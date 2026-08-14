@@ -2502,7 +2502,6 @@
   var swipeView = document.getElementById("swipeView");
   var chaosView = document.getElementById("chaosView");
   var outfitView = document.getElementById("outfitView");
-  var chaosBuilt = false;
 
   function showClassic() {
     viewPicker.classList.add("hidden");
@@ -2697,9 +2696,17 @@
     swipeView.classList.remove("hidden");
   }
 
+  function chaosItemCount() {
+    var w = window.innerWidth;
+    if (w < 640) return 14;
+    if (w < 1100) return 26;
+    if (w < 1600) return 38;
+    return 48;
+  }
+
   function buildChaos() {
-    if (chaosBuilt) return;
-    chaosBuilt = true;
+    var host = document.getElementById("chaosItems");
+    host.innerHTML = "";
     var pool = ITEMS.filter(function (it) {
       return it.status !== "Verkauft" && it.gallery && it.gallery[0];
     });
@@ -2707,21 +2714,20 @@
       var j = Math.floor(Math.random() * (i + 1));
       var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
     }
-    var picks = pool.slice(0, Math.min(22, pool.length));
-    var host = document.getElementById("chaosItems");
+    var picks = pool.slice(0, Math.min(chaosItemCount(), pool.length));
     var frag = document.createDocumentFragment();
     picks.forEach(function (it) {
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "chaos-item";
-      btn.style.left = (4 + Math.random() * 82) + "%";
-      btn.style.top = (10 + Math.random() * 72) + "%";
-      btn.style.animationDuration = (9 + Math.random() * 10) + "s";
-      btn.style.animationDelay = (Math.random() * -18) + "s";
-      btn.style.setProperty("--dx", (Math.random() * 70 - 35).toFixed(0) + "px");
-      btn.style.setProperty("--dy", (Math.random() * 70 - 35).toFixed(0) + "px");
-      btn.style.setProperty("--rot0", (Math.random() * 10 - 5).toFixed(1) + "deg");
-      btn.style.setProperty("--rot1", (Math.random() * 10 - 5).toFixed(1) + "deg");
+      btn.style.left = (2 + Math.random() * 92) + "%";
+      btn.style.top = (4 + Math.random() * 88) + "%";
+      btn.style.animationDuration = (6 + Math.random() * 7) + "s";
+      btn.style.animationDelay = (Math.random() * -13) + "s";
+      btn.style.setProperty("--dx", (Math.random() * 130 - 65).toFixed(0) + "px");
+      btn.style.setProperty("--dy", (Math.random() * 130 - 65).toFixed(0) + "px");
+      btn.style.setProperty("--rot0", (Math.random() * 18 - 9).toFixed(1) + "deg");
+      btn.style.setProperty("--rot1", (Math.random() * 18 - 9).toFixed(1) + "deg");
       btn.setAttribute("aria-label", (it.brand || "") + " " + it.title);
       btn.innerHTML = '<img src="' + it.gallery[0] + '" alt="" loading="lazy" />';
       btn.addEventListener("click", function () {
