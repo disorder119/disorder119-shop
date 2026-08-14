@@ -1451,9 +1451,13 @@
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    display: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
     filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
   }
+
+  .outfit-figure__layer.visible { opacity: 1; }
 
   .outfit-figure__layer--top { top: 6%; width: 82%; z-index: 1; }
   .outfit-figure__layer--bottom { top: 44%; width: 64%; z-index: 2; }
@@ -1465,11 +1469,15 @@
     top: 6%;
     right: 4%;
     width: 26%;
-    display: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
     background: var(--mount);
     border: 1px solid var(--mount-rule);
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
   }
+
+  .outfit-figure__accessory.visible { opacity: 1; }
 
   .outfit-stack {
     width: min(360px, 100%);
