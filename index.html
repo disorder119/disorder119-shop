@@ -4,6 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Disorder119 — kuratiertes Archiv für Designer-Mode aus zweiter Hand.">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/favicon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Disorder119">
+<meta property="og:title" content="Disorder119 — Archiv-Katalog">
+<meta property="og:description" content="Disorder119 — kuratiertes Archiv für Designer-Mode aus zweiter Hand.">
+<meta property="og:url" content="https://disorder119.github.io/disorder119-shop/">
+<meta property="og:image" content="https://disorder119.github.io/disorder119-shop/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Disorder119 — Archiv-Katalog">
+<meta name="twitter:description" content="Disorder119 — kuratiertes Archiv für Designer-Mode aus zweiter Hand.">
+<meta name="twitter:image" content="https://disorder119.github.io/disorder119-shop/assets/og-image.png">
 <title>Disorder119 — Archiv-Katalog</title>
 <style>
   :root {
@@ -870,6 +884,131 @@
 
   .footer strong { color: var(--text-muted); font-weight: 600; }
 
+  .footer__legal {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .footer__legal button {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: inherit;
+    letter-spacing: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
+  .footer__legal button:hover { color: var(--text-muted); }
+
+  /* ---------- Rechtliches (Impressum / AGB / Datenschutz) ---------- */
+
+  .legal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 8, 7, 0.78);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: clamp(16px, 4vw, 60px) clamp(14px, 3vw, 20px);
+    z-index: 400;
+    overflow-y: auto;
+  }
+
+  .legal-backdrop.open { display: flex; }
+
+  .legal-panel {
+    background: var(--surface);
+    color: var(--text);
+    width: min(640px, 100%);
+    border: 1px solid var(--rule-strong);
+    padding: clamp(24px, 4vw, 40px);
+    position: relative;
+  }
+
+  .legal-panel__close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    background: transparent;
+    border: 1px solid var(--rule-strong);
+    color: var(--text);
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+
+  .legal-panel h2 {
+    font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 1.5rem;
+    margin-bottom: 18px;
+    padding-right: 40px;
+  }
+
+  .legal-panel h3 {
+    font-size: 0.9rem;
+    margin: 20px 0 6px;
+    color: var(--text);
+  }
+
+  .legal-panel p, .legal-panel li {
+    font-size: 0.86rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  .legal-panel ul { padding-left: 18px; margin: 6px 0; }
+  .legal-panel a { color: var(--accent); }
+
+  .cookie-note {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    z-index: 350;
+    max-width: 460px;
+    margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    padding: 16px 18px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cookie-note.visible { display: flex; }
+
+  .cookie-note p {
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+
+  .cookie-note__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .cookie-note__actions button {
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    font-family: inherit;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 9px 16px;
+    cursor: pointer;
+  }
+
   .hidden { display: none !important; }
 
   /* ---------- Ansicht-Auswahl (bei jedem Besuch) ---------- */
@@ -1316,9 +1455,10 @@
     filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
   }
 
-  .outfit-figure__layer--top { top: 6%; width: 82%; }
-  .outfit-figure__layer--bottom { top: 44%; width: 64%; }
-  .outfit-figure__layer--shoes { bottom: 3%; width: 32%; }
+  .outfit-figure__layer--top { top: 6%; width: 82%; z-index: 1; }
+  .outfit-figure__layer--bottom { top: 44%; width: 64%; z-index: 2; }
+  .outfit-figure__layer--jacket { top: 4%; width: 88%; z-index: 3; }
+  .outfit-figure__layer--shoes { bottom: 3%; width: 32%; z-index: 2; }
 
   .outfit-figure__accessory {
     position: absolute;
@@ -1483,6 +1623,32 @@
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
+  }
+
+  .outfit-picker__search {
+    display: block;
+    max-width: 700px;
+    width: 100%;
+    margin: 0 auto 18px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--rule-strong);
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 6px 2px 10px;
+  }
+
+  .outfit-picker__search::placeholder { color: rgba(242, 239, 231, 0.4); }
+  .outfit-picker__search:focus { border-bottom-color: var(--accent); }
+
+  .outfit-picker__empty {
+    max-width: 700px;
+    margin: 0 auto;
+    color: var(--text-faint);
+    font-size: 0.86rem;
+    text-align: center;
+    padding: 40px 0;
   }
 
   .outfit-picker__grid {
@@ -1686,6 +1852,7 @@
         </svg>
         <img class="outfit-figure__layer outfit-figure__layer--top" id="figTop" alt="" />
         <img class="outfit-figure__layer outfit-figure__layer--bottom" id="figBottom" alt="" />
+        <img class="outfit-figure__layer outfit-figure__layer--jacket" id="figJacket" alt="" />
         <img class="outfit-figure__layer outfit-figure__layer--shoes" id="figShoes" alt="" />
         <img class="outfit-figure__accessory" id="figAccessory" alt="" />
       </div>
@@ -1700,6 +1867,7 @@
     <span class="outfit-picker__title" id="outfitPickerTitle">Teil wählen</span>
     <button type="button" class="modal__close" id="outfitPickerClose" aria-label="Schließen">✕</button>
   </div>
+  <input type="text" id="outfitPickerSearch" class="outfit-picker__search" placeholder="Suche nach Marke, Titel …" autocomplete="off">
   <div class="outfit-picker__grid" id="outfitPickerGrid"></div>
 </div>
 
@@ -1765,6 +1933,27 @@
 <div class="footer">
   <span><strong>Disorder119</strong> — Testwebseite, generiert aus dem realen Katalogbestand.</span>
   <span id="footerStamp"></span>
+  <div class="footer__legal">
+    <button type="button" data-legal="impressum">Impressum</button>
+    <button type="button" data-legal="agb">AGB</button>
+    <button type="button" data-legal="datenschutz">Datenschutz</button>
+  </div>
+</div>
+
+<div class="legal-backdrop" id="legalBackdrop">
+  <div class="legal-panel">
+    <button type="button" class="legal-panel__close" id="legalClose" aria-label="Schließen">✕</button>
+    <div id="legalContent"></div>
+  </div>
+</div>
+
+<div class="cookie-note" id="cookieNote">
+  <p>Diese Seite verwendet keine Tracking- oder Marketing-Cookies. Warenkorb und Outfit-Baukasten
+  speichern deine Auswahl nur lokal in deinem Browser (localStorage), damit sie beim nächsten
+  Besuch noch da ist — diese Daten verlassen nie deinen Browser.</p>
+  <div class="cookie-note__actions">
+    <button type="button" id="cookieNoteOk">Verstanden</button>
+  </div>
 </div>
 
 <div class="modal-backdrop" id="modalBackdrop">
@@ -2548,18 +2737,26 @@
 
   // ---- Outfit-Baukasten ----
   var outfitPicker = document.getElementById("outfitPicker");
-  var OUTFIT_ORDER = ["top", "bottom", "shoes", "accessory"];
+  var OUTFIT_KEY = "disorder119_outfit";
+  var OUTFIT_ORDER = ["top", "jacket", "bottom", "shoes", "accessory"];
   var outfitSlots = {
-    top: { label: "Oberteil", categories: ["Top / Bluse", "Jacke / Blazer", "Kleid"], item: null },
+    top: { label: "Oberteil / Kleid", categories: ["Top / Bluse", "Kleid"], item: null },
+    jacket: { label: "Jacke (optional)", categories: ["Jacke / Blazer"], item: null },
     bottom: { label: "Unterteil", categories: ["Hose", "Rock"], item: null },
     shoes: { label: "Schuhe", categories: ["Schuhe"], item: null },
     accessory: { label: "Accessoire", categories: ["Accessoires"], item: null }
   };
+  var outfitPickerKey = null;
+  var outfitPickerQuery = "";
 
-  function outfitEligible(categories) {
+  function outfitEligible(categories, query) {
+    var q = (query || "").trim().toLowerCase();
     return ITEMS.filter(function (it) {
-      return it.status !== "Verkauft" && it.price > 0 && it.gallery && it.gallery[0] &&
-        categories.indexOf(it.category) !== -1;
+      if (it.status === "Verkauft" || !(it.price > 0) || !it.gallery || !it.gallery[0]) return false;
+      if (categories.indexOf(it.category) === -1) return false;
+      if (!q) return true;
+      var hay = ((it.brand || "") + " " + (it.title || "")).toLowerCase();
+      return hay.indexOf(q) !== -1;
     });
   }
 
@@ -2567,14 +2764,17 @@
     return !!(outfitSlots.top.item && outfitSlots.top.item.category === "Kleid");
   }
 
+  function outfitVisibleKeys() {
+    return OUTFIT_ORDER.filter(function (k) { return k !== "bottom" || !outfitIsDress(); });
+  }
+
   function outfitStatusText() {
-    var total = outfitIsDress() ? 3 : 4;
-    var filled = OUTFIT_ORDER.filter(function (k) {
-      return k !== "bottom" || !outfitIsDress();
-    }).filter(function (k) { return outfitSlots[k].item; }).length;
-    if (filled === 0) return "Wähl ein Oberteil zum Start.";
-    if (filled >= total) return "Kompletter Look! 🔥";
-    return filled + " von " + total + " Teilen ausgewählt.";
+    var required = outfitVisibleKeys().filter(function (k) { return k !== "jacket" && k !== "accessory"; });
+    var filledRequired = required.filter(function (k) { return outfitSlots[k].item; }).length;
+    var filledAny = OUTFIT_ORDER.filter(function (k) { return outfitSlots[k].item; }).length;
+    if (filledAny === 0) return "Wähl ein Oberteil oder Kleid zum Start.";
+    if (filledRequired >= required.length) return "Kompletter Look! 🔥";
+    return filledRequired + " von " + required.length + " Pflichtteilen ausgewählt.";
   }
 
   function outfitTotalPrice() {
@@ -2584,11 +2784,36 @@
     }, 0);
   }
 
+  function saveOutfit() {
+    try {
+      var ids = {};
+      OUTFIT_ORDER.forEach(function (k) {
+        if (outfitSlots[k].item) ids[k] = outfitSlots[k].item.id;
+      });
+      window.localStorage.setItem(OUTFIT_KEY, JSON.stringify(ids));
+    } catch (e) {}
+  }
+
+  function loadOutfit() {
+    try {
+      var raw = window.localStorage.getItem(OUTFIT_KEY);
+      if (!raw) return;
+      var ids = JSON.parse(raw);
+      OUTFIT_ORDER.forEach(function (k) {
+        if (ids[k] != null) {
+          var it = findItem(ids[k]);
+          if (it && it.status !== "Verkauft" && it.price > 0) outfitSlots[k].item = it;
+        }
+      });
+    } catch (e) {}
+  }
+
   function setOutfitSlot(key, item) {
     outfitSlots[key].item = item;
     if (key === "top" && item && item.category === "Kleid") {
       outfitSlots.bottom.item = null;
     }
+    saveOutfit();
     renderOutfitStack();
   }
 
@@ -2654,26 +2879,30 @@
 
   function renderOutfitFigure() {
     function setLayer(imgEl, item) {
-      if (item && item.gallery && item.gallery[0]) {
-        imgEl.src = item.gallery[0];
-        imgEl.style.display = "block";
+      var src = item && item.gallery && item.gallery[0] ? item.gallery[0] : "";
+      if (src) {
+        if (imgEl.getAttribute("src") !== src) imgEl.src = src;
+        imgEl.classList.add("visible");
       } else {
-        imgEl.removeAttribute("src");
-        imgEl.style.display = "none";
+        imgEl.classList.remove("visible");
       }
     }
     setLayer(document.getElementById("figTop"), outfitSlots.top.item);
+    setLayer(document.getElementById("figJacket"), outfitSlots.jacket.item);
     setLayer(document.getElementById("figBottom"), outfitIsDress() ? null : outfitSlots.bottom.item);
     setLayer(document.getElementById("figShoes"), outfitSlots.shoes.item);
     setLayer(document.getElementById("figAccessory"), outfitSlots.accessory.item);
   }
 
-  function openOutfitPicker(key) {
-    var slot = outfitSlots[key];
-    document.getElementById("outfitPickerTitle").textContent = slot.label + " wählen";
+  function renderOutfitPickerGrid() {
+    var slot = outfitSlots[outfitPickerKey];
     var grid = document.getElementById("outfitPickerGrid");
-    var options = outfitEligible(slot.categories);
+    var options = outfitEligible(slot.categories, outfitPickerQuery);
     grid.innerHTML = "";
+    if (!options.length) {
+      grid.innerHTML = '<p class="outfit-picker__empty">Keine Treffer.</p>';
+      return;
+    }
     var frag = document.createDocumentFragment();
     options.forEach(function (it) {
       var btn = document.createElement("button");
@@ -2684,13 +2913,24 @@
         '<div class="outfit-picker__item-title">' + escapeHtml((it.brand ? it.brand + " " : "") + it.title) + "</div>" +
         '<div class="outfit-picker__item-price">' + fmtPrice(it.price) + "</div>";
       btn.addEventListener("click", function () {
-        setOutfitSlot(key, it);
+        setOutfitSlot(outfitPickerKey, it);
         closeOutfitPicker();
       });
       frag.appendChild(btn);
     });
     grid.appendChild(frag);
+  }
+
+  function openOutfitPicker(key) {
+    outfitPickerKey = key;
+    outfitPickerQuery = "";
+    var slot = outfitSlots[key];
+    document.getElementById("outfitPickerTitle").textContent = slot.label + " wählen";
+    var search = document.getElementById("outfitPickerSearch");
+    search.value = "";
+    renderOutfitPickerGrid();
     outfitPicker.classList.add("open");
+    search.focus();
   }
 
   function closeOutfitPicker() {
@@ -2698,11 +2938,19 @@
   }
 
   document.getElementById("outfitPickerClose").addEventListener("click", closeOutfitPicker);
+  document.getElementById("outfitPickerSearch").addEventListener("input", function (e) {
+    outfitPickerQuery = e.target.value;
+    renderOutfitPickerGrid();
+  });
 
   function randomOutfit() {
     OUTFIT_ORDER.forEach(function (k) { outfitSlots[k].item = null; });
     var topOptions = outfitEligible(outfitSlots.top.categories);
     if (topOptions.length) outfitSlots.top.item = topOptions[Math.floor(Math.random() * topOptions.length)];
+    if (!outfitIsDress() && Math.random() > 0.5) {
+      var jacketOptions = outfitEligible(outfitSlots.jacket.categories);
+      if (jacketOptions.length) outfitSlots.jacket.item = jacketOptions[Math.floor(Math.random() * jacketOptions.length)];
+    }
     if (!outfitIsDress()) {
       var bottomOptions = outfitEligible(outfitSlots.bottom.categories);
       if (bottomOptions.length) outfitSlots.bottom.item = bottomOptions[Math.floor(Math.random() * bottomOptions.length)];
@@ -2711,12 +2959,14 @@
     if (shoeOptions.length) outfitSlots.shoes.item = shoeOptions[Math.floor(Math.random() * shoeOptions.length)];
     var accOptions = outfitEligible(outfitSlots.accessory.categories);
     if (accOptions.length && Math.random() > 0.35) outfitSlots.accessory.item = accOptions[Math.floor(Math.random() * accOptions.length)];
+    saveOutfit();
     renderOutfitStack();
   }
 
   document.getElementById("outfitRandom").addEventListener("click", randomOutfit);
   document.getElementById("outfitReset").addEventListener("click", function () {
     OUTFIT_ORDER.forEach(function (k) { outfitSlots[k].item = null; });
+    saveOutfit();
     renderOutfitStack();
   });
   document.getElementById("outfitAddCart").addEventListener("click", function () {
@@ -2735,10 +2985,102 @@
     appShell.classList.add("hidden");
     swipeView.classList.add("hidden");
     chaosView.classList.add("hidden");
-    OUTFIT_ORDER.forEach(function (k) { outfitSlots[k].item = null; });
     renderOutfitStack();
     outfitView.classList.remove("hidden");
   }
+
+  loadOutfit();
+
+  // ---- Rechtliches (Impressum / AGB / Datenschutz) ----
+  function legalEmailLine() {
+    return SHOP_CONFIG.email
+      ? '<a href="mailto:' + SHOP_CONFIG.email + '">' + escapeHtml(SHOP_CONFIG.email) + "</a>"
+      : "wird nachgereicht, sobald der Shop live geht";
+  }
+
+  function legalContent(key) {
+    if (key === "impressum") {
+      return "<h2>Impressum</h2>" +
+        "<p>Angaben gemäß § 5 TMG</p>" +
+        "<p>Joel Bittner<br>Disorder119 (Einzelunternehmen)<br>Nelseestraße 25<br>63739 Aschaffenburg<br>Deutschland</p>" +
+        "<h3>Kontakt</h3>" +
+        "<p>E-Mail: " + legalEmailLine() + "</p>" +
+        "<h3>Umsatzsteuer</h3>" +
+        "<p>Kleinunternehmer gemäß § 19 UStG — es wird keine Umsatzsteuer ausgewiesen.</p>" +
+        "<h3>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h3>" +
+        "<p>Joel Bittner (Anschrift wie oben)</p>" +
+        "<h3>Streitschlichtung</h3>" +
+        '<p>Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: ' +
+        '<a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">ec.europa.eu/consumers/odr</a>. ' +
+        "Wir sind nicht verpflichtet und nicht bereit, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>";
+    }
+    if (key === "agb") {
+      return "<h2>Allgemeine Geschäftsbedingungen</h2>" +
+        "<h3>1. Geltungsbereich</h3>" +
+        "<p>Diese Bedingungen gelten für Kaufanfragen über diese Website zwischen Joel Bittner (Disorder119) und Kundinnen und Kunden.</p>" +
+        "<h3>2. Zustandekommen des Vertrags</h3>" +
+        "<p>Über den Warenkorb kann eine unverbindliche Anfrage per WhatsApp oder E-Mail gestellt werden. " +
+        "Ein Kaufvertrag kommt erst durch gesonderte Bestätigung (Verfügbarkeit, Preis, Zahlungs- und Versandart) zustande — " +
+        "nicht bereits durch das Absenden der Anfrage.</p>" +
+        "<h3>3. Artikel</h3>" +
+        "<p>Alle angebotenen Artikel sind gebrauchte Einzelstücke (Vintage / Second Hand). Kleine gebrauchsbedingte " +
+        "Abweichungen sind möglich und werden nach bestem Wissen in der Artikelbeschreibung angegeben.</p>" +
+        "<h3>4. Preise & Zahlung</h3>" +
+        "<p>Alle Preise verstehen sich in Euro. Kleinunternehmer gemäß § 19 UStG, keine Umsatzsteuer ausgewiesen. " +
+        "Zahlungs- und Versandart werden individuell vereinbart.</p>" +
+        "<h3>5. Widerruf & Gewährleistung</h3>" +
+        "<p>Verbraucher:innen steht bei Fernabsatzverträgen grundsätzlich ein gesetzliches Widerrufsrecht zu; " +
+        "es gelten die gesetzlichen Gewährleistungsrechte. Details werden bei Vertragsschluss individuell mitgeteilt.</p>";
+    }
+    if (key === "datenschutz") {
+      return "<h2>Datenschutzerklärung</h2>" +
+        "<h3>Verantwortlicher</h3>" +
+        "<p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg — Kontakt siehe Impressum.</p>" +
+        "<h3>Lokale Speicherung (localStorage)</h3>" +
+        "<p>Warenkorb und Outfit-Baukasten speichern deine Auswahl ausschließlich lokal in deinem Browser " +
+        "(localStorage). Diese Daten werden nicht an uns oder Dritte übertragen und verlassen nie dein Gerät. " +
+        "Du kannst sie jederzeit über die Browser-Einstellungen löschen.</p>" +
+        "<h3>Bestellanfragen</h3>" +
+        "<p>Wenn du über WhatsApp oder E-Mail eine Anfrage sendest, werden die von dir eingegebenen Daten " +
+        "(z. B. Name, Nachricht) an den jeweiligen Dienst (WhatsApp/Meta bzw. deinen E-Mail-Anbieter) und an uns " +
+        "übermittelt, um deine Anfrage zu bearbeiten. Es findet keine Weitergabe an weitere Dritte statt.</p>" +
+        "<h3>Hosting</h3>" +
+        "<p>Diese Seite wird bei GitHub Pages (GitHub Inc.) gehostet. Beim Aufruf verarbeitet GitHub technisch " +
+        "notwendige Zugriffsdaten (u. a. IP-Adresse) zur Auslieferung der Seite. Näheres in der " +
+        '<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>' +
+        "<h3>Keine Tracking-Cookies</h3>" +
+        "<p>Diese Seite verwendet keine Analyse-, Marketing- oder Tracking-Cookies.</p>";
+    }
+    return "";
+  }
+
+  var legalBackdrop = document.getElementById("legalBackdrop");
+  function openLegal(key) {
+    document.getElementById("legalContent").innerHTML = legalContent(key);
+    legalBackdrop.classList.add("open");
+    document.getElementById("legalClose").focus();
+  }
+  function closeLegal() { legalBackdrop.classList.remove("open"); }
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-legal]"), function (btn) {
+    btn.addEventListener("click", function () { openLegal(btn.getAttribute("data-legal")); });
+  });
+  document.getElementById("legalClose").addEventListener("click", closeLegal);
+  legalBackdrop.addEventListener("click", function (e) {
+    if (e.target === legalBackdrop) closeLegal();
+  });
+
+  // ---- Hinweis zur lokalen Speicherung (kein Tracking, daher kein Consent-Banner mit Ablehnen-Option) ----
+  var COOKIE_NOTE_KEY = "disorder119_cookie_note_seen";
+  try {
+    if (!window.localStorage.getItem(COOKIE_NOTE_KEY)) {
+      document.getElementById("cookieNote").classList.add("visible");
+    }
+  } catch (e) {}
+  document.getElementById("cookieNoteOk").addEventListener("click", function () {
+    document.getElementById("cookieNote").classList.remove("visible");
+    try { window.localStorage.setItem(COOKIE_NOTE_KEY, "1"); } catch (e) {}
+  });
 
   Array.prototype.forEach.call(document.querySelectorAll(".view-picker__option"), function (btn) {
     btn.addEventListener("click", function () {
