@@ -1408,6 +1408,43 @@
     to   { transform: translate(var(--dx, 24px), var(--dy, -30px)) rotate(var(--rot1, 5deg)); }
   }
 
+  /* ---------- Chaos: 360-Grad-Showroom (nur Desktop, s. JS chaosIsShowroom()) ---------- */
+
+  .chaos-view--showroom {
+    perspective: 1700px;
+  }
+
+  .chaos-view--showroom #chaosItems {
+    position: absolute;
+    inset: 0;
+    width: 260%;
+    left: -80%;
+    transform-style: preserve-3d;
+    will-change: transform;
+    animation-name: chaos-pan;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+
+  @keyframes chaos-pan {
+    0%   { transform: translateX(0); }
+    50%  { transform: translateX(-34%); }
+    100% { transform: translateX(0); }
+  }
+
+  .chaos-item-wrap {
+    position: absolute;
+    will-change: transform;
+  }
+
+  .chaos-item-wrap .chaos-item {
+    position: static;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chaos-view--showroom #chaosItems { animation: none; }
+  }
+
   /* ---------- Outfit-Baukasten ---------- */
 
   .outfit-view {
@@ -2848,9 +2885,29 @@
     return 48;
   }
 
+  // Ab dieser Breite gibt's den automatisch schwenkenden 360-Grad-Showroom
+  // statt dem einfachen Treiben-lassen - am Handy waer's per Touch eh nicht
+  // steuerbar, deshalb bewusst nur am Desktop.
+  function chaosIsShowroom() {
+    return window.innerWidth >= 900;
+  }
+
+  function chaosShowroomItemCount() {
+    var w = window.innerWidth;
+    if (w < 1300) return 60;
+    if (w < 1800) return 80;
+    return 100;
+  }
+
   function buildChaos() {
     var host = document.getElementById("chaosItems");
+    var chaosViewEl = document.getElementById("chaosView");
     host.innerHTML = "";
+    host.style.animation = "";
+    host.style.animationDuration = "";
+    var showroom = chaosIsShowroom();
+    chaosViewEl.classList.toggle("chaos-view--showroom", showroom);
+
     var pool = ITEMS.filter(function (it) {
       return it.status !== "Verkauft" && it.gallery && it.gallery[0];
     });
@@ -2858,14 +2915,13 @@
       var j = Math.floor(Math.random() * (i + 1));
       var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
     }
-    var picks = pool.slice(0, Math.min(chaosItemCount(), pool.length));
+    var count = showroom ? chaosShowroomItemCount() : chaosItemCount();
+    var picks = pool.slice(0, Math.min(count, pool.length));
     var frag = document.createDocumentFragment();
     picks.forEach(function (it) {
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "chaos-item";
-      btn.style.left = (2 + Math.random() * 92) + "%";
-      btn.style.top = (4 + Math.random() * 88) + "%";
       btn.style.animationDuration = (6 + Math.random() * 7) + "s";
       btn.style.animationDelay = (Math.random() * -13) + "s";
       btn.style.setProperty("--dx", (Math.random() * 130 - 65).toFixed(0) + "px");
@@ -2879,9 +2935,38 @@
         showClassic();
         openModal(picked);
       });
-      frag.appendChild(btn);
+
+      if (showroom) {
+        // Position entlang der breiten Buehne (0-100% der 2.6x-Viewport-
+        // breiten Spur). Je weiter aussen, desto staerker gedreht + nach
+        // hinten versetzt -> Eindruck einer runden Wand.
+        var xPct = 2 + Math.random() * 96;
+        var yPct = 5 + Math.random() * 84;
+        var norm = (xPct - 50) / 50; // -1 .. 1
+        var rotY = norm * 38;
+        var depth = -Math.abs(norm) * 110;
+        var scale = 1 - Math.abs(norm) * 0.18;
+        var wrap = document.createElement("div");
+        wrap.className = "chaos-item-wrap";
+        wrap.style.left = xPct + "%";
+        wrap.style.top = yPct + "%";
+        wrap.style.zIndex = String(200 - Math.round(Math.abs(norm) * 100));
+        wrap.style.transform =
+          "translateZ(" + depth.toFixed(0) + "px) rotateY(" + rotY.toFixed(1) + "deg) scale(" + scale.toFixed(3) + ")";
+        wrap.appendChild(btn);
+        frag.appendChild(wrap);
+      } else {
+        btn.style.left = (2 + Math.random() * 92) + "%";
+        btn.style.top = (4 + Math.random() * 88) + "%";
+        frag.appendChild(btn);
+      }
     });
     host.appendChild(frag);
+
+    if (showroom) {
+      var panDuration = (46 + Math.random() * 14).toFixed(1) + "s";
+      host.style.animationDuration = panDuration;
+    }
   }
 
   function showChaos() {
