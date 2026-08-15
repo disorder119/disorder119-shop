@@ -2907,7 +2907,7 @@
       document.removeEventListener("mousemove", chaosPanPointerMove);
       return;
     }
-    chaosPan.current += (chaosPan.target - chaosPan.current) * 0.07;
+    chaosPan.current += (chaosPan.target - chaosPan.current) * 0.025;
     var host = document.getElementById("chaosItems");
     if (host) host.style.transform = "translateX(" + chaosPan.current.toFixed(1) + "px)";
     chaosPan.raf = requestAnimationFrame(chaosPanFrame);
@@ -2969,15 +2969,19 @@
       });
 
       if (showroom) {
-        // Position entlang der breiten Buehne (0-100% der 2.6x-Viewport-
+        // Position entlang der breiten Buehne (0-100% der 3.2x-Viewport-
         // breiten Spur). Je weiter aussen, desto staerker gedreht + nach
-        // hinten versetzt -> Eindruck einer runden Wand.
+        // hinten versetzt -> Eindruck einer runden Wand. In Ruheposition
+        // ist nur das mittlere Drittel der Buehne sichtbar - deshalb die
+        // Kruemmung mit sqrt() nach vorne ziehen, damit sie schon dort
+        // sichtbar ist und nicht erst beim Schwenken zum Rand.
         var xPct = 2 + Math.random() * 96;
         var yPct = 5 + Math.random() * 84;
-        var norm = (xPct - 50) / 50; // -1 .. 1
-        var rotY = norm * 52;
-        var depth = -Math.abs(norm) * 170;
-        var scale = 1 - Math.abs(norm) * 0.22;
+        var raw = (xPct - 50) / 50; // -1 .. 1
+        var norm = Math.sign(raw) * Math.sqrt(Math.abs(raw));
+        var rotY = norm * 64;
+        var depth = -Math.abs(norm) * 220;
+        var scale = 1 - Math.abs(norm) * 0.26;
         var wrap = document.createElement("div");
         wrap.className = "chaos-item-wrap";
         wrap.style.left = xPct + "%";
