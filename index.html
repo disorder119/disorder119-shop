@@ -1419,15 +1419,38 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 26px 20px 22px;
-    overflow-y: auto;
-    gap: 18px;
+    padding: clamp(12px, 2.4vh, 24px) 18px clamp(10px, 2vh, 18px);
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    gap: clamp(6px, 1.4vh, 14px);
   }
 
-  .outfit-view__head { text-align: center; }
+  .outfit-view__close {
+    position: absolute;
+    top: clamp(10px, 2vh, 16px);
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--rule-strong);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2;
+    flex: 0 0 auto;
+  }
+
+  .outfit-view__close:hover { border-color: var(--accent); color: var(--accent); }
+
+  .outfit-view__head { text-align: center; flex: 0 0 auto; }
 
   .outfit-view__eyebrow {
-    font-size: 0.68rem;
+    font-size: 0.6rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: rgba(242, 239, 231, 0.5);
@@ -1437,40 +1460,45 @@
     font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-weight: 800;
     text-transform: uppercase;
-    font-size: clamp(1.6rem, 5vw, 2.6rem);
-    margin-top: 4px;
+    font-size: clamp(1.2rem, 3.4vh, 2.4rem);
+    margin-top: 2px;
   }
 
   .outfit-view__status {
-    font-size: 0.76rem;
+    font-size: 0.7rem;
     color: var(--accent);
-    margin-top: 6px;
-    min-height: 1.2em;
+    margin-top: 3px;
+    min-height: 1.1em;
   }
 
   .outfit-layout {
     display: flex;
     flex-wrap: wrap;
-    gap: 32px;
-    align-items: flex-start;
+    gap: clamp(14px, 2.4vw, 32px);
+    align-items: stretch;
     justify-content: center;
     width: 100%;
-    max-width: 760px;
+    max-width: 780px;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .outfit-main {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: clamp(6px, 1.2vh, 12px);
     width: min(360px, 100%);
+    min-height: 0;
   }
 
   .outfit-figure {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
     width: min(300px, 100%);
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .outfit-figure__label {
@@ -1484,7 +1512,8 @@
   .outfit-figure__stage {
     position: relative;
     width: 100%;
-    min-height: 460px;
+    flex: 1 1 auto;
+    min-height: 0;
     background: radial-gradient(120% 85% at 50% 15%, var(--surface-2) 0%, var(--ink) 70%);
     border: 1px solid var(--rule-strong);
     overflow: hidden;
@@ -1561,22 +1590,26 @@
     width: min(360px, 100%);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: clamp(4px, 0.9vh, 10px);
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .outfit-slot {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     background: var(--surface);
     border: 1px solid var(--rule-strong);
-    padding: 12px;
-    min-height: 92px;
+    padding: 0 10px;
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: 84px;
   }
 
   .outfit-slot__frame {
-    width: 68px;
-    height: 90px;
+    width: clamp(34px, 6vh, 60px);
+    height: clamp(44px, 8vh, 78px);
     flex: 0 0 auto;
     background: var(--mount);
     overflow: hidden;
@@ -1599,23 +1632,31 @@
   }
 
   .outfit-slot__label {
-    font-size: 0.64rem;
-    letter-spacing: 0.12em;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--text-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .outfit-slot__value {
-    font-size: 0.88rem;
-    margin-top: 3px;
+    font-size: 0.8rem;
+    margin-top: 2px;
     color: var(--text);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    line-height: 1.3;
   }
 
   .outfit-slot__price {
     font-variant-numeric: tabular-nums;
     font-weight: 700;
-    font-size: 0.84rem;
-    margin-top: 4px;
+    font-size: 0.78rem;
+    margin-top: 2px;
     color: var(--text);
   }
 
@@ -1651,26 +1692,34 @@
 
   .outfit-slot__remove:hover { color: var(--accent); }
 
-  .outfit-total {
+  .outfit-view__footer {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(6px, 1vh, 10px);
     width: min(360px, 100%);
+  }
+
+  .outfit-total {
+    width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     border-top: 1px solid var(--rule-strong);
-    padding-top: 12px;
-    font-size: 1rem;
+    padding-top: 8px;
+    font-size: 0.92rem;
     font-weight: 700;
   }
 
   .outfit-view__actions {
     display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    justify-content: center;
-    width: min(360px, 100%);
+    gap: 8px;
+    width: 100%;
   }
 
-  .outfit-view__actions .view-enter-btn { flex: 1 1 auto; }
+  .outfit-view__actions .view-enter-btn { flex: 0 0 auto; padding: 10px 14px; }
+
+  .outfit-view__actions #outfitAddCart { flex: 1 1 auto; }
 
   .outfit-cta {
     background: var(--accent);
@@ -1846,6 +1895,27 @@
 
     .view-picker__option { width: min(280px, 80vw); padding: 20px 16px; }
     .chaos-item { width: clamp(72px, 24vw, 120px); }
+
+    .outfit-view { padding: 10px 14px 8px; gap: 5px; }
+    .outfit-view__close { top: 8px; right: 10px; width: 28px; height: 28px; font-size: 0.8rem; }
+    .outfit-view__eyebrow { font-size: 0.54rem; }
+    .outfit-view__title { font-size: clamp(1.05rem, 5.2vw, 1.5rem); }
+    .outfit-view__status { font-size: 0.64rem; margin-top: 2px; }
+
+    .outfit-layout { flex-direction: column; flex-wrap: nowrap; gap: 8px; max-width: 420px; }
+    .outfit-main { width: 100%; flex: 3 1 0; min-height: 0; gap: 6px; }
+    .outfit-figure { width: 100%; flex: 2 1 0; min-height: 0; gap: 4px; }
+    .outfit-figure__label { font-size: 0.56rem; }
+
+    .outfit-slot { gap: 8px; padding: 0 8px; max-height: none; }
+    .outfit-slot__frame { width: clamp(30px, 7vh, 44px); height: clamp(36px, 8vh, 54px); }
+    .outfit-slot__label { font-size: 0.54rem; }
+    .outfit-slot__value { font-size: 0.72rem; }
+    .outfit-slot__price { font-size: 0.68rem; }
+
+    .outfit-view__footer { gap: 5px; }
+    .outfit-total { font-size: 0.78rem; padding-top: 5px; }
+    .outfit-view__actions .view-enter-btn { padding: 8px 10px; font-size: 0.62rem; }
   }
 </style>
 </head>
@@ -1897,6 +1967,8 @@
 </div>
 
 <div class="outfit-view hidden" id="outfitView">
+  <button type="button" class="outfit-view__close" data-enter-classic aria-label="Schließen">✕</button>
+
   <div class="outfit-view__head">
     <p class="outfit-view__eyebrow">Outfit-Baukasten</p>
     <h1 class="outfit-view__title">Bau dir einen Look</h1>
@@ -1907,17 +1979,16 @@
     <div class="outfit-main">
       <div class="outfit-stack" id="outfitStack"></div>
 
-      <div class="outfit-total">
-        <span>Gesamt</span>
-        <span id="outfitTotal">0,00 €</span>
-      </div>
-
-      <div class="outfit-view__actions">
-        <button type="button" class="view-enter-btn" id="outfitRandom">🎲 Überrasch mich</button>
-        <button type="button" class="view-enter-btn" id="outfitReset">Neues Outfit</button>
-      </div>
-      <div class="outfit-view__actions">
-        <button type="button" class="view-enter-btn outfit-cta" id="outfitAddCart" disabled>Ganzen Look in den Warenkorb</button>
+      <div class="outfit-view__footer">
+        <div class="outfit-total">
+          <span>Gesamt</span>
+          <span id="outfitTotal">0,00 €</span>
+        </div>
+        <div class="outfit-view__actions">
+          <button type="button" class="view-enter-btn" id="outfitRandom" aria-label="Überrasch mich">🎲</button>
+          <button type="button" class="view-enter-btn" id="outfitReset">Neu</button>
+          <button type="button" class="view-enter-btn outfit-cta" id="outfitAddCart" disabled>In den Warenkorb</button>
+        </div>
       </div>
     </div>
 
@@ -1933,8 +2004,6 @@
       </div>
     </div>
   </div>
-
-  <button type="button" class="view-enter-btn" data-enter-classic>Zum Archiv →</button>
 </div>
 
 <div class="outfit-picker" id="outfitPicker">
@@ -2193,7 +2262,7 @@
       return '<div class="cart-line">' +
         '<div class="cart-line__frame">' + (hero ? '<img src="' + hero + '" alt="" loading="lazy" />' : "") + "</div>" +
         '<div class="cart-line__body">' +
-          '<span class="cart-line__title">' + escapeHtml(((it.brand ? it.brand + " " : "") + it.title)) + "</span>" +
+          '<span class="cart-line__title">' + escapeHtml(it.title) + "</span>" +
           '<span class="cart-line__meta">' + escapeHtml(it.size || "") + "</span>" +
           '<div class="cart-line__row">' +
             '<span class="cart-line__price">' + fmtPrice(it.price) + "</span>" +
@@ -2934,7 +3003,7 @@
           '<div class="outfit-slot__frame" data-slot="' + key + '"><img src="' + it.gallery[0] + '" alt="" /></div>' +
           '<div class="outfit-slot__body" data-slot="' + key + '">' +
             '<div class="outfit-slot__label">' + slot.label + "</div>" +
-            '<div class="outfit-slot__value">' + escapeHtml((it.brand ? it.brand + " " : "") + it.title) + "</div>" +
+            '<div class="outfit-slot__value">' + escapeHtml(it.title) + "</div>" +
             '<div class="outfit-slot__price">' + fmtPrice(it.price) + "</div>" +
           "</div>" +
           '<button type="button" class="outfit-slot__remove" data-remove="' + key + '" aria-label="Entfernen">✕</button>';
@@ -2973,7 +3042,7 @@
       var imgEl = cardEl.querySelector("img");
       if (src) {
         if (imgEl.getAttribute("src") !== src) imgEl.src = src;
-        imgEl.alt = (item.brand ? item.brand + " " : "") + item.title;
+        imgEl.alt = item.title;
         cardEl.classList.add("visible");
         anyVisible = true;
       } else {
@@ -3004,7 +3073,7 @@
       btn.className = "outfit-picker__item";
       btn.innerHTML =
         '<div class="outfit-picker__item-frame"><img src="' + it.gallery[0] + '" alt="" loading="lazy" /></div>' +
-        '<div class="outfit-picker__item-title">' + escapeHtml((it.brand ? it.brand + " " : "") + it.title) + "</div>" +
+        '<div class="outfit-picker__item-title">' + escapeHtml(it.title) + "</div>" +
         '<div class="outfit-picker__item-price">' + fmtPrice(it.price) + "</div>";
       btn.addEventListener("click", function () {
         setOutfitSlot(outfitPickerKey, it);
