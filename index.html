@@ -2528,7 +2528,7 @@
       var plate = document.createElement("button");
       plate.className = "plate";
       plate.type = "button";
-      plate.setAttribute("aria-label", it.brand + " — " + it.title);
+      plate.setAttribute("aria-label", it.title);
 
       var soldHtml = it.status === "Verkauft"
         ? '<span class="plate__sold-bar">Verkauft</span>'
@@ -2947,8 +2947,13 @@
   // ein Zentrum verteilt (rotateY + translateZ je Artikel), und der ganze
   // Raum dreht sich um die eigene Achse, je nachdem wo die Maus steht - wie
   // wenn man in der Mitte eines Rundraums den Kopf dreht, statt dass sich
-  // die Artikel selbst bewegen. ----
-  var chaosPan = { active: false, target: 0, current: 0, raf: null, maxYaw: 0 };
+  // die Artikel selbst bewegen. Naehert man sich beim Umschauen einem Rand
+  // des Blickbereichs (= man hat den Raum einmal "abgelaufen"), wird der
+  // Raum mit neuen Artikeln aufgefrischt, ohne die Blickrichtung zu
+  // resetten - so wird ueber laengeres Umschauen irgendwann der ganze
+  // Katalog gezeigt, nie dieselben Teile in Dauerschleife. ----
+  var chaosPan = { active: false, target: 0, current: 0, raf: null, maxYaw: 0, lapArmed: true };
+  var chaosShownIds = null;
 
   function chaosPanPointerMove(e) {
     var nx = (e.clientX / window.innerWidth) * 2 - 1; // -1 (links) .. 1 (rechts)
@@ -2965,6 +2970,15 @@
     chaosPan.current += (chaosPan.target - chaosPan.current) * 0.025;
     var host = document.getElementById("chaosItems");
     if (host) host.style.transform = "rotateY(" + chaosPan.current.toFixed(2) + "deg)";
+
+    var edgeFrac = Math.abs(chaosPan.current) / chaosPan.maxYaw;
+    if (edgeFrac > 0.9 && chaosPan.lapArmed) {
+      chaosPan.lapArmed = false;
+      populateChaosItems(true);
+    } else if (edgeFrac < 0.3) {
+      chaosPan.lapArmed = true;
+    }
+
     chaosPan.raf = requestAnimationFrame(chaosPanFrame);
   }
 
@@ -2982,28 +2996,35 @@
     chaosPan.maxYaw = 185; // Grad - deckt den vollen Rundumblick (360 Grad) ueber die Mausbreite ab
     chaosPan.target = 0;
     chaosPan.current = 0;
+    chaosPan.lapArmed = true;
     document.addEventListener("mousemove", chaosPanPointerMove);
     chaosPanFrame();
   }
 
-  function buildChaos() {
-    var host = document.getElementById("chaosItems");
-    var chaosViewEl = document.getElementById("chaosView");
-    host.innerHTML = "";
-    host.style.transform = "";
-    stopChaosPan();
-    var showroom = chaosIsShowroom();
-    chaosViewEl.classList.toggle("chaos-view--showroom", showroom);
-
+  // Waehlt eine frische Auswahl Artikel - bevorzugt solche, die in dieser
+  // Chaos-Sitzung noch nicht gezeigt wurden. Erst wenn der ganze Katalog
+  // durch ist, faengt die "gezeigt"-Liste wieder von vorne an.
+  function chaosPickRoomItems(count) {
     var pool = ITEMS.filter(function (it) {
       return it.status !== "Verkauft" && it.gallery && it.gallery[0];
     });
-    for (var i = pool.length - 1; i > 0; i--) {
+    if (!chaosShownIds) chaosShownIds = new Set();
+    var unseen = pool.filter(function (it) { return !chaosShownIds.has(it.id); });
+    var source = unseen.length >= count ? unseen : pool;
+    if (source === pool) chaosShownIds = new Set();
+    for (var i = source.length - 1; i > 0; i--) {
       var j = Math.floor(Math.random() * (i + 1));
-      var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+      var tmp = source[i]; source[i] = source[j]; source[j] = tmp;
     }
+    var picks = source.slice(0, Math.min(count, source.length));
+    picks.forEach(function (it) { chaosShownIds.add(it.id); });
+    return picks;
+  }
+
+  function populateChaosItems(showroom) {
+    var host = document.getElementById("chaosItems");
     var count = showroom ? chaosShowroomItemCount() : chaosItemCount();
-    var picks = pool.slice(0, Math.min(count, pool.length));
+    var picks = chaosPickRoomItems(count);
     var slotWidth = 360 / picks.length;
     var frag = document.createDocumentFragment();
     picks.forEach(function (it, idx) {
@@ -3016,7 +3037,7 @@
       btn.style.setProperty("--dy", (Math.random() * 130 - 65).toFixed(0) + "px");
       btn.style.setProperty("--rot0", (Math.random() * 18 - 9).toFixed(1) + "deg");
       btn.style.setProperty("--rot1", (Math.random() * 18 - 9).toFixed(1) + "deg");
-      btn.setAttribute("aria-label", (it.brand || "") + " " + it.title);
+      btn.setAttribute("aria-label", it.title);
       btn.innerHTML = '<img src="' + it.gallery[0] + '" alt="" loading="lazy" />';
       btn.addEventListener("click", function () {
         var picked = it;
@@ -3054,11 +3075,20 @@
         frag.appendChild(btn);
       }
     });
+    host.innerHTML = "";
     host.appendChild(frag);
+  }
 
-    if (showroom) {
-      startChaosPan();
-    }
+  function buildChaos() {
+    var chaosViewEl = document.getElementById("chaosView");
+    var host = document.getElementById("chaosItems");
+    stopChaosPan();
+    host.style.transform = "";
+    var showroom = chaosIsShowroom();
+    chaosViewEl.classList.toggle("chaos-view--showroom", showroom);
+    chaosShownIds = new Set(); // frischer Start jedes Mal, wenn die Ansicht neu geoeffnet wird
+    populateChaosItems(showroom);
+    if (showroom) startChaosPan();
   }
 
   function showChaos() {
