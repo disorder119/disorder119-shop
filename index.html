@@ -1440,7 +1440,7 @@
   }
 
   .chaos-view--showroom .chaos-screen {
-    perspective: 1100px;
+    perspective: 2400px;
   }
 
   .chaos-view--showroom #chaosItems {
@@ -1451,19 +1451,33 @@
   }
 
   .chaos-item-wrap {
+    /* Klein statt (wie zuvor) so gross wie die ganze Buehne, UND
+       pointer-events:none: die Wrap-Box selbst soll nie fuer Klicks
+       "gefunden" werden, nur der Artikel-Button darin (per pointer-events:
+       auto wieder aktiviert) - so landen Klicks immer beim tatsaechlich
+       sichtbaren Artikel an dieser Bildschirmstelle, egal wie stark sich
+       einzelne (perspektivisch vergroesserte) Wrap-Boxen ueberlappen.
+       Zentrierung per margin, nicht per transform, weil transform auf
+       .chaos-item selbst schon fuer das Schweben (chaos-float) gebraucht
+       wird. */
     position: absolute;
-    inset: 0;
+    top: 50%;
+    left: 50%;
+    width: 220px;
+    height: 300px;
+    margin: -150px 0 0 -110px;
     display: flex;
     align-items: center;
     justify-content: center;
     transform-style: preserve-3d;
-    backface-visibility: hidden;
     will-change: transform;
+    pointer-events: none;
   }
 
   .chaos-item-wrap .chaos-item {
     position: static;
     width: clamp(97px, 15vw, 193px);
+    pointer-events: auto;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -2920,10 +2934,13 @@
   }
 
   function chaosShowroomItemCount() {
+    // Bewusst begrenzt: bei zu vielen Artikeln rings um den Raum ueberlappen
+    // sie sich (Perspektive vergroessert Artikel vorne im Blickfeld) so
+    // stark, dass viele nicht mehr anklickbar waeren.
     var w = window.innerWidth;
-    if (w < 1300) return 60;
-    if (w < 1800) return 80;
-    return 100;
+    if (w < 1300) return 18;
+    if (w < 1800) return 22;
+    return 26;
   }
 
   // ---- Chaos-Showroom: echter 3D-Panoramaraum. Die Artikel stehen rund um
@@ -2962,7 +2979,7 @@
   function startChaosPan() {
     stopChaosPan();
     chaosPan.active = true;
-    chaosPan.maxYaw = 130; // Grad - wie weit man sich per Maus umschauen kann
+    chaosPan.maxYaw = 185; // Grad - deckt den vollen Rundumblick (360 Grad) ueber die Mausbreite ab
     chaosPan.target = 0;
     chaosPan.current = 0;
     document.addEventListener("mousemove", chaosPanPointerMove);
@@ -2987,8 +3004,9 @@
     }
     var count = showroom ? chaosShowroomItemCount() : chaosItemCount();
     var picks = pool.slice(0, Math.min(count, pool.length));
+    var slotWidth = 360 / picks.length;
     var frag = document.createDocumentFragment();
-    picks.forEach(function (it) {
+    picks.forEach(function (it, idx) {
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "chaos-item";
@@ -3015,10 +3033,14 @@
         // dreht ihn so, dass er zur Mitte (zur Kamera) zeigt statt nach
         // aussen. translateY vorneweg (im Weltkoordinatensystem, vor der
         // Drehung) gibt Hoehen-Streuung ohne die Kreisposition zu verzerren.
-        var theta = Math.random() * 360;
-        var radius = 620 + Math.random() * 420;
+        // Theta NICHT rein zufaellig ueber 360 Grad verteilen - das haeuft
+        // per Zufall zu viele Artikel im selben Sichtbereich (starke
+        // Ueberlappung, kaum noch anklickbar). Stattdessen ein eigener
+        // "Slot" pro Artikel mit Streuung nur innerhalb des Slots.
+        var theta = idx * slotWidth + (Math.random() - 0.5) * slotWidth * 0.8;
+        var radius = 780 + Math.random() * 220;
         var yOffset = Math.random() * 480 - 240;
-        var itemScale = 0.8 + Math.random() * 0.5;
+        var itemScale = 0.85 + Math.random() * 0.3;
         var wrap = document.createElement("div");
         wrap.className = "chaos-item-wrap";
         wrap.style.transform =
