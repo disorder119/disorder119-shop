@@ -1410,8 +1410,34 @@
 
   /* ---------- Chaos: 360-Grad-Showroom (nur Desktop, s. JS chaosIsShowroom()) ---------- */
 
+  .chaos-screen {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
   .chaos-view--showroom {
     perspective: 1500px;
+    background: radial-gradient(120% 100% at 50% 108%, #171009 0%, var(--ink) 62%);
+  }
+
+  .chaos-view--showroom .chaos-screen {
+    inset: 4.5vh 6vw;
+    border-radius: 8vw / 4.5vh;
+    background: #000;
+    box-shadow:
+      0 0 0 1px rgba(242, 239, 231, 0.12),
+      0 60px 160px rgba(0, 0, 0, 0.7),
+      0 0 90px rgba(140, 150, 255, 0.05);
+  }
+
+  .chaos-view--showroom .chaos-screen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 500;
+    pointer-events: none;
+    background: radial-gradient(130% 95% at 50% 42%, transparent 52%, rgba(0, 0, 0, 0.6) 100%);
   }
 
   .chaos-view--showroom #chaosItems {
@@ -1991,7 +2017,9 @@
 
 <div class="chaos-view hidden" id="chaosView">
   <span class="chaos-view__label">Chaos-Ansicht — anklicken für Details</span>
-  <div id="chaosItems"></div>
+  <div class="chaos-screen" id="chaosScreen">
+    <div id="chaosItems"></div>
+  </div>
   <button type="button" class="view-enter-btn" data-enter-classic>Zum Archiv →</button>
 </div>
 
@@ -2924,7 +2952,9 @@
   function startChaosPan() {
     stopChaosPan();
     chaosPan.active = true;
-    chaosPan.maxPan = window.innerWidth * 1.1;
+    var screenEl = document.getElementById("chaosScreen");
+    var screenWidth = screenEl ? screenEl.getBoundingClientRect().width : window.innerWidth;
+    chaosPan.maxPan = screenWidth * 1.1;
     chaosPan.target = 0;
     chaosPan.current = 0;
     document.addEventListener("mousemove", chaosPanPointerMove);
