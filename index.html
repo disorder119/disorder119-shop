@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="description" content="Disorder119 — kuratiertes Archiv für Designer-Mode aus zweiter Hand.">
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
@@ -1972,24 +1972,45 @@
     .view-picker__option { width: min(280px, 80vw); padding: 20px 16px; }
     .chaos-item { width: clamp(72px, 24vw, 120px); }
 
-    .outfit-view { padding: 10px 14px 8px; gap: 5px; }
+    .outfit-view { padding: 10px 10px 8px; gap: 5px; }
     .outfit-view__close { top: 8px; right: 10px; width: 28px; height: 28px; font-size: 0.8rem; }
     .outfit-view__eyebrow { font-size: 0.54rem; }
     .outfit-view__title { font-size: clamp(1.05rem, 5.2vw, 1.5rem); }
     .outfit-view__status { font-size: 0.64rem; margin-top: 2px; }
 
-    .outfit-layout { flex-direction: column; flex-wrap: nowrap; gap: 8px; max-width: 420px; }
-    .outfit-main { width: 100%; flex: 3 1 0; min-height: 0; gap: 6px; }
-    .outfit-figure { width: 100%; flex: 2 1 0; min-height: 0; gap: 4px; }
+    /* Baukasten und Vorschau nebeneinander statt untereinander - so bleibt
+       das grosse Look-Board direkt sichtbar, waehrend man Teile waehlt,
+       und nichts muss sich die Bildschirmhoehe streitig machen. Die Fuss-
+       leiste (Gesamt + Buttons) steckt im Markup zwar noch in .outfit-main,
+       wird hier aber absolut ueber die volle Breite unten rausgeloest -
+       sonst haette sie nur die schmale linke Spalte zur Verfuegung. */
+    .outfit-layout { flex-direction: row; flex-wrap: nowrap; gap: 8px; max-width: 100%; align-items: stretch; padding-bottom: 96px; position: relative; }
+    .outfit-main { width: auto; flex: 0 0 116px; min-height: 0; gap: 5px; display: flex; flex-direction: column; }
+    .outfit-figure { width: auto; flex: 1 1 auto; min-height: 0; gap: 4px; }
     .outfit-figure__label { font-size: 0.56rem; }
 
-    .outfit-slot { gap: 8px; padding: 0 8px; max-height: none; }
-    .outfit-slot__frame { width: clamp(30px, 7vh, 44px); height: clamp(36px, 8vh, 54px); }
-    .outfit-slot__label { font-size: 0.54rem; }
-    .outfit-slot__value { font-size: 0.72rem; }
-    .outfit-slot__price { font-size: 0.68rem; }
+    /* Slot-Karten kompakt hochkant statt breiter Reihe: Bild oben, ein Zeile
+       Text drunter, Entfernen-Button als kleines Badge auf dem Bild. */
+    .outfit-slot { flex-direction: column; align-items: stretch; gap: 2px; padding: 4px; position: relative; }
+    .outfit-slot__frame { width: 100%; height: auto; aspect-ratio: 3 / 4; }
+    .outfit-slot__label { display: none; }
+    .outfit-slot__value {
+      font-size: 0.58rem; margin-top: 0; line-height: 1.2;
+      overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+    .outfit-slot__price { font-size: 0.6rem; margin-top: 1px; }
+    .outfit-slot__remove {
+      position: absolute; top: 2px; right: 2px; width: 20px; height: 20px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(10, 10, 9, 0.72); color: var(--paper); font-size: 0.7rem; padding: 0;
+    }
 
-    .outfit-view__footer { gap: 5px; }
+    .outfit-view__footer {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      width: auto;
+      gap: 5px;
+    }
     .outfit-total { font-size: 0.78rem; padding-top: 5px; }
     .outfit-view__actions .view-enter-btn { padding: 8px 10px; font-size: 0.62rem; }
   }
