@@ -1411,14 +1411,14 @@
   /* ---------- Chaos: 360-Grad-Showroom (nur Desktop, s. JS chaosIsShowroom()) ---------- */
 
   .chaos-view--showroom {
-    perspective: 1700px;
+    perspective: 1500px;
   }
 
   .chaos-view--showroom #chaosItems {
     position: absolute;
     inset: 0;
-    width: 260%;
-    left: -80%;
+    width: 320%;
+    left: -110%;
     transform-style: preserve-3d;
     will-change: transform;
   }
@@ -1430,6 +1430,7 @@
 
   .chaos-item-wrap .chaos-item {
     position: static;
+    width: clamp(97px, 15vw, 193px);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -2923,7 +2924,7 @@
   function startChaosPan() {
     stopChaosPan();
     chaosPan.active = true;
-    chaosPan.maxPan = window.innerWidth * 0.8;
+    chaosPan.maxPan = window.innerWidth * 1.1;
     chaosPan.target = 0;
     chaosPan.current = 0;
     document.addEventListener("mousemove", chaosPanPointerMove);
@@ -2974,9 +2975,9 @@
         var xPct = 2 + Math.random() * 96;
         var yPct = 5 + Math.random() * 84;
         var norm = (xPct - 50) / 50; // -1 .. 1
-        var rotY = norm * 38;
-        var depth = -Math.abs(norm) * 110;
-        var scale = 1 - Math.abs(norm) * 0.18;
+        var rotY = norm * 52;
+        var depth = -Math.abs(norm) * 170;
+        var scale = 1 - Math.abs(norm) * 0.22;
         var wrap = document.createElement("div");
         wrap.className = "chaos-item-wrap";
         wrap.style.left = xPct + "%";
