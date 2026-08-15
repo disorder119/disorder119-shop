@@ -1417,7 +1417,6 @@
   }
 
   .chaos-view--showroom {
-    perspective: 1500px;
     background: radial-gradient(120% 100% at 50% 108%, #171009 0%, var(--ink) 62%);
   }
 
@@ -1440,17 +1439,25 @@
     background: radial-gradient(130% 95% at 50% 42%, transparent 52%, rgba(0, 0, 0, 0.6) 100%);
   }
 
+  .chaos-view--showroom .chaos-screen {
+    perspective: 1100px;
+  }
+
   .chaos-view--showroom #chaosItems {
     position: absolute;
     inset: 0;
-    width: 320%;
-    left: -110%;
     transform-style: preserve-3d;
     will-change: transform;
   }
 
   .chaos-item-wrap {
     position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
     will-change: transform;
   }
 
@@ -2919,13 +2926,16 @@
     return 100;
   }
 
-  // ---- Chaos-Showroom: Kamera folgt der Mausposition (wie ein 360-Grad-
-  // Panoramafoto) statt sich von selbst zu bewegen. ----
-  var chaosPan = { active: false, target: 0, current: 0, raf: null, maxPan: 0 };
+  // ---- Chaos-Showroom: echter 3D-Panoramaraum. Die Artikel stehen rund um
+  // ein Zentrum verteilt (rotateY + translateZ je Artikel), und der ganze
+  // Raum dreht sich um die eigene Achse, je nachdem wo die Maus steht - wie
+  // wenn man in der Mitte eines Rundraums den Kopf dreht, statt dass sich
+  // die Artikel selbst bewegen. ----
+  var chaosPan = { active: false, target: 0, current: 0, raf: null, maxYaw: 0 };
 
   function chaosPanPointerMove(e) {
     var nx = (e.clientX / window.innerWidth) * 2 - 1; // -1 (links) .. 1 (rechts)
-    chaosPan.target = -nx * chaosPan.maxPan;
+    chaosPan.target = -nx * chaosPan.maxYaw;
   }
 
   function chaosPanFrame() {
@@ -2937,7 +2947,7 @@
     }
     chaosPan.current += (chaosPan.target - chaosPan.current) * 0.025;
     var host = document.getElementById("chaosItems");
-    if (host) host.style.transform = "translateX(" + chaosPan.current.toFixed(1) + "px)";
+    if (host) host.style.transform = "rotateY(" + chaosPan.current.toFixed(2) + "deg)";
     chaosPan.raf = requestAnimationFrame(chaosPanFrame);
   }
 
@@ -2952,9 +2962,7 @@
   function startChaosPan() {
     stopChaosPan();
     chaosPan.active = true;
-    var screenEl = document.getElementById("chaosScreen");
-    var screenWidth = screenEl ? screenEl.getBoundingClientRect().width : window.innerWidth;
-    chaosPan.maxPan = screenWidth * 1.1;
+    chaosPan.maxYaw = 130; // Grad - wie weit man sich per Maus umschauen kann
     chaosPan.target = 0;
     chaosPan.current = 0;
     document.addEventListener("mousemove", chaosPanPointerMove);
@@ -2999,26 +3007,23 @@
       });
 
       if (showroom) {
-        // Position entlang der breiten Buehne (0-100% der 3.2x-Viewport-
-        // breiten Spur). Je weiter aussen, desto staerker gedreht + nach
-        // hinten versetzt -> Eindruck einer runden Wand. In Ruheposition
-        // ist nur das mittlere Drittel der Buehne sichtbar - deshalb die
-        // Kruemmung mit sqrt() nach vorne ziehen, damit sie schon dort
-        // sichtbar ist und nicht erst beim Schwenken zum Rand.
-        var xPct = 2 + Math.random() * 96;
-        var yPct = 5 + Math.random() * 84;
-        var raw = (xPct - 50) / 50; // -1 .. 1
-        var norm = Math.sign(raw) * Math.sqrt(Math.abs(raw));
-        var rotY = norm * 64;
-        var depth = -Math.abs(norm) * 220;
-        var scale = 1 - Math.abs(norm) * 0.26;
+        // Echter 3D-Rundraum: jeder Artikel steht an einem Winkel rings um
+        // die Mitte (volle 360 Grad), auf "Armlaenge" nach aussen versetzt
+        // und zur Mitte hin gedreht - wie Bilder an einer runden Wand, die
+        // man von innen betrachtet. rotateY(theta) translateZ(radius)
+        // platziert den Artikel am Kreis; das abschliessende rotateY(180deg)
+        // dreht ihn so, dass er zur Mitte (zur Kamera) zeigt statt nach
+        // aussen. translateY vorneweg (im Weltkoordinatensystem, vor der
+        // Drehung) gibt Hoehen-Streuung ohne die Kreisposition zu verzerren.
+        var theta = Math.random() * 360;
+        var radius = 620 + Math.random() * 420;
+        var yOffset = Math.random() * 480 - 240;
+        var itemScale = 0.8 + Math.random() * 0.5;
         var wrap = document.createElement("div");
         wrap.className = "chaos-item-wrap";
-        wrap.style.left = xPct + "%";
-        wrap.style.top = yPct + "%";
-        wrap.style.zIndex = String(200 - Math.round(Math.abs(norm) * 100));
         wrap.style.transform =
-          "translateZ(" + depth.toFixed(0) + "px) rotateY(" + rotY.toFixed(1) + "deg) scale(" + scale.toFixed(3) + ")";
+          "translateY(" + yOffset.toFixed(0) + "px) rotateY(" + theta.toFixed(1) + "deg) " +
+          "translateZ(" + radius.toFixed(0) + "px) rotateY(180deg) scale(" + itemScale.toFixed(3) + ")";
         wrap.appendChild(btn);
         frag.appendChild(wrap);
       } else {
