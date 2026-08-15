@@ -1421,15 +1421,6 @@
     left: -80%;
     transform-style: preserve-3d;
     will-change: transform;
-    animation-name: chaos-pan;
-    animation-timing-function: ease-in-out;
-    animation-iteration-count: infinite;
-  }
-
-  @keyframes chaos-pan {
-    0%   { transform: translateX(0); }
-    50%  { transform: translateX(-34%); }
-    100% { transform: translateX(0); }
   }
 
   .chaos-item-wrap {
@@ -1442,7 +1433,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .chaos-view--showroom #chaosItems { animation: none; }
+    .chaos-view--showroom #chaosItems { transform: none !important; }
   }
 
   /* ---------- Outfit-Baukasten ---------- */
@@ -2899,12 +2890,52 @@
     return 100;
   }
 
+  // ---- Chaos-Showroom: Kamera folgt der Mausposition (wie ein 360-Grad-
+  // Panoramafoto) statt sich von selbst zu bewegen. ----
+  var chaosPan = { active: false, target: 0, current: 0, raf: null, maxPan: 0 };
+
+  function chaosPanPointerMove(e) {
+    var nx = (e.clientX / window.innerWidth) * 2 - 1; // -1 (links) .. 1 (rechts)
+    chaosPan.target = -nx * chaosPan.maxPan;
+  }
+
+  function chaosPanFrame() {
+    var chaosViewEl = document.getElementById("chaosView");
+    if (!chaosPan.active || !chaosViewEl || chaosViewEl.classList.contains("hidden")) {
+      chaosPan.active = false;
+      document.removeEventListener("mousemove", chaosPanPointerMove);
+      return;
+    }
+    chaosPan.current += (chaosPan.target - chaosPan.current) * 0.07;
+    var host = document.getElementById("chaosItems");
+    if (host) host.style.transform = "translateX(" + chaosPan.current.toFixed(1) + "px)";
+    chaosPan.raf = requestAnimationFrame(chaosPanFrame);
+  }
+
+  function stopChaosPan() {
+    chaosPan.active = false;
+    if (chaosPan.raf) cancelAnimationFrame(chaosPan.raf);
+    document.removeEventListener("mousemove", chaosPanPointerMove);
+    var host = document.getElementById("chaosItems");
+    if (host) host.style.transform = "";
+  }
+
+  function startChaosPan() {
+    stopChaosPan();
+    chaosPan.active = true;
+    chaosPan.maxPan = window.innerWidth * 0.8;
+    chaosPan.target = 0;
+    chaosPan.current = 0;
+    document.addEventListener("mousemove", chaosPanPointerMove);
+    chaosPanFrame();
+  }
+
   function buildChaos() {
     var host = document.getElementById("chaosItems");
     var chaosViewEl = document.getElementById("chaosView");
     host.innerHTML = "";
-    host.style.animation = "";
-    host.style.animationDuration = "";
+    host.style.transform = "";
+    stopChaosPan();
     var showroom = chaosIsShowroom();
     chaosViewEl.classList.toggle("chaos-view--showroom", showroom);
 
@@ -2964,8 +2995,7 @@
     host.appendChild(frag);
 
     if (showroom) {
-      var panDuration = (46 + Math.random() * 14).toFixed(1) + "s";
-      host.style.animationDuration = panDuration;
+      startChaosPan();
     }
   }
 
@@ -2974,8 +3004,8 @@
     appShell.classList.add("hidden");
     swipeView.classList.add("hidden");
     outfitView.classList.add("hidden");
-    buildChaos();
     chaosView.classList.remove("hidden");
+    buildChaos();
   }
 
   // ---- Outfit-Baukasten ----
