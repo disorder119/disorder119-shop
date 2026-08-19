@@ -636,6 +636,41 @@
     line-height: 1;
   }
 
+  .modal__share {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 34px;
+    height: 34px;
+    background: transparent;
+    color: var(--mount-text);
+    border: 1px solid var(--mount-rule);
+    font-size: 1rem;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 2;
+  }
+
+  .modal__share:hover { border-color: var(--accent); color: var(--accent); }
+
+  .modal__share-toast {
+    position: absolute;
+    top: 52px;
+    left: 10px;
+    background: var(--mount);
+    color: var(--mount-text);
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+    padding: 6px 10px;
+    border: 1px solid var(--mount-rule);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 2;
+  }
+
+  .modal__share-toast.visible { opacity: 1; }
+
   .modal__nav {
     position: absolute;
     top: 50%;
@@ -1113,6 +1148,23 @@
     gap: clamp(24px, 5vw, 44px);
     padding: 28px 20px;
     text-align: center;
+  }
+
+  .view-picker__kicker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .view-picker__brand {
+    font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: clamp(1.1rem, 3vw, 1.5rem);
+    letter-spacing: 0.02em;
+    color: var(--paper);
+    margin: 0;
   }
 
   .view-picker__eyebrow {
@@ -1992,13 +2044,15 @@
     .plate__brand { font-size: 0.64rem; }
     .plate__title { font-size: 0.8rem; }
     .plate__price { font-size: 0.86rem; }
-    .plate__cart-btn { width: 30px; height: 30px; font-size: 1rem; }
+    .plate__cart-btn { width: 38px; height: 38px; font-size: 1.15rem; }
 
     .modal-backdrop { padding: 0; align-items: stretch; }
     .modal { max-height: 100vh; height: 100%; border: none; }
     .modal__media { min-height: 46vh; }
     .modal__nav { width: 44px; height: 44px; font-size: 1.6rem; }
     .modal__close { width: 40px; height: 40px; top: 12px; right: 12px; }
+    .modal__share { width: 40px; height: 40px; top: 12px; left: 12px; font-size: 1.1rem; }
+    .modal__share-toast { top: 56px; left: 12px; }
     .modal__panel { padding: 20px 18px 28px; }
 
     .cart-drawer { width: 100%; }
@@ -2063,7 +2117,10 @@
 
 
 <div class="view-picker" id="viewPicker">
-  <p class="view-picker__eyebrow">Bevor es losgeht</p>
+  <div class="view-picker__kicker">
+    <p class="view-picker__brand">Disorder119</p>
+    <p class="view-picker__eyebrow">Bevor es losgeht</p>
+  </div>
   <h1 class="view-picker__title">Wie möchtest du heute stöbern?</h1>
   <div class="view-picker__options">
     <button type="button" class="view-picker__option" data-view="classic">
@@ -2194,7 +2251,7 @@
         <span class="meta-figure__label">Marken</span>
       </div>
     </div>
-    <div class="masthead__index">Testversion — Katalogansicht<br />Nicht für den Live-Betrieb</div>
+    <div class="masthead__index">Jedes Teil ein Einzelstück<br />einmal weg, für immer weg</div>
   </div>
 </div>
 
@@ -2253,6 +2310,8 @@
 <div class="modal-backdrop" id="modalBackdrop">
   <div class="modal" id="modal" role="dialog" aria-modal="true">
     <div class="modal__media">
+      <button class="modal__share" id="modalShare" type="button" aria-label="Teilen">↗</button>
+      <span class="modal__share-toast" id="modalShareToast">Link kopiert</span>
       <button class="modal__close" id="modalClose" type="button" aria-label="Schließen">✕</button>
       <button class="modal__nav modal__nav--prev" id="modalPrev" type="button" aria-label="Vorheriges Foto">‹</button>
       <button class="modal__nav modal__nav--next" id="modalNext" type="button" aria-label="Nächstes Foto">›</button>
@@ -2776,6 +2835,25 @@
   document.getElementById("modalCartBtn").addEventListener("click", function () {
     if (!currentItem || currentItem.status === "Verkauft" || !(currentItem.price > 0)) return;
     toggleCart(currentItem.id);
+  });
+
+  document.getElementById("modalShare").addEventListener("click", function () {
+    if (!currentItem) return;
+    var shareUrl = new URL("artikel/" + currentItem.id + ".html", location.href).href;
+    var shareTitle = (currentItem.brand ? currentItem.brand + " — " : "") + currentItem.title;
+    var shareText = shareTitle + " bei Disorder119";
+    if (navigator.share) {
+      navigator.share({ title: shareTitle, text: shareText, url: shareUrl }).catch(function () {});
+      return;
+    }
+    var toast = document.getElementById("modalShareToast");
+    function showToast() {
+      toast.classList.add("visible");
+      setTimeout(function () { toast.classList.remove("visible"); }, 1800);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareUrl).then(showToast).catch(function () {});
+    }
   });
 
   document.getElementById("modalClose").addEventListener("click", closeModal);
