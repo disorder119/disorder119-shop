@@ -349,16 +349,20 @@
   }
 
   .cart-bag__body {
+    /* Echte Tueten-Silhouette (oben schmaler, unten breiter) statt eines
+       schlichten Rechtecks - trifft sich oben mit den Henkel-Ansatzpunkten
+       bei 30%/70%. */
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
-    height: 42px;
+    height: 40px;
     background: #ffffff;
-    border-radius: 2px;
+    clip-path: polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%);
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
+    padding-bottom: 7px;
     box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
   }
 
@@ -366,17 +370,19 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    line-height: 0.85;
+    line-height: 0.92;
   }
 
   .cart-bag__logo span {
     font-family: "Helvetica Neue Condensed", "Arial Narrow", Helvetica, Arial, sans-serif;
     font-weight: 800;
     text-transform: uppercase;
-    font-size: 7.5px;
-    letter-spacing: 0.01em;
+    letter-spacing: 0.02em;
     color: #0a0a09;
   }
+
+  .cart-bag__logo span:first-child { font-size: 6px; }
+  .cart-bag__logo span:last-child { font-size: 9.5px; margin-top: 0.5px; }
 
   .cart-bag__count {
     position: absolute;
@@ -1920,10 +1926,13 @@
 
   @media (max-width: 720px) {
     .masthead { padding-top: 16px; padding-bottom: 18px; gap: 16px; }
-    .masthead__top { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
-    .eyebrow { grid-column: auto; justify-self: auto; max-width: none; font-size: 0.6rem; }
+    .masthead__top { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; position: relative; }
+    .eyebrow { grid-column: auto; justify-self: auto; max-width: calc(100% - 60px); font-size: 0.6rem; }
     .wordmark-block { grid-column: auto; justify-self: auto; align-items: flex-start; }
-    .cart-bag { grid-column: auto; justify-self: auto; }
+    /* Warenkorb-Tuete rechts oben frei schwebend statt Teil des links-
+       buendigen Textstapels - sonst sass sie unstimmig direkt unter dem
+       Schriftzug statt an der erwarteten Cart-Position oben rechts. */
+    .cart-bag { grid-column: auto; justify-self: auto; position: absolute; top: 0; right: 0; width: 46px; height: 50px; }
     .masthead__index { text-align: left; line-height: 1.5; }
     .masthead__bottom { align-items: flex-start; gap: 14px 28px; }
 
@@ -1989,16 +1998,23 @@
     .outfit-figure { width: auto; flex: 1 1 auto; min-height: 0; gap: 4px; }
     .outfit-figure__label { font-size: 0.56rem; }
 
-    /* Slot-Karten kompakt hochkant statt breiter Reihe: Bild oben, ein Zeile
-       Text drunter, Entfernen-Button als kleines Badge auf dem Bild. */
-    .outfit-slot { flex-direction: column; align-items: stretch; gap: 2px; padding: 4px; position: relative; }
-    .outfit-slot__frame { width: 100%; height: auto; aspect-ratio: 3 / 4; }
+    /* Slot-Karten kompakt hochkant statt breiter Reihe: Bild oben, Preis
+       drunter, Entfernen-Button als kleines Badge auf dem Bild. Der Rahmen
+       bekommt eine feste Basis-Groesse (34x44, s. Grundregel), war aber
+       vorher per aspect-ratio auf ~144px Hoehe gezwungen - das sprengte den
+       von der Grundregel geerbten max-height:84px und liess Bild und Text
+       sich gegenseitig ueberlappen (Text dadurch unsichtbar). Jetzt darf
+       der Rahmen flexibel wachsen (flex:1 1 auto), der Slot hat keine
+       Hoehenobergrenze mehr, und object-fit:contain haelt das Bild dabei
+       unverzerrt. */
+    .outfit-slot { flex-direction: column; align-items: stretch; gap: 3px; padding: 4px; position: relative; max-height: none; }
+    .outfit-slot__frame { width: 100%; height: auto; flex: 1 1 auto; min-height: 0; }
+    .outfit-slot__body { flex: 0 0 auto; }
     .outfit-slot__label { display: none; }
-    .outfit-slot__value {
-      font-size: 0.58rem; margin-top: 0; line-height: 1.2;
-      overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    }
-    .outfit-slot__price { font-size: 0.6rem; margin-top: 1px; }
+    .outfit-slot__value { display: none; }
+    .outfit-slot__price { font-size: 0.66rem; margin-top: 0; text-align: center; }
+    .outfit-slot--empty .outfit-slot__value,
+    .outfit-slot--locked .outfit-slot__value { display: block; font-size: 0.58rem; text-align: center; }
     .outfit-slot__remove {
       position: absolute; top: 2px; right: 2px; width: 20px; height: 20px;
       display: flex; align-items: center; justify-content: center;
@@ -2126,11 +2142,11 @@
     </div>
     <button type="button" class="cart-bag" id="cartToggle" aria-label="Warenkorb öffnen">
       <svg class="cart-bag__handles" viewBox="0 0 100 44" aria-hidden="true">
-        <path d="M28,44 L28,20 Q28,4 50,4 Q72,4 72,20 L72,44" />
+        <path d="M30,44 L30,20 Q30,4 50,4 Q70,4 70,20 L70,44" />
       </svg>
       <span class="cart-bag__body">
         <span class="cart-bag__logo">
-          <span>Dis</span><span>Order</span><span>119</span>
+          <span>Disorder</span><span>119</span>
         </span>
       </span>
       <span class="cart-bag__count" id="cartCount">0</span>
