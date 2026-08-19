@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://disorder119.github.io/disorder119-shop/sitemap.xml
