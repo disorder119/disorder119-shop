@@ -1237,17 +1237,52 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: clamp(14px, 2.6vw, 22px);
   }
 
+  /* ---- Der grosse Auftritt: Logo als eindeutiger Star des ersten Eindrucks,
+     mit spuerbarer Ankunft (Skalierung + Letter-Spacing-Snap) statt einer
+     stillen Textzeile. Danach zieht eine Akzentlinie ein und die USP-Zeile
+     folgt - klassischer dreistufiger Marken-Reveal. ---- */
   .view-picker__brand {
+    margin: 0;
     font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-weight: 800;
     text-transform: uppercase;
-    font-size: clamp(1.1rem, 3vw, 1.5rem);
-    letter-spacing: 0.02em;
+    font-size: clamp(2.8rem, 13vw, 6.4rem);
+    letter-spacing: -0.01em;
+    line-height: 0.92;
     color: var(--paper);
+    opacity: 0;
+    animation: brand-arrive 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes brand-arrive {
+    0% { opacity: 0; transform: scale(0.82) translateY(14px); letter-spacing: 0.22em; }
+    65% { opacity: 1; }
+    100% { opacity: 1; transform: scale(1) translateY(0); letter-spacing: -0.01em; }
+  }
+
+  .view-picker__rule {
+    width: 64px;
+    height: 3px;
+    background: var(--accent);
+    transform: scaleX(0);
+    animation: rule-draw 0.5s ease-out 0.7s forwards;
+  }
+
+  @keyframes rule-draw {
+    to { transform: scaleX(1); }
+  }
+
+  .view-picker__usp {
     margin: 0;
+    font-size: clamp(0.82rem, 2vw, 1rem);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--accent-text);
+    opacity: 0;
+    animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.85s forwards;
   }
 
   .view-picker__eyebrow {
@@ -1255,16 +1290,29 @@
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: rgba(242, 239, 231, 0.55);
+    opacity: 0;
+    animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.05s forwards;
   }
 
   .view-picker__title {
-    font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-weight: 800;
-    text-transform: uppercase;
-    font-size: clamp(1.9rem, 6.5vw, 4rem);
-    letter-spacing: -0.01em;
-    line-height: 1.02;
-    max-width: 18ch;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 700;
+    font-size: clamp(1.05rem, 2.6vw, 1.3rem);
+    letter-spacing: -0.005em;
+    line-height: 1.25;
+    max-width: 22ch;
+    color: var(--text-muted);
+    opacity: 0;
+    animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.05s forwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .view-picker__brand, .view-picker__rule, .view-picker__usp,
+    .view-picker__eyebrow, .view-picker__title {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
   }
 
   .view-picker__options {
@@ -2142,10 +2190,15 @@
 
     .footer { padding: 20px 16px 28px; font-size: 0.7rem; }
 
-    .view-picker { gap: 14px; padding: 16px 16px 18px; justify-content: flex-start; }
-    .view-picker__kicker { gap: 4px; }
-    .view-picker__brand { font-size: 1rem; }
-    .view-picker__title { font-size: clamp(1.5rem, 8vw, 2.1rem); }
+    .view-picker { gap: 10px; padding: 16px 16px 14px; justify-content: flex-start; }
+    .view-picker__kicker { gap: 6px; }
+    .view-picker__brand { font-size: clamp(2.4rem, 14vw, 3.2rem); }
+    .view-picker__usp { font-size: 0.76rem; max-width: 26ch; }
+    .view-picker__eyebrow { display: none; }
+    .view-picker__title { font-size: 0.88rem; margin-top: 0; }
+    .view-picker__options { gap: 8px; }
+    .view-picker__option { padding: 10px 14px; }
+    .view-picker__option-desc { display: none; }
     .view-picker__options { gap: 10px; }
     .view-picker__option { width: min(280px, 80vw); padding: 12px 16px; }
     .view-picker__option-desc { font-size: 0.72rem; line-height: 1.35; }
@@ -2213,10 +2266,12 @@
 
 <div class="view-picker" id="viewPicker">
   <div class="view-picker__kicker">
-    <p class="view-picker__brand">Disorder119</p>
-    <p class="view-picker__eyebrow">Bevor es losgeht</p>
+    <h1 class="view-picker__brand">Disorder119</h1>
+    <div class="view-picker__rule" aria-hidden="true"></div>
+    <p class="view-picker__usp">Jedes Stück ein Einzelstück — einmal weg, für immer weg.</p>
+    <p class="view-picker__eyebrow">Kuratiertes Archiv · Prada · Dior · Jean Paul Gaultier · Yves Saint Laurent</p>
   </div>
-  <h1 class="view-picker__title">Wie möchtest du heute stöbern?</h1>
+  <p class="view-picker__title">Wie möchtest du heute stöbern?</p>
   <div class="view-picker__options">
     <button type="button" class="view-picker__option" data-view="classic">
       <span class="view-picker__option-icon">▦</span>
