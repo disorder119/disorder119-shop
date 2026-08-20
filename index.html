@@ -1135,6 +1135,83 @@
 
   /* ---------- Ansicht-Auswahl (bei jedem Besuch) ---------- */
 
+  /* ---------- Moduswechsel (linke Navigation) ---------- */
+
+  .mode-rail {
+    position: fixed;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 280;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    padding: 6px;
+  }
+
+  .mode-rail.hidden { display: none; }
+
+  .mode-rail__btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: inherit;
+    padding: 9px 12px 9px 9px;
+    cursor: pointer;
+    white-space: nowrap;
+    text-align: left;
+  }
+
+  .mode-rail__btn:hover { color: var(--text); }
+
+  .mode-rail__btn[aria-current="true"] {
+    color: var(--accent-text);
+    background: var(--accent-soft);
+  }
+
+  .mode-rail__icon {
+    font-size: 1.05rem;
+    width: 20px;
+    text-align: center;
+    flex: 0 0 auto;
+  }
+
+  .mode-rail__label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 760px) {
+    /* Auf dem Handy wuerde eine linksfixierte Spalte die erste Produkt-
+       spalte verdecken - deshalb hier als Bottom-Bar (etabliertes Mobile-
+       Muster), damit die Modi trotzdem jederzeit erreichbar bleiben. */
+    .mode-rail {
+      left: 0;
+      right: 0;
+      top: auto;
+      bottom: 0;
+      transform: none;
+      flex-direction: row;
+      justify-content: space-around;
+      width: 100%;
+      border-left: none;
+      border-right: none;
+      border-bottom: none;
+      padding: 4px;
+      gap: 2px;
+    }
+    .mode-rail__btn { flex-direction: column; gap: 3px; padding: 7px 10px; }
+    .mode-rail__label { display: block; font-size: 0.52rem; }
+    .mode-rail__icon { font-size: 1.15rem; width: auto; }
+  }
+
   .view-picker {
     position: fixed;
     inset: 0;
@@ -2104,12 +2181,18 @@
 
     .outfit-view__footer {
       position: absolute;
-      left: 0; right: 0; bottom: 0;
+      left: 0; right: 0; bottom: 54px;
       width: auto;
       gap: 5px;
     }
     .outfit-total { font-size: 0.78rem; padding-top: 5px; }
     .outfit-view__actions .view-enter-btn { padding: 8px 10px; font-size: 0.62rem; }
+
+    /* Bottom-Mode-Bar wuerde sonst den "Zum Archiv"-Button in Chaos ueberlagern */
+    .chaos-view .view-enter-btn { bottom: 62px; }
+    /* ...und bei hohem Swipe-Karten-Inhalt auch den zentrierten "Zum Archiv"-
+       Button dort - Swipe-View bekommt daher unten reservierten Platz. */
+    .swipe-view { padding-bottom: 64px; }
   }
 </style>
 </head>
@@ -2145,6 +2228,25 @@
     </button>
   </div>
 </div>
+
+<nav class="mode-rail hidden" id="modeRail" aria-label="Ansicht wechseln">
+  <button type="button" class="mode-rail__btn" data-mode-view="classic" aria-label="Archiv">
+    <span class="mode-rail__icon" aria-hidden="true">▦</span>
+    <span class="mode-rail__label">Archiv</span>
+  </button>
+  <button type="button" class="mode-rail__btn" data-mode-view="swipe" aria-label="Match">
+    <span class="mode-rail__icon" aria-hidden="true">♥</span>
+    <span class="mode-rail__label">Match</span>
+  </button>
+  <button type="button" class="mode-rail__btn" data-mode-view="chaos" aria-label="Chaos">
+    <span class="mode-rail__icon" aria-hidden="true">✦</span>
+    <span class="mode-rail__label">Chaos</span>
+  </button>
+  <button type="button" class="mode-rail__btn" data-mode-view="outfit" aria-label="Outfit-Baukasten">
+    <span class="mode-rail__icon" aria-hidden="true">⛃</span>
+    <span class="mode-rail__label">Baukasten</span>
+  </button>
+</nav>
 
 <div class="swipe-view hidden" id="swipeView">
   <span class="swipe-view__progress" id="swipeProgress"></span>
@@ -2884,12 +2986,34 @@
   var chaosView = document.getElementById("chaosView");
   var outfitView = document.getElementById("outfitView");
 
+  var modeRail = document.getElementById("modeRail");
+
+  function syncModeRail(activeKey) {
+    modeRail.classList.remove("hidden");
+    Array.prototype.forEach.call(modeRail.querySelectorAll(".mode-rail__btn"), function (btn) {
+      var isActive = btn.getAttribute("data-mode-view") === activeKey;
+      if (isActive) btn.setAttribute("aria-current", "true");
+      else btn.removeAttribute("aria-current");
+    });
+  }
+
+  Array.prototype.forEach.call(modeRail.querySelectorAll(".mode-rail__btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var target = btn.getAttribute("data-mode-view");
+      if (target === "classic") showClassic();
+      else if (target === "swipe") showSwipe();
+      else if (target === "chaos") showChaos();
+      else if (target === "outfit") showOutfit();
+    });
+  });
+
   function showClassic() {
     viewPicker.classList.add("hidden");
     swipeView.classList.add("hidden");
     chaosView.classList.add("hidden");
     outfitView.classList.add("hidden");
     appShell.classList.remove("hidden");
+    syncModeRail("classic");
   }
 
   // ---- Swipe-Minigame ----
@@ -3075,6 +3199,7 @@
     buildSwipeQueue();
     renderSwipeCard();
     swipeView.classList.remove("hidden");
+    syncModeRail("swipe");
   }
 
   function chaosItemCount() {
@@ -3257,6 +3382,7 @@
     outfitView.classList.add("hidden");
     chaosView.classList.remove("hidden");
     buildChaos();
+    syncModeRail("chaos");
   }
 
   // ---- Outfit-Baukasten ----
@@ -3516,6 +3642,7 @@
     chaosView.classList.add("hidden");
     renderOutfitStack();
     outfitView.classList.remove("hidden");
+    syncModeRail("outfit");
   }
 
   loadOutfit();
