@@ -431,6 +431,20 @@
     flex-direction: column;
   }
 
+  /* Gestaffelter Einstieg der ersten Karten beim allerersten Seitenaufbau -
+     s. render() in JS, wo nur idx<16 des ersten Renders diese Klassen bekommen. */
+  .plate.plate--enter {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+    transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .plate.plate--enter.plate--in { opacity: 1; transform: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .plate.plate--enter { opacity: 1; transform: none; transition: none; }
+  }
+
   .plate__frame {
     position: relative;
     aspect-ratio: 3 / 4;
@@ -1223,6 +1237,62 @@
     .masthead, .rail, .grid-wrap {
       padding-left: 190px;
     }
+  }
+
+  @media (min-width: 761px) and (max-width: 900px) {
+    /* Zwischen der Mobil-Grenze und "richtig breitem" Desktop ist 190px
+       Reserve ein zu grosser Anteil der verfuegbaren Breite - hier reicht
+       weniger, weil die Leiste selbst hier nicht schmaler wird. */
+    .masthead, .rail, .grid-wrap {
+      padding-left: 168px;
+    }
+  }
+
+  /* ---------- Einmaliger Hinweis auf die Fun-Modi (Match/Chaos/Baukasten) ----------
+     Seit dem Direkteinstieg ins Archiv ist die Moduswechsel-Leiste die einzige
+     Tuer zu diesen Modi und leicht zu uebersehen (schmale Leiste/Icon-Bar).
+     Dieser Callout erscheint nur beim allerersten Besuch (localStorage-Flag),
+     JS setzt Position + Pfeilrichtung passend zur aktuellen Leisten-Ausrichtung. */
+  .mode-rail-hint {
+    position: fixed;
+    z-index: 281;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 220px;
+    background: var(--accent);
+    color: var(--ink);
+    border: 1px solid var(--ink);
+    padding: 9px 10px 9px 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.35;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+    pointer-events: none;
+  }
+
+  .mode-rail-hint.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .mode-rail-hint.hidden { display: none; }
+
+  .mode-rail-hint__close {
+    flex: 0 0 auto;
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    font-size: 0.8rem;
+    line-height: 1;
+    padding: 2px;
+    cursor: pointer;
+    opacity: 0.7;
+  }
+
+  .mode-rail-hint__close:hover { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mode-rail-hint { transition: none; }
   }
 
   /* ---------- Swipe-Minigame ---------- */
@@ -2153,6 +2223,11 @@
   </button>
 </nav>
 
+<div class="mode-rail-hint hidden" id="modeRailHint" role="status">
+  <span class="mode-rail-hint__text">Entdecke auch Match, Chaos &amp; Baukasten</span>
+  <button type="button" class="mode-rail-hint__close" id="modeRailHintClose" aria-label="Hinweis schließen">✕</button>
+</div>
+
 <div class="swipe-view hidden" id="swipeView">
   <span class="swipe-view__progress" id="swipeProgress"></span>
   <div id="swipeStage"></div>
@@ -2667,18 +2742,31 @@
     return available.concat(sold);
   }
 
+  var firstGridRenderDone = false;
+
   function render() {
     var filtered = sortItems(ITEMS.filter(matches));
     countEl.textContent = filtered.length + " von " + ITEMS.length + " Objekten";
     gridEl.innerHTML = "";
     emptyEl.classList.toggle("visible", filtered.length === 0);
 
+    // Nur beim allerersten Aufbau der Seite bekommen die ersten Karten ein
+    // gestaffeltes Einblenden (spuerbarer Einstieg statt starrem Grid-Dump).
+    // Bei jedem weiteren Render (Filter/Sortierung/Suche) bleibt es sofort
+    // sichtbar, damit Interaktionen nicht kuenstlich verzoegert wirken.
+    var animateEntry = !firstGridRenderDone;
+    var animateCount = 16;
+
     var frag = document.createDocumentFragment();
-    filtered.forEach(function (it) {
+    filtered.forEach(function (it, idx) {
       var plate = document.createElement("button");
       plate.className = "plate";
       plate.type = "button";
       plate.setAttribute("aria-label", it.title);
+      if (animateEntry && idx < animateCount) {
+        plate.classList.add("plate--enter");
+        plate.style.transitionDelay = (idx * 45) + "ms";
+      }
 
       var soldHtml = it.status === "Verkauft"
         ? '<span class="plate__sold-bar">Verkauft</span>'
@@ -2736,6 +2824,16 @@
       frag.appendChild(plate);
     });
     gridEl.appendChild(frag);
+    if (animateEntry) {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          Array.prototype.forEach.call(gridEl.querySelectorAll(".plate--enter"), function (el) {
+            el.classList.add("plate--in");
+          });
+        });
+      });
+      firstGridRenderDone = true;
+    }
   }
 
   // ---- Modal ----
@@ -2918,8 +3016,54 @@
       else if (target === "swipe") showSwipe();
       else if (target === "chaos") showChaos();
       else if (target === "outfit") showOutfit();
+      dismissModeRailHint();
     });
   });
+
+  // ---- Einmaliger Hinweis auf die Fun-Modi (nur beim allerersten Besuch) ----
+  var modeRailHint = document.getElementById("modeRailHint");
+  var MODE_HINT_KEY = "disorder119_mode_hint_seen";
+  var modeHintTimer = null;
+
+  function positionModeRailHint() {
+    var railRect = modeRail.getBoundingClientRect();
+    var hintRect = modeRailHint.getBoundingClientRect();
+    var isRow = getComputedStyle(modeRail).flexDirection === "row";
+    if (isRow) {
+      // Mobil: Leiste unten, Hinweis darueber, ueber der Mitte der Leiste zentriert.
+      var left = railRect.left + railRect.width / 2 - hintRect.width / 2;
+      left = Math.max(8, Math.min(left, window.innerWidth - hintRect.width - 8));
+      modeRailHint.style.left = left + "px";
+      modeRailHint.style.top = (railRect.top - hintRect.height - 10) + "px";
+    } else {
+      // Desktop: Leiste links, Hinweis rechts daneben, vertikal an der Leiste zentriert.
+      modeRailHint.style.left = (railRect.right + 12) + "px";
+      modeRailHint.style.top = (railRect.top + railRect.height / 2 - hintRect.height / 2) + "px";
+    }
+  }
+
+  function dismissModeRailHint() {
+    if (modeHintTimer) { clearTimeout(modeHintTimer); modeHintTimer = null; }
+    modeRailHint.classList.remove("visible");
+    window.removeEventListener("resize", positionModeRailHint);
+    try { window.localStorage.setItem(MODE_HINT_KEY, "1"); } catch (e) {}
+    setTimeout(function () { modeRailHint.classList.add("hidden"); }, 400);
+  }
+
+  function showModeRailHint() {
+    var alreadySeen = false;
+    try { alreadySeen = !!window.localStorage.getItem(MODE_HINT_KEY); } catch (e) {}
+    if (alreadySeen) return;
+    modeRailHint.classList.remove("hidden");
+    positionModeRailHint();
+    window.addEventListener("resize", positionModeRailHint);
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { modeRailHint.classList.add("visible"); });
+    });
+    modeHintTimer = setTimeout(dismissModeRailHint, 7000);
+  }
+
+  document.getElementById("modeRailHintClose").addEventListener("click", dismissModeRailHint);
 
   function showClassic() {
     swipeView.classList.add("hidden");
@@ -3684,6 +3828,9 @@
   // sind ausschliesslich ueber die Moduswechsel-Leiste (#modeRail) erreichbar.
   showClassic();
   render();
+  // Kurz warten, bis Layout/Fonts sich gesetzt haben, damit die Positionsmessung
+  // der Leiste (fuer den Erstbesuch-Hinweis) verlaessliche Werte liefert.
+  setTimeout(showModeRailHint, 900);
 })();
 </script>
 
