@@ -1477,7 +1477,14 @@
     animation-iteration-count: infinite;
     animation-direction: alternate;
     transform-origin: 50% 50%;
+    /* Sanftes, gestaffeltes Einblenden statt abruptem Erscheinen - macht den
+       Einstieg in den Chaos-Modus fluessiger. Die Float-Animation laeuft
+       unabhaengig auf transform, opacity bleibt frei fuer diesen Fade-in. */
+    opacity: 0;
+    transition: opacity 0.55s ease;
   }
+
+  .chaos-item.chaos-item--in { opacity: 1; }
 
   .chaos-item img {
     width: 100%;
@@ -1728,13 +1735,20 @@
   .look-card--top.visible { transform: rotate(4deg) scale(1); }
 
   .look-card--bottom {
-    top: 46%; left: 20%; width: 54%; aspect-ratio: 3 / 4; z-index: 2;
+    /* Schmaler als frueher (54% -> 36%), damit bei aspect-ratio 3/4 die
+       Kartenhoehe nicht mehr bis in die Schuh-Karte darunter reicht -
+       gemessen per getBoundingClientRect auf echten Desktop- (389x697)
+       und Mobil-Buehnen (231x576), kein Overlap mehr in beiden Faellen. */
+    top: 46%; left: 20%; width: 36%; aspect-ratio: 3 / 4; z-index: 2;
     transform: rotate(-3deg) scale(0.96);
   }
   .look-card--bottom.visible { transform: rotate(-3deg) scale(1); }
 
   .look-card--shoes {
-    top: 74%; left: 2%; width: 36%; aspect-ratio: 4 / 3; z-index: 3;
+    /* Deutlich groesser (36% -> 50% Breite) und ein breiteres Seitenverhaeltnis
+       (4/3 -> 3/2), damit die zusaetzliche Breite nicht in Hoehe zurueckschlaegt
+       und die Karte gegen die Buehnen-Unterkante clippt. */
+    top: 76%; left: 4%; width: 50%; aspect-ratio: 3 / 2; z-index: 3;
     transform: rotate(10deg) scale(0.96);
   }
   .look-card--shoes.visible { transform: rotate(10deg) scale(1); }
@@ -3208,6 +3222,14 @@
     var count = showroom ? chaosShowroomItemCount() : chaosItemCount();
     var picks = chaosPickRoomItems(count);
     var slotWidth = 360 / picks.length;
+    // Raster mit Streuung statt reinem Zufall fuer die flache (Nicht-Showroom)
+    // Anordnung - dasselbe Prinzip wie beim 3D-Showroom weiter unten (dort
+    // schon "Slot + Jitter" statt Vollzufall), nur in 2D. Vollzufall liess
+    // Artikel auf kleinen Bildschirmen zu oft stark ueberlappend haufen.
+    var cols = Math.max(1, Math.round(Math.sqrt(picks.length * 1.6)));
+    var rows = Math.ceil(picks.length / cols);
+    var cellW = 92 / cols;
+    var cellH = 88 / rows;
     var frag = document.createDocumentFragment();
     picks.forEach(function (it, idx) {
       var btn = document.createElement("button");
@@ -3219,6 +3241,10 @@
       btn.style.setProperty("--dy", (Math.random() * 130 - 65).toFixed(0) + "px");
       btn.style.setProperty("--rot0", (Math.random() * 18 - 9).toFixed(1) + "deg");
       btn.style.setProperty("--rot1", (Math.random() * 18 - 9).toFixed(1) + "deg");
+      // Gestaffeltes Einblenden (s. .chaos-item--in): je spaeter im Raster,
+      // desto spaeter erscheint der Artikel - wirkt wie ein fliessender
+      // Aufbau statt eines abrupten "Alles auf einmal".
+      btn.style.transitionDelay = Math.min(idx * 14, 480) + "ms";
       btn.setAttribute("aria-label", it.title);
       btn.innerHTML = '<img src="' + it.gallery[0] + '" alt="" loading="lazy" />';
       btn.addEventListener("click", function () {
@@ -3252,13 +3278,29 @@
         wrap.appendChild(btn);
         frag.appendChild(wrap);
       } else {
-        btn.style.left = (2 + Math.random() * 92) + "%";
-        btn.style.top = (4 + Math.random() * 88) + "%";
+        var col = idx % cols;
+        var row = Math.floor(idx / cols);
+        var jitterX = (Math.random() - 0.5) * cellW * 0.65;
+        var jitterY = (Math.random() - 0.5) * cellH * 0.65;
+        var left = 2 + col * cellW + cellW / 2 + jitterX;
+        var top = 4 + row * cellH + cellH / 2 + jitterY;
+        btn.style.left = Math.min(94, Math.max(2, left)) + "%";
+        btn.style.top = Math.min(92, Math.max(4, top)) + "%";
         frag.appendChild(btn);
       }
     });
     host.innerHTML = "";
     host.appendChild(frag);
+    // Doppeltes rAF: der Browser muss den opacity:0-Startzustand einmal
+    // gemalt haben, bevor das Umschalten auf opacity:1 ueberhaupt als
+    // Uebergang (statt Sprung) erkannt wird.
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        Array.prototype.forEach.call(host.querySelectorAll(".chaos-item"), function (el) {
+          el.classList.add("chaos-item--in");
+        });
+      });
+    });
   }
 
   function buildChaos() {
