@@ -114,6 +114,23 @@ def related_card_html(x):
     )
 
 
+def auto_description(it):
+    # Artikel ohne hinterlegte Beschreibung (echte Datenluecke) bekommen statt
+    # eines nichtssagenden "Keine Beschreibung hinterlegt." einen kurzen,
+    # sachlichen Text aus den ohnehin vorhandenen, verlaesslichen Fakten -
+    # keine erfundenen Material-/Detailangaben.
+    facts = []
+    if it.get("category"):
+        facts.append(it["category"])
+    if it.get("size"):
+        facts.append("Größe " + it["size"])
+    if it.get("condition"):
+        facts.append("Zustand " + it["condition"])
+    name = display_name(it)
+    tail = (" – " + ", ".join(facts)) if facts else ""
+    return name + tail + ". Aus dem kuratierten Archiv von Disorder119."
+
+
 def facts_html(it):
     facts = []
     if it.get("category"):
@@ -272,7 +289,7 @@ def build_page(it):
     <h1>{esc(it["title"])}</h1>
     {price_block_html(it)}
     <div class="info__facts">{facts_html(it)}</div>
-    <p class="info__desc">{esc(it.get("desc") or "Keine Beschreibung hinterlegt.")}</p>
+    <p class="info__desc">{esc((it.get("desc") or "").strip() or auto_description(it))}</p>
     {cta_html(it)}
   </div>
 </div>

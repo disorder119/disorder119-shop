@@ -319,6 +319,65 @@
     cursor: pointer;
   }
 
+  #moreFiltersToggle[aria-expanded="true"] {
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
+
+  .filter-panel {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 14px;
+    align-items: end;
+    padding: 16px clamp(20px, 5vw, 64px) 0;
+    margin-top: 4px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .filter-panel.hidden { display: none; }
+
+  .filter-field { display: flex; flex-direction: column; gap: 6px; }
+
+  .filter-field label {
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .filter-field select,
+  .filter-price-inputs input {
+    background: transparent;
+    border: 1px solid var(--rule-strong);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.78rem;
+    padding: 8px 8px;
+  }
+
+  .filter-price-inputs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-faint);
+  }
+  .filter-price-inputs input { width: 100%; min-width: 0; }
+
+  .filter-reset {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 8px 0;
+    justify-self: start;
+  }
+  .filter-reset:hover { color: var(--accent-text); }
+
   /* Das Dropdown-Popup rendert der Browser mit eigenem (meist weissem)
      Hintergrund, unabhaengig vom transparenten <select> - ohne das hier
      waren die Optionen (helle Schrift fuers dunkle Theme) darauf fast
@@ -2400,6 +2459,7 @@
   <div class="chip-row" id="statusChips"></div>
   <div class="chip-row" id="categoryChips"></div>
   <div class="rail__right">
+    <button class="theme-toggle" id="moreFiltersToggle" type="button" aria-expanded="false" data-i18n="moreFilters">Weitere Filter</button>
     <span class="rail__count" id="railCount">180 Objekte</span>
     <select class="rail__sort" id="sortSelect">
       <option value="brightness" data-i18n="sortBrightness">Hell → Dunkel</option>
@@ -2409,6 +2469,33 @@
       <option value="brand" data-i18n="sortBrand">Marke A–Z</option>
     </select>
     <button class="theme-toggle" id="mountToggle" type="button">Fotomontage: Schwarz</button>
+  </div>
+  <div class="filter-panel hidden" id="filterPanel">
+    <div class="filter-field">
+      <label data-i18n="filterBrandLabel">Marke</label>
+      <select id="filterBrand"><option value="" data-i18n="filterAllBrands">Alle Marken</option></select>
+    </div>
+    <div class="filter-field">
+      <label data-i18n="filterSizeLabel">Größe</label>
+      <select id="filterSize"><option value="" data-i18n="filterAllSizes">Alle Größen</option></select>
+    </div>
+    <div class="filter-field">
+      <label data-i18n="filterColorLabel">Farbe</label>
+      <select id="filterColor"><option value="" data-i18n="filterAllColors">Alle Farben</option></select>
+    </div>
+    <div class="filter-field">
+      <label data-i18n="filterConditionLabel">Zustand</label>
+      <select id="filterCondition"><option value="" data-i18n="filterAllConditions">Alle Zustände</option></select>
+    </div>
+    <div class="filter-field filter-field--price">
+      <label data-i18n="filterPriceLabel">Preis (€)</label>
+      <div class="filter-price-inputs">
+        <input type="number" id="filterPriceMin" min="0" data-i18n-placeholder="filterPriceFrom" placeholder="von">
+        <span>–</span>
+        <input type="number" id="filterPriceMax" min="0" data-i18n-placeholder="filterPriceTo" placeholder="bis">
+      </div>
+    </div>
+    <button type="button" class="filter-reset" id="filterReset" data-i18n="filterResetLabel">Filter zurücksetzen</button>
   </div>
 </div>
 
@@ -2534,6 +2621,13 @@
       sortBrightness: "Hell → Dunkel", sortNew: "Neueste zuerst", sortPriceAsc: "Preis aufsteigend",
       sortPriceDesc: "Preis absteigend", sortBrand: "Marke A–Z",
       mountBlack: "Fotomontage: Schwarz", mountWhite: "Fotomontage: Weiß",
+      moreFilters: "Weitere Filter",
+      filterBrandLabel: "Marke", filterAllBrands: "Alle Marken",
+      filterSizeLabel: "Größe", filterAllSizes: "Alle Größen",
+      filterColorLabel: "Farbe", filterAllColors: "Alle Farben",
+      filterConditionLabel: "Zustand", filterAllConditions: "Alle Zustände",
+      filterPriceLabel: "Preis (€)", filterPriceFrom: "von", filterPriceTo: "bis",
+      filterResetLabel: "Filter zurücksetzen",
       railCountTemplate: "{filtered} von {total} Objekten",
       emptyTitle: "Keine Treffer im Archiv",
       emptyBody: "Versuche einen anderen Suchbegriff oder setze die Filter zurück.",
@@ -2589,6 +2683,7 @@
       sizeEinheitsgroesse: "Einheitsgröße", sizeVerstellbar: "verstellbar", sizeKidsL: "Kindergröße L",
       descTemplate: "Aus dem kuratierten Archiv von Disorder119.\n\n{title} von {brand}.",
       descOriginalNote: "",
+      autoDescTemplate: "{name}{facts}. Aus dem kuratierten Archiv von Disorder119.",
       legalImpressumHtml: "<h2>Impressum</h2>" +
         "<p>Angaben gemäß § 5 TMG</p>" +
         "<p>Joel Bittner<br>Disorder119 (Einzelunternehmen)<br>Nelseestraße 25<br>63739 Aschaffenburg<br>Deutschland</p>" +
@@ -2631,6 +2726,13 @@
       sortBrightness: "Light → dark", sortNew: "Newest first", sortPriceAsc: "Price ascending",
       sortPriceDesc: "Price descending", sortBrand: "Brand A–Z",
       mountBlack: "Photo backdrop: black", mountWhite: "Photo backdrop: white",
+      moreFilters: "More filters",
+      filterBrandLabel: "Brand", filterAllBrands: "All brands",
+      filterSizeLabel: "Size", filterAllSizes: "All sizes",
+      filterColorLabel: "Colour", filterAllColors: "All colours",
+      filterConditionLabel: "Condition", filterAllConditions: "All conditions",
+      filterPriceLabel: "Price (€)", filterPriceFrom: "from", filterPriceTo: "to",
+      filterResetLabel: "Reset filters",
       railCountTemplate: "{filtered} of {total} pieces",
       emptyTitle: "No matches in the archive",
       emptyBody: "Try a different search term or reset the filters.",
@@ -2686,6 +2788,7 @@
       sizeEinheitsgroesse: "One size", sizeVerstellbar: "adjustable", sizeKidsL: "Kids' size L",
       descTemplate: "From the curated archive of Disorder119.\n\n{title} by {brand}.",
       descOriginalNote: "Full description available in German only:",
+      autoDescTemplate: "{name}{facts}. From the curated archive of Disorder119.",
       legalImpressumHtml: "<h2>Legal notice</h2>" +
         "<p>This page is translated for convenience — the German version above is the legally binding one.</p>" +
         "<p>Information pursuant to § 5 TMG</p>" +
@@ -2731,6 +2834,13 @@
       sortBrightness: "Clair → foncé", sortNew: "Plus récent d'abord", sortPriceAsc: "Prix croissant",
       sortPriceDesc: "Prix décroissant", sortBrand: "Marque A–Z",
       mountBlack: "Fond photo : noir", mountWhite: "Fond photo : blanc",
+      moreFilters: "Plus de filtres",
+      filterBrandLabel: "Marque", filterAllBrands: "Toutes les marques",
+      filterSizeLabel: "Taille", filterAllSizes: "Toutes les tailles",
+      filterColorLabel: "Couleur", filterAllColors: "Toutes les couleurs",
+      filterConditionLabel: "État", filterAllConditions: "Tous les états",
+      filterPriceLabel: "Prix (€)", filterPriceFrom: "de", filterPriceTo: "à",
+      filterResetLabel: "Réinitialiser les filtres",
       railCountTemplate: "{filtered} sur {total} objets",
       emptyTitle: "Aucun résultat dans l'archive",
       emptyBody: "Essaie un autre terme de recherche ou réinitialise les filtres.",
@@ -2786,6 +2896,7 @@
       sizeEinheitsgroesse: "Taille unique", sizeVerstellbar: "réglable", sizeKidsL: "Taille enfant L",
       descTemplate: "Issu de l'archive sélectionnée de Disorder119.\n\n{title} par {brand}.",
       descOriginalNote: "Description complète disponible uniquement en allemand :",
+      autoDescTemplate: "{name}{facts}. Issu de l'archive sélectionnée de Disorder119.",
       legalImpressumHtml: "<h2>Mentions légales</h2>" +
         "<p>Cette page est traduite par courtoisie — la version allemande ci-dessus fait foi juridiquement.</p>" +
         "<p>Informations selon le § 5 TMG (loi allemande)</p>" +
@@ -2852,9 +2963,28 @@
   // gegenlesen kann, wiegt schwerer als der Komfort einer Volltext-Uebersetzung.
   // Stattdessen bleibt der deutsche Originaltext sichtbar, mit uebersetztem Hinweis.
   var DESC_TEMPLATE_RE = /^Aus dem kuratierten Archiv von Disorder119\.\n\n(.+) von (.+)\.$/;
+  // Manche Artikel haben (noch) gar keine Beschreibung im Manager hinterlegt
+  // (echte Datenluecke, kein Anzeigefehler - z.B. bei schnell erfassten
+  // "Ohne Preis"-Artikeln). Statt eines nichtssagenden "Keine Beschreibung
+  // hinterlegt." wird aus den ohnehin vorhandenen, verlaesslichen Fakten
+  // (Marke, Kategorie, Groesse, Zustand) automatisch ein kurzer, sachlicher
+  // Ersatztext gebaut - keine erfundenen Materialangaben oder Ausschmueckung.
+  function autoDescription(it) {
+    var facts = [];
+    if (it.category) facts.push(trCategory(it.category));
+    if (it.size) facts.push(t("factSize") + " " + trSize(it.size));
+    if (it.condition) facts.push(t("factCondition") + " " + trCondition(it.condition));
+    var name = it.brand && it.title.toLowerCase().indexOf(it.brand.toLowerCase()) === 0
+      ? it.title
+      : [it.brand, it.title].filter(Boolean).join(" ");
+    var factsStr = facts.join(", ");
+    return tFormat("autoDescTemplate", { name: name, facts: factsStr ? " – " + factsStr : "" });
+  }
+
   function trDescription(it) {
-    var raw = it.desc || "";
-    if (LANG === "de" || !raw) return raw || t("noDesc");
+    var raw = (it.desc || "").trim();
+    if (!raw) return autoDescription(it);
+    if (LANG === "de") return raw;
     var m = DESC_TEMPLATE_RE.exec(raw);
     if (m) return tFormat("descTemplate", { title: m[1], brand: m[2] });
     return t("descOriginalNote") + "\n\n" + raw;
@@ -3061,7 +3191,13 @@
     query: "",
     status: "all",
     category: "all",
-    sort: "brightness"
+    sort: "brightness",
+    brand: "",
+    size: "",
+    color: "",
+    condition: "",
+    priceMin: null,
+    priceMax: null
   };
 
   var brandsSet = {};
@@ -3142,6 +3278,76 @@
       render();
     });
     categoryChipsEl.appendChild(b);
+  });
+
+  // ---- Weitere Filter: Marke, Groesse, Farbe, Zustand, Preis ----
+  // Bewusst hinter einem Umschalter versteckt (statt permanent in der Leiste),
+  // damit die Oberflaeche bei "nur mal schnell stoebern" nicht ueberladen
+  // wirkt - wer gezielt filtern will, klappt sie auf.
+  var filterPanel = document.getElementById("filterPanel");
+  var moreFiltersToggle = document.getElementById("moreFiltersToggle");
+  moreFiltersToggle.addEventListener("click", function () {
+    var willShow = filterPanel.classList.contains("hidden");
+    filterPanel.classList.toggle("hidden", !willShow);
+    moreFiltersToggle.setAttribute("aria-expanded", willShow ? "true" : "false");
+  });
+
+  var filterBrandEl = document.getElementById("filterBrand");
+  var filterSizeEl = document.getElementById("filterSize");
+  var filterColorEl = document.getElementById("filterColor");
+  var filterConditionEl = document.getElementById("filterCondition");
+  var filterPriceMinEl = document.getElementById("filterPriceMin");
+  var filterPriceMaxEl = document.getElementById("filterPriceMax");
+
+  function fillSelect(el, values, translateFn) {
+    values.forEach(function (v) {
+      var opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = translateFn ? translateFn(v) : v;
+      el.appendChild(opt);
+    });
+  }
+
+  var brandList = Object.keys(brandsSet).sort(function (a, b) { return a.localeCompare(b, "de"); });
+  fillSelect(filterBrandEl, brandList);
+
+  var sizeSet = {};
+  ITEMS.forEach(function (it) { if (it.size) sizeSet[it.size] = true; });
+  fillSelect(filterSizeEl, Object.keys(sizeSet).sort(function (a, b) { return a.localeCompare(b, "de", { numeric: true }); }), trSize);
+
+  var colorSet = {};
+  ITEMS.forEach(function (it) {
+    (it.color || "").split(",").forEach(function (c) {
+      c = c.trim();
+      if (c) colorSet[c] = true;
+    });
+  });
+  fillSelect(filterColorEl, Object.keys(colorSet).sort(function (a, b) { return a.localeCompare(b, "de"); }));
+
+  var conditionSet = {};
+  ITEMS.forEach(function (it) { if (it.condition) conditionSet[it.condition] = true; });
+  var conditionList = Object.keys(conditionSet).sort();
+  fillSelect(filterConditionEl, conditionList, trCondition);
+
+  filterBrandEl.addEventListener("change", function () { state.brand = filterBrandEl.value; render(); });
+  filterSizeEl.addEventListener("change", function () { state.size = filterSizeEl.value; render(); });
+  filterColorEl.addEventListener("change", function () { state.color = filterColorEl.value; render(); });
+  filterConditionEl.addEventListener("change", function () { state.condition = filterConditionEl.value; render(); });
+  filterPriceMinEl.addEventListener("input", function () {
+    state.priceMin = filterPriceMinEl.value === "" ? null : Number(filterPriceMinEl.value);
+    render();
+  });
+  filterPriceMaxEl.addEventListener("input", function () {
+    state.priceMax = filterPriceMaxEl.value === "" ? null : Number(filterPriceMaxEl.value);
+    render();
+  });
+
+  document.getElementById("filterReset").addEventListener("click", function () {
+    state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
+    state.priceMin = null; state.priceMax = null;
+    filterBrandEl.value = ""; filterSizeEl.value = ""; filterColorEl.value = ""; filterConditionEl.value = "";
+    filterPriceMinEl.value = ""; filterPriceMaxEl.value = "";
+    render();
   });
 
   // ---- Suche: Umlaute/Akzente ignorieren, Marken-Kurzformen/Tippfehler tolerieren ----
@@ -3233,6 +3439,16 @@
     Array.prototype.forEach.call(categoryChipsEl.children, function (c) {
       c.setAttribute("aria-pressed", c === allCatBtn ? "true" : "false");
     });
+    // Zusaetzliche Filter zuruecksetzen, damit sie einem Marken-Klick nicht
+    // unerwartet Ergebnisse wegfiltern (z.B. eine vorher gewaehlte Farbe).
+    state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
+    state.priceMin = null; state.priceMax = null;
+    if (filterBrandEl) filterBrandEl.value = "";
+    if (filterSizeEl) filterSizeEl.value = "";
+    if (filterColorEl) filterColorEl.value = "";
+    if (filterConditionEl) filterConditionEl.value = "";
+    if (filterPriceMinEl) filterPriceMinEl.value = "";
+    if (filterPriceMaxEl) filterPriceMaxEl.value = "";
     showClassic();
     render();
   }
@@ -3252,6 +3468,18 @@
     // lieber gar nicht gezeigt statt faelschlich als verfuegbar zu gelten.
     if (it.status !== "Verfügbar" && it.status !== "Verkauft") return false;
     if (state.status !== "all" && it.status !== state.status) return false;
+    if (state.brand && it.brand !== state.brand) return false;
+    if (state.size && it.size !== state.size) return false;
+    if (state.condition && it.condition !== state.condition) return false;
+    if (state.color) {
+      // Farbfeld ist teils Mehrfachangabe ("Schwarz, Weiß") - Treffer, wenn
+      // die gewaehlte Farbe EINE der genannten Farben ist, nicht nur bei
+      // exakter Gleichheit des ganzen Textfelds.
+      var itColors = (it.color || "").split(",").map(function (c) { return c.trim(); });
+      if (itColors.indexOf(state.color) === -1) return false;
+    }
+    if (state.priceMin != null && !(it.price >= state.priceMin)) return false;
+    if (state.priceMax != null && !(it.price > 0 && it.price <= state.priceMax)) return false;
     if (state.category !== "all" && it.category !== state.category) return false;
     if (state.query) {
       var hay = normalizeText(it.title) + " " + normalizeText(it.brand) + " " + normalizeText(it.category);
