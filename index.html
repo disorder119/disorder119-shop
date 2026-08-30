@@ -570,7 +570,15 @@
     letter-spacing: 0.05em;
     font-size: 0.7rem;
     color: var(--text);
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    text-align: left;
+    cursor: pointer;
+    width: fit-content;
   }
+  .plate__brand:hover, .plate__brand:focus-visible { color: var(--accent-text); text-decoration: underline; }
 
   .plate__title {
     font-size: 0.86rem;
@@ -815,6 +823,14 @@
     font-variant-numeric: tabular-nums;
     font-size: 1.6rem;
     font-weight: 700;
+  }
+
+  .modal__price--sold {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
   }
 
   .modal__desc {
@@ -2444,7 +2460,7 @@
     </div>
     <div class="modal__panel">
       <div class="modal__eyebrow">
-        <span class="plate__brand" id="modalBrand"></span>
+        <button type="button" class="plate__brand" id="modalBrand"></button>
         <span id="modalStamp"></span>
       </div>
       <h2 class="modal__title" id="modalTitle"></h2>
@@ -2534,6 +2550,7 @@
       noBrand: "Ohne Marke", noDesc: "Keine Beschreibung hinterlegt.",
       priceOnRequest: "Preis auf Anfrage", priceEstimatedPrefix: "ca. ", priceEstimatedBadge: "Preis wird geprüft",
       sold: "Verkauft", priceOnRequestCta: "Preis auf Anfrage — bitte kontaktieren",
+      soldArchiveBadge: "SOLD — DISORDER119 ARCHIVE",
       inCartRemove: "Im Warenkorb ✓ — entfernen", addToCart: "In den Warenkorb",
       removeFromCartAria: "Aus Warenkorb entfernen",
       cartHeading: "Warenkorb", cartAria: "Warenkorb", cartEmpty: "Dein Warenkorb ist leer.",
@@ -2630,6 +2647,7 @@
       noBrand: "No brand", noDesc: "No description available.",
       priceOnRequest: "Price on request", priceEstimatedPrefix: "approx. ", priceEstimatedBadge: "Price being confirmed",
       sold: "Sold", priceOnRequestCta: "Price on request — please get in touch",
+      soldArchiveBadge: "SOLD — DISORDER119 ARCHIVE",
       inCartRemove: "In cart ✓ — remove", addToCart: "Add to cart",
       removeFromCartAria: "Remove from cart",
       cartHeading: "Cart", cartAria: "Cart", cartEmpty: "Your cart is empty.",
@@ -2729,6 +2747,7 @@
       noBrand: "Sans marque", noDesc: "Aucune description disponible.",
       priceOnRequest: "Prix sur demande", priceEstimatedPrefix: "env. ", priceEstimatedBadge: "Prix en cours de vérification",
       sold: "Vendu", priceOnRequestCta: "Prix sur demande — merci de nous contacter",
+      soldArchiveBadge: "SOLD — DISORDER119 ARCHIVE",
       inCartRemove: "Dans le panier ✓ — retirer", addToCart: "Ajouter au panier",
       removeFromCartAria: "Retirer du panier",
       cartHeading: "Panier", cartAria: "Panier", cartEmpty: "Ton panier est vide.",
@@ -3125,15 +3144,98 @@
     categoryChipsEl.appendChild(b);
   });
 
+  // ---- Suche: Umlaute/Akzente ignorieren, Marken-Kurzformen/Tippfehler tolerieren ----
+  function normalizeText(s) {
+    return (s || "").toLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/[’'`]/g, "");
+  }
+
+  var BRAND_ALIASES = {
+    "gaultier": "jean paul gaultier", "jpg": "jean paul gaultier",
+    "yohji": "yohji yamamoto",
+    "y3": "y-3",
+    "cdg": "comme des garcons", "comme": "comme des garcons",
+    "mcqueen": "alexander mcqueen",
+    "ysl": "yves saint laurent", "saint laurent": "yves saint laurent",
+    "margiela": "maison margiela", "mmm": "maison margiela",
+    "mm6": "mm6 maison margiela",
+    "raf": "raf simons",
+    "vandevorst": "a.f. vandevorst", "af vandevorst": "a.f. vandevorst",
+    "demeulemeester": "ann demeulemeester",
+    "dg": "dolce gabbana", "d&g": "dolce gabbana"
+  };
+
+  // Kleine Levenshtein-Distanz fuer Tippfehlertoleranz - bewusst ohne
+  // Bibliothek, da nur kurze Woerter (Marken/Titel-Tokens) verglichen werden.
+  function levenshtein(a, b) {
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+    var prev = [];
+    for (var j = 0; j <= b.length; j++) prev[j] = j;
+    for (var i = 1; i <= a.length; i++) {
+      var cur = [i];
+      for (var j2 = 1; j2 <= b.length; j2++) {
+        cur[j2] = Math.min(prev[j2] + 1, cur[j2 - 1] + 1, prev[j2 - 1] + (a[i - 1] === b[j2 - 1] ? 0 : 1));
+      }
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+
+  function fuzzyIncludes(haystack, needle) {
+    if (!needle) return true;
+    if (haystack.indexOf(needle) !== -1) return true;
+    if (needle.length < 4) return false;
+    var maxDist = needle.length <= 6 ? 1 : 2;
+    var words = haystack.split(/\s+/);
+    for (var i = 0; i < words.length; i++) {
+      if (Math.abs(words[i].length - needle.length) > maxDist + 1) continue;
+      if (levenshtein(words[i], needle) <= maxDist) return true;
+    }
+    return false;
+  }
+
+  function queryMatchesHay(hay, q) {
+    var expanded = BRAND_ALIASES[q] || q;
+    if (fuzzyIncludes(hay, expanded)) return true;
+    var qWords = q.split(/\s+/).filter(Boolean);
+    if (qWords.length < 2) return false;
+    return qWords.every(function (w) {
+      var exp = BRAND_ALIASES[w] || w;
+      return fuzzyIncludes(hay, exp);
+    });
+  }
+
   // ---- Search + sort ----
-  document.getElementById("searchInput").addEventListener("input", function (e) {
-    state.query = e.target.value.trim().toLowerCase();
+  var searchInputEl = document.getElementById("searchInput");
+  searchInputEl.addEventListener("input", function (e) {
+    state.query = normalizeText(e.target.value.trim());
     render();
   });
   document.getElementById("sortSelect").addEventListener("change", function (e) {
     state.sort = e.target.value;
     render();
   });
+
+  // Setzt Suchfeld + Filter auf eine Marke - genutzt von klickbaren Marken-
+  // Namen (Produktkarte/Modal) und von Produktseiten-Links ("?brand=...").
+  function filterByBrand(brand) {
+    if (!brand) return;
+    searchInputEl.value = brand;
+    state.query = normalizeText(brand);
+    state.status = "all";
+    Array.prototype.forEach.call(statusChipsEl.children, function (c) {
+      c.setAttribute("aria-pressed", c.getAttribute("data-i18n") === "statusAll" ? "true" : "false");
+    });
+    state.category = "all";
+    Array.prototype.forEach.call(categoryChipsEl.children, function (c) {
+      c.setAttribute("aria-pressed", c === allCatBtn ? "true" : "false");
+    });
+    showClassic();
+    render();
+  }
 
   // ---- Grid rendering ----
   var gridEl = document.getElementById("grid");
@@ -3144,11 +3246,16 @@
     // Verkaufte Artikel nur zeigen, wenn explizit "Bereits verkauft" gewaehlt ist -
     // nie automatisch unter "Alle" oder "Verfuegbar" mitlaufen lassen.
     if (it.status === "Verkauft" && state.status !== "Verkauft") return false;
+    // Ein paar Artikel haben einen unklaren Zwischenstatus aus dem Manager-
+    // Workflow (z.B. "Bilder importiert" statt "Verfuegbar"/"Verkauft") - ein
+    // Wert, dessen Verfuegbarkeit nicht zuverlaessig feststeht, wird oeffentlich
+    // lieber gar nicht gezeigt statt faelschlich als verfuegbar zu gelten.
+    if (it.status !== "Verfügbar" && it.status !== "Verkauft") return false;
     if (state.status !== "all" && it.status !== state.status) return false;
     if (state.category !== "all" && it.category !== state.category) return false;
     if (state.query) {
-      var hay = (it.title + " " + it.brand).toLowerCase();
-      if (hay.indexOf(state.query) === -1) return false;
+      var hay = normalizeText(it.title) + " " + normalizeText(it.brand) + " " + normalizeText(it.category);
+      if (!queryMatchesHay(hay, state.query)) return false;
     }
     return true;
   }
@@ -3221,6 +3328,12 @@
         : "";
 
       var altText = escapeHtml(productAltText(it));
+      var isSold = it.status === "Verkauft";
+      // Verkaufte Artikel zeigen NIE einen Preis (auch nicht den alten
+      // Verkaufspreis) - nur die Groesse bleibt in der Zeile stehen.
+      var priceHtml = isSold
+        ? ""
+        : '<span class="plate__price">' + (it.price_estimated ? t("priceEstimatedPrefix") : "") + fmtPriceDisplay(it.price) + "</span>";
 
       plate.innerHTML =
         '<div class="plate__frame">' +
@@ -3230,15 +3343,23 @@
           cartBtnHtml +
         "</div>" +
         '<div class="plate__body">' +
-          '<span class="plate__brand">' + escapeHtml(it.brand || t("noBrand")) + "</span>" +
+          '<button type="button" class="plate__brand" data-brand-filter>' + escapeHtml(it.brand || t("noBrand")) + "</button>" +
           '<span class="plate__title">' + escapeHtml(it.title) + "</span>" +
           '<div class="plate__row">' +
-            '<span class="plate__price">' + (it.price_estimated ? t("priceEstimatedPrefix") : "") + fmtPriceDisplay(it.price) + "</span>" +
+            priceHtml +
             '<span class="plate__size">' + escapeHtml(trSize(it.size) || "") + "</span>" +
           "</div>" +
         "</div>";
 
       plate.addEventListener("click", function () { openModal(it); });
+
+      var brandBtn = plate.querySelector("[data-brand-filter]");
+      if (brandBtn && it.brand) {
+        brandBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          filterByBrand(it.brand);
+        });
+      }
 
       if (purchasable) {
         var cartBtn = plate.querySelector("[data-cart-toggle]");
@@ -3274,6 +3395,13 @@
   var backdrop = document.getElementById("modalBackdrop");
   var modalImg = document.getElementById("modalImg");
   var modalBrand = document.getElementById("modalBrand");
+  modalBrand.addEventListener("click", function () {
+    if (currentItem && currentItem.brand) {
+      var brandToFilter = currentItem.brand;
+      closeModal();
+      filterByBrand(brandToFilter);
+    }
+  });
   var modalTitle = document.getElementById("modalTitle");
   var modalPrice = document.getElementById("modalPrice");
   var modalStamp = document.getElementById("modalStamp");
@@ -3330,11 +3458,16 @@
     showPhoto(0);
     modalBrand.textContent = it.brand || t("noBrand");
     modalTitle.textContent = it.title;
-    modalPrice.textContent = (it.price_estimated ? t("priceEstimatedPrefix") : "") + fmtPriceDisplay(it.price);
+    // Verkaufte Artikel zeigen nie mehr einen (alten) Preis - stattdessen die
+    // Archiv-Kennzeichnung direkt an der Preis-Stelle, nicht nur als Badge.
+    modalPrice.textContent = it.status === "Verkauft"
+      ? t("soldArchiveBadge")
+      : (it.price_estimated ? t("priceEstimatedPrefix") : "") + fmtPriceDisplay(it.price);
+    modalPrice.classList.toggle("modal__price--sold", it.status === "Verkauft");
 
-    modalStamp.innerHTML = it.status === "Verkauft"
-      ? '<span style="font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-faint);">' + t("sold") + '</span>'
-      : (it.price_estimated ? '<span style="font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);">' + t("priceEstimatedBadge") + '</span>' : "");
+    modalStamp.innerHTML = it.price_estimated && it.status !== "Verkauft"
+      ? '<span style="font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);">' + t("priceEstimatedBadge") + '</span>'
+      : "";
 
     var facts = [];
     if (it.category) facts.push([t("factCategory"), trCategory(it.category)]);
@@ -4218,6 +4351,17 @@
   // EN/FR-Erstbesucher kurz deutschen Text sehen, bevor auf seine gespeicherte
   // Sprache umgeschaltet wird. applyLanguage() ruft render() bereits selbst auf.
   applyLanguage(LANG);
+
+  // Marken-Link von einer Produktseite ("artikel/{id}.html?brand=...zurueck
+  // ins Archiv") - Parameter danach aus der URL entfernen, damit ein Reload
+  // oder Teilen des Links nicht dauerhaft auf diese Marke fixiert bleibt.
+  try {
+    var brandParam = new URLSearchParams(window.location.search).get("brand");
+    if (brandParam) {
+      filterByBrand(brandParam);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  } catch (e) {}
   // Kurz warten, bis Layout/Fonts sich gesetzt haben, damit die Positionsmessung
   // der Leiste (fuer den Erstbesuch-Hinweis) verlaessliche Werte liefert.
   setTimeout(showModeRailHint, 900);
