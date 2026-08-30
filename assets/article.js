@@ -1,8 +1,9 @@
 /* Geteiltes Skript fuer alle Produktseiten - liest die kleine, pro Seite
    eingebettete ARTICLE_ITEM/ARTICLE_SHOP_CONFIG-Variable, keine Frameworks.
-   Der Warenkorb teilt sich das localStorage-Format mit der Hauptseite
-   (index.html), damit ein hier hinzugefuegtes Stueck dort im Warenkorb
-   auftaucht und umgekehrt. */
+   Der Warenkorb UND die gewaehlte Sprache teilen sich das localStorage-Format
+   mit der Hauptseite (index.html, gleiche Keys), damit beides synchron
+   bleibt: ein hier hinzugefuegtes Stueck erscheint dort im Warenkorb, und
+   die auf der Startseite gewaehlte Sprache gilt auch hier automatisch. */
 (function () {
   "use strict";
 
@@ -10,10 +11,220 @@
   if (!IT) return;
   var SHOP_CONFIG = window.ARTICLE_SHOP_CONFIG || { whatsappNumber: "", email: "" };
   var CART_KEY = "disorder119_cart";
+  var LANG_KEY = "disorder119_lang";
 
   function fmtPrice(v) {
     return v.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
   }
+
+  // ---- Sprache (DE Standard, synchron mit der Hauptseite via localStorage) ----
+  var LANG = "de";
+  try { LANG = window.localStorage.getItem(LANG_KEY) || "de"; } catch (e) {}
+
+  var I18N = {
+    de: {
+      langGroupAria: "Sprache wählen", backToArchive: "← Zum Archiv",
+      prevPhotoAria: "Vorheriges Foto", nextPhotoAria: "Nächstes Foto", closeAria: "Schließen",
+      factCategory: "Kategorie", factSize: "Größe", factColor: "Farbe", factCondition: "Zustand",
+      factArticleNo: "Artikelnummer",
+      priceOnRequest: "Preis auf Anfrage", priceEstimatedPrefix: "ca. ", priceEstimatedBadge: "Preis wird geprüft",
+      soldBadge: "SOLD — DISORDER119 ARCHIVE",
+      soldNote: "Dieses Stück ist bereits verkauft und bleibt als Teil des Disorder119-Archivs sichtbar.",
+      addToCart: "In den Warenkorb", inCartRemove: "Im Warenkorb ✓ — entfernen",
+      inquireWhatsapp: "Anfrage per WhatsApp", inquireEmail: "Anfrage per E-Mail",
+      configWarning: "Shop-Kontakt noch nicht eingerichtet: WhatsApp-Nummer oder E-Mail-Adresse fehlen in SHOP_CONFIG (index.html).",
+      moreFromBrand: "MEHR VON {brand}", relatedPieces: "ÄHNLICHE ARCHIVSTÜCKE",
+      relatedPrice: "Preis auf Anfrage", relatedSold: "SOLD",
+      footerNote: "Disorder119 · Kuratiertes Archiv für Designer-, Vintage- und Contemporary-Mode. Jedes Stück wird einzeln ausgewählt, fotografiert und beschrieben.",
+      footerFullArchive: "Zum vollständigen Archiv",
+      orderGreeting: "Hallo! Ich interessiere mich für folgendes Stück aus dem Disorder119-Archiv:",
+      orderArticleAbbrev: "Art.-Nr. ", orderAvailQuestion: "Ist dieses Stück noch verfügbar?",
+      orderSubjectPrefix: "Anfrage Disorder119 – ",
+      noBrand: "Ohne Marke", noDesc: "Keine Beschreibung hinterlegt.",
+      descOriginalNote: "",
+      autoDescTemplate: "{name}{facts}. Aus dem kuratierten Archiv von Disorder119.",
+      descTemplate: "Aus dem kuratierten Archiv von Disorder119.\n\n{title} von {brand}."
+    },
+    en: {
+      langGroupAria: "Choose language", backToArchive: "← To the archive",
+      prevPhotoAria: "Previous photo", nextPhotoAria: "Next photo", closeAria: "Close",
+      factCategory: "Category", factSize: "Size", factColor: "Colour", factCondition: "Condition",
+      factArticleNo: "Item number",
+      priceOnRequest: "Price on request", priceEstimatedPrefix: "approx. ", priceEstimatedBadge: "Price being confirmed",
+      soldBadge: "SOLD — DISORDER119 ARCHIVE",
+      soldNote: "This piece has already been sold and remains visible as part of the Disorder119 archive.",
+      addToCart: "Add to cart", inCartRemove: "In cart ✓ — remove",
+      inquireWhatsapp: "Enquire via WhatsApp", inquireEmail: "Enquire via e-mail",
+      configWarning: "Shop contact not set up yet: WhatsApp number or e-mail address missing in SHOP_CONFIG (index.html).",
+      moreFromBrand: "MORE FROM {brand}", relatedPieces: "RELATED ARCHIVE PIECES",
+      relatedPrice: "Price on request", relatedSold: "SOLD",
+      footerNote: "Disorder119 · Curated archive for designer, vintage and contemporary fashion. Every piece is individually selected, photographed and described.",
+      footerFullArchive: "To the full archive",
+      orderGreeting: "Hello! I'm interested in the following piece from the Disorder119 archive:",
+      orderArticleAbbrev: "Item no. ", orderAvailQuestion: "Is this piece still available?",
+      orderSubjectPrefix: "Disorder119 enquiry – ",
+      noBrand: "No brand", noDesc: "No description available.",
+      descOriginalNote: "Full description available in German only:",
+      autoDescTemplate: "{name}{facts}. From the curated archive of Disorder119.",
+      descTemplate: "From the curated archive of Disorder119.\n\n{title} by {brand}."
+    },
+    fr: {
+      langGroupAria: "Choisir la langue", backToArchive: "← Vers l'archive",
+      prevPhotoAria: "Photo précédente", nextPhotoAria: "Photo suivante", closeAria: "Fermer",
+      factCategory: "Catégorie", factSize: "Taille", factColor: "Couleur", factCondition: "État",
+      factArticleNo: "N° d'article",
+      priceOnRequest: "Prix sur demande", priceEstimatedPrefix: "env. ", priceEstimatedBadge: "Prix en cours de vérification",
+      soldBadge: "SOLD — DISORDER119 ARCHIVE",
+      soldNote: "Cette pièce est déjà vendue et reste visible comme partie de l'archive Disorder119.",
+      addToCart: "Ajouter au panier", inCartRemove: "Dans le panier ✓ — retirer",
+      inquireWhatsapp: "Demande par WhatsApp", inquireEmail: "Demande par e-mail",
+      configWarning: "Le contact de la boutique n'est pas encore configuré : numéro WhatsApp ou e-mail manquant dans SHOP_CONFIG (index.html).",
+      moreFromBrand: "PLUS DE {brand}", relatedPieces: "PIÈCES D'ARCHIVE SIMILAIRES",
+      relatedPrice: "Prix sur demande", relatedSold: "SOLD",
+      footerNote: "Disorder119 · Archive sélectionnée pour la mode de créateurs, vintage et contemporaine. Chaque pièce est choisie, photographiée et décrite individuellement.",
+      footerFullArchive: "Vers l'archive complète",
+      orderGreeting: "Bonjour ! Je suis intéressé(e) par la pièce suivante de l'archive Disorder119 :",
+      orderArticleAbbrev: "N° d'article ", orderAvailQuestion: "Cette pièce est-elle toujours disponible ?",
+      orderSubjectPrefix: "Demande Disorder119 – ",
+      noBrand: "Sans marque", noDesc: "Aucune description disponible.",
+      descOriginalNote: "Description complète disponible uniquement en allemand :",
+      autoDescTemplate: "{name}{facts}. Issu de l'archive sélectionnée de Disorder119.",
+      descTemplate: "Issu de l'archive sélectionnée de Disorder119.\n\n{title} par {brand}."
+    }
+  };
+
+  function t(key) { return (I18N[LANG] && I18N[LANG][key] != null) ? I18N[LANG][key] : I18N.de[key]; }
+  function tFormat(key, vars) {
+    var s = t(key);
+    for (var k in vars) { s = s.split("{" + k + "}").join(vars[k]); }
+    return s;
+  }
+
+  // Kategorie-Werte in den Artikeldaten sind die englischen Kanonisch-Namen
+  // (z.B. "Jackets") - diese Map ist eine reine Sprach-Uebersetzung.
+  var CATEGORY_TR = {
+    Jackets: { de: "Jacken", en: "Jackets", fr: "Vestes" },
+    Coats: { de: "Mäntel", en: "Coats", fr: "Manteaux" },
+    Tops: { de: "Tops", en: "Tops", fr: "Hauts" },
+    Shirts: { de: "Hemden/Shirts", en: "Shirts", fr: "Chemises/T-shirts" },
+    Knitwear: { de: "Strickwaren", en: "Knitwear", fr: "Maille" },
+    Pants: { de: "Hosen", en: "Pants", fr: "Pantalons" },
+    Skirts: { de: "Röcke", en: "Skirts", fr: "Jupes" },
+    Dresses: { de: "Kleider", en: "Dresses", fr: "Robes" },
+    Shoes: { de: "Schuhe", en: "Shoes", fr: "Chaussures" },
+    Accessories: { de: "Accessoires", en: "Accessories", fr: "Accessoires" },
+    Objects: { de: "Objekte", en: "Objects", fr: "Objets" }
+  };
+  var CONDITION_TR = {
+    "Repariert": { de: "Repariert", en: "Repaired", fr: "Réparé" },
+    "Mit Defekt": { de: "Mit Defekt", en: "With defect", fr: "Avec défaut" },
+    "Gut": { de: "Gut", en: "Good", fr: "Bon" },
+    "Sehr gut": { de: "Sehr gut", en: "Very good", fr: "Très bon" },
+    "Zufriedenstellend": { de: "Zufriedenstellend", en: "Satisfactory", fr: "Satisfaisant" }
+  };
+  var SIZE_TR = {
+    "Einheitsgröße": { de: "Einheitsgröße", en: "One size", fr: "Taille unique" },
+    "verstellbar": { de: "verstellbar", en: "adjustable", fr: "réglable" },
+    "Größenverstellbar": { de: "verstellbar", en: "adjustable", fr: "réglable" },
+    "Kindergröße L": { de: "Kindergröße L", en: "Kids' size L", fr: "Taille enfant L" },
+    "Sonstige": { de: "Sonstige", en: "Other", fr: "Autre" }
+  };
+
+  function trCat(cat) { var e = CATEGORY_TR[cat]; return e ? e[LANG] || e.de : (cat || ""); }
+  function trCond(cond) { var e = CONDITION_TR[cond]; return e ? e[LANG] || e.de : (cond || ""); }
+  function trSize(size) { var e = SIZE_TR[size]; return e ? e[LANG] || e.de : (size || ""); }
+
+  var DESC_TEMPLATE_RE = /^Aus dem kuratierten Archiv von Disorder119\.\n\n(.+) von (.+)\.$/;
+  function displayName() {
+    var brand = IT.brand || "", title = IT.title || "";
+    if (brand && title.toLowerCase().indexOf(brand.toLowerCase()) === 0) return title;
+    return (brand + " " + title).trim();
+  }
+  function autoDescription() {
+    var facts = [];
+    if (IT.category) facts.push(trCat(IT.category));
+    if (IT.size) facts.push(t("factSize") + " " + trSize(IT.size));
+    if (IT.condition) facts.push(t("factCondition") + " " + trCond(IT.condition));
+    var factsStr = facts.join(", ");
+    return tFormat("autoDescTemplate", { name: displayName(), facts: factsStr ? " – " + factsStr : "" });
+  }
+  function descriptionText() {
+    var raw = (IT.desc || "").trim();
+    if (!raw) return autoDescription();
+    if (LANG === "de") return raw;
+    var m = DESC_TEMPLATE_RE.exec(raw);
+    if (m) return tFormat("descTemplate", { title: m[1], brand: m[2] });
+    return t("descOriginalNote") + "\n\n" + raw;
+  }
+
+  function applyLang() {
+    document.documentElement.setAttribute("lang", LANG);
+    Array.prototype.forEach.call(document.querySelectorAll("#langSwitch [data-lang]"), function (btn) {
+      if (btn.getAttribute("data-lang") === LANG) btn.setAttribute("aria-current", "true");
+      else btn.removeAttribute("aria-current");
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-i18n]"), function (el) {
+      el.textContent = t(el.getAttribute("data-i18n"));
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-i18n-aria]"), function (el) {
+      el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria")));
+    });
+
+    var brandFig = document.getElementById("factCategoryValue");
+    if (brandFig) brandFig.textContent = trCat(IT.category);
+    var sizeFig = document.getElementById("factSizeValue");
+    if (sizeFig) sizeFig.textContent = trSize(IT.size);
+    var condFig = document.getElementById("factConditionValue");
+    if (condFig) condFig.textContent = trCond(IT.condition);
+
+    var priceEl = document.getElementById("priceBlock");
+    if (priceEl) renderPriceBlock(priceEl);
+
+    var descEl = document.getElementById("itemDesc");
+    if (descEl) descEl.textContent = descriptionText();
+
+    var soldNoteEl = document.getElementById("soldNote");
+    if (soldNoteEl) soldNoteEl.textContent = t("soldNote");
+
+    Array.prototype.forEach.call(document.querySelectorAll("[data-related-heading]"), function (el) {
+      var kind = el.getAttribute("data-related-heading");
+      el.textContent = kind === "brand" ? tFormat("moreFromBrand", { brand: (IT.brand || "").toUpperCase() }) : t("relatedPieces");
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".related-card__price[data-price-on-request]"), function (el) {
+      el.textContent = t("relatedPrice");
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".related-card__sold"), function (el) {
+      el.textContent = t("relatedSold");
+    });
+
+    updateOrderLinks();
+    refreshCartBtn();
+  }
+
+  function renderPriceBlock(el) {
+    if (IT.sold) {
+      el.innerHTML = '<div class="info__badge info__badge--sold">' + t("soldBadge") + "</div>";
+      return;
+    }
+    if (IT.priceEstimated) {
+      el.innerHTML = '<div class="info__price">' + t("priceEstimatedPrefix") + fmtPrice(IT.price) + "</div>" +
+        '<div class="info__badge info__badge--estimate">' + t("priceEstimatedBadge") + "</div>";
+      return;
+    }
+    if (IT.price > 0) {
+      el.innerHTML = '<div class="info__price">' + fmtPrice(IT.price) + "</div>";
+      return;
+    }
+    el.innerHTML = '<div class="info__price">' + t("priceOnRequest") + "</div>";
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll("#langSwitch [data-lang]"), function (btn) {
+    btn.addEventListener("click", function () {
+      LANG = btn.getAttribute("data-lang");
+      try { window.localStorage.setItem(LANG_KEY, LANG); } catch (e) {}
+      applyLang();
+    });
+  });
 
   // ---- Galerie ----
   var mainImg = document.getElementById("galleryMain");
@@ -24,9 +235,12 @@
   var idx = 0;
   // IT.gallery-Pfade sind relativ zur Site-Wurzel (z.B. "assets/img/123/0.webp"),
   // die Produktseite selbst liegt aber unter /artikel/ - deshalb hier einmalig
-  // mit "../" auf Seiten-relative Pfade umrechnen, statt das bei jedem Zugriff
-  // zu vergessen (genau das brach zuvor das Hauptbild beim ersten showPhoto()-Aufruf).
+  // mit "../" auf Seiten-relative Pfade umrechnen. IT.thumbs (falls vorhanden)
+  // sind kleinere, eigens erzeugte Vorschaubilder - spart Datenvolumen, die
+  // grosse Version wird erst als Hauptbild/im Lightbox-Modus geladen.
   var gallery = (IT.gallery || []).map(function (p) { return "../" + p; });
+  var thumbs = (IT.thumbs && IT.thumbs.length === gallery.length ? IT.thumbs : IT.gallery || [])
+    .map(function (p) { return "../" + p; });
 
   function showPhoto(i) {
     if (!gallery.length) return;
@@ -34,20 +248,20 @@
     mainImg.src = gallery[idx];
     if (counterEl) counterEl.textContent = (idx + 1) + " / " + gallery.length;
     if (thumbsEl) {
-      Array.prototype.forEach.call(thumbsEl.children, function (t, ti) {
-        t.classList.toggle("active", ti === idx);
+      Array.prototype.forEach.call(thumbsEl.children, function (t2, ti) {
+        t2.classList.toggle("active", ti === idx);
       });
     }
   }
 
   if (gallery.length > 1) {
-    gallery.forEach(function (src, i) {
-      var t = document.createElement("button");
-      t.type = "button";
-      t.className = "gallery-thumb" + (i === 0 ? " active" : "");
-      t.innerHTML = '<img src="' + src + '" alt="" loading="lazy" />';
-      t.addEventListener("click", function () { showPhoto(i); });
-      thumbsEl.appendChild(t);
+    thumbs.forEach(function (src, i) {
+      var t2 = document.createElement("button");
+      t2.type = "button";
+      t2.className = "gallery-thumb" + (i === 0 ? " active" : "");
+      t2.innerHTML = '<img src="' + src + '" alt="" loading="lazy" />';
+      t2.addEventListener("click", function () { showPhoto(i); });
+      thumbsEl.appendChild(t2);
     });
   } else {
     if (prevBtn) prevBtn.hidden = true;
@@ -66,7 +280,7 @@
     touchStartX = null;
   });
 
-  // ---- Lightbox (Zoom/Vollbild) ----
+  // ---- Lightbox (Zoom/Vollbild) - immer die grosse Version, nie das Thumbnail ----
   var lightbox = document.getElementById("lightbox");
   var lightboxImg = document.getElementById("lightboxImg");
   function openLightbox() {
@@ -99,50 +313,63 @@
   }
 
   var cartBtn = document.getElementById("addToCartBtn");
+  function refreshCartBtn() {
+    if (!cartBtn) return;
+    var cart = loadCart();
+    var inCart = cart.indexOf(IT.id) !== -1;
+    cartBtn.textContent = inCart ? t("inCartRemove") : t("addToCart");
+    cartBtn.classList.toggle("active", inCart);
+  }
   if (cartBtn) {
-    function refreshCartBtn() {
-      var cart = loadCart();
-      var inCart = cart.indexOf(IT.id) !== -1;
-      cartBtn.textContent = inCart ? "Im Warenkorb ✓ — entfernen" : "In den Warenkorb";
-      cartBtn.classList.toggle("active", inCart);
-    }
     cartBtn.addEventListener("click", function () {
+      // Sicherheitsnetz: ein SOLD-Artikel darf nie in den Warenkorb gelangen,
+      // selbst wenn der Button aus irgendeinem Grund noch aktiv waere.
+      if (IT.sold) return;
       var cart = loadCart();
       var pos = cart.indexOf(IT.id);
       if (pos === -1) cart.push(IT.id); else cart.splice(pos, 1);
       saveCart(cart);
       refreshCartBtn();
     });
-    refreshCartBtn();
   }
 
   // ---- Direkte Anfrage fuer genau dieses Stueck (kein Umweg ueber die Startseite) ----
   function orderText() {
-    var name = [IT.brand, IT.title].filter(Boolean).join(" ");
-    return "Hallo! Ich interessiere mich für folgendes Stück aus dem Disorder119-Archiv:\n\n" +
-      "• " + name + (IT.size ? " (Gr. " + IT.size + ")" : "") + " – " + fmtPrice(IT.price) +
-      " (Art.-Nr. " + IT.article + ")" +
-      "\n\nIst dieses Stück noch verfügbar?";
+    var name = displayName();
+    var rows = [name, t("orderArticleAbbrev") + (IT.article || IT.id)];
+    if (IT.size) rows.push(t("factSize") + ": " + trSize(IT.size));
+    rows.push(fmtPrice(IT.price));
+    return t("orderGreeting") + "\n\n" + rows.join("\n") + "\n\n" + t("orderAvailQuestion");
   }
 
   var waBtn = document.getElementById("inquireWhatsapp");
   var emailBtn = document.getElementById("inquireEmail");
-  if (waBtn) {
-    if (SHOP_CONFIG.whatsappNumber) {
-      waBtn.href = "https://wa.me/" + SHOP_CONFIG.whatsappNumber + "?text=" + encodeURIComponent(orderText());
-    } else {
-      waBtn.style.display = "none";
+  function updateOrderLinks() {
+    if (IT.sold) {
+      if (waBtn) waBtn.style.display = "none";
+      if (emailBtn) emailBtn.style.display = "none";
+      return;
     }
-  }
-  if (emailBtn) {
-    if (SHOP_CONFIG.email) {
-      emailBtn.href = "mailto:" + SHOP_CONFIG.email +
-        "?subject=" + encodeURIComponent("Anfrage Disorder119 – " + IT.title) +
-        "&body=" + encodeURIComponent(orderText());
-    } else {
-      emailBtn.style.display = "none";
+    if (waBtn) {
+      if (SHOP_CONFIG.whatsappNumber) {
+        waBtn.href = "https://wa.me/" + SHOP_CONFIG.whatsappNumber + "?text=" + encodeURIComponent(orderText());
+        waBtn.style.display = "";
+      } else {
+        waBtn.style.display = "none";
+      }
+    }
+    if (emailBtn) {
+      if (SHOP_CONFIG.email) {
+        emailBtn.href = "mailto:" + SHOP_CONFIG.email +
+          "?subject=" + encodeURIComponent(t("orderSubjectPrefix") + IT.title) +
+          "&body=" + encodeURIComponent(orderText());
+        emailBtn.style.display = "";
+      } else {
+        emailBtn.style.display = "none";
+      }
     }
   }
 
   showPhoto(0);
+  applyLang();
 })();
