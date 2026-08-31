@@ -1716,20 +1716,20 @@
     border: none;
     padding: 0;
     cursor: pointer;
-    filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.55));
     animation-name: chaos-float;
     animation-timing-function: ease-in-out;
     animation-iteration-count: infinite;
     animation-direction: alternate;
     transform-origin: 50% 50%;
-    /* Sanftes, gestaffeltes Einblenden statt abruptem Erscheinen - macht den
-       Einstieg in den Chaos-Modus fluessiger. Die Float-Animation laeuft
-       unabhaengig auf transform, opacity bleibt frei fuer diesen Fade-in. */
-    opacity: 0;
-    transition: opacity 0.55s ease;
   }
 
-  .chaos-item.chaos-item--in { opacity: 1; }
+  /* drop-shadow(filter) ist pro Element teuer, vor allem kombiniert mit der
+     laufenden Float-Animation - auf dem Handy (viele Artikel gleichzeitig,
+     schwaechere GPU) fuehrte das zu sichtbarem Ruckeln. Ab Tablet-Breite
+     aufwaerts gibt es den Schatten weiterhin, am Handy bleibt es flach. */
+  @media (min-width: 641px) {
+    .chaos-item { filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.55)); }
+  }
 
   .chaos-item img {
     width: 100%;
@@ -1885,13 +1885,6 @@
     min-height: 1.1em;
   }
 
-  .outfit-view__brandmix {
-    font-size: 0.66rem;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-    margin-top: 2px;
-  }
-  .outfit-view__brandmix.hidden { display: none; }
 
   .outfit-layout {
     display: flex;
@@ -2032,12 +2025,12 @@
     padding: 0 10px;
     flex: 1 1 0;
     min-height: 0;
-    max-height: 84px;
+    max-height: 116px;
   }
 
   .outfit-slot__frame {
-    width: clamp(34px, 6vh, 60px);
-    height: clamp(44px, 8vh, 78px);
+    width: clamp(48px, 9vh, 88px);
+    height: clamp(62px, 11.5vh, 112px);
     flex: 0 0 auto;
     background: transparent;
     overflow: hidden;
@@ -2435,7 +2428,6 @@
     <p class="outfit-view__eyebrow" data-i18n="outfitEyebrow">Outfit-Baukasten</p>
     <h1 class="outfit-view__title" data-i18n="outfitTitle">Bau dir einen Look</h1>
     <p class="outfit-view__status" id="outfitStatus">Wähl ein Oberteil zum Start.</p>
-    <p class="outfit-view__brandmix hidden" id="outfitBrandMix"></p>
   </div>
 
   <div class="outfit-layout">
@@ -2767,7 +2759,6 @@
       outfitStatusStart: "Wähl ein Oberteil oder Kleid zum Start.",
       outfitStatusComplete: "Kompletter Look! 🔥",
       outfitStatusProgress: "{filled} von {required} Pflichtteilen ausgewählt.",
-      outfitBrandMix: "{count} Designer im Mix: {brands}",
       outfitSlotTop: "Oberteil / Kleid", outfitSlotJacket: "Jacke (optional)", outfitSlotBottom: "Unterteil",
       outfitSlotShoes: "Schuhe", outfitSlotAccessory: "Accessoire",
       outfitRandomAria: "Überrasch mich", outfitResetLabel: "Neu",
@@ -2874,7 +2865,6 @@
       outfitStatusStart: "Pick a top or dress to start.",
       outfitStatusComplete: "Complete look! 🔥",
       outfitStatusProgress: "{filled} of {required} required pieces selected.",
-      outfitBrandMix: "{count} designers mixed: {brands}",
       outfitSlotTop: "Top / dress", outfitSlotJacket: "Jacket (optional)", outfitSlotBottom: "Bottoms",
       outfitSlotShoes: "Shoes", outfitSlotAccessory: "Accessory",
       outfitRandomAria: "Surprise me", outfitResetLabel: "Reset",
@@ -2984,7 +2974,6 @@
       outfitStatusStart: "Choisis un haut ou une robe pour commencer.",
       outfitStatusComplete: "Look complet ! 🔥",
       outfitStatusProgress: "{filled} pièce(s) obligatoire(s) sur {required} sélectionnée(s).",
-      outfitBrandMix: "{count} maisons mélangées : {brands}",
       outfitSlotTop: "Haut / robe", outfitSlotJacket: "Veste (optionnel)", outfitSlotBottom: "Bas",
       outfitSlotShoes: "Chaussures", outfitSlotAccessory: "Accessoire",
       outfitRandomAria: "Surprends-moi", outfitResetLabel: "Réinitialiser",
@@ -4362,10 +4351,6 @@
       btn.style.setProperty("--dy", (Math.random() * 130 - 65).toFixed(0) + "px");
       btn.style.setProperty("--rot0", (Math.random() * 18 - 9).toFixed(1) + "deg");
       btn.style.setProperty("--rot1", (Math.random() * 18 - 9).toFixed(1) + "deg");
-      // Gestaffeltes Einblenden (s. .chaos-item--in): je spaeter im Raster,
-      // desto spaeter erscheint der Artikel - wirkt wie ein fliessender
-      // Aufbau statt eines abrupten "Alles auf einmal".
-      btn.style.transitionDelay = Math.min(idx * 14, 480) + "ms";
       btn.setAttribute("aria-label", it.title);
       btn.innerHTML = '<img src="' + it.gallery[0] + '" alt="" loading="lazy" />';
       btn.addEventListener("click", function () {
@@ -4415,16 +4400,6 @@
     });
     host.innerHTML = "";
     host.appendChild(frag);
-    // Doppeltes rAF: der Browser muss den opacity:0-Startzustand einmal
-    // gemalt haben, bevor das Umschalten auf opacity:1 ueberhaupt als
-    // Uebergang (statt Sprung) erkannt wird.
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
-        Array.prototype.forEach.call(host.querySelectorAll(".chaos-item"), function (el) {
-          el.classList.add("chaos-item--in");
-        });
-      });
-    });
   }
 
   var chaosTooltip = document.getElementById("chaosTooltip");
@@ -4607,18 +4582,6 @@
     document.getElementById("outfitStatus").textContent = outfitStatusText();
     var anyFilled = OUTFIT_ORDER.some(function (k) { return outfitSlots[k].item; });
     document.getElementById("outfitAddCart").disabled = !anyFilled;
-    var brandMixEl = document.getElementById("outfitBrandMix");
-    var brands = [];
-    OUTFIT_ORDER.forEach(function (k) {
-      var it = outfitSlots[k].item;
-      if (it && it.brand && brands.indexOf(it.brand) === -1) brands.push(it.brand);
-    });
-    if (brands.length >= 2) {
-      brandMixEl.textContent = tFormat("outfitBrandMix", { count: brands.length, brands: brands.join(" × ") });
-      brandMixEl.classList.remove("hidden");
-    } else {
-      brandMixEl.classList.add("hidden");
-    }
     renderOutfitFigure();
   }
 

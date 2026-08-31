@@ -932,7 +932,7 @@
     "article": "2204",
     "title": "Raf Simons Kinetic Youth Leather Vest",
     "brand": "Raf Simons",
-    "price": 550.0,
+    "price": 1200.0,
     "status": "Verfügbar",
     "category": "Jackets",
     "size": "52",
@@ -6655,8 +6655,14 @@
     "color": "Grau",
     "condition": "",
     "desc": "",
-    "gallery": [],
-    "look": null,
+    "gallery": [
+      "assets/img/9366/0.webp",
+      "assets/img/9366/1.webp",
+      "assets/img/9366/2.webp",
+      "assets/img/9366/3.webp",
+      "assets/img/9366/4.webp"
+    ],
+    "look": "assets/img/9366/look.webp",
     "price_estimated": false,
     "brightness": 0.5,
     "public_status": "SOLD"
