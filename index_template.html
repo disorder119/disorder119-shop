@@ -35,10 +35,12 @@
     --bg: var(--ink);
     --surface: var(--ink-lift);
     --surface-2: var(--ink-lift-2);
-    --accent: #c98a45;
-    --accent-soft: rgba(201, 138, 69, 0.16);
-    --accent-text: #e3ab6c;
-    --focus: #c98a45;
+    /* Bewusst kein Braun/Orange mehr - gedeckter, warmer Graphiton statt
+       Farbakzent, passend zum ohnehin schwarz-weiss-cremefarbenen Archiv-Look. */
+    --accent: #8f897c;
+    --accent-soft: rgba(143, 137, 124, 0.18);
+    --accent-text: #d6d0c2;
+    --focus: #8f897c;
     /* photo mount: the ground each cut-out product photo sits on */
     --mount: #000000;
     --mount-text: #f2efe7;
@@ -381,8 +383,10 @@
   /* Das Dropdown-Popup rendert der Browser mit eigenem (meist weissem)
      Hintergrund, unabhaengig vom transparenten <select> - ohne das hier
      waren die Optionen (helle Schrift fuers dunkle Theme) darauf fast
-     unlesbar. */
-  .rail__sort option {
+     unlesbar. Gilt fuer alle <select>-Felder, nicht nur die Sortierung -
+     "Weitere Filter" (Marke/Groesse/Farbe/Zustand) hatte denselben Fehler. */
+  .rail__sort option,
+  .filter-field select option {
     background: var(--ink);
     color: var(--paper);
   }
@@ -1296,7 +1300,11 @@
     padding: 0 16px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    transform: translateY(0);
+    transition: transform 0.28s ease;
   }
+
+  .mode-rail.rail-hidden { transform: translateY(-100%); }
 
   .mode-rail::-webkit-scrollbar { display: none; }
 
@@ -1626,14 +1634,44 @@
     z-index: 2;
   }
 
-  .chaos-view .view-enter-btn {
+  .chaos-view__actions {
     position: absolute;
     bottom: 22px;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--ink);
+    display: flex;
+    gap: 10px;
     z-index: 2;
   }
+
+  .chaos-view__actions .view-enter-btn { background: var(--ink); }
+
+  /* Kurze Vorschau (Marke/Titel/Preis) beim Ueberfahren eines Chaos-Artikels,
+     bevor man klickt - vorher musste man jedes Teil erst anklicken/oeffnen,
+     um ueberhaupt zu wissen, was es ist. */
+  .chaos-tooltip {
+    position: fixed;
+    z-index: 3;
+    background: var(--ink);
+    border: 1px solid var(--rule-strong);
+    padding: 8px 12px;
+    font-size: 0.7rem;
+    line-height: 1.4;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    white-space: nowrap;
+    transform: translate(-50%, -100%);
+  }
+  .chaos-tooltip.visible { opacity: 1; }
+  .chaos-tooltip__brand {
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    font-size: 0.62rem;
+  }
+  .chaos-tooltip__price { color: var(--accent-text); font-weight: 700; }
 
   .chaos-item {
     position: absolute;
@@ -1744,6 +1782,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .chaos-view--showroom #chaosItems { transform: none !important; }
+    .chaos-item { animation: none !important; }
   }
 
   /* ---------- Outfit-Baukasten ---------- */
@@ -1809,6 +1848,14 @@
     margin-top: 3px;
     min-height: 1.1em;
   }
+
+  .outfit-view__brandmix {
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .outfit-view__brandmix.hidden { display: none; }
 
   .outfit-layout {
     display: flex;
@@ -2158,7 +2205,13 @@
     aspect-ratio: 3 / 4;
     background: var(--mount);
     overflow: hidden;
+    border: 1px solid transparent;
   }
+
+  .outfit-picker__item--active .outfit-picker__item-frame {
+    border-color: var(--accent);
+  }
+  .outfit-picker__item--active .outfit-picker__item-title { color: var(--accent-text); }
 
   .outfit-picker__item-frame img {
     width: 100%;
@@ -2332,7 +2385,11 @@
   <div class="chaos-screen" id="chaosScreen">
     <div id="chaosItems"></div>
   </div>
-  <button type="button" class="view-enter-btn" data-enter-classic data-i18n="toArchive">Zum Archiv →</button>
+  <span class="chaos-tooltip" id="chaosTooltip"></span>
+  <div class="chaos-view__actions">
+    <button type="button" class="view-enter-btn" id="chaosShuffle" data-i18n="chaosShuffle">Neu mischen</button>
+    <button type="button" class="view-enter-btn" data-enter-classic data-i18n="toArchive">Zum Archiv →</button>
+  </div>
 </div>
 
 <div class="outfit-view hidden" id="outfitView">
@@ -2342,6 +2399,7 @@
     <p class="outfit-view__eyebrow" data-i18n="outfitEyebrow">Outfit-Baukasten</p>
     <h1 class="outfit-view__title" data-i18n="outfitTitle">Bau dir einen Look</h1>
     <p class="outfit-view__status" id="outfitStatus">Wähl ein Oberteil zum Start.</p>
+    <p class="outfit-view__brandmix hidden" id="outfitBrandMix"></p>
   </div>
 
   <div class="outfit-layout">
@@ -2664,6 +2722,7 @@
       swipeViewCart: "Warenkorb ansehen", swipePlayAgain: "Nochmal spielen", swipeNopeTag: "Nope",
       swipeNopeAria: "Nicht mein Stil", swipeLikeAria: "Merken",
       chaosLabel: "Chaos-Ansicht — anklicken für Details",
+      chaosShuffle: "Neu mischen",
       outfitEyebrow: "Outfit-Baukasten", outfitTitle: "Bau dir einen Look",
       outfitPickerCloseAria: "Schließen",
       outfitPickerChoose: "wählen", outfitPickerSearchPh: "Suche nach Marke, Titel …",
@@ -2672,6 +2731,7 @@
       outfitStatusStart: "Wähl ein Oberteil oder Kleid zum Start.",
       outfitStatusComplete: "Kompletter Look! 🔥",
       outfitStatusProgress: "{filled} von {required} Pflichtteilen ausgewählt.",
+      outfitBrandMix: "{count} Designer im Mix: {brands}",
       outfitSlotTop: "Oberteil / Kleid", outfitSlotJacket: "Jacke (optional)", outfitSlotBottom: "Unterteil",
       outfitSlotShoes: "Schuhe", outfitSlotAccessory: "Accessoire",
       outfitRandomAria: "Überrasch mich", outfitResetLabel: "Neu",
@@ -2769,6 +2829,7 @@
       swipeViewCart: "View cart", swipePlayAgain: "Play again", swipeNopeTag: "Nope",
       swipeNopeAria: "Not my style", swipeLikeAria: "Save",
       chaosLabel: "Chaos view — click for details",
+      chaosShuffle: "Shuffle again",
       outfitEyebrow: "Outfit builder", outfitTitle: "Build a look",
       outfitPickerCloseAria: "Close",
       outfitPickerChoose: "choose", outfitPickerSearchPh: "Search by brand, title …",
@@ -2777,6 +2838,7 @@
       outfitStatusStart: "Pick a top or dress to start.",
       outfitStatusComplete: "Complete look! 🔥",
       outfitStatusProgress: "{filled} of {required} required pieces selected.",
+      outfitBrandMix: "{count} designers mixed: {brands}",
       outfitSlotTop: "Top / dress", outfitSlotJacket: "Jacket (optional)", outfitSlotBottom: "Bottoms",
       outfitSlotShoes: "Shoes", outfitSlotAccessory: "Accessory",
       outfitRandomAria: "Surprise me", outfitResetLabel: "Reset",
@@ -2877,6 +2939,7 @@
       swipeViewCart: "Voir le panier", swipePlayAgain: "Rejouer", swipeNopeTag: "Non",
       swipeNopeAria: "Pas mon style", swipeLikeAria: "Garder",
       chaosLabel: "Vue Chaos — clique pour les détails",
+      chaosShuffle: "Remélanger",
       outfitEyebrow: "Configurateur de tenues", outfitTitle: "Compose un look",
       outfitPickerCloseAria: "Fermer",
       outfitPickerChoose: "choisir", outfitPickerSearchPh: "Recherche par marque, titre …",
@@ -2885,6 +2948,7 @@
       outfitStatusStart: "Choisis un haut ou une robe pour commencer.",
       outfitStatusComplete: "Look complet ! 🔥",
       outfitStatusProgress: "{filled} pièce(s) obligatoire(s) sur {required} sélectionnée(s).",
+      outfitBrandMix: "{count} maisons mélangées : {brands}",
       outfitSlotTop: "Haut / robe", outfitSlotJacket: "Veste (optionnel)", outfitSlotBottom: "Bas",
       outfitSlotShoes: "Chaussures", outfitSlotAccessory: "Accessoire",
       outfitRandomAria: "Surprends-moi", outfitResetLabel: "Réinitialiser",
@@ -3859,8 +3923,29 @@
 
   var modeRail = document.getElementById("modeRail");
 
+  // Leiste blendet sich beim Runterscrollen im Archiv aus (bleibt sonst
+  // dauerhaft ueber dem Katalog haengen) und taucht beim Hochscrollen oder
+  // ganz oben sofort wieder auf. In Match/Chaos/Baukasten (kein Scrollen,
+  // volle Vollbild-Ansicht) bleibt sie immer sichtbar.
+  var RAIL_HIDE_AT = 24;
+  var railLastScrollY = window.pageYOffset || 0;
+  function updateRailScrollVisibility() {
+    var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+    if (y <= RAIL_HIDE_AT || y < railLastScrollY) {
+      modeRail.classList.remove("rail-hidden");
+    } else if (y > railLastScrollY) {
+      modeRail.classList.add("rail-hidden");
+    }
+    railLastScrollY = y;
+  }
+  window.addEventListener("scroll", function () {
+    if (!appShell.classList.contains("hidden")) updateRailScrollVisibility();
+  }, { passive: true });
+
   function syncModeRail(activeKey) {
     modeRail.classList.remove("hidden");
+    if (activeKey === "classic") updateRailScrollVisibility();
+    else modeRail.classList.remove("rail-hidden");
     Array.prototype.forEach.call(modeRail.querySelectorAll(".mode-rail__btn"), function (btn) {
       var isActive = btn.getAttribute("data-mode-view") === activeKey;
       if (isActive) btn.setAttribute("aria-current", "true");
@@ -4252,6 +4337,9 @@
         showClassic();
         openModal(picked);
       });
+      btn.addEventListener("mouseenter", function () { showChaosTooltip(it); });
+      btn.addEventListener("mousemove", function (ev) { positionChaosTooltip(ev.clientX, ev.clientY); });
+      btn.addEventListener("mouseleave", hideChaosTooltip);
 
       if (showroom) {
         // Echter 3D-Rundraum: jeder Artikel steht an einem Winkel rings um
@@ -4303,10 +4391,26 @@
     });
   }
 
+  var chaosTooltip = document.getElementById("chaosTooltip");
+  function showChaosTooltip(it) {
+    chaosTooltip.innerHTML =
+      '<span class="chaos-tooltip__brand">' + escapeHtml(it.brand || "") + '</span>' +
+      escapeHtml(it.title) + '<br><span class="chaos-tooltip__price">' + fmtPriceDisplay(it.price) + '</span>';
+    chaosTooltip.classList.add("visible");
+  }
+  function positionChaosTooltip(x, y) {
+    chaosTooltip.style.left = x + "px";
+    chaosTooltip.style.top = (y - 14) + "px";
+  }
+  function hideChaosTooltip() {
+    chaosTooltip.classList.remove("visible");
+  }
+
   function buildChaos() {
     var chaosViewEl = document.getElementById("chaosView");
     var host = document.getElementById("chaosItems");
     stopChaosPan();
+    hideChaosTooltip();
     host.style.transform = "";
     var showroom = chaosIsShowroom();
     chaosViewEl.classList.toggle("chaos-view--showroom", showroom);
@@ -4314,6 +4418,8 @@
     populateChaosItems(showroom);
     if (showroom) startChaosPan();
   }
+
+  document.getElementById("chaosShuffle").addEventListener("click", buildChaos);
 
   function showChaos() {
     appShell.classList.add("hidden");
@@ -4465,6 +4571,18 @@
     document.getElementById("outfitStatus").textContent = outfitStatusText();
     var anyFilled = OUTFIT_ORDER.some(function (k) { return outfitSlots[k].item; });
     document.getElementById("outfitAddCart").disabled = !anyFilled;
+    var brandMixEl = document.getElementById("outfitBrandMix");
+    var brands = [];
+    OUTFIT_ORDER.forEach(function (k) {
+      var it = outfitSlots[k].item;
+      if (it && it.brand && brands.indexOf(it.brand) === -1) brands.push(it.brand);
+    });
+    if (brands.length >= 2) {
+      brandMixEl.textContent = tFormat("outfitBrandMix", { count: brands.length, brands: brands.join(" × ") });
+      brandMixEl.classList.remove("hidden");
+    } else {
+      brandMixEl.classList.add("hidden");
+    }
     renderOutfitFigure();
   }
 
@@ -4503,7 +4621,7 @@
     options.forEach(function (it) {
       var btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "outfit-picker__item";
+      btn.className = "outfit-picker__item" + (slot.item && slot.item.id === it.id ? " outfit-picker__item--active" : "");
       btn.innerHTML =
         '<div class="outfit-picker__item-frame"><img src="' + it.gallery[0] + '" alt="" loading="lazy" /></div>' +
         '<div class="outfit-picker__item-title">' + escapeHtml(it.title) + "</div>" +
