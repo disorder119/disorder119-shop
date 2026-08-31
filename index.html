@@ -2239,7 +2239,10 @@
     .cart-bag { grid-column: auto; justify-self: auto; position: absolute; top: 0; right: 0; width: 40px; }
     .masthead__actions { align-self: flex-end; margin-right: 54px; }
     .lang-switch__btn { padding: 5px 6px; font-size: 0.6rem; }
-    .masthead__index { text-align: left; line-height: 1.5; white-space: normal; }
+    /* Reine Zier-Zeile (Markenaufzaehlung) - auf dem Handy nur zusaetzliche
+       Zeilen vor dem eigentlichen Archiv, ohne eigenen Nutzwert (die echte
+       Markensuche laeuft ueber das Suchfeld/den Marken-Filter). */
+    .masthead__index { display: none; }
     .masthead__bottom { align-items: flex-start; gap: 14px 28px; }
 
     .rail {
@@ -2264,6 +2267,13 @@
     .rail__right { width: 100%; justify-content: space-between; margin-left: 0; flex-wrap: wrap; gap: 10px; }
     .rail__sort { padding: 9px 10px; }
     .theme-toggle { padding: 10px 12px; font-size: 0.64rem; }
+    /* Sortierung + Foto-Hintergrund-Umschalter sind auf dem Handy standardmaessig
+       ausgeblendet, um die erste Ansicht schlank zu halten - sie erscheinen
+       zusammen mit den restlichen Filtern, sobald "Weitere Filter" geoeffnet
+       ist. Nichts geht verloren, nur der Ersteindruck wird ruhiger. */
+    .rail__sort, #mountToggle { display: none; }
+    #moreFiltersToggle[aria-expanded="true"] ~ .rail__sort,
+    #moreFiltersToggle[aria-expanded="true"] ~ #mountToggle { display: inline-flex; }
 
     .grid-wrap { padding: 18px 16px 70px; }
     .grid { grid-template-columns: repeat(2, 1fr); gap: 22px 14px; }
