@@ -66,6 +66,11 @@
   body {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
+    /* Ohne das vergroessert iOS Safari lange Textbloecke eigenmaechtig
+       (Font-Boosting) - lief beim grossen DISORDER119-Schriftzug auf
+       schmalen iPhones rechts aus dem Bildschirm heraus. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   a { color: inherit; }
@@ -140,6 +145,7 @@
 
   .wordmark {
     margin: 0;
+    max-width: 100%;
     display: flex;
     align-items: center;
     font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -148,6 +154,13 @@
     font-size: clamp(2.9rem, 9vw, 5.6rem);
     line-height: 0.85;
     letter-spacing: -0.01em;
+  }
+
+  @media (max-width: 400px) {
+    /* Der Mindestwert im clamp() greift ab hier, weil 9vw schon kleiner ist -
+       auf sehr schmalen Handys zusaetzlich absenken, damit "DISORDER119"
+       sicher nicht ueber den Bildschirmrand hinaus laeuft. */
+    .wordmark { font-size: clamp(2.3rem, 12vw, 5.6rem); }
   }
 
   .wordmark__line {
@@ -180,6 +193,12 @@
       opacity: 1;
       transform: none;
     }
+    /* .wordmark__line startet mit breitem letter-spacing (Teil der
+       Eintritts-Animation) - ohne diese Zeile blieb der Schriftzug bei
+       aktivierter "Bewegung reduzieren"-Einstellung dauerhaft im breiten
+       Startzustand haengen und lief auf schmalen Handys rechts aus dem
+       Bildschirm heraus. */
+    .wordmark__line { letter-spacing: -0.01em; }
   }
 
   .masthead__bottom {
@@ -309,15 +328,30 @@
     white-space: nowrap;
   }
 
+  /* iOS Safari rendert <select> sonst mit eigenem, stark abgerundetem
+     Systemstil (dicke graue Pille) statt der eckigen Optik des restlichen
+     Archivs - appearance:none plus ein selbst gezeichneter Pfeil sorgen
+     dafuer, dass es auf allen Plattformen gleich aussieht. */
+  .rail__sort,
+  .filter-field select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999691' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    border-radius: 0;
+  }
+
   .rail__sort {
-    background: transparent;
+    background-color: transparent;
     border: 1px solid var(--rule-strong);
     color: var(--text-muted);
     font-family: inherit;
     font-size: 0.72rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    padding: 7px 10px;
+    padding: 7px 26px 7px 10px;
     cursor: pointer;
   }
 
@@ -350,13 +384,15 @@
 
   .filter-field select,
   .filter-price-inputs input {
-    background: transparent;
+    background-color: transparent;
     border: 1px solid var(--rule-strong);
     color: var(--text);
     font-family: inherit;
     font-size: 0.78rem;
     padding: 8px 8px;
   }
+
+  .filter-field select { padding-right: 26px; }
 
   .filter-price-inputs {
     display: flex;
