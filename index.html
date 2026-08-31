@@ -1653,7 +1653,7 @@
 
   .chaos-item {
     position: absolute;
-    width: clamp(84px, 13vw, 168px);
+    width: clamp(92px, 13vw, 168px);
     background: none;
     border: none;
     padding: 0;
@@ -1663,6 +1663,7 @@
     animation-iteration-count: infinite;
     animation-direction: alternate;
     transform-origin: 50% 50%;
+    will-change: transform;
   }
 
   /* drop-shadow(filter) ist pro Element teuer, vor allem kombiniert mit der
@@ -1694,6 +1695,17 @@
     overflow: hidden;
   }
 
+  /* Immer selbst positioniert und volle Groesse (nicht nur im Showroom) -
+     sonst hat der Container (nur absolut positionierte Kinder, kein eigener
+     Inhalt) eine Eigenhoehe von 0px. Sobald IRGENDEIN transform darauf
+     landet (z.B. die Neige-Parallaxe unten), wuerde er sonst selbst zum
+     Bezugsrahmen fuer die Prozent-Positionen seiner Kinder werden - bei 0px
+     Hoehe kollabieren dann alle Artikel auf Position 0. */
+  #chaosItems {
+    position: absolute;
+    inset: 0;
+  }
+
   .chaos-view--showroom {
     background: radial-gradient(120% 100% at 50% 108%, #171009 0%, var(--ink) 62%);
   }
@@ -1722,8 +1734,6 @@
   }
 
   .chaos-view--showroom #chaosItems {
-    position: absolute;
-    inset: 0;
     transform-style: preserve-3d;
     will-change: transform;
   }
@@ -1985,9 +1995,12 @@
     background: var(--surface);
     border: 1px solid var(--rule-strong);
     padding: 0 10px;
-    flex: 1 1 0;
-    min-height: 0;
-    max-height: 116px;
+    /* Feste statt maximale Hoehe - vorher durften leere/kuerzere Kaesten
+       (z.B. der optionale Jacke-Slot) auf ihre Inhaltsgroesse schrumpfen,
+       wirkte uneinheitlich neben den befuellten Kaesten. Jetzt sind alle
+       fuenf Kaesten immer exakt gleich hoch, egal ob befuellt oder leer. */
+    flex: 0 0 116px;
+    height: 116px;
   }
 
   .outfit-slot__frame {
@@ -2383,7 +2396,10 @@
        der Rahmen flexibel wachsen (flex:1 1 auto), der Slot hat keine
        Hoehenobergrenze mehr, und object-fit:contain haelt das Bild dabei
        unverzerrt. */
-    .outfit-slot { flex-direction: column; align-items: stretch; gap: 3px; padding: 4px; position: relative; max-height: none; }
+    /* Eigene, kleinere feste Hoehe fuer das Handy - die Desktop-Hoehe (116px)
+       liess bei 5 Kaesten + Abstaenden keinen Platz mehr fuer die Fusszeile
+       (Gesamt/Buttons), die Kaesten liefen darunter durch. */
+    .outfit-slot { flex-direction: column; align-items: stretch; gap: 3px; padding: 4px; position: relative; flex: 0 0 100px; height: 100px; }
     .outfit-slot__frame { width: 100%; height: auto; flex: 1 1 auto; min-height: 0; }
     .outfit-slot__body { flex: 0 0 auto; }
     .outfit-slot__label { display: none; }
@@ -4406,6 +4422,17 @@
     var rows = Math.ceil(picks.length / cols);
     var cellW = 92 / cols;
     var cellH = 88 / rows;
+    // Auf schmalen Handys ist ein Zell-Raster viel kleiner als am Desktop -
+    // der bisherige feste Drift von +-65px war dort ein grosser Teil der
+    // Zellbreite und liess Artikel waehrend des Schwebens ineinanderlaufen.
+    // Drift + Jitter deshalb an die tatsaechliche Bildschirmbreite koppeln.
+    var narrow = window.innerWidth < 640;
+    var driftPx = narrow ? 26 : 65;
+    var jitterFactor = narrow ? 0.42 : 0.65;
+    // Unterer Rand bleibt frei fuer "Neu mischen"/"Zum Archiv" - vorher
+    // konnten Artikel bis auf 92% Hoehe spawnen und damit fast auf die
+    // Buttons rutschen.
+    var maxTop = narrow ? 78 : 92;
     var frag = document.createDocumentFragment();
     picks.forEach(function (it, idx) {
       var btn = document.createElement("button");
@@ -4413,8 +4440,8 @@
       btn.className = "chaos-item";
       btn.style.animationDuration = (6 + Math.random() * 7) + "s";
       btn.style.animationDelay = (Math.random() * -13) + "s";
-      btn.style.setProperty("--dx", (Math.random() * 130 - 65).toFixed(0) + "px");
-      btn.style.setProperty("--dy", (Math.random() * 130 - 65).toFixed(0) + "px");
+      btn.style.setProperty("--dx", (Math.random() * driftPx * 2 - driftPx).toFixed(0) + "px");
+      btn.style.setProperty("--dy", (Math.random() * driftPx * 2 - driftPx).toFixed(0) + "px");
       btn.style.setProperty("--rot0", (Math.random() * 18 - 9).toFixed(1) + "deg");
       btn.style.setProperty("--rot1", (Math.random() * 18 - 9).toFixed(1) + "deg");
       btn.setAttribute("aria-label", it.title);
@@ -4455,12 +4482,12 @@
       } else {
         var col = idx % cols;
         var row = Math.floor(idx / cols);
-        var jitterX = (Math.random() - 0.5) * cellW * 0.65;
-        var jitterY = (Math.random() - 0.5) * cellH * 0.65;
+        var jitterX = (Math.random() - 0.5) * cellW * jitterFactor;
+        var jitterY = (Math.random() - 0.5) * cellH * jitterFactor;
         var left = 2 + col * cellW + cellW / 2 + jitterX;
         var top = 4 + row * cellH + cellH / 2 + jitterY;
         btn.style.left = Math.min(94, Math.max(2, left)) + "%";
-        btn.style.top = Math.min(92, Math.max(4, top)) + "%";
+        btn.style.top = Math.min(maxTop, Math.max(4, top)) + "%";
         frag.appendChild(btn);
       }
     });
@@ -4483,10 +4510,74 @@
     chaosTooltip.classList.remove("visible");
   }
 
+  // ---- Chaos: sanfte Neige-Parallaxe fuers Handy (Gyroskop) ----
+  // Laeuft nur in der flachen (Nicht-Showroom) Ansicht, als mobile Entsprechung
+  // zum Maus-Schwenk des Desktop-Showrooms - dasselbe manuelle Lerp-Muster wie
+  // chaosPanFrame(), damit sich beide Effekte technisch nicht in die Quere
+  // kommen (unabhaengige rAF-Schleifen auf demselben Element, aber nie
+  // gleichzeitig aktiv, da showroom/flach sich gegenseitig ausschliessen).
+  var chaosTilt = { active: false, x: 0, y: 0, targetX: 0, targetY: 0, raf: null };
+
+  function chaosTiltHandler(e) {
+    var gamma = Math.max(-30, Math.min(30, e.gamma || 0)); // links/rechts
+    var beta = Math.max(-30, Math.min(30, (e.beta || 45) - 45)); // vor/zurueck, 45deg = normale Haltung
+    chaosTilt.targetX = (gamma / 30) * 14;
+    chaosTilt.targetY = (beta / 30) * 10;
+  }
+
+  function chaosTiltFrame() {
+    var chaosViewEl = document.getElementById("chaosView");
+    var host = document.getElementById("chaosItems");
+    if (!chaosTilt.active || !host || !chaosViewEl || chaosViewEl.classList.contains("hidden")) {
+      chaosTilt.active = false;
+      window.removeEventListener("deviceorientation", chaosTiltHandler);
+      return;
+    }
+    chaosTilt.x += (chaosTilt.targetX - chaosTilt.x) * 0.06;
+    chaosTilt.y += (chaosTilt.targetY - chaosTilt.y) * 0.06;
+    host.style.transform = "translate(" + chaosTilt.x.toFixed(1) + "px, " + chaosTilt.y.toFixed(1) + "px)";
+    chaosTilt.raf = requestAnimationFrame(chaosTiltFrame);
+  }
+
+  function stopChaosTilt() {
+    chaosTilt.active = false;
+    if (chaosTilt.raf) cancelAnimationFrame(chaosTilt.raf);
+    window.removeEventListener("deviceorientation", chaosTiltHandler);
+    var host = document.getElementById("chaosItems");
+    if (host) host.style.transform = "";
+  }
+
+  function startChaosTilt() {
+    stopChaosTilt();
+    // Respektiert "Bewegung reduzieren" (anders als das Schweben der
+    // einzelnen Artikel ist das hier reine Zierde, kein Kern des Modus).
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (typeof window.DeviceOrientationEvent === "undefined") return;
+    function begin() {
+      chaosTilt.active = true;
+      window.addEventListener("deviceorientation", chaosTiltHandler);
+      chaosTiltFrame();
+    }
+    if (typeof DeviceOrientationEvent.requestPermission === "function") {
+      // iOS 13+: Freigabe muss aus einer Nutzer-Geste (Tap auf Chaos) heraus
+      // angefragt werden. Wird sie verweigert oder schlaegt fehl, bleibt
+      // einfach nur das normale Schweben der Artikel ohne Neige-Effekt -
+      // kein Fehlerzustand, keine sichtbare Stoerung.
+      try {
+        DeviceOrientationEvent.requestPermission().then(function (state) {
+          if (state === "granted") begin();
+        }).catch(function () {});
+      } catch (e) {}
+    } else {
+      begin();
+    }
+  }
+
   function buildChaos() {
     var chaosViewEl = document.getElementById("chaosView");
     var host = document.getElementById("chaosItems");
     stopChaosPan();
+    stopChaosTilt();
     hideChaosTooltip();
     host.style.transform = "";
     var showroom = chaosIsShowroom();
@@ -4494,6 +4585,7 @@
     chaosShownIds = new Set(); // frischer Start jedes Mal, wenn die Ansicht neu geoeffnet wird
     populateChaosItems(showroom);
     if (showroom) startChaosPan();
+    else startChaosTilt();
   }
 
   document.getElementById("chaosShuffle").addEventListener("click", buildChaos);
