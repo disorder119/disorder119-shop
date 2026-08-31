@@ -1269,48 +1269,64 @@
 
   /* ---------- Moduswechsel (linke Navigation) ---------- */
 
+  /* Moduswechsel als schmale Tab-Leiste oben, fest ueber der ganzen Seite
+     (statt der frueheren fixierten linken Spalte, die dauerhaft Platz
+     wegnahm und sich ueber die erste Produktspalte legte). Fest positioniert
+     UND mit hoeherem z-index als Match/Chaos/Baukasten (z-index 250), damit
+     man auch WAEHREND dieser Vollbild-Modi direkt in einen anderen wechseln
+     kann, statt vorher jedes Mal ueber "Zum Archiv" zurueckspringen zu
+     muessen - der eigentliche Verbesserungs-Teil dieser Aenderung. */
+  :root { --rail-h: 46px; }
+
+  body { padding-top: var(--rail-h); }
+
   .mode-rail {
     position: fixed;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 280;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--rail-h);
+    z-index: 300;
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    background: var(--surface);
-    border: 1px solid var(--rule-strong);
-    padding: 6px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--ink);
+    border-bottom: 1px solid var(--rule-strong);
+    padding: 0 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
+
+  .mode-rail::-webkit-scrollbar { display: none; }
 
   .mode-rail.hidden { display: none; }
 
   .mode-rail__btn {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     background: transparent;
-    border: none;
+    border: 1px solid var(--rule-strong);
     color: var(--text-muted);
     font-family: inherit;
-    padding: 9px 12px 9px 9px;
+    padding: 7px 14px;
     cursor: pointer;
     white-space: nowrap;
-    text-align: left;
+    flex: 0 0 auto;
   }
 
-  .mode-rail__btn:hover { color: var(--text); }
+  .mode-rail__btn:hover { color: var(--text); border-color: var(--text-muted); }
 
   .mode-rail__btn[aria-current="true"] {
     color: var(--accent-text);
+    border-color: var(--accent);
     background: var(--accent-soft);
   }
 
   .mode-rail__icon {
-    font-size: 1.05rem;
-    width: 20px;
-    text-align: center;
-    flex: 0 0 auto;
+    font-size: 0.95rem;
+    line-height: 1;
   }
 
   .mode-rail__label {
@@ -1320,47 +1336,11 @@
     text-transform: uppercase;
   }
 
-  @media (max-width: 760px) {
-    /* Auf dem Handy wuerde eine linksfixierte Spalte die erste Produkt-
-       spalte verdecken - deshalb hier als Bottom-Bar (etabliertes Mobile-
-       Muster), damit die Modi trotzdem jederzeit erreichbar bleiben. */
-    .mode-rail {
-      left: 0;
-      right: 0;
-      top: auto;
-      bottom: 0;
-      transform: none;
-      flex-direction: row;
-      justify-content: space-around;
-      width: 100%;
-      border-left: none;
-      border-right: none;
-      border-bottom: none;
-      padding: 4px;
-      gap: 2px;
-    }
-    .mode-rail__btn { flex-direction: column; gap: 3px; padding: 7px 10px; }
-    .mode-rail__label { display: block; font-size: 0.52rem; }
-    .mode-rail__icon { font-size: 1.15rem; width: auto; }
-  }
-
-  @media (min-width: 761px) {
-    /* Platz fuer die fixierte linke Moduswechsel-Leiste (left:12px, ~138px
-       breit) reservieren - sonst legt sie sich ueber die erste Produkt-
-       spalte/den Filterbereich, was seit dem Direkteinstieg ins Archiv bei
-       jedem Seitenaufruf sichtbar waere (vorher nur nach manuellem Wechsel). */
-    .masthead, .rail, .grid-wrap {
-      padding-left: 190px;
-    }
-  }
-
-  @media (min-width: 761px) and (max-width: 900px) {
-    /* Zwischen der Mobil-Grenze und "richtig breitem" Desktop ist 190px
-       Reserve ein zu grosser Anteil der verfuegbaren Breite - hier reicht
-       weniger, weil die Leiste selbst hier nicht schmaler wird. */
-    .masthead, .rail, .grid-wrap {
-      padding-left: 168px;
-    }
+  @media (max-width: 480px) {
+    /* Auf sehr schmalen Handys reichen die Icons allein, damit alle vier
+       Modi ohne Scrollen in die Leiste passen. */
+    .mode-rail__label { display: none; }
+    .mode-rail__btn { padding: 8px 12px; }
   }
 
   /* ---------- Einmaliger Hinweis auf die Fun-Modi (Match/Chaos/Baukasten) ----------
@@ -1414,7 +1394,10 @@
 
   .swipe-view {
     position: fixed;
-    inset: 0;
+    top: var(--rail-h);
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 250;
     background: var(--ink);
     color: var(--paper);
@@ -1623,7 +1606,10 @@
 
   .chaos-view {
     position: fixed;
-    inset: 0;
+    top: var(--rail-h);
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 250;
     background: var(--ink);
     overflow: hidden;
@@ -1764,7 +1750,10 @@
 
   .outfit-view {
     position: fixed;
-    inset: 0;
+    top: var(--rail-h);
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 250;
     background: var(--ink);
     color: var(--paper);
@@ -1772,8 +1761,6 @@
     flex-direction: column;
     align-items: center;
     padding: clamp(12px, 2.4vh, 24px) 18px clamp(10px, 2vh, 18px);
-    height: 100vh;
-    height: 100dvh;
     overflow: hidden;
     gap: clamp(6px, 1.4vh, 14px);
   }
@@ -2093,7 +2080,10 @@
 
   .outfit-picker {
     position: fixed;
-    inset: 0;
+    top: var(--rail-h);
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 260;
     background: rgba(6, 6, 5, 0.94);
     display: none;
@@ -2321,25 +2311,6 @@
 
 
 
-<nav class="mode-rail hidden" id="modeRail" data-i18n-aria="modeRailAria" aria-label="Ansicht wechseln">
-  <button type="button" class="mode-rail__btn" data-mode-view="classic" aria-label="Archiv">
-    <span class="mode-rail__icon" aria-hidden="true">▦</span>
-    <span class="mode-rail__label" data-i18n="modeArchiv">Archiv</span>
-  </button>
-  <button type="button" class="mode-rail__btn" data-mode-view="swipe" aria-label="Match">
-    <span class="mode-rail__icon" aria-hidden="true">♥</span>
-    <span class="mode-rail__label" data-i18n="modeMatch">Match</span>
-  </button>
-  <button type="button" class="mode-rail__btn" data-mode-view="chaos" aria-label="Chaos">
-    <span class="mode-rail__icon" aria-hidden="true">✦</span>
-    <span class="mode-rail__label" data-i18n="modeChaos">Chaos</span>
-  </button>
-  <button type="button" class="mode-rail__btn" data-mode-view="outfit" aria-label="Outfit-Baukasten">
-    <span class="mode-rail__icon" aria-hidden="true">⛃</span>
-    <span class="mode-rail__label" data-i18n="modeBaukasten">Baukasten</span>
-  </button>
-</nav>
-
 <div class="mode-rail-hint hidden" id="modeRailHint" role="status">
   <span class="mode-rail-hint__text" data-i18n="modeHint">Entdecke auch Match, Chaos &amp; Baukasten</span>
   <button type="button" class="mode-rail-hint__close" id="modeRailHintClose" data-i18n-aria="hintCloseAria" aria-label="Hinweis schließen">✕</button>
@@ -2412,6 +2383,25 @@
   <input type="text" id="outfitPickerSearch" class="outfit-picker__search" data-i18n-placeholder="outfitPickerSearchPh" placeholder="Suche nach Marke, Titel …" autocomplete="off">
   <div class="outfit-picker__grid" id="outfitPickerGrid"></div>
 </div>
+
+<nav class="mode-rail hidden" id="modeRail" data-i18n-aria="modeRailAria" aria-label="Ansicht wechseln">
+  <button type="button" class="mode-rail__btn" data-mode-view="classic" aria-label="Archiv">
+    <span class="mode-rail__icon" aria-hidden="true">▦</span>
+    <span class="mode-rail__label" data-i18n="modeArchiv">Archiv</span>
+  </button>
+  <button type="button" class="mode-rail__btn" data-mode-view="swipe" aria-label="Match">
+    <span class="mode-rail__icon" aria-hidden="true">♥</span>
+    <span class="mode-rail__label" data-i18n="modeMatch">Match</span>
+  </button>
+  <button type="button" class="mode-rail__btn" data-mode-view="chaos" aria-label="Chaos">
+    <span class="mode-rail__icon" aria-hidden="true">✦</span>
+    <span class="mode-rail__label" data-i18n="modeChaos">Chaos</span>
+  </button>
+  <button type="button" class="mode-rail__btn" data-mode-view="outfit" aria-label="Outfit-Baukasten">
+    <span class="mode-rail__icon" aria-hidden="true">⛃</span>
+    <span class="mode-rail__label" data-i18n="modeBaukasten">Baukasten</span>
+  </button>
+</nav>
 
 <div class="app-shell hidden" id="appShell">
 <div class="masthead">
@@ -3895,20 +3885,15 @@
   var modeHintTimer = null;
 
   function positionModeRailHint() {
-    var railRect = modeRail.getBoundingClientRect();
+    // Leiste ist jetzt eine fest fixierte Zeile ganz oben - Hinweis erscheint
+    // darunter, zentriert unter dem Match-Button.
+    var firstBtn = modeRail.querySelector(".mode-rail__btn[data-mode-view='swipe']") || modeRail;
+    var railRect = firstBtn.getBoundingClientRect();
     var hintRect = modeRailHint.getBoundingClientRect();
-    var isRow = getComputedStyle(modeRail).flexDirection === "row";
-    if (isRow) {
-      // Mobil: Leiste unten, Hinweis darueber, ueber der Mitte der Leiste zentriert.
-      var left = railRect.left + railRect.width / 2 - hintRect.width / 2;
-      left = Math.max(8, Math.min(left, window.innerWidth - hintRect.width - 8));
-      modeRailHint.style.left = left + "px";
-      modeRailHint.style.top = (railRect.top - hintRect.height - 10) + "px";
-    } else {
-      // Desktop: Leiste links, Hinweis rechts daneben, vertikal an der Leiste zentriert.
-      modeRailHint.style.left = (railRect.right + 12) + "px";
-      modeRailHint.style.top = (railRect.top + railRect.height / 2 - hintRect.height / 2) + "px";
-    }
+    var left = railRect.left + railRect.width / 2 - hintRect.width / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - hintRect.width - 8));
+    modeRailHint.style.left = left + "px";
+    modeRailHint.style.top = (railRect.bottom + 10) + "px";
   }
 
   function dismissModeRailHint() {
@@ -3938,6 +3923,7 @@
     swipeView.classList.add("hidden");
     chaosView.classList.add("hidden");
     outfitView.classList.add("hidden");
+    outfitPicker.classList.remove("open");
     appShell.classList.remove("hidden");
     syncModeRail("classic");
   }
@@ -4121,6 +4107,7 @@
     appShell.classList.add("hidden");
     chaosView.classList.add("hidden");
     outfitView.classList.add("hidden");
+    outfitPicker.classList.remove("open");
     buildSwipeQueue();
     renderSwipeCard();
     swipeView.classList.remove("hidden");
@@ -4332,6 +4319,7 @@
     appShell.classList.add("hidden");
     swipeView.classList.add("hidden");
     outfitView.classList.add("hidden");
+    outfitPicker.classList.remove("open");
     chaosView.classList.remove("hidden");
     buildChaos();
     syncModeRail("chaos");
