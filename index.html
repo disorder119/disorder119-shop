@@ -2229,9 +2229,9 @@
   /* ---------- Mobile ---------- */
 
   @media (max-width: 720px) {
-    .masthead { padding-top: 16px; padding-bottom: 18px; gap: 12px; }
-    .masthead__top { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; position: relative; }
-    .eyebrow { grid-column: auto; justify-self: auto; max-width: calc(100% - 60px); font-size: 0.6rem; }
+    .masthead { padding-top: 10px; padding-bottom: 12px; gap: 8px; }
+    .masthead__top { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; position: relative; }
+    .eyebrow { grid-column: auto; justify-self: auto; max-width: calc(100% - 60px); font-size: 0.58rem; line-height: 1.35; }
     .wordmark-block { grid-column: auto; justify-self: auto; align-items: flex-start; }
     /* Warenkorb-Tuete rechts oben frei schwebend statt Teil des links-
        buendigen Textstapels - sonst sass sie unstimmig direkt unter dem
@@ -2243,15 +2243,22 @@
        Zeilen vor dem eigentlichen Archiv, ohne eigenen Nutzwert (die echte
        Markensuche laeuft ueber das Suchfeld/den Marken-Filter). */
     .masthead__index { display: none; }
-    .masthead__bottom { align-items: flex-start; gap: 14px 28px; }
+    .masthead__bottom { align-items: flex-start; gap: 6px; }
+    /* Kennzahlen (235/165/46) waren ein 2-zeiliger 3-Spalten-Block - auf dem
+       Handy als eine schmale Zeile statt eigenem Block, spart deutlich
+       Hoehe vor dem eigentlichen Archiv. */
+    .masthead__meta { gap: 14px; }
+    .meta-figure { flex-direction: row; align-items: baseline; gap: 4px; }
+    .meta-figure__value { font-size: 0.82rem; }
+    .meta-figure__label { font-size: 0.56rem; }
 
     .rail {
       position: static;
       flex-direction: column;
       flex-wrap: nowrap;
       align-items: stretch;
-      gap: 12px;
-      padding: 14px 16px;
+      gap: 9px;
+      padding: 12px 16px;
     }
     .rail__search { flex: 0 0 auto; max-width: none; }
     .rail__search input { font-size: 16px; padding: 10px 2px; }
@@ -2275,7 +2282,7 @@
     #moreFiltersToggle[aria-expanded="true"] ~ .rail__sort,
     #moreFiltersToggle[aria-expanded="true"] ~ #mountToggle { display: inline-flex; }
 
-    .grid-wrap { padding: 18px 16px 70px; }
+    .grid-wrap { padding: 12px 16px 70px; }
     .grid { grid-template-columns: repeat(2, 1fr); gap: 22px 14px; }
     .plate__frame img { padding: 6%; }
     .plate__brand { font-size: 0.64rem; }
@@ -4222,7 +4229,11 @@
 
   function chaosItemCount() {
     var w = window.innerWidth;
-    if (w < 640) return 14;
+    // Auf schmalen Handys weniger Artikel als vorher (14 -> 9) - sonst
+    // ueberlappten sich die kleinen, treibenden Karten zu stark und liessen
+    // sich kaum noch einzeln antippen.
+    if (w < 420) return 9;
+    if (w < 640) return 12;
     if (w < 1100) return 26;
     if (w < 1600) return 38;
     return 48;
