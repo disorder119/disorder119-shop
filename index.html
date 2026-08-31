@@ -2002,10 +2002,26 @@
   .look-card--shoes.visible { transform: rotate(10deg) scale(1); }
 
   .look-card--accessory {
-    top: 4%; left: 66%; width: 30%; aspect-ratio: 4 / 3; z-index: 3;
-    transform: rotate(-9deg) scale(0.96);
+    /* Default fuer eher quadratische/hochformatige Accessoires (Muetzen,
+       Taschen, Sonnenbrillen) - deutlich groesser als frueher (war 30% Breite
+       in einer 4:3-Box, quetschte hochformatige Fotos winzig klein). */
+    top: 2%; left: 60%; width: 36%; aspect-ratio: 1 / 1; z-index: 3;
+    transform: rotate(-6deg) scale(0.96);
   }
-  .look-card--accessory.visible { transform: rotate(-9deg) scale(1); }
+  .look-card--accessory.visible { transform: rotate(-6deg) scale(1); }
+
+  .look-card--accessory--tall { aspect-ratio: 3 / 4; }
+
+  /* Sehr breite Motive (Guertel etc.) wuerden in der quadratischen Ecke auf
+     einen kaum sichtbaren duennen Strich schrumpfen (object-fit:contain
+     zwingt sie auf die knappere Seite) - stattdessen ein breiter Streifen
+     auf Hueft-Hoehe, wo ein Guertel ohnehin getragen wuerde. Seitenverhaeltnis
+     wird per JS anhand der echten Bildmasse erkannt (renderOutfitFigure). */
+  .look-card--accessory--wide {
+    top: 42%; left: 8%; width: 84%; aspect-ratio: 11 / 3; z-index: 4;
+    transform: rotate(0deg) scale(0.96);
+  }
+  .look-card--accessory--wide.visible { transform: rotate(0deg) scale(1); }
 
   .outfit-stack {
     width: min(360px, 100%);
@@ -4587,7 +4603,7 @@
 
   function renderOutfitFigure() {
     var anyVisible = false;
-    function setCard(cardEl, item) {
+    function setCard(cardEl, item, onAspect) {
       var src = item && (item.look || (item.gallery && item.gallery[0])) ? (item.look || item.gallery[0]) : "";
       var imgEl = cardEl.querySelector("img");
       if (src) {
@@ -4595,15 +4611,28 @@
         imgEl.alt = item.title;
         cardEl.classList.add("visible");
         anyVisible = true;
+        if (onAspect) {
+          if (imgEl.complete && imgEl.naturalWidth) onAspect(imgEl);
+          else imgEl.onload = function () { onAspect(imgEl); };
+        }
       } else {
         cardEl.classList.remove("visible");
+        if (onAspect) cardEl.classList.remove("look-card--accessory--wide", "look-card--accessory--tall");
       }
     }
     setCard(document.getElementById("figTop"), outfitSlots.top.item);
     setCard(document.getElementById("figJacket"), outfitSlots.jacket.item);
     setCard(document.getElementById("figBottom"), outfitIsDress() ? null : outfitSlots.bottom.item);
     setCard(document.getElementById("figShoes"), outfitSlots.shoes.item);
-    setCard(document.getElementById("figAccessory"), outfitSlots.accessory.item);
+    setCard(document.getElementById("figAccessory"), outfitSlots.accessory.item, function (imgEl) {
+      // Sehr breite Fotos (Guertel) bekommen einen breiten Huefthoehe-Streifen
+      // statt in die quadratische Standard-Ecke gequetscht zu werden; sehr
+      // hochformatige (Muetzen auf Buesten-Fotos) ein hochformatiges Feld.
+      var accEl = document.getElementById("figAccessory");
+      var ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+      accEl.classList.toggle("look-card--accessory--wide", ratio >= 1.6);
+      accEl.classList.toggle("look-card--accessory--tall", ratio <= 0.85);
+    });
     document.getElementById("lookBoardEmpty").classList.toggle("hidden-empty", anyVisible);
   }
 
