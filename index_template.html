@@ -462,80 +462,20 @@
     grid-column: 3;
     justify-self: end;
     position: relative;
-    width: 54px;
-    height: 58px;
+    /* Breite wird per JS so gesetzt, dass die resultierende (Seitenverhaeltnis-
+       treue) Hoehe exakt der Hoehe des Eyebrow-Textblocks links entspricht
+       (syncCartIconHeight) - hier nur ein Startwert, bis JS greift. */
+    width: 46px;
     background: transparent;
     border: none;
     padding: 0;
     cursor: pointer;
+    line-height: 0;
   }
 
   .cart-bag:hover { transform: translateY(-1px); }
 
-  .cart-bag__handles {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 22px;
-    fill: none;
-    stroke: #ffffff;
-    stroke-width: 4;
-    stroke-linecap: round;
-  }
-
-  .cart-bag__body {
-    /* Schlichtes abgerundetes Rechteck statt der vorherigen spitzen
-       Tueten-Silhouette (clip-path-Trapez) - das sah bei der kleinen
-       Groesse eher wie eine Glocke/Kegel aus als wie eine Tuete. */
-    position: absolute;
-    left: 2px;
-    right: 2px;
-    bottom: 0;
-    height: 38px;
-    background: #ffffff;
-    border-radius: 3px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
-  }
-
-  .cart-bag__logo {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    line-height: 0.92;
-  }
-
-  .cart-bag__logo span {
-    font-family: "Helvetica Neue Condensed", "Arial Narrow", Helvetica, Arial, sans-serif;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    color: #0a0a09;
-  }
-
-  .cart-bag__logo span:first-child { font-size: 6px; }
-  .cart-bag__logo span:last-child { font-size: 9.5px; margin-top: 0.5px; }
-
-  .cart-bag__count {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    background: var(--accent);
-    color: #17110a;
-    border-radius: 50%;
-    min-width: 19px;
-    height: 19px;
-    padding: 0 4px;
-    font-size: 0.66rem;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid var(--ink);
-  }
+  .cart-bag svg { display: block; width: 100%; height: auto; }
 
   /* ---------- Grid ---------- */
 
@@ -2296,7 +2236,7 @@
     /* Warenkorb-Tuete rechts oben frei schwebend statt Teil des links-
        buendigen Textstapels - sonst sass sie unstimmig direkt unter dem
        Schriftzug statt an der erwarteten Cart-Position oben rechts. */
-    .cart-bag { grid-column: auto; justify-self: auto; position: absolute; top: 0; right: 0; width: 46px; height: 50px; }
+    .cart-bag { grid-column: auto; justify-self: auto; position: absolute; top: 0; right: 0; width: 40px; }
     .masthead__actions { align-self: flex-end; margin-right: 54px; }
     .lang-switch__btn { padding: 5px 6px; font-size: 0.6rem; }
     .masthead__index { text-align: left; line-height: 1.5; white-space: normal; }
@@ -2522,15 +2462,17 @@
         <button type="button" class="lang-switch__btn" data-lang="fr">FR</button>
       </div>
       <button type="button" class="cart-bag" id="cartToggle" data-i18n-aria="cartOpenAria" aria-label="Warenkorb öffnen">
-        <svg class="cart-bag__handles" viewBox="0 0 100 44" aria-hidden="true">
-          <path d="M24,44 L24,22 Q24,4 50,4 Q76,4 76,22 L76,44" />
+        <svg viewBox="0 0 240 300" role="img" aria-hidden="true">
+          <title>Disorder119 Warenkorb</title>
+          <g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M28 20H126C181 20 214 56 214 111V189C214 244 181 280 126 280H28Z"/>
+            <path d="M77 106L93 86H147L163 106V220C163 230 155 238 145 238H95C85 238 77 230 77 220Z"/>
+            <path d="M96 87V68C96 54 107 43 120 43C133 43 144 54 144 68V87"/>
+            <circle cx="120" cy="110" r="6"/>
+          </g>
+          <circle cx="120" cy="166" r="28" fill="#fff"/>
+          <text id="cartCount" x="120" y="176" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#000">0</text>
         </svg>
-        <span class="cart-bag__body">
-          <span class="cart-bag__logo">
-            <span>Disorder</span><span>119</span>
-          </span>
-        </span>
-        <span class="cart-bag__count" id="cartCount">0</span>
       </button>
     </div>
   </div>
@@ -3142,7 +3084,35 @@
       var legalContentEl = document.getElementById("legalContent");
       if (legalContentEl) legalContentEl.innerHTML = legalContent(currentLegalKey);
     }
+    // Eyebrow-Text aendert pro Sprache seine Laenge/Zeilenumbrueche -
+    // Warenkorb-Icon-Groesse danach neu an dessen Hoehe angleichen.
+    syncCartIconHeight();
   }
+
+  // Warenkorb-Icon soll immer exakt so hoch sein wie der Eyebrow-Textblock
+  // links davon (nur auf der Breite, auf der beide nebeneinander in derselben
+  // Grid-Zeile stehen - auf dem Handy steht der Cart frei schwebend, dort
+  // gilt stattdessen eine feste Breite aus der Media Query).
+  function syncCartIconHeight() {
+    var eyebrowEl = document.querySelector(".eyebrow");
+    var cartEl = document.getElementById("cartToggle");
+    if (!eyebrowEl || !cartEl) return;
+    if (window.innerWidth <= 720) { cartEl.style.width = ""; return; }
+    var eyebrowHeight = eyebrowEl.getBoundingClientRect().height;
+    if (eyebrowHeight <= 0) return;
+    // SVG-Seitenverhaeltnis (viewBox 240x300) in eine Breite umrechnen, die
+    // bei automatischer Hoehe genau eyebrowHeight ergibt.
+    cartEl.style.width = (eyebrowHeight * (240 / 300)) + "px";
+  }
+
+  var cartIconResizeRaf = null;
+  window.addEventListener("resize", function () {
+    if (cartIconResizeRaf) return;
+    cartIconResizeRaf = requestAnimationFrame(function () {
+      cartIconResizeRaf = null;
+      syncCartIconHeight();
+    });
+  });
 
   Array.prototype.forEach.call(document.querySelectorAll("#langSwitch [data-lang]"), function (btn) {
     btn.addEventListener("click", function () { applyLanguage(btn.getAttribute("data-lang")); });
