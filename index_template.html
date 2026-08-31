@@ -2150,7 +2150,7 @@
     display: block;
     max-width: 700px;
     width: 100%;
-    margin: 0 auto 18px;
+    margin: 0 auto 10px;
     background: transparent;
     border: none;
     border-bottom: 1px solid var(--rule-strong);
@@ -2162,6 +2162,38 @@
 
   .outfit-picker__search::placeholder { color: rgba(242, 239, 231, 0.4); }
   .outfit-picker__search:focus { border-bottom-color: var(--accent); }
+
+  .outfit-picker__filters {
+    display: flex;
+    gap: 10px;
+    max-width: 700px;
+    width: 100%;
+    margin: 0 auto 18px;
+  }
+
+  .outfit-picker__filters select,
+  .outfit-picker__filters input {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: transparent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999691' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    border: 1px solid var(--rule-strong);
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 0.76rem;
+    padding: 7px 26px 7px 10px;
+    flex: 1 1 0;
+    min-width: 0;
+    border-radius: 0;
+  }
+
+  .outfit-picker__filters input { background-image: none; padding-right: 10px; }
+  .outfit-picker__filters select option { background: var(--ink); color: var(--paper); }
+  .outfit-picker__filters select:focus,
+  .outfit-picker__filters input:focus { border-color: var(--accent); outline: none; }
+  .outfit-picker__filters input::placeholder { color: rgba(242, 239, 231, 0.4); }
 
   .outfit-picker__empty {
     max-width: 700px;
@@ -2235,14 +2267,19 @@
 
   @media (max-width: 720px) {
     .masthead { padding-top: 10px; padding-bottom: 12px; gap: 8px; }
-    .masthead__top { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; position: relative; }
-    /* Sprachumschalter sass vorher allein in einer eigenen Zeile unterm
-       Schriftzug, rechtsbuendig mit viel Leerraum links davon - wirkte
-       "verloren". Jetzt bilden Sprachumschalter + Warenkorb-Icon zusammen
-       EINE fest verankerte Einheit oben rechts, auf gleicher Hoehe wie die
-       erste Eyebrow-Zeile - symmetrisches Gegenstueck zum Text links. */
-    .eyebrow { grid-column: auto; justify-self: auto; max-width: calc(100% - 140px); font-size: 0.56rem; line-height: 1.3; }
-    .wordmark-block { grid-column: auto; justify-self: auto; align-items: flex-start; }
+    /* Kompletter Wechsel auf mittige Ausrichtung statt der linksbuendigen
+       Desktop-Anordnung - Sprachumschalter + Warenkorb bleiben als kleine,
+       oben rechts verankerte Utility-Icons (uebliche Konvention, zaehlt
+       nicht gegen die Symmetrie des eigentlichen Inhalts darunter). Text,
+       Logo und Kennzahlen sind darunter alle zentriert - wirkt wie ein
+       richtiger, ausbalancierter Hero-Bereich statt einer Textspalte. */
+    .masthead__top {
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center; gap: 6px; position: relative;
+      padding-top: 52px;
+    }
+    .eyebrow { grid-column: auto; justify-self: auto; max-width: 100%; margin: 0 auto; font-size: 0.56rem; line-height: 1.3; }
+    .wordmark-block { grid-column: auto; justify-self: auto; align-items: center; width: 100%; }
     .masthead__actions {
       grid-column: auto; justify-self: auto;
       position: absolute; top: 0; right: 0;
@@ -2254,11 +2291,11 @@
        Zeilen vor dem eigentlichen Archiv, ohne eigenen Nutzwert (die echte
        Markensuche laeuft ueber das Suchfeld/den Marken-Filter). */
     .masthead__index { display: none; }
-    .masthead__bottom { align-items: flex-start; gap: 6px; }
+    .masthead__bottom { align-items: center; text-align: center; gap: 6px; }
     /* Kennzahlen (235/165/46) waren ein 2-zeiliger 3-Spalten-Block - auf dem
-       Handy als eine schmale Zeile statt eigenem Block, spart deutlich
-       Hoehe vor dem eigentlichen Archiv. */
-    .masthead__meta { gap: 14px; }
+       Handy als eine schmale, zentrierte Zeile statt eigenem Block, spart
+       deutlich Hoehe vor dem eigentlichen Archiv. */
+    .masthead__meta { justify-content: center; gap: 14px; }
     .meta-figure { flex-direction: row; align-items: baseline; gap: 4px; }
     .meta-figure__value { font-size: 0.82rem; }
     .meta-figure__label { font-size: 0.56rem; }
@@ -2455,6 +2492,10 @@
     <button type="button" class="modal__close" id="outfitPickerClose" data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
   </div>
   <input type="text" id="outfitPickerSearch" class="outfit-picker__search" data-i18n-placeholder="outfitPickerSearchPh" placeholder="Suche nach Marke, Titel …" autocomplete="off">
+  <div class="outfit-picker__filters">
+    <select id="outfitPickerSize"><option value="" data-i18n="outfitPickerAllSizes">Alle Größen</option></select>
+    <input type="number" id="outfitPickerPriceMax" min="0" step="10" data-i18n-placeholder="outfitPickerPriceMaxPh" placeholder="Preis bis (€)">
+  </div>
   <div class="outfit-picker__grid" id="outfitPickerGrid"></div>
 </div>
 
@@ -4479,11 +4520,17 @@
   var outfitPickerKey = null;
   var outfitPickerQuery = "";
 
-  function outfitEligible(categories, query) {
+  function outfitEligible(categories, query, opts) {
+    // public_status statt der alten "status === Verkauft"-Pruefung - sonst
+    // koennten hier (anders als im Rest des Shops) auch interne Workflow-
+    // Staende oder inzwischen verkaufte Artikel auftauchen.
+    opts = opts || {};
     var q = (query || "").trim().toLowerCase();
     return ITEMS.filter(function (it) {
-      if (it.status === "Verkauft" || !(it.price > 0) || !it.gallery || !it.gallery[0]) return false;
+      if (it.public_status !== "AVAILABLE" || !(it.price > 0) || !it.gallery || !it.gallery[0]) return false;
       if (categories.indexOf(it.category) === -1) return false;
+      if (opts.size && it.size !== opts.size) return false;
+      if (opts.priceMax && it.price > opts.priceMax) return false;
       if (!q) return true;
       var hay = ((it.brand || "") + " " + (it.title || "")).toLowerCase();
       return hay.indexOf(q) !== -1;
@@ -4532,7 +4579,7 @@
       OUTFIT_ORDER.forEach(function (k) {
         if (ids[k] != null) {
           var it = findItem(ids[k]);
-          if (it && it.status !== "Verkauft" && it.price > 0) outfitSlots[k].item = it;
+          if (it && it.public_status === "AVAILABLE" && it.price > 0) outfitSlots[k].item = it;
         }
       });
     } catch (e) {}
@@ -4642,10 +4689,16 @@
     document.getElementById("lookBoardEmpty").classList.toggle("hidden-empty", anyVisible);
   }
 
+  var outfitPickerSize = "";
+  var outfitPickerPriceMax = null;
+
   function renderOutfitPickerGrid() {
     var slot = outfitSlots[outfitPickerKey];
     var grid = document.getElementById("outfitPickerGrid");
-    var options = outfitEligible(slot.categories, outfitPickerQuery);
+    var options = outfitEligible(slot.categories, outfitPickerQuery, {
+      size: outfitPickerSize,
+      priceMax: outfitPickerPriceMax
+    });
     grid.innerHTML = "";
     if (!options.length) {
       grid.innerHTML = '<p class="outfit-picker__empty">' + t("outfitEmptyOptions") + '</p>';
@@ -4672,9 +4725,25 @@
   function openOutfitPicker(key) {
     outfitPickerKey = key;
     outfitPickerQuery = "";
+    outfitPickerSize = "";
+    outfitPickerPriceMax = null;
     document.getElementById("outfitPickerTitle").textContent = outfitSlotLabel(key) + " " + t("outfitPickerChoose");
     var search = document.getElementById("outfitPickerSearch");
     search.value = "";
+    var priceInput = document.getElementById("outfitPickerPriceMax");
+    priceInput.value = "";
+
+    // Groessen-Auswahl neu befuellen - nur Groessen, die in dieser Kategorie
+    // tatsaechlich vorkommen (unabhaengig von Text-/Preisfilter).
+    var sizeSelect = document.getElementById("outfitPickerSize");
+    var sizes = [];
+    outfitEligible(outfitSlots[key].categories).forEach(function (it) {
+      if (it.size && sizes.indexOf(it.size) === -1) sizes.push(it.size);
+    });
+    sizes.sort();
+    sizeSelect.innerHTML = '<option value="" data-i18n="outfitPickerAllSizes">' + t("outfitPickerAllSizes") + '</option>' +
+      sizes.map(function (s) { return '<option value="' + escapeHtml(s) + '">' + escapeHtml(s) + '</option>'; }).join("");
+
     renderOutfitPickerGrid();
     outfitPicker.classList.add("open");
     search.focus();
@@ -4689,23 +4758,50 @@
     outfitPickerQuery = e.target.value;
     renderOutfitPickerGrid();
   });
+  document.getElementById("outfitPickerSize").addEventListener("change", function (e) {
+    outfitPickerSize = e.target.value;
+    renderOutfitPickerGrid();
+  });
+  document.getElementById("outfitPickerPriceMax").addEventListener("input", function (e) {
+    var v = parseFloat(e.target.value);
+    outfitPickerPriceMax = (e.target.value !== "" && !isNaN(v)) ? v : null;
+    renderOutfitPickerGrid();
+  });
 
   function randomOutfit() {
     OUTFIT_ORDER.forEach(function (k) { outfitSlots[k].item = null; });
-    var topOptions = outfitEligible(outfitSlots.top.categories);
-    if (topOptions.length) outfitSlots.top.item = topOptions[Math.floor(Math.random() * topOptions.length)];
-    if (!outfitIsDress() && Math.random() > 0.5) {
-      var jacketOptions = outfitEligible(outfitSlots.jacket.categories);
-      if (jacketOptions.length) outfitSlots.jacket.item = jacketOptions[Math.floor(Math.random() * jacketOptions.length)];
+
+    // Manchmal bewusst einen "Marken-Moment" versuchen statt komplett wild
+    // zu mischen - wirkt kuratierter statt zufaellig. Nur Marken mit
+    // genuegend Auswahl ueber mehrere Kategorien hinweg kommen infrage.
+    var monoBrand = null;
+    if (Math.random() < 0.4) {
+      var brandCounts = {};
+      ITEMS.forEach(function (it) {
+        if (it.public_status === "AVAILABLE" && it.price > 0 && it.gallery && it.gallery[0] && it.brand) {
+          brandCounts[it.brand] = (brandCounts[it.brand] || 0) + 1;
+        }
+      });
+      var candidates = Object.keys(brandCounts).filter(function (b) { return brandCounts[b] >= 3; });
+      if (candidates.length) monoBrand = candidates[Math.floor(Math.random() * candidates.length)];
     }
-    if (!outfitIsDress()) {
-      var bottomOptions = outfitEligible(outfitSlots.bottom.categories);
-      if (bottomOptions.length) outfitSlots.bottom.item = bottomOptions[Math.floor(Math.random() * bottomOptions.length)];
+
+    function pick(categories) {
+      var pool = outfitEligible(categories);
+      if (monoBrand) {
+        var brandPool = pool.filter(function (it) { return it.brand === monoBrand; });
+        // Nicht stur erzwingen - wenn die Marke in dieser Kategorie nichts
+        // Passendes hat, faellt es zurueck auf die volle Auswahl.
+        if (brandPool.length && Math.random() < 0.8) pool = brandPool;
+      }
+      return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
     }
-    var shoeOptions = outfitEligible(outfitSlots.shoes.categories);
-    if (shoeOptions.length) outfitSlots.shoes.item = shoeOptions[Math.floor(Math.random() * shoeOptions.length)];
-    var accOptions = outfitEligible(outfitSlots.accessory.categories);
-    if (accOptions.length && Math.random() > 0.35) outfitSlots.accessory.item = accOptions[Math.floor(Math.random() * accOptions.length)];
+
+    outfitSlots.top.item = pick(outfitSlots.top.categories);
+    if (!outfitIsDress() && Math.random() > 0.5) outfitSlots.jacket.item = pick(outfitSlots.jacket.categories);
+    if (!outfitIsDress()) outfitSlots.bottom.item = pick(outfitSlots.bottom.categories);
+    outfitSlots.shoes.item = pick(outfitSlots.shoes.categories);
+    if (Math.random() > 0.35) outfitSlots.accessory.item = pick(outfitSlots.accessory.categories);
     saveOutfit();
     renderOutfitStack();
   }
