@@ -217,7 +217,7 @@ def json_ld(it):
         "name": it["title"],
         "url": SITE_URL + "artikel/" + str(it["id"]) + ".html",
         "image": [SITE_URL + g for g in it.get("gallery") or []],
-        "description": (it.get("desc") or meta_description(it))[:500],
+        "description": (it.get("desc_de") or it.get("desc") or meta_description(it))[:500],
         "sku": it.get("article") or str(it["id"]),
         "brand": {"@type": "Brand", "name": it.get("brand") or "Disorder119"},
     }
@@ -269,6 +269,9 @@ def build_page(it, shop_config):
         "condition": it.get("condition"),
         "category": it.get("category"),
         "desc": it.get("desc") or "",
+        "desc_de": it.get("desc_de") or it.get("desc") or "",
+        "desc_en": it.get("desc_en") or "",
+        "desc_fr": it.get("desc_fr") or "",
         "gallery": gallery,
         "thumbs": [thumb_path(g) for g in gallery],
         "sold": sold,
@@ -327,7 +330,7 @@ def build_page(it, shop_config):
     <h1>{esc(it["title"])}</h1>
     <div id="priceBlock">{price_block_html(it)}</div>
     <div class="info__facts">{facts_html(it)}</div>
-    <p class="info__desc" id="itemDesc">{esc((it.get("desc") or "").strip() or auto_description(it))}</p>
+    <p class="info__desc" id="itemDesc">{esc((it.get("desc_de") or it.get("desc") or "").strip() or auto_description(it))}</p>
     {cta_html(it, shop_config)}
   </div>
 </div>

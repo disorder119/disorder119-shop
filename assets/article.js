@@ -41,9 +41,7 @@
       orderArticleAbbrev: "Art.-Nr. ", orderAvailQuestion: "Ist dieses Stück noch verfügbar?",
       orderSubjectPrefix: "Anfrage Disorder119 – ",
       noBrand: "Ohne Marke", noDesc: "Keine Beschreibung hinterlegt.",
-      descOriginalNote: "",
-      autoDescTemplate: "{name}{facts}. Aus dem kuratierten Archiv von Disorder119.",
-      descTemplate: "Aus dem kuratierten Archiv von Disorder119.\n\n{title} von {brand}."
+      autoDescTemplate: "{name}{facts}. Aus dem kuratierten Archiv von Disorder119."
     },
     en: {
       langGroupAria: "Choose language", backToArchive: "← To the archive",
@@ -64,9 +62,7 @@
       orderArticleAbbrev: "Item no. ", orderAvailQuestion: "Is this piece still available?",
       orderSubjectPrefix: "Disorder119 enquiry – ",
       noBrand: "No brand", noDesc: "No description available.",
-      descOriginalNote: "Full description available in German only:",
-      autoDescTemplate: "{name}{facts}. From the curated archive of Disorder119.",
-      descTemplate: "From the curated archive of Disorder119.\n\n{title} by {brand}."
+      autoDescTemplate: "{name}{facts}. From the curated archive of Disorder119."
     },
     fr: {
       langGroupAria: "Choisir la langue", backToArchive: "← Vers l'archive",
@@ -87,9 +83,7 @@
       orderArticleAbbrev: "N° d'article ", orderAvailQuestion: "Cette pièce est-elle toujours disponible ?",
       orderSubjectPrefix: "Demande Disorder119 – ",
       noBrand: "Sans marque", noDesc: "Aucune description disponible.",
-      descOriginalNote: "Description complète disponible uniquement en allemand :",
-      autoDescTemplate: "{name}{facts}. Issu de l'archive sélectionnée de Disorder119.",
-      descTemplate: "Issu de l'archive sélectionnée de Disorder119.\n\n{title} par {brand}."
+      autoDescTemplate: "{name}{facts}. Issu de l'archive sélectionnée de Disorder119."
     }
   };
 
@@ -134,7 +128,6 @@
   function trCond(cond) { var e = CONDITION_TR[cond]; return e ? e[LANG] || e.de : (cond || ""); }
   function trSize(size) { var e = SIZE_TR[size]; return e ? e[LANG] || e.de : (size || ""); }
 
-  var DESC_TEMPLATE_RE = /^Aus dem kuratierten Archiv von Disorder119\.\n\n(.+) von (.+)\.$/;
   function displayName() {
     var brand = IT.brand || "", title = IT.title || "";
     if (brand && title.toLowerCase().indexOf(brand.toLowerCase()) === 0) return title;
@@ -149,12 +142,13 @@
     return tFormat("autoDescTemplate", { name: displayName(), facts: factsStr ? " – " + factsStr : "" });
   }
   function descriptionText() {
-    var raw = (IT.desc || "").trim();
-    if (!raw) return autoDescription();
-    if (LANG === "de") return raw;
-    var m = DESC_TEMPLATE_RE.exec(raw);
-    if (m) return tFormat("descTemplate", { title: m[1], brand: m[2] });
-    return t("descOriginalNote") + "\n\n" + raw;
+    var descriptions = {
+      de: IT.desc_de || IT.desc || "",
+      en: IT.desc_en || "",
+      fr: IT.desc_fr || ""
+    };
+    var localized = (descriptions[LANG] || "").trim();
+    return localized || autoDescription();
   }
 
   function applyLang() {

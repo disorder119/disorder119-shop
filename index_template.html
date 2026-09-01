@@ -1926,6 +1926,51 @@
     object-position: center;
   }
 
+  /* Im Look-Board zeigen wir bei getragenen Produktfotos nur den
+     koerperrelevanten Ausschnitt. Die Klassen werden ausschliesslich von
+     renderOutfitFigure gesetzt; Produktkarten, Modals und Artikelseiten
+     behalten daher immer ihre vollstaendigen Originalbilder. */
+  .look-card--crop-upper,
+  .look-card--crop-lower,
+  .look-card--crop-feet {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .look-card--crop-upper img,
+  .look-card--crop-lower img,
+  .look-card--crop-feet img {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    object-fit: cover;
+  }
+
+  /* Tops, Hemden, Strick und Jacken: Kopf/Oberkoerper behalten,
+     Taille und Unterkoerper ausserhalb des Viewports abschneiden. */
+  .look-card--crop-upper img {
+    top: 0;
+    height: 190%;
+    object-position: center top;
+  }
+
+  /* Hosen und Roecke: ab Taille nach unten zeigen; der Oberkoerper liegt
+     oberhalb des Viewports. */
+  .look-card--crop-lower img {
+    bottom: 0;
+    height: 190%;
+    object-position: center bottom;
+  }
+
+  /* Schuhe: auf das untere Drittel des getragenen Fotos zoomen. */
+  .look-card--crop-feet img {
+    bottom: 0;
+    height: 300%;
+    object-position: center bottom;
+  }
+
   .look-card--jacket {
     top: 4%; left: 6%; width: 52%; aspect-ratio: 3 / 4; z-index: 1;
     transform: rotate(-8deg) scale(0.96);
@@ -2817,8 +2862,6 @@
       condRepariert: "Repariert", condDefekt: "Mit Defekt",
       condGut: "Gut", condSehrGut: "Sehr gut", condZufriedenstellend: "Zufriedenstellend",
       sizeEinheitsgroesse: "Einheitsgröße", sizeVerstellbar: "verstellbar", sizeKidsL: "Kindergröße L",
-      descTemplate: "Aus dem kuratierten Archiv von Disorder119.\n\n{title} von {brand}.",
-      descOriginalNote: "",
       autoDescTemplate: "{name}{facts}. Aus dem kuratierten Archiv von Disorder119.",
       legalImpressumHtml: "<h2>Impressum</h2>" +
         "<p>Angaben gemäß § 5 DDG</p>" +
@@ -2924,8 +2967,6 @@
       condRepariert: "Repaired", condDefekt: "With defect",
       condGut: "Good", condSehrGut: "Very good", condZufriedenstellend: "Satisfactory",
       sizeEinheitsgroesse: "One size", sizeVerstellbar: "adjustable", sizeKidsL: "Kids' size L",
-      descTemplate: "From the curated archive of Disorder119.\n\n{title} by {brand}.",
-      descOriginalNote: "Full description available in German only:",
       autoDescTemplate: "{name}{facts}. From the curated archive of Disorder119.",
       legalImpressumHtml: "<h2>Legal notice</h2>" +
         "<p>This page is translated for convenience — the German version above is the legally binding one.</p>" +
@@ -3034,8 +3075,6 @@
       condRepariert: "Réparé", condDefekt: "Avec défaut",
       condGut: "Bon", condSehrGut: "Très bon", condZufriedenstellend: "Satisfaisant",
       sizeEinheitsgroesse: "Taille unique", sizeVerstellbar: "réglable", sizeKidsL: "Taille enfant L",
-      descTemplate: "Issu de l'archive sélectionnée de Disorder119.\n\n{title} par {brand}.",
-      descOriginalNote: "Description complète disponible uniquement en allemand :",
       autoDescTemplate: "{name}{facts}. Issu de l'archive sélectionnée de Disorder119.",
       legalImpressumHtml: "<h2>Mentions légales</h2>" +
         "<p>Cette page est traduite par courtoisie — la version allemande ci-dessus fait foi juridiquement.</p>" +
@@ -3098,13 +3137,7 @@
   function trCondition(cond) { var k = CONDITION_MAP_DE_TO_KEY[cond]; return k ? t(k) : (cond || ""); }
   function trSize(size) { var k = SIZE_MAP_DE_TO_KEY[size]; return k ? t(k) : (size || ""); }
 
-  // Artikelbeschreibungen: die kurze, ueberall gleiche Vorlage (BATCH2/NEW_ITEMS)
-  // wird pro Sprache neu zusammengesetzt. Echte, lange Freitext-Beschreibungen
-  // (aus eBay-Inseraten, oft mit Massangaben) werden NICHT automatisch uebersetzt -
-  // das Risiko falscher Mass-/Materialangaben in einer Sprache, die niemand hier
-  // gegenlesen kann, wiegt schwerer als der Komfort einer Volltext-Uebersetzung.
-  // Stattdessen bleibt der deutsche Originaltext sichtbar, mit uebersetztem Hinweis.
-  var DESC_TEMPLATE_RE = /^Aus dem kuratierten Archiv von Disorder119\.\n\n(.+) von (.+)\.$/;
+  // Jede Sprache verwendet die fest im Artikeldatensatz hinterlegte Beschreibung.
   // Manche Artikel haben (noch) gar keine Beschreibung im Manager hinterlegt
   // (echte Datenluecke, kein Anzeigefehler - z.B. bei schnell erfassten
   // "Ohne Preis"-Artikeln). Statt eines nichtssagenden "Keine Beschreibung
@@ -3124,12 +3157,13 @@
   }
 
   function trDescription(it) {
-    var raw = (it.desc || "").trim();
-    if (!raw) return autoDescription(it);
-    if (LANG === "de") return raw;
-    var m = DESC_TEMPLATE_RE.exec(raw);
-    if (m) return tFormat("descTemplate", { title: m[1], brand: m[2] });
-    return t("descOriginalNote") + "\n\n" + raw;
+    var descriptions = {
+      de: it.desc_de || it.desc || "",
+      en: it.desc_en || "",
+      fr: it.desc_fr || ""
+    };
+    var localized = (descriptions[LANG] || "").trim();
+    return localized || autoDescription(it);
   }
 
   // Wird nach dem Aufbau der restlichen Seite (Chips, Modal, Warenkorb, Baukasten,
@@ -4751,10 +4785,31 @@
 
   function renderOutfitFigure() {
     var anyVisible = false;
+    var outfitCropClasses = ["look-card--crop-upper", "look-card--crop-lower", "look-card--crop-feet"];
+
+    function outfitCropClass(item) {
+      // Nur die eigens fuer den Look-Baukasten hinterlegten Tragebilder
+      // beschneiden. Falls ein Artikel kein `look`-Bild besitzt und auf das
+      // normale Galeriefoto zurueckfaellt, bleibt dieses vollstaendig sichtbar.
+      if (!item || !item.look) return "";
+      if (["Tops", "Shirts", "Knitwear", "Jackets", "Coats"].indexOf(item.category) !== -1) {
+        return "look-card--crop-upper";
+      }
+      if (["Pants", "Skirts"].indexOf(item.category) !== -1) {
+        return "look-card--crop-lower";
+      }
+      if (item.category === "Shoes") return "look-card--crop-feet";
+      // Kleider und Accessoires sollen weiterhin als Ganzes sichtbar sein.
+      return "";
+    }
+
     function setCard(cardEl, item, onAspect) {
       var src = item && (item.look || (item.gallery && item.gallery[0])) ? (item.look || item.gallery[0]) : "";
       var imgEl = cardEl.querySelector("img");
+      outfitCropClasses.forEach(function (className) { cardEl.classList.remove(className); });
       if (src) {
+        var cropClass = outfitCropClass(item);
+        if (cropClass) cardEl.classList.add(cropClass);
         if (imgEl.getAttribute("src") !== src) imgEl.src = src;
         imgEl.alt = item.title;
         cardEl.classList.add("visible");
