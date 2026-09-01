@@ -1326,7 +1326,19 @@
     /* Auf sehr schmalen Handys reichen die Icons allein, damit alle vier
        Modi ohne Scrollen in die Leiste passen. */
     .mode-rail__label { display: none; }
-    .mode-rail__btn { padding: 8px 12px; }
+    .mode-rail__btn {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      justify-content: center;
+    }
+    .mode-rail__icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   }
 
   /* ---------- Einmaliger Hinweis auf die Fun-Modi (Match/Chaos/Baukasten) ----------
@@ -2338,6 +2350,10 @@
     }
     .eyebrow { grid-column: auto; justify-self: auto; max-width: 100%; margin: 0 auto; font-size: 0.56rem; line-height: 1.3; }
     .wordmark-block { grid-column: auto; justify-self: auto; align-items: center; width: 100%; }
+    /* Auf dem iPhone soll der Name klar fuehren, aber nicht mehr fast die
+       gesamte Bildschirmbreite belegen. */
+    .wordmark { font-size: clamp(2rem, 10.2vw, 2.6rem); line-height: 0.9; }
+    .wordmark-kicker { font-size: 0.54rem; }
     .masthead__actions {
       grid-column: auto; justify-self: auto;
       position: absolute; top: 0; right: 0;
@@ -2374,13 +2390,14 @@
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
       padding-bottom: 2px;
+      gap: 6px;
       /* Weicher Ausblend-Rand statt hartem Anschnitt am Bildschirmrand -
          signalisiert "hier geht wischbar weiter" statt wie abgeschnitten. */
       -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
       mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
     }
     .chip-row::-webkit-scrollbar { display: none; }
-    .chip { padding: 9px 14px; flex: 0 0 auto; }
+    .chip { padding: 7px 10px; flex: 0 0 auto; font-size: 0.64rem; }
     .rail__right { width: 100%; justify-content: space-between; margin-left: 0; flex-wrap: wrap; gap: 10px; }
     .rail__sort { padding: 9px 10px; }
     .theme-toggle { padding: 10px 12px; font-size: 0.64rem; }
@@ -2415,8 +2432,14 @@
 
     .chaos-item { width: clamp(72px, 24vw, 120px); }
 
-    .outfit-view { padding: 10px 10px 8px; gap: 5px; }
+    .outfit-view {
+      padding: 10px 10px calc(8px + env(safe-area-inset-bottom));
+      gap: 6px;
+      align-items: stretch;
+      overflow-y: auto;
+    }
     .outfit-view__close { top: 8px; right: 10px; width: 28px; height: 28px; font-size: 0.8rem; }
+    .outfit-view__head { min-height: 76px; }
     .outfit-view__eyebrow { font-size: 0.54rem; }
     .outfit-view__title { font-size: clamp(1.05rem, 5.2vw, 1.5rem); }
     .outfit-view__status { font-size: 0.64rem; margin-top: 2px; }
@@ -2466,6 +2489,83 @@
     }
     .outfit-total { font-size: 0.78rem; padding-top: 5px; }
     .outfit-view__actions .view-enter-btn { padding: 8px 10px; font-size: 0.62rem; }
+
+    /* Uebersichtlicher iPhone-Baukasten: alle fuenf Auswahlfelder sitzen in
+       einer gleich hohen Reihe, die Vorschau nutzt darunter die volle Breite
+       und die Aktionen bleiben im normalen Fluss statt Artikel zu verdecken. */
+    .outfit-layout {
+      flex-direction: column;
+      flex-wrap: nowrap;
+      gap: 7px;
+      max-width: 100%;
+      align-items: stretch;
+      justify-content: flex-start;
+      padding-bottom: 0;
+      position: static;
+      overflow: visible;
+    }
+    .outfit-main { display: contents; }
+    .outfit-stack {
+      order: 1;
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 5px;
+      flex: 0 0 auto;
+    }
+    .outfit-figure {
+      order: 2;
+      width: 100%;
+      flex: 1 0 300px;
+      min-height: 300px;
+      gap: 0;
+    }
+    .outfit-figure__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .outfit-slot {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 2px;
+      padding: 3px;
+      position: relative;
+      min-width: 0;
+      flex: none;
+      height: 82px;
+    }
+    .outfit-slot__price {
+      font-size: 0.58rem;
+      margin-top: 0;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .outfit-slot--empty .outfit-slot__value,
+    .outfit-slot--locked .outfit-slot__value {
+      display: block;
+      font-size: 0.48rem;
+      line-height: 1.15;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .outfit-view__footer {
+      order: 3;
+      position: static;
+      left: auto;
+      right: auto;
+      bottom: auto;
+      width: 100%;
+      flex: 0 0 auto;
+    }
 
     /* Bottom-Mode-Bar wuerde sonst den "Zum Archiv"-Button in Chaos ueberlagern */
     .chaos-view .view-enter-btn { bottom: 62px; }
