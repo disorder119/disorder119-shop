@@ -1,0 +1,54 @@
+name: Seite automatisch neu bauen
+
+# Baut index.html / artikel/*.html / sitemap.xml aus data/items.json +
+# index_template.html neu, sobald sich eine der beiden Quelldateien aendert,
+# und committet das Ergebnis direkt zurueck. Der normale GitHub-Pages-Deploy
+# greift danach automatisch (Push auf main).
+#
+# Der Hauptzweck: sobald der spaeter angebundene Shop-Worker nach einem
+# Verkauf den public_status eines Artikels in data/items.json auf SOLD
+# setzt und das committet, baut dieser Workflow die Seite ohne weiteres
+# manuelles Zutun neu - der Artikel verschwindet automatisch aus dem
+# Katalog, bevor ihn jemand anders bestellen kann.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/items.json"
+      - "index_template.html"
+      - "build_site.py"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repo auschecken
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Abhaengigkeiten installieren
+        run: pip install pillow
+
+      - name: Seite bauen
+        run: python build_site.py
+
+      - name: Ergebnis committen
+        run: |
+          git config user.name "disorder119-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html artikel sitemap.xml
+          if git diff --cached --quiet; then
+            echo "Keine Aenderungen am generierten Output - nichts zu committen."
+          else
+            git commit -m "Automatischer Rebuild (data/items.json oder Template geaendert)"
+            git push
+          fi
