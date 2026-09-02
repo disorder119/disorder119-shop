@@ -2573,6 +2573,582 @@
        Button dort - Swipe-View bekommt daher unten reservierten Platz. */
     .swipe-view { padding-bottom: 64px; }
   }
+
+  /* ---------- Minimalistische Archiv-Struktur ---------- */
+
+  :root { --rail-h: 64px; }
+
+  .mode-rail {
+    height: var(--rail-h);
+    justify-content: space-between;
+    gap: 0;
+    padding: 0 clamp(16px, 3vw, 34px);
+    border-bottom-color: rgba(242, 239, 231, 0.2);
+    overflow: visible;
+  }
+
+  .mode-rail.rail-hidden { transform: none; }
+
+  .site-header__menu,
+  .site-header__brand {
+    border: 0;
+    background: transparent;
+    color: var(--paper);
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .site-header__menu {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .site-header__brand {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 12px;
+    font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.92rem;
+    font-weight: 800;
+    letter-spacing: 0.035em;
+  }
+
+  .site-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .site-header .mode-rail__btn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    justify-content: center;
+    border: 0;
+  }
+
+  .site-header .mode-rail__btn[aria-current="true"] {
+    background: transparent;
+    border: 0;
+    color: var(--paper);
+  }
+
+  .site-header .mode-rail__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .masthead {
+    align-items: center;
+    gap: clamp(24px, 4vw, 42px);
+    padding: clamp(62px, 9vw, 128px) 20px clamp(52px, 8vw, 108px);
+  }
+
+  .masthead__top {
+    width: min(100%, 980px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(16px, 2.4vw, 28px);
+    text-align: center;
+  }
+
+  .wordmark-block {
+    order: 1;
+    width: 100%;
+  }
+
+  .wordmark-kicker {
+    font-size: clamp(0.58rem, 0.8vw, 0.72rem);
+    letter-spacing: 0.18em;
+  }
+
+  .wordmark {
+    justify-content: center;
+    font-size: clamp(4rem, 10vw, 8rem);
+    line-height: 0.9;
+  }
+
+  .eyebrow {
+    order: 2;
+    max-width: 66ch;
+    margin: 0;
+    text-align: center;
+    font-size: clamp(0.62rem, 0.9vw, 0.76rem);
+    line-height: 1.65;
+    letter-spacing: 0.13em;
+  }
+
+  .masthead__actions { display: none; }
+
+  .masthead__bottom {
+    width: min(100%, 760px);
+    justify-content: center;
+  }
+
+  .masthead__meta {
+    width: 100%;
+    justify-content: center;
+    gap: clamp(42px, 9vw, 110px);
+  }
+
+  .meta-figure {
+    align-items: center;
+    text-align: center;
+  }
+
+  .meta-figure__value {
+    font-size: clamp(1.35rem, 2vw, 1.8rem);
+  }
+
+  .meta-figure__label {
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+  }
+
+  .masthead__index { display: none; }
+
+  @media (max-width: 720px) {
+    :root { --rail-h: 54px; }
+
+    .mode-rail { padding: 0 12px; }
+    .site-header__menu { width: 34px; height: 34px; }
+    .site-header__brand { font-size: 0.8rem; }
+    .site-header .mode-rail__btn { width: 32px; height: 34px; }
+    .site-header__actions { gap: 0; }
+
+    .masthead {
+      gap: 30px;
+      padding: 56px 18px 48px;
+    }
+
+    .masthead__top {
+      padding-top: 0;
+      gap: 18px;
+    }
+
+    .wordmark { font-size: clamp(2.75rem, 13.2vw, 3.55rem); }
+    .wordmark-kicker { font-size: 0.54rem; }
+    .eyebrow { max-width: 39ch; font-size: 0.56rem; line-height: 1.55; }
+
+    .masthead__meta {
+      align-items: flex-start;
+      gap: 0;
+    }
+
+    .meta-figure {
+      flex: 1 1 0;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .meta-figure__value { font-size: 1.15rem; }
+    .meta-figure__label {
+      max-width: 12ch;
+      font-size: 0.5rem;
+      line-height: 1.35;
+    }
+  }
+
+  /* ---------- Reduzierter Katalog, Menü und Footer ---------- */
+
+  .menu-backdrop,
+  .account-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 420;
+    display: none;
+    background: rgba(0, 0, 0, 0.74);
+  }
+
+  .menu-backdrop.open,
+  .account-backdrop.open { display: block; }
+
+  .menu-drawer {
+    width: min(430px, 100%);
+    height: 100%;
+    overflow-y: auto;
+    background: var(--ink);
+    color: var(--paper);
+    border-right: 1px solid var(--rule-strong);
+    padding: 22px clamp(22px, 5vw, 42px) 38px;
+  }
+
+  .menu-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .menu-drawer__close,
+  .account-panel__close {
+    width: 34px;
+    height: 34px;
+    border: 0;
+    background: transparent;
+    color: var(--paper);
+    cursor: pointer;
+  }
+
+  .menu-drawer__nav,
+  .menu-drawer__section {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .menu-drawer__nav {
+    padding: 22px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .menu-drawer__section { padding: 22px 0; }
+
+  .menu-drawer__nav button,
+  .menu-drawer__section button,
+  .menu-drawer__brands button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 0.78rem;
+    letter-spacing: 0.075em;
+    text-align: left;
+    text-transform: uppercase;
+    padding: 9px 0;
+    cursor: pointer;
+  }
+
+  .menu-drawer__nav button:hover,
+  .menu-drawer__section button:hover,
+  .menu-drawer__brands button:hover { color: var(--accent-text); }
+
+  .menu-drawer__brands {
+    max-height: 230px;
+    overflow-y: auto;
+    margin: 4px 0 10px 12px;
+    padding-left: 12px;
+    border-left: 1px solid var(--rule-strong);
+  }
+
+  .menu-drawer__brands button {
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    padding: 7px 0;
+  }
+
+  .menu-drawer__languages {
+    display: flex;
+    gap: 18px;
+    padding-top: 10px;
+  }
+
+  .menu-drawer__languages button {
+    border: 0;
+    background: transparent;
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+
+  .menu-drawer__languages button[aria-current="true"] {
+    color: var(--paper);
+    border-bottom: 1px solid var(--paper);
+  }
+
+  .account-backdrop {
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .account-backdrop.open { display: flex; }
+
+  .account-panel {
+    position: relative;
+    width: min(560px, 100%);
+    background: var(--ink);
+    color: var(--paper);
+    border: 1px solid var(--rule-strong);
+    padding: clamp(32px, 7vw, 64px);
+  }
+
+  .account-panel__close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+  }
+
+  .account-panel__eyebrow {
+    color: var(--text-faint);
+    font-size: 0.58rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .account-panel h2 {
+    margin: 14px 0 20px;
+    font-size: clamp(1.5rem, 4vw, 2.4rem);
+    text-transform: uppercase;
+  }
+
+  .account-panel > p:last-child {
+    max-width: 50ch;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.7;
+  }
+
+  .rail {
+    position: static;
+    width: min(100%, 1000px);
+    margin: 0 auto;
+    padding: clamp(20px, 4vw, 46px) 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: clamp(34px, 5vw, 58px);
+    border: 0;
+  }
+
+  .rail__search {
+    width: 100%;
+    max-width: none;
+    flex: none;
+  }
+
+  .rail__search input {
+    font-size: clamp(1rem, 1.7vw, 1.3rem);
+    padding: 14px 0;
+    border-bottom-color: rgba(242, 239, 231, 0.42);
+  }
+
+  .catalog-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 20px;
+    color: var(--paper);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .catalog-heading .rail__count {
+    color: var(--text-faint);
+    font-size: 0.6rem;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+  }
+
+  .catalog-controls { display: none !important; }
+
+  .grid-wrap {
+    width: min(100%, 1400px);
+    margin: 0 auto;
+    padding: 10px clamp(18px, 3vw, 36px) clamp(86px, 10vw, 140px);
+  }
+
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(52px, 6vw, 88px) clamp(18px, 2.5vw, 34px);
+  }
+
+  @media (min-width: 1180px) {
+    .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+
+  .plate {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .plate__frame img { padding: 3%; }
+
+  .plate__sold-bar,
+  .plate__estimate-badge,
+  .plate__cart-btn,
+  .plate__size { display: none !important; }
+
+  .plate__favorite {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 3;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: rgba(242, 239, 231, 0.64);
+    font-family: inherit;
+    font-size: 0.92rem;
+    cursor: pointer;
+  }
+
+  .plate__favorite[aria-pressed="true"] { color: var(--paper); }
+
+  .plate__body {
+    gap: 3px;
+    padding-top: 10px;
+  }
+
+  .plate__brand { font-size: 0.66rem; }
+  .plate__title { font-size: 0.78rem; }
+  .plate__row { margin-top: 4px; }
+  .plate__price { font-size: 0.82rem; }
+
+  .plate__price--sold {
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .load-more-wrap {
+    display: flex;
+    justify-content: center;
+    padding-top: clamp(64px, 8vw, 110px);
+  }
+
+  .load-more {
+    min-width: 190px;
+    border: 1px solid var(--rule-strong);
+    background: transparent;
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    padding: 14px 24px;
+    cursor: pointer;
+  }
+
+  .load-more:hover { border-color: var(--paper); }
+  .load-more.hidden { display: none; }
+
+  .footer {
+    width: min(100%, 1400px);
+    margin: 0 auto;
+    padding: 0 clamp(20px, 4vw, 42px) clamp(52px, 7vw, 86px);
+    display: block;
+    border: 0;
+    color: var(--paper);
+    font-size: 0.66rem;
+  }
+
+  .footer__nav {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding: clamp(38px, 6vw, 72px) 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .footer__nav button,
+  .footer__nav a,
+  .footer__cart {
+    border: 0;
+    background: transparent;
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-decoration: none;
+    text-transform: uppercase;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .footer__stamp {
+    display: block;
+    margin-top: 24px;
+    color: var(--text-faint);
+  }
+
+  .footer__legal {
+    justify-content: flex-start;
+    margin-top: 12px;
+  }
+
+  .footer__cart {
+    display: flex;
+    gap: 6px;
+    margin-top: clamp(68px, 9vw, 120px);
+  }
+
+  @media (max-width: 720px) {
+    .masthead {
+      gap: 25px;
+      padding: 40px 18px 36px;
+    }
+
+    .wordmark { font-size: clamp(2.65rem, 12.4vw, 3.35rem); }
+
+    .rail {
+      gap: 30px;
+      padding: 16px 16px 12px;
+    }
+
+    .rail__search input { padding: 12px 0; }
+
+    .catalog-heading { font-size: 0.64rem; }
+
+    .grid-wrap {
+      padding: 8px 12px 84px;
+    }
+
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 42px 10px;
+    }
+
+    .plate__frame img { padding: 2%; }
+    .plate__favorite { top: 5px; right: 5px; width: 32px; height: 32px; }
+    .plate__body { padding-top: 8px; }
+    .plate__brand { font-size: 0.58rem; }
+    .plate__title { font-size: 0.7rem; }
+    .plate__price { font-size: 0.76rem; }
+    .plate__price--sold { font-size: 0.6rem; }
+
+    .load-more-wrap { padding-top: 62px; }
+
+    .footer {
+      padding: 0 16px calc(58px + env(safe-area-inset-bottom));
+    }
+
+    .footer__nav { padding: 34px 0; }
+    .footer__cart { margin-top: 72px; }
+  }
 </style>
 </head>
 <body>
@@ -2660,24 +3236,75 @@
   <div class="outfit-picker__grid" id="outfitPickerGrid"></div>
 </div>
 
-<nav class="mode-rail hidden" id="modeRail" data-i18n-aria="modeRailAria" aria-label="Ansicht wechseln">
-  <button type="button" class="mode-rail__btn" data-mode-view="classic" aria-label="Archiv">
+<nav class="mode-rail site-header hidden" id="modeRail" data-i18n-aria="modeRailAria" aria-label="Ansicht wechseln">
+  <button type="button" class="site-header__menu" id="menuToggle" aria-label="Menü öffnen" aria-expanded="false">
     <span class="mode-rail__icon" aria-hidden="true">▦</span>
-    <span class="mode-rail__label" data-i18n="modeArchiv">Archiv</span>
   </button>
-  <button type="button" class="mode-rail__btn" data-mode-view="swipe" aria-label="Match">
-    <span class="mode-rail__icon" aria-hidden="true">♥</span>
-    <span class="mode-rail__label" data-i18n="modeMatch">Match</span>
-  </button>
-  <button type="button" class="mode-rail__btn" data-mode-view="chaos" aria-label="Chaos">
-    <span class="mode-rail__icon" aria-hidden="true">✦</span>
-    <span class="mode-rail__label" data-i18n="modeChaos">Chaos</span>
-  </button>
-  <button type="button" class="mode-rail__btn" data-mode-view="outfit" aria-label="Outfit-Baukasten">
-    <span class="mode-rail__icon" aria-hidden="true">⛃</span>
-    <span class="mode-rail__label" data-i18n="modeBaukasten">Baukasten</span>
-  </button>
+  <button type="button" class="site-header__brand" data-enter-classic aria-label="DISORDER119 Startseite">DISORDER119</button>
+  <div class="site-header__actions">
+    <button type="button" class="mode-rail__btn" data-mode-view="swipe" aria-label="Match">
+      <span class="mode-rail__icon" aria-hidden="true">♥</span>
+      <span class="mode-rail__label" data-i18n="modeMatch">Match</span>
+    </button>
+    <button type="button" class="mode-rail__btn" data-mode-view="chaos" aria-label="Chaos">
+      <span class="mode-rail__icon" aria-hidden="true">✦</span>
+      <span class="mode-rail__label" data-i18n="modeChaos">Chaos</span>
+    </button>
+    <button type="button" class="mode-rail__btn" data-mode-view="outfit" aria-label="Outfit-Baukasten">
+      <span class="mode-rail__icon" aria-hidden="true">⛃</span>
+      <span class="mode-rail__label" data-i18n="modeBaukasten">Baukasten</span>
+    </button>
+  </div>
 </nav>
+
+<div class="menu-backdrop" id="menuBackdrop">
+  <aside class="menu-drawer" id="menuDrawer" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
+    <div class="menu-drawer__head">
+      <span id="menuTitle" data-i18n="menuTitle">Menü</span>
+      <button type="button" class="menu-drawer__close" id="menuClose" data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
+    </div>
+
+    <nav class="menu-drawer__nav" aria-label="Kategorien">
+      <button type="button" data-menu-status="all" data-i18n="menuAllItems">Alle Artikel</button>
+      <button type="button" data-menu-categories="Jackets,Coats" data-i18n="menuJackets">Jacken</button>
+      <button type="button" data-menu-categories="Tops,Shirts,Knitwear" data-i18n="menuTops">Tops</button>
+      <button type="button" data-menu-categories="Pants" data-i18n="menuPants">Hosen</button>
+      <button type="button" data-menu-categories="Skirts" data-i18n="menuSkirts">Röcke</button>
+      <button type="button" data-menu-categories="Dresses" data-i18n="menuDresses">Kleider</button>
+      <button type="button" data-menu-categories="Shoes" data-i18n="menuShoes">Schuhe</button>
+      <button type="button" data-menu-categories="Accessories,Objects" data-i18n="menuAccessories">Accessoires</button>
+      <button type="button" id="menuBrandsToggle" aria-expanded="false" data-i18n="menuBrands">Marken</button>
+      <div class="menu-drawer__brands hidden" id="menuBrandList"></div>
+      <button type="button" data-menu-status="Verkauft" data-i18n="menuArchive">Archiv</button>
+    </nav>
+
+    <div class="menu-drawer__section">
+      <button type="button" data-account-target="account" data-i18n="menuAccount">Mein Konto</button>
+      <button type="button" data-account-target="orders" data-i18n="menuOrders">Bestellungen</button>
+      <button type="button" data-account-target="addresses" data-i18n="menuAddresses">Adressen</button>
+      <button type="button" id="menuFavorites" data-i18n="menuFavorites">Favoriten</button>
+      <button type="button" id="menuCart">
+        <span data-i18n="menuCart">Warenkorb</span>
+        <span>(<span id="menuCartCount">0</span>)</span>
+      </button>
+    </div>
+
+    <div class="menu-drawer__languages" role="group" data-i18n-aria="langGroupAria" aria-label="Sprache wählen">
+      <button type="button" data-lang="de">DE</button>
+      <button type="button" data-lang="en">EN</button>
+      <button type="button" data-lang="fr">FR</button>
+    </div>
+  </aside>
+</div>
+
+<div class="account-backdrop" id="accountBackdrop">
+  <section class="account-panel" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
+    <button type="button" class="account-panel__close" id="accountClose" data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
+    <p class="account-panel__eyebrow" data-i18n="accountEyebrow">DISORDER119 Kundenkonto</p>
+    <h2 id="accountTitle" data-i18n="accountSetupTitle">Sicheres Kundenkonto vorbereiten</h2>
+    <p data-i18n="accountSetupBody">Anmeldung, Passwort-Reset, Adressen, Favoriten und Bestellungen benötigen eine geschützte Datenbank- und Login-Verbindung. Diese wird nicht unsicher im Browser simuliert.</p>
+  </section>
+</div>
 
 <div class="app-shell hidden" id="appShell">
 <div class="masthead">
@@ -2733,11 +3360,16 @@
   <div class="rail__search">
     <input id="searchInput" type="text" data-i18n-placeholder="searchPlaceholder" placeholder="Suche nach Marke, Titel" autocomplete="off" />
   </div>
-  <div class="chip-row" id="statusChips"></div>
-  <div class="chip-row" id="categoryChips"></div>
-  <div class="rail__right">
-    <button class="theme-toggle" id="moreFiltersToggle" type="button" aria-expanded="false" data-i18n="moreFilters">Weitere Filter</button>
+  <div class="catalog-heading">
+    <span id="catalogTitle">Verfügbar</span>
     <span class="rail__count" id="railCount">180 Objekte</span>
+  </div>
+  <div class="catalog-controls" aria-hidden="true">
+    <div class="chip-row" id="statusChips"></div>
+    <div class="chip-row" id="categoryChips"></div>
+  </div>
+  <div class="rail__right catalog-controls" aria-hidden="true">
+    <button class="theme-toggle" id="moreFiltersToggle" type="button" aria-expanded="false" data-i18n="moreFilters">Weitere Filter</button>
     <select class="rail__sort" id="sortSelect">
       <option value="brightness" data-i18n="sortBrightness">Hell → Dunkel</option>
       <option value="new" data-i18n="sortNew">Neueste zuerst</option>
@@ -2782,17 +3414,29 @@
     <p class="empty-state__title" data-i18n="emptyTitle">Keine Treffer im Archiv</p>
     <p data-i18n="emptyBody">Versuche einen anderen Suchbegriff oder setze die Filter zurück.</p>
   </div>
+  <div class="load-more-wrap">
+    <button type="button" class="load-more" id="loadMoreBtn" data-i18n="loadMore">Weitere laden</button>
+  </div>
 </div>
 
-<div class="footer">
-  <span><strong>Disorder119</strong> — <span data-i18n="footerTagline">Kuratiertes Second-Hand-Archiv für Designer- und Vintage-Mode.</span></span>
-  <span id="footerStamp"></span>
+<footer class="footer">
+  <nav class="footer__nav" aria-label="Footer">
+    <button type="button" data-info="about" data-i18n="footerAbout">Über Disorder119</button>
+    <button type="button" id="footerArchive" data-i18n="menuArchive">Archiv</button>
+    <button type="button" data-info="faq" data-i18n="footerFaq">FAQ</button>
+    <a href="mailto:disorder119shop@gmail.com" data-i18n="footerContact">Kontakt</a>
+  </nav>
+  <span id="footerStamp" class="footer__stamp"></span>
   <div class="footer__legal">
     <button type="button" data-legal="impressum" data-i18n="legalImpressum">Impressum</button>
     <button type="button" data-legal="agb" data-i18n="legalAgb">AGB</button>
     <button type="button" data-legal="datenschutz" data-i18n="legalDatenschutz">Datenschutz</button>
   </div>
-</div>
+  <button type="button" class="footer__cart" id="footerCartToggle">
+    <span data-i18n="menuCart">Warenkorb</span>
+    <span>(<span id="footerCartCount">0</span>)</span>
+  </button>
+</footer>
 
 <div class="legal-backdrop" id="legalBackdrop">
   <div class="legal-panel">
@@ -2909,10 +3553,21 @@
       emptyTitle: "Keine Treffer im Archiv",
       emptyBody: "Versuche einen anderen Suchbegriff oder setze die Filter zurück.",
       footerTagline: "Kuratiertes Second-Hand-Archiv für Designer- und Vintage-Mode.",
+      menuTitle: "Menü", menuAllItems: "Alle Artikel", menuJackets: "Jacken", menuTops: "Tops",
+      menuPants: "Hosen", menuSkirts: "Röcke", menuDresses: "Kleider", menuShoes: "Schuhe",
+      menuAccessories: "Accessoires", menuBrands: "Marken", menuArchive: "Archiv",
+      menuAccount: "Mein Konto", menuOrders: "Bestellungen", menuAddresses: "Adressen",
+      menuFavorites: "Favoriten", menuCart: "Warenkorb",
+      loadMore: "Weitere laden", footerAbout: "Über Disorder119", footerFaq: "FAQ", footerContact: "Kontakt",
+      favoriteAddAria: "Zu Favoriten hinzufügen", favoriteRemoveAria: "Aus Favoriten entfernen",
+      accountEyebrow: "DISORDER119 Kundenkonto", accountSetupTitle: "Sicheres Kundenkonto vorbereiten",
+      accountSetupBody: "Anmeldung, Passwort-Reset, Adressen, Favoriten und Bestellungen benötigen eine geschützte Datenbank- und Login-Verbindung. Diese wird nicht unsicher im Browser simuliert.",
+      aboutHtml: "<h2>Über Disorder119</h2><p>DISORDER119 ist ein kuratiertes Archiv für ausgewählte Designer-, Vintage- und Contemporary-Pieces mit Fokus auf Qualität, Authentizität und Zeitlosigkeit.</p>",
+      faqHtml: "<h2>FAQ</h2><h3>Sind alle Artikel Einzelstücke?</h3><p>Ja. Alle verfügbaren Artikel sind kuratierte Einzelstücke.</p><h3>Wie funktioniert eine Bestellung?</h3><p>Lege verfügbare Artikel in den Warenkorb und sende anschließend eine unverbindliche Anfrage per E-Mail.</p><h3>Warum bleiben verkaufte Artikel sichtbar?</h3><p>Verkaufte Pieces bleiben als Teil des DISORDER119-Archivs erhalten.</p>",
       legalImpressum: "Impressum", legalAgb: "AGB", legalDatenschutz: "Datenschutz",
       legalEmailPending: "wird nachgereicht, sobald der Shop live geht",
       closeAria: "Schließen",
-      cookieText: "Diese Seite verwendet keine Tracking- oder Marketing-Cookies. Warenkorb und Outfit-Baukasten speichern deine Auswahl nur lokal in deinem Browser (localStorage), damit sie beim nächsten Besuch noch da ist — diese Daten verlassen nie deinen Browser.",
+      cookieText: "Diese Seite verwendet keine Tracking- oder Marketing-Cookies. Warenkorb, Favoriten und Outfit-Baukasten speichern deine Auswahl nur lokal in deinem Browser (localStorage), damit sie beim nächsten Besuch noch da ist — diese Daten verlassen nie deinen Browser.",
       cookieOk: "Verstanden",
       shareAria: "Teilen", shareToast: "Link kopiert",
       prevPhotoAria: "Vorheriges Foto", nextPhotoAria: "Nächstes Foto",
@@ -3014,10 +3669,21 @@
       emptyTitle: "No matches in the archive",
       emptyBody: "Try a different search term or reset the filters.",
       footerTagline: "Curated second-hand archive for designer and vintage fashion.",
+      menuTitle: "Menu", menuAllItems: "All pieces", menuJackets: "Jackets", menuTops: "Tops",
+      menuPants: "Trousers", menuSkirts: "Skirts", menuDresses: "Dresses", menuShoes: "Shoes",
+      menuAccessories: "Accessories", menuBrands: "Brands", menuArchive: "Archive",
+      menuAccount: "My account", menuOrders: "Orders", menuAddresses: "Addresses",
+      menuFavorites: "Favourites", menuCart: "Cart",
+      loadMore: "Load more", footerAbout: "About Disorder119", footerFaq: "FAQ", footerContact: "Contact",
+      favoriteAddAria: "Add to favourites", favoriteRemoveAria: "Remove from favourites",
+      accountEyebrow: "DISORDER119 customer account", accountSetupTitle: "Preparing a secure customer account",
+      accountSetupBody: "Sign-in, password reset, addresses, favourites and orders require a protected database and authentication connection. They are not simulated insecurely in the browser.",
+      aboutHtml: "<h2>About Disorder119</h2><p>DISORDER119 is a curated archive of selected designer, vintage and contemporary pieces with a focus on quality, authenticity and timelessness.</p>",
+      faqHtml: "<h2>FAQ</h2><h3>Is every item one of a kind?</h3><p>Yes. Every available item is a curated one-off piece.</p><h3>How do orders work?</h3><p>Add available pieces to the cart and send a non-binding enquiry by e-mail.</p><h3>Why do sold pieces remain visible?</h3><p>Sold pieces remain part of the DISORDER119 archive.</p>",
       legalImpressum: "Legal notice", legalAgb: "Terms", legalDatenschutz: "Privacy",
       legalEmailPending: "to be added once the shop goes live",
       closeAria: "Close",
-      cookieText: "This site does not use tracking or marketing cookies. Your cart and outfit builder only save your selection locally in your browser (localStorage), so it's still there on your next visit — this data never leaves your browser.",
+      cookieText: "This site does not use tracking or marketing cookies. Your cart, favourites and outfit builder only save your selection locally in your browser (localStorage), so they're still there on your next visit — this data never leaves your browser.",
       cookieOk: "Got it",
       shareAria: "Share", shareToast: "Link copied",
       prevPhotoAria: "Previous photo", nextPhotoAria: "Next photo",
@@ -3122,10 +3788,21 @@
       emptyTitle: "Aucun résultat dans l'archive",
       emptyBody: "Essaie un autre terme de recherche ou réinitialise les filtres.",
       footerTagline: "Archive de seconde main sélectionnée pour la mode de créateurs et vintage.",
+      menuTitle: "Menu", menuAllItems: "Tous les articles", menuJackets: "Vestes", menuTops: "Hauts",
+      menuPants: "Pantalons", menuSkirts: "Jupes", menuDresses: "Robes", menuShoes: "Chaussures",
+      menuAccessories: "Accessoires", menuBrands: "Marques", menuArchive: "Archive",
+      menuAccount: "Mon compte", menuOrders: "Commandes", menuAddresses: "Adresses",
+      menuFavorites: "Favoris", menuCart: "Panier",
+      loadMore: "Charger plus", footerAbout: "À propos de Disorder119", footerFaq: "FAQ", footerContact: "Contact",
+      favoriteAddAria: "Ajouter aux favoris", favoriteRemoveAria: "Retirer des favoris",
+      accountEyebrow: "Compte client DISORDER119", accountSetupTitle: "Préparation d’un compte client sécurisé",
+      accountSetupBody: "La connexion, la réinitialisation du mot de passe, les adresses, les favoris et les commandes nécessitent une base de données protégée et une authentification. Ces fonctions ne sont pas simulées de manière non sécurisée dans le navigateur.",
+      aboutHtml: "<h2>À propos de Disorder119</h2><p>DISORDER119 est une archive sélectionnée de pièces de créateurs, vintage et contemporaines, axée sur la qualité, l’authenticité et l’intemporalité.</p>",
+      faqHtml: "<h2>FAQ</h2><h3>Chaque article est-il unique ?</h3><p>Oui. Chaque article disponible est une pièce unique sélectionnée.</p><h3>Comment commander ?</h3><p>Ajoute les articles disponibles au panier, puis envoie une demande sans engagement par e-mail.</p><h3>Pourquoi les articles vendus restent-ils visibles ?</h3><p>Les pièces vendues restent dans l’archive DISORDER119.</p>",
       legalImpressum: "Mentions légales", legalAgb: "CGV", legalDatenschutz: "Confidentialité",
       legalEmailPending: "sera ajoutée dès la mise en ligne de la boutique",
       closeAria: "Fermer",
-      cookieText: "Ce site n'utilise aucun cookie de suivi ou marketing. Le panier et le configurateur de tenues n'enregistrent ta sélection que localement dans ton navigateur (localStorage), pour qu'elle soit encore là lors de ta prochaine visite — ces données ne quittent jamais ton navigateur.",
+      cookieText: "Ce site n'utilise aucun cookie de suivi ou marketing. Le panier, les favoris et le configurateur de tenues n'enregistrent ta sélection que localement dans ton navigateur (localStorage), pour qu'elle soit encore là lors de ta prochaine visite — ces données ne quittent jamais ton navigateur.",
       cookieOk: "Compris",
       shareAria: "Partager", shareToast: "Lien copié",
       prevPhotoAria: "Photo précédente", nextPhotoAria: "Photo suivante",
@@ -3275,7 +3952,7 @@
     try { window.localStorage.setItem(LANG_KEY, lang); } catch (e) {}
     document.documentElement.setAttribute("lang", lang);
 
-    Array.prototype.forEach.call(document.querySelectorAll("#langSwitch [data-lang]"), function (btn) {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-lang]"), function (btn) {
       if (btn.getAttribute("data-lang") === lang) btn.setAttribute("aria-current", "true");
       else btn.removeAttribute("aria-current");
     });
@@ -3310,6 +3987,10 @@
       var legalContentEl = document.getElementById("legalContent");
       if (legalContentEl) legalContentEl.innerHTML = legalContent(currentLegalKey);
     }
+    if (typeof currentInfoKey !== "undefined" && currentInfoKey) {
+      var infoContentEl = document.getElementById("legalContent");
+      if (infoContentEl) infoContentEl.innerHTML = t(INFO_HTML_KEY[currentInfoKey]);
+    }
     // Eyebrow-Text aendert pro Sprache seine Laenge/Zeilenumbrueche -
     // Warenkorb-Icon-Groesse danach neu an dessen Hoehe angleichen.
     syncCartIconHeight();
@@ -3340,7 +4021,7 @@
     });
   });
 
-  Array.prototype.forEach.call(document.querySelectorAll("#langSwitch [data-lang]"), function (btn) {
+  Array.prototype.forEach.call(document.querySelectorAll("[data-lang]"), function (btn) {
     btn.addEventListener("click", function () { applyLanguage(btn.getAttribute("data-lang")); });
   });
 
@@ -3354,7 +4035,9 @@
 
   // ---- Warenkorb ----
   var CART_KEY = "disorder119_cart";
+  var FAVORITES_KEY = "disorder119_favorites";
   var cart = loadCart();
+  var favorites = loadFavorites();
 
   function loadCart() {
     try {
@@ -3368,6 +4051,29 @@
 
   function saveCart() {
     try { window.localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (e) {}
+  }
+
+  function loadFavorites() {
+    try {
+      var raw = window.localStorage.getItem(FAVORITES_KEY);
+      var ids = raw ? JSON.parse(raw) : [];
+      return Array.isArray(ids) ? ids : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveFavorites() {
+    try { window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites)); } catch (e) {}
+  }
+
+  function isFavorite(id) { return favorites.indexOf(id) !== -1; }
+
+  function toggleFavorite(id) {
+    var idx = favorites.indexOf(id);
+    if (idx === -1) favorites.push(id); else favorites.splice(idx, 1);
+    saveFavorites();
+    render();
   }
 
   function isInCart(id) { return cart.indexOf(id) !== -1; }
@@ -3406,16 +4112,25 @@
   // diesen Tab wird der Stand dann live nachgezogen statt erst beim naechsten
   // vollstaendigen Neuladen.
   window.addEventListener("storage", function (e) {
-    if (e.key !== CART_KEY) return;
-    cart = loadCart();
-    sanitizeCart();
-    updateCartCount();
-    render();
-    renderCartDrawer();
+    if (e.key === CART_KEY) {
+      cart = loadCart();
+      sanitizeCart();
+      updateCartCount();
+      render();
+      renderCartDrawer();
+    }
+    if (e.key === FAVORITES_KEY) {
+      favorites = loadFavorites();
+      render();
+    }
   });
 
   function updateCartCount() {
     document.getElementById("cartCount").textContent = cart.length;
+    var menuCount = document.getElementById("menuCartCount");
+    var footerCount = document.getElementById("footerCartCount");
+    if (menuCount) menuCount.textContent = cart.length;
+    if (footerCount) footerCount.textContent = cart.length;
   }
 
   function toggleCart(id) {
@@ -3538,6 +4253,12 @@
   }
 
   document.getElementById("cartToggle").addEventListener("click", openCart);
+  document.getElementById("menuCart").addEventListener("click", function () {
+    closeMenu();
+    showClassic();
+    openCart();
+  });
+  document.getElementById("footerCartToggle").addEventListener("click", openCart);
   document.getElementById("cartClose").addEventListener("click", closeCart);
   document.getElementById("cartBackdrop").addEventListener("click", function (e) {
     if (e.target === document.getElementById("cartBackdrop")) closeCart();
@@ -3550,13 +4271,18 @@
     // bewusster, eigener Erkundungs-Zustand, kein Standard-Anblick.
     status: "Verfügbar",
     category: "all",
+    categoryGroup: null,
+    favoritesOnly: false,
     sort: "brightness",
     brand: "",
     size: "",
     color: "",
     condition: "",
     priceMin: null,
-    priceMax: null
+    priceMax: null,
+    catalogLabelKey: "statusAvailable",
+    catalogLabelCategory: "",
+    catalogLabelText: ""
   };
 
   // Nur oeffentliche Artikel (AVAILABLE/SOLD) fliessen in Statistiken,
@@ -3593,6 +4319,10 @@
     b.setAttribute("aria-pressed", opt.key === state.status ? "true" : "false");
     b.addEventListener("click", function () {
       state.status = opt.key;
+      state.favoritesOnly = false;
+      state.catalogLabelKey = opt.i18n;
+      state.catalogLabelCategory = "";
+      state.catalogLabelText = "";
       Array.prototype.forEach.call(statusChipsEl.children, function (c) {
         c.setAttribute("aria-pressed", "false");
       });
@@ -3619,6 +4349,11 @@
   allCatBtn.setAttribute("aria-pressed", "true");
   allCatBtn.addEventListener("click", function () {
     state.category = "all";
+    state.categoryGroup = null;
+    state.favoritesOnly = false;
+    state.catalogLabelKey = "categoryAll";
+    state.catalogLabelCategory = "";
+    state.catalogLabelText = "";
     Array.prototype.forEach.call(categoryChipsEl.children, function (c) {
       c.setAttribute("aria-pressed", "false");
     });
@@ -3635,6 +4370,11 @@
     b.setAttribute("aria-pressed", "false");
     b.addEventListener("click", function () {
       state.category = cat;
+      state.categoryGroup = null;
+      state.favoritesOnly = false;
+      state.catalogLabelKey = "";
+      state.catalogLabelCategory = cat;
+      state.catalogLabelText = "";
       Array.prototype.forEach.call(categoryChipsEl.children, function (c) {
         c.setAttribute("aria-pressed", "false");
       });
@@ -3709,6 +4449,7 @@
   document.getElementById("filterReset").addEventListener("click", function () {
     state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
     state.priceMin = null; state.priceMax = null;
+    state.categoryGroup = null; state.favoritesOnly = false;
     filterBrandEl.value = ""; filterSizeEl.value = ""; filterColorEl.value = ""; filterConditionEl.value = "";
     filterPriceMinEl.value = ""; filterPriceMaxEl.value = "";
     render();
@@ -3796,10 +4537,15 @@
     searchInputEl.value = brand;
     state.query = normalizeText(brand);
     state.status = "all";
+    state.catalogLabelKey = "";
+    state.catalogLabelCategory = "";
+    state.catalogLabelText = brand;
     Array.prototype.forEach.call(statusChipsEl.children, function (c) {
       c.setAttribute("aria-pressed", c.getAttribute("data-i18n") === "statusAll" ? "true" : "false");
     });
     state.category = "all";
+    state.categoryGroup = null;
+    state.favoritesOnly = false;
     Array.prototype.forEach.call(categoryChipsEl.children, function (c) {
       c.setAttribute("aria-pressed", c === allCatBtn ? "true" : "false");
     });
@@ -3821,6 +4567,10 @@
   var gridEl = document.getElementById("grid");
   var emptyEl = document.getElementById("emptyState");
   var countEl = document.getElementById("railCount");
+  var catalogTitleEl = document.getElementById("catalogTitle");
+  var loadMoreBtn = document.getElementById("loadMoreBtn");
+  var visibleLimit = 12;
+  var lastFilterSignature = "";
 
   function matches(it) {
     // Klare, konsistente Statuslogik (statt der vorherigen impliziten
@@ -3845,7 +4595,9 @@
     }
     if (state.priceMin != null && !(it.price >= state.priceMin)) return false;
     if (state.priceMax != null && !(it.price > 0 && it.price <= state.priceMax)) return false;
+    if (state.categoryGroup && state.categoryGroup.indexOf(it.category) === -1) return false;
     if (state.category !== "all" && it.category !== state.category) return false;
+    if (state.favoritesOnly && !isFavorite(it.id)) return false;
     if (state.query) {
       var hay = normalizeText(it.title) + " " + normalizeText(it.brand) + " " + normalizeText(it.category);
       if (!queryMatchesHay(hay, state.query)) return false;
@@ -3880,6 +4632,18 @@
 
   function render() {
     var filtered = sortItems(ITEMS.filter(matches));
+    catalogTitleEl.textContent = state.catalogLabelText ||
+      (state.catalogLabelCategory ? trCategory(state.catalogLabelCategory) : t(state.catalogLabelKey || "statusAvailable"));
+    var filterSignature = JSON.stringify([
+      state.query, state.status, state.category, state.categoryGroup,
+      state.favoritesOnly, state.sort, state.brand, state.size, state.color,
+      state.condition, state.priceMin, state.priceMax
+    ]);
+    if (filterSignature !== lastFilterSignature) {
+      visibleLimit = 12;
+      lastFilterSignature = filterSignature;
+    }
+    var visibleItems = filtered.slice(0, visibleLimit);
     countEl.textContent = tFormat("railCountTemplate", { filtered: filtered.length, total: PUBLIC_ITEMS.length });
     gridEl.innerHTML = "";
     emptyEl.classList.toggle("visible", filtered.length === 0);
@@ -3892,59 +4656,51 @@
     var animateCount = 16;
 
     var frag = document.createDocumentFragment();
-    filtered.forEach(function (it, idx) {
-      var plate = document.createElement("button");
+    visibleItems.forEach(function (it, idx) {
+      var plate = document.createElement("article");
       plate.className = "plate";
-      plate.type = "button";
+      plate.tabIndex = 0;
+      plate.setAttribute("role", "button");
       plate.setAttribute("aria-label", it.title);
       if (animateEntry && idx < animateCount) {
         plate.classList.add("plate--enter");
         plate.style.transitionDelay = (idx * 20) + "ms";
       }
 
-      var soldHtml = it.status === "Verkauft"
-        ? '<span class="plate__sold-bar">' + t("sold") + '</span>'
-        : "";
-
-      var estimateHtml = it.price_estimated
-        ? '<span class="plate__estimate-badge">' + t("priceEstimatedBadge") + '</span>'
-        : "";
-
       var hero = it.gallery && it.gallery[0];
       var imgSrc = hero || "";
-      var purchasable = it.status !== "Verkauft" && it.price > 0;
-      var inCart = isInCart(it.id);
-
-      var cartBtnHtml = purchasable
-        ? '<button type="button" class="plate__cart-btn' + (inCart ? " plate__cart-btn--active" : "") + '" data-cart-toggle aria-label="' +
-          (inCart ? t("removeFromCartAria") : t("addToCart")) + '">' + (inCart ? "✓" : "+") + "</button>"
-        : "";
+      var favoriteActive = isFavorite(it.id);
+      var favoriteHtml =
+        '<button type="button" class="plate__favorite' + (favoriteActive ? " plate__favorite--active" : "") +
+        '" data-favorite-toggle aria-pressed="' + (favoriteActive ? "true" : "false") +
+        '" aria-label="' + (favoriteActive ? t("favoriteRemoveAria") : t("favoriteAddAria")) + '">♥</button>';
 
       var altText = escapeHtml(productAltText(it));
       var isSold = it.status === "Verkauft";
-      // Verkaufte Artikel zeigen NIE einen Preis (auch nicht den alten
-      // Verkaufspreis) - nur die Groesse bleibt in der Zeile stehen.
       var priceHtml = isSold
-        ? ""
+        ? '<span class="plate__price plate__price--sold">' + t("sold") + "</span>"
         : '<span class="plate__price">' + (it.price_estimated ? t("priceEstimatedPrefix") : "") + fmtPriceDisplay(it.price) + "</span>";
 
       plate.innerHTML =
         '<div class="plate__frame">' +
           (imgSrc ? '<img src="' + imgSrc + '" alt="' + altText + '" loading="lazy" />' : "") +
-          soldHtml +
-          estimateHtml +
-          cartBtnHtml +
+          favoriteHtml +
         "</div>" +
         '<div class="plate__body">' +
           '<button type="button" class="plate__brand" data-brand-filter>' + escapeHtml(it.brand || t("noBrand")) + "</button>" +
           '<span class="plate__title">' + escapeHtml(it.title) + "</span>" +
           '<div class="plate__row">' +
             priceHtml +
-            '<span class="plate__size">' + escapeHtml(trSize(it.size) || "") + "</span>" +
           "</div>" +
         "</div>";
 
       plate.addEventListener("click", function () { openModal(it); });
+      plate.addEventListener("keydown", function (e) {
+        if ((e.key === "Enter" || e.key === " ") && e.target === plate) {
+          e.preventDefault();
+          openModal(it);
+        }
+      });
 
       var brandBtn = plate.querySelector("[data-brand-filter]");
       if (brandBtn && it.brand) {
@@ -3954,13 +4710,11 @@
         });
       }
 
-      if (purchasable) {
-        var cartBtn = plate.querySelector("[data-cart-toggle]");
-        cartBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          toggleCart(it.id);
-        });
-      }
+      var favoriteBtn = plate.querySelector("[data-favorite-toggle]");
+      favoriteBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        toggleFavorite(it.id);
+      });
 
       if (canHover && it.gallery && it.gallery.length > 1) {
         var frameImg = plate.querySelector(".plate__frame img");
@@ -3972,6 +4726,7 @@
       frag.appendChild(plate);
     });
     gridEl.appendChild(frag);
+    loadMoreBtn.classList.toggle("hidden", filtered.length === 0 || visibleItems.length >= filtered.length);
     if (animateEntry) {
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
@@ -3983,6 +4738,11 @@
       firstGridRenderDone = true;
     }
   }
+
+  loadMoreBtn.addEventListener("click", function () {
+    visibleLimit += 12;
+    render();
+  });
 
   // ---- Modal ----
   var backdrop = document.getElementById("modalBackdrop");
@@ -4199,6 +4959,152 @@
       else if (target === "outfit") showOutfit();
       dismissModeRailHint();
     });
+  });
+
+  // ---- Minimalistisches Hauptmenue + Kundenkonto-Hinweis ----
+  var menuBackdrop = document.getElementById("menuBackdrop");
+  var menuToggle = document.getElementById("menuToggle");
+  var menuBrandsToggle = document.getElementById("menuBrandsToggle");
+  var menuBrandList = document.getElementById("menuBrandList");
+
+  brandList.forEach(function (brand) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = brand;
+    btn.addEventListener("click", function () {
+      closeMenu();
+      filterByBrand(brand);
+      focusCatalog();
+    });
+    menuBrandList.appendChild(btn);
+  });
+
+  function resetCatalogFilters() {
+    state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
+    state.priceMin = null; state.priceMax = null;
+    filterBrandEl.value = ""; filterSizeEl.value = ""; filterColorEl.value = ""; filterConditionEl.value = "";
+    filterPriceMinEl.value = ""; filterPriceMaxEl.value = "";
+  }
+
+  function syncCatalogChips() {
+    Array.prototype.forEach.call(statusChipsEl.children, function (chip) {
+      var key = chip.getAttribute("data-i18n");
+      var active = (state.status === "all" && key === "statusAll") ||
+        (state.status === "Verfügbar" && key === "statusAvailable") ||
+        (state.status === "Verkauft" && key === "statusSold");
+      chip.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    Array.prototype.forEach.call(categoryChipsEl.children, function (chip) {
+      chip.setAttribute("aria-pressed", chip === allCatBtn ? "true" : "false");
+    });
+  }
+
+  function focusCatalog() {
+    var catalog = document.querySelector(".catalog-heading");
+    if (!catalog) return;
+    requestAnimationFrame(function () {
+      catalog.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function applyMenuView(status, categories, labelKey) {
+    state.query = "";
+    searchInputEl.value = "";
+    state.status = status;
+    state.category = "all";
+    state.categoryGroup = categories || null;
+    state.favoritesOnly = false;
+    state.catalogLabelKey = labelKey || "statusAvailable";
+    state.catalogLabelCategory = "";
+    state.catalogLabelText = "";
+    resetCatalogFilters();
+    syncCatalogChips();
+    closeMenu();
+    showClassic();
+    render();
+    focusCatalog();
+  }
+
+  function openMenu() {
+    menuBackdrop.classList.add("open");
+    menuToggle.setAttribute("aria-expanded", "true");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeMenu() {
+    menuBackdrop.classList.remove("open");
+    menuToggle.setAttribute("aria-expanded", "false");
+    document.body.style.overflow = "";
+  }
+
+  menuToggle.addEventListener("click", openMenu);
+  document.getElementById("menuClose").addEventListener("click", closeMenu);
+  menuBackdrop.addEventListener("click", function (e) {
+    if (e.target === menuBackdrop) closeMenu();
+  });
+
+  menuBrandsToggle.addEventListener("click", function () {
+    var willOpen = menuBrandList.classList.contains("hidden");
+    menuBrandList.classList.toggle("hidden", !willOpen);
+    menuBrandsToggle.setAttribute("aria-expanded", willOpen ? "true" : "false");
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-menu-status]"), function (btn) {
+    btn.addEventListener("click", function () {
+      applyMenuView(btn.getAttribute("data-menu-status"), null, btn.getAttribute("data-i18n"));
+    });
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-menu-categories]"), function (btn) {
+    btn.addEventListener("click", function () {
+      applyMenuView("Verfügbar", btn.getAttribute("data-menu-categories").split(","), btn.getAttribute("data-i18n"));
+    });
+  });
+
+  document.getElementById("menuFavorites").addEventListener("click", function () {
+    state.query = "";
+    searchInputEl.value = "";
+    state.status = "all";
+    state.category = "all";
+    state.categoryGroup = null;
+    state.favoritesOnly = true;
+    state.catalogLabelKey = "menuFavorites";
+    state.catalogLabelCategory = "";
+    state.catalogLabelText = "";
+    resetCatalogFilters();
+    syncCatalogChips();
+    closeMenu();
+    showClassic();
+    render();
+    focusCatalog();
+  });
+
+  document.getElementById("footerArchive").addEventListener("click", function () {
+    applyMenuView("Verkauft", null, "menuArchive");
+  });
+
+  var accountBackdrop = document.getElementById("accountBackdrop");
+  function openAccountNotice() {
+    closeMenu();
+    accountBackdrop.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+  function closeAccountNotice() {
+    accountBackdrop.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("[data-account-target]"), function (btn) {
+    btn.addEventListener("click", openAccountNotice);
+  });
+  document.getElementById("accountClose").addEventListener("click", closeAccountNotice);
+  accountBackdrop.addEventListener("click", function (e) {
+    if (e.target === accountBackdrop) closeAccountNotice();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (menuBackdrop.classList.contains("open")) closeMenu();
+    if (accountBackdrop.classList.contains("open")) closeAccountNotice();
   });
 
   // ---- Einmaliger Hinweis auf die Fun-Modi (nur beim allerersten Besuch) ----
@@ -5092,6 +5998,7 @@
   }
 
   var LEGAL_HTML_KEY = { impressum: "legalImpressumHtml", agb: "legalAgbHtml", datenschutz: "legalDatenschutzHtml" };
+  var INFO_HTML_KEY = { about: "aboutHtml", faq: "faqHtml" };
   function legalContent(key) {
     var htmlKey = LEGAL_HTML_KEY[key];
     if (!htmlKey) return "";
@@ -5100,16 +6007,33 @@
 
   var legalBackdrop = document.getElementById("legalBackdrop");
   var currentLegalKey = null;
+  var currentInfoKey = null;
   function openLegal(key) {
     currentLegalKey = key;
+    currentInfoKey = null;
     document.getElementById("legalContent").innerHTML = legalContent(key);
     legalBackdrop.classList.add("open");
     document.getElementById("legalClose").focus();
   }
-  function closeLegal() { legalBackdrop.classList.remove("open"); currentLegalKey = null; }
+  function openInfo(key) {
+    if (!INFO_HTML_KEY[key]) return;
+    currentLegalKey = null;
+    currentInfoKey = key;
+    document.getElementById("legalContent").innerHTML = t(INFO_HTML_KEY[key]);
+    legalBackdrop.classList.add("open");
+    document.getElementById("legalClose").focus();
+  }
+  function closeLegal() {
+    legalBackdrop.classList.remove("open");
+    currentLegalKey = null;
+    currentInfoKey = null;
+  }
 
   Array.prototype.forEach.call(document.querySelectorAll("[data-legal]"), function (btn) {
     btn.addEventListener("click", function () { openLegal(btn.getAttribute("data-legal")); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-info]"), function (btn) {
+    btn.addEventListener("click", function () { openInfo(btn.getAttribute("data-info")); });
   });
   document.getElementById("legalClose").addEventListener("click", closeLegal);
   legalBackdrop.addEventListener("click", function (e) {
