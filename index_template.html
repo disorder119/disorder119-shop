@@ -461,13 +461,8 @@
   }
 
   .cart-bag {
-    grid-column: 3;
-    justify-self: end;
     position: relative;
-    /* Breite wird per JS so gesetzt, dass die resultierende (Seitenverhaeltnis-
-       treue) Hoehe exakt der Hoehe des Eyebrow-Textblocks links entspricht
-       (syncCartIconHeight) - hier nur ein Startwert, bis JS greift. */
-    width: 46px;
+    width: 30px;
     background: transparent;
     border: none;
     padding: 0;
@@ -2359,7 +2354,6 @@
       position: absolute; top: 0; right: 0;
       display: flex; align-items: center; gap: 8px;
     }
-    .cart-bag { width: 40px; }
     .lang-switch__btn { padding: 5px 6px; font-size: 0.6rem; }
     /* Reine Zier-Zeile (Markenaufzaehlung) - auf dem Handy nur zusaetzliche
        Zeilen vor dem eigentlichen Archiv, ohne eigenen Nutzwert (die echte
@@ -2444,55 +2438,11 @@
     .outfit-view__title { font-size: clamp(1.05rem, 5.2vw, 1.5rem); }
     .outfit-view__status { font-size: 0.64rem; margin-top: 2px; }
 
-    /* Baukasten und Vorschau nebeneinander statt untereinander - so bleibt
-       das grosse Look-Board direkt sichtbar, waehrend man Teile waehlt,
-       und nichts muss sich die Bildschirmhoehe streitig machen. Die Fuss-
-       leiste (Gesamt + Buttons) steckt im Markup zwar noch in .outfit-main,
-       wird hier aber absolut ueber die volle Breite unten rausgeloest -
-       sonst haette sie nur die schmale linke Spalte zur Verfuegung. */
-    .outfit-layout { flex-direction: row; flex-wrap: nowrap; gap: 8px; max-width: 100%; align-items: stretch; padding-bottom: 96px; position: relative; }
-    .outfit-main { width: auto; flex: 0 0 116px; min-height: 0; gap: 5px; display: flex; flex-direction: column; }
-    .outfit-figure { width: auto; flex: 1 1 auto; min-height: 0; gap: 4px; }
-    .outfit-figure__label { font-size: 0.56rem; }
-
-    /* Slot-Karten kompakt hochkant statt breiter Reihe: Bild oben, Preis
-       drunter, Entfernen-Button als kleines Badge auf dem Bild. Der Rahmen
-       bekommt eine feste Basis-Groesse (34x44, s. Grundregel), war aber
-       vorher per aspect-ratio auf ~144px Hoehe gezwungen - das sprengte den
-       von der Grundregel geerbten max-height:84px und liess Bild und Text
-       sich gegenseitig ueberlappen (Text dadurch unsichtbar). Jetzt darf
-       der Rahmen flexibel wachsen (flex:1 1 auto), der Slot hat keine
-       Hoehenobergrenze mehr, und object-fit:contain haelt das Bild dabei
-       unverzerrt. */
-    /* Eigene, kleinere feste Hoehe fuer das Handy - die Desktop-Hoehe (116px)
-       liess bei 5 Kaesten + Abstaenden keinen Platz mehr fuer die Fusszeile
-       (Gesamt/Buttons), die Kaesten liefen darunter durch. */
-    .outfit-slot { flex-direction: column; align-items: stretch; gap: 3px; padding: 4px; position: relative; flex: 0 0 100px; height: 100px; }
-    .outfit-slot__frame { width: 100%; height: auto; flex: 1 1 auto; min-height: 0; }
-    .outfit-slot__body { flex: 0 0 auto; }
-    .outfit-slot__label { display: none; }
-    .outfit-slot__value { display: none; }
-    .outfit-slot__price { font-size: 0.66rem; margin-top: 0; text-align: center; }
-    .outfit-slot--empty .outfit-slot__value,
-    .outfit-slot--locked .outfit-slot__value { display: block; font-size: 0.58rem; text-align: center; }
-    .outfit-slot__remove {
-      position: absolute; top: 2px; right: 2px; width: 20px; height: 20px;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(10, 10, 9, 0.72); color: var(--paper); font-size: 0.7rem; padding: 0;
-    }
-
-    .outfit-view__footer {
-      position: absolute;
-      left: 0; right: 0; bottom: 54px;
-      width: auto;
-      gap: 5px;
-    }
-    .outfit-total { font-size: 0.78rem; padding-top: 5px; }
-    .outfit-view__actions .view-enter-btn { padding: 8px 10px; font-size: 0.62rem; }
-
-    /* Uebersichtlicher iPhone-Baukasten: alle fuenf Auswahlfelder sitzen in
-       einer gleich hohen Reihe, die Vorschau nutzt darunter die volle Breite
-       und die Aktionen bleiben im normalen Fluss statt Artikel zu verdecken. */
+    /* Uebersichtlicher iPhone-Baukasten: die fuenf Auswahlfelder liegen in
+       einer horizontal wischbaren Reihe (gleiches Muster wie die Kategorie-
+       Chips), gross genug um Bild UND Preis klar zu erkennen. Die Vorschau
+       nutzt darunter die volle Breite und die Aktionen bleiben im normalen
+       Fluss statt Artikel zu verdecken. */
     .outfit-layout {
       flex-direction: column;
       flex-wrap: nowrap;
@@ -2508,11 +2458,19 @@
     .outfit-stack {
       order: 1;
       width: 100%;
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 5px;
-      flex: 0 0 auto;
+      display: flex;
+      flex-direction: row;
+      gap: 8px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding: 2px 2px 6px;
+      /* Weicher Ausblend-Rand statt hartem Anschnitt - gleiches Signal
+         "hier geht wischbar weiter" wie bei den Kategorie-Chips oben. */
+      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+      mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
     }
+    .outfit-stack::-webkit-scrollbar { display: none; }
     .outfit-figure {
       order: 2;
       width: 100%;
@@ -2534,24 +2492,45 @@
     .outfit-slot {
       flex-direction: column;
       align-items: stretch;
-      gap: 2px;
-      padding: 3px;
+      gap: 4px;
+      padding: 5px;
       position: relative;
-      min-width: 0;
-      flex: none;
-      height: 82px;
+      flex: 0 0 108px;
+      height: 108px;
+    }
+    .outfit-slot__frame {
+      width: 100%;
+      height: 76px;
+    }
+    .outfit-slot__label,
+    .outfit-slot__value {
+      display: none;
     }
     .outfit-slot__price {
-      font-size: 0.58rem;
+      font-size: 0.68rem;
       margin-top: 0;
       text-align: center;
       white-space: nowrap;
     }
+    .outfit-slot__remove {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 9, 0.72);
+      color: var(--paper);
+      font-size: 0.72rem;
+      padding: 0;
+    }
     .outfit-slot--empty .outfit-slot__value,
     .outfit-slot--locked .outfit-slot__value {
       display: block;
-      font-size: 0.48rem;
-      line-height: 1.15;
+      font-size: 0.56rem;
+      line-height: 1.2;
       text-align: center;
       white-space: nowrap;
       overflow: hidden;
@@ -2630,6 +2609,15 @@
     padding: 0;
     justify-content: center;
     border: 0;
+  }
+
+  /* Eigenes Warenkorb-Icon (Disorder119_Cart_NR7) als letztes Element der
+     Kopfzeile - immer sichtbar, auch in Match/Chaos/Baukasten und egal wie
+     weit runtergescrollt wurde (im Gegensatz zur vorherigen Platzierung im
+     Hero, die beim Scrollen bzw. auf Desktop komplett verschwand). */
+  .site-header .cart-bag {
+    width: 26px;
+    margin-left: 6px;
   }
 
   .site-header .mode-rail__btn[aria-current="true"] {
@@ -2727,6 +2715,7 @@
     .site-header__menu { width: 34px; height: 34px; }
     .site-header__brand { font-size: 0.8rem; }
     .site-header .mode-rail__btn { width: 32px; height: 34px; }
+    .site-header .cart-bag { width: 22px; margin-left: 4px; }
     .site-header__actions { gap: 0; }
 
     .masthead {
@@ -3254,6 +3243,19 @@
       <span class="mode-rail__icon" aria-hidden="true">⛃</span>
       <span class="mode-rail__label" data-i18n="modeBaukasten">Baukasten</span>
     </button>
+    <button type="button" class="cart-bag" id="cartToggle" data-i18n-aria="cartOpenAria" aria-label="Warenkorb öffnen">
+      <svg viewBox="0 0 240 300" role="img" aria-hidden="true">
+        <title>Disorder119 Warenkorb</title>
+        <g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M28 20H126C181 20 214 56 214 111V189C214 244 181 280 126 280H28Z"/>
+          <path d="M77 106L93 86H147L163 106V220C163 230 155 238 145 238H95C85 238 77 230 77 220Z"/>
+          <path d="M96 87V68C96 54 107 43 120 43C133 43 144 54 144 68V87"/>
+          <circle cx="120" cy="110" r="6"/>
+        </g>
+        <circle cx="120" cy="166" r="28" fill="#fff"/>
+        <text id="cartCount" x="120" y="176" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#000">0</text>
+      </svg>
+    </button>
   </div>
 </nav>
 
@@ -3322,19 +3324,6 @@
         <button type="button" class="lang-switch__btn" data-lang="en">EN</button>
         <button type="button" class="lang-switch__btn" data-lang="fr">FR</button>
       </div>
-      <button type="button" class="cart-bag" id="cartToggle" data-i18n-aria="cartOpenAria" aria-label="Warenkorb öffnen">
-        <svg viewBox="0 0 240 300" role="img" aria-hidden="true">
-          <title>Disorder119 Warenkorb</title>
-          <g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M28 20H126C181 20 214 56 214 111V189C214 244 181 280 126 280H28Z"/>
-            <path d="M77 106L93 86H147L163 106V220C163 230 155 238 145 238H95C85 238 77 230 77 220Z"/>
-            <path d="M96 87V68C96 54 107 43 120 43C133 43 144 54 144 68V87"/>
-            <circle cx="120" cy="110" r="6"/>
-          </g>
-          <circle cx="120" cy="166" r="28" fill="#fff"/>
-          <text id="cartCount" x="120" y="176" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#000">0</text>
-        </svg>
-      </button>
     </div>
   </div>
   <div class="masthead__bottom reveal" style="animation-delay:0.3s">
@@ -3991,35 +3980,11 @@
       var infoContentEl = document.getElementById("legalContent");
       if (infoContentEl) infoContentEl.innerHTML = t(INFO_HTML_KEY[currentInfoKey]);
     }
-    // Eyebrow-Text aendert pro Sprache seine Laenge/Zeilenumbrueche -
-    // Warenkorb-Icon-Groesse danach neu an dessen Hoehe angleichen.
-    syncCartIconHeight();
   }
 
-  // Warenkorb-Icon soll immer exakt so hoch sein wie der Eyebrow-Textblock
-  // links davon (nur auf der Breite, auf der beide nebeneinander in derselben
-  // Grid-Zeile stehen - auf dem Handy steht der Cart frei schwebend, dort
-  // gilt stattdessen eine feste Breite aus der Media Query).
-  function syncCartIconHeight() {
-    var eyebrowEl = document.querySelector(".eyebrow");
-    var cartEl = document.getElementById("cartToggle");
-    if (!eyebrowEl || !cartEl) return;
-    if (window.innerWidth <= 720) { cartEl.style.width = ""; return; }
-    var eyebrowHeight = eyebrowEl.getBoundingClientRect().height;
-    if (eyebrowHeight <= 0) return;
-    // SVG-Seitenverhaeltnis (viewBox 240x300) in eine Breite umrechnen, die
-    // bei automatischer Hoehe genau eyebrowHeight ergibt.
-    cartEl.style.width = (eyebrowHeight * (240 / 300)) + "px";
-  }
-
-  var cartIconResizeRaf = null;
-  window.addEventListener("resize", function () {
-    if (cartIconResizeRaf) return;
-    cartIconResizeRaf = requestAnimationFrame(function () {
-      cartIconResizeRaf = null;
-      syncCartIconHeight();
-    });
-  });
+  // Warenkorb-Icon sitzt jetzt fest in der Kopfzeile (feste CSS-Groesse je
+  // Breakpoint) statt an die Eyebrow-Texthoehe im Hero gekoppelt zu sein -
+  // kein JS-Sync mehr noetig.
 
   Array.prototype.forEach.call(document.querySelectorAll("[data-lang]"), function (btn) {
     btn.addEventListener("click", function () { applyLanguage(btn.getAttribute("data-lang")); });
@@ -4743,6 +4708,21 @@
     visibleLimit += 12;
     render();
   });
+
+  // Automatisches Nachladen beim Runterscrollen - der Button bleibt im DOM
+  // (Tastatur/Fallback), wird aber praktisch nie gebraucht: sobald er in die
+  // Naehe des sichtbaren Bereichs kommt, laedt er sich selbst nach.
+  if (typeof IntersectionObserver !== "undefined") {
+    var loadMoreObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          visibleLimit += 12;
+          render();
+        }
+      });
+    }, { rootMargin: "600px 0px" });
+    loadMoreObserver.observe(loadMoreBtn);
+  }
 
   // ---- Modal ----
   var backdrop = document.getElementById("modalBackdrop");

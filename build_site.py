@@ -27,6 +27,22 @@ SITE_URL = "https://disorder119.github.io/disorder119-shop/"
 DATA_PATH = BASE / "data" / "items.json"
 
 ITEMS = json.loads(DATA_PATH.read_text(encoding="utf-8"))
+
+# Manche Marken im Rohbestand sind eigentlich Linien/Kollaborationen einer
+# anderen Marke und sollen im Shop nicht als eigene Marke gezaehlt/gefiltert
+# werden, sondern unter der Hauptmarke laufen. Der Titel behaelt den
+# spezifischeren Namen (z.B. "Luna Rossa Sweatjacke"), nur das brand-Feld
+# wird hier zentral normalisiert - wirkt dadurch ueberall (Kachel-Filter,
+# Menue-Markenliste, "MEHR VON ..."-Vorschlaege, Markenzaehler im Header).
+BRAND_ALIASES = {
+    "Luna Rossa": "Prada",
+    "Maison Margiela x H&M": "Maison Margiela",
+}
+for _it in ITEMS:
+    _alias = BRAND_ALIASES.get(_it.get("brand") or "")
+    if _alias:
+        _it["brand"] = _alias
+
 BY_ID = {it["id"]: it for it in ITEMS}
 
 
