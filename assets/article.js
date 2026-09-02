@@ -327,6 +327,42 @@
     });
   }
 
+  // ---- PayPal "Jetzt kaufen" (nur gerendert, wenn CONFIG.paypalClientId +
+  // shopWorkerUrl gesetzt sind - build_site.py laesst den Container sonst
+  // ganz weg, siehe shop-worker/README.md fuer die Einrichtung) ----
+  var paypalContainer = document.getElementById("paypalButtons");
+  if (paypalContainer && window.paypal && SHOP_CONFIG.shopWorkerUrl) {
+    var workerUrl = SHOP_CONFIG.shopWorkerUrl.replace(/\/$/, "");
+    paypal.Buttons({
+      style: { shape: "rect", color: "black", layout: "vertical", label: "paypal" },
+      createOrder: function () {
+        return fetch(workerUrl + "/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ itemId: IT.id }),
+        })
+          .then(function (r) {
+            if (!r.ok) throw new Error("nicht mehr verfuegbar");
+            return r.json();
+          })
+          .then(function (data) { return data.id; });
+      },
+      onApprove: function (data) {
+        return fetch(workerUrl + "/capture-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: data.orderID, itemId: IT.id }),
+        })
+          .then(function (r) { if (!r.ok) throw new Error("Zahlung fehlgeschlagen"); })
+          .then(function () { location.reload(); }); // Seite neu laden -> Artikel zeigt sich als verkauft, sobald der Rebuild durch ist
+      },
+      onError: function (err) {
+        console.error(err);
+        alert(t("paypalError") || "Da ist leider etwas schiefgelaufen. Bitte versuch es gleich nochmal oder schreib uns.");
+      },
+    }).render("#paypalButtons");
+  }
+
   // ---- Direkte Anfrage fuer genau dieses Stueck (kein Umweg ueber die Startseite) ----
   function orderText() {
     var name = displayName();

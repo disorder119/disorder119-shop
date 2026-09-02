@@ -216,9 +216,14 @@ def cta_html(it, shop_config):
     if sold:
         return '<p class="info__note" id="soldNote">Dieses Stück ist bereits verkauft und bleibt als Teil des Disorder119-Archivs sichtbar.</p>'
     has_price = it.get("price", 0) > 0
+    paypal_ready = bool(shop_config.get("paypalClientId")) and bool(shop_config.get("shopWorkerUrl"))
     parts = ['<div class="info__cta">']
     if has_price:
         parts.append('<button type="button" class="btn" id="addToCartBtn" data-i18n="addToCart">In den Warenkorb</button>')
+    if has_price and paypal_ready:
+        # Bleibt leer/unsichtbar, bis paypal_buy_button() in article.js den
+        # echten PayPal-Button hineinrendert (siehe shop-worker/README.md).
+        parts.append('<div id="paypalButtons" data-item-id="' + str(it["id"]) + '" data-price="' + f'{it["price"]:.2f}' + '"></div>')
     parts.append('<a class="btn btn--outline" id="inquireWhatsapp" target="_blank" rel="noopener" data-i18n="inquireWhatsapp">Anfrage per WhatsApp</a>')
     parts.append('<a class="btn btn--outline" id="inquireEmail" data-i18n="inquireEmail">Anfrage per E-Mail</a>')
     parts.append("</div>")
@@ -273,6 +278,12 @@ def build_page(it, shop_config):
     hero = gallery[0] if gallery else "assets/favicon.png"
     canonical = SITE_URL + "artikel/" + str(it["id"]) + ".html"
     sold = it.get("public_status") == "SOLD"
+    paypal_sdk_tag = ""
+    if shop_config.get("paypalClientId") and shop_config.get("shopWorkerUrl") and not sold and it.get("price", 0) > 0:
+        paypal_sdk_tag = (
+            '<script src="https://www.paypal.com/sdk/js?client-id='
+            + esc(shop_config["paypalClientId"]) + '&currency=EUR"></script>\n'
+        )
 
     # ARTICLE_ITEM enthaelt bei SOLD-Artikeln bewusst KEINEN Preis (Task 2) -
     # article.js bekommt stattdessen nur sold:true und zeigt ausschliesslich
@@ -361,7 +372,7 @@ def build_page(it, shop_config):
   <button type="button" class="lightbox__close" id="lightboxClose" data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
   <img id="lightboxImg" src="" alt="">
 </div>
-<script>
+{paypal_sdk_tag}<script>
   window.ARTICLE_ITEM = {json.dumps(article_data, ensure_ascii=False)};
   window.ARTICLE_SHOP_CONFIG = {json.dumps(shop_config, ensure_ascii=False)};
 </script>
@@ -379,7 +390,14 @@ def get_shop_config():
     tmpl = (BASE / "index_template.html").read_text(encoding="utf-8")
     wa = re.search(r'whatsappNumber:\s*"([^"]*)"', tmpl)
     em = re.search(r'\bemail:\s*"([^"]*)"', tmpl)
-    return {"whatsappNumber": wa.group(1) if wa else "", "email": em.group(1) if em else ""}
+    pp = re.search(r'paypalClientId:\s*"([^"]*)"', tmpl)
+    wk = re.search(r'shopWorkerUrl:\s*"([^"]*)"', tmpl)
+    return {
+        "whatsappNumber": wa.group(1) if wa else "",
+        "email": em.group(1) if em else "",
+        "paypalClientId": pp.group(1) if pp else "",
+        "shopWorkerUrl": wk.group(1) if wk else "",
+    }
 
 
 def build_index():

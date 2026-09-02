@@ -4065,9 +4065,15 @@
   // ---- Shop-Kontakt: bitte vor dem Veröffentlichen eintragen ----
   // whatsappNumber: internationales Format OHNE "+" und ohne führende 0,
   // z. B. für die deutsche Nummer 0170 1234567 -> "491701234567"
+  // paypalClientId/shopWorkerUrl: bleiben leer, bis der Shop-Automat steht
+  // (siehe shop-worker/README.md) - der "Jetzt kaufen"-Button auf den
+  // Artikelseiten erscheint erst, wenn beide gesetzt sind, vorher laeuft
+  // alles unveraendert ueber die WhatsApp-/E-Mail-Anfrage.
   var SHOP_CONFIG = {
     whatsappNumber: "",
-    email: "disorder119shop@gmail.com"
+    email: "disorder119shop@gmail.com",
+    paypalClientId: "",
+    shopWorkerUrl: ""
   };
 
   // ---- Warenkorb ----

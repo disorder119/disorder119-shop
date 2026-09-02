@@ -1,0 +1,6 @@
+name = "disorder119-shop-worker"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# Alle echten Zugangsdaten sind Secrets (nie hier eintragen, nie committen) -
+# siehe README.md fuer die genauen `wrangler secret put ...`-Befehle.
