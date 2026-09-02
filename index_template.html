@@ -532,6 +532,7 @@
     padding: 0;
     text-align: left;
     color: inherit;
+    text-decoration: none;
     cursor: pointer;
     font-family: inherit;
     display: flex;
@@ -4282,16 +4283,36 @@
     foot.innerHTML = footHtml;
   }
 
-  function openCart() {
+  // Warenkorb bekommt einen echten Verlaufseintrag (#warenkorb) statt nur
+  // eine Overlay-Klasse umzuschalten - dadurch schliesst der Zurueck-Button
+  // des Browsers den Warenkorb (vorher landete man beim Zurueck-Klick
+  // komplett von der Seite weg), und ein Link mit #warenkorb im URL oeffnet
+  // ihn beim Laden direkt.
+  function showCartUI() {
     renderCartDrawer(true);
     document.getElementById("cartBackdrop").classList.add("open");
     document.body.style.overflow = "hidden";
   }
 
-  function closeCart() {
+  function hideCartUI() {
     document.getElementById("cartBackdrop").classList.remove("open");
     document.body.style.overflow = "";
   }
+
+  function openCart() {
+    if (location.hash !== "#warenkorb") history.pushState({ cart: true }, "", "#warenkorb");
+    showCartUI();
+  }
+
+  function closeCart() {
+    if (location.hash === "#warenkorb") history.back();
+    else hideCartUI();
+  }
+
+  window.addEventListener("popstate", function () {
+    if (location.hash === "#warenkorb") showCartUI();
+    else hideCartUI();
+  });
 
   document.getElementById("cartToggle").addEventListener("click", openCart);
   document.getElementById("menuCart").addEventListener("click", function () {
@@ -4305,6 +4326,9 @@
     if (e.target === document.getElementById("cartBackdrop")) closeCart();
   });
   updateCartCount();
+  // Direktlink/Neu laden mit #warenkorb in der URL - Schublade sofort zeigen,
+  // ohne einen weiteren Verlaufseintrag draufzupacken (der existiert ja schon).
+  if (location.hash === "#warenkorb") showCartUI();
 
   var state = {
     query: "",
@@ -4704,10 +4728,15 @@
 
     var frag = document.createDocumentFragment();
     visibleItems.forEach(function (it, idx) {
-      var plate = document.createElement("article");
+      // Echter Link statt Klick-Handler auf ein <article> - Artikelseiten
+      // existieren als vollwertige, einzeln teilbare Seiten (artikel/{id}.html,
+      // eigene og:-Tags fuer WhatsApp/Social-Vorschau) sowieso schon fuer jedes
+      // Stueck. Rechtsklick "In neuem Tab oeffnen", Hover zeigt die Ziel-URL,
+      // der Zurueck-Button des Browsers funktioniert normal - all das gibt es
+      // bei einem reinen JS-Modal ohne eigene URL nicht.
+      var plate = document.createElement("a");
       plate.className = "plate";
-      plate.tabIndex = 0;
-      plate.setAttribute("role", "button");
+      plate.href = "artikel/" + it.id + ".html";
       plate.setAttribute("aria-label", it.title);
       if (animateEntry && idx < animateCount) {
         plate.classList.add("plate--enter");
@@ -4741,17 +4770,10 @@
           "</div>" +
         "</div>";
 
-      plate.addEventListener("click", function () { openModal(it); });
-      plate.addEventListener("keydown", function (e) {
-        if ((e.key === "Enter" || e.key === " ") && e.target === plate) {
-          e.preventDefault();
-          openModal(it);
-        }
-      });
-
       var brandBtn = plate.querySelector("[data-brand-filter]");
       if (brandBtn && it.brand) {
         brandBtn.addEventListener("click", function (e) {
+          e.preventDefault();
           e.stopPropagation();
           filterByBrand(it.brand);
         });
@@ -4759,6 +4781,7 @@
 
       var favoriteBtn = plate.querySelector("[data-favorite-toggle]");
       favoriteBtn.addEventListener("click", function (e) {
+        e.preventDefault();
         e.stopPropagation();
         toggleFavorite(it.id);
       });
