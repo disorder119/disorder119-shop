@@ -474,6 +474,26 @@
 
   .cart-bag svg { display: block; width: 100%; height: auto; }
 
+  .cart-bag__badge {
+    position: absolute;
+    top: -5px;
+    right: -7px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 15px;
+    text-align: center;
+    display: none;
+  }
+
+  .cart-bag__badge--visible { display: block; }
+
   /* ---------- Grid ---------- */
 
   .grid-wrap {
@@ -925,7 +945,11 @@
     background: rgba(8, 8, 7, 0.72);
     display: none;
     justify-content: flex-end;
-    z-index: 60;
+    /* War 60 - lag damit UNTER der fixen Kopfzeile (.mode-rail, 300) und
+       das Schubladen-Kopfteil (Titel + Schliessen-X, jetzt auch das
+       Warenkorb-Symbol) verschwand komplett dahinter. Menue/Konto nutzen
+       schon 420 fuer dasselbe Muster - hier angeglichen. */
+    z-index: 420;
   }
 
   .cart-backdrop.open { display: flex; }
@@ -947,6 +971,19 @@
     padding: 20px clamp(18px, 3vw, 28px);
     border-bottom: 1px solid var(--rule);
     position: relative;
+  }
+
+  .cart-drawer__brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .cart-drawer__brand-icon {
+    width: 34px;
+    height: auto;
+    color: var(--text);
+    flex: 0 0 auto;
   }
 
   .cart-drawer__head h2 {
@@ -2001,10 +2038,13 @@
   .look-card--bottom.visible { transform: rotate(-3deg) scale(1); }
 
   .look-card--shoes {
-    /* Deutlich groesser (36% -> 50% Breite) und ein breiteres Seitenverhaeltnis
-       (4/3 -> 3/2), damit die zusaetzliche Breite nicht in Hoehe zurueckschlaegt
-       und die Karte gegen die Buehnen-Unterkante clippt. */
-    top: 76%; left: 4%; width: 50%; aspect-ratio: 3 / 2; z-index: 3;
+    /* Von unten verankert (bottom statt top): die Buehne ist unterschiedlich
+       hoch je nach Fensterhoehe (kein festes Seitenverhaeltnis), ein fixer
+       top-Prozentwert + Kartenhoehe passte deshalb nur bei einer bestimmten
+       Fenstergroesse - bei anderen ragte der Schuh unten/rechts ueber die
+       Buehnenkante hinaus und wurde vom overflow:hidden angeschnitten.
+       bottom-Verankerung haelt den unteren Rand immer sicher im Rahmen. */
+    bottom: 6%; left: 4%; width: 50%; aspect-ratio: 3 / 2; z-index: 3;
     transform: rotate(10deg) scale(0.96);
   }
   .look-card--shoes.visible { transform: rotate(10deg) scale(1); }
@@ -3244,6 +3284,12 @@
       <span class="mode-rail__label" data-i18n="modeBaukasten">Baukasten</span>
     </button>
     <button type="button" class="cart-bag" id="cartToggle" data-i18n-aria="cartOpenAria" aria-label="Warenkorb öffnen">
+      <!-- Vereinfachte Fassung des Disorder119_Cart_NR7-Symbols: die feine
+           Zahlen-Plakette aus der Vollversion (siehe Warenkorb-Schublade)
+           wird bei dieser Groesse (~26px) nur zu einem verschwommenen
+           weissen Fleck. Silhouette (D-Rahmen, Tasche, Henkel) bleibt exakt
+           dieselbe, die Anzahl sitzt stattdessen als normale HTML-Plakette
+           am Rand - so wie in jeder anderen App auch. -->
       <svg viewBox="0 0 240 300" role="img" aria-hidden="true">
         <title>Disorder119 Warenkorb</title>
         <g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
@@ -3252,9 +3298,8 @@
           <path d="M96 87V68C96 54 107 43 120 43C133 43 144 54 144 68V87"/>
           <circle cx="120" cy="110" r="6"/>
         </g>
-        <circle cx="120" cy="166" r="28" fill="#fff"/>
-        <text id="cartCount" x="120" y="176" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#000">0</text>
       </svg>
+      <span class="cart-bag__badge" id="cartCountNav" aria-hidden="true">0</span>
     </button>
   </div>
 </nav>
@@ -3473,7 +3518,20 @@
 <div class="cart-backdrop" id="cartBackdrop">
   <div class="cart-drawer" id="cartDrawer" role="dialog" aria-modal="true" data-i18n-aria="cartAria" aria-label="Warenkorb">
     <div class="cart-drawer__head">
-      <h2 data-i18n="cartHeading">Warenkorb</h2>
+      <div class="cart-drawer__brand">
+        <svg class="cart-drawer__brand-icon" viewBox="0 0 240 300" role="img" aria-hidden="true">
+          <title>Disorder119 Warenkorb</title>
+          <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M28 20H126C181 20 214 56 214 111V189C214 244 181 280 126 280H28Z"/>
+            <path d="M77 106L93 86H147L163 106V220C163 230 155 238 145 238H95C85 238 77 230 77 220Z"/>
+            <path d="M96 87V68C96 54 107 43 120 43C133 43 144 54 144 68V87"/>
+            <circle cx="120" cy="110" r="6"/>
+          </g>
+          <circle cx="120" cy="166" r="28" fill="currentColor"/>
+          <text id="cartCountDrawer" x="120" y="176" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" style="fill: var(--surface);">0</text>
+        </svg>
+        <h2 data-i18n="cartHeading">Warenkorb</h2>
+      </div>
       <button class="modal__close" id="cartClose" type="button" data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
     </div>
     <div class="cart-drawer__body" id="cartBody"></div>
@@ -4091,9 +4149,15 @@
   });
 
   function updateCartCount() {
-    document.getElementById("cartCount").textContent = cart.length;
+    var navBadge = document.getElementById("cartCountNav");
+    var drawerCount = document.getElementById("cartCountDrawer");
     var menuCount = document.getElementById("menuCartCount");
     var footerCount = document.getElementById("footerCartCount");
+    if (navBadge) {
+      navBadge.textContent = cart.length;
+      navBadge.classList.toggle("cart-bag__badge--visible", cart.length > 0);
+    }
+    if (drawerCount) drawerCount.textContent = cart.length;
     if (menuCount) menuCount.textContent = cart.length;
     if (footerCount) footerCount.textContent = cart.length;
   }
@@ -4720,7 +4784,7 @@
           render();
         }
       });
-    }, { rootMargin: "600px 0px" });
+    }, { rootMargin: "1200px 0px" });
     loadMoreObserver.observe(loadMoreBtn);
   }
 
