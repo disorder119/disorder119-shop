@@ -4319,11 +4319,17 @@
   // Zwischenstatus) bleiben komplett unsichtbar, auch indirekt.
   var PUBLIC_ITEMS = ITEMS.filter(function (it) { return it.public_status !== "DRAFT"; });
 
+  // Marken, von denen aktuell nichts verfuegbar ist (nur noch verkaufte
+  // Stuecke), tauchen bewusst nirgends auf (Zaehler, Marken-Filter, Menue-
+  // Markenliste) - man kann dort ohnehin nichts kaufen, das waere nur
+  // Frust staetter Auswahl.
   var brandsSet = {};
   var availableCount = 0;
   PUBLIC_ITEMS.forEach(function (it) {
-    if (it.brand) brandsSet[it.brand] = true;
-    if (it.public_status === "AVAILABLE") availableCount++;
+    if (it.public_status === "AVAILABLE") {
+      if (it.brand) brandsSet[it.brand] = true;
+      availableCount++;
+    }
   });
 
   document.getElementById("metaTotal").textContent = PUBLIC_ITEMS.length;

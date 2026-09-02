@@ -37,6 +37,8 @@ ITEMS = json.loads(DATA_PATH.read_text(encoding="utf-8"))
 BRAND_ALIASES = {
     "Luna Rossa": "Prada",
     "Maison Margiela x H&M": "Maison Margiela",
+    "Dior Homme": "Dior",
+    "MM6 Maison Margiela": "Maison Margiela",
 }
 for _it in ITEMS:
     _alias = BRAND_ALIASES.get(_it.get("brand") or "")
