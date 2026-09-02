@@ -460,39 +460,59 @@
     color: var(--ink);
   }
 
+  /* Schwebender runder Warenkorb-Button - erscheint nur, wenn der Warenkorb
+     nicht leer ist (siehe updateCartCount). Bleibt ueber allen Ansichten an
+     derselben Stelle, deshalb ein eigenstaendiges position:fixed-Element statt
+     Teil der Kopfzeile. */
   .cart-bag {
-    position: relative;
-    width: 30px;
-    background: transparent;
-    border: none;
+    position: fixed;
+    right: 18px;
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: var(--ink);
+    border: 1px solid var(--rule-strong);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 0;
     cursor: pointer;
-    line-height: 0;
+    z-index: 310;
+    opacity: 0;
+    transform: scale(0.6);
+    pointer-events: none;
+    transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.2, 0.7, 0.2, 1);
   }
 
-  .cart-bag:hover { transform: translateY(-1px); }
+  .cart-bag--visible {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+  }
 
-  .cart-bag svg { display: block; width: 100%; height: auto; }
+  .cart-bag:hover { border-color: var(--accent); }
+
+  .cart-bag svg { display: block; width: 26px; height: auto; }
 
   .cart-bag__badge {
     position: absolute;
-    top: -5px;
-    right: -7px;
-    min-width: 15px;
-    height: 15px;
-    padding: 0 3px;
+    top: -4px;
+    right: -4px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 4px;
     border-radius: 999px;
     background: var(--paper);
     color: var(--ink);
+    border: 2px solid var(--ink);
     font-family: Arial, Helvetica, sans-serif;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 800;
-    line-height: 15px;
+    line-height: 16px;
     text-align: center;
-    display: none;
   }
-
-  .cart-bag__badge--visible { display: block; }
 
   /* ---------- Grid ---------- */
 
@@ -2651,15 +2671,6 @@
     border: 0;
   }
 
-  /* Eigenes Warenkorb-Icon (Disorder119_Cart_NR7) als letztes Element der
-     Kopfzeile - immer sichtbar, auch in Match/Chaos/Baukasten und egal wie
-     weit runtergescrollt wurde (im Gegensatz zur vorherigen Platzierung im
-     Hero, die beim Scrollen bzw. auf Desktop komplett verschwand). */
-  .site-header .cart-bag {
-    width: 26px;
-    margin-left: 6px;
-  }
-
   .site-header .mode-rail__btn[aria-current="true"] {
     background: transparent;
     border: 0;
@@ -2755,8 +2766,9 @@
     .site-header__menu { width: 34px; height: 34px; }
     .site-header__brand { font-size: 0.8rem; }
     .site-header .mode-rail__btn { width: 32px; height: 34px; }
-    .site-header .cart-bag { width: 22px; margin-left: 4px; }
     .site-header__actions { gap: 0; }
+    .cart-bag { width: 48px; height: 48px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); }
+    .cart-bag svg { width: 22px; }
 
     .masthead {
       gap: 30px;
@@ -3283,26 +3295,27 @@
       <span class="mode-rail__icon" aria-hidden="true">⛃</span>
       <span class="mode-rail__label" data-i18n="modeBaukasten">Baukasten</span>
     </button>
-    <button type="button" class="cart-bag" id="cartToggle" data-i18n-aria="cartOpenAria" aria-label="Warenkorb öffnen">
-      <!-- Vereinfachte Fassung des Disorder119_Cart_NR7-Symbols: die feine
-           Zahlen-Plakette aus der Vollversion (siehe Warenkorb-Schublade)
-           wird bei dieser Groesse (~26px) nur zu einem verschwommenen
-           weissen Fleck. Silhouette (D-Rahmen, Tasche, Henkel) bleibt exakt
-           dieselbe, die Anzahl sitzt stattdessen als normale HTML-Plakette
-           am Rand - so wie in jeder anderen App auch. -->
-      <svg viewBox="0 0 240 300" role="img" aria-hidden="true">
-        <title>Disorder119 Warenkorb</title>
-        <g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M28 20H126C181 20 214 56 214 111V189C214 244 181 280 126 280H28Z"/>
-          <path d="M77 106L93 86H147L163 106V220C163 230 155 238 145 238H95C85 238 77 230 77 220Z"/>
-          <path d="M96 87V68C96 54 107 43 120 43C133 43 144 54 144 68V87"/>
-          <circle cx="120" cy="110" r="6"/>
-        </g>
-      </svg>
-      <span class="cart-bag__badge" id="cartCountNav" aria-hidden="true">0</span>
-    </button>
   </div>
 </nav>
+
+<!-- Schwebender Warenkorb-Button statt festem Platz in der Kopfzeile - dort
+     wirkte das kleine D staendig wie ein fester, etwas verlorener Programm-
+     punkt neben den Modi. Taucht jetzt erst auf, sobald wirklich etwas im
+     Warenkorb liegt (wie eine Benachrichtigung), bleibt aber ueber allen
+     Ansichten sichtbar (eigenstaendiges Element ausserhalb von #modeRail
+     und #appShell, daher von deren hidden-Zustand unberuehrt). -->
+<button type="button" class="cart-bag" id="cartToggle" data-i18n-aria="cartOpenAria" aria-label="Warenkorb öffnen">
+  <svg viewBox="0 0 240 300" role="img" aria-hidden="true">
+    <title>Disorder119 Warenkorb</title>
+    <g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M28 20H126C181 20 214 56 214 111V189C214 244 181 280 126 280H28Z"/>
+      <path d="M77 106L93 86H147L163 106V220C163 230 155 238 145 238H95C85 238 77 230 77 220Z"/>
+      <path d="M96 87V68C96 54 107 43 120 43C133 43 144 54 144 68V87"/>
+      <circle cx="120" cy="110" r="6"/>
+    </g>
+  </svg>
+  <span class="cart-bag__badge" id="cartCountNav" aria-hidden="true">0</span>
+</button>
 
 <div class="menu-backdrop" id="menuBackdrop">
   <aside class="menu-drawer" id="menuDrawer" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
@@ -4149,14 +4162,13 @@
   });
 
   function updateCartCount() {
+    var fab = document.getElementById("cartToggle");
     var navBadge = document.getElementById("cartCountNav");
     var drawerCount = document.getElementById("cartCountDrawer");
     var menuCount = document.getElementById("menuCartCount");
     var footerCount = document.getElementById("footerCartCount");
-    if (navBadge) {
-      navBadge.textContent = cart.length;
-      navBadge.classList.toggle("cart-bag__badge--visible", cart.length > 0);
-    }
+    if (fab) fab.classList.toggle("cart-bag--visible", cart.length > 0);
+    if (navBadge) navBadge.textContent = cart.length;
     if (drawerCount) drawerCount.textContent = cart.length;
     if (menuCount) menuCount.textContent = cart.length;
     if (footerCount) footerCount.textContent = cart.length;
@@ -5606,32 +5618,49 @@
   // chaosPanFrame(), damit sich beide Effekte technisch nicht in die Quere
   // kommen (unabhaengige rAF-Schleifen auf demselben Element, aber nie
   // gleichzeitig aktiv, da showroom/flach sich gegenseitig ausschliessen).
-  var chaosTilt = { active: false, x: 0, y: 0, targetX: 0, targetY: 0, raf: null };
+  // Fruehere Version bewegte die Buehne NUR per Handy-Neigung - auf iOS haengt
+  // das an einer Permission, die beim Moduswechsel nicht zuverlaessig aus der
+  // Nutzer-Geste heraus ausgeloest wurde (blieb oft stumm haengen), und selbst
+  // mit erteilter Freigabe passiert nichts, wenn man das Handy einfach nur
+  // ruhig haelt (der Normalfall). Jetzt laeuft immer eine sanfte, automatische
+  // Kreisbewegung der ganzen Buehne (kein Sensor, keine Permission noetig) -
+  // Neigung (falls erlaubt) legt sich nur noch zusaetzlich obendrauf.
+  var chaosMotion = { active: false, angle: 0, tiltTargetX: 0, tiltTargetY: 0, tiltX: 0, tiltY: 0, raf: null };
 
   function chaosTiltHandler(e) {
     var gamma = Math.max(-30, Math.min(30, e.gamma || 0)); // links/rechts
     var beta = Math.max(-30, Math.min(30, (e.beta || 45) - 45)); // vor/zurueck, 45deg = normale Haltung
-    chaosTilt.targetX = (gamma / 30) * 14;
-    chaosTilt.targetY = (beta / 30) * 10;
+    chaosMotion.tiltTargetX = (gamma / 30) * 10;
+    chaosMotion.tiltTargetY = (beta / 30) * 7;
   }
 
-  function chaosTiltFrame() {
+  function chaosMotionFrame() {
     var chaosViewEl = document.getElementById("chaosView");
     var host = document.getElementById("chaosItems");
-    if (!chaosTilt.active || !host || !chaosViewEl || chaosViewEl.classList.contains("hidden")) {
-      chaosTilt.active = false;
+    if (!chaosMotion.active || !host || !chaosViewEl || chaosViewEl.classList.contains("hidden")) {
+      chaosMotion.active = false;
       window.removeEventListener("deviceorientation", chaosTiltHandler);
       return;
     }
-    chaosTilt.x += (chaosTilt.targetX - chaosTilt.x) * 0.06;
-    chaosTilt.y += (chaosTilt.targetY - chaosTilt.y) * 0.06;
-    host.style.transform = "translate(" + chaosTilt.x.toFixed(1) + "px, " + chaosTilt.y.toFixed(1) + "px)";
-    chaosTilt.raf = requestAnimationFrame(chaosTiltFrame);
+    // Langsame elliptische Bahn (~25s pro Umlauf) - dezent genug, um nicht vom
+    // Stoebern abzulenken, aber deutlich sichtbar ohne dass am Geraet gewackelt
+    // werden muss. Tippen auf ein Teil bleibt unveraendert moeglich (reine
+    // transform-Verschiebung der ganzen Buehne, keine Aenderung an den
+    // einzelnen Klick-/Touch-Zielen).
+    chaosMotion.angle += 0.0022;
+    var driftX = Math.cos(chaosMotion.angle) * 13;
+    var driftY = Math.sin(chaosMotion.angle) * 8;
+    chaosMotion.tiltX += (chaosMotion.tiltTargetX - chaosMotion.tiltX) * 0.06;
+    chaosMotion.tiltY += (chaosMotion.tiltTargetY - chaosMotion.tiltY) * 0.06;
+    var x = driftX + chaosMotion.tiltX;
+    var y = driftY + chaosMotion.tiltY;
+    host.style.transform = "translate(" + x.toFixed(1) + "px, " + y.toFixed(1) + "px)";
+    chaosMotion.raf = requestAnimationFrame(chaosMotionFrame);
   }
 
   function stopChaosTilt() {
-    chaosTilt.active = false;
-    if (chaosTilt.raf) cancelAnimationFrame(chaosTilt.raf);
+    chaosMotion.active = false;
+    if (chaosMotion.raf) cancelAnimationFrame(chaosMotion.raf);
     window.removeEventListener("deviceorientation", chaosTiltHandler);
     var host = document.getElementById("chaosItems");
     if (host) host.style.transform = "";
@@ -5639,27 +5668,26 @@
 
   function startChaosTilt() {
     stopChaosTilt();
-    // Respektiert "Bewegung reduzieren" (anders als das Schweben der
-    // einzelnen Artikel ist das hier reine Zierde, kein Kern des Modus).
+    // Respektiert "Bewegung reduzieren" - wie ueberall sonst auf der Seite.
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    chaosMotion.active = true;
+    chaosMotion.angle = Math.random() * Math.PI * 2; // nicht jedes Mal am selben Punkt starten
+    chaosMotion.tiltTargetX = chaosMotion.tiltX = 0;
+    chaosMotion.tiltTargetY = chaosMotion.tiltY = 0;
+    chaosMotionFrame();
     if (typeof window.DeviceOrientationEvent === "undefined") return;
-    function begin() {
-      chaosTilt.active = true;
-      window.addEventListener("deviceorientation", chaosTiltHandler);
-      chaosTiltFrame();
-    }
+    function beginTilt() { window.addEventListener("deviceorientation", chaosTiltHandler); }
     if (typeof DeviceOrientationEvent.requestPermission === "function") {
-      // iOS 13+: Freigabe muss aus einer Nutzer-Geste (Tap auf Chaos) heraus
-      // angefragt werden. Wird sie verweigert oder schlaegt fehl, bleibt
-      // einfach nur das normale Schweben der Artikel ohne Neige-Effekt -
-      // kein Fehlerzustand, keine sichtbare Stoerung.
+      // iOS 13+: Freigabe muss aus einer Nutzer-Geste heraus angefragt werden.
+      // Wird sie verweigert oder schlaegt fehl, laeuft die automatische
+      // Kreisbewegung trotzdem normal weiter - kein Fehlerzustand.
       try {
         DeviceOrientationEvent.requestPermission().then(function (state) {
-          if (state === "granted") begin();
+          if (state === "granted") beginTilt();
         }).catch(function () {});
       } catch (e) {}
     } else {
-      begin();
+      beginTilt();
     }
   }
 
