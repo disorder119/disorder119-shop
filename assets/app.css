@@ -1868,19 +1868,18 @@
     flex-direction: column;
     align-items: center;
     padding: clamp(12px, 2.4vh, 24px) 18px clamp(10px, 2vh, 18px);
-    /* War frueher "overflow: hidden" - das Layout sollte per flex-shrink
-       IMMER exakt in die Fensterhoehe passen, ohne je scrollen zu muessen.
-       Bricht aber in jedem normalen, nicht maximierten Desktop-Fenster mit
-       wenig Hoehe (z.B. ~700-800px, sehr uebliche Fenstergroesse): der
-       Inhalt (5 Auswahlfelder + Look-Vorschau) ist dann schlicht hoeher als
-       verfuegbar, und "overflow:hidden" hat die untere Haelfte samt der
-       Wuerfel-/Neu-/Warenkorb-Buttons komplett unerreichbar abgeschnitten -
-       kein Scrollbalken, keine Moeglichkeit, doch noch hinzukommen. Verifiziert
-       live auf disorder119.com in einem normalen Edge-Fenster (720px hoch):
-       outfitView-Inhalt 811px hoch bei nur 656px verfuegbarem Platz. auto
-       scrollt in diesem Fall einfach, statt stumm Bedienelemente zu killen. */
-    overflow-y: auto;
-    overflow-x: hidden;
+    /* Muss IMMER exakt in die Fensterhoehe passen, nie scrollen - auch nicht
+       in kleinen Fenstern. Der fruehere "overflow-y:auto"-Kompromiss kam nur
+       zustande, weil .outfit-layout mit flex-wrap:wrap + fehlendem
+       flex:1 1 auto auf .outfit-main NICHT korrekt auf die verfuegbare Hoehe
+       gestaucht wurde (Browser-Eigenheit: bei einzeiligem, aber wrap-
+       faehigem Flex-Layout wird beim Stretch teils die urspruengliche
+       Content-Groesse statt der tatsaechlich zugewiesenen Zeilenhoehe
+       verwendet). Mit flex-wrap:nowrap unten UND .outfit-main{flex:1 1 auto}
+       greift der min-height:0-Kettenmechanismus korrekt durch die gesamte
+       Kette (outfit-layout -> outfit-main/-figure -> outfit-stack/-figure__stage),
+       live verifiziert auf disorder119.com ohne jeden Overflow. */
+    overflow: hidden;
     gap: clamp(6px, 1.4vh, 14px);
   }
 
@@ -1933,7 +1932,7 @@
 
   .outfit-layout {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: clamp(14px, 2.4vw, 32px);
     align-items: stretch;
     justify-content: center;
@@ -1948,6 +1947,7 @@
     flex-direction: column;
     gap: clamp(6px, 1.2vh, 12px);
     width: min(360px, 100%);
+    flex: 1 1 auto;
     min-height: 0;
   }
 
@@ -2632,7 +2632,6 @@
       padding: 10px 10px calc(8px + env(safe-area-inset-bottom));
       gap: 6px;
       align-items: stretch;
-      overflow-y: auto;
     }
     .outfit-view__close { top: 8px; right: 10px; width: 28px; height: 28px; font-size: 0.8rem; }
     .outfit-view__head { min-height: 76px; }
@@ -2676,8 +2675,8 @@
     .outfit-figure {
       order: 2;
       width: 100%;
-      flex: 1 0 300px;
-      min-height: 300px;
+      flex: 1 1 auto;
+      min-height: 0;
       gap: 0;
     }
     .outfit-figure__label {
