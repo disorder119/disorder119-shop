@@ -27,6 +27,25 @@
     return div.innerHTML;
   }
 
+  // Gemeinsame Fokus-Falle fuer Dialog-Overlays (Menue, Warenkorb, Produkt-
+  // Schnellansicht, Verleih-Anfrage): Tab/Shift+Tab bleiben innerhalb des
+  // Dialogs statt in den (vom Backdrop verdeckten) Hintergrund zu springen.
+  // isOpenFn prueft, ob das Overlay gerade sichtbar ist (Tastatur-Events
+  // laufen global auf document, sollen aber nur greifen, wenn das jeweilige
+  // Overlay tatsaechlich offen ist).
+  function bindFocusTrap(containerEl, isOpenFn, closeFn) {
+    document.addEventListener("keydown", function (e) {
+      if (!isOpenFn()) return;
+      if (e.key === "Escape") { closeFn(); return; }
+      if (e.key !== "Tab") return;
+      var focusables = containerEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (!focusables.length) return;
+      var first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+  }
+
   function productAltText(it) {
     var title = it.title || "";
     var brand = it.brand || "";
@@ -1043,16 +1062,25 @@
     el.href = CART_PATH;
   });
 
+  var cartLastFocusEl = null;
   function showCartUI() {
     renderCartDrawer(true);
+    cartLastFocusEl = document.activeElement;
     document.getElementById("cartBackdrop").classList.add("open");
     document.body.style.overflow = "hidden";
+    document.getElementById("cartClose").focus();
   }
 
   function hideCartUI() {
     document.getElementById("cartBackdrop").classList.remove("open");
     document.body.style.overflow = "";
+    if (cartLastFocusEl && typeof cartLastFocusEl.focus === "function") cartLastFocusEl.focus();
   }
+  bindFocusTrap(
+    document.getElementById("cartDrawer"),
+    function () { return document.getElementById("cartBackdrop").classList.contains("open"); },
+    closeCart
+  );
 
   function openCart() {
     if (location.pathname !== CART_PATH) history.pushState({ cart: true }, "", CART_PATH);
@@ -1749,9 +1777,18 @@
   });
   document.addEventListener("keydown", function (e) {
     if (!backdrop.classList.contains("open")) return;
-    if (e.key === "Escape") closeModal();
-    else if (e.key === "ArrowLeft") showPhoto(currentPhoto - 1);
-    else if (e.key === "ArrowRight") showPhoto(currentPhoto + 1);
+    if (e.key === "Escape") { closeModal(); return; }
+    if (e.key === "ArrowLeft") { showPhoto(currentPhoto - 1); return; }
+    if (e.key === "ArrowRight") { showPhoto(currentPhoto + 1); return; }
+    // Fokus-Falle: Tab/Shift+Tab bleiben innerhalb des Dialogs, statt in den
+    // (unsichtbaren, weil vom Backdrop verdeckten) Hintergrund zu springen -
+    // gleiches Muster wie beim Verleih-Modal.
+    if (e.key !== "Tab") return;
+    var focusables = document.getElementById("modal").querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    var first = focusables[0], last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
 
   // ---- Photo mount toggle (black / white ground behind the cut-out photos) ----
@@ -1946,17 +1983,22 @@
     focusCatalog();
   }
 
+  var menuLastFocusEl = null;
   function openMenu() {
+    menuLastFocusEl = document.activeElement;
     menuBackdrop.classList.add("open");
     menuToggle.setAttribute("aria-expanded", "true");
     document.body.style.overflow = "hidden";
+    document.getElementById("menuClose").focus();
   }
 
   function closeMenu() {
     menuBackdrop.classList.remove("open");
     menuToggle.setAttribute("aria-expanded", "false");
     document.body.style.overflow = "";
+    if (menuLastFocusEl && typeof menuLastFocusEl.focus === "function") menuLastFocusEl.focus();
   }
+  bindFocusTrap(document.getElementById("menuDrawer"), function () { return menuBackdrop.classList.contains("open"); }, closeMenu);
 
   menuToggle.addEventListener("click", openMenu);
   document.getElementById("menuClose").addEventListener("click", closeMenu);
