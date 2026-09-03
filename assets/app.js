@@ -3231,6 +3231,21 @@
     else if (initialMode === "mieten") showMieten();
     else showClassic();
     suppressModePush = false;
+    // Deep-Link von einer Produktseite ("...mieten/?item=123", siehe
+    // rentalTeaser-Link in build_site.py/cta_html()) - oeffnet die Anfrage
+    // direkt fuer genau dieses Stueck, statt nur auf die allgemeine
+    // Mieten-Kategorie zu verweisen. Parameter danach aus der URL entfernen,
+    // damit ein Reload/Teilen des Links nicht dauerhaft dasselbe Modal
+    // erneut aufreisst.
+    if (initialMode === "mieten") {
+      try {
+        var rentalItemId = Number(new URLSearchParams(window.location.search).get("item"));
+        if (rentalItemId && findItem(rentalItemId)) {
+          openRentalModal(rentalItemId);
+          window.history.replaceState(history.state, "", window.location.pathname);
+        }
+      } catch (e) {}
+    }
   } else {
     modeRail.classList.remove("hidden");
   }

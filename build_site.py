@@ -444,7 +444,7 @@ def price_block_html(it):
     return '<div class="info__price">Preis auf Anfrage</div>'
 
 
-def cta_html(it, shop_config):
+def cta_html(it, shop_config, home):
     sold = it.get("public_status") == "SOLD"
     if sold:
         return '<p class="info__note" id="soldNote">Dieses Stück ist bereits verkauft und bleibt als Teil des Disorder119-Archivs sichtbar.</p>'
@@ -460,6 +460,17 @@ def cta_html(it, shop_config):
     parts.append('<a class="btn btn--outline" id="inquireWhatsapp" target="_blank" rel="noopener" data-i18n="inquireWhatsapp">Anfrage per WhatsApp</a>')
     parts.append('<a class="btn btn--outline" id="inquireEmail" data-i18n="inquireEmail">Anfrage per E-Mail</a>')
     parts.append("</div>")
+    # Verlinkt auf die eigene Mieten-Kategorie mit ?item=<id> - app.js
+    # erkennt den Parameter beim Laden von /mieten/ und oeffnet die
+    # Anfrage direkt fuer genau dieses Stueck (siehe showMieten() in
+    # assets/app.js), statt nur auf die allgemeine Kategorie zu verweisen.
+    # Vorher gab es auf der Produktseite selbst ueberhaupt keinen Hinweis
+    # aufs Mieten - wer sich ein Stueck ansah, erfuhr nie, dass es auch
+    # ausleihbar ist.
+    parts.append(
+        '<a class="btn btn--outline btn--rental" href="' + home + 'mieten/?item=' + str(it["id"])
+        + '" data-i18n="rentalTeaser">📅 Auch mietbar – Für Miete anfragen</a>'
+    )
     if not shop_config["whatsappNumber"] and not shop_config["email"]:
         parts.append('<p class="info__config-warning" data-i18n="configWarning">Shop-Kontakt noch nicht eingerichtet: WhatsApp-Nummer oder E-Mail-Adresse fehlen in SHOP_CONFIG (index.html).</p>')
     return "".join(parts)
@@ -602,7 +613,7 @@ def build_page(it, shop_config, lang):
     <div id="priceBlock">{price_block_html(it)}</div>
     <div class="info__facts">{facts_html(it)}</div>
     <p class="info__desc" id="itemDesc">{esc((it.get("desc_de") or it.get("desc") or "").strip() or auto_description(it, "de"))}</p>
-    {cta_html(it, shop_config)}
+    {cta_html(it, shop_config, home)}
   </div>
 </div>
 {related_sections_html(it, lang)}
