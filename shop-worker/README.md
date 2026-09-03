@@ -78,13 +78,31 @@ Token augenblicklich ungueltig).
 ## Was danach automatisch passiert
 
 Sobald alle Secrets gesetzt sind:
-1. Käufer klickt "Jetzt kaufen" auf einer Artikelseite.
+1. Käufer klickt "Jetzt kaufen" auf einer Artikelseite - der Worker
+   reserviert das Einzelstück dabei sofort für 15 Minuten (siehe unten),
+   damit es niemand anders in der Zwischenzeit ebenfalls kaufen kann.
 2. PayPal-Fenster oeffnet sich, Zahlung wird bestaetigt.
-3. Worker markiert den Artikel in `data/items.json` als `SOLD`.
+3. Worker prueft die Reservierung erneut und zieht erst dann die Zahlung
+   ein, markiert den Artikel in `data/items.json` als `SOLD`.
 4. Der GitHub-Actions-Workflow (`.github/workflows/rebuild.yml`) baut die
    Seite automatisch neu - der Artikel verschwindet aus dem Katalog.
 5. Worker erstellt automatisch ein DHL-Label mit der von PayPal
    uebermittelten Lieferadresse.
+
+### Schutz gegen Doppelverkauf (Reservierung)
+
+Jedes Stück ist ein Einzelstück - zwei Personen duerfen es nie gleichzeitig
+erfolgreich kaufen koennen. Der Worker reserviert deshalb ab dem Klick auf
+"Jetzt kaufen" (`POST /create-order`) den Artikel atomar fuer 15 Minuten
+(`RESERVATION_TTL_MS` in `worker.js`) an genau diese eine PayPal-Bestellung.
+Erst wenn beim Zahlungseinzug (`POST /capture-order`) diese Reservierung
+noch gueltig und unveraendert ist, wird ueberhaupt Geld abgebucht - vorher
+wurde hier immer zuerst abgebucht und erst danach geprueft, ob der Artikel
+noch zu haben war. Bricht jemand den Kauf ab (Tab geschlossen, PayPal-
+Fenster geschlossen), verfaellt die Reservierung nach 15 Minuten von selbst
+und der Artikel wird beim naechsten Kaufversuch automatisch wieder frei -
+es gibt dafuer keinen eigenen Aufraeum-Job, das passiert "lazy" beim
+naechsten `/create-order` fuer denselben Artikel.
 
 Kosten: PayPal-Transaktionsgebuehr (branchenueblich, kein Weg drumrum),
 normales DHL-Porto pro Paket. Keine Monats-/Plattformgebuehr fuer

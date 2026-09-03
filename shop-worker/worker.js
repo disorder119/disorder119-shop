@@ -3,24 +3,35 @@
  * ---------------------------------------------
  * Sitzt zwischen dem PayPal-Button auf den Artikelseiten und dem Repo:
  *
- *   1. Frontend ruft POST /create-order  -> Worker legt bei PayPal eine
+ *   1. Frontend ruft POST /create-order -> Worker legt bei PayPal eine
  *      Bestellung ueber den ECHTEN, in items.json hinterlegten Preis an
  *      (nie dem Browser vertrauen - der Preis kommt server-seitig aus dem
- *      Katalog, nicht vom Client).
+ *      Katalog, nicht vom Client) und reserviert das Einzelstueck DANACH
+ *      atomar fuer genau diese PayPal-Order-ID (15 Minuten TTL, siehe
+ *      reserveItem()/RESERVATION_TTL_MS) - schlaegt die Reservierung fehl
+ *      (inzwischen von jemand anderem geschnappt oder verkauft), bleibt die
+ *      PayPal-Order einfach ungenutzt liegen, es wurde noch kein Cent
+ *      abgebucht.
  *   2. Kaeufer bestaetigt bei PayPal.
- *   3. Frontend ruft POST /capture-order -> Worker zieht die Zahlung ein,
- *      und wenn das klappt:
+ *   3. Frontend ruft POST /capture-order -> Worker prueft ZUERST, ob fuer
+ *      dieses Item noch eine gueltige, nicht abgelaufene Reservierung mit
+ *      exakt dieser Order-ID existiert - NUR dann wird ueberhaupt Geld
+ *      eingezogen. Das ist der Kern des Schutzes gegen Doppelverkauf: ein
+ *      Einzelstueck kann nie zweimal erfolgreich bezahlt werden, weil eine
+ *      zweite, konkurrierende Anfrage schon in Schritt 1 keine Reservierung
+ *      mehr bekommen haette. Klappt der Zahlungseinzug:
  *        a) markiert den Artikel in data/items.json als SOLD (ueber die
  *           GitHub Contents API) - der Rebuild-Workflow baut die Seite
  *           danach automatisch neu, der Artikel verschwindet aus dem
- *           Katalog, bevor ihn jemand zweites Mal bestellen kann.
+ *           Katalog.
  *        b) erstellt ein DHL-Versandlabel mit der vom Kaeufer bei PayPal
  *           hinterlegten Lieferadresse.
  *   4. POST /paypal-webhook ist ein Sicherheitsnetz: falls Schritt 3 durch
  *      einen geschlossenen Tab o.ae. nie ausgeloest wurde, markiert PayPals
  *      eigener Webhook (PAYMENT.CAPTURE.COMPLETED) den Artikel trotzdem als
- *      verkauft. Beide Wege sind idempotent (pruefen erst, ob der Artikel
- *      nicht schon SOLD ist), doppeltes Ausfuehren richtet nichts an.
+ *      verkauft. Alle Wege sind idempotent (pruefen erst, ob der Artikel
+ *      nicht schon SOLD ist bzw. ob genau diese Order schon abgeschlossen
+ *      wurde), doppeltes Ausfuehren richtet nichts an.
  *
  * Zusaetzlich zum Kauf-Ablauf nimmt der Worker auch Verleih-Anfragen
  * (Musikvideo/Shooting) entgegen und macht sie fuer ein spaeteres
@@ -201,7 +212,7 @@ async function findItem(env, id) {
 
 /** Markiert einen Artikel als verkauft. Idempotent: ist er schon SOLD,
  *  passiert nichts (wichtig, weil Capture UND Webhook denselben Artikel
- *  markieren koennten). */
+ *  markieren koennten). Loescht dabei auch die Reservierungsfelder. */
 async function markSold(env, id, orderId) {
   const { items, sha } = await loadItems(env);
   const item = items.find((it) => String(it.id) === String(id));
@@ -211,6 +222,8 @@ async function markSold(env, id, orderId) {
   item.public_status = "SOLD";
   item.status = "Verkauft";
   item.paypal_order_id = orderId;
+  delete item.reserved_order_id;
+  delete item.reserved_until;
 
   const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(items, null, 2))));
   const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.itemsPath}`;
@@ -227,6 +240,80 @@ async function markSold(env, id, orderId) {
   if (!res.ok) throw new Error("Konnte Artikel nicht als verkauft markieren: " + (await res.text()));
   return { item, alreadySold: false };
 }
+
+// ---------- Reservierung (verhindert Doppelverkauf) ----------
+// data/items.json (ueber die GitHub-Contents-API) ist keine echte
+// Datenbank mit Transaktionen - aber die API bietet trotzdem ein echtes
+// Nebenlaeufigkeits-Primitiv: PUT verlangt den sha der zuletzt gelesenen
+// Version und schlaegt mit 409 fehl, wenn die Datei sich seitdem geaendert
+// hat. Zwei fast gleichzeitige Reservierungsversuche fuer DASSELBE
+// Einzelstueck lesen denselben sha, aber nur der ERSTE PUT wird
+// akzeptiert - der zweite bekommt 409 und weiss dadurch zuverlaessig,
+// dass er zu spaet war, statt (wie vorher) beide Kaeufe unbemerkt parallel
+// laufen zu lassen bis zum Zahlungseinzug.
+const RESERVATION_TTL_MS = 15 * 60 * 1000; // 15 Minuten Zeit fuer den PayPal-Checkout
+
+function reservationActive(item) {
+  return item.public_status === "RESERVED" && typeof item.reserved_until === "number" && Date.now() < item.reserved_until;
+}
+
+/** true, wenn der Artikel gerade fuer eine neue Reservierung frei ist -
+ *  entweder wirklich AVAILABLE, oder eine fruehere Reservierung ist
+ *  abgelaufen (Kaeufer hat Tab geschlossen/PayPal abgebrochen, ohne dass
+ *  je ein capture-order kam - es gibt keinen Cron-Job, der das aktiv
+ *  aufraeumt, daher wird der Ablauf hier "lazy" beim naechsten Versuch
+ *  erkannt). */
+function isReleasable(item) {
+  if (item.public_status === "AVAILABLE") return true;
+  if (item.public_status === "RESERVED" && !reservationActive(item)) return true;
+  return false;
+}
+
+class ItemUnavailableError extends Error {}
+
+/** Reserviert ein Einzelstueck atomar fuer eine bestimmte PayPal-Order-ID.
+ *  Wirft ItemUnavailableError, wenn der Artikel verkauft oder gerade aktiv
+ *  von jemand anderem reserviert ist. Retry-Schleife faengt den Fall ab,
+ *  dass zwei Anfragen exakt denselben sha gelesen haben - nach einem 409
+ *  wird frisch neu gelesen und die Verfuegbarkeit erneut echt geprueft,
+ *  nicht blind nochmal geschrieben. */
+async function reserveItem(env, id, orderId) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const { items, sha } = await loadItems(env);
+    const item = items.find((it) => String(it.id) === String(id));
+    if (!item) throw new Error("Unbekannter Artikel: " + id);
+    if (item.public_status === "SOLD") throw new ItemUnavailableError("Artikel bereits verkauft.");
+    if (!isReleasable(item)) throw new ItemUnavailableError("Artikel ist gerade reserviert.");
+
+    item.public_status = "RESERVED";
+    item.reserved_order_id = orderId;
+    item.reserved_until = Date.now() + RESERVATION_TTL_MS;
+
+    const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(items, null, 2))));
+    const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.itemsPath}`;
+    const res = await fetch(url, {
+      method: "PUT",
+      headers: ghHeaders(env),
+      body: JSON.stringify({
+        message: `Reserviert (PayPal-Order ${orderId}): ${item.brand || ""} ${item.title} (Artikel ${id})`.trim(),
+        content: newContent,
+        sha,
+        branch: CONFIG.githubBranch,
+      }),
+    });
+    if (res.ok) return item;
+    if (res.status === 409) continue; // jemand anderes war minimal schneller - frisch neu pruefen
+    throw new Error("Reservierung fehlgeschlagen: " + (await res.text()));
+  }
+  throw new ItemUnavailableError("Artikel ist gerade reserviert (zu viele gleichzeitige Versuche).");
+}
+
+// Bewusst KEINE explizite releaseReservation()-Funktion: bricht ein
+// Kaeufer ab (Tab/PayPal-Fenster geschlossen, Zahlung abgelehnt), bleibt
+// die Reservierung bis zum Ablauf der 15 Minuten stehen und wird beim
+// naechsten Kaufversuch desselben Artikels automatisch als frei erkannt
+// (isReleasable() oben) - einfacher und robuster als ein aktives
+// Freigeben um jeden moeglichen Fehlerpfad herum nachzuziehen.
 
 // ---------- Verleih-Anfragen ----------
 // Gleiche Technik wie loadItems()/markSold() oben: data/rental-requests.json
@@ -336,20 +423,52 @@ export default {
       if (url.pathname === "/create-order" && request.method === "POST") {
         const { itemId } = await request.json();
         const item = await findItem(env, itemId);
-        if (!item || item.public_status !== "AVAILABLE") {
+        if (!item || !isReleasable(item)) {
           return json({ error: "Artikel nicht mehr verfuegbar." }, 409, origin);
         }
+        // PayPal-Order zuerst anlegen (liefert die orderId, die als
+        // Reservierungs-Schluessel dient), dann ATOMAR reservieren. Schlaegt
+        // die Reservierung fehl (inzwischen von jemand anderem geschnappt),
+        // bleibt die PayPal-Order einfach ungenutzt liegen und verfaellt von
+        // selbst - es wird nie etwas abgebucht, kein Schaden entstanden.
         const order = await createPaypalOrder(env, item);
+        try {
+          await reserveItem(env, itemId, order.id);
+        } catch (reserveErr) {
+          if (reserveErr instanceof ItemUnavailableError) {
+            return json({ error: "Artikel wurde soeben von jemand anderem reserviert." }, 409, origin);
+          }
+          throw reserveErr;
+        }
         return json({ id: order.id }, 200, origin);
       }
 
       if (url.pathname === "/capture-order" && request.method === "POST") {
         const { orderId, itemId } = await request.json();
-        const capture = await capturePaypalOrder(env, orderId);
-        if (capture.status !== "COMPLETED") {
+        const preCheckItem = await findItem(env, itemId);
+        // Idempotenz: wurde GENAU diese Order schon erfolgreich abgeschlossen
+        // (z.B. Doppelklick, oder Webhook kam parallel zum direkten Aufruf),
+        // einfach Erfolg zurueckmelden statt erneut zu pruefen/abzurechnen.
+        const alreadyDoneForThisOrder = preCheckItem && preCheckItem.public_status === "SOLD" && preCheckItem.paypal_order_id === orderId;
+        if (!alreadyDoneForThisOrder) {
+          // DAS ist der eigentliche Fix: erst hier, VOR jedem Zahlungseinzug,
+          // pruefen, ob wir fuer dieses Item noch eine gueltige, nicht
+          // abgelaufene Reservierung mit exakt dieser Order-ID halten.
+          // Vorher wurde immer zuerst abgebucht und erst danach geprueft, ob
+          // der Artikel ueberhaupt noch verfuegbar war - dadurch konnte eine
+          // zweite Person tatsaechlich zahlen, ohne je eine reelle Chance auf
+          // den Artikel gehabt zu haben.
+          if (!preCheckItem || preCheckItem.reserved_order_id !== orderId || !reservationActive(preCheckItem)) {
+            return json({ error: "Reservierung abgelaufen oder ungueltig - bitte Kauf neu starten." }, 409, origin);
+          }
+        }
+        const capture = alreadyDoneForThisOrder ? null : await capturePaypalOrder(env, orderId);
+        if (capture && capture.status !== "COMPLETED") {
           return json({ error: "Zahlung nicht abgeschlossen." }, 402, origin);
         }
-        const { item, alreadySold } = await markSold(env, itemId, orderId);
+        const { item, alreadySold } = alreadyDoneForThisOrder
+          ? { item: preCheckItem, alreadySold: true }
+          : await markSold(env, itemId, orderId);
         if (!alreadySold) {
           const shippingRaw = capture.purchase_units?.[0]?.shipping;
           if (shippingRaw) {
