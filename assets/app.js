@@ -2872,6 +2872,16 @@
     renderOutfitFigure();
   }
 
+  // Feste Regel, WO ein Accessoire im Look-Board auftaucht - "Accessories"
+  // ist im Katalog eine einzige grobe Kategorie (Muetzen, Sonnenbrillen,
+  // Guertel, Taschen, Schals, ...), es gibt kein eigenes Datenfeld fuer den
+  // genauen Typ. Deshalb per Titel-Stichwort erkannt: Kopf-/Gesichts-
+  // Accessoires (Muetzen, Caps, Hueten, Sonnenbrillen) UND Guertel wandern
+  // ganz nach oben (per CSS order:1, noch vor Jacke/Oberteil) - alles
+  // andere (Taschen, Schals, Wallets, ...) bleibt an der bisherigen Stelle
+  // zwischen Unterteil und Schuhen.
+  var ACCESSORY_TOP_PATTERN = /(m[üu]tze|beanie|\bcap\b|kappe|h[uü]t(e|chen)?|sonnenbrille|brille|sunglasses|g[üu]rtel|belt)/i;
+
   function renderOutfitFigure() {
     var anyVisible = false;
 
@@ -2897,6 +2907,11 @@
     setCard(document.getElementById("figBottom"), outfitIsDress() ? null : outfitSlots.bottom.item);
     setCard(document.getElementById("figShoes"), outfitSlots.shoes.item);
     setCard(document.getElementById("figAccessory"), outfitSlots.accessory.item);
+    var accItem = outfitSlots.accessory.item;
+    document.getElementById("figAccessory").classList.toggle(
+      "look-card--accessory-top",
+      !!(accItem && ACCESSORY_TOP_PATTERN.test(accItem.title))
+    );
     document.getElementById("lookBoardEmpty").classList.toggle("hidden-empty", anyVisible);
   }
 

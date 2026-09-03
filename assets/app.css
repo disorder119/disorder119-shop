@@ -2058,6 +2058,21 @@
     box-sizing: border-box;
   }
 
+  /* Feste Reihenfolge im Raster statt nur "wie im DOM/wie gerade befuellt":
+     order steuert die Fuellreihenfolge von grid-auto-flow (unabhaengig von
+     der HTML-Reihenfolge), damit jede Artikelart IMMER an derselben,
+     koerperlogischen Stelle landet. Kopf-/Gesichts-Accessoires (Muetzen,
+     Caps, Sonnenbrillen) und Guertel bekommen in renderOutfitFigure() die
+     Zusatzklasse look-card--accessory-top (siehe app.js) und ruecken damit
+     ganz nach oben, sogar vor Jacke/Oberteil. Schuhe bleiben IMMER
+     zuunterst - unabhaengig davon, welches Accessoire gerade gewaehlt ist. */
+  .look-card--jacket { order: 2; }
+  .look-card--top { order: 3; }
+  .look-card--bottom { order: 4; }
+  .look-card--accessory { order: 5; }
+  .look-card--accessory-top { order: 1; }
+  .look-card--shoes { order: 6; }
+
   .outfit-stack {
     width: min(360px, 100%);
     display: flex;
