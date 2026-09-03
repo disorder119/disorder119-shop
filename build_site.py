@@ -469,7 +469,7 @@ def cta_html(it, shop_config, home):
     # ausleihbar ist.
     parts.append(
         '<a class="btn btn--outline btn--rental" href="' + home + 'mieten/?item=' + str(it["id"])
-        + '" data-i18n="rentalTeaser">📅 Auch mietbar – Für Miete anfragen</a>'
+        + '" data-i18n="rentalTeaser">Auch mietbar – Für Miete anfragen</a>'
     )
     if not shop_config["whatsappNumber"] and not shop_config["email"]:
         parts.append('<p class="info__config-warning" data-i18n="configWarning">Shop-Kontakt noch nicht eingerichtet: WhatsApp-Nummer oder E-Mail-Adresse fehlen in SHOP_CONFIG (index.html).</p>')

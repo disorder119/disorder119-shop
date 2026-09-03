@@ -126,7 +126,7 @@
       pageTitleChaos: "Disorder119 — Chaos", pageTitleOutfit: "Disorder119 — Outfit-Baukasten",
       modeHint: "Entdecke auch Match, Chaos & Baukasten", hintCloseAria: "Hinweis schließen",
       modeRailAria: "Ansicht wechseln",
-      rentalCta: "📅 Für Miete anfragen", rentalCloseAria: "Schließen",
+      rentalCta: "Für Miete anfragen", rentalCloseAria: "Schließen",
       rentalPriceLabel: "Mietpreis", rentalPriceOnRequest: "Mietpreis auf Anfrage",
       rentalModalTitle: "Stück ausleihen",
       rentalStartLabel: "Von", rentalEndLabel: "Bis",
@@ -292,7 +292,7 @@
       pageTitleChaos: "Disorder119 — Chaos", pageTitleOutfit: "Disorder119 — Outfit Builder",
       modeHint: "Also discover Match, Chaos & the outfit builder", hintCloseAria: "Close hint",
       modeRailAria: "Switch view",
-      rentalCta: "📅 Request to rent", rentalCloseAria: "Close",
+      rentalCta: "Request to rent", rentalCloseAria: "Close",
       rentalPriceLabel: "Rental price", rentalPriceOnRequest: "Rental price on request",
       rentalModalTitle: "Rent this piece",
       rentalStartLabel: "From", rentalEndLabel: "To",
@@ -459,7 +459,7 @@
       pageTitleChaos: "Disorder119 — Chaos", pageTitleOutfit: "Disorder119 — Configurateur de tenues",
       modeHint: "Découvre aussi Match, Chaos et le configurateur de tenues", hintCloseAria: "Fermer l'info",
       modeRailAria: "Changer de vue",
-      rentalCta: "📅 Demander la location", rentalCloseAria: "Fermer",
+      rentalCta: "Demander la location", rentalCloseAria: "Fermer",
       rentalPriceLabel: "Prix de location", rentalPriceOnRequest: "Prix de location sur demande",
       rentalModalTitle: "Louer cette pièce",
       rentalStartLabel: "Du", rentalEndLabel: "Au",
@@ -2880,33 +2880,24 @@
     // Ganzkoerperfotos mit viel Stand-/Bodenflaeche komplett daneben liegt.
     // "feet" zoomt zusaetzlich per transform in den untersten Bereich, weil
     // ein reiner Breiten-Fill dort noch das ganze Bein zeigen wuerde.
-    function fitLookCropImage(cardEl, imgEl, cropClass) {
-      imgEl.style.transform = "";
-      if (!cropClass) {
-        imgEl.style.width = ""; imgEl.style.height = "";
-        imgEl.style.top = ""; imgEl.style.bottom = "";
-        return;
-      }
-      var bw = cardEl.clientWidth;
-      if (!bw || !imgEl.naturalWidth || !imgEl.naturalHeight) return;
-      var scaledH = (bw / imgEl.naturalWidth) * imgEl.naturalHeight;
-      imgEl.style.width = "100%";
-      imgEl.style.height = scaledH + "px";
-      if (cropClass === "look-card--crop-upper") {
-        imgEl.style.top = "0"; imgEl.style.bottom = "";
-      } else if (cropClass === "look-card--crop-lower") {
-        imgEl.style.top = ""; imgEl.style.bottom = "0";
-      } else if (cropClass === "look-card--crop-feet") {
-        imgEl.style.top = ""; imgEl.style.bottom = "0";
-        imgEl.style.transform = "scale(1.15)";
-        imgEl.style.transformOrigin = "center bottom";
-      }
-    }
-
+    // Positionierung/Ausschnitt der Karte liegt komplett in CSS
+    // (.look-card--crop-upper/-lower/-feet img { object-fit: cover;
+    // object-position: ... }) - object-fit:cover skaliert IMMER korrekt auf
+    // die tatsaechliche Kartengroesse hoch, unabhaengig vom Seitenverhaeltnis
+    // des jeweiligen Fotos (garantiert luecken- und verzerrungsfrei, im
+    // Gegensatz zu einer manuell in JS berechneten Breiten-Fill-Skalierung +
+    // fixem scale()-Zoomfaktor, die hier frueher stand: bei den Schuh-Fotos
+    // reichen die echten Seitenverhaeltnisse von ~0.8 bis ~2.0 - ein einzelner
+    // fixer Zoomfaktor sah dadurch je nach Foto entweder zu eng oder zu weit
+    // aus bzw. liess bei sehr breiten Fotos oben/unten Luecken im Rahmen).
+    // JS setzt hier nur noch die Crop-Klasse fuer object-position, keine
+    // inline Groessen/Transforms mehr.
     function setCard(cardEl, item, onAspect) {
       var src = assetUrl(item && (item.look || (item.gallery && item.gallery[0])) ? (item.look || item.gallery[0]) : "");
       var imgEl = cardEl.querySelector("img");
       outfitCropClasses.forEach(function (className) { cardEl.classList.remove(className); });
+      imgEl.style.width = ""; imgEl.style.height = "";
+      imgEl.style.top = ""; imgEl.style.bottom = ""; imgEl.style.transform = "";
       if (src) {
         var cropClass = outfitCropClass(item);
         if (cropClass) cardEl.classList.add(cropClass);
@@ -2914,15 +2905,9 @@
         imgEl.alt = item.title;
         cardEl.classList.add("visible");
         anyVisible = true;
-        var applyFit = function () { fitLookCropImage(cardEl, imgEl, cropClass); };
-        if (imgEl.complete && imgEl.naturalWidth) applyFit();
-        else imgEl.onload = applyFit;
         if (onAspect) {
           if (imgEl.complete && imgEl.naturalWidth) onAspect(imgEl);
-          else {
-            var prevOnload = imgEl.onload;
-            imgEl.onload = function () { prevOnload(); onAspect(imgEl); };
-          }
+          else imgEl.onload = function () { onAspect(imgEl); };
         }
       } else {
         cardEl.classList.remove("visible");
@@ -2945,9 +2930,9 @@
     document.getElementById("lookBoardEmpty").classList.toggle("hidden-empty", anyVisible);
   }
 
-  // Kartenbreite (und damit die per fitLookCropImage() berechnete Skalierung)
-  // aendert sich bei Rotation/Fenstergroesse - ohne Neuberechnung wuerde der
-  // Ausschnitt nach einem Resize wieder daneben liegen.
+  // Accessoire-Erkennung (schmal/breit/hochformatig, siehe onAspect oben)
+  // haengt indirekt von der Kartengroesse ab - bei Rotation/Fenstergroesse
+  // einmal neu rendern, damit sie konsistent bleibt.
   var outfitResizeTimer = null;
   window.addEventListener("resize", function () {
     if (outfitView.classList.contains("hidden")) return;

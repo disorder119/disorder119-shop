@@ -2003,17 +2003,17 @@
      renderOutfitFigure gesetzt; Produktkarten, Modals und Artikelseiten
      behalten daher immer ihre vollstaendigen Originalbilder.
 
-     Die tatsaechliche Position/Hoehe wird NICHT mehr fix per Prozentwert
-     hier vorgegeben, sondern von fitLookCropImage() in app.js inline am img
-     gesetzt, sobald die echten Bildmasse bekannt sind (imgEl.naturalWidth/
-     naturalHeight). Grund: die Artikelfotos haben stark unterschiedliche
-     Seitenverhaeltnisse (neuere enge Halbkoerper-Fotos vs. aeltere
-     Ganzkoerper-Fotos mit hohem Stand-/Bodenanteil unterhalb der Fuesse) -
-     ein einzelner fixer Prozentsatz (frueher: height:190%/300%) passte nur
-     fuer die neueren Fotos und riss bei den alten Vollkoerperfotos das
-     Kleidungsstueck aus dem Rahmen bzw. zeigte nur noch einen winzigen,
-     falsch positionierten Ausschnitt ("Bilder falsch dargestellt").
-     Die Werte unten sind nur der Ausgangszustand bis JS greift. */
+     Reines CSS (object-fit:cover mit fester object-position) statt einer
+     in JS berechneten Breiten-Fill-Skalierung + zusaetzlichem Zoomfaktor
+     (frueher hier im Einsatz): cover skaliert IMMER so hoch, dass die Karte
+     ohne Luecken gefuellt wird, unabhaengig vom Seitenverhaeltnis des
+     jeweiligen Fotos - die Artikelfotos schwanken stark (bei den
+     Schuh-Fotos z.B. zwischen ~0.8 und ~2.0 Breite/Hoehe-Verhaeltnis).
+     Ein fixer JS-Zoomfaktor passte dadurch nie fuer alle gleichzeitig
+     (mal zu eng, mal zu weit, bei sehr breiten Fotos sogar mit sichtbaren
+     Luecken oben/unten im Rahmen). object-fit:cover braucht dagegen keine
+     Fallunterscheidung - der Browser berechnet die korrekte Skalierung pro
+     Bild automatisch. */
   .look-card--crop-upper,
   .look-card--crop-lower,
   .look-card--crop-feet {
@@ -2025,16 +2025,17 @@
   .look-card--crop-lower img,
   .look-card--crop-feet img {
     position: absolute;
-    left: 0;
+    inset: 0;
     width: 100%;
+    height: 100%;
     max-width: none;
     padding: 0;
     object-fit: cover;
   }
 
-  .look-card--crop-upper img { top: 0; height: 100%; object-position: center top; }
-  .look-card--crop-lower img { bottom: 0; height: 100%; object-position: center bottom; }
-  .look-card--crop-feet img { bottom: 0; height: 100%; object-position: center bottom; }
+  .look-card--crop-upper img { object-position: center top; }
+  .look-card--crop-lower img { object-position: center bottom; }
+  .look-card--crop-feet img { object-position: center bottom; }
 
   .look-card--jacket {
     top: 4%; left: 6%; width: 52%; aspect-ratio: 3 / 4; z-index: 1;
