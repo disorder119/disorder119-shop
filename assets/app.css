@@ -1,0 +1,3103 @@
+  :root {
+    --ink: #000000;
+    --ink-lift: #121212;
+    --ink-lift-2: #1b1b1b;
+    --paper: #f2efe7;
+    --rule: rgba(242, 239, 231, 0.14);
+    --rule-strong: rgba(242, 239, 231, 0.28);
+    --text: #f2efe7;
+    --text-muted: rgba(242, 239, 231, 0.58);
+    --text-faint: rgba(242, 239, 231, 0.36);
+    --bg: var(--ink);
+    --surface: var(--ink-lift);
+    --surface-2: var(--ink-lift-2);
+    /* Bewusst kein Braun/Orange mehr - gedeckter, warmer Graphiton statt
+       Farbakzent, passend zum ohnehin schwarz-weiss-cremefarbenen Archiv-Look. */
+    --accent: #8f897c;
+    --accent-soft: rgba(143, 137, 124, 0.18);
+    --accent-text: #d6d0c2;
+    --focus: #8f897c;
+    /* photo mount: the ground each cut-out product photo sits on */
+    --mount: #000000;
+    --mount-text: #f2efe7;
+    --mount-rule: rgba(242, 239, 231, 0.16);
+  }
+
+  :root[data-mount="white"] {
+    --mount: #ffffff;
+    --mount-text: #0c0c0b;
+    --mount-rule: rgba(12, 12, 11, 0.14);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    /* Ohne das vergroessert iOS Safari lange Textbloecke eigenmaechtig
+       (Font-Boosting) - lief beim grossen DISORDER119-Schriftzug auf
+       schmalen iPhones rechts aus dem Bildschirm heraus. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  a { color: inherit; }
+
+  ::selection { background: var(--accent-soft); color: var(--text); }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  /* ---------- Masthead ---------- */
+
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(16px, 3vw, 26px);
+    padding: clamp(18px, 3vw, 30px) clamp(20px, 5vw, 64px) clamp(22px, 3vw, 32px);
+    background: var(--ink);
+    color: var(--paper);
+    position: relative;
+  }
+
+  .masthead__top {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .eyebrow {
+    grid-column: 1;
+    justify-self: start;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.64rem;
+    letter-spacing: 0.1em;
+    line-height: 1.5;
+    color: rgba(242, 239, 231, 0.6);
+    max-width: 34ch;
+  }
+
+  .masthead__index {
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(242, 239, 231, 0.5);
+    text-align: right;
+    line-height: 1.7;
+    white-space: nowrap;
+  }
+
+  .wordmark-block {
+    grid-column: 2;
+    justify-self: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0px;
+  }
+
+  .wordmark-kicker {
+    margin: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    color: rgba(242, 239, 231, 0.5);
+  }
+
+  .wordmark {
+    margin: 0;
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: clamp(2.9rem, 9vw, 5.6rem);
+    line-height: 0.85;
+    letter-spacing: -0.01em;
+  }
+
+  @media (max-width: 400px) {
+    /* Der Mindestwert im clamp() greift ab hier, weil 9vw schon kleiner ist -
+       auf sehr schmalen Handys zusaetzlich absenken, damit "DISORDER119"
+       sicher nicht ueber den Bildschirmrand hinaus laeuft. */
+    .wordmark { font-size: clamp(2.3rem, 12vw, 5.6rem); }
+  }
+
+  .wordmark__line {
+    display: block;
+    opacity: 0;
+    transform: scale(0.85) translateY(0.4em);
+    letter-spacing: 0.18em;
+    animation: wordmark-in 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes wordmark-in {
+    0% { opacity: 0; transform: scale(0.85) translateY(0.4em); letter-spacing: 0.18em; }
+    60% { opacity: 1; }
+    100% { opacity: 1; transform: scale(1) translateY(0); letter-spacing: -0.01em; }
+  }
+
+  .reveal {
+    opacity: 0;
+    animation: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wordmark__line, .reveal {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+    /* .wordmark__line startet mit breitem letter-spacing (Teil der
+       Eintritts-Animation) - ohne diese Zeile blieb der Schriftzug bei
+       aktivierter "Bewegung reduzieren"-Einstellung dauerhaft im breiten
+       Startzustand haengen und lief auf schmalen Handys rechts aus dem
+       Bildschirm heraus. */
+    .wordmark__line { letter-spacing: -0.01em; }
+  }
+
+  .masthead__bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    border-top: 1px solid rgba(242, 239, 231, 0.18);
+    padding-top: 18px;
+    flex-wrap: wrap;
+  }
+
+  .masthead__meta {
+    display: flex;
+    gap: clamp(20px, 4vw, 48px);
+    flex-wrap: wrap;
+  }
+
+  .meta-figure {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .meta-figure__value {
+    font-variant-numeric: tabular-nums;
+    font-size: 1.15rem;
+    font-weight: 600;
+  }
+
+  .meta-figure__label {
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(242, 239, 231, 0.5);
+  }
+
+  .theme-toggle {
+    background: transparent;
+    border: 1px solid rgba(242, 239, 231, 0.3);
+    color: rgba(242, 239, 231, 0.85);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .theme-toggle:hover { border-color: rgba(242, 239, 231, 0.6); }
+
+  /* ---------- Index / filter rail ---------- */
+
+  .rail {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bg);
+    border-bottom: 1px solid var(--rule);
+    padding: 14px clamp(20px, 5vw, 64px);
+    display: flex;
+    align-items: center;
+    gap: clamp(14px, 2vw, 28px);
+    flex-wrap: wrap;
+  }
+
+  .rail__search {
+    position: relative;
+    flex: 1 1 220px;
+    min-width: 160px;
+    max-width: 340px;
+  }
+
+  .rail__search input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--rule-strong);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.92rem;
+    padding: 6px 2px 8px 0;
+  }
+
+  .rail__search input::placeholder { color: var(--text-faint); }
+  .rail__search input:focus { border-bottom-color: var(--accent); }
+
+  .chip-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex: 2 1 auto;
+  }
+
+  .chip {
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border: 1px solid var(--rule-strong);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+
+  .chip:hover { border-color: var(--text-muted); color: var(--text); }
+
+  .chip[aria-pressed="true"] {
+    background: var(--text);
+    color: var(--bg);
+    border-color: var(--text);
+  }
+
+  .rail__right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-left: auto;
+  }
+
+  .rail__count {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* iOS Safari rendert <select> sonst mit eigenem, stark abgerundetem
+     Systemstil (dicke graue Pille) statt der eckigen Optik des restlichen
+     Archivs - appearance:none plus ein selbst gezeichneter Pfeil sorgen
+     dafuer, dass es auf allen Plattformen gleich aussieht. */
+  .rail__sort,
+  .filter-field select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999691' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    border-radius: 0;
+  }
+
+  .rail__sort {
+    background-color: transparent;
+    border: 1px solid var(--rule-strong);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 7px 26px 7px 10px;
+    cursor: pointer;
+  }
+
+  #moreFiltersToggle[aria-expanded="true"] {
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
+
+  .filter-panel {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 14px;
+    align-items: end;
+    padding: 16px clamp(20px, 5vw, 64px) 0;
+    margin-top: 4px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .filter-panel.hidden { display: none; }
+
+  .filter-field { display: flex; flex-direction: column; gap: 6px; }
+
+  .filter-field label {
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .filter-field select,
+  .filter-price-inputs input {
+    background-color: transparent;
+    border: 1px solid var(--rule-strong);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.78rem;
+    padding: 8px 8px;
+  }
+
+  .filter-field select { padding-right: 26px; }
+
+  .filter-price-inputs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-faint);
+  }
+  .filter-price-inputs input { width: 100%; min-width: 0; }
+
+  .filter-reset {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 8px 0;
+    justify-self: start;
+  }
+  .filter-reset:hover { color: var(--accent-text); }
+
+  /* Das Dropdown-Popup rendert der Browser mit eigenem (meist weissem)
+     Hintergrund, unabhaengig vom transparenten <select> - ohne das hier
+     waren die Optionen (helle Schrift fuers dunkle Theme) darauf fast
+     unlesbar. Gilt fuer alle <select>-Felder, nicht nur die Sortierung -
+     "Weitere Filter" (Marke/Groesse/Farbe/Zustand) hatte denselben Fehler. */
+  .rail__sort option,
+  .filter-field select option {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .masthead__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    justify-self: end;
+    gap: 12px;
+  }
+
+  .lang-switch {
+    display: flex;
+    gap: 2px;
+    border: 1px solid rgba(242, 239, 231, 0.3);
+  }
+
+  .lang-switch__btn {
+    background: transparent;
+    border: none;
+    color: rgba(242, 239, 231, 0.6);
+    font-family: inherit;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 6px 8px;
+    cursor: pointer;
+  }
+
+  .lang-switch__btn:hover { color: var(--paper); }
+
+  .lang-switch__btn[aria-current="true"] {
+    background: var(--accent);
+    color: var(--ink);
+  }
+
+  /* Schwebender runder Warenkorb-Button - erscheint nur, wenn der Warenkorb
+     nicht leer ist (siehe updateCartCount). Bleibt ueber allen Ansichten an
+     derselben Stelle, deshalb ein eigenstaendiges position:fixed-Element statt
+     Teil der Kopfzeile. */
+  .cart-bag {
+    position: fixed;
+    right: 18px;
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: var(--ink);
+    border: 1px solid var(--rule-strong);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: none;
+    z-index: 310;
+    opacity: 0;
+    transform: scale(0.6);
+    pointer-events: none;
+    transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  .cart-bag--visible {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+  }
+
+  .cart-bag:hover { border-color: var(--accent); }
+
+  .cart-bag svg { display: block; width: 26px; height: auto; }
+
+  .cart-bag__badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 16px;
+    text-align: center;
+  }
+
+  /* ---------- Grid ---------- */
+
+  .grid-wrap {
+    padding: clamp(20px, 4vw, 40px) clamp(20px, 5vw, 64px) clamp(60px, 8vw, 100px);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: clamp(28px, 3vw, 46px) clamp(18px, 2.2vw, 28px);
+  }
+
+  .plate {
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Gestaffelter Einstieg der ersten Karten beim allerersten Seitenaufbau -
+     s. render() in JS, wo nur idx<16 des ersten Renders diese Klassen bekommen. */
+  .plate.plate--enter {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .plate.plate--enter.plate--in { opacity: 1; transform: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .plate.plate--enter { opacity: 1; transform: none; transition: none; }
+  }
+
+  .plate__frame {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    background: var(--mount);
+    overflow: hidden;
+  }
+
+  .plate__frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+    padding: 8%;
+    display: block;
+    transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  .plate:hover .plate__frame img { transform: scale(1.035); }
+
+  .plate__sold-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--mount);
+    color: var(--mount-text);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 7px 0;
+    opacity: 0.92;
+    border-top: 1px solid var(--mount-rule);
+  }
+
+  .plate__estimate-badge {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    background: var(--accent);
+    color: #17110a;
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    z-index: 2;
+  }
+
+  .plate__cart-btn {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--mount-rule);
+    background: var(--mount);
+    color: var(--mount-text);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+
+  .plate__cart-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 14px rgba(201, 138, 69, 0.35);
+  }
+
+  .plate__cart-btn--active {
+    background: var(--accent);
+    color: #17110a;
+    border-color: var(--accent);
+  }
+
+  .plate__body {
+    padding-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .plate__brand {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.7rem;
+    color: var(--text);
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    text-align: left;
+    cursor: pointer;
+    width: fit-content;
+  }
+  .plate__brand:hover, .plate__brand:focus-visible { color: var(--accent-text); text-decoration: underline; }
+
+  .plate__title {
+    font-size: 0.86rem;
+    line-height: 1.32;
+    color: var(--text-muted);
+    text-wrap: balance;
+  }
+
+  .plate__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 6px;
+  }
+
+  .plate__price {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.92rem;
+    font-weight: 700;
+    transition: color 0.2s ease;
+  }
+
+  .plate:hover .plate__price { color: var(--accent-text); }
+
+  .plate__size {
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .empty-state {
+    display: none;
+    padding: 80px 20px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+
+  .empty-state.visible { display: block; }
+
+  .empty-state__title {
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+  }
+
+  /* ---------- Modal ---------- */
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 8, 7, 0.72);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(14px, 4vw, 48px);
+    z-index: 50;
+  }
+
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    color: var(--text);
+    max-width: 920px;
+    width: 100%;
+    max-height: 88vh;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    border: 1px solid var(--rule-strong);
+  }
+
+  @media (max-width: 720px) {
+    .modal { grid-template-columns: 1fr; }
+  }
+
+  .modal__media {
+    position: relative;
+    background: var(--mount);
+  }
+
+  .modal__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+    padding: 6%;
+    display: block;
+    max-height: 88vh;
+  }
+
+  .modal__panel {
+    padding: clamp(22px, 3vw, 36px);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .modal__close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    background: transparent;
+    color: var(--mount-text);
+    border: 1px solid var(--mount-rule);
+    font-size: 1.1rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .modal__share {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 34px;
+    height: 34px;
+    background: transparent;
+    color: var(--mount-text);
+    border: 1px solid var(--mount-rule);
+    font-size: 1rem;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 2;
+  }
+
+  .modal__share:hover { border-color: var(--accent); color: var(--accent); }
+
+  .modal__share-toast {
+    position: absolute;
+    top: 52px;
+    left: 10px;
+    background: var(--mount);
+    color: var(--mount-text);
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+    padding: 6px 10px;
+    border: 1px solid var(--mount-rule);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 2;
+  }
+
+  .modal__share-toast.visible { opacity: 1; }
+
+  .modal__nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+    background: transparent;
+    color: var(--mount-text);
+    border: 1px solid var(--mount-rule);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .modal__nav:hover { border-color: var(--accent); color: var(--accent); }
+  .modal__nav[disabled] { opacity: 0.25; cursor: default; }
+  .modal__nav[disabled]:hover { border-color: var(--mount-rule); color: var(--mount-text); }
+  .modal__nav--prev { left: 10px; }
+  .modal__nav--next { right: 10px; }
+
+  .modal__counter {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 0.72rem;
+    color: var(--mount-text);
+    opacity: 0.7;
+  }
+
+  .modal__dots {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    display: flex;
+    gap: 5px;
+    max-width: 60%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .modal__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--mount-text);
+    opacity: 0.28;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .modal__dot[aria-current="true"] {
+    opacity: 1;
+    background: var(--accent);
+  }
+
+  .modal__eyebrow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .modal__title {
+    font-size: 1.35rem;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+
+  .modal__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 18px;
+    padding: 14px 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .fact__label {
+    font-size: 0.64rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .fact__value {
+    font-size: 0.9rem;
+    margin-top: 2px;
+  }
+
+  .modal__price {
+    font-variant-numeric: tabular-nums;
+    font-size: 1.6rem;
+    font-weight: 700;
+  }
+
+  .modal__price--sold {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .modal__desc {
+    font-size: 0.88rem;
+    line-height: 1.62;
+    color: var(--text-muted);
+    white-space: pre-line;
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .modal__note {
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .cart-cta {
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 13px 16px;
+    cursor: pointer;
+    width: 100%;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .cart-cta:not([disabled]):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(201, 138, 69, 0.28);
+  }
+
+  .cart-cta--active {
+    background: var(--accent);
+    color: #17110a;
+  }
+
+  .cart-cta[disabled] {
+    background: var(--rule-strong);
+    color: var(--text-faint);
+    cursor: default;
+  }
+
+  /* ---------- Warenkorb ---------- */
+
+  .cart-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 8, 7, 0.72);
+    display: none;
+    justify-content: flex-end;
+    /* War 60 - lag damit UNTER der fixen Kopfzeile (.mode-rail, 300) und
+       das Schubladen-Kopfteil (Titel + Schliessen-X, jetzt auch das
+       Warenkorb-Symbol) verschwand komplett dahinter. Menue/Konto nutzen
+       schon 420 fuer dasselbe Muster - hier angeglichen. */
+    z-index: 420;
+  }
+
+  .cart-backdrop.open { display: flex; }
+
+  .cart-drawer {
+    background: var(--surface);
+    color: var(--text);
+    width: min(420px, 100%);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--rule-strong);
+  }
+
+  .cart-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px clamp(18px, 3vw, 28px);
+    border-bottom: 1px solid var(--rule);
+    position: relative;
+  }
+
+  .cart-drawer__brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .cart-drawer__brand-icon {
+    width: 34px;
+    height: auto;
+    color: var(--text);
+    flex: 0 0 auto;
+  }
+
+  .cart-drawer__head h2 {
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .cart-drawer__head .modal__close {
+    position: static;
+    color: var(--text);
+    border-color: var(--rule-strong);
+  }
+
+  .cart-drawer__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px clamp(18px, 3vw, 28px);
+  }
+
+  .cart-line {
+    display: flex;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .cart-line__frame {
+    width: 64px;
+    height: 84px;
+    flex: 0 0 auto;
+    background: var(--mount);
+    overflow: hidden;
+  }
+
+  .cart-line__frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+    padding: 8%;
+    display: block;
+  }
+
+  .cart-line__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .cart-line__title {
+    font-size: 0.86rem;
+    line-height: 1.3;
+  }
+
+  .cart-line__meta {
+    font-size: 0.72rem;
+    color: var(--text-faint);
+  }
+
+  .cart-line__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+  }
+
+  .cart-line__price {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+
+  .cart-line__remove {
+    background: transparent;
+    border: none;
+    color: var(--text-faint);
+    text-decoration: underline;
+    font-size: 0.72rem;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .cart-removed-notice {
+    font-size: 0.74rem;
+    line-height: 1.5;
+    color: var(--accent-text);
+    border: 1px solid var(--accent);
+    padding: 10px 12px;
+    margin: 0 0 14px;
+  }
+
+  .cart-empty {
+    padding: 60px 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.86rem;
+  }
+
+  .cart-drawer__foot {
+    border-top: 1px solid var(--rule);
+    padding: clamp(16px, 3vw, 24px) clamp(18px, 3vw, 28px);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cart-total {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .cart-checkout-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 13px 16px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .cart-checkout-btn--whatsapp { background: #25d366; color: #062012; }
+  .cart-checkout-btn--email { background: transparent; color: var(--text); border: 1px solid var(--rule-strong); }
+
+  .cart-note {
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    line-height: 1.5;
+  }
+
+  .cart-config-warning {
+    font-size: 0.7rem;
+    color: var(--accent);
+    border: 1px solid var(--accent-soft);
+    padding: 10px 12px;
+    line-height: 1.5;
+  }
+
+  /* ---------- Footer ---------- */
+
+  .footer {
+    border-top: 1px solid var(--rule);
+    padding: clamp(24px, 4vw, 40px) clamp(20px, 5vw, 64px) clamp(30px, 5vw, 48px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    color: var(--text-faint);
+    font-size: 0.74rem;
+    letter-spacing: 0.02em;
+  }
+
+  .footer strong { color: var(--text-muted); font-weight: 600; }
+
+  .footer__legal {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .footer__legal button, .footer__legal a {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: inherit;
+    letter-spacing: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
+  .footer__legal button:hover, .footer__legal a:hover { color: var(--text-muted); }
+
+  /* ---------- Rechtliches (Impressum / AGB / Datenschutz) ---------- */
+
+  .legal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 8, 7, 0.78);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: clamp(16px, 4vw, 60px) clamp(14px, 3vw, 20px);
+    z-index: 400;
+    overflow-y: auto;
+  }
+
+  .legal-backdrop.open { display: flex; }
+
+  .legal-panel {
+    background: var(--surface);
+    color: var(--text);
+    width: min(640px, 100%);
+    border: 1px solid var(--rule-strong);
+    padding: clamp(24px, 4vw, 40px);
+    position: relative;
+  }
+
+  .legal-panel__close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    background: transparent;
+    border: 1px solid var(--rule-strong);
+    color: var(--text);
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+
+  .legal-panel h2 {
+    font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 1.5rem;
+    margin-bottom: 18px;
+    padding-right: 40px;
+  }
+
+  .legal-panel h3 {
+    font-size: 0.9rem;
+    margin: 20px 0 6px;
+    color: var(--text);
+  }
+
+  .legal-panel p, .legal-panel li {
+    font-size: 0.86rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  .legal-panel ul { padding-left: 18px; margin: 6px 0; }
+  .legal-panel a { color: var(--accent); }
+
+  .cookie-note {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    z-index: 350;
+    max-width: 460px;
+    margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    padding: 16px 18px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cookie-note.visible { display: flex; }
+
+  .cookie-note p {
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+
+  .cookie-note__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .cookie-note__actions button {
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    font-family: inherit;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 9px 16px;
+    cursor: pointer;
+  }
+
+  .hidden { display: none !important; }
+
+  /* ---------- Ansicht-Auswahl (bei jedem Besuch) ---------- */
+
+  /* ---------- Moduswechsel (linke Navigation) ---------- */
+
+  /* Moduswechsel als schmale Tab-Leiste oben, fest ueber der ganzen Seite
+     (statt der frueheren fixierten linken Spalte, die dauerhaft Platz
+     wegnahm und sich ueber die erste Produktspalte legte). Fest positioniert
+     UND mit hoeherem z-index als Match/Chaos/Baukasten (z-index 250), damit
+     man auch WAEHREND dieser Vollbild-Modi direkt in einen anderen wechseln
+     kann, statt vorher jedes Mal ueber "Zum Archiv" zurueckspringen zu
+     muessen - der eigentliche Verbesserungs-Teil dieser Aenderung. */
+  :root { --rail-h: 46px; }
+
+  body { padding-top: var(--rail-h); }
+
+  .mode-rail {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--rail-h);
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--ink);
+    border-bottom: 1px solid var(--rule-strong);
+    padding: 0 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    transform: translateY(0);
+    transition: transform 0.28s ease;
+  }
+
+  .mode-rail.rail-hidden { transform: translateY(-100%); }
+
+  .mode-rail::-webkit-scrollbar { display: none; }
+
+  .mode-rail.hidden { display: none; }
+
+  .mode-rail__btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid var(--rule-strong);
+    color: var(--text-muted);
+    font-family: inherit;
+    padding: 7px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .mode-rail__btn:hover { color: var(--text); border-color: var(--text-muted); }
+
+  .mode-rail__btn[aria-current="true"] {
+    color: var(--accent-text);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .mode-rail__icon {
+    font-size: 0.95rem;
+    line-height: 1;
+  }
+
+  .mode-rail__label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 480px) {
+    /* Auf sehr schmalen Handys reichen die Icons allein, damit alle vier
+       Modi ohne Scrollen in die Leiste passen. */
+    .mode-rail__label { display: none; }
+    .mode-rail__btn {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      justify-content: center;
+    }
+    .mode-rail__icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  /* ---------- Einmaliger Hinweis auf die Fun-Modi (Match/Chaos/Baukasten) ----------
+     Seit dem Direkteinstieg ins Archiv ist die Moduswechsel-Leiste die einzige
+     Tuer zu diesen Modi und leicht zu uebersehen (schmale Leiste/Icon-Bar).
+     Dieser Callout erscheint nur beim allerersten Besuch (localStorage-Flag),
+     JS setzt Position + Pfeilrichtung passend zur aktuellen Leisten-Ausrichtung. */
+  .mode-rail-hint {
+    position: fixed;
+    z-index: 281;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 220px;
+    background: var(--accent);
+    color: var(--ink);
+    border: 1px solid var(--ink);
+    padding: 9px 10px 9px 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.35;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+    pointer-events: none;
+  }
+
+  .mode-rail-hint.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .mode-rail-hint.hidden { display: none; }
+
+  .mode-rail-hint__close {
+    flex: 0 0 auto;
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    font-size: 0.8rem;
+    line-height: 1;
+    padding: 2px;
+    cursor: pointer;
+    opacity: 0.7;
+  }
+
+  .mode-rail-hint__close:hover { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mode-rail-hint { transition: none; }
+  }
+
+  /* ---------- Swipe-Minigame ---------- */
+
+  .swipe-view {
+    position: fixed;
+    top: var(--rail-h);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 250;
+    background: var(--ink);
+    color: var(--paper);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    padding: 20px;
+    overflow: hidden;
+  }
+
+  .swipe-view__progress {
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(242, 239, 231, 0.5);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .swipe-card {
+    position: relative;
+    width: min(320px, 82vw);
+    background: var(--mount);
+    border: 1px solid var(--mount-rule);
+    display: flex;
+    flex-direction: column;
+    cursor: grab;
+    touch-action: pan-y;
+    transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.35s ease;
+    user-select: none;
+  }
+
+  .swipe-card.dragging { transition: none; cursor: grabbing; }
+  .swipe-card.fly-left { transform: translate(-140%, -10%) rotate(-18deg) !important; opacity: 0; }
+  .swipe-card.fly-right { transform: translate(140%, -10%) rotate(18deg) !important; opacity: 0; }
+
+  .swipe-card__frame {
+    aspect-ratio: 3 / 4;
+    background: var(--mount);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .swipe-card__frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+    padding: 8%;
+    display: block;
+    pointer-events: none;
+  }
+
+  .swipe-card__tag {
+    position: absolute;
+    top: 16px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border: 2px solid;
+    border-radius: 3px;
+    opacity: 0;
+    transform: rotate(-8deg);
+    z-index: 2;
+  }
+
+  .swipe-card__tag--like { left: 16px; color: #6fbf73; border-color: #6fbf73; }
+  .swipe-card__tag--nope { right: 16px; color: #c9645f; border-color: #c9645f; transform: rotate(8deg); }
+
+  .swipe-card__zones {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    z-index: 1;
+  }
+
+  .swipe-card__zone { flex: 1; }
+
+  .swipe-card__dots {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .swipe-card__dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--mount-text);
+    opacity: 0.32;
+  }
+
+  .swipe-card__dot--active { opacity: 1; background: var(--accent); }
+
+  .swipe-card__body {
+    padding: 16px 18px 20px;
+    color: var(--text);
+  }
+
+  .swipe-card__brand {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  .swipe-card__title { font-size: 0.92rem; margin-top: 3px; }
+
+  .swipe-card__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 8px;
+  }
+
+  .swipe-card__price {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+
+  .swipe-card__size {
+    font-size: 0.78rem;
+    color: var(--text-faint);
+  }
+
+  .swipe-view__actions {
+    display: flex;
+    gap: 22px;
+  }
+
+  .swipe-btn {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    border: 1px solid rgba(242, 239, 231, 0.3);
+    background: transparent;
+    color: var(--paper);
+    font-size: 1.4rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+
+  .swipe-btn:hover { transform: scale(1.08); }
+  .swipe-btn--nope:hover { border-color: #c9645f; color: #c9645f; }
+  .swipe-btn--like:hover { border-color: #6fbf73; color: #6fbf73; }
+
+  .swipe-view__hint {
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    color: rgba(242, 239, 231, 0.4);
+  }
+
+  .swipe-summary {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    max-width: 340px;
+  }
+
+  .swipe-summary__count {
+    font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 800;
+    font-size: clamp(2.4rem, 10vw, 4rem);
+  }
+
+  .swipe-summary__actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 6px;
+  }
+
+  .view-enter-btn {
+    background: transparent;
+    border: 1px solid rgba(242, 239, 231, 0.3);
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 12px 22px;
+    cursor: pointer;
+  }
+
+  .view-enter-btn:hover { border-color: var(--accent); }
+
+  /* ---------- Chaos-Ansicht ---------- */
+
+  .chaos-view {
+    position: fixed;
+    top: var(--rail-h);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 250;
+    background: var(--ink);
+    overflow: hidden;
+  }
+
+  .chaos-view__label {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(242, 239, 231, 0.5);
+    z-index: 2;
+  }
+
+  .chaos-view__actions {
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 2;
+  }
+
+  .chaos-view__actions .view-enter-btn { background: var(--ink); }
+
+  /* Kurze Vorschau (Marke/Titel/Preis) beim Ueberfahren eines Chaos-Artikels,
+     bevor man klickt - vorher musste man jedes Teil erst anklicken/oeffnen,
+     um ueberhaupt zu wissen, was es ist. */
+  .chaos-tooltip {
+    position: fixed;
+    z-index: 3;
+    background: var(--ink);
+    border: 1px solid var(--rule-strong);
+    padding: 8px 12px;
+    font-size: 0.7rem;
+    line-height: 1.4;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    white-space: nowrap;
+    transform: translate(-50%, -100%);
+  }
+  .chaos-tooltip.visible { opacity: 1; }
+  .chaos-tooltip__brand {
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    font-size: 0.62rem;
+  }
+  .chaos-tooltip__price { color: var(--accent-text); font-weight: 700; }
+
+  .chaos-item {
+    position: absolute;
+    width: clamp(92px, 13vw, 168px);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    animation-name: chaos-float;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+    transform-origin: 50% 50%;
+    will-change: transform;
+  }
+
+  /* drop-shadow(filter) ist pro Element teuer, vor allem kombiniert mit der
+     laufenden Float-Animation - auf dem Handy (viele Artikel gleichzeitig,
+     schwaechere GPU) fuehrte das zu sichtbarem Ruckeln. Ab Tablet-Breite
+     aufwaerts gibt es den Schatten weiterhin, am Handy bleibt es flach. */
+  @media (min-width: 641px) {
+    .chaos-item { filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.55)); }
+  }
+
+  .chaos-item img {
+    width: 100%;
+    display: block;
+    pointer-events: none;
+  }
+
+  .chaos-item:hover { filter: drop-shadow(0 14px 22px rgba(201, 138, 69, 0.45)); }
+
+  @keyframes chaos-float {
+    from { transform: translate(0, 0) rotate(var(--rot0, -4deg)); }
+    to   { transform: translate(var(--dx, 24px), var(--dy, -30px)) rotate(var(--rot1, 5deg)); }
+  }
+
+  /* ---------- Chaos: 360-Grad-Showroom (nur Desktop, s. JS chaosIsShowroom()) ---------- */
+
+  .chaos-screen {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  /* Immer selbst positioniert und volle Groesse (nicht nur im Showroom) -
+     sonst hat der Container (nur absolut positionierte Kinder, kein eigener
+     Inhalt) eine Eigenhoehe von 0px. Sobald IRGENDEIN transform darauf
+     landet (z.B. die Neige-Parallaxe unten), wuerde er sonst selbst zum
+     Bezugsrahmen fuer die Prozent-Positionen seiner Kinder werden - bei 0px
+     Hoehe kollabieren dann alle Artikel auf Position 0. */
+  #chaosItems {
+    position: absolute;
+    inset: 0;
+  }
+
+  .chaos-view--showroom {
+    background: radial-gradient(120% 100% at 50% 108%, #171009 0%, var(--ink) 62%);
+  }
+
+  .chaos-view--showroom .chaos-screen {
+    inset: 4.5vh 6vw;
+    border-radius: 8vw / 4.5vh;
+    background: #000;
+    box-shadow:
+      0 0 0 1px rgba(242, 239, 231, 0.12),
+      0 60px 160px rgba(0, 0, 0, 0.7),
+      0 0 90px rgba(140, 150, 255, 0.05);
+  }
+
+  .chaos-view--showroom .chaos-screen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 500;
+    pointer-events: none;
+    background: radial-gradient(130% 95% at 50% 42%, transparent 52%, rgba(0, 0, 0, 0.6) 100%);
+  }
+
+  .chaos-view--showroom .chaos-screen {
+    perspective: 2400px;
+  }
+
+  .chaos-view--showroom #chaosItems {
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+
+  .chaos-item-wrap {
+    /* Klein statt (wie zuvor) so gross wie die ganze Buehne, UND
+       pointer-events:none: die Wrap-Box selbst soll nie fuer Klicks
+       "gefunden" werden, nur der Artikel-Button darin (per pointer-events:
+       auto wieder aktiviert) - so landen Klicks immer beim tatsaechlich
+       sichtbaren Artikel an dieser Bildschirmstelle, egal wie stark sich
+       einzelne (perspektivisch vergroesserte) Wrap-Boxen ueberlappen.
+       Zentrierung per margin, nicht per transform, weil transform auf
+       .chaos-item selbst schon fuer das Schweben (chaos-float) gebraucht
+       wird. */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 220px;
+    height: 300px;
+    margin: -150px 0 0 -110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-style: preserve-3d;
+    will-change: transform;
+    pointer-events: none;
+  }
+
+  .chaos-item-wrap .chaos-item {
+    position: static;
+    width: clamp(97px, 15vw, 193px);
+    pointer-events: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* Der grosse, kontinuierliche 3D-Raumschwenk bleibt aus Ruecksicht auf
+       Bewegungsempfindlichkeit deaktiviert - das leichte Schweben der
+       einzelnen Artikel (siehe unten, .chaos-item bleibt bewusst animiert)
+       ist dagegen so klein/langsam, dass es fuer den eigentlichen Sinn des
+       bewusst aufgerufenen Chaos-Modus erhalten bleibt. */
+    .chaos-view--showroom #chaosItems { transform: none !important; }
+  }
+
+  /* ---------- Outfit-Baukasten ---------- */
+
+  .outfit-view {
+    position: fixed;
+    top: var(--rail-h);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 250;
+    background: var(--ink);
+    color: var(--paper);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: clamp(12px, 2.4vh, 24px) 18px clamp(10px, 2vh, 18px);
+    overflow: hidden;
+    gap: clamp(6px, 1.4vh, 14px);
+  }
+
+  .outfit-view__close {
+    position: absolute;
+    top: clamp(10px, 2vh, 16px);
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--rule-strong);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2;
+    flex: 0 0 auto;
+  }
+
+  .outfit-view__close:hover { border-color: var(--accent); color: var(--accent); }
+
+  .outfit-view__head { text-align: center; flex: 0 0 auto; }
+
+  .outfit-view__eyebrow {
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(242, 239, 231, 0.5);
+  }
+
+  .outfit-view__title {
+    font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: clamp(1.2rem, 3.4vh, 2.4rem);
+    margin-top: 2px;
+  }
+
+  .outfit-view__status {
+    font-size: 0.7rem;
+    color: var(--accent);
+    margin-top: 3px;
+    min-height: 1.1em;
+  }
+
+
+  .outfit-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(14px, 2.4vw, 32px);
+    align-items: stretch;
+    justify-content: center;
+    width: 100%;
+    max-width: 780px;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .outfit-main {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(6px, 1.2vh, 12px);
+    width: min(360px, 100%);
+    min-height: 0;
+  }
+
+  .outfit-figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: min(300px, 100%);
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .outfit-figure__label {
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    text-align: center;
+  }
+
+  .outfit-figure__stage {
+    position: relative;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    background: radial-gradient(120% 85% at 50% 15%, var(--surface-2) 0%, var(--ink) 70%);
+    border: 1px solid var(--rule-strong);
+    overflow: hidden;
+  }
+
+  .outfit-figure__empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 18%;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    color: var(--text-faint);
+    transition: opacity 0.2s ease;
+  }
+
+  .outfit-figure__empty.hidden-empty { opacity: 0; pointer-events: none; }
+
+  .look-card {
+    position: absolute;
+    padding: 8%;
+    background: transparent;
+    opacity: 0;
+    pointer-events: none;
+    filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.45));
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  .look-card.visible { opacity: 1; }
+
+  .look-card img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+  }
+
+  /* Im Look-Board zeigen wir bei getragenen Produktfotos nur den
+     koerperrelevanten Ausschnitt. Die Klassen werden ausschliesslich von
+     renderOutfitFigure gesetzt; Produktkarten, Modals und Artikelseiten
+     behalten daher immer ihre vollstaendigen Originalbilder. */
+  .look-card--crop-upper,
+  .look-card--crop-lower,
+  .look-card--crop-feet {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .look-card--crop-upper img,
+  .look-card--crop-lower img,
+  .look-card--crop-feet img {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    object-fit: cover;
+  }
+
+  /* Tops, Hemden, Strick und Jacken: Kopf/Oberkoerper behalten,
+     Taille und Unterkoerper ausserhalb des Viewports abschneiden. */
+  .look-card--crop-upper img {
+    top: 0;
+    height: 190%;
+    object-position: center top;
+  }
+
+  /* Hosen und Roecke: ab Taille nach unten zeigen; der Oberkoerper liegt
+     oberhalb des Viewports. */
+  .look-card--crop-lower img {
+    bottom: 0;
+    height: 190%;
+    object-position: center bottom;
+  }
+
+  /* Schuhe: auf das untere Drittel des getragenen Fotos zoomen. */
+  .look-card--crop-feet img {
+    bottom: 0;
+    height: 300%;
+    object-position: center bottom;
+  }
+
+  .look-card--jacket {
+    top: 4%; left: 6%; width: 52%; aspect-ratio: 3 / 4; z-index: 1;
+    transform: rotate(-8deg) scale(0.96);
+  }
+  .look-card--jacket.visible { transform: rotate(-8deg) scale(1); }
+
+  .look-card--top {
+    top: 3%; left: 34%; width: 58%; aspect-ratio: 3 / 4; z-index: 2;
+    transform: rotate(4deg) scale(0.96);
+  }
+  .look-card--top.visible { transform: rotate(4deg) scale(1); }
+
+  .look-card--bottom {
+    /* Schmaler als frueher (54% -> 36%), damit bei aspect-ratio 3/4 die
+       Kartenhoehe nicht mehr bis in die Schuh-Karte darunter reicht -
+       gemessen per getBoundingClientRect auf echten Desktop- (389x697)
+       und Mobil-Buehnen (231x576), kein Overlap mehr in beiden Faellen. */
+    top: 46%; left: 20%; width: 36%; aspect-ratio: 3 / 4; z-index: 2;
+    transform: rotate(-3deg) scale(0.96);
+  }
+  .look-card--bottom.visible { transform: rotate(-3deg) scale(1); }
+
+  .look-card--shoes {
+    /* Von unten verankert (bottom statt top): die Buehne ist unterschiedlich
+       hoch je nach Fensterhoehe (kein festes Seitenverhaeltnis), ein fixer
+       top-Prozentwert + Kartenhoehe passte deshalb nur bei einer bestimmten
+       Fenstergroesse - bei anderen ragte der Schuh unten/rechts ueber die
+       Buehnenkante hinaus und wurde vom overflow:hidden angeschnitten.
+       bottom-Verankerung haelt den unteren Rand immer sicher im Rahmen. */
+    bottom: 6%; left: 4%; width: 50%; aspect-ratio: 3 / 2; z-index: 3;
+    transform: rotate(10deg) scale(0.96);
+  }
+  .look-card--shoes.visible { transform: rotate(10deg) scale(1); }
+
+  .look-card--accessory {
+    /* Default fuer eher quadratische/hochformatige Accessoires (Muetzen,
+       Taschen, Sonnenbrillen) - deutlich groesser als frueher (war 30% Breite
+       in einer 4:3-Box, quetschte hochformatige Fotos winzig klein). */
+    top: 2%; left: 60%; width: 36%; aspect-ratio: 1 / 1; z-index: 3;
+    transform: rotate(-6deg) scale(0.96);
+  }
+  .look-card--accessory.visible { transform: rotate(-6deg) scale(1); }
+
+  .look-card--accessory--tall { aspect-ratio: 3 / 4; }
+
+  /* Sehr breite Motive (Guertel etc.) wuerden in der quadratischen Ecke auf
+     einen kaum sichtbaren duennen Strich schrumpfen (object-fit:contain
+     zwingt sie auf die knappere Seite) - stattdessen ein breiter Streifen
+     auf Hueft-Hoehe, wo ein Guertel ohnehin getragen wuerde. Seitenverhaeltnis
+     wird per JS anhand der echten Bildmasse erkannt (renderOutfitFigure). */
+  .look-card--accessory--wide {
+    top: 42%; left: 8%; width: 84%; aspect-ratio: 11 / 3; z-index: 4;
+    transform: rotate(0deg) scale(0.96);
+  }
+  .look-card--accessory--wide.visible { transform: rotate(0deg) scale(1); }
+
+  .outfit-stack {
+    width: min(360px, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(4px, 0.9vh, 10px);
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .outfit-slot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    padding: 0 10px;
+    /* Feste statt maximale Hoehe - vorher durften leere/kuerzere Kaesten
+       (z.B. der optionale Jacke-Slot) auf ihre Inhaltsgroesse schrumpfen,
+       wirkte uneinheitlich neben den befuellten Kaesten. Jetzt sind alle
+       fuenf Kaesten immer exakt gleich hoch, egal ob befuellt oder leer. */
+    flex: 0 0 116px;
+    height: 116px;
+  }
+
+  .outfit-slot__frame {
+    width: clamp(48px, 9vh, 88px);
+    height: clamp(62px, 11.5vh, 112px);
+    flex: 0 0 auto;
+    background: transparent;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .outfit-slot__frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+    padding: 8%;
+    display: block;
+  }
+
+  .outfit-slot__body {
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+  }
+
+  .outfit-slot__label {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .outfit-slot__value {
+    font-size: 0.8rem;
+    margin-top: 2px;
+    color: var(--text);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    line-height: 1.3;
+  }
+
+  .outfit-slot__price {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 0.78rem;
+    margin-top: 2px;
+    color: var(--text);
+  }
+
+  .outfit-slot--empty .outfit-slot__frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--rule-strong);
+    font-size: 1.3rem;
+    color: var(--text-faint);
+  }
+
+  .outfit-slot--empty .outfit-slot__value { color: var(--text-faint); }
+
+  .outfit-slot--locked {
+    opacity: 0.5;
+  }
+
+  .outfit-slot--locked .outfit-slot__frame,
+  .outfit-slot--locked .outfit-slot__body {
+    cursor: default;
+  }
+
+  .outfit-slot__remove {
+    background: transparent;
+    border: none;
+    color: var(--text-faint);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 4px 6px;
+    flex: 0 0 auto;
+  }
+
+  .outfit-slot__remove:hover { color: var(--accent); }
+
+  .outfit-view__footer {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(6px, 1vh, 10px);
+    width: min(360px, 100%);
+  }
+
+  .outfit-total {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-top: 1px solid var(--rule-strong);
+    padding-top: 8px;
+    font-size: 0.92rem;
+    font-weight: 700;
+  }
+
+  .outfit-view__actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .outfit-view__actions .view-enter-btn { flex: 0 0 auto; padding: 10px 14px; }
+
+  .outfit-view__actions #outfitAddCart { flex: 1 1 auto; }
+
+  .outfit-cta {
+    background: var(--accent);
+    color: #17110a;
+    border: none;
+  }
+
+  .outfit-cta[disabled] {
+    background: var(--rule-strong);
+    color: var(--text-faint);
+    cursor: default;
+  }
+
+  .outfit-picker {
+    position: fixed;
+    top: var(--rail-h);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 260;
+    background: rgba(6, 6, 5, 0.94);
+    display: none;
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .outfit-picker.open { display: flex; }
+
+  .outfit-picker__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 700px;
+    width: 100%;
+    margin: 0 auto 16px;
+  }
+
+  .outfit-picker__title {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .outfit-picker__search {
+    display: block;
+    max-width: 700px;
+    width: 100%;
+    margin: 0 auto 10px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--rule-strong);
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 6px 2px 10px;
+  }
+
+  .outfit-picker__search::placeholder { color: rgba(242, 239, 231, 0.4); }
+  .outfit-picker__search:focus { border-bottom-color: var(--accent); }
+
+  .outfit-picker__filters {
+    display: flex;
+    gap: 10px;
+    max-width: 700px;
+    width: 100%;
+    margin: 0 auto 18px;
+  }
+
+  .outfit-picker__filters select,
+  .outfit-picker__filters input {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: transparent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999691' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    border: 1px solid var(--rule-strong);
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 0.76rem;
+    padding: 7px 26px 7px 10px;
+    flex: 1 1 0;
+    min-width: 0;
+    border-radius: 0;
+  }
+
+  .outfit-picker__filters input { background-image: none; padding-right: 10px; }
+  .outfit-picker__filters select option { background: var(--ink); color: var(--paper); }
+  .outfit-picker__filters select:focus,
+  .outfit-picker__filters input:focus { border-color: var(--accent); outline: none; }
+  .outfit-picker__filters input::placeholder { color: rgba(242, 239, 231, 0.4); }
+
+  .outfit-picker__empty {
+    max-width: 700px;
+    margin: 0 auto;
+    color: var(--text-faint);
+    font-size: 0.86rem;
+    text-align: center;
+    padding: 40px 0;
+  }
+
+  .outfit-picker__grid {
+    max-width: 700px;
+    width: 100%;
+    margin: 0 auto;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 14px;
+    padding-bottom: 20px;
+  }
+
+  .outfit-picker__item {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--paper);
+    text-align: left;
+  }
+
+  .outfit-picker__item-frame {
+    aspect-ratio: 3 / 4;
+    background: var(--mount);
+    overflow: hidden;
+    border: 1px solid transparent;
+  }
+
+  .outfit-picker__item--active .outfit-picker__item-frame {
+    border-color: var(--accent);
+  }
+  .outfit-picker__item--active .outfit-picker__item-title { color: var(--accent-text); }
+
+  .outfit-picker__item-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+    padding: 8%;
+    display: block;
+  }
+
+  .outfit-picker__item-title {
+    font-size: 0.72rem;
+    margin-top: 6px;
+    line-height: 1.3;
+  }
+
+  .outfit-picker__item-price {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-top: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .plate__frame img { transition: none; }
+    .swipe-card { transition: none; }
+  }
+
+  /* ---------- Mobile ---------- */
+
+  @media (max-width: 720px) {
+    .masthead { padding-top: 10px; padding-bottom: 12px; gap: 8px; }
+    /* Kompletter Wechsel auf mittige Ausrichtung statt der linksbuendigen
+       Desktop-Anordnung - Sprachumschalter + Warenkorb bleiben als kleine,
+       oben rechts verankerte Utility-Icons (uebliche Konvention, zaehlt
+       nicht gegen die Symmetrie des eigentlichen Inhalts darunter). Text,
+       Logo und Kennzahlen sind darunter alle zentriert - wirkt wie ein
+       richtiger, ausbalancierter Hero-Bereich statt einer Textspalte. */
+    .masthead__top {
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center; gap: 6px; position: relative;
+      padding-top: 52px;
+    }
+    .eyebrow { grid-column: auto; justify-self: auto; max-width: 100%; margin: 0 auto; font-size: 0.56rem; line-height: 1.3; }
+    .wordmark-block { grid-column: auto; justify-self: auto; align-items: center; width: 100%; }
+    /* Auf dem iPhone soll der Name klar fuehren, aber nicht mehr fast die
+       gesamte Bildschirmbreite belegen. */
+    .wordmark { font-size: clamp(2rem, 10.2vw, 2.6rem); line-height: 0.9; }
+    .wordmark-kicker { font-size: 0.54rem; }
+    .masthead__actions {
+      grid-column: auto; justify-self: auto;
+      position: absolute; top: 0; right: 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .lang-switch__btn { padding: 5px 6px; font-size: 0.6rem; }
+    /* Reine Zier-Zeile (Markenaufzaehlung) - auf dem Handy nur zusaetzliche
+       Zeilen vor dem eigentlichen Archiv, ohne eigenen Nutzwert (die echte
+       Markensuche laeuft ueber das Suchfeld/den Marken-Filter). */
+    .masthead__index { display: none; }
+    .masthead__bottom { align-items: center; text-align: center; gap: 6px; }
+    /* Kennzahlen (235/165/46) waren ein 2-zeiliger 3-Spalten-Block - auf dem
+       Handy als eine schmale, zentrierte Zeile statt eigenem Block, spart
+       deutlich Hoehe vor dem eigentlichen Archiv. */
+    .masthead__meta { justify-content: center; gap: 14px; }
+    .meta-figure { flex-direction: row; align-items: baseline; gap: 4px; }
+    .meta-figure__value { font-size: 0.82rem; }
+    .meta-figure__label { font-size: 0.56rem; }
+
+    .rail {
+      position: static;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      gap: 9px;
+      padding: 12px 16px;
+    }
+    .rail__search { flex: 0 0 auto; max-width: none; }
+    .rail__search input { font-size: 16px; padding: 10px 2px; }
+    .chip-row {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+      gap: 6px;
+      /* Weicher Ausblend-Rand statt hartem Anschnitt am Bildschirmrand -
+         signalisiert "hier geht wischbar weiter" statt wie abgeschnitten. */
+      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+      mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+    }
+    .chip-row::-webkit-scrollbar { display: none; }
+    .chip { padding: 7px 10px; flex: 0 0 auto; font-size: 0.64rem; }
+    .rail__right { width: 100%; justify-content: space-between; margin-left: 0; flex-wrap: wrap; gap: 10px; }
+    .rail__sort { padding: 9px 10px; }
+    .theme-toggle { padding: 10px 12px; font-size: 0.64rem; }
+    /* Sortierung + Foto-Hintergrund-Umschalter sind auf dem Handy standardmaessig
+       ausgeblendet, um die erste Ansicht schlank zu halten - sie erscheinen
+       zusammen mit den restlichen Filtern, sobald "Weitere Filter" geoeffnet
+       ist. Nichts geht verloren, nur der Ersteindruck wird ruhiger. */
+    .rail__sort, #mountToggle { display: none; }
+    #moreFiltersToggle[aria-expanded="true"] ~ .rail__sort,
+    #moreFiltersToggle[aria-expanded="true"] ~ #mountToggle { display: inline-flex; }
+
+    .grid-wrap { padding: 12px 16px 70px; }
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 22px 14px; }
+    .plate__frame img { padding: 6%; }
+    .plate__brand { font-size: 0.64rem; }
+    .plate__title { font-size: 0.8rem; }
+    .plate__price { font-size: 0.86rem; }
+    .plate__cart-btn { width: 38px; height: 38px; font-size: 1.15rem; }
+
+    .modal-backdrop { padding: 0; align-items: stretch; }
+    .modal { max-height: 100vh; height: 100%; border: none; }
+    .modal__media { min-height: 46vh; }
+    .modal__nav { width: 44px; height: 44px; font-size: 1.6rem; }
+    .modal__close { width: 40px; height: 40px; top: 12px; right: 12px; }
+    .modal__share { width: 40px; height: 40px; top: 12px; left: 12px; font-size: 1.1rem; }
+    .modal__share-toast { top: 56px; left: 12px; }
+    .modal__panel { padding: 20px 18px 28px; }
+
+    .cart-drawer { width: 100%; }
+
+    .footer { padding: 20px 16px 28px; font-size: 0.7rem; }
+
+    .chaos-item { width: clamp(72px, 24vw, 120px); }
+
+    .outfit-view {
+      padding: 10px 10px calc(8px + env(safe-area-inset-bottom));
+      gap: 6px;
+      align-items: stretch;
+      overflow-y: auto;
+    }
+    .outfit-view__close { top: 8px; right: 10px; width: 28px; height: 28px; font-size: 0.8rem; }
+    .outfit-view__head { min-height: 76px; }
+    .outfit-view__eyebrow { font-size: 0.54rem; }
+    .outfit-view__title { font-size: clamp(1.05rem, 5.2vw, 1.5rem); }
+    .outfit-view__status { font-size: 0.64rem; margin-top: 2px; }
+
+    /* Uebersichtlicher iPhone-Baukasten: die fuenf Auswahlfelder liegen in
+       einer horizontal wischbaren Reihe (gleiches Muster wie die Kategorie-
+       Chips), gross genug um Bild UND Preis klar zu erkennen. Die Vorschau
+       nutzt darunter die volle Breite und die Aktionen bleiben im normalen
+       Fluss statt Artikel zu verdecken. */
+    .outfit-layout {
+      flex-direction: column;
+      flex-wrap: nowrap;
+      gap: 7px;
+      max-width: 100%;
+      align-items: stretch;
+      justify-content: flex-start;
+      padding-bottom: 0;
+      position: static;
+      overflow: visible;
+    }
+    .outfit-main { display: contents; }
+    .outfit-stack {
+      order: 1;
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      gap: 8px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding: 2px 2px 6px;
+      /* Weicher Ausblend-Rand statt hartem Anschnitt - gleiches Signal
+         "hier geht wischbar weiter" wie bei den Kategorie-Chips oben. */
+      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+      mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+    }
+    .outfit-stack::-webkit-scrollbar { display: none; }
+    .outfit-figure {
+      order: 2;
+      width: 100%;
+      flex: 1 0 300px;
+      min-height: 300px;
+      gap: 0;
+    }
+    .outfit-figure__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .outfit-slot {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 4px;
+      padding: 5px;
+      position: relative;
+      flex: 0 0 108px;
+      height: 108px;
+    }
+    .outfit-slot__frame {
+      width: 100%;
+      height: 76px;
+    }
+    .outfit-slot__label,
+    .outfit-slot__value {
+      display: none;
+    }
+    .outfit-slot__price {
+      font-size: 0.68rem;
+      margin-top: 0;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .outfit-slot__remove {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 9, 0.72);
+      color: var(--paper);
+      font-size: 0.72rem;
+      padding: 0;
+    }
+    .outfit-slot--empty .outfit-slot__value,
+    .outfit-slot--locked .outfit-slot__value {
+      display: block;
+      font-size: 0.56rem;
+      line-height: 1.2;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .outfit-view__footer {
+      order: 3;
+      position: static;
+      left: auto;
+      right: auto;
+      bottom: auto;
+      width: 100%;
+      flex: 0 0 auto;
+    }
+
+    /* Bottom-Mode-Bar wuerde sonst den "Zum Archiv"-Button in Chaos ueberlagern */
+    .chaos-view .view-enter-btn { bottom: 62px; }
+    /* ...und bei hohem Swipe-Karten-Inhalt auch den zentrierten "Zum Archiv"-
+       Button dort - Swipe-View bekommt daher unten reservierten Platz. */
+    .swipe-view { padding-bottom: 64px; }
+  }
+
+  /* ---------- Minimalistische Archiv-Struktur ---------- */
+
+  :root { --rail-h: 64px; }
+
+  .mode-rail {
+    height: var(--rail-h);
+    justify-content: space-between;
+    gap: 0;
+    padding: 0 clamp(16px, 3vw, 34px);
+    border-bottom-color: rgba(242, 239, 231, 0.2);
+    overflow: visible;
+  }
+
+  .mode-rail.rail-hidden { transform: none; }
+
+  .site-header__menu,
+  .site-header__brand {
+    border: 0;
+    background: transparent;
+    color: var(--paper);
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .site-header__menu {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .site-header__brand {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 12px;
+    font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.92rem;
+    font-weight: 800;
+    letter-spacing: 0.035em;
+  }
+
+  .site-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .site-header .mode-rail__btn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    justify-content: center;
+    border: 0;
+  }
+
+  .site-header .mode-rail__btn[aria-current="true"] {
+    background: transparent;
+    border: 0;
+    color: var(--paper);
+  }
+
+  .site-header .mode-rail__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .masthead {
+    align-items: center;
+    gap: clamp(24px, 4vw, 42px);
+    padding: clamp(62px, 9vw, 128px) 20px clamp(52px, 8vw, 108px);
+  }
+
+  .masthead__top {
+    width: min(100%, 980px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(16px, 2.4vw, 28px);
+    text-align: center;
+  }
+
+  .wordmark-block {
+    order: 1;
+    width: 100%;
+  }
+
+  .wordmark-kicker {
+    font-size: clamp(0.58rem, 0.8vw, 0.72rem);
+    letter-spacing: 0.18em;
+  }
+
+  .wordmark {
+    justify-content: center;
+    font-size: clamp(4rem, 10vw, 8rem);
+    line-height: 0.9;
+  }
+
+  .eyebrow {
+    order: 2;
+    max-width: 66ch;
+    margin: 0;
+    text-align: center;
+    font-size: clamp(0.62rem, 0.9vw, 0.76rem);
+    line-height: 1.65;
+    letter-spacing: 0.13em;
+  }
+
+  .masthead__actions { display: none; }
+
+  .masthead__bottom {
+    width: min(100%, 760px);
+    justify-content: center;
+  }
+
+  .masthead__meta {
+    width: 100%;
+    justify-content: center;
+    gap: clamp(42px, 9vw, 110px);
+  }
+
+  .meta-figure {
+    align-items: center;
+    text-align: center;
+  }
+
+  .meta-figure__value {
+    font-size: clamp(1.35rem, 2vw, 1.8rem);
+  }
+
+  .meta-figure__label {
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+  }
+
+  .masthead__index { display: none; }
+
+  @media (max-width: 720px) {
+    :root { --rail-h: 54px; }
+
+    .mode-rail { padding: 0 12px; }
+    .site-header__menu { width: 34px; height: 34px; }
+    .site-header__brand { font-size: 0.8rem; }
+    .site-header .mode-rail__btn { width: 32px; height: 34px; }
+    .site-header__actions { gap: 0; }
+    .cart-bag { width: 48px; height: 48px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); }
+    .cart-bag svg { width: 22px; }
+
+    .masthead {
+      gap: 30px;
+      padding: 56px 18px 48px;
+    }
+
+    .masthead__top {
+      padding-top: 0;
+      gap: 18px;
+    }
+
+    .wordmark { font-size: clamp(2.75rem, 13.2vw, 3.55rem); }
+    .wordmark-kicker { font-size: 0.54rem; }
+    .eyebrow { max-width: 39ch; font-size: 0.56rem; line-height: 1.55; }
+
+    .masthead__meta {
+      align-items: flex-start;
+      gap: 0;
+    }
+
+    .meta-figure {
+      flex: 1 1 0;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .meta-figure__value { font-size: 1.15rem; }
+    .meta-figure__label {
+      max-width: 12ch;
+      font-size: 0.5rem;
+      line-height: 1.35;
+    }
+  }
+
+  /* ---------- Reduzierter Katalog, Menü und Footer ---------- */
+
+  .menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 420;
+    display: none;
+    background: rgba(0, 0, 0, 0.74);
+  }
+
+  .menu-backdrop.open { display: block; }
+
+  .menu-drawer {
+    width: min(430px, 100%);
+    height: 100%;
+    overflow-y: auto;
+    background: var(--ink);
+    color: var(--paper);
+    border-right: 1px solid var(--rule-strong);
+    padding: 22px clamp(22px, 5vw, 42px) 38px;
+  }
+
+  .menu-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .menu-drawer__close {
+    width: 34px;
+    height: 34px;
+    border: 0;
+    background: transparent;
+    color: var(--paper);
+    cursor: pointer;
+  }
+
+  .menu-drawer__nav,
+  .menu-drawer__section {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .menu-drawer__nav {
+    padding: 22px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .menu-drawer__section { padding: 22px 0; }
+
+  .menu-drawer__nav button,
+  .menu-drawer__section button,
+  .menu-drawer__brands button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 0.78rem;
+    letter-spacing: 0.075em;
+    text-align: left;
+    text-transform: uppercase;
+    padding: 9px 0;
+    cursor: pointer;
+  }
+
+  .menu-drawer__nav button:hover,
+  .menu-drawer__section button:hover,
+  .menu-drawer__brands button:hover { color: var(--accent-text); }
+
+  .menu-drawer__brands {
+    max-height: 230px;
+    overflow-y: auto;
+    margin: 4px 0 10px 12px;
+    padding-left: 12px;
+    border-left: 1px solid var(--rule-strong);
+  }
+
+  .menu-drawer__brands button {
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    padding: 7px 0;
+  }
+
+  .menu-drawer__languages {
+    display: flex;
+    gap: 18px;
+    padding-top: 10px;
+  }
+
+  .menu-drawer__languages button {
+    border: 0;
+    background: transparent;
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+
+  .menu-drawer__languages button[aria-current="true"] {
+    color: var(--paper);
+    border-bottom: 1px solid var(--paper);
+  }
+
+  .rail {
+    position: static;
+    width: min(100%, 1000px);
+    margin: 0 auto;
+    padding: clamp(20px, 4vw, 46px) 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: clamp(34px, 5vw, 58px);
+    border: 0;
+  }
+
+  .rail__search {
+    width: 100%;
+    max-width: none;
+    flex: none;
+  }
+
+  .rail__search input {
+    font-size: clamp(1rem, 1.7vw, 1.3rem);
+    padding: 14px 0;
+    border-bottom-color: rgba(242, 239, 231, 0.42);
+  }
+
+  .catalog-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 20px;
+    color: var(--paper);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .catalog-heading .rail__count {
+    color: var(--text-faint);
+    font-size: 0.6rem;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+  }
+
+  .catalog-controls { display: none !important; }
+
+  .grid-wrap {
+    width: min(100%, 1400px);
+    margin: 0 auto;
+    padding: 10px clamp(18px, 3vw, 36px) clamp(86px, 10vw, 140px);
+  }
+
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(52px, 6vw, 88px) clamp(18px, 2.5vw, 34px);
+  }
+
+  @media (min-width: 1180px) {
+    .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+
+  .plate {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .plate__frame img { padding: 3%; }
+
+  .plate__sold-bar,
+  .plate__estimate-badge,
+  .plate__cart-btn,
+  .plate__size { display: none !important; }
+
+  .plate__body {
+    gap: 3px;
+    padding-top: 10px;
+  }
+
+  .plate__brand { font-size: 0.66rem; }
+  .plate__title { font-size: 0.78rem; }
+  .plate__row { margin-top: 4px; }
+  .plate__price { font-size: 0.82rem; }
+
+  .plate__price--sold {
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .load-more-wrap {
+    display: flex;
+    justify-content: center;
+    padding-top: clamp(64px, 8vw, 110px);
+  }
+
+  .load-more {
+    min-width: 190px;
+    border: 1px solid var(--rule-strong);
+    background: transparent;
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    padding: 14px 24px;
+    cursor: pointer;
+  }
+
+  .load-more:hover { border-color: var(--paper); }
+  .load-more.hidden { display: none; }
+
+  .footer {
+    width: min(100%, 1400px);
+    margin: 0 auto;
+    padding: 0 clamp(20px, 4vw, 42px) clamp(52px, 7vw, 86px);
+    display: block;
+    border: 0;
+    color: var(--paper);
+    font-size: 0.66rem;
+  }
+
+  .footer__nav {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding: clamp(38px, 6vw, 72px) 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .footer__nav button,
+  .footer__nav a,
+  .footer__cart {
+    border: 0;
+    background: transparent;
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-decoration: none;
+    text-transform: uppercase;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .footer__stamp {
+    display: block;
+    margin-top: 24px;
+    color: var(--text-faint);
+  }
+
+  .footer__legal {
+    justify-content: flex-start;
+    margin-top: 12px;
+  }
+
+  .footer__cart {
+    display: flex;
+    gap: 6px;
+    margin-top: clamp(68px, 9vw, 120px);
+  }
+
+  @media (max-width: 720px) {
+    .masthead {
+      gap: 25px;
+      padding: 40px 18px 36px;
+    }
+
+    .wordmark { font-size: clamp(2.65rem, 12.4vw, 3.35rem); }
+
+    .rail {
+      gap: 30px;
+      padding: 16px 16px 12px;
+    }
+
+    .rail__search input { padding: 12px 0; }
+
+    .catalog-heading { font-size: 0.64rem; }
+
+    .grid-wrap {
+      padding: 8px 12px 84px;
+    }
+
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 42px 10px;
+    }
+
+    .plate__frame img { padding: 2%; }
+    .plate__body { padding-top: 8px; }
+    .plate__brand { font-size: 0.58rem; }
+    .plate__title { font-size: 0.7rem; }
+    .plate__price { font-size: 0.76rem; }
+    .plate__price--sold { font-size: 0.6rem; }
+
+    .load-more-wrap { padding-top: 62px; }
+
+    .footer {
+      padding: 0 16px calc(58px + env(safe-area-inset-bottom));
+    }
+
+    .footer__nav { padding: 34px 0; }
+    .footer__cart { margin-top: 72px; }
+  }

@@ -430,10 +430,8 @@ def render_index_html():
     # Laden nur automatisch ein anderes Panel (anhand von location.pathname,
     # siehe index_template.html).
     tmpl = (BASE / "index_template.html").read_text(encoding="utf-8")
-    data_safe = json.dumps(ITEMS, ensure_ascii=False).replace("</script>", "<\\/script>")
     public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
-    out = tmpl.replace("__ITEMS_JSON__", data_safe)
-    out = out.replace("__ITEMLIST_JSONLD__", item_list_jsonld(public_items))
+    out = tmpl.replace("__ITEMLIST_JSONLD__", item_list_jsonld(public_items))
     return out
 
 
