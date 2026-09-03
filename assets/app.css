@@ -1985,7 +1985,19 @@
   /* Im Look-Board zeigen wir bei getragenen Produktfotos nur den
      koerperrelevanten Ausschnitt. Die Klassen werden ausschliesslich von
      renderOutfitFigure gesetzt; Produktkarten, Modals und Artikelseiten
-     behalten daher immer ihre vollstaendigen Originalbilder. */
+     behalten daher immer ihre vollstaendigen Originalbilder.
+
+     Die tatsaechliche Position/Hoehe wird NICHT mehr fix per Prozentwert
+     hier vorgegeben, sondern von fitLookCropImage() in app.js inline am img
+     gesetzt, sobald die echten Bildmasse bekannt sind (imgEl.naturalWidth/
+     naturalHeight). Grund: die Artikelfotos haben stark unterschiedliche
+     Seitenverhaeltnisse (neuere enge Halbkoerper-Fotos vs. aeltere
+     Ganzkoerper-Fotos mit hohem Stand-/Bodenanteil unterhalb der Fuesse) -
+     ein einzelner fixer Prozentsatz (frueher: height:190%/300%) passte nur
+     fuer die neueren Fotos und riss bei den alten Vollkoerperfotos das
+     Kleidungsstueck aus dem Rahmen bzw. zeigte nur noch einen winzigen,
+     falsch positionierten Ausschnitt ("Bilder falsch dargestellt").
+     Die Werte unten sind nur der Ausgangszustand bis JS greift. */
   .look-card--crop-upper,
   .look-card--crop-lower,
   .look-card--crop-feet {
@@ -2004,28 +2016,9 @@
     object-fit: cover;
   }
 
-  /* Tops, Hemden, Strick und Jacken: Kopf/Oberkoerper behalten,
-     Taille und Unterkoerper ausserhalb des Viewports abschneiden. */
-  .look-card--crop-upper img {
-    top: 0;
-    height: 190%;
-    object-position: center top;
-  }
-
-  /* Hosen und Roecke: ab Taille nach unten zeigen; der Oberkoerper liegt
-     oberhalb des Viewports. */
-  .look-card--crop-lower img {
-    bottom: 0;
-    height: 190%;
-    object-position: center bottom;
-  }
-
-  /* Schuhe: auf das untere Drittel des getragenen Fotos zoomen. */
-  .look-card--crop-feet img {
-    bottom: 0;
-    height: 300%;
-    object-position: center bottom;
-  }
+  .look-card--crop-upper img { top: 0; height: 100%; object-position: center top; }
+  .look-card--crop-lower img { bottom: 0; height: 100%; object-position: center bottom; }
+  .look-card--crop-feet img { bottom: 0; height: 100%; object-position: center bottom; }
 
   .look-card--jacket {
     top: 4%; left: 6%; width: 52%; aspect-ratio: 3 / 4; z-index: 1;
@@ -2373,6 +2366,175 @@
     font-weight: 700;
     color: var(--accent);
     margin-top: 2px;
+  }
+
+  /* ---------- Verleih (Rental) ---------- */
+
+  .plate__rental-btn {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    background: transparent;
+    border: 1px solid var(--rule-strong);
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: 0.68rem;
+    letter-spacing: 0.02em;
+    padding: 7px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .plate__rental-btn:hover,
+  .plate__rental-btn:focus-visible { border-color: var(--accent); color: var(--paper); }
+
+  .rental-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 400;
+    background: rgba(6, 6, 5, 0.86);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .rental-modal-backdrop.hidden { display: none; }
+
+  .rental-modal {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    max-height: 92vh;
+    overflow-y: auto;
+    background: var(--ink);
+    border: 1px solid var(--rule-strong);
+    border-bottom: none;
+    padding: 20px;
+  }
+
+  @media (min-width: 640px) {
+    .rental-modal-backdrop { align-items: center; }
+    .rental-modal { border-bottom: 1px solid var(--rule-strong); }
+  }
+
+  .rental-modal__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .rental-modal__title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .rental-modal .modal__close {
+    position: static;
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+  }
+
+  .rental-modal__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--rule-strong);
+    padding: 8px;
+    margin-bottom: 16px;
+  }
+  .rental-modal__item img {
+    width: 44px;
+    height: 58px;
+    object-fit: contain;
+    background: var(--mount);
+  }
+  .rental-modal__item-body { font-size: 0.78rem; line-height: 1.4; }
+  .rental-modal__item-price { color: var(--accent); font-weight: 700; }
+
+  .rental-modal__row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .rental-modal__field {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .rental-modal__field label {
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .rental-modal__field input,
+  .rental-modal__field select,
+  .rental-modal__field textarea {
+    background: transparent;
+    border: 1px solid var(--rule-strong);
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 0.86rem;
+    padding: 8px 10px;
+    border-radius: 0;
+    resize: vertical;
+  }
+  .rental-modal__field select option { background: var(--ink); color: var(--paper); }
+  .rental-modal__field input:focus,
+  .rental-modal__field select:focus,
+  .rental-modal__field textarea:focus { border-color: var(--accent); outline: none; }
+  /* Native Datumsfelder haben in dunklen Themes ein schwer sichtbares
+     schwarzes Kalendersymbol - invertieren macht es auf dunklem Grund lesbar. */
+  .rental-modal__field input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+
+  .rental-modal__days {
+    font-size: 0.76rem;
+    color: var(--text-faint);
+    margin: -6px 0 14px;
+  }
+
+  .rental-modal__error {
+    font-size: 0.76rem;
+    color: var(--accent);
+    margin: -6px 0 14px;
+  }
+  .rental-modal__error.hidden { display: none; }
+
+  .rental-modal__note {
+    font-size: 0.72rem;
+    color: var(--text-faint);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  .rental-modal__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .rental-modal__actions a,
+  .rental-modal__actions p {
+    display: block;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 12px;
+    border: 1px solid var(--paper);
+    color: var(--paper);
+    text-decoration: none;
+  }
+  .rental-modal__actions a:hover { background: var(--paper); color: var(--ink); }
+  .rental-modal__actions .rental-modal__config-warning {
+    font-weight: 400;
+    font-size: 0.74rem;
+    border-style: dashed;
+    color: var(--text-faint);
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -102,8 +102,24 @@
       orderAvailQuestion: "Sind diese Artikel noch verfügbar?", orderSubject: "Bestellanfrage Disorder119",
       orderSizeAbbrev: "Gr. ", orderArticleAbbrev: "Art.-Nr. ",
       modeArchiv: "Archiv", modeMatch: "Match", modeChaos: "Chaos", modeBaukasten: "Baukasten",
+      modeRental: "Verleih",
       modeHint: "Entdecke auch Match, Chaos & Baukasten", hintCloseAria: "Hinweis schließen",
       modeRailAria: "Ansicht wechseln",
+      rentalCta: "📅 Für Shooting/Video anfragen", rentalCloseAria: "Schließen",
+      rentalModalTitle: "Für Shooting oder Musikvideo anfragen",
+      rentalStartLabel: "Von", rentalEndLabel: "Bis",
+      rentalDaysTemplate: "{days} Tag(e) ausgewählt",
+      rentalPurposeLabel: "Verwendungszweck",
+      rentalPurposeVideo: "Musikvideo", rentalPurposePhoto: "Fotoshooting", rentalPurposeOther: "Sonstiges",
+      rentalMessageLabel: "Nachricht (optional)",
+      rentalMessagePh: "z. B. Produktion, Set, Ansprechpartner …",
+      rentalNote: "Dies ist eine unverbindliche Anfrage, keine Buchung. Verfügbarkeit und Konditionen bestätige ich dir persönlich.",
+      rentalDateError: "Bitte wähle ein gültiges Zeitfenster (Ende nach oder gleich Beginn).",
+      rentalWhatsapp: "Anfrage per WhatsApp senden", rentalEmail: "Anfrage per E-Mail senden",
+      rentalConfigWarning: "Shop-Kontakt noch nicht eingerichtet: Trage in config/shop-config.json deine WhatsApp-Nummer oder E-Mail-Adresse ein, damit Verleih-Anfragen bei dir ankommen.",
+      rentalSubject: "Verleih-Anfrage Disorder119",
+      rentalGreeting: "Hallo! Ich möchte folgendes Stück aus dem Disorder119-Archiv für ein Shooting/Musikvideo anfragen:",
+      rentalPeriodLabel: "Zeitraum", rentalPurposeMsgLabel: "Zweck", rentalMessageMsgLabel: "Nachricht",
       toArchive: "Zum Archiv →",
       swipeHint: "Ziehen oder klicken — ✕ überspringen, ♥ merken",
       swipeRoundDone: "Runde beendet", swipeSavedInCart: "Teile gemerkt &amp; im Warenkorb",
@@ -239,8 +255,24 @@
       orderAvailQuestion: "Are these pieces still available?", orderSubject: "Order request Disorder119",
       orderSizeAbbrev: "Size ", orderArticleAbbrev: "Item no. ",
       modeArchiv: "Archive", modeMatch: "Match", modeChaos: "Chaos", modeBaukasten: "Outfit builder",
+      modeRental: "Rental",
       modeHint: "Also discover Match, Chaos & the outfit builder", hintCloseAria: "Close hint",
       modeRailAria: "Switch view",
+      rentalCta: "📅 Request for shoot/video", rentalCloseAria: "Close",
+      rentalModalTitle: "Request for a shoot or music video",
+      rentalStartLabel: "From", rentalEndLabel: "To",
+      rentalDaysTemplate: "{days} day(s) selected",
+      rentalPurposeLabel: "Purpose",
+      rentalPurposeVideo: "Music video", rentalPurposePhoto: "Photo shoot", rentalPurposeOther: "Other",
+      rentalMessageLabel: "Message (optional)",
+      rentalMessagePh: "e.g. production, set, contact person …",
+      rentalNote: "This is a non-binding request, not a booking. I'll confirm availability and terms with you personally.",
+      rentalDateError: "Please choose a valid time window (end on or after start).",
+      rentalWhatsapp: "Send request via WhatsApp", rentalEmail: "Send request via email",
+      rentalConfigWarning: "Shop contact not set up yet: add your WhatsApp number or email address in config/shop-config.json so rental requests reach you.",
+      rentalSubject: "Rental request Disorder119",
+      rentalGreeting: "Hi! I'd like to request the following piece from the Disorder119 archive for a shoot/music video:",
+      rentalPeriodLabel: "Period", rentalPurposeMsgLabel: "Purpose", rentalMessageMsgLabel: "Message",
       toArchive: "To the archive →",
       swipeHint: "Drag or click — ✕ skip, ♥ save",
       swipeRoundDone: "Round finished", swipeSavedInCart: "Pieces saved &amp; in cart",
@@ -377,8 +409,24 @@
       orderAvailQuestion: "Ces pièces sont-elles toujours disponibles ?", orderSubject: "Demande de commande Disorder119",
       orderSizeAbbrev: "Taille ", orderArticleAbbrev: "N° d'article ",
       modeArchiv: "Archive", modeMatch: "Match", modeChaos: "Chaos", modeBaukasten: "Configurateur",
+      modeRental: "Location",
       modeHint: "Découvre aussi Match, Chaos et le configurateur de tenues", hintCloseAria: "Fermer l'info",
       modeRailAria: "Changer de vue",
+      rentalCta: "📅 Demander pour tournage/shooting", rentalCloseAria: "Fermer",
+      rentalModalTitle: "Demande pour un shooting ou un clip",
+      rentalStartLabel: "Du", rentalEndLabel: "Au",
+      rentalDaysTemplate: "{days} jour(s) sélectionné(s)",
+      rentalPurposeLabel: "Utilisation prévue",
+      rentalPurposeVideo: "Clip musical", rentalPurposePhoto: "Shooting photo", rentalPurposeOther: "Autre",
+      rentalMessageLabel: "Message (facultatif)",
+      rentalMessagePh: "p. ex. production, plateau, contact …",
+      rentalNote: "Ceci est une demande sans engagement, pas une réservation. Je te confirme personnellement la disponibilité et les conditions.",
+      rentalDateError: "Merci de choisir une période valide (fin après ou égale au début).",
+      rentalWhatsapp: "Envoyer la demande via WhatsApp", rentalEmail: "Envoyer la demande par e-mail",
+      rentalConfigWarning: "Le contact de la boutique n'est pas encore configuré : renseigne ton numéro WhatsApp ou ton adresse e-mail dans config/shop-config.json pour recevoir les demandes de location.",
+      rentalSubject: "Demande de location Disorder119",
+      rentalGreeting: "Bonjour ! Je souhaite demander la pièce suivante de l'archive Disorder119 pour un shooting/clip :",
+      rentalPeriodLabel: "Période", rentalPurposeMsgLabel: "Utilisation", rentalMessageMsgLabel: "Message",
       toArchive: "Vers l'archive →",
       swipeHint: "Glisse ou clique — ✕ passer, ♥ garder",
       swipeRoundDone: "Manche terminée", swipeSavedInCart: "Pièces enregistrées &amp; dans le panier",
@@ -794,6 +842,157 @@
     footHtml += '<p class="cart-note">' + t("cartNote") + '</p>';
     foot.innerHTML = footHtml;
   }
+
+  // ---- Verleih-Anfrage (Rental) ----
+  // Jedes verfuegbare Stueck laesst sich fuer Musikvideo-/Foto-Shootings
+  // anfragen - kein echtes Buchungssystem/Verfuegbarkeitskalender im Backend
+  // (es gibt noch keine Datenbank), sondern wie der Warenkorb eine
+  // unverbindliche Anfrage per WhatsApp/E-Mail, hier zusaetzlich mit
+  // Zeitraum (natives <input type="date">, also ein echter, barrierefreier
+  // Systemkalender) und Verwendungszweck.
+  var rentalBackdrop = document.getElementById("rentalModalBackdrop");
+  var rentalItemEl = document.getElementById("rentalModalItem");
+  var rentalStartEl = document.getElementById("rentalStart");
+  var rentalEndEl = document.getElementById("rentalEnd");
+  var rentalDaysEl = document.getElementById("rentalDaysText");
+  var rentalErrorEl = document.getElementById("rentalDateError");
+  var rentalPurposeEl = document.getElementById("rentalPurpose");
+  var rentalMessageEl = document.getElementById("rentalMessage");
+  var rentalActionsEl = document.getElementById("rentalModalActions");
+  var rentalCloseBtn = document.getElementById("rentalModalClose");
+  var rentalCurrentItem = null;
+  var rentalLastFocusEl = null;
+
+  function todayIso() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  function rentalDayCount() {
+    if (!rentalStartEl.value || !rentalEndEl.value) return null;
+    var start = new Date(rentalStartEl.value + "T00:00:00");
+    var end = new Date(rentalEndEl.value + "T00:00:00");
+    var diff = Math.round((end - start) / 86400000) + 1;
+    return diff;
+  }
+
+  function rentalValid() {
+    var days = rentalDayCount();
+    return days !== null && days >= 1;
+  }
+
+  function updateRentalSummary() {
+    var days = rentalDayCount();
+    if (days === null) {
+      rentalDaysEl.textContent = "";
+      rentalErrorEl.classList.add("hidden");
+    } else if (days < 1) {
+      rentalDaysEl.textContent = "";
+      rentalErrorEl.classList.remove("hidden");
+    } else {
+      rentalDaysEl.textContent = tFormat("rentalDaysTemplate", { days: days });
+      rentalErrorEl.classList.add("hidden");
+    }
+    renderRentalActions();
+  }
+
+  function buildRentalText() {
+    var it = rentalCurrentItem;
+    if (!it) return "";
+    var purposeKey = rentalPurposeEl.value === "video" ? "rentalPurposeVideo"
+      : rentalPurposeEl.value === "photo" ? "rentalPurposePhoto" : "rentalPurposeOther";
+    var lines = [
+      t("rentalGreeting"),
+      "",
+      productAltText(it) + " (" + t("orderArticleAbbrev") + (it.article || it.id) + ")",
+      t("rentalPeriodLabel") + ": " + rentalStartEl.value + " – " + rentalEndEl.value +
+        " (" + tFormat("rentalDaysTemplate", { days: rentalDayCount() }) + ")",
+      t("rentalPurposeMsgLabel") + ": " + t(purposeKey)
+    ];
+    if (rentalMessageEl.value.trim()) {
+      lines.push(t("rentalMessageMsgLabel") + ": " + rentalMessageEl.value.trim());
+    }
+    return lines.join("\n");
+  }
+
+  function renderRentalActions() {
+    var hasWhatsapp = !!SHOP_CONFIG.whatsappNumber;
+    var hasEmail = !!SHOP_CONFIG.email;
+    var valid = rentalValid();
+    var html = "";
+    if (!valid) {
+      rentalActionsEl.innerHTML = "";
+      return;
+    }
+    var encoded = encodeURIComponent(buildRentalText());
+    if (hasWhatsapp) {
+      html += '<a href="https://wa.me/' + SHOP_CONFIG.whatsappNumber + '?text=' + encoded +
+        '" target="_blank" rel="noopener">' + t("rentalWhatsapp") + '</a>';
+    }
+    if (hasEmail) {
+      html += '<a href="mailto:' + SHOP_CONFIG.email + '?subject=' + encodeURIComponent(t("rentalSubject")) +
+        '&body=' + encoded + '">' + t("rentalEmail") + '</a>';
+    }
+    if (!hasWhatsapp && !hasEmail) {
+      html += '<p class="rental-modal__config-warning">' + t("rentalConfigWarning") + '</p>';
+    }
+    rentalActionsEl.innerHTML = html;
+  }
+
+  function openRentalModal(itemId) {
+    var it = findItem(itemId);
+    if (!it) return;
+    rentalCurrentItem = it;
+    rentalLastFocusEl = document.activeElement;
+    var hero = assetUrl(it.gallery && it.gallery[0] ? it.gallery[0] : "");
+    rentalItemEl.innerHTML =
+      (hero ? '<img src="' + hero + '" alt="" />' : "") +
+      '<div class="rental-modal__item-body">' +
+        '<div>' + escapeHtml(productAltText(it)) + "</div>" +
+        '<div class="rental-modal__item-price">' + fmtPriceDisplay(it.price) + "</div>" +
+      "</div>";
+    var min = todayIso();
+    rentalStartEl.min = min;
+    rentalEndEl.min = min;
+    rentalStartEl.value = "";
+    rentalEndEl.value = "";
+    rentalPurposeEl.value = "video";
+    rentalMessageEl.value = "";
+    updateRentalSummary();
+    rentalBackdrop.classList.remove("hidden");
+    document.body.classList.add("no-scroll");
+    rentalStartEl.focus();
+  }
+
+  function closeRentalModal() {
+    rentalBackdrop.classList.add("hidden");
+    document.body.classList.remove("no-scroll");
+    rentalCurrentItem = null;
+    if (rentalLastFocusEl && typeof rentalLastFocusEl.focus === "function") rentalLastFocusEl.focus();
+  }
+
+  rentalStartEl.addEventListener("change", function () {
+    rentalEndEl.min = rentalStartEl.value || todayIso();
+    updateRentalSummary();
+  });
+  rentalEndEl.addEventListener("change", updateRentalSummary);
+  rentalPurposeEl.addEventListener("change", renderRentalActions);
+  rentalMessageEl.addEventListener("input", renderRentalActions);
+  rentalCloseBtn.addEventListener("click", closeRentalModal);
+  rentalBackdrop.addEventListener("click", function (e) {
+    if (e.target === rentalBackdrop) closeRentalModal();
+  });
+  // Einfache Fokus-Falle: Tab/Shift+Tab bleiben innerhalb des Dialogs,
+  // Escape schliesst - wie bei den anderen Overlays der Seite.
+  rentalBackdrop.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { closeRentalModal(); return; }
+    if (e.key !== "Tab") return;
+    var focusables = rentalBackdrop.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    var first = focusables[0], last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
 
   // Warenkorb hat eine echte, eigene URL (/cart/, /en/cart/, /fr/cart/) statt
   // nur eine Overlay-Klasse umzuschalten oder eines Hash-Fragments - jede
@@ -1282,6 +1481,7 @@
           '<div class="plate__row">' +
             priceHtml +
           "</div>" +
+          (isSold ? "" : '<button type="button" class="plate__rental-btn" data-rental="' + it.id + '">' + t("rentalCta") + "</button>") +
         "</div>";
 
       var brandBtn = plate.querySelector("[data-brand-filter]");
@@ -1290,6 +1490,15 @@
           e.preventDefault();
           e.stopPropagation();
           filterByBrand(it.brand);
+        });
+      }
+
+      var rentalBtn = plate.querySelector("[data-rental]");
+      if (rentalBtn) {
+        rentalBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          openRentalModal(it.id);
         });
       }
 
@@ -1512,6 +1721,36 @@
 
   var modeRail = document.getElementById("modeRail");
 
+  // Bislang legten Match/Chaos/Baukasten keinen eigenen Verlaufseintrag an.
+  // Ein Klick auf einen Artikel aus einem dieser Modi (echte Navigation zur
+  // Artikelseite) gefolgt vom Zurueck-Button des Browsers sprang deshalb
+  // nicht in den Modus zurueck, sondern direkt zum zuvor bestehenden
+  // Zustand - meist dem Archiv, der Modus wurde dabei uebersprungen ("zu
+  // schnell wieder auf Archiv"). pushModeState() legt fuer jeden
+  // Moduswechsel einen eigenen Verlaufseintrag an (gleiche URL, eigener
+  // state.mode), damit Zurueck/Vorwaerts die Modi einzeln durchgeht statt
+  // sie zu ueberspringen. Wirkt nur auf der Archiv-Startseite selbst - auf
+  // Warenkorb-/Rechtstexte-URLs kuemmern sich deren eigene Popstate-Handler
+  // weiter oben/unten in dieser Datei um sich selbst.
+  var MODE_HOME_PATH = langHome(LANG);
+  var suppressModePush = false;
+  function pushModeState(mode) {
+    if (suppressModePush) return;
+    if (location.pathname !== MODE_HOME_PATH) return;
+    if (history.state && history.state.mode === mode) return;
+    history.pushState({ mode: mode }, "", location.pathname + location.search);
+  }
+  window.addEventListener("popstate", function (e) {
+    if (location.pathname !== MODE_HOME_PATH) return;
+    var mode = (e.state && e.state.mode) || "classic";
+    suppressModePush = true;
+    if (mode === "swipe") showSwipe();
+    else if (mode === "chaos") showChaos();
+    else if (mode === "outfit") showOutfit();
+    else showClassic();
+    suppressModePush = false;
+  });
+
   // Leiste blendet sich beim Runterscrollen im Archiv aus (bleibt sonst
   // dauerhaft ueber dem Katalog haengen) und taucht beim Hochscrollen oder
   // ganz oben sofort wieder auf. In Match/Chaos/Baukasten (kein Scrollen,
@@ -1549,6 +1788,7 @@
       else if (target === "swipe") showSwipe();
       else if (target === "chaos") showChaos();
       else if (target === "outfit") showOutfit();
+      else if (target === "rental") { showClassic(); focusCatalog(); }
       dismissModeRailHint();
     });
   });
@@ -1708,6 +1948,7 @@
     outfitPicker.classList.remove("open");
     appShell.classList.remove("hidden");
     syncModeRail("classic");
+    pushModeState("classic");
   }
 
   // ---- Swipe-Minigame ----
@@ -1894,6 +2135,7 @@
     renderSwipeCard();
     swipeView.classList.remove("hidden");
     syncModeRail("swipe");
+    pushModeState("swipe");
   }
 
   function chaosItemCount() {
@@ -2208,6 +2450,7 @@
     chaosView.classList.remove("hidden");
     buildChaos();
     syncModeRail("chaos");
+    pushModeState("chaos");
   }
 
   // ---- Outfit-Baukasten ----
@@ -2379,6 +2622,40 @@
       return "";
     }
 
+    // Setzt Breite/Hoehe/Position des Fotos im Look-Board anhand der
+    // TATSAECHLICHEN Bildmasse (nicht anhand eines fix angenommenen
+    // Seitenverhaeltnisses - siehe Kommentar bei .look-card--crop-* in
+    // app.css). Skaliert das Bild so, dass es die Kartenbreite exakt
+    // ausfuellt (wie object-fit:cover es fuer die Breite ohnehin taete),
+    // haengt es dann oben ("upper") oder unten ("lower"/"feet") an - so
+    // beginnt/endet der sichtbare Ausschnitt immer exakt am echten Bildrand
+    // statt an einer geschaetzten Prozentmarke, die bei sehr hohen
+    // Ganzkoerperfotos mit viel Stand-/Bodenflaeche komplett daneben liegt.
+    // "feet" zoomt zusaetzlich per transform in den untersten Bereich, weil
+    // ein reiner Breiten-Fill dort noch das ganze Bein zeigen wuerde.
+    function fitLookCropImage(cardEl, imgEl, cropClass) {
+      imgEl.style.transform = "";
+      if (!cropClass) {
+        imgEl.style.width = ""; imgEl.style.height = "";
+        imgEl.style.top = ""; imgEl.style.bottom = "";
+        return;
+      }
+      var bw = cardEl.clientWidth;
+      if (!bw || !imgEl.naturalWidth || !imgEl.naturalHeight) return;
+      var scaledH = (bw / imgEl.naturalWidth) * imgEl.naturalHeight;
+      imgEl.style.width = "100%";
+      imgEl.style.height = scaledH + "px";
+      if (cropClass === "look-card--crop-upper") {
+        imgEl.style.top = "0"; imgEl.style.bottom = "";
+      } else if (cropClass === "look-card--crop-lower") {
+        imgEl.style.top = ""; imgEl.style.bottom = "0";
+      } else if (cropClass === "look-card--crop-feet") {
+        imgEl.style.top = ""; imgEl.style.bottom = "0";
+        imgEl.style.transform = "scale(1.5)";
+        imgEl.style.transformOrigin = "center bottom";
+      }
+    }
+
     function setCard(cardEl, item, onAspect) {
       var src = assetUrl(item && (item.look || (item.gallery && item.gallery[0])) ? (item.look || item.gallery[0]) : "");
       var imgEl = cardEl.querySelector("img");
@@ -2390,9 +2667,15 @@
         imgEl.alt = item.title;
         cardEl.classList.add("visible");
         anyVisible = true;
+        var applyFit = function () { fitLookCropImage(cardEl, imgEl, cropClass); };
+        if (imgEl.complete && imgEl.naturalWidth) applyFit();
+        else imgEl.onload = applyFit;
         if (onAspect) {
           if (imgEl.complete && imgEl.naturalWidth) onAspect(imgEl);
-          else imgEl.onload = function () { onAspect(imgEl); };
+          else {
+            var prevOnload = imgEl.onload;
+            imgEl.onload = function () { prevOnload(); onAspect(imgEl); };
+          }
         }
       } else {
         cardEl.classList.remove("visible");
@@ -2414,6 +2697,16 @@
     });
     document.getElementById("lookBoardEmpty").classList.toggle("hidden-empty", anyVisible);
   }
+
+  // Kartenbreite (und damit die per fitLookCropImage() berechnete Skalierung)
+  // aendert sich bei Rotation/Fenstergroesse - ohne Neuberechnung wuerde der
+  // Ausschnitt nach einem Resize wieder daneben liegen.
+  var outfitResizeTimer = null;
+  window.addEventListener("resize", function () {
+    if (outfitView.classList.contains("hidden")) return;
+    clearTimeout(outfitResizeTimer);
+    outfitResizeTimer = setTimeout(renderOutfitFigure, 150);
+  });
 
   var outfitPickerSize = "";
   var outfitPickerPriceMax = null;
@@ -2556,6 +2849,7 @@
     renderOutfitStack();
     outfitView.classList.remove("hidden");
     syncModeRail("outfit");
+    pushModeState("outfit");
   }
 
   loadOutfit();

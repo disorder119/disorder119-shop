@@ -131,8 +131,53 @@
       <span class="mode-rail__icon" aria-hidden="true">⛃</span>
       <span class="mode-rail__label" data-i18n="modeBaukasten">Baukasten</span>
     </button>
+    <button type="button" class="mode-rail__btn" data-mode-view="rental" aria-label="Verleih">
+      <span class="mode-rail__icon" aria-hidden="true">🎬</span>
+      <span class="mode-rail__label" data-i18n="modeRental">Verleih</span>
+    </button>
   </div>
 </nav>
+
+<!-- Verleih-Anfrage: ein einziges, wiederverwendbares Modal fuer alle Artikel -
+     wird per openRentalModal(itemId) mit dem jeweiligen Artikel befuellt statt
+     pro Kachel ein eigenes Modal im DOM zu halten. Kalenderauswahl nutzt
+     native <input type="date"> (echter, barrierefreier Systemkalender inkl.
+     Tastaturbedienung) statt eines selbstgebauten Kalender-Widgets. -->
+<div class="rental-modal-backdrop hidden" id="rentalModalBackdrop">
+  <div class="rental-modal" role="dialog" aria-modal="true" aria-labelledby="rentalModalTitle">
+    <div class="rental-modal__head">
+      <span class="rental-modal__title" id="rentalModalTitle" data-i18n="rentalModalTitle">Für Shooting oder Musikvideo anfragen</span>
+      <button type="button" class="modal__close" id="rentalModalClose" data-i18n-aria="rentalCloseAria" aria-label="Schließen">✕</button>
+    </div>
+    <div class="rental-modal__item" id="rentalModalItem"></div>
+    <div class="rental-modal__row">
+      <div class="rental-modal__field">
+        <label for="rentalStart" data-i18n="rentalStartLabel">Von</label>
+        <input type="date" id="rentalStart">
+      </div>
+      <div class="rental-modal__field">
+        <label for="rentalEnd" data-i18n="rentalEndLabel">Bis</label>
+        <input type="date" id="rentalEnd">
+      </div>
+    </div>
+    <p class="rental-modal__days" id="rentalDaysText"></p>
+    <p class="rental-modal__error hidden" id="rentalDateError" data-i18n="rentalDateError">Bitte wähle ein gültiges Zeitfenster (Ende nach oder gleich Beginn).</p>
+    <div class="rental-modal__field">
+      <label for="rentalPurpose" data-i18n="rentalPurposeLabel">Verwendungszweck</label>
+      <select id="rentalPurpose">
+        <option value="video" data-i18n="rentalPurposeVideo">Musikvideo</option>
+        <option value="photo" data-i18n="rentalPurposePhoto">Fotoshooting</option>
+        <option value="other" data-i18n="rentalPurposeOther">Sonstiges</option>
+      </select>
+    </div>
+    <div class="rental-modal__field">
+      <label for="rentalMessage" data-i18n="rentalMessageLabel">Nachricht (optional)</label>
+      <textarea id="rentalMessage" rows="3" data-i18n-placeholder="rentalMessagePh" placeholder="z. B. Produktion, Set, Ansprechpartner …"></textarea>
+    </div>
+    <p class="rental-modal__note" data-i18n="rentalNote">Dies ist eine unverbindliche Anfrage, keine Buchung. Verfügbarkeit und Konditionen bestätige ich dir persönlich.</p>
+    <div class="rental-modal__actions" id="rentalModalActions"></div>
+  </div>
+</div>
 
 <!-- Schwebender Warenkorb-Button statt festem Platz in der Kopfzeile - dort
      wirkte das kleine D staendig wie ein fester, etwas verlorener Programm-
