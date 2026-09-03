@@ -2696,12 +2696,11 @@
       min-height: 0;
       display: flex;
       flex-direction: column;
-      /* Zentriert statt oben ausgerichtet: die Buehne rechts fuellt ihre
-         gesamte Spaltenhoehe (Grid-Zelle), die fuenf Zeilen links dagegen
-         haben eine Hoechstgroesse (naechster Kommentar) und lassen bei viel
-         verfuegbarer Hoehe sonst einen haesslichen toten Bereich unten in
-         der Spalte stehen. */
-      justify-content: center;
+      /* Oben ausgerichtet (Standard) statt zentriert: die erste Zeile
+         links soll exakt auf gleicher Hoehe wie die erste Karte im
+         Look-Board rechts beginnen ("auf einer Ebene", Nutzer-Feedback) -
+         mit justify-content:center schwebte die kuerzere Liste mittig in
+         ihrer Spalte, waehrend die Buehne rechts oben buendig anfing. */
       gap: clamp(4px, 1vh, 10px);
     }
     .outfit-figure {
