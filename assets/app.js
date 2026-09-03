@@ -127,6 +127,7 @@
       modeHint: "Entdecke auch Match, Chaos & Baukasten", hintCloseAria: "Hinweis schließen",
       modeRailAria: "Ansicht wechseln",
       rentalCta: "📅 Für Miete anfragen", rentalCloseAria: "Schließen",
+      rentalPriceLabel: "Mietpreis", rentalPriceOnRequest: "Mietpreis auf Anfrage",
       rentalModalTitle: "Stück ausleihen",
       rentalStartLabel: "Von", rentalEndLabel: "Bis",
       rentalDaysTemplate: "{days} Tag(e) ausgewählt",
@@ -142,7 +143,8 @@
       rentalWhatsapp: "Anfrage per WhatsApp senden", rentalEmail: "Anfrage per E-Mail senden",
       rentalConfigWarning: "Shop-Kontakt noch nicht eingerichtet: Trage in config/shop-config.json deine WhatsApp-Nummer oder E-Mail-Adresse ein, damit Verleih-Anfragen bei dir ankommen.",
       rentalSubject: "Verleih-Anfrage Disorder119",
-      rentalGreeting: "Hallo! Ich möchte folgendes Stück aus dem Disorder119-Archiv ausleihen:",
+      rentalEmailIntro: "Hallo!\n\nIch interessiere mich für folgendes Stück aus dem Disorder119-Archiv und würde es gerne ausleihen:\n\n{item}",
+      rentalEmailClosing: "Über eine Rückmeldung zu Verfügbarkeit, Mietpreis und Kaution würde ich mich freuen.\n\nViele Grüße",
       rentalPeriodLabel: "Zeitraum", rentalPurposeMsgLabel: "Zweck", rentalMessageMsgLabel: "Nachricht",
       pageTitleMieten: "Disorder119 — Mieten & Ausleihen",
       mietenCatalogHeading: "Mieten & Ausleihen",
@@ -291,6 +293,7 @@
       modeHint: "Also discover Match, Chaos & the outfit builder", hintCloseAria: "Close hint",
       modeRailAria: "Switch view",
       rentalCta: "📅 Request to rent", rentalCloseAria: "Close",
+      rentalPriceLabel: "Rental price", rentalPriceOnRequest: "Rental price on request",
       rentalModalTitle: "Rent this piece",
       rentalStartLabel: "From", rentalEndLabel: "To",
       rentalDaysTemplate: "{days} day(s) selected",
@@ -306,7 +309,8 @@
       rentalWhatsapp: "Send request via WhatsApp", rentalEmail: "Send request via email",
       rentalConfigWarning: "Shop contact not set up yet: add your WhatsApp number or email address in config/shop-config.json so rental requests reach you.",
       rentalSubject: "Rental request Disorder119",
-      rentalGreeting: "Hi! I'd like to rent the following piece from the Disorder119 archive:",
+      rentalEmailIntro: "Hi!\n\nI'm interested in the following piece from the Disorder119 archive and would like to rent it:\n\n{item}",
+      rentalEmailClosing: "I'd love to hear back about availability, rental price and deposit.\n\nBest regards",
       rentalPeriodLabel: "Period", rentalPurposeMsgLabel: "Purpose", rentalMessageMsgLabel: "Message",
       pageTitleMieten: "Disorder119 — Rent & Borrow",
       mietenCatalogHeading: "Rent & Borrow",
@@ -456,6 +460,7 @@
       modeHint: "Découvre aussi Match, Chaos et le configurateur de tenues", hintCloseAria: "Fermer l'info",
       modeRailAria: "Changer de vue",
       rentalCta: "📅 Demander la location", rentalCloseAria: "Fermer",
+      rentalPriceLabel: "Prix de location", rentalPriceOnRequest: "Prix de location sur demande",
       rentalModalTitle: "Louer cette pièce",
       rentalStartLabel: "Du", rentalEndLabel: "Au",
       rentalDaysTemplate: "{days} jour(s) sélectionné(s)",
@@ -471,7 +476,8 @@
       rentalWhatsapp: "Envoyer la demande via WhatsApp", rentalEmail: "Envoyer la demande par e-mail",
       rentalConfigWarning: "Le contact de la boutique n'est pas encore configuré : renseigne ton numéro WhatsApp ou ton adresse e-mail dans config/shop-config.json pour recevoir les demandes de location.",
       rentalSubject: "Demande de location Disorder119",
-      rentalGreeting: "Bonjour ! Je souhaite louer la pièce suivante de l'archive Disorder119 :",
+      rentalEmailIntro: "Bonjour !\n\nJe suis intéressé(e) par la pièce suivante de l'archive Disorder119 et souhaiterais la louer :\n\n{item}",
+      rentalEmailClosing: "Je serais ravi(e) d'avoir un retour sur la disponibilité, le prix de location et la caution.\n\nBien cordialement",
       rentalPeriodLabel: "Période", rentalPurposeMsgLabel: "Utilisation", rentalMessageMsgLabel: "Message",
       pageTitleMieten: "Disorder119 — Location",
       mietenCatalogHeading: "Location",
@@ -955,21 +961,46 @@
     renderRentalActions();
   }
 
+  // "2026-09-10" -> "10.09.2026" (DE/FR) bzw. sprachgerechtes Datum (EN) -
+  // liesst sich in der fertig formulierten Mail natuerlicher als das rohe
+  // ISO-Format aus dem <input type="date">.
+  function fmtRentalDate(iso) {
+    if (!iso) return "";
+    var parts = iso.split("-");
+    if (parts.length !== 3) return iso;
+    var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    if (isNaN(d.getTime())) return iso;
+    var localeMap = { de: "de-DE", en: "en-GB", fr: "fr-FR" };
+    try {
+      return d.toLocaleDateString(localeMap[LANG] || "de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+    } catch (e) {
+      return iso;
+    }
+  }
+
+  // Fertig formulierte, komplette E-Mail statt einer reinen Stichpunktliste -
+  // liest sich wie eine echte Nachricht der Kundschaft an den Shop (Anrede,
+  // konkreter Artikel, Zeitraum, Zweck, Schlussformel), nicht wie ein reiner
+  // Datenauszug. Gilt fuer WhatsApp genauso wie fuer die E-Mail, damit beide
+  // Kanaele denselben, vollstaendigen Text verwenden.
   function buildRentalText() {
     var it = rentalCurrentItem;
     if (!it) return "";
     var purposeKey = RENTAL_PURPOSE_KEYS[rentalPurposeEl.value] || "rentalPurposeOther";
+    var itemLine = productAltText(it) + " (" + t("orderArticleAbbrev") + (it.article || it.id) + ")";
+    var periodLine = fmtRentalDate(rentalStartEl.value) + " – " + fmtRentalDate(rentalEndEl.value) +
+      " (" + tFormat("rentalDaysTemplate", { days: rentalDayCount() }) + ")";
     var lines = [
-      t("rentalGreeting"),
+      tFormat("rentalEmailIntro", { item: itemLine }),
       "",
-      productAltText(it) + " (" + t("orderArticleAbbrev") + (it.article || it.id) + ")",
-      t("rentalPeriodLabel") + ": " + rentalStartEl.value + " – " + rentalEndEl.value +
-        " (" + tFormat("rentalDaysTemplate", { days: rentalDayCount() }) + ")",
+      t("rentalPeriodLabel") + ": " + periodLine,
       t("rentalPurposeMsgLabel") + ": " + t(purposeKey)
     ];
     if (rentalMessageEl.value.trim()) {
       lines.push(t("rentalMessageMsgLabel") + ": " + rentalMessageEl.value.trim());
     }
+    lines.push("");
+    lines.push(t("rentalEmailClosing"));
     return lines.join("\n");
   }
 
@@ -1027,6 +1058,16 @@
     });
   }
 
+  // Fester Mietpreis pro Stueck (optional, siehe rental_price in
+  // data/items.json) statt einer dem Kunden vorgerechneten Formel -
+  // branchenueblich (Rent the Runway, By Rotation: jedes Stueck hat einen
+  // vom Anbieter festgelegten Preis, keine live berechnete Kundenanzeige).
+  // Ohne gepflegten Wert bleibt es bei "Mietpreis auf Anfrage".
+  function fmtRentalPrice(it) {
+    if (it.rental_price > 0) return t("rentalPriceLabel") + ": " + fmtPrice(it.rental_price);
+    return t("rentalPriceOnRequest");
+  }
+
   function openRentalModal(itemId) {
     var it = findItem(itemId);
     if (!it) return;
@@ -1037,7 +1078,7 @@
       (hero ? '<img src="' + hero + '" alt="" />' : "") +
       '<div class="rental-modal__item-body">' +
         '<div>' + escapeHtml(productAltText(it)) + "</div>" +
-        '<div class="rental-modal__item-price">' + fmtPriceDisplay(it.price) + "</div>" +
+        '<div class="rental-modal__item-price">' + fmtRentalPrice(it) + "</div>" +
       "</div>";
     var min = todayIso();
     rentalStartEl.min = min;
@@ -1577,7 +1618,9 @@
       var isSold = it.status === "Verkauft";
       var priceHtml = isSold
         ? '<span class="plate__price plate__price--sold">' + t("sold") + "</span>"
-        : '<span class="plate__price">' + (it.price_estimated ? t("priceEstimatedPrefix") : "") + fmtPriceDisplay(it.price) + "</span>";
+        : RENTAL_CATALOG_MODE
+          ? '<span class="plate__price">' + fmtRentalPrice(it) + "</span>"
+          : '<span class="plate__price">' + (it.price_estimated ? t("priceEstimatedPrefix") : "") + fmtPriceDisplay(it.price) + "</span>";
 
       plate.innerHTML =
         '<div class="plate__frame">' +
