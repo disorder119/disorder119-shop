@@ -354,6 +354,7 @@ def build_page(it, shop_config):
       <button type="button" class="lang-switch__btn" data-lang="fr">FR</button>
     </div>
     <a class="page-head__back" href="../../" data-i18n="backToArchive">← Zum Archiv</a>
+    <a class="page-head__cart" id="pageHeadCart" href="/cart/"><span data-i18n="cartLink">Warenkorb</span><span class="page-head__cart-count" id="pageHeadCartCount"></span></a>
   </div>
 </div>
 <div class="product">

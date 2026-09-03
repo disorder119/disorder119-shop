@@ -58,6 +58,19 @@ a { color: inherit; }
 }
 .page-head__back:hover { color: var(--paper); border-color: var(--paper); }
 
+.page-head__cart {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--paper);
+  padding: 8px 14px;
+}
+.page-head__cart:hover { background: var(--accent-text); border-color: var(--accent-text); }
+.page-head__cart-count { font-weight: 700; }
+
 .page-head__right { display: flex; align-items: center; gap: 12px; }
 
 .lang-switch { display: flex; gap: 2px; border: 1px solid var(--rule-strong); }

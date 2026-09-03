@@ -23,7 +23,7 @@
 
   var I18N = {
     de: {
-      langGroupAria: "Sprache wählen", backToArchive: "← Zum Archiv",
+      langGroupAria: "Sprache wählen", backToArchive: "← Zum Archiv", cartLink: "Warenkorb",
       prevPhotoAria: "Vorheriges Foto", nextPhotoAria: "Nächstes Foto", closeAria: "Schließen",
       factCategory: "Kategorie", factSize: "Größe", factColor: "Farbe", factCondition: "Zustand",
       factArticleNo: "Artikelnummer",
@@ -44,7 +44,7 @@
       autoDescTemplate: "{name}{facts}. Aus dem kuratierten Archiv von Disorder119."
     },
     en: {
-      langGroupAria: "Choose language", backToArchive: "← To the archive",
+      langGroupAria: "Choose language", backToArchive: "← To the archive", cartLink: "Cart",
       prevPhotoAria: "Previous photo", nextPhotoAria: "Next photo", closeAria: "Close",
       factCategory: "Category", factSize: "Size", factColor: "Colour", factCondition: "Condition",
       factArticleNo: "Item number",
@@ -65,7 +65,7 @@
       autoDescTemplate: "{name}{facts}. From the curated archive of Disorder119."
     },
     fr: {
-      langGroupAria: "Choisir la langue", backToArchive: "← Vers l'archive",
+      langGroupAria: "Choisir la langue", backToArchive: "← Vers l'archive", cartLink: "Panier",
       prevPhotoAria: "Photo précédente", nextPhotoAria: "Photo suivante", closeAria: "Fermer",
       factCategory: "Catégorie", factSize: "Taille", factColor: "Couleur", factCondition: "État",
       factArticleNo: "N° d'article",
@@ -308,6 +308,7 @@
   }
 
   var cartBtn = document.getElementById("addToCartBtn");
+  var pageHeadCartCount = document.getElementById("pageHeadCartCount");
   function refreshCartBtn() {
     if (!cartBtn) return;
     var cart = loadCart();
@@ -315,6 +316,15 @@
     cartBtn.textContent = inCart ? t("inCartRemove") : t("addToCart");
     cartBtn.classList.toggle("active", inCart);
   }
+  function refreshCartCount() {
+    if (!pageHeadCartCount) return;
+    var count = loadCart().length;
+    pageHeadCartCount.textContent = count ? " (" + count + ")" : "";
+  }
+  refreshCartCount();
+  window.addEventListener("storage", function (e) {
+    if (e.key === CART_KEY) { refreshCartBtn(); refreshCartCount(); }
+  });
   if (cartBtn) {
     cartBtn.addEventListener("click", function () {
       // Sicherheitsnetz: ein SOLD-Artikel darf nie in den Warenkorb gelangen,
@@ -325,6 +335,7 @@
       if (pos === -1) cart.push(IT.id); else cart.splice(pos, 1);
       saveCart(cart);
       refreshCartBtn();
+      refreshCartCount();
     });
   }
 

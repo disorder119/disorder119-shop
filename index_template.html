@@ -2,11 +2,11 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Kuratiertes Archiv für Designer-Mode aus zweiter Hand: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent u.v.m. Jedes Stück handverlesen, einzeln fotografiert und genau beschrieben.">
 <link rel="canonical" href="https://disorder119.com/">
-<link rel="icon" type="image/png" href="assets/favicon.png">
-<link rel="apple-touch-icon" href="assets/favicon.png">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/favicon.png">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Disorder119">
 <meta property="og:title" content="Disorder119 — Archiv-Katalog">
@@ -18,7 +18,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Disorder119 — Archiv-Katalog">
 <meta name="twitter:description" content="Kuratiertes Archiv für Designer-Mode aus zweiter Hand: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent u.v.m. Jedes Stück handverlesen, einzeln fotografiert und genau beschrieben.">
-<meta name="twitter:image" content="https://disorder119.github.io/disorder119-shop/assets/og-image.png">
+<meta name="twitter:image" content="https://disorder119.com/assets/og-image.png">
 <script type="application/ld+json">__ITEMLIST_JSONLD__</script>
 <title>Disorder119 — Archiv-Katalog</title>
 <style>
@@ -4052,6 +4052,15 @@
     shopWorkerUrl: ""
   };
 
+  // Bild-/Asset-Pfade aus items.json sind Site-Wurzel-relativ ohne fuehrenden
+  // Schraegstrich (z.B. "assets/img/123/0.webp"). Diese Seite (index.html)
+  // wird unveraendert auch fuer /cart/, /impressum/ usw. wiederverwendet
+  // (siehe build_special_pages() in build_site.py) - dort liegt das Dokument
+  // eine Ebene tiefer, ein simples "assets/..." wuerde also faelschlich zu
+  // "/cart/assets/..." aufgeloest. assetUrl() macht jeden Pfad wurzel-absolut,
+  // das funktioniert unabhaengig davon, auf welcher Seite/Tiefe er verwendet wird.
+  function assetUrl(p) { return p ? "/" + String(p).replace(/^\/+/, "") : ""; }
+
   // ---- Warenkorb ----
   var CART_KEY = "disorder119_cart";
   var cart = loadCart();
@@ -4196,7 +4205,7 @@
       var it = findItem(id);
       if (!it) return "";
       total += it.price;
-      var hero = it.gallery && it.gallery[0] ? it.gallery[0] : "";
+      var hero = assetUrl(it.gallery && it.gallery[0] ? it.gallery[0] : "");
       return '<div class="cart-line">' +
         '<div class="cart-line__frame">' + (hero ? '<img src="' + hero + '" alt="" loading="lazy" />' : "") + "</div>" +
         '<div class="cart-line__body">' +
@@ -4694,7 +4703,7 @@
       }
 
       var hero = it.gallery && it.gallery[0];
-      var imgSrc = hero || "";
+      var imgSrc = assetUrl(hero || "");
 
       var altText = escapeHtml(productAltText(it));
       var isSold = it.status === "Verkauft";
@@ -4725,7 +4734,7 @@
 
       if (canHover && it.gallery && it.gallery.length > 1) {
         var frameImg = plate.querySelector(".plate__frame img");
-        var secondSrc = it.gallery[1];
+        var secondSrc = assetUrl(it.gallery[1]);
         plate.addEventListener("mouseenter", function () { frameImg.src = secondSrc; });
         plate.addEventListener("mouseleave", function () { frameImg.src = imgSrc; });
       }
@@ -4802,7 +4811,7 @@
       return;
     }
     currentPhoto = Math.max(0, Math.min(index, gallery.length - 1));
-    modalImg.src = gallery[currentPhoto];
+    modalImg.src = assetUrl(gallery[currentPhoto]);
     modalImg.alt = currentItem.title + " — Foto " + (currentPhoto + 1) + " von " + gallery.length;
 
     var multi = gallery.length > 1;
@@ -5275,7 +5284,7 @@
     document.getElementById("swipeActions").style.display = "";
     document.getElementById("swipeProgress").textContent = (swipeIndex + 1) + " / " + swipeQueue.length;
     var it = swipeQueue[swipeIndex];
-    var photos = it.gallery && it.gallery.length ? it.gallery : [""];
+    var photos = (it.gallery && it.gallery.length ? it.gallery : [""]).map(assetUrl);
 
     var card = document.createElement("div");
     card.className = "swipe-card";
@@ -5488,7 +5497,7 @@
       btn.style.setProperty("--rot0", (Math.random() * 18 - 9).toFixed(1) + "deg");
       btn.style.setProperty("--rot1", (Math.random() * 18 - 9).toFixed(1) + "deg");
       btn.setAttribute("aria-label", it.title);
-      btn.innerHTML = '<img src="' + it.gallery[0] + '" alt="" loading="lazy" />';
+      btn.innerHTML = '<img src="' + assetUrl(it.gallery[0]) + '" alt="" loading="lazy" />';
       btn.addEventListener("click", function () {
         var picked = it;
         showClassic();
@@ -5773,7 +5782,7 @@
       if (slot.item) {
         var it = slot.item;
         row.innerHTML =
-          '<div class="outfit-slot__frame" data-slot="' + key + '"><img src="' + it.gallery[0] + '" alt="" /></div>' +
+          '<div class="outfit-slot__frame" data-slot="' + key + '"><img src="' + assetUrl(it.gallery[0]) + '" alt="" /></div>' +
           '<div class="outfit-slot__body" data-slot="' + key + '">' +
             '<div class="outfit-slot__label">' + outfitSlotLabel(key) + "</div>" +
             '<div class="outfit-slot__value">' + escapeHtml(it.title) + "</div>" +
@@ -5829,7 +5838,7 @@
     }
 
     function setCard(cardEl, item, onAspect) {
-      var src = item && (item.look || (item.gallery && item.gallery[0])) ? (item.look || item.gallery[0]) : "";
+      var src = assetUrl(item && (item.look || (item.gallery && item.gallery[0])) ? (item.look || item.gallery[0]) : "");
       var imgEl = cardEl.querySelector("img");
       outfitCropClasses.forEach(function (className) { cardEl.classList.remove(className); });
       if (src) {
@@ -5885,7 +5894,7 @@
       btn.type = "button";
       btn.className = "outfit-picker__item" + (slot.item && slot.item.id === it.id ? " outfit-picker__item--active" : "");
       btn.innerHTML =
-        '<div class="outfit-picker__item-frame"><img src="' + it.gallery[0] + '" alt="" loading="lazy" /></div>' +
+        '<div class="outfit-picker__item-frame"><img src="' + assetUrl(it.gallery[0]) + '" alt="" loading="lazy" /></div>' +
         '<div class="outfit-picker__item-title">' + escapeHtml(it.title) + "</div>" +
         '<div class="outfit-picker__item-price">' + fmtPrice(it.price) + "</div>";
       btn.addEventListener("click", function () {
