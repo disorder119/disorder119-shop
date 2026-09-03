@@ -128,6 +128,7 @@
       modeRailAria: "Ansicht wechseln",
       rentalCta: "Für Miete anfragen", rentalCloseAria: "Schließen",
       rentalPriceLabel: "Mietpreis", rentalPriceOnRequest: "Mietpreis auf Anfrage",
+      rentalSoldNote: "Bereits verkauft – nicht mehr mietbar",
       rentalModalTitle: "Stück ausleihen",
       rentalStartLabel: "Von", rentalEndLabel: "Bis",
       rentalDaysTemplate: "{days} Tag(e) ausgewählt",
@@ -294,6 +295,7 @@
       modeRailAria: "Switch view",
       rentalCta: "Request to rent", rentalCloseAria: "Close",
       rentalPriceLabel: "Rental price", rentalPriceOnRequest: "Rental price on request",
+      rentalSoldNote: "Already sold – no longer available to rent",
       rentalModalTitle: "Rent this piece",
       rentalStartLabel: "From", rentalEndLabel: "To",
       rentalDaysTemplate: "{days} day(s) selected",
@@ -461,6 +463,7 @@
       modeRailAria: "Changer de vue",
       rentalCta: "Demander la location", rentalCloseAria: "Fermer",
       rentalPriceLabel: "Prix de location", rentalPriceOnRequest: "Prix de location sur demande",
+      rentalSoldNote: "Déjà vendu – plus disponible à la location",
       rentalModalTitle: "Louer cette pièce",
       rentalStartLabel: "Du", rentalEndLabel: "Au",
       rentalDaysTemplate: "{days} jour(s) sélectionné(s)",
@@ -916,6 +919,7 @@
     event: "rentalPurposeEvent", private: "rentalPurposePrivate", other: "rentalPurposeOther"
   };
   var rentalBackdrop = document.getElementById("rentalModalBackdrop");
+  var rentalModalEl = document.querySelector(".rental-modal");
   var rentalItemEl = document.getElementById("rentalModalItem");
   var rentalStartEl = document.getElementById("rentalStart");
   var rentalEndEl = document.getElementById("rentalEnd");
@@ -1074,12 +1078,29 @@
     rentalCurrentItem = it;
     rentalLastFocusEl = document.activeElement;
     var hero = assetUrl(it.gallery && it.gallery[0] ? it.gallery[0] : "");
+    // Verkaufte Stuecke sind nicht mehr mietbar - Katalog/Artikelseite
+    // verstecken den Anfragen-Button dafuer bereits, aber der Deep-Link
+    // /mieten/?item=<id> (z.B. ein alter geteilter Link) rief bisher
+    // ungeprueft direkt dieses Formular auf. Statt es zu oeffnen, zeigt
+    // der Dialog jetzt nur Foto + Hinweis, keine Datums-/Anfragefelder
+    // (siehe .rental-modal--sold in app.css).
+    var isSold = it.status === "Verkauft";
+    rentalModalEl.classList.toggle("rental-modal--sold", isSold);
     rentalItemEl.innerHTML =
       (hero ? '<img src="' + hero + '" alt="" />' : "") +
       '<div class="rental-modal__item-body">' +
         '<div>' + escapeHtml(productAltText(it)) + "</div>" +
-        '<div class="rental-modal__item-price">' + fmtRentalPrice(it) + "</div>" +
+        '<div class="rental-modal__item-price' + (isSold ? " rental-modal__item-price--sold" : "") + '">' +
+          (isSold ? t("rentalSoldNote") : fmtRentalPrice(it)) +
+        "</div>" +
       "</div>";
+    rentalBackdrop.classList.remove("hidden");
+    document.body.classList.add("no-scroll");
+    if (isSold) {
+      rentalActionsEl.innerHTML = "";
+      rentalCloseBtn.focus();
+      return;
+    }
     var min = todayIso();
     rentalStartEl.min = min;
     rentalEndEl.min = min;
@@ -1088,8 +1109,6 @@
     rentalPurposeEl.value = "photo";
     rentalMessageEl.value = "";
     updateRentalSummary();
-    rentalBackdrop.classList.remove("hidden");
-    document.body.classList.add("no-scroll");
     rentalStartEl.focus();
   }
 

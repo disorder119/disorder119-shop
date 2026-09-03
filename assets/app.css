@@ -2460,6 +2460,13 @@
   }
   .rental-modal__item-body { font-size: 0.78rem; line-height: 1.4; }
   .rental-modal__item-price { color: var(--accent); font-weight: 700; }
+  .rental-modal__item-price--sold {
+    color: var(--text-muted);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.7rem;
+  }
 
   .rental-modal__row {
     display: flex;
@@ -2518,6 +2525,20 @@
     color: var(--text-faint);
     line-height: 1.5;
     margin-bottom: 16px;
+  }
+
+  /* Bereits verkaufte Stuecke: Formularfelder ausblenden statt eine
+     Miet-Anfrage fuer ein nicht mehr verfuegbares Stueck zuzulassen -
+     openRentalModal() setzt diese Klasse. Betrifft auch den Deep-Link
+     /mieten/?item=<id> (z.B. ein alter, geteilter Link zu einem
+     inzwischen verkauften Stueck), der bisher komplett ungeprueft direkt
+     das Formular geoeffnet hat. */
+  .rental-modal--sold .rental-modal__row,
+  .rental-modal--sold .rental-modal__field,
+  .rental-modal--sold .rental-modal__days,
+  .rental-modal--sold .rental-modal__error,
+  .rental-modal--sold .rental-modal__note {
+    display: none;
   }
 
   .rental-modal__actions {
