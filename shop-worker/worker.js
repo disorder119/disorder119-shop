@@ -35,7 +35,7 @@
  *      ADMIN_TOKEN (Bearer-Header) abrufbar. Das ist bewusst nur ein
  *      simples geteiltes Geheimnis als UEBERGANGSLOESUNG, bis ein echtes
  *      Admin-Auth-System (Supabase Auth + Cloudflare Access, siehe
- *      ADMIN_SETUP.md im disorder119-admin-Repo) steht - dann re-checkt
+ *      README.md im disorder119-admin-Repo) steht - dann re-checkt
  *      dieser Worker zusaetzlich die dortige Identitaet/JWT statt (oder
  *      zusaetzlich zu) diesem Token.
  *
