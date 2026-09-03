@@ -1977,6 +1977,12 @@
     background: radial-gradient(120% 85% at 50% 15%, var(--surface-2) 0%, var(--ink) 70%);
     border: 1px solid var(--rule-strong);
     overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-auto-rows: minmax(0, 1fr);
+    grid-auto-flow: row dense;
+    gap: clamp(3px, 0.7vh, 7px);
+    padding: clamp(3px, 0.7vh, 7px);
   }
 
   .outfit-figure__empty {
@@ -1995,17 +2001,52 @@
 
   .outfit-figure__empty.hidden-empty { opacity: 0; pointer-events: none; }
 
+  /* Zwei fruehere Ansaetze haben sich als Sackgasse erwiesen: (1) lose
+     gestreutes, einzeln rotiertes Moodboard (Jacke oben-links, Top mittig,
+     Hose winzig und schraeg dazwischen, Schuhe unten-links) wirkte wie
+     zufaellig hingeworfene Einzelteile statt wie ein Outfit. (2) der
+     Versuch, daraus per Ueberlappung eine "echte Silhouette" zu bauen
+     (Jacke HINTER Top an derselben Stelle, Bottom ueberlappend an der
+     Taille) schlug fehl, weil die Look-Fotos einzeln fotografierte,
+     rechteckige Bilder mit UNDURCHSICHTIGEM (nicht transparentem)
+     dunklem Hintergrund sind - beim Uebereinanderlegen entsteht dadurch
+     immer eine sichtbare rechteckige Kante/Naht statt eines nahtlosen
+     Uebergangs, egal wie praezise Position und Ausschnitt stimmen.
+
+     Deshalb jetzt der robuste Weg: KEINE Ueberlappung mehr. Jedes Teil
+     bekommt seine eigene, klar begrenzte Karte (eigener Rahmen/Hintergrund)
+     in einem 2-Spalten-Raster, Reihenfolge = Anziehreihenfolge (Jacke,
+     Oberteil, Unterteil, Schuhe, Accessoire). Das vollstaendige Foto wird
+     unbeschnitten gezeigt (object-fit:contain) - keine Koerperteil-
+     Ausschnitte mehr noetig, weil keine zweite Karte mehr direkt "dahinter"
+     weitergehen muss. Die Look-Fotos sind sehr hochformatig (~525x1093px,
+     Seitenverhaeltnis ~0.48) - in EINER breiten, kurzen Zeile wuerden sie
+     winzig mit viel leerem Schwarz drumherum wirken. Ein 2-Spalten-Raster
+     gibt jeder Karte eine schmalere, hoehere Zelle, die deutlich naeher am
+     tatsaechlichen Fotoformat liegt.
+
+     Leere Slots bekommen display:none statt nur opacity:0 (grid-auto-flow:
+     row dense sorgt dafuer, dass die sichtbaren Karten dann ohne Luecken
+     von oben links auffuellen, unabhaengig davon, welche Kombination von
+     Slots gerade gefuellt ist - z.B. bei einem Kleid ohne Bottom-Slot). */
   .look-card {
-    position: absolute;
-    padding: 8%;
-    background: transparent;
-    opacity: 0;
-    pointer-events: none;
-    filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.45));
-    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+    display: none;
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    min-width: 0;
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    overflow: hidden;
   }
 
-  .look-card.visible { opacity: 1; }
+  .look-card.visible { display: flex; animation: lookCardIn 0.25s ease; }
+
+  @keyframes lookCardIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
 
   .look-card img {
     display: block;
@@ -2013,131 +2054,9 @@
     height: 100%;
     object-fit: contain;
     object-position: center;
+    padding: 6%;
+    box-sizing: border-box;
   }
-
-  /* Im Look-Board zeigen wir bei getragenen Produktfotos nur den
-     koerperrelevanten Ausschnitt. Die Klassen werden ausschliesslich von
-     renderOutfitFigure gesetzt; Produktkarten, Modals und Artikelseiten
-     behalten daher immer ihre vollstaendigen Originalbilder.
-
-     Reines CSS (object-fit:cover mit fester object-position) statt einer
-     in JS berechneten Breiten-Fill-Skalierung + zusaetzlichem Zoomfaktor
-     (frueher hier im Einsatz): cover skaliert IMMER so hoch, dass die Karte
-     ohne Luecken gefuellt wird, unabhaengig vom Seitenverhaeltnis des
-     jeweiligen Fotos - die Artikelfotos schwanken stark (bei den
-     Schuh-Fotos z.B. zwischen ~0.8 und ~2.0 Breite/Hoehe-Verhaeltnis).
-     Ein fixer JS-Zoomfaktor passte dadurch nie fuer alle gleichzeitig
-     (mal zu eng, mal zu weit, bei sehr breiten Fotos sogar mit sichtbaren
-     Luecken oben/unten im Rahmen). object-fit:cover braucht dagegen keine
-     Fallunterscheidung - der Browser berechnet die korrekte Skalierung pro
-     Bild automatisch. */
-  .look-card--crop-upper,
-  .look-card--crop-lower,
-  .look-card--crop-feet {
-    padding: 0;
-    overflow: hidden;
-  }
-
-  .look-card--crop-upper img,
-  .look-card--crop-lower img,
-  .look-card--crop-feet img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    padding: 0;
-    object-fit: cover;
-  }
-
-  .look-card--crop-upper img { object-position: center top; }
-  .look-card--crop-lower img { object-position: center bottom; }
-  .look-card--crop-feet img { object-position: center bottom; }
-
-  /* Vorher lagen die Teile als lose gestreutes, einzeln verdreht(!) rotiertes
-     Moodboard auf der Buehne (Jacke oben-links, Top mittig, Hose winzig und
-     schraeg irgendwo dazwischen, Schuhe unten-links) - das ergab optisch
-     keinen zusammenhaengenden Menschen, sondern wirkte wie zufaellig
-     hingeworfene Einzelteile (konkret bemaengelt: eine Hose, die verdreht
-     und viel zu klein losgeloest neben dem Schuhkarton "schwebte"). Jetzt
-     eine echte vertikale Silhouette ohne jede Rotation: Kopf/Oberkoerper
-     oben, Beine darunter, Schuhe ganz unten, alle mittig auf derselben
-     Achse - genau wie an einer angezogenen Person, nicht als Collage.
-     Jacke liegt als etwas breitere Schicht HINTER dem Top an derselben
-     Position (wie tatsaechlich getragen, guckt an den Raendern etwas
-     hervor), Bottom schliesst mit leichter UEberlappung direkt an die
-     Taille an, Schuhe sind von unten verankert (Buehnenhoehe ist nicht
-     fix, siehe Kommentar unten). Die Prozentwerte sind bewusst gegen echte
-     Buehnenmasse (Desktop 389x697, Mobil 231x576) durchgemessen, damit sich
-     nichts ueberlappt oder abgeschnitten wird. */
-  /* Groesse ueber HOEHE statt Breite vorgeben (Breite ergibt sich aus
-     aspect-ratio): die Buehne ist mal hochformatig-schmal (Handy), mal
-     breit-flach (kleineres Desktop-Fenster) - bei breiten-basierter Groesse
-     + aspect-ratio wird die daraus resultierende Hoehe auf einer flachen
-     Buehne unkontrolliert riesig (gemessen: 325px Kartenhoehe auf einer nur
-     300px hohen Buehne!) und die Karten ueberlappen sich chaotisch, egal
-     wie sorgfaeltig top/left gesetzt sind. Hoehen-basierte Prozentwerte
-     bleiben dagegen IMMER proportional zur tatsaechlichen Buehnenhoehe,
-     unabhaengig von deren Seitenverhaeltnis - garantiert ueberlappungsfrei
-     nachgemessen auf einer breiten 370x300-Buehne UND einer hohen
-     231x576-Buehne. */
-  .look-card--jacket {
-    top: 1%; height: 46%; left: 50%; aspect-ratio: 3 / 4; z-index: 1;
-    transform: translateX(-50%) scale(0.97);
-  }
-  .look-card--jacket.visible { transform: translateX(-50%) scale(1); }
-
-  .look-card--top {
-    top: 3%; height: 40%; left: 50%; aspect-ratio: 3 / 4; z-index: 2;
-    transform: translateX(-50%) scale(0.97);
-  }
-  .look-card--top.visible { transform: translateX(-50%) scale(1); }
-
-  .look-card--bottom {
-    /* Ueberlappt das Oberteil bewusst leicht an der Taille (top:38% statt
-       nahtlos an dessen Ende), damit die Silhouette durchgehend wirkt statt
-       eine sichtbare Luecke zwischen Oberteil und Hose zu zeigen. */
-    top: 38%; height: 32%; left: 50%; aspect-ratio: 3 / 4; z-index: 2;
-    transform: translateX(-50%) scale(0.97);
-  }
-  .look-card--bottom.visible { transform: translateX(-50%) scale(1); }
-
-  .look-card--shoes {
-    /* Von unten verankert (bottom statt top): so bleibt der untere Rand
-       immer sicher innerhalb des Rahmens, egal wie hoch die Buehne gerade
-       ist. */
-    bottom: 2%; height: 18%; left: 50%; aspect-ratio: 3 / 2; z-index: 3;
-    transform: translateX(-50%) scale(0.97);
-  }
-  .look-card--shoes.visible { transform: translateX(-50%) scale(1); }
-
-  .look-card--accessory {
-    /* Accessoires (Muetzen, Taschen, Guertel, Sonnenbrillen) gehoeren nicht
-       eindeutig auf die Koerperachse - bleiben als kleinerer, ruhiger
-       Akzent oben rechts statt Teil der Silhouette zu erzwingen. Von RECHTS
-       verankert (right statt left+translateX): bei hohen/schmalen Buehnen
-       (Handy) ergibt height:20% eine recht breite Karte - mit einer von der
-       Mitte aus zentrierten Position ragte die dadurch teils ueber den
-       rechten Rand hinaus (nachgemessen: 413px Kartenrand auf einer nur
-       389px breiten Buehne). right:4% haelt den rechten Rand garantiert
-       innerhalb der Buehne, unabhaengig von Buehnenform und Kartengroesse. */
-    top: 2%; height: 20%; right: 4%; aspect-ratio: 1 / 1; z-index: 4;
-    transform: scale(0.97);
-  }
-  .look-card--accessory.visible { transform: scale(1); }
-
-  .look-card--accessory--tall { aspect-ratio: 3 / 4; }
-
-  /* Sehr breite Motive (Guertel etc.) wuerden in der quadratischen Ecke auf
-     einen kaum sichtbaren duennen Strich schrumpfen (object-fit:contain
-     zwingt sie auf die knappere Seite) - stattdessen ein breiter Streifen
-     auf Hueft-Hoehe, wo ein Guertel ohnehin getragen wuerde. Seitenverhaeltnis
-     wird per JS anhand der echten Bildmasse erkannt (renderOutfitFigure). */
-  .look-card--accessory--wide {
-    top: 42%; left: 8%; width: 84%; aspect-ratio: 11 / 3; z-index: 4;
-    transform: rotate(0deg) scale(0.96);
-  }
-  .look-card--accessory--wide.visible { transform: rotate(0deg) scale(1); }
 
   .outfit-stack {
     width: min(360px, 100%);

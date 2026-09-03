@@ -2874,94 +2874,31 @@
 
   function renderOutfitFigure() {
     var anyVisible = false;
-    var outfitCropClasses = ["look-card--crop-upper", "look-card--crop-lower", "look-card--crop-feet"];
 
-    function outfitCropClass(item) {
-      // Nur die eigens fuer den Look-Baukasten hinterlegten Tragebilder
-      // beschneiden. Falls ein Artikel kein `look`-Bild besitzt und auf das
-      // normale Galeriefoto zurueckfaellt, bleibt dieses vollstaendig sichtbar.
-      if (!item || !item.look) return "";
-      if (["Tops", "Shirts", "Knitwear", "Jackets", "Coats"].indexOf(item.category) !== -1) {
-        return "look-card--crop-upper";
-      }
-      if (["Pants", "Skirts"].indexOf(item.category) !== -1) {
-        return "look-card--crop-lower";
-      }
-      if (item.category === "Shoes") return "look-card--crop-feet";
-      // Kleider und Accessoires sollen weiterhin als Ganzes sichtbar sein.
-      return "";
-    }
-
-    // Setzt Breite/Hoehe/Position des Fotos im Look-Board anhand der
-    // TATSAECHLICHEN Bildmasse (nicht anhand eines fix angenommenen
-    // Seitenverhaeltnisses - siehe Kommentar bei .look-card--crop-* in
-    // app.css). Skaliert das Bild so, dass es die Kartenbreite exakt
-    // ausfuellt (wie object-fit:cover es fuer die Breite ohnehin taete),
-    // haengt es dann oben ("upper") oder unten ("lower"/"feet") an - so
-    // beginnt/endet der sichtbare Ausschnitt immer exakt am echten Bildrand
-    // statt an einer geschaetzten Prozentmarke, die bei sehr hohen
-    // Ganzkoerperfotos mit viel Stand-/Bodenflaeche komplett daneben liegt.
-    // "feet" zoomt zusaetzlich per transform in den untersten Bereich, weil
-    // ein reiner Breiten-Fill dort noch das ganze Bein zeigen wuerde.
-    // Positionierung/Ausschnitt der Karte liegt komplett in CSS
-    // (.look-card--crop-upper/-lower/-feet img { object-fit: cover;
-    // object-position: ... }) - object-fit:cover skaliert IMMER korrekt auf
-    // die tatsaechliche Kartengroesse hoch, unabhaengig vom Seitenverhaeltnis
-    // des jeweiligen Fotos (garantiert luecken- und verzerrungsfrei, im
-    // Gegensatz zu einer manuell in JS berechneten Breiten-Fill-Skalierung +
-    // fixem scale()-Zoomfaktor, die hier frueher stand: bei den Schuh-Fotos
-    // reichen die echten Seitenverhaeltnisse von ~0.8 bis ~2.0 - ein einzelner
-    // fixer Zoomfaktor sah dadurch je nach Foto entweder zu eng oder zu weit
-    // aus bzw. liess bei sehr breiten Fotos oben/unten Luecken im Rahmen).
-    // JS setzt hier nur noch die Crop-Klasse fuer object-position, keine
-    // inline Groessen/Transforms mehr.
-    function setCard(cardEl, item, onAspect) {
+    // Jede Karte zeigt das vollstaendige Look-Foto unbeschnitten
+    // (object-fit:contain, siehe .look-card in app.css) - keine
+    // Koerperteil-Crops/Sonderformen mehr noetig, da die Karten nicht mehr
+    // uebereinandergelegt werden, sondern als eigene Reihe in einer Spalte
+    // stehen (siehe Kommentar bei .look-card in app.css).
+    function setCard(cardEl, item) {
       var src = assetUrl(item && (item.look || (item.gallery && item.gallery[0])) ? (item.look || item.gallery[0]) : "");
       var imgEl = cardEl.querySelector("img");
-      outfitCropClasses.forEach(function (className) { cardEl.classList.remove(className); });
-      imgEl.style.width = ""; imgEl.style.height = "";
-      imgEl.style.top = ""; imgEl.style.bottom = ""; imgEl.style.transform = "";
       if (src) {
-        var cropClass = outfitCropClass(item);
-        if (cropClass) cardEl.classList.add(cropClass);
         if (imgEl.getAttribute("src") !== src) imgEl.src = src;
         imgEl.alt = item.title;
         cardEl.classList.add("visible");
         anyVisible = true;
-        if (onAspect) {
-          if (imgEl.complete && imgEl.naturalWidth) onAspect(imgEl);
-          else imgEl.onload = function () { onAspect(imgEl); };
-        }
       } else {
         cardEl.classList.remove("visible");
-        if (onAspect) cardEl.classList.remove("look-card--accessory--wide", "look-card--accessory--tall");
       }
     }
     setCard(document.getElementById("figTop"), outfitSlots.top.item);
     setCard(document.getElementById("figJacket"), outfitSlots.jacket.item);
     setCard(document.getElementById("figBottom"), outfitIsDress() ? null : outfitSlots.bottom.item);
     setCard(document.getElementById("figShoes"), outfitSlots.shoes.item);
-    setCard(document.getElementById("figAccessory"), outfitSlots.accessory.item, function (imgEl) {
-      // Sehr breite Fotos (Guertel) bekommen einen breiten Huefthoehe-Streifen
-      // statt in die quadratische Standard-Ecke gequetscht zu werden; sehr
-      // hochformatige (Muetzen auf Buesten-Fotos) ein hochformatiges Feld.
-      var accEl = document.getElementById("figAccessory");
-      var ratio = imgEl.naturalWidth / imgEl.naturalHeight;
-      accEl.classList.toggle("look-card--accessory--wide", ratio >= 1.6);
-      accEl.classList.toggle("look-card--accessory--tall", ratio <= 0.85);
-    });
+    setCard(document.getElementById("figAccessory"), outfitSlots.accessory.item);
     document.getElementById("lookBoardEmpty").classList.toggle("hidden-empty", anyVisible);
   }
-
-  // Accessoire-Erkennung (schmal/breit/hochformatig, siehe onAspect oben)
-  // haengt indirekt von der Kartengroesse ab - bei Rotation/Fenstergroesse
-  // einmal neu rendern, damit sie konsistent bleibt.
-  var outfitResizeTimer = null;
-  window.addEventListener("resize", function () {
-    if (outfitView.classList.contains("hidden")) return;
-    clearTimeout(outfitResizeTimer);
-    outfitResizeTimer = setTimeout(renderOutfitFigure, 150);
-  });
 
   var outfitPickerSize = "";
   var outfitPickerPriceMax = null;
