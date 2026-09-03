@@ -915,6 +915,33 @@
     return lines.join("\n");
   }
 
+  // Meldet die Anfrage zusaetzlich zur WhatsApp-/E-Mail-Nachricht best-effort
+  // an den Shop-Worker (POST /rental-request, siehe shop-worker/worker.js),
+  // damit sie im (kuenftigen) Admin-Dashboard auftaucht. Nur aktiv, wenn
+  // shopWorkerUrl in config/shop-config.json gesetzt ist - ohne Worker-URL
+  // funktioniert die Anfrage weiterhin unveraendert rein per WhatsApp/E-Mail.
+  // Fehler werden bewusst verschluckt: das Absenden der eigentlichen
+  // Anfrage (WhatsApp/E-Mail) darf niemals von der Erreichbarkeit des
+  // Workers abhaengen.
+  var rentalReportedForKey = null;
+  function reportRentalToBackend() {
+    if (!SHOP_CONFIG.shopWorkerUrl || !rentalCurrentItem) return;
+    var key = rentalCurrentItem.id + "|" + rentalStartEl.value + "|" + rentalEndEl.value;
+    if (rentalReportedForKey === key) return;
+    rentalReportedForKey = key;
+    fetch(SHOP_CONFIG.shopWorkerUrl.replace(/\/+$/, "") + "/rental-request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        itemId: rentalCurrentItem.id,
+        start: rentalStartEl.value,
+        end: rentalEndEl.value,
+        purpose: rentalPurposeEl.value,
+        message: rentalMessageEl.value.trim()
+      })
+    }).catch(function () {});
+  }
+
   function renderRentalActions() {
     var hasWhatsapp = !!SHOP_CONFIG.whatsappNumber;
     var hasEmail = !!SHOP_CONFIG.email;
@@ -927,16 +954,19 @@
     var encoded = encodeURIComponent(buildRentalText());
     if (hasWhatsapp) {
       html += '<a href="https://wa.me/' + SHOP_CONFIG.whatsappNumber + '?text=' + encoded +
-        '" target="_blank" rel="noopener">' + t("rentalWhatsapp") + '</a>';
+        '" target="_blank" rel="noopener" data-rental-submit="whatsapp">' + t("rentalWhatsapp") + '</a>';
     }
     if (hasEmail) {
       html += '<a href="mailto:' + SHOP_CONFIG.email + '?subject=' + encodeURIComponent(t("rentalSubject")) +
-        '&body=' + encoded + '">' + t("rentalEmail") + '</a>';
+        '&body=' + encoded + '" data-rental-submit="email">' + t("rentalEmail") + '</a>';
     }
     if (!hasWhatsapp && !hasEmail) {
       html += '<p class="rental-modal__config-warning">' + t("rentalConfigWarning") + '</p>';
     }
     rentalActionsEl.innerHTML = html;
+    Array.prototype.forEach.call(rentalActionsEl.querySelectorAll("[data-rental-submit]"), function (a) {
+      a.addEventListener("click", reportRentalToBackend);
+    });
   }
 
   function openRentalModal(itemId) {

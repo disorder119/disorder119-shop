@@ -22,11 +22,30 @@
  *      verkauft. Beide Wege sind idempotent (pruefen erst, ob der Artikel
  *      nicht schon SOLD ist), doppeltes Ausfuehren richtet nichts an.
  *
+ * Zusaetzlich zum Kauf-Ablauf nimmt der Worker auch Verleih-Anfragen
+ * (Musikvideo/Shooting) entgegen und macht sie fuer ein spaeteres
+ * Admin-Dashboard abrufbar:
+ *   5. POST /rental-request  -> vom Verleih-Modal auf der Startseite
+ *      aufgerufen (sofern SHOP_CONFIG.shopWorkerUrl gesetzt ist), validiert
+ *      Artikel/Zeitraum server-seitig und haengt die Anfrage an
+ *      data/rental-requests.json an (gleiche GitHub-Contents-API-Technik
+ *      wie markSold() - keine eigene Datenbank noetig fuer dieses
+ *      Datenvolumen).
+ *   6. GET  /rental-requests -> fuers Admin-Dashboard, nur mit gueltigem
+ *      ADMIN_TOKEN (Bearer-Header) abrufbar. Das ist bewusst nur ein
+ *      simples geteiltes Geheimnis als UEBERGANGSLOESUNG, bis ein echtes
+ *      Admin-Auth-System (Supabase Auth + Cloudflare Access, siehe
+ *      ADMIN_SETUP.md im disorder119-admin-Repo) steht - dann re-checkt
+ *      dieser Worker zusaetzlich die dortige Identitaet/JWT statt (oder
+ *      zusaetzlich zu) diesem Token.
+ *
  * Noetige Secrets (per `wrangler secret put NAME` setzen, s. README.md):
  *   PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_WEBHOOK_ID  (developer.paypal.com)
  *   DHL_API_KEY, DHL_API_SECRET, DHL_EKP, DHL_BILLING_NUMBER   (developer.dhl.com)
  *   GITHUB_TOKEN   (fein granulares PAT, nur "Contents: Read & write" auf
  *                    dieses eine Repo - siehe README.md)
+ *   ADMIN_TOKEN    (frei gewaehltes, langes Zufallsgeheimnis - Uebergangs-
+ *                    Login fuers Admin-Dashboard, s.o.)
  *
  * Nicht-geheime Konfiguration (unten in CONFIG):
  *   GITHUB_REPO, PAYPAL_API_BASE (sandbox waehrend des Testens, live danach)
@@ -37,18 +56,42 @@ const CONFIG = {
   githubRepo: "disorder119-shop",
   githubBranch: "main",
   itemsPath: "data/items.json",
+  rentalRequestsPath: "data/rental-requests.json",
   // https://api-m.sandbox.paypal.com waehrend des Testens,
   // https://api-m.paypal.com sobald es mit echtem Geld laufen soll.
   paypalApiBase: "https://api-m.sandbox.paypal.com",
   currency: "EUR",
 };
 
+// Production darf keine beliebige Origin spiegeln (frueher: origin || "*") -
+// nur die tatsaechlichen Disorder119-Domains + das kuenftige Admin-Dashboard
+// + localhost fuers lokale Testen duerfen den Worker aufrufen.
+const ALLOWED_ORIGINS = [
+  "https://disorder119.com",
+  "https://www.disorder119.com",
+  "https://admin.disorder119.com",
+  "http://localhost:8765",
+];
+
+function isAllowedOrigin(origin) {
+  return ALLOWED_ORIGINS.indexOf(origin) !== -1;
+}
+
 function corsHeaders(origin) {
   return {
-    "Access-Control-Allow-Origin": origin || "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
+}
+
+/** Uebergangsloesung bis Supabase Auth + Cloudflare Access stehen (siehe
+ *  Kommentar oben): ein einzelnes, langes, per `wrangler secret put
+ *  ADMIN_TOKEN` gesetztes Geheimnis. Nie im Code hinterlegen. */
+function isAdminAuthorized(request, env) {
+  const auth = request.headers.get("Authorization") || "";
+  const token = auth.replace(/^Bearer\s+/i, "").trim();
+  return !!env.ADMIN_TOKEN && token.length > 0 && token === env.ADMIN_TOKEN;
 }
 
 function json(data, status, origin) {
@@ -185,6 +228,45 @@ async function markSold(env, id, orderId) {
   return { item, alreadySold: false };
 }
 
+// ---------- Verleih-Anfragen ----------
+// Gleiche Technik wie loadItems()/markSold() oben: data/rental-requests.json
+// im Repo ist die "Datenbank" (kein eigener DB-Server fuer dieses geringe
+// Datenvolumen noetig). Datei existiert anfangs nicht - wird beim ersten
+// Request angelegt.
+
+async function loadRentalRequests(env) {
+  const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.rentalRequestsPath}?ref=${CONFIG.githubBranch}`;
+  const res = await fetch(url, { headers: ghHeaders(env) });
+  if (res.status === 404) return { requests: [], sha: null };
+  if (!res.ok) throw new Error("Verleih-Anfragen konnten nicht geladen werden: " + (await res.text()));
+  const file = await res.json();
+  const text = new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g, "")), (c) => c.charCodeAt(0)));
+  return { requests: JSON.parse(text), sha: file.sha };
+}
+
+async function appendRentalRequest(env, record) {
+  const { requests, sha } = await loadRentalRequests(env);
+  requests.unshift(record); // neueste zuerst, praktisch fuers Admin-Dashboard
+  const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(requests, null, 2))));
+  const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.rentalRequestsPath}`;
+  const body = {
+    message: `Verleih-Anfrage: ${record.itemTitle} (${record.start} – ${record.end})`,
+    content: newContent,
+    branch: CONFIG.githubBranch,
+  };
+  if (sha) body.sha = sha;
+  const res = await fetch(url, { method: "PUT", headers: ghHeaders(env), body: JSON.stringify(body) });
+  if (!res.ok) throw new Error("Verleih-Anfrage konnte nicht gespeichert werden: " + (await res.text()));
+  return record;
+}
+
+function rentalDayCount(start, end) {
+  const s = new Date(start + "T00:00:00");
+  const e = new Date(end + "T00:00:00");
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
+  return Math.round((e - s) / 86400000) + 1;
+}
+
 // ---------- DHL ----------
 
 async function dhlAccessToken(env) {
@@ -298,6 +380,46 @@ export default {
           if (itemId) await markSold(env, itemId, body.resource?.supplementary_data?.related_ids?.order_id);
         }
         return json({ ok: true }, 200, origin);
+      }
+
+      if (url.pathname === "/rental-request" && request.method === "POST") {
+        // Nur echte Disorder119-Seiten duerfen Anfragen anlegen - keine
+        // beliebige Website darf hier Datensaetze in unser Repo schreiben.
+        if (!isAllowedOrigin(origin)) return json({ error: "Origin nicht erlaubt." }, 403, origin);
+        const body = await request.json();
+        const itemId = body.itemId;
+        const start = String(body.start || "");
+        const end = String(body.end || "");
+        const purpose = String(body.purpose || "other").slice(0, 40);
+        const message = String(body.message || "").slice(0, 2000);
+        if (!itemId || !start || !end) return json({ error: "Fehlende Angaben." }, 400, origin);
+        const days = rentalDayCount(start, end);
+        if (!days || days < 1) return json({ error: "Ungueltiger Zeitraum." }, 400, origin);
+        // Server-seitig gegen den echten Katalog pruefen statt dem Client zu
+        // vertrauen - derselbe Grundsatz wie beim Kaufpreis in /create-order.
+        const item = await findItem(env, itemId);
+        if (!item) return json({ error: "Unbekannter Artikel." }, 404, origin);
+        const record = {
+          id: crypto.randomUUID(),
+          itemId: item.id,
+          itemTitle: `${item.brand || ""} ${item.title}`.trim(),
+          articleNo: item.article || item.id,
+          start,
+          end,
+          days,
+          purpose,
+          message,
+          status: "new",
+          createdAt: new Date().toISOString(),
+        };
+        await appendRentalRequest(env, record);
+        return json({ ok: true }, 200, origin);
+      }
+
+      if (url.pathname === "/rental-requests" && request.method === "GET") {
+        if (!isAdminAuthorized(request, env)) return json({ error: "Nicht autorisiert." }, 401, origin);
+        const { requests } = await loadRentalRequests(env);
+        return json({ requests }, 200, origin);
       }
 
       return json({ error: "Not found" }, 404, origin);

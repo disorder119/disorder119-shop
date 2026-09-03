@@ -57,6 +57,24 @@ Label.
 magst, sag Bescheid, dann finden wir einen sichereren Weg das zu
 uebergeben).
 
+### 5. Admin-Token (fuers Verleih-Anfragen-Dashboard)
+Uebergangsloesung, bis das echte Admin-Login (Supabase Auth + Cloudflare
+Access, siehe `disorder119-admin`-Repo) steht: ein einziges, langes
+Zufallsgeheimnis, das der Worker gegen den `Authorization: Bearer ...`-
+Header von `GET /rental-requests` prueft.
+
+1. Generiere z.B. mit `openssl rand -hex 32` (Terminal) ein langes,
+   zufaelliges Token.
+2. `wrangler secret put ADMIN_TOKEN` im `shop-worker/`-Ordner, Wert
+   einfuegen.
+3. Dasselbe Token traegst du im Admin-Dashboard (`disorder119-admin`-Repo)
+   beim ersten Login ein - siehe dortige README.
+
+Dieses Token ist aequivalent zu einem Passwort fuers Admin-Dashboard -
+niemals committen, niemals im Klartext teilen, bei Verdacht auf Missbrauch
+sofort per `wrangler secret put ADMIN_TOKEN` neu setzen (macht das alte
+Token augenblicklich ungueltig).
+
 ## Was danach automatisch passiert
 
 Sobald alle Secrets gesetzt sind:
@@ -72,3 +90,19 @@ Kosten: PayPal-Transaktionsgebuehr (branchenueblich, kein Weg drumrum),
 normales DHL-Porto pro Paket. Keine Monats-/Plattformgebuehr fuer
 PayPal, Cloudflare Worker oder GitHub - alles bleibt im kostenlosen Rahmen
 bei diesem Bestellvolumen.
+
+## Verleih-Anfragen (Musikvideo/Shooting)
+
+Sobald `shopWorkerUrl` in `config/shop-config.json` auf die Worker-URL
+zeigt, sendet das Verleih-Modal auf der Startseite jede Anfrage zusaetzlich
+zur WhatsApp-/E-Mail-Nachricht per `POST /rental-request` an den Worker.
+Der Worker prueft Artikel und Zeitraum server-seitig nach und haengt die
+Anfrage an `data/rental-requests.json` im Repo an (dieselbe Technik wie bei
+`data/items.json` - kein eigener Datenbankserver noetig).
+
+Das Admin-Dashboard (separates, privates Repo `disorder119-admin` - noch
+nicht deployed, Code liegt bereit) ruft `GET /rental-requests` mit dem
+Admin-Token ab und zeigt die Liste an. Solange `apiBaseUrl`/`shopWorkerUrl`
+nicht gesetzt ist, passiert auf der Website gar nichts Zusaetzliches - die
+Verleih-Anfrage funktioniert dann weiterhin wie bisher rein per WhatsApp/
+E-Mail, nur eben ohne zusaetzliche Dashboard-Ansicht.
