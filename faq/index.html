@@ -3036,26 +3036,6 @@
   .plate__cart-btn,
   .plate__size { display: none !important; }
 
-  .plate__favorite {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 3;
-    width: 34px;
-    height: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 0;
-    background: transparent;
-    color: rgba(242, 239, 231, 0.64);
-    font-family: inherit;
-    font-size: 0.92rem;
-    cursor: pointer;
-  }
-
-  .plate__favorite[aria-pressed="true"] { color: var(--paper); }
-
   .plate__body {
     gap: 3px;
     padding-top: 10px;
@@ -3176,7 +3156,6 @@
     }
 
     .plate__frame img { padding: 2%; }
-    .plate__favorite { top: 5px; right: 5px; width: 32px; height: 32px; }
     .plate__body { padding-top: 8px; }
     .plate__brand { font-size: 0.58rem; }
     .plate__title { font-size: 0.7rem; }
@@ -3344,7 +3323,6 @@
       <button type="button" data-account-target="account" data-i18n="menuAccount">Mein Konto</button>
       <button type="button" data-account-target="orders" data-i18n="menuOrders">Bestellungen</button>
       <button type="button" data-account-target="addresses" data-i18n="menuAddresses">Adressen</button>
-      <button type="button" id="menuFavorites" data-i18n="menuFavorites">Favoriten</button>
       <button type="button" id="menuCart">
         <span data-i18n="menuCart">Warenkorb</span>
         <span>(<span id="menuCartCount">0</span>)</span>
@@ -3364,7 +3342,7 @@
     <button type="button" class="account-panel__close" id="accountClose" data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
     <p class="account-panel__eyebrow" data-i18n="accountEyebrow">DISORDER119 Kundenkonto</p>
     <h2 id="accountTitle" data-i18n="accountSetupTitle">Sicheres Kundenkonto vorbereiten</h2>
-    <p data-i18n="accountSetupBody">Anmeldung, Passwort-Reset, Adressen, Favoriten und Bestellungen benötigen eine geschützte Datenbank- und Login-Verbindung. Diese wird nicht unsicher im Browser simuliert.</p>
+    <p data-i18n="accountSetupBody">Anmeldung, Passwort-Reset, Adressen und Bestellungen benötigen eine geschützte Datenbank- und Login-Verbindung. Diese wird nicht unsicher im Browser simuliert.</p>
   </section>
 </div>
 
@@ -3619,17 +3597,16 @@
       menuPants: "Hosen", menuSkirts: "Röcke", menuDresses: "Kleider", menuShoes: "Schuhe",
       menuAccessories: "Accessoires", menuBrands: "Marken", menuArchive: "Archiv",
       menuAccount: "Mein Konto", menuOrders: "Bestellungen", menuAddresses: "Adressen",
-      menuFavorites: "Favoriten", menuCart: "Warenkorb",
+      menuCart: "Warenkorb",
       loadMore: "Weitere laden", footerAbout: "Über Disorder119", footerFaq: "FAQ", footerContact: "Kontakt",
-      favoriteAddAria: "Zu Favoriten hinzufügen", favoriteRemoveAria: "Aus Favoriten entfernen",
       accountEyebrow: "DISORDER119 Kundenkonto", accountSetupTitle: "Sicheres Kundenkonto vorbereiten",
-      accountSetupBody: "Anmeldung, Passwort-Reset, Adressen, Favoriten und Bestellungen benötigen eine geschützte Datenbank- und Login-Verbindung. Diese wird nicht unsicher im Browser simuliert.",
+      accountSetupBody: "Anmeldung, Passwort-Reset, Adressen und Bestellungen benötigen eine geschützte Datenbank- und Login-Verbindung. Diese wird nicht unsicher im Browser simuliert.",
       aboutHtml: "<h2>Über Disorder119</h2><p>DISORDER119 ist ein kuratiertes Archiv für ausgewählte Designer-, Vintage- und Contemporary-Pieces mit Fokus auf Qualität, Authentizität und Zeitlosigkeit.</p>",
       faqHtml: "<h2>FAQ</h2><h3>Sind alle Artikel Einzelstücke?</h3><p>Ja. Alle verfügbaren Artikel sind kuratierte Einzelstücke.</p><h3>Wie funktioniert eine Bestellung?</h3><p>Lege verfügbare Artikel in den Warenkorb und sende anschließend eine unverbindliche Anfrage per E-Mail.</p><h3>Warum bleiben verkaufte Artikel sichtbar?</h3><p>Verkaufte Pieces bleiben als Teil des DISORDER119-Archivs erhalten.</p>",
       legalImpressum: "Impressum", legalAgb: "AGB", legalDatenschutz: "Datenschutz",
       legalEmailPending: "wird nachgereicht, sobald der Shop live geht",
       closeAria: "Schließen",
-      cookieText: "Diese Seite verwendet keine Tracking- oder Marketing-Cookies. Warenkorb, Favoriten und Outfit-Baukasten speichern deine Auswahl nur lokal in deinem Browser (localStorage), damit sie beim nächsten Besuch noch da ist — diese Daten verlassen nie deinen Browser.",
+      cookieText: "Diese Seite verwendet keine Tracking- oder Marketing-Cookies. Warenkorb und Outfit-Baukasten speichern deine Auswahl nur lokal in deinem Browser (localStorage), damit sie beim nächsten Besuch noch da ist — diese Daten verlassen nie deinen Browser.",
       cookieOk: "Verstanden",
       shareAria: "Teilen", shareToast: "Link kopiert",
       prevPhotoAria: "Vorheriges Foto", nextPhotoAria: "Nächstes Foto",
@@ -3735,17 +3712,16 @@
       menuPants: "Trousers", menuSkirts: "Skirts", menuDresses: "Dresses", menuShoes: "Shoes",
       menuAccessories: "Accessories", menuBrands: "Brands", menuArchive: "Archive",
       menuAccount: "My account", menuOrders: "Orders", menuAddresses: "Addresses",
-      menuFavorites: "Favourites", menuCart: "Cart",
+      menuCart: "Cart",
       loadMore: "Load more", footerAbout: "About Disorder119", footerFaq: "FAQ", footerContact: "Contact",
-      favoriteAddAria: "Add to favourites", favoriteRemoveAria: "Remove from favourites",
       accountEyebrow: "DISORDER119 customer account", accountSetupTitle: "Preparing a secure customer account",
-      accountSetupBody: "Sign-in, password reset, addresses, favourites and orders require a protected database and authentication connection. They are not simulated insecurely in the browser.",
+      accountSetupBody: "Sign-in, password reset, addresses and orders require a protected database and authentication connection. They are not simulated insecurely in the browser.",
       aboutHtml: "<h2>About Disorder119</h2><p>DISORDER119 is a curated archive of selected designer, vintage and contemporary pieces with a focus on quality, authenticity and timelessness.</p>",
       faqHtml: "<h2>FAQ</h2><h3>Is every item one of a kind?</h3><p>Yes. Every available item is a curated one-off piece.</p><h3>How do orders work?</h3><p>Add available pieces to the cart and send a non-binding enquiry by e-mail.</p><h3>Why do sold pieces remain visible?</h3><p>Sold pieces remain part of the DISORDER119 archive.</p>",
       legalImpressum: "Legal notice", legalAgb: "Terms", legalDatenschutz: "Privacy",
       legalEmailPending: "to be added once the shop goes live",
       closeAria: "Close",
-      cookieText: "This site does not use tracking or marketing cookies. Your cart, favourites and outfit builder only save your selection locally in your browser (localStorage), so they're still there on your next visit — this data never leaves your browser.",
+      cookieText: "This site does not use tracking or marketing cookies. Your cart and outfit builder only save your selection locally in your browser (localStorage), so they're still there on your next visit — this data never leaves your browser.",
       cookieOk: "Got it",
       shareAria: "Share", shareToast: "Link copied",
       prevPhotoAria: "Previous photo", nextPhotoAria: "Next photo",
@@ -3854,17 +3830,16 @@
       menuPants: "Pantalons", menuSkirts: "Jupes", menuDresses: "Robes", menuShoes: "Chaussures",
       menuAccessories: "Accessoires", menuBrands: "Marques", menuArchive: "Archive",
       menuAccount: "Mon compte", menuOrders: "Commandes", menuAddresses: "Adresses",
-      menuFavorites: "Favoris", menuCart: "Panier",
+      menuCart: "Panier",
       loadMore: "Charger plus", footerAbout: "À propos de Disorder119", footerFaq: "FAQ", footerContact: "Contact",
-      favoriteAddAria: "Ajouter aux favoris", favoriteRemoveAria: "Retirer des favoris",
       accountEyebrow: "Compte client DISORDER119", accountSetupTitle: "Préparation d’un compte client sécurisé",
-      accountSetupBody: "La connexion, la réinitialisation du mot de passe, les adresses, les favoris et les commandes nécessitent une base de données protégée et une authentification. Ces fonctions ne sont pas simulées de manière non sécurisée dans le navigateur.",
+      accountSetupBody: "La connexion, la réinitialisation du mot de passe, les adresses et les commandes nécessitent une base de données protégée et une authentification. Ces fonctions ne sont pas simulées de manière non sécurisée dans le navigateur.",
       aboutHtml: "<h2>À propos de Disorder119</h2><p>DISORDER119 est une archive sélectionnée de pièces de créateurs, vintage et contemporaines, axée sur la qualité, l’authenticité et l’intemporalité.</p>",
       faqHtml: "<h2>FAQ</h2><h3>Chaque article est-il unique ?</h3><p>Oui. Chaque article disponible est une pièce unique sélectionnée.</p><h3>Comment commander ?</h3><p>Ajoute les articles disponibles au panier, puis envoie une demande sans engagement par e-mail.</p><h3>Pourquoi les articles vendus restent-ils visibles ?</h3><p>Les pièces vendues restent dans l’archive DISORDER119.</p>",
       legalImpressum: "Mentions légales", legalAgb: "CGV", legalDatenschutz: "Confidentialité",
       legalEmailPending: "sera ajoutée dès la mise en ligne de la boutique",
       closeAria: "Fermer",
-      cookieText: "Ce site n'utilise aucun cookie de suivi ou marketing. Le panier, les favoris et le configurateur de tenues n'enregistrent ta sélection que localement dans ton navigateur (localStorage), pour qu'elle soit encore là lors de ta prochaine visite — ces données ne quittent jamais ton navigateur.",
+      cookieText: "Ce site n'utilise aucun cookie de suivi ou marketing. Le panier et le configurateur de tenues n'enregistrent ta sélection que localement dans ton navigateur (localStorage), pour qu'elle soit encore là lors de ta prochaine visite — ces données ne quittent jamais ton navigateur.",
       cookieOk: "Compris",
       shareAria: "Partager", shareToast: "Lien copié",
       prevPhotoAria: "Photo précédente", nextPhotoAria: "Photo suivante",
@@ -4079,9 +4054,7 @@
 
   // ---- Warenkorb ----
   var CART_KEY = "disorder119_cart";
-  var FAVORITES_KEY = "disorder119_favorites";
   var cart = loadCart();
-  var favorites = loadFavorites();
 
   function loadCart() {
     try {
@@ -4095,29 +4068,6 @@
 
   function saveCart() {
     try { window.localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (e) {}
-  }
-
-  function loadFavorites() {
-    try {
-      var raw = window.localStorage.getItem(FAVORITES_KEY);
-      var ids = raw ? JSON.parse(raw) : [];
-      return Array.isArray(ids) ? ids : [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  function saveFavorites() {
-    try { window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites)); } catch (e) {}
-  }
-
-  function isFavorite(id) { return favorites.indexOf(id) !== -1; }
-
-  function toggleFavorite(id) {
-    var idx = favorites.indexOf(id);
-    if (idx === -1) favorites.push(id); else favorites.splice(idx, 1);
-    saveFavorites();
-    render();
   }
 
   function isInCart(id) { return cart.indexOf(id) !== -1; }
@@ -4162,10 +4112,6 @@
       updateCartCount();
       render();
       renderCartDrawer();
-    }
-    if (e.key === FAVORITES_KEY) {
-      favorites = loadFavorites();
-      render();
     }
   });
 
@@ -4348,7 +4294,6 @@
     status: "Verfügbar",
     category: "all",
     categoryGroup: null,
-    favoritesOnly: false,
     sort: "brightness",
     brand: "",
     size: "",
@@ -4401,7 +4346,6 @@
     b.setAttribute("aria-pressed", opt.key === state.status ? "true" : "false");
     b.addEventListener("click", function () {
       state.status = opt.key;
-      state.favoritesOnly = false;
       state.catalogLabelKey = opt.i18n;
       state.catalogLabelCategory = "";
       state.catalogLabelText = "";
@@ -4432,7 +4376,6 @@
   allCatBtn.addEventListener("click", function () {
     state.category = "all";
     state.categoryGroup = null;
-    state.favoritesOnly = false;
     state.catalogLabelKey = "categoryAll";
     state.catalogLabelCategory = "";
     state.catalogLabelText = "";
@@ -4453,7 +4396,6 @@
     b.addEventListener("click", function () {
       state.category = cat;
       state.categoryGroup = null;
-      state.favoritesOnly = false;
       state.catalogLabelKey = "";
       state.catalogLabelCategory = cat;
       state.catalogLabelText = "";
@@ -4531,8 +4473,7 @@
   document.getElementById("filterReset").addEventListener("click", function () {
     state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
     state.priceMin = null; state.priceMax = null;
-    state.categoryGroup = null; state.favoritesOnly = false;
-    filterBrandEl.value = ""; filterSizeEl.value = ""; filterColorEl.value = ""; filterConditionEl.value = "";
+    state.categoryGroup = null;    filterBrandEl.value = ""; filterSizeEl.value = ""; filterColorEl.value = ""; filterConditionEl.value = "";
     filterPriceMinEl.value = ""; filterPriceMaxEl.value = "";
     render();
   });
@@ -4627,7 +4568,6 @@
     });
     state.category = "all";
     state.categoryGroup = null;
-    state.favoritesOnly = false;
     Array.prototype.forEach.call(categoryChipsEl.children, function (c) {
       c.setAttribute("aria-pressed", c === allCatBtn ? "true" : "false");
     });
@@ -4679,7 +4619,6 @@
     if (state.priceMax != null && !(it.price > 0 && it.price <= state.priceMax)) return false;
     if (state.categoryGroup && state.categoryGroup.indexOf(it.category) === -1) return false;
     if (state.category !== "all" && it.category !== state.category) return false;
-    if (state.favoritesOnly && !isFavorite(it.id)) return false;
     if (state.query) {
       var hay = normalizeText(it.title) + " " + normalizeText(it.brand) + " " + normalizeText(it.category);
       if (!queryMatchesHay(hay, state.query)) return false;
@@ -4718,7 +4657,7 @@
       (state.catalogLabelCategory ? trCategory(state.catalogLabelCategory) : t(state.catalogLabelKey || "statusAvailable"));
     var filterSignature = JSON.stringify([
       state.query, state.status, state.category, state.categoryGroup,
-      state.favoritesOnly, state.sort, state.brand, state.size, state.color,
+      state.sort, state.brand, state.size, state.color,
       state.condition, state.priceMin, state.priceMax
     ]);
     if (filterSignature !== lastFilterSignature) {
@@ -4756,11 +4695,6 @@
 
       var hero = it.gallery && it.gallery[0];
       var imgSrc = hero || "";
-      var favoriteActive = isFavorite(it.id);
-      var favoriteHtml =
-        '<button type="button" class="plate__favorite' + (favoriteActive ? " plate__favorite--active" : "") +
-        '" data-favorite-toggle aria-pressed="' + (favoriteActive ? "true" : "false") +
-        '" aria-label="' + (favoriteActive ? t("favoriteRemoveAria") : t("favoriteAddAria")) + '">♥</button>';
 
       var altText = escapeHtml(productAltText(it));
       var isSold = it.status === "Verkauft";
@@ -4771,7 +4705,6 @@
       plate.innerHTML =
         '<div class="plate__frame">' +
           (imgSrc ? '<img src="' + imgSrc + '" alt="' + altText + '" loading="lazy" />' : "") +
-          favoriteHtml +
         "</div>" +
         '<div class="plate__body">' +
           '<button type="button" class="plate__brand" data-brand-filter>' + escapeHtml(it.brand || t("noBrand")) + "</button>" +
@@ -4789,13 +4722,6 @@
           filterByBrand(it.brand);
         });
       }
-
-      var favoriteBtn = plate.querySelector("[data-favorite-toggle]");
-      favoriteBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleFavorite(it.id);
-      });
 
       if (canHover && it.gallery && it.gallery.length > 1) {
         var frameImg = plate.querySelector(".plate__frame img");
@@ -5109,7 +5035,6 @@
     state.status = status;
     state.category = "all";
     state.categoryGroup = categories || null;
-    state.favoritesOnly = false;
     state.catalogLabelKey = labelKey || "statusAvailable";
     state.catalogLabelCategory = "";
     state.catalogLabelText = "";
@@ -5155,24 +5080,6 @@
     btn.addEventListener("click", function () {
       applyMenuView("Verfügbar", btn.getAttribute("data-menu-categories").split(","), btn.getAttribute("data-i18n"));
     });
-  });
-
-  document.getElementById("menuFavorites").addEventListener("click", function () {
-    state.query = "";
-    searchInputEl.value = "";
-    state.status = "all";
-    state.category = "all";
-    state.categoryGroup = null;
-    state.favoritesOnly = true;
-    state.catalogLabelKey = "menuFavorites";
-    state.catalogLabelCategory = "";
-    state.catalogLabelText = "";
-    resetCatalogFilters();
-    syncCatalogChips();
-    closeMenu();
-    showClassic();
-    render();
-    focusCatalog();
   });
 
   document.getElementById("footerArchive").addEventListener("click", function () {
