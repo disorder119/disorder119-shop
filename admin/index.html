@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Disorder119 — Admin</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<style>
+  :root {
+    --ink: #000000;
+    --ink-lift: #121212;
+    --ink-lift-2: #1b1b1b;
+    --paper: #f2efe7;
+    --rule: rgba(242, 239, 231, 0.14);
+    --rule-strong: rgba(242, 239, 231, 0.28);
+    --text: #f2efe7;
+    --text-muted: rgba(242, 239, 231, 0.58);
+    --text-faint: rgba(242, 239, 231, 0.36);
+    --surface: var(--ink-lift);
+    --surface-2: var(--ink-lift-2);
+    --accent: #8f897c;
+    --accent-soft: rgba(143, 137, 124, 0.18);
+    --accent-text: #d6d0c2;
+    --danger: #c96a4f;
+    --ok: #7fae7f;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--ink); color: var(--text);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 15px; line-height: 1.4;
+  }
+  a { color: inherit; }
+  button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+  .hidden { display: none !important; }
+
+  /* ---------- Gate (PAT-Eingabe) ---------- */
+  .gate {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .gate__box {
+    max-width: 440px; width: 100%; border: 1px solid var(--rule-strong);
+    background: var(--surface); padding: 28px 26px;
+  }
+  .gate__eyebrow {
+    font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--text-faint); margin: 0 0 6px;
+  }
+  .gate__title {
+    font-family: "Helvetica Neue Condensed", "Arial Narrow", sans-serif;
+    font-weight: 800; text-transform: uppercase; font-size: 1.6rem; margin: 0 0 14px;
+  }
+  .gate__box p { font-size: 0.84rem; color: var(--text-muted); line-height: 1.6; }
+  .gate__box ol { font-size: 0.84rem; color: var(--text-muted); line-height: 1.7; padding-left: 20px; margin: 10px 0 18px; }
+  .gate__box code {
+    background: var(--surface-2); padding: 1px 5px; font-size: 0.82em;
+    border: 1px solid var(--rule);
+  }
+  .gate__box input[type="password"], .gate__box input[type="text"] {
+    width: 100%; background: transparent; border: 1px solid var(--rule-strong);
+    color: var(--paper); padding: 10px 12px; margin-bottom: 12px;
+  }
+  .gate__box input:focus { outline: none; border-color: var(--accent); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    background: var(--accent); color: #17110a; border: none; font-weight: 700;
+    padding: 11px 18px; cursor: pointer; text-decoration: none; font-size: 0.86rem;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn--outline {
+    background: transparent; color: var(--text); border: 1px solid var(--rule-strong); font-weight: 500;
+  }
+  .btn--outline:hover { border-color: var(--accent); color: var(--accent-text); }
+  .btn--danger { background: var(--danger); color: #1a0d09; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .gate__error {
+    color: var(--danger); font-size: 0.8rem; margin-top: -4px; margin-bottom: 12px; display: none;
+  }
+  .gate__error.visible { display: block; }
+
+  /* ---------- App-Shell ---------- */
+  #app { max-width: 1180px; margin: 0 auto; padding: 20px 18px 80px; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px solid var(--rule-strong);
+    flex-wrap: wrap;
+  }
+  .topbar__brand { font-weight: 800; letter-spacing: 0.04em; text-decoration: none; }
+  .topbar__meta { font-size: 0.72rem; color: var(--text-faint); }
+  .topbar__actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .banner {
+    border: 1px solid var(--rule-strong); background: var(--surface); padding: 10px 14px;
+    font-size: 0.78rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.6;
+  }
+  .banner strong { color: var(--text); }
+
+  .toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface); border: 1px solid var(--rule-strong); padding: 11px 18px;
+    font-size: 0.82rem; opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 500; max-width: 90vw;
+  }
+  .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast--ok { border-color: var(--ok); }
+  .toast--err { border-color: var(--danger); }
+
+  /* ---------- Dashboard-Karten ---------- */
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1px; background: var(--rule-strong); border: 1px solid var(--rule-strong);
+    margin-bottom: 22px;
+  }
+  .stat { background: var(--ink); padding: 14px 12px; }
+  .stat--warn { background: rgba(201, 106, 79, 0.1); }
+  .stat__value { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat__label { font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); margin-top: 3px; }
+  .stat--warn .stat__value { color: var(--danger); }
+
+  /* ---------- Filter/Suche ---------- */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center;
+  }
+  .filters input[type="search"] {
+    flex: 1 1 200px; background: var(--surface); border: 1px solid var(--rule-strong);
+    color: var(--paper); padding: 9px 12px;
+  }
+  .filters select {
+    background: var(--surface); border: 1px solid var(--rule-strong); color: var(--paper); padding: 9px 10px;
+  }
+  .filters input:focus, .filters select:focus { outline: none; border-color: var(--accent); }
+  .result-count { font-size: 0.72rem; color: var(--text-faint); margin-bottom: 12px; }
+
+  /* ---------- Artikel-Karten ---------- */
+  .rows { display: flex; flex-direction: column; gap: 1px; background: var(--rule-strong); border: 1px solid var(--rule-strong); }
+  .row { background: var(--ink); }
+  .row__head {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px; cursor: pointer;
+  }
+  .row__head:hover { background: var(--surface); }
+  .row__thumb {
+    width: 44px; height: 58px; flex: 0 0 auto; background: var(--surface-2);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .row__thumb img { width: 100%; height: 100%; object-fit: contain; }
+  .row__main { flex: 1 1 auto; min-width: 0; }
+  .row__title { font-weight: 700; font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row__sub { font-size: 0.72rem; color: var(--text-faint); margin-top: 2px; }
+  .row__badges { display: flex; gap: 6px; flex-wrap: wrap; flex: 0 0 auto; }
+  .badge {
+    font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 3px 7px; border: 1px solid var(--rule-strong); color: var(--text-muted); white-space: nowrap;
+  }
+  .badge--available { color: var(--ok); border-color: var(--ok); }
+  .badge--sold { color: var(--text-faint); }
+  .badge--draft { color: var(--accent-text); border-color: var(--accent); }
+  .badge--gap { color: var(--danger); border-color: var(--danger); }
+  .row__price { font-weight: 700; font-variant-numeric: tabular-nums; flex: 0 0 auto; min-width: 64px; text-align: right; }
+  .row__caret { flex: 0 0 auto; color: var(--text-faint); transition: transform 0.15s ease; }
+  .row.open .row__caret { transform: rotate(90deg); }
+
+  .row__panel { display: none; padding: 4px 14px 18px; border-top: 1px solid var(--rule); }
+  .row.open .row__panel { display: block; }
+
+  .field-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 12px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
+  .field input, .field select, .field textarea {
+    background: var(--surface); border: 1px solid var(--rule-strong); color: var(--paper);
+    padding: 8px 9px; width: 100%;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 60px; grid-column: 1 / -1; }
+  .field--full { grid-column: 1 / -1; }
+  .field--check { flex-direction: row; align-items: center; gap: 8px; }
+  .field--check input { width: auto; }
+
+  .readonly-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;
+    margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--rule);
+  }
+  .readonly-grid div { font-size: 0.72rem; }
+  .readonly-grid span { display: block; color: var(--text-faint); font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 2px; }
+
+  .row__actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; align-items: center; }
+  .row__save-state { font-size: 0.72rem; color: var(--text-faint); }
+
+  @media (max-width: 640px) {
+    .row__head { flex-wrap: wrap; }
+    .row__sub { white-space: normal; }
+    .row__price { order: 3; text-align: left; }
+    .row__badges { order: 4; width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gate__box">
+    <p class="gate__eyebrow">Disorder119</p>
+    <h1 class="gate__title">Admin</h1>
+
+    <div id="setupPane">
+      <p>Zugriff auf <code>data/items.json</code> direkt über die GitHub-API — Änderungen hier werden als echter Commit gespeichert und lösen automatisch einen Neubau der Seite aus (~30&nbsp;Sekunden).</p>
+      <ol>
+        <li>Auf GitHub: <strong>Settings → Developer settings → Fine-grained tokens → Generate new token</strong></li>
+        <li>Repository access: nur <code>disorder119/disorder119-shop</code></li>
+        <li>Permissions: <code>Contents</code> → <strong>Read and write</strong></li>
+        <li>Token unten einfügen und eine Passphrase vergeben, die es verschlüsselt.</li>
+      </ol>
+      <input type="password" id="patInput" placeholder="github_pat_…" autocomplete="off" spellcheck="false">
+      <input type="password" id="passSetup1" placeholder="Neue Passphrase" autocomplete="new-password">
+      <input type="password" id="passSetup2" placeholder="Passphrase wiederholen" autocomplete="new-password">
+      <p style="font-size:0.76rem;color:var(--text-faint);margin-top:-6px;">Der Token wird mit dieser Passphrase verschlüsselt (AES-256-GCM, PBKDF2) im Browser gespeichert — im Klartext verlässt er ihn nie. Vergisst du die Passphrase, hilft nur ein neuer Token samt neuer Einrichtung; es gibt keine Wiederherstellung.</p>
+      <p class="gate__error" id="setupError"></p>
+      <button type="button" class="btn" id="setupSubmit" style="width:100%">Verschlüsselt einrichten</button>
+    </div>
+
+    <div id="unlockPane" class="hidden">
+      <p>Token liegt verschlüsselt in diesem Browser. Passphrase zum Entsperren eingeben.</p>
+      <input type="password" id="unlockInput" placeholder="Passphrase" autocomplete="current-password">
+      <p class="gate__error" id="unlockError"></p>
+      <button type="button" class="btn" id="unlockSubmit" style="width:100%">Entsperren</button>
+      <button type="button" class="btn btn--outline" id="forgetBtn" style="width:100%;margin-top:10px;">Gespeicherten Token löschen (neu einrichten)</button>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="topbar">
+    <a href="/" class="topbar__brand">DISORDER119 · ADMIN</a>
+    <div class="topbar__actions">
+      <span class="topbar__meta" id="shaMeta"></span>
+      <a href="/" class="btn btn--outline">Zum Archiv</a>
+      <button type="button" class="btn btn--outline" id="logoutBtn">Sperren</button>
+    </div>
+  </div>
+
+  <div class="banner">
+    <strong>Nur diese Datei wird bearbeitet:</strong> data/items.json. Fotos, Kategorien-Struktur und IDs bleiben hier unangetastet — dafür weiterhin direkt in GitHub oder per Foto-Import-Pipeline. Jede Speicherung ist ein echter Git-Commit; die Seite baut sich danach automatisch neu.
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="filters">
+    <input type="search" id="searchInput" placeholder="Suche nach Titel, Marke, Artikelnummer, ID …">
+    <select id="statusFilter">
+      <option value="all">Alle Status</option>
+      <option value="AVAILABLE">Verfügbar</option>
+      <option value="SOLD">Verkauft</option>
+      <option value="DRAFT">Entwurf</option>
+    </select>
+    <select id="categoryFilter"><option value="all">Alle Kategorien</option></select>
+    <select id="gapFilter">
+      <option value="all">Alle</option>
+      <option value="noRental">Ohne Mietpreis</option>
+      <option value="noDesc">Ohne Beschreibung (DE)</option>
+      <option value="estimated">Geschätzter Preis</option>
+    </select>
+    <select id="sortSelect">
+      <option value="id_desc">Neueste zuerst (ID)</option>
+      <option value="id_asc">Älteste zuerst (ID)</option>
+      <option value="price_desc">Preis absteigend</option>
+      <option value="price_asc">Preis aufsteigend</option>
+      <option value="brand_asc">Marke A–Z</option>
+      <option value="title_asc">Titel A–Z</option>
+    </select>
+  </div>
+  <p class="result-count" id="resultCount"></p>
+
+  <div class="rows" id="rows"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+  var OWNER = "disorder119";
+  var REPO = "disorder119-shop";
+  var FILE_PATH = "data/items.json";
+  var BRANCH = "main";
+  var API_BASE = "https://api.github.com/repos/" + OWNER + "/" + REPO + "/contents/" + FILE_PATH;
+  var ENC_KEY = "d119_admin_enc";
+  var currentPat = "";
+
+  var CATEGORIES = ["Accessories", "Coats", "Dresses", "Jackets", "Knitwear", "Objects", "Pants", "Shirts", "Shoes", "Skirts", "Tops"];
+  var CONDITIONS = ["Sehr gut", "Gut", "Zufriedenstellend", "Repariert", "Mit Defekt"];
+
+  var state = { items: [], sha: "", filtered: [] };
+
+  // ---------- Utilities ----------
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function fmtPrice(n) {
+    return (n || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+  }
+  function b64DecodeUtf8(b64) {
+    var binary = atob(b64.replace(/\n/g, ""));
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new TextDecoder("utf-8").decode(bytes);
+  }
+  function b64EncodeUtf8(str) {
+    var bytes = new TextEncoder().encode(str);
+    var binary = "";
+    for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+  var toastTimer = null;
+  function showToast(msg, kind) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.className = "toast visible" + (kind ? " toast--" + kind : "");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove("visible"); }, 4000);
+  }
+
+  // ---------- GitHub API ----------
+  function ghHeaders(pat) {
+    return { Authorization: "token " + pat, Accept: "application/vnd.github+json" };
+  }
+
+  // ---------- Verschluesselung (AES-256-GCM, Schluessel per PBKDF2 aus
+  // der Passphrase) - der GitHub-Token verlaesst diesen Browser nie im
+  // Klartext, auch nicht im Ruhezustand in localStorage. Ohne die
+  // Passphrase ist der gespeicherte Blob wertlos (kein Backdoor, keine
+  // Wiederherstellung - das ist bei echter Verschluesselung so gewollt). */
+  var PBKDF2_ITERATIONS = 210000;
+
+  function bufToB64(buf) {
+    var bytes = new Uint8Array(buf);
+    var binary = "";
+    for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+  function b64ToBuf(b64) {
+    var binary = atob(b64);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+  function deriveKey(passphrase, salt) {
+    var enc = new TextEncoder();
+    return crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]).then(function (keyMaterial) {
+      return crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt: salt, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    });
+  }
+  function encryptPat(pat, passphrase) {
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    return deriveKey(passphrase, salt).then(function (key) {
+      return crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, new TextEncoder().encode(pat));
+    }).then(function (cipherBuf) {
+      return { salt: bufToB64(salt), iv: bufToB64(iv), cipher: bufToB64(cipherBuf) };
+    });
+  }
+  function decryptPat(blob, passphrase) {
+    var salt = b64ToBuf(blob.salt);
+    var iv = b64ToBuf(blob.iv);
+    return deriveKey(passphrase, salt).then(function (key) {
+      // Falsche Passphrase laesst AES-GCM (Authenticated Encryption) hier
+      // zuverlaessig fehlschlagen statt stillschweigend Datenmuell zu
+      // liefern - genau das nutzen wir als Passphrasen-Pruefung.
+      return crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, b64ToBuf(blob.cipher));
+    }).then(function (plainBuf) {
+      return new TextDecoder().decode(plainBuf);
+    });
+  }
+
+  function loadEncBlob() {
+    try { return JSON.parse(localStorage.getItem(ENC_KEY) || "null"); } catch (e) { return null; }
+  }
+  function saveEncBlob(blob) { localStorage.setItem(ENC_KEY, JSON.stringify(blob)); }
+  function clearEncBlob() { localStorage.removeItem(ENC_KEY); }
+
+  function fetchItems() {
+    var pat = currentPat;
+    return fetch(API_BASE + "?ref=" + BRANCH, { headers: ghHeaders(pat) }).then(function (res) {
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("AUTH");
+      }
+      if (!res.ok) throw new Error("GitHub-Fehler " + res.status);
+      return res.json();
+    }).then(function (data) {
+      var text = b64DecodeUtf8(data.content);
+      state.items = JSON.parse(text);
+      state.sha = data.sha;
+    });
+  }
+
+  function saveItem(updatedItem, attempt) {
+    attempt = attempt || 1;
+    var pat = currentPat;
+    var idx = state.items.findIndex(function (it) { return it.id === updatedItem.id; });
+    if (idx === -1) return Promise.reject(new Error("Artikel nicht mehr im Datensatz gefunden."));
+    var nextItems = state.items.slice();
+    nextItems[idx] = updatedItem;
+    var content = JSON.stringify(nextItems, null, 2) + "\n";
+    return fetch(API_BASE, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders(pat)),
+      body: JSON.stringify({
+        message: "Admin: " + updatedItem.title + " (#" + updatedItem.id + ") aktualisiert",
+        content: b64EncodeUtf8(content),
+        sha: state.sha,
+        branch: BRANCH
+      })
+    }).then(function (res) {
+      if (res.status === 409 && attempt === 1) {
+        // Datei wurde zwischenzeitlich anderswo geaendert - einmal neu
+        // laden (frischer sha + frische Daten der ANDEREN Artikel) und
+        // die eine Bearbeitung erneut versuchen.
+        return fetchItems().then(function () { return saveItem(updatedItem, 2); });
+      }
+      if (!res.ok) {
+        return res.json().catch(function () { return {}; }).then(function (err) {
+          throw new Error("GitHub-Fehler " + res.status + (err.message ? ": " + err.message : ""));
+        });
+      }
+      return res.json();
+    }).then(function (data) {
+      state.items = nextItems;
+      state.sha = data.content.sha;
+    });
+  }
+
+  // ---------- Ableitungen / Stats ----------
+  function computeStats(items) {
+    var available = items.filter(function (it) { return it.public_status === "AVAILABLE"; });
+    var sold = items.filter(function (it) { return it.public_status === "SOLD"; });
+    var draft = items.filter(function (it) { return it.public_status === "DRAFT"; });
+    var noRental = available.filter(function (it) { return !(it.rental_price > 0); });
+    var noDesc = items.filter(function (it) { return !((it.desc_de || it.desc || "").trim()); });
+    var totalValue = available.reduce(function (sum, it) { return sum + (it.price || 0); }, 0);
+    var brands = {};
+    available.forEach(function (it) { if (it.brand) brands[it.brand] = true; });
+    return {
+      total: items.length,
+      available: available.length,
+      sold: sold.length,
+      draft: draft.length,
+      noRental: noRental.length,
+      noDesc: noDesc.length,
+      totalValue: totalValue,
+      avgPrice: available.length ? totalValue / available.length : 0,
+      brandCount: Object.keys(brands).length
+    };
+  }
+
+  function renderStats() {
+    var s = computeStats(state.items);
+    var cards = [
+      { label: "Gesamt", value: s.total },
+      { label: "Verfügbar", value: s.available },
+      { label: "Verkauft", value: s.sold },
+      { label: "Entwurf", value: s.draft, warn: s.draft > 0 },
+      { label: "Ohne Mietpreis", value: s.noRental, warn: s.noRental > 0 },
+      { label: "Ohne Beschreibung", value: s.noDesc, warn: s.noDesc > 0 },
+      { label: "Lagerwert (verfügbar)", value: fmtPrice(s.totalValue) },
+      { label: "Ø Preis (verfügbar)", value: fmtPrice(s.avgPrice) },
+      { label: "Marken (aktiv)", value: s.brandCount }
+    ];
+    $("stats").innerHTML = cards.map(function (c) {
+      return '<div class="stat' + (c.warn ? " stat--warn" : "") + '"><div class="stat__value">' + c.value +
+        '</div><div class="stat__label">' + esc(c.label) + "</div></div>";
+    }).join("");
+  }
+
+  function populateCategoryFilter() {
+    var sel = $("categoryFilter");
+    CATEGORIES.forEach(function (c) {
+      var opt = document.createElement("option");
+      opt.value = c; opt.textContent = c;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ---------- Liste filtern/sortieren ----------
+  function applyFilters() {
+    var q = $("searchInput").value.trim().toLowerCase();
+    var status = $("statusFilter").value;
+    var cat = $("categoryFilter").value;
+    var gap = $("gapFilter").value;
+    var sort = $("sortSelect").value;
+
+    var list = state.items.filter(function (it) {
+      if (status !== "all" && it.public_status !== status) return false;
+      if (cat !== "all" && it.category !== cat) return false;
+      if (gap === "noRental" && !(it.public_status === "AVAILABLE" && !(it.rental_price > 0))) return false;
+      if (gap === "noDesc" && (it.desc_de || it.desc || "").trim()) return false;
+      if (gap === "estimated" && !it.price_estimated) return false;
+      if (q) {
+        var hay = ((it.title || "") + " " + (it.brand || "") + " " + (it.article || "") + " " + it.id).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+
+    list.sort(function (a, b) {
+      switch (sort) {
+        case "id_asc": return a.id - b.id;
+        case "price_desc": return (b.price || 0) - (a.price || 0);
+        case "price_asc": return (a.price || 0) - (b.price || 0);
+        case "brand_asc": return (a.brand || "").localeCompare(b.brand || "");
+        case "title_asc": return (a.title || "").localeCompare(b.title || "");
+        default: return b.id - a.id;
+      }
+    });
+
+    state.filtered = list;
+    $("resultCount").textContent = list.length + " von " + state.items.length + " Artikeln";
+    renderRows();
+  }
+
+  // ---------- Zeilen rendern ----------
+  var openRowId = null;
+
+  function statusBadges(it) {
+    var badges = "";
+    if (it.public_status === "AVAILABLE") badges += '<span class="badge badge--available">Verfügbar</span>';
+    else if (it.public_status === "SOLD") badges += '<span class="badge badge--sold">Verkauft</span>';
+    else if (it.public_status === "DRAFT") badges += '<span class="badge badge--draft">Entwurf</span>';
+    if (it.public_status === "AVAILABLE" && !(it.rental_price > 0)) badges += '<span class="badge badge--gap">Kein Mietpreis</span>';
+    if (!((it.desc_de || it.desc || "").trim())) badges += '<span class="badge badge--gap">Keine Beschreibung</span>';
+    if (it.price_estimated) badges += '<span class="badge">Preis geschätzt</span>';
+    return badges;
+  }
+
+  function renderRows() {
+    var host = $("rows");
+    if (!state.filtered.length) {
+      host.innerHTML = '<div class="row"><div class="row__head" style="cursor:default">Keine Treffer.</div></div>';
+      return;
+    }
+    host.innerHTML = state.filtered.map(function (it) {
+      var thumb = it.gallery && it.gallery[0] ? "/" + it.gallery[0] : "";
+      return (
+        '<div class="row' + (openRowId === it.id ? " open" : "") + '" data-row="' + it.id + '">' +
+          '<div class="row__head" data-toggle="' + it.id + '">' +
+            '<div class="row__thumb">' + (thumb ? '<img src="' + esc(thumb) + '" alt="" loading="lazy">' : "") + "</div>" +
+            '<div class="row__main">' +
+              '<div class="row__title">' + esc(it.title) + "</div>" +
+              '<div class="row__sub">' + esc(it.brand || "Ohne Marke") + " · #" + esc(it.article || it.id) + " · " + esc(it.category) + (it.size ? " · " + esc(it.size) : "") + "</div>" +
+            "</div>" +
+            '<div class="row__badges">' + statusBadges(it) + "</div>" +
+            '<div class="row__price">' + (it.public_status === "SOLD" ? "—" : fmtPrice(it.price)) + "</div>" +
+            '<div class="row__caret">▸</div>' +
+          "</div>" +
+          '<div class="row__panel">' + (openRowId === it.id ? renderPanel(it) : "") + "</div>" +
+        "</div>"
+      );
+    }).join("");
+
+    Array.prototype.forEach.call(host.querySelectorAll("[data-toggle]"), function (el) {
+      el.addEventListener("click", function () {
+        var id = Number(el.getAttribute("data-toggle"));
+        openRowId = openRowId === id ? null : id;
+        renderRows();
+      });
+    });
+    if (openRowId !== null) wirePanel(openRowId);
+  }
+
+  function renderPanel(it) {
+    var descCompleteness = ["de", "en", "fr"].map(function (l) {
+      var val = it["desc_" + l];
+      return (l.toUpperCase() + ": " + (val && val.trim() ? "✓" : "✗"));
+    }).join("  ");
+    return (
+      '<div class="field-grid">' +
+        field("Titel", "title", "text", it.title) +
+        field("Marke", "brand", "text", it.brand) +
+        field("Preis (€)", "price", "number", it.price) +
+        field("Mietpreis (€, leer = auf Anfrage)", "rental_price", "number", it.rental_price || "") +
+        selectField("Kategorie", "category", CATEGORIES, it.category) +
+        field("Größe", "size", "text", it.size) +
+        field("Farbe", "color", "text", it.color) +
+        selectField("Zustand", "condition", CONDITIONS, it.condition) +
+        selectField("Sichtbarer Status", "public_status", ["AVAILABLE", "SOLD", "DRAFT"], it.public_status) +
+        checkField("Preis geschätzt (nicht final)", "price_estimated", it.price_estimated) +
+        textareaField("Beschreibung (DE)", "desc_de", it.desc_de) +
+        textareaField("Beschreibung (EN)", "desc_en", it.desc_en) +
+        textareaField("Beschreibung (FR)", "desc_fr", it.desc_fr) +
+      "</div>" +
+      '<div class="readonly-grid">' +
+        roField("Interner Status", esc(it.status)) +
+        roField("Artikelnummer", esc(it.article)) +
+        roField("Fotos", (it.gallery ? it.gallery.length : 0) + " im Katalog" + (it.look ? " + Look-Foto" : "")) +
+        roField("Helligkeit (Sortierung)", it.brightness != null ? it.brightness : "—") +
+        roField("Beschreibung je Sprache", descCompleteness) +
+      "</div>" +
+      '<div class="row__actions">' +
+        '<button type="button" class="btn" data-save="' + it.id + '">Speichern</button>' +
+        '<a class="btn btn--outline" href="/artikel/' + it.id + '/" target="_blank" rel="noopener">Live-Seite ansehen ↗</a>' +
+        '<span class="row__save-state" data-savestate="' + it.id + '"></span>' +
+      "</div>"
+    );
+  }
+
+  function field(label, name, type, value) {
+    return '<div class="field"><label>' + esc(label) + '</label><input type="' + type + '" data-field="' + name +
+      '" value="' + esc(value == null ? "" : value) + '"' + (type === "number" ? ' step="0.01"' : "") + "></div>";
+  }
+  function textareaField(label, name, value) {
+    return '<div class="field field--full"><label>' + esc(label) + '</label><textarea data-field="' + name + '">' + esc(value || "") + "</textarea></div>";
+  }
+  function selectField(label, name, options, current) {
+    return '<div class="field"><label>' + esc(label) + '</label><select data-field="' + name + '">' +
+      options.map(function (o) { return '<option value="' + esc(o) + '"' + (o === current ? " selected" : "") + ">" + esc(o) + "</option>"; }).join("") +
+      "</select></div>";
+  }
+  function checkField(label, name, checked) {
+    return '<div class="field field--check"><input type="checkbox" data-field="' + name + '"' + (checked ? " checked" : "") + "><label>" + esc(label) + "</label></div>";
+  }
+  function roField(label, value) {
+    return "<div><span>" + esc(label) + "</span>" + value + "</div>";
+  }
+
+  function wirePanel(id) {
+    var row = document.querySelector('.row[data-row="' + id + '"]');
+    if (!row) return;
+    var saveBtn = row.querySelector('[data-save="' + id + '"]');
+    if (!saveBtn) return;
+    saveBtn.addEventListener("click", function () {
+      var it = state.items.find(function (x) { return x.id === id; });
+      if (!it) return;
+      var updated = Object.assign({}, it);
+      Array.prototype.forEach.call(row.querySelectorAll("[data-field]"), function (el) {
+        var name = el.getAttribute("data-field");
+        if (el.type === "checkbox") updated[name] = el.checked;
+        else if (el.type === "number") updated[name] = el.value === "" ? (name === "rental_price" ? undefined : 0) : parseFloat(el.value);
+        else updated[name] = el.value;
+      });
+      if (updated.rental_price === undefined) delete updated.rental_price;
+      var stateEl = row.querySelector('[data-savestate="' + id + '"]');
+      saveBtn.disabled = true;
+      stateEl.textContent = "Speichere …";
+      saveItem(updated, 1).then(function () {
+        stateEl.textContent = "Gespeichert — Seite baut sich in ~30s neu.";
+        showToast("Gespeichert: " + updated.title, "ok");
+        saveBtn.disabled = false;
+        renderStats();
+        // Kurze Verzoegerung statt sofortigem Neu-Rendern der Liste - sonst
+        // ersetzt applyFilters() die gerade erst gesetzte Bestaetigungs-
+        // Nachricht im selben Tick wieder (neue DOM-Knoten fuer die Zeile),
+        // bevor sie ueberhaupt sichtbar war. Der Toast unten bleibt davon
+        // unberuehrt, aber die Inline-Bestaetigung im Formular verdient
+        // denselben kurzen sichtbaren Moment.
+        setTimeout(applyFilters, 1200);
+      }).catch(function (err) {
+        stateEl.textContent = "";
+        saveBtn.disabled = false;
+        showToast("Fehler beim Speichern: " + err.message, "err");
+      });
+    });
+  }
+
+  // ---------- Start ----------
+  function boot() {
+    populateCategoryFilter();
+    renderStats();
+    applyFilters();
+    ["searchInput", "statusFilter", "categoryFilter", "gapFilter", "sortSelect"].forEach(function (id) {
+      $(id).addEventListener("input", applyFilters);
+      $(id).addEventListener("change", applyFilters);
+    });
+    $("shaMeta").textContent = "main @ " + state.sha.slice(0, 7);
+    $("gate").classList.add("hidden");
+    $("app").classList.remove("hidden");
+  }
+
+  function showError(elId, msg) {
+    var e = $(elId);
+    e.textContent = msg;
+    e.classList.add("visible");
+  }
+  function hideError(elId) { $(elId).classList.remove("visible"); }
+
+  // Prueft den Token direkt gegen die GitHub-API, BEVOR irgendetwas
+  // verschluesselt gespeichert wird - ein Tippfehler im Token soll nicht
+  // erst als unbrauchbarer verschluesselter Blob enden.
+  function verifyAndBoot(pat, errElId) {
+    currentPat = pat;
+    return fetchItems().then(boot).catch(function (err) {
+      currentPat = "";
+      if (err.message === "AUTH") {
+        showError(errElId, "Token abgelehnt (401/403) — Berechtigung prüfen (Contents: Read and write) oder neu erstellen.");
+      } else {
+        showError(errElId, "Verbindung zu GitHub fehlgeschlagen: " + err.message);
+      }
+      throw err;
+    });
+  }
+
+  $("setupSubmit").addEventListener("click", function () {
+    hideError("setupError");
+    var pat = $("patInput").value.trim();
+    var p1 = $("passSetup1").value;
+    var p2 = $("passSetup2").value;
+    if (!pat) { showError("setupError", "Bitte einen GitHub-Token einfügen."); return; }
+    if (p1.length < 8) { showError("setupError", "Passphrase braucht mindestens 8 Zeichen."); return; }
+    if (p1 !== p2) { showError("setupError", "Passphrasen stimmen nicht überein."); return; }
+    $("setupSubmit").disabled = true;
+    verifyAndBoot(pat, "setupError").then(function () {
+      return encryptPat(pat, p1);
+    }).then(function (blob) {
+      saveEncBlob(blob);
+    }).catch(function () {
+      // Fehler wurde bereits in verifyAndBoot angezeigt.
+    }).finally(function () { $("setupSubmit").disabled = false; });
+  });
+
+  $("unlockSubmit").addEventListener("click", function () {
+    hideError("unlockError");
+    var passphrase = $("unlockInput").value;
+    var blob = loadEncBlob();
+    if (!blob) { location.reload(); return; }
+    $("unlockSubmit").disabled = true;
+    decryptPat(blob, passphrase).then(function (pat) {
+      return verifyAndBoot(pat, "unlockError");
+    }).catch(function (err) {
+      // AES-GCM meldet eine falsche Passphrase als Entschluesselungsfehler,
+      // nicht als eigene Fehlermeldung - beides zusammen abfangen.
+      if (!$("unlockError").classList.contains("visible")) {
+        showError("unlockError", "Falsche Passphrase.");
+      }
+    }).finally(function () { $("unlockSubmit").disabled = false; });
+  });
+
+  $("forgetBtn").addEventListener("click", function () {
+    if (!confirm("Gespeicherten, verschlüsselten Token wirklich löschen? Danach muss der Token neu eingerichtet werden.")) return;
+    clearEncBlob();
+    location.reload();
+  });
+
+  ["patInput", "passSetup1", "passSetup2"].forEach(function (id) {
+    $(id).addEventListener("keydown", function (e) { if (e.key === "Enter") $("setupSubmit").click(); });
+  });
+  $("unlockInput").addEventListener("keydown", function (e) { if (e.key === "Enter") $("unlockSubmit").click(); });
+
+  $("logoutBtn").addEventListener("click", function () {
+    currentPat = "";
+    location.reload();
+  });
+
+  var existingBlob = loadEncBlob();
+  if (existingBlob) {
+    $("setupPane").classList.add("hidden");
+    $("unlockPane").classList.remove("hidden");
+    $("unlockInput").focus();
+  } else {
+    $("patInput").focus();
+  }
+})();
+</script>
+</body>
+</html>
