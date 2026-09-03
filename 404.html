@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,follow">
+<title>Disorder119 — Seite nicht gefunden</title>
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="stylesheet" href="/assets/app.css">
+<style>
+  /* Eigenstaendige, schlanke 404-Seite - laedt bewusst NICHT app.js (kein
+     Katalog-Fetch, kein Warenkorb/Menue-Aufbau noetig fuer eine reine
+     Fehlerseite). GitHub Pages liefert dieselbe /404.html fuer JEDEN nicht
+     gefundenen Pfad aus, auch unter /en/... oder /fr/... - die Sprache wird
+     daher unten per kleinem Inline-Script aus dem urspruenglich
+     aufgerufenen Pfad erkannt statt fest auf Deutsch zu stehen. */
+  .error-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px 20px;
+  }
+  .error-page__brand {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.92rem;
+    font-weight: 800;
+    letter-spacing: 0.035em;
+    color: var(--paper);
+    text-decoration: none;
+  }
+  .error-page__code {
+    font-size: clamp(4rem, 16vw, 8rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin: 0 0 8px;
+  }
+  .error-page__title {
+    font-size: clamp(1.1rem, 3vw, 1.4rem);
+    font-weight: 700;
+    margin: 0 0 12px;
+  }
+  .error-page__text {
+    max-width: 440px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin: 0 0 28px;
+  }
+  .error-page__actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .error-page__actions a {
+    display: inline-block;
+    padding: 12px 22px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 1px solid var(--paper);
+    color: var(--paper);
+  }
+  .error-page__actions a:hover { background: var(--paper); color: var(--ink); }
+  .error-page__actions a.secondary { border-color: var(--rule-strong); color: var(--text-muted); }
+  .error-page__actions a.secondary:hover { color: var(--paper); border-color: var(--paper); background: transparent; }
+</style>
+</head>
+<body>
+
+<a class="error-page__brand" id="brandLink" href="/">DISORDER119</a>
+
+<div class="error-page">
+  <p class="error-page__code">404</p>
+  <h1 class="error-page__title" id="errTitle">Seite nicht gefunden</h1>
+  <p class="error-page__text" id="errText">
+    Dieses Stück gibt es hier nicht (mehr) — der Link ist entweder veraltet
+    oder falsch geschrieben. Im Archiv findest du garantiert etwas anderes.
+  </p>
+  <div class="error-page__actions">
+    <a href="/" id="homeLink">Zum Archiv</a>
+    <a href="mailto:disorder119shop@gmail.com" class="secondary" id="contactLink">Kontakt</a>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  // Sprache rein aus dem urspruenglich versuchten Pfad ableiten (kein
+  // localStorage/Accept-Language noetig - der Pfad, der zu diesem 404
+  // gefuehrt hat, ist schon das zuverlaessigste Signal).
+  var path = window.location.pathname;
+  var lang = "de";
+  if (path.indexOf("/en/") === 0 || path === "/en") lang = "en";
+  else if (path.indexOf("/fr/") === 0 || path === "/fr") lang = "fr";
+
+  var STRINGS = {
+    de: {
+      title: "Seite nicht gefunden",
+      text: "Dieses Stück gibt es hier nicht (mehr) — der Link ist entweder veraltet oder falsch geschrieben. Im Archiv findest du garantiert etwas anderes.",
+      home: "Zum Archiv",
+      contact: "Kontakt",
+      docTitle: "Disorder119 — Seite nicht gefunden"
+    },
+    en: {
+      title: "Page not found",
+      text: "This piece doesn't exist here (anymore) — the link is either outdated or mistyped. You'll definitely find something else in the archive.",
+      home: "To the archive",
+      contact: "Contact",
+      docTitle: "Disorder119 — Page not found"
+    },
+    fr: {
+      title: "Page introuvable",
+      text: "Cette pièce n'existe pas (plus) ici — le lien est soit obsolète, soit mal écrit. Tu trouveras sûrement autre chose dans l'archive.",
+      home: "Vers l'archive",
+      contact: "Contact",
+      docTitle: "Disorder119 — Page introuvable"
+    }
+  };
+  var s = STRINGS[lang];
+  var home = lang === "de" ? "/" : "/" + lang + "/";
+  document.title = s.docTitle;
+  document.documentElement.lang = lang;
+  document.getElementById("errTitle").textContent = s.title;
+  document.getElementById("errText").textContent = s.text;
+  document.getElementById("homeLink").textContent = s.home;
+  document.getElementById("homeLink").href = home;
+  document.getElementById("contactLink").textContent = s.contact;
+  document.getElementById("brandLink").href = home;
+})();
+</script>
+
+</body>
+</html>
