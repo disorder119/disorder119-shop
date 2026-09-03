@@ -1496,7 +1496,12 @@
       // bei einem reinen JS-Modal ohne eigene URL nicht.
       var plate = document.createElement("a");
       plate.className = "plate";
-      plate.href = "artikel/" + it.id + "/";
+      // Absolut statt relativ ("artikel/" + id + "/"): das Klassik-Grid wird
+      // immer aufgebaut (auch waehrend Match/Chaos/Baukasten aktiv sind, nur
+      // eben unsichtbar), diese Katalog-Ansichten liegen aber jetzt auf
+      // echten eigenen Pfaden wie /chaos/ - ein relativer Link haette sich
+      // dort falsch aufgeloest (".../chaos/artikel/123/" statt "/artikel/123/").
+      plate.href = langHome(LANG) + "artikel/" + it.id + "/";
       plate.setAttribute("aria-label", it.title);
       if (animateEntry && idx < animateCount) {
         plate.classList.add("plate--enter");
@@ -1716,7 +1721,12 @@
 
   document.getElementById("modalShare").addEventListener("click", function () {
     if (!currentItem) return;
-    var shareUrl = new URL("artikel/" + currentItem.id + "/", location.href).href;
+    // Absolut + sprachbewusst statt relativ gegen location.href aufgeloest:
+    // dieses Modal kann jetzt auch von /match/, /chaos/ oder /baukasten/ aus
+    // geoeffnet werden (echte eigene URLs, keine reinen Client-Zustaende
+    // mehr) - eine relative Aufloesung haette dort z.B. ".../chaos/artikel/
+    // 123/" ergeben (404) statt der echten Artikel-URL.
+    var shareUrl = location.origin + langHome(LANG) + "artikel/" + currentItem.id + "/";
     var shareTitle = (currentItem.brand ? currentItem.brand + " — " : "") + currentItem.title;
     var shareText = shareTitle + " bei Disorder119";
     if (navigator.share) {
@@ -2363,9 +2373,17 @@
       btn.setAttribute("aria-label", it.title);
       btn.innerHTML = '<img src="' + assetUrl(it.gallery[0]) + '" alt="" loading="lazy" />';
       btn.addEventListener("click", function () {
-        var picked = it;
-        showClassic();
-        openModal(picked);
+        // Frueher stand hier zusaetzlich showClassic() vor openModal() - das
+        // war harmlos, solange Moduswechsel nur lokale Zustaende umschalteten.
+        // Jetzt navigiert showClassic() aber wirklich zu / (siehe pushModePath
+        // oben) - ein Klick auf ein Chaos-Objekt haette also unbemerkt die
+        // URL auf die Startseite umgeschrieben und man waere nach dem
+        // Schliessen des Quickviews ueberraschend im Archiv statt wieder in
+        // Chaos gelandet. Die Schnellansicht liegt als eigenes Overlay
+        // ausserhalb von #appShell (siehe index_template.html) und
+        // funktioniert daher unabhaengig davon, ob Chaos oder Archiv aktiv
+        // ist - keine Navigation noetig, um sie zu zeigen.
+        openModal(it);
       });
       btn.addEventListener("mouseenter", function () { showChaosTooltip(it); });
       btn.addEventListener("mousemove", function (ev) { positionChaosTooltip(ev.clientX, ev.clientY); });
