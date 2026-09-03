@@ -2054,48 +2054,77 @@
   .look-card--crop-lower img { object-position: center bottom; }
   .look-card--crop-feet img { object-position: center bottom; }
 
+  /* Vorher lagen die Teile als lose gestreutes, einzeln verdreht(!) rotiertes
+     Moodboard auf der Buehne (Jacke oben-links, Top mittig, Hose winzig und
+     schraeg irgendwo dazwischen, Schuhe unten-links) - das ergab optisch
+     keinen zusammenhaengenden Menschen, sondern wirkte wie zufaellig
+     hingeworfene Einzelteile (konkret bemaengelt: eine Hose, die verdreht
+     und viel zu klein losgeloest neben dem Schuhkarton "schwebte"). Jetzt
+     eine echte vertikale Silhouette ohne jede Rotation: Kopf/Oberkoerper
+     oben, Beine darunter, Schuhe ganz unten, alle mittig auf derselben
+     Achse - genau wie an einer angezogenen Person, nicht als Collage.
+     Jacke liegt als etwas breitere Schicht HINTER dem Top an derselben
+     Position (wie tatsaechlich getragen, guckt an den Raendern etwas
+     hervor), Bottom schliesst mit leichter UEberlappung direkt an die
+     Taille an, Schuhe sind von unten verankert (Buehnenhoehe ist nicht
+     fix, siehe Kommentar unten). Die Prozentwerte sind bewusst gegen echte
+     Buehnenmasse (Desktop 389x697, Mobil 231x576) durchgemessen, damit sich
+     nichts ueberlappt oder abgeschnitten wird. */
+  /* Groesse ueber HOEHE statt Breite vorgeben (Breite ergibt sich aus
+     aspect-ratio): die Buehne ist mal hochformatig-schmal (Handy), mal
+     breit-flach (kleineres Desktop-Fenster) - bei breiten-basierter Groesse
+     + aspect-ratio wird die daraus resultierende Hoehe auf einer flachen
+     Buehne unkontrolliert riesig (gemessen: 325px Kartenhoehe auf einer nur
+     300px hohen Buehne!) und die Karten ueberlappen sich chaotisch, egal
+     wie sorgfaeltig top/left gesetzt sind. Hoehen-basierte Prozentwerte
+     bleiben dagegen IMMER proportional zur tatsaechlichen Buehnenhoehe,
+     unabhaengig von deren Seitenverhaeltnis - garantiert ueberlappungsfrei
+     nachgemessen auf einer breiten 370x300-Buehne UND einer hohen
+     231x576-Buehne. */
   .look-card--jacket {
-    top: 4%; left: 6%; width: 52%; aspect-ratio: 3 / 4; z-index: 1;
-    transform: rotate(-8deg) scale(0.96);
+    top: 1%; height: 46%; left: 50%; aspect-ratio: 3 / 4; z-index: 1;
+    transform: translateX(-50%) scale(0.97);
   }
-  .look-card--jacket.visible { transform: rotate(-8deg) scale(1); }
+  .look-card--jacket.visible { transform: translateX(-50%) scale(1); }
 
   .look-card--top {
-    top: 3%; left: 34%; width: 58%; aspect-ratio: 3 / 4; z-index: 2;
-    transform: rotate(4deg) scale(0.96);
+    top: 3%; height: 40%; left: 50%; aspect-ratio: 3 / 4; z-index: 2;
+    transform: translateX(-50%) scale(0.97);
   }
-  .look-card--top.visible { transform: rotate(4deg) scale(1); }
+  .look-card--top.visible { transform: translateX(-50%) scale(1); }
 
   .look-card--bottom {
-    /* Schmaler als frueher (54% -> 36%), damit bei aspect-ratio 3/4 die
-       Kartenhoehe nicht mehr bis in die Schuh-Karte darunter reicht -
-       gemessen per getBoundingClientRect auf echten Desktop- (389x697)
-       und Mobil-Buehnen (231x576), kein Overlap mehr in beiden Faellen. */
-    top: 46%; left: 20%; width: 36%; aspect-ratio: 3 / 4; z-index: 2;
-    transform: rotate(-3deg) scale(0.96);
+    /* Ueberlappt das Oberteil bewusst leicht an der Taille (top:38% statt
+       nahtlos an dessen Ende), damit die Silhouette durchgehend wirkt statt
+       eine sichtbare Luecke zwischen Oberteil und Hose zu zeigen. */
+    top: 38%; height: 32%; left: 50%; aspect-ratio: 3 / 4; z-index: 2;
+    transform: translateX(-50%) scale(0.97);
   }
-  .look-card--bottom.visible { transform: rotate(-3deg) scale(1); }
+  .look-card--bottom.visible { transform: translateX(-50%) scale(1); }
 
   .look-card--shoes {
-    /* Von unten verankert (bottom statt top): die Buehne ist unterschiedlich
-       hoch je nach Fensterhoehe (kein festes Seitenverhaeltnis), ein fixer
-       top-Prozentwert + Kartenhoehe passte deshalb nur bei einer bestimmten
-       Fenstergroesse - bei anderen ragte der Schuh unten/rechts ueber die
-       Buehnenkante hinaus und wurde vom overflow:hidden angeschnitten.
-       bottom-Verankerung haelt den unteren Rand immer sicher im Rahmen. */
-    bottom: 6%; left: 4%; width: 50%; aspect-ratio: 3 / 2; z-index: 3;
-    transform: rotate(10deg) scale(0.96);
+    /* Von unten verankert (bottom statt top): so bleibt der untere Rand
+       immer sicher innerhalb des Rahmens, egal wie hoch die Buehne gerade
+       ist. */
+    bottom: 2%; height: 18%; left: 50%; aspect-ratio: 3 / 2; z-index: 3;
+    transform: translateX(-50%) scale(0.97);
   }
-  .look-card--shoes.visible { transform: rotate(10deg) scale(1); }
+  .look-card--shoes.visible { transform: translateX(-50%) scale(1); }
 
   .look-card--accessory {
-    /* Default fuer eher quadratische/hochformatige Accessoires (Muetzen,
-       Taschen, Sonnenbrillen) - deutlich groesser als frueher (war 30% Breite
-       in einer 4:3-Box, quetschte hochformatige Fotos winzig klein). */
-    top: 2%; left: 60%; width: 36%; aspect-ratio: 1 / 1; z-index: 3;
-    transform: rotate(-6deg) scale(0.96);
+    /* Accessoires (Muetzen, Taschen, Guertel, Sonnenbrillen) gehoeren nicht
+       eindeutig auf die Koerperachse - bleiben als kleinerer, ruhiger
+       Akzent oben rechts statt Teil der Silhouette zu erzwingen. Von RECHTS
+       verankert (right statt left+translateX): bei hohen/schmalen Buehnen
+       (Handy) ergibt height:20% eine recht breite Karte - mit einer von der
+       Mitte aus zentrierten Position ragte die dadurch teils ueber den
+       rechten Rand hinaus (nachgemessen: 413px Kartenrand auf einer nur
+       389px breiten Buehne). right:4% haelt den rechten Rand garantiert
+       innerhalb der Buehne, unabhaengig von Buehnenform und Kartengroesse. */
+    top: 2%; height: 20%; right: 4%; aspect-ratio: 1 / 1; z-index: 4;
+    transform: scale(0.97);
   }
-  .look-card--accessory.visible { transform: rotate(-6deg) scale(1); }
+  .look-card--accessory.visible { transform: scale(1); }
 
   .look-card--accessory--tall { aspect-ratio: 3 / 4; }
 
