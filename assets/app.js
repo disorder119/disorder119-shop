@@ -2811,8 +2811,10 @@
         return;
       }
 
+      var slotAriaLabel;
       if (slot.item) {
         var it = slot.item;
+        slotAriaLabel = outfitSlotLabel(key) + ": " + it.title + ", " + fmtPrice(it.price);
         row.innerHTML =
           '<div class="outfit-slot__frame" data-slot="' + key + '"><img src="' + assetUrl(it.gallery[0]) + '" alt="" /></div>' +
           '<div class="outfit-slot__body" data-slot="' + key + '">' +
@@ -2822,6 +2824,7 @@
           "</div>" +
           '<button type="button" class="outfit-slot__remove" data-remove="' + key + '" aria-label="' + t("cartRemove") + '">✕</button>';
       } else {
+        slotAriaLabel = outfitSlotLabel(key) + ": " + t("outfitChoose");
         row.innerHTML =
           '<div class="outfit-slot__frame" data-slot="' + key + '">+</div>' +
           '<div class="outfit-slot__body" data-slot="' + key + '">' +
@@ -2829,11 +2832,31 @@
             '<div class="outfit-slot__value">' + t("outfitChoose") + "</div>" +
           "</div>";
       }
+      // Frame/Body waren bisher reine <div>s ohne jede Tastaturbedienbarkeit -
+      // per Tab nicht erreichbar, Enter/Leertaste taten nichts. Die ganze
+      // Zeile bekommt jetzt role="button"/tabindex, damit sie EIN
+      // Tab-Stopp ist (nicht zwei getrennte fuer Bild und Text), mit
+      // Enter/Leertaste bedienbar, ohne die bestehende Klick-Zuordnung auf
+      // frame/body fuer Maus/Touch anzufassen. Klicks auf den verschachtelten
+      // echten Entfernen-Button duerfen dabei nicht zusaetzlich die Zeile
+      // aktivieren (e.target-Pruefung im keydown-Handler unten).
+      row.setAttribute("role", "button");
+      row.setAttribute("tabindex", "0");
+      row.setAttribute("aria-label", slotAriaLabel);
       stack.appendChild(row);
     });
 
     Array.prototype.forEach.call(stack.querySelectorAll("[data-slot]"), function (el) {
       el.addEventListener("click", function () { openOutfitPicker(el.getAttribute("data-slot")); });
+    });
+    Array.prototype.forEach.call(stack.querySelectorAll(".outfit-slot[role='button']"), function (el) {
+      el.addEventListener("keydown", function (e) {
+        if (e.target !== el) return; // Klick/Enter auf dem verschachtelten Entfernen-Button nicht zusaetzlich als Zeilen-Aktivierung werten
+        if (e.key !== "Enter" && e.key !== " " && e.key !== "Spacebar") return;
+        e.preventDefault();
+        var frame = el.querySelector("[data-slot]");
+        if (frame) openOutfitPicker(frame.getAttribute("data-slot"));
+      });
     });
     Array.prototype.forEach.call(stack.querySelectorAll("[data-remove]"), function (el) {
       el.addEventListener("click", function (e) {
@@ -2973,7 +2996,9 @@
     grid.appendChild(frag);
   }
 
+  var outfitPickerLastFocusEl = null;
   function openOutfitPicker(key) {
+    outfitPickerLastFocusEl = document.activeElement;
     outfitPickerKey = key;
     outfitPickerQuery = "";
     outfitPickerSize = "";
@@ -3002,7 +3027,9 @@
 
   function closeOutfitPicker() {
     outfitPicker.classList.remove("open");
+    if (outfitPickerLastFocusEl && typeof outfitPickerLastFocusEl.focus === "function") outfitPickerLastFocusEl.focus();
   }
+  bindFocusTrap(outfitPicker, function () { return outfitPicker.classList.contains("open"); }, closeOutfitPicker);
 
   document.getElementById("outfitPickerClose").addEventListener("click", closeOutfitPicker);
   document.getElementById("outfitPickerSearch").addEventListener("input", function (e) {

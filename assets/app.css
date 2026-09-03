@@ -469,6 +469,23 @@
     pointer-events: auto;
   }
 
+  /* Ausnahme vom "immer ueber allen Ansichten sichtbar"-Prinzip oben: der
+     Outfit-Baukasten hat in seiner eigenen Fusszeile bereits einen
+     vollwertigen "In den Warenkorb"-Button, der auf schmaleren/nicht
+     maximierten Fenstern (Handy UND normal grosse Desktop-Fenster, nicht
+     nur sehr kleine) bis unter den schwebenden Warenkorb-Button reicht -
+     verifiziert per getBoundingClientRect(): beide Elemente ueberlappten
+     sich dort tatsaechlich, der Kreis-Button lag sichtbar auf dem Text von
+     "In den Warenkorb"/"Gesamt". Da der Baukasten ohnehin einen eigenen,
+     klar sichtbaren Kaufbutton hat, ist der schwebende zweite hier
+     schlicht ueberfluessig - einfacher und robuster, ihn dort ganz
+     auszublenden, als die Fusszeile fuer jede Fenstergroesse neu gegen ihn
+     abzugrenzen. #outfitView und .cart-bag sind direkte Geschwister von
+     <body>, das funktioniert daher rein per CSS-Selektor. */
+  .outfit-view:not(.hidden) ~ .cart-bag {
+    display: none;
+  }
+
   .cart-bag:hover { border-color: var(--accent); }
 
   .cart-bag svg { display: block; width: 26px; height: auto; }
