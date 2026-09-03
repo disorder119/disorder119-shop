@@ -31,10 +31,17 @@
     return brand + " " + title;
   }
 
-  // ---- Sprachen (DE Standard, EN/FR zuschaltbar) ----
+  // ---- Sprachen (DE Standard, EN/FR unter eigenen /en/-/fr/-URLs) ----
+  // Jede Sprache hat eine echte eigene URL (/, /en/, /fr/ - siehe hreflang-Tags
+  // im <head>), damit Suchmaschinen pro Sprache die richtige Seite indexieren
+  // koennen. Die URL ist deshalb die alleinige Quelle fuer LANG beim Laden -
+  // localStorage wuerde sonst z.B. "/" fuer einen EN-Nutzer auf Englisch
+  // rendern, obwohl die Seite sich selbst per hreflang als Deutsch deklariert.
   var LANG_KEY = "disorder119_lang";
-  var LANG = "de";
-  try { LANG = window.localStorage.getItem(LANG_KEY) || "de"; } catch (e) {}
+  var PATH_LANG_MATCH = /^\/(en|fr)\/(.*)$/.exec(location.pathname);
+  var LANG = PATH_LANG_MATCH ? PATH_LANG_MATCH[1] : "de";
+  var PATH_REST = PATH_LANG_MATCH ? PATH_LANG_MATCH[2] : location.pathname.replace(/^\//, "");
+  function langHome(lang) { return lang === "de" ? "/" : "/" + lang + "/"; }
 
   var I18N = {
     de: {
@@ -136,8 +143,33 @@
         "Abweichungen sind möglich und werden nach bestem Wissen in der Artikelbeschreibung angegeben.</p>" +
         "<h3>4. Preise &amp; Zahlung</h3><p>Alle Preise verstehen sich in Euro. Kleinunternehmer gemäß § 19 UStG, keine Umsatzsteuer ausgewiesen. " +
         "Zahlungs- und Versandart werden individuell vereinbart.</p>" +
-        "<h3>5. Widerruf &amp; Gewährleistung</h3><p>Verbraucher:innen steht bei Fernabsatzverträgen grundsätzlich ein gesetzliches Widerrufsrecht zu; " +
-        "es gelten die gesetzlichen Gewährleistungsrechte. Details werden bei Vertragsschluss individuell mitgeteilt.</p>",
+        "<h3>5. Gewährleistung</h3><p>Es gelten die gesetzlichen Gewährleistungsrechte. Da alle Artikel gebrauchte Einzelstücke sind, wird der " +
+        "Zustand nach bestem Wissen in der jeweiligen Artikelbeschreibung angegeben.</p>" +
+        "<h3>6. Widerrufsbelehrung für Verbraucher:innen</h3>" +
+        "<p><strong>Widerrufsrecht</strong><br>Du hast das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. " +
+        "Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag, an dem du oder ein von dir benannter Dritter, der nicht der Beförderer ist, die Waren in Besitz genommen hast bzw. hat. " +
+        "Um dein Widerrufsrecht auszuüben, musst du uns (Joel Bittner, Disorder119, Nelseestraße 25, 63739 Aschaffenburg, E-Mail: {email}) mittels einer eindeutigen Erklärung " +
+        "(z. B. ein mit der Post versandter Brief oder eine E-Mail) über deinen Entschluss, diesen Vertrag zu widerrufen, informieren. Du kannst dafür das unten stehende " +
+        "Muster-Widerrufsformular verwenden, das ist jedoch nicht vorgeschrieben. Zur Wahrung der Widerrufsfrist reicht es aus, dass du die Mitteilung über die Ausübung " +
+        "des Widerrufsrechts vor Ablauf der Widerrufsfrist absendest.</p>" +
+        "<p><strong>Folgen des Widerrufs</strong><br>Wenn du diesen Vertrag widerrufst, haben wir dir alle Zahlungen, die wir von dir erhalten haben, einschließlich der Lieferkosten " +
+        "(mit Ausnahme der zusätzlichen Kosten, die sich daraus ergeben, dass du eine andere Art der Lieferung als die von uns angebotene, günstigste Standardlieferung gewählt hast), " +
+        "unverzüglich und spätestens binnen vierzehn Tagen ab dem Tag zurückzuzahlen, an dem die Mitteilung über deinen Widerruf dieses Vertrags bei uns eingegangen ist. Für diese " +
+        "Rückzahlung verwenden wir dasselbe Zahlungsmittel, das du bei der ursprünglichen Transaktion eingesetzt hast, es sei denn, mit dir wurde ausdrücklich etwas anderes vereinbart; " +
+        "in keinem Fall werden dir wegen dieser Rückzahlung Entgelte berechnet. Wir können die Rückzahlung verweigern, bis wir die Waren wieder zurückerhalten haben oder bis du den " +
+        "Nachweis erbracht hast, dass du die Waren zurückgesandt hast, je nachdem, welches der frühere Zeitpunkt ist. Du hast die Waren unverzüglich und in jedem Fall spätestens binnen " +
+        "vierzehn Tagen ab dem Tag, an dem du uns über den Widerruf dieses Vertrags unterrichtest, an uns zurückzusenden oder zu übergeben. Die Frist ist gewahrt, wenn du die Waren vor " +
+        "Ablauf der Frist von vierzehn Tagen absendest. Du trägst die unmittelbaren Kosten der Rücksendung der Waren. Du musst für einen etwaigen Wertverlust der Waren nur aufkommen, " +
+        "wenn dieser Wertverlust auf einen zur Prüfung der Beschaffenheit, Eigenschaften und Funktionsweise der Waren nicht notwendigen Umgang mit ihnen zurückzuführen ist.</p>" +
+        "<p><strong>Muster-Widerrufsformular</strong><br>(Wenn du den Vertrag widerrufen willst, dann fülle bitte dieses Formular aus und sende es zurück.)</p>" +
+        "<p>An: Joel Bittner, Disorder119, Nelseestraße 25, 63739 Aschaffenburg, E-Mail: {email}<br>" +
+        "Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen Vertrag über den Kauf der folgenden Waren (*)/die Erbringung der folgenden Dienstleistung (*)<br>" +
+        "Bestellt am (*)/erhalten am (*)<br>" +
+        "Name des/der Verbraucher(s)<br>" +
+        "Anschrift des/der Verbraucher(s)<br>" +
+        "Unterschrift des/der Verbraucher(s) (nur bei Mitteilung auf Papier)<br>" +
+        "Datum<br>" +
+        "(*) Unzutreffendes streichen.</p>",
       legalDatenschutzHtml: "<h2>Datenschutzerklärung</h2>" +
         "<h3>Verantwortlicher</h3><p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg — Kontakt siehe Impressum.</p>" +
         "<h3>Lokale Speicherung (localStorage)</h3><p>Warenkorb und Outfit-Baukasten speichern deine Auswahl ausschließlich lokal in deinem Browser " +
@@ -250,8 +282,31 @@
         "variations are possible and are noted to the best of our knowledge in the item description.</p>" +
         "<h3>4. Prices &amp; payment</h3><p>All prices are in euros. Small business as per § 19 UStG, no VAT shown. " +
         "Payment and shipping method are agreed individually.</p>" +
-        "<h3>5. Withdrawal &amp; warranty</h3><p>Consumers generally have a statutory right of withdrawal for distance contracts; " +
-        "statutory warranty rights apply. Details are communicated individually when the contract is concluded.</p>",
+        "<h3>5. Warranty</h3><p>Statutory warranty rights apply. As all items are used one-off pieces, condition is described to the best of our " +
+        "knowledge in the respective item description.</p>" +
+        "<h3>6. Right of withdrawal for consumers</h3>" +
+        "<p><strong>Right of withdrawal</strong><br>You have the right to withdraw from this contract within 14 days without giving any reason. " +
+        "The withdrawal period will expire 14 days from the day on which you, or a third party other than the carrier and indicated by you, acquire physical possession of the goods. " +
+        "To exercise the right of withdrawal, you must inform us (Joel Bittner, Disorder119, Nelseestraße 25, 63739 Aschaffenburg, Germany, e-mail: {email}) of your decision to withdraw " +
+        "from this contract by an unequivocal statement (e.g. a letter sent by post or e-mail). You may use the model withdrawal form below, but it is not obligatory. To meet the " +
+        "withdrawal deadline, it is sufficient for you to send your communication concerning the exercise of the right of withdrawal before the withdrawal period has expired.</p>" +
+        "<p><strong>Effects of withdrawal</strong><br>If you withdraw from this contract, we shall reimburse all payments received from you, including delivery costs (except for the " +
+        "supplementary costs resulting from your choice of a delivery type other than the least expensive standard delivery offered by us), without undue delay and in any event not " +
+        "later than 14 days from the day on which we are informed about your decision to withdraw. We will use the same means of payment as you used for the initial transaction, " +
+        "unless expressly agreed otherwise; in any event, you will not incur any fees as a result of such reimbursement. We may withhold reimbursement until we have received the goods " +
+        "back, or you have supplied evidence of having sent back the goods, whichever is the earliest. You shall send back the goods without undue delay and in any event not later than " +
+        "14 days from the day on which you communicate your withdrawal from this contract to us. The deadline is met if you send back the goods before the period of 14 days has expired. " +
+        "You will bear the direct cost of returning the goods. You are only liable for any diminished value of the goods resulting from handling other than what is necessary to " +
+        "establish the nature, characteristics and functioning of the goods.</p>" +
+        "<p><strong>Model withdrawal form</strong><br>(Complete and return this form only if you wish to withdraw from the contract.)</p>" +
+        "<p>To: Joel Bittner, Disorder119, Nelseestraße 25, 63739 Aschaffenburg, Germany, e-mail: {email}<br>" +
+        "I/We (*) hereby give notice that I/We (*) withdraw from my/our (*) contract for the sale of the following goods (*)/for the provision of the following service (*)<br>" +
+        "Ordered on (*)/received on (*)<br>" +
+        "Name of consumer(s)<br>" +
+        "Address of consumer(s)<br>" +
+        "Signature of consumer(s) (only if this form is notified on paper)<br>" +
+        "Date<br>" +
+        "(*) Delete as appropriate.</p>",
       legalDatenschutzHtml: "<h2>Privacy policy</h2>" +
         "<p>This page is translated for convenience — the German version is the legally binding one.</p>" +
         "<h3>Controller</h3><p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg, Germany — contact details in the legal notice.</p>" +
@@ -365,8 +420,33 @@
         "variations liées à l'usage sont possibles et sont indiquées au mieux de notre connaissance dans la description de l'article.</p>" +
         "<h3>4. Prix &amp; paiement</h3><p>Tous les prix s'entendent en euros. Micro-entreprise selon le § 19 UStG, TVA non indiquée. " +
         "Le mode de paiement et d'expédition est convenu individuellement.</p>" +
-        "<h3>5. Rétractation &amp; garantie</h3><p>Les consommateurs disposent en principe d'un droit de rétractation légal pour les contrats à distance ; " +
-        "les droits de garantie légaux s'appliquent. Les détails sont communiqués individuellement à la conclusion du contrat.</p>",
+        "<h3>5. Garantie</h3><p>Les droits de garantie légaux s'appliquent. Tous les articles étant des pièces uniques d'occasion, leur état est décrit " +
+        "au mieux de notre connaissance dans la description de l'article concerné.</p>" +
+        "<h3>6. Droit de rétractation des consommateurs</h3>" +
+        "<p><strong>Droit de rétractation</strong><br>Tu disposes d'un délai de 14 jours pour te rétracter du présent contrat sans avoir à motiver ta décision. " +
+        "Le délai de rétractation expire 14 jours après le jour où toi, ou un tiers autre que le transporteur et désigné par toi, prend physiquement possession du bien. " +
+        "Pour exercer le droit de rétractation, tu dois nous notifier (Joel Bittner, Disorder119, Nelseestraße 25, 63739 Aschaffenburg, Allemagne, e-mail : {email}) ta décision de te " +
+        "rétracter du présent contrat au moyen d'une déclaration dénuée d'ambiguïté (par exemple lettre envoyée par la poste ou e-mail). Tu peux utiliser le formulaire type de " +
+        "rétractation ci-dessous, sans que cela soit obligatoire. Pour respecter le délai de rétractation, il suffit que tu transmettes ta communication relative à l'exercice du droit " +
+        "de rétractation avant l'expiration du délai de rétractation.</p>" +
+        "<p><strong>Effets de la rétractation</strong><br>En cas de rétractation, nous te rembourserons tous les paiements reçus, y compris les frais de livraison (à l'exception des " +
+        "frais supplémentaires découlant du fait que tu as choisi un mode de livraison autre que le mode le moins coûteux de livraison standard proposé par nous), sans retard excessif " +
+        "et en tout état de cause au plus tard 14 jours à compter du jour où nous sommes informés de ta décision de te rétracter. Nous procéderons au remboursement en utilisant le même " +
+        "moyen de paiement que celui utilisé pour la transaction initiale, sauf accord exprès contraire ; en tout état de cause, ce remboursement ne t'occasionnera aucun frais. Nous " +
+        "pouvons différer le remboursement jusqu'à ce que nous ayons reçu le bien ou jusqu'à ce que tu aies fourni une preuve de l'expédition du bien, la date retenue étant celle du " +
+        "premier de ces faits. Tu devras renvoyer ou restituer les biens sans retard excessif et en tout état de cause au plus tard 14 jours après nous avoir communiqué ta décision de " +
+        "te rétracter. Ce délai est réputé respecté si tu renvoies le bien avant l'expiration du délai de 14 jours. Les frais directs de renvoi du bien sont à ta charge. Ta responsabilité " +
+        "n'est engagée qu'à l'égard de la dépréciation du bien résultant de manipulations autres que celles nécessaires pour établir la nature, les caractéristiques et le bon " +
+        "fonctionnement de ce bien.</p>" +
+        "<p><strong>Formulaire type de rétractation</strong><br>(Veuillez compléter et renvoyer le présent formulaire uniquement si vous souhaitez vous rétracter du contrat.)</p>" +
+        "<p>À l'attention de : Joel Bittner, Disorder119, Nelseestraße 25, 63739 Aschaffenburg, Allemagne, e-mail : {email}<br>" +
+        "Je/nous (*) vous notifie/notifions par la présente ma/notre (*) rétractation du contrat portant sur la vente du bien (*)/pour la prestation de service (*) ci-dessous<br>" +
+        "Commandé le (*)/reçu le (*)<br>" +
+        "Nom du (des) consommateur(s)<br>" +
+        "Adresse du (des) consommateur(s)<br>" +
+        "Signature du (des) consommateur(s) (uniquement en cas de notification du présent formulaire sur papier)<br>" +
+        "Date<br>" +
+        "(*) Rayez la mention inutile.</p>",
       legalDatenschutzHtml: "<h2>Politique de confidentialité</h2>" +
         "<p>Cette page est traduite par courtoisie — la version allemande fait foi juridiquement.</p>" +
         "<h3>Responsable</h3><p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg, Allemagne — contact, voir mentions légales.</p>" +
@@ -492,8 +572,18 @@
   // Breakpoint) statt an die Eyebrow-Texthoehe im Hero gekoppelt zu sein -
   // kein JS-Sync mehr noetig.
 
+  // Sprachwahl navigiert jetzt zur eigenen Sprach-URL (siehe langHome() oben)
+  // statt nur die aktuelle Seite umzuskinnen - jede Sprache hat eine echte
+  // eigene Adresse, das muss sich auch beim Umschalten in der Adresszeile
+  // widerspiegeln (sonst waeren die hreflang-Angaben irrefuehrend).
   Array.prototype.forEach.call(document.querySelectorAll("[data-lang]"), function (btn) {
-    btn.addEventListener("click", function () { applyLanguage(btn.getAttribute("data-lang")); });
+    if (btn.tagName === "A") {
+      btn.href = langHome(btn.getAttribute("data-lang")) + PATH_REST;
+    } else {
+      btn.addEventListener("click", function () {
+        location.href = langHome(btn.getAttribute("data-lang")) + PATH_REST;
+      });
+    }
   });
 
   // ---- Shop-Kontakt: bitte vor dem Veröffentlichen eintragen ----
@@ -703,13 +793,19 @@
     foot.innerHTML = footHtml;
   }
 
-  // Warenkorb hat eine echte, eigene URL (/cart/) statt nur eine
-  // Overlay-Klasse umzuschalten oder eines Hash-Fragments - /cart/ existiert
-  // als eigene Datei (siehe build_special_pages() in build_site.py, eine
-  // vollstaendige Kopie dieser Seite, die beim Laden anhand von location.pathname
-  // die Schublade sofort oeffnet). Von hier aus (Startseite) wechselt ein Klick
-  // per pushState schnell und ohne Neuladen dorthin; der Zurueck-Button des
-  // Browsers schliesst den Warenkorb wieder; die URL laesst sich echt teilen.
+  // Warenkorb hat eine echte, eigene URL (/cart/, /en/cart/, /fr/cart/) statt
+  // nur eine Overlay-Klasse umzuschalten oder eines Hash-Fragments - jede
+  // existiert als eigene Datei (siehe build_special_pages() in build_site.py,
+  // eine vollstaendige Kopie dieser Seite, die beim Laden anhand von
+  // location.pathname die Schublade sofort oeffnet). Von hier aus wechselt
+  // ein Klick per pushState schnell und ohne Neuladen dorthin; der
+  // Zurueck-Button des Browsers schliesst den Warenkorb wieder; die URL
+  // laesst sich echt teilen.
+  var CART_PATH = langHome(LANG) + "cart/";
+  Array.prototype.forEach.call(document.querySelectorAll("#cartToggle, #footerCartToggle"), function (el) {
+    el.href = CART_PATH;
+  });
+
   function showCartUI() {
     renderCartDrawer(true);
     document.getElementById("cartBackdrop").classList.add("open");
@@ -722,17 +818,17 @@
   }
 
   function openCart() {
-    if (location.pathname !== "/cart/") history.pushState({ cart: true }, "", "/cart/");
+    if (location.pathname !== CART_PATH) history.pushState({ cart: true }, "", CART_PATH);
     showCartUI();
   }
 
   function closeCart() {
-    if (location.pathname === "/cart/") history.back();
+    if (location.pathname === CART_PATH) history.back();
     else hideCartUI();
   }
 
   window.addEventListener("popstate", function () {
-    if (location.pathname === "/cart/") showCartUI();
+    if (location.pathname === CART_PATH) showCartUI();
     else hideCartUI();
   });
 
@@ -752,7 +848,7 @@
   // Direktaufruf von /cart/ - Schublade sofort zeigen, ohne einen weiteren
   // Verlaufseintrag draufzupacken (der existiert ja schon durch das Laden
   // dieser Seite selbst).
-  if (location.pathname === "/cart/") showCartUI();
+  if (location.pathname === CART_PATH) showCartUI();
 
   var state = {
     query: "",
@@ -2477,8 +2573,17 @@
   // dieser Seite, die beim Laden anhand von location.pathname das passende
   // Panel sofort oeffnen). Von hier aus wechselt ein Klick per pushState
   // schnell dorthin; Direktaufruf/Teilen der URL funktioniert genauso.
-  var LEGAL_PATHS = { impressum: "/impressum/", agb: "/agb/", datenschutz: "/datenschutz/" };
-  var INFO_PATHS = { about: "/ueber-uns/", faq: "/faq/" };
+  var LEGAL_PATHS = { impressum: langHome(LANG) + "impressum/", agb: langHome(LANG) + "agb/", datenschutz: langHome(LANG) + "datenschutz/" };
+  var INFO_PATHS = { about: langHome(LANG) + "ueber-uns/", faq: langHome(LANG) + "faq/" };
+  // Statisches HTML (index_template.html) verlinkt hier fest auf die
+  // deutschen Pfade, weil dieselbe Vorlage fuer /, /en/ und /fr/ verwendet
+  // wird - fuer EN/FR hier auf die passende Sprachversion korrigieren.
+  Array.prototype.forEach.call(document.querySelectorAll("[data-legal]"), function (btn) {
+    if (btn.tagName === "A") btn.href = LEGAL_PATHS[btn.getAttribute("data-legal")];
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-info]"), function (btn) {
+    if (btn.tagName === "A") btn.href = INFO_PATHS[btn.getAttribute("data-info")];
+  });
 
   var legalBackdrop = document.getElementById("legalBackdrop");
   var currentLegalKey = null;
@@ -2507,7 +2612,7 @@
     legalBackdrop.classList.remove("open");
     currentLegalKey = null;
     currentInfoKey = null;
-    if (onOwnPage) location.href = "/";
+    if (onOwnPage) location.href = langHome(LANG);
   }
 
   Array.prototype.forEach.call(document.querySelectorAll("[data-legal]"), function (btn) {

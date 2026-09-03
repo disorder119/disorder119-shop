@@ -1,9 +1,8 @@
 /* Geteiltes Skript fuer alle Produktseiten - liest die kleine, pro Seite
-   eingebettete ARTICLE_ITEM/ARTICLE_SHOP_CONFIG-Variable, keine Frameworks.
-   Der Warenkorb UND die gewaehlte Sprache teilen sich das localStorage-Format
-   mit der Hauptseite (index.html, gleiche Keys), damit beides synchron
-   bleibt: ein hier hinzugefuegtes Stueck erscheint dort im Warenkorb, und
-   die auf der Startseite gewaehlte Sprache gilt auch hier automatisch. */
+   eingebettete ARTICLE_ITEM/ARTICLE_SHOP_CONFIG/ARTICLE_LANG-Variable, keine
+   Frameworks. Der Warenkorb teilt sich das localStorage-Format mit der
+   Hauptseite (index.html, gleicher Key), damit ein hier hinzugefuegtes
+   Stueck dort im Warenkorb erscheint. */
 (function () {
   "use strict";
 
@@ -11,15 +10,17 @@
   if (!IT) return;
   var SHOP_CONFIG = window.ARTICLE_SHOP_CONFIG || { whatsappNumber: "", email: "" };
   var CART_KEY = "disorder119_cart";
-  var LANG_KEY = "disorder119_lang";
 
   function fmtPrice(v) {
     return v.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
   }
 
-  // ---- Sprache (DE Standard, synchron mit der Hauptseite via localStorage) ----
-  var LANG = "de";
-  try { LANG = window.localStorage.getItem(LANG_KEY) || "de"; } catch (e) {}
+  // Jede Sprache hat eine echte eigene URL (/artikel/, /en/artikel/,
+  // /fr/artikel/ - siehe hreflang-Tags im <head>), die Seite selbst
+  // bestimmt also die Sprache verbindlich (window.ARTICLE_LANG, von
+  // build_page() in build_site.py gesetzt) - nicht mehr localStorage, das
+  // sonst z.B. eine EN-URL faelschlich auf Deutsch rendern wuerde.
+  var LANG = window.ARTICLE_LANG || "de";
 
   var I18N = {
     de: {
@@ -212,13 +213,10 @@
     el.innerHTML = '<div class="info__price">' + t("priceOnRequest") + "</div>";
   }
 
-  Array.prototype.forEach.call(document.querySelectorAll("#langSwitch [data-lang]"), function (btn) {
-    btn.addEventListener("click", function () {
-      LANG = btn.getAttribute("data-lang");
-      try { window.localStorage.setItem(LANG_KEY, LANG); } catch (e) {}
-      applyLang();
-    });
-  });
+  // DE/EN/FR im Sprachumschalter sind echte Links auf die jeweilige
+  // Sprach-URL dieses Artikels (siehe build_page() in build_site.py) -
+  // kein In-Place-Umschalten mehr noetig, das braeuchte sonst wieder eine
+  // eigene Loesung fuer Title/Meta-Tags/hreflang der aktuellen Seite.
 
   // ---- Galerie ----
   var mainImg = document.getElementById("galleryMain");
@@ -227,15 +225,16 @@
   var prevBtn = document.getElementById("galleryPrev");
   var nextBtn = document.getElementById("galleryNext");
   var idx = 0;
-  // IT.gallery-Pfade sind relativ zur Site-Wurzel (z.B. "assets/img/123/0.webp"),
-  // die Produktseite selbst liegt aber unter /artikel/{id}/ - deshalb hier
-  // einmalig mit "../../" auf Seiten-relative Pfade umrechnen. IT.thumbs
-  // (falls vorhanden) sind kleinere, eigens erzeugte Vorschaubilder - spart
+  // IT.gallery-Pfade sind relativ zur Site-Wurzel (z.B. "assets/img/123/0.webp")
+  // - hier wurzel-absolut gemacht ("/" davor), das funktioniert unabhaengig
+  // davon, wie tief die aktuelle Produktseite verschachtelt ist
+  // (/artikel/{id}/, /en/artikel/{id}/, /fr/artikel/{id}/). IT.thumbs (falls
+  // vorhanden) sind kleinere, eigens erzeugte Vorschaubilder - spart
   // Datenvolumen, die grosse Version wird erst als Hauptbild/im
   // Lightbox-Modus geladen.
-  var gallery = (IT.gallery || []).map(function (p) { return "../../" + p; });
+  var gallery = (IT.gallery || []).map(function (p) { return "/" + p; });
   var thumbs = (IT.thumbs && IT.thumbs.length === gallery.length ? IT.thumbs : IT.gallery || [])
-    .map(function (p) { return "../../" + p; });
+    .map(function (p) { return "/" + p; });
 
   function showPhoto(i) {
     if (!gallery.length) return;
