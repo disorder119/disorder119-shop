@@ -158,8 +158,12 @@ __ITEMLIST_JSONLD_BLOCK__
     <div class="rental-modal__field">
       <label for="rentalPurpose" data-i18n="rentalPurposeLabel">Verwendungszweck</label>
       <select id="rentalPurpose">
-        <option value="video" data-i18n="rentalPurposeVideo">Musikvideo</option>
         <option value="photo" data-i18n="rentalPurposePhoto">Fotoshooting</option>
+        <option value="video" data-i18n="rentalPurposeVideo">Musikvideo</option>
+        <option value="filmTheater" data-i18n="rentalPurposeFilmTheater">Film/Theater/Bühne</option>
+        <option value="editorial" data-i18n="rentalPurposeEditorial">Redaktionell/Editorial</option>
+        <option value="event" data-i18n="rentalPurposeEvent">Event/Ausstellung</option>
+        <option value="private" data-i18n="rentalPurposePrivate">Privater Anlass</option>
         <option value="other" data-i18n="rentalPurposeOther">Sonstiges</option>
       </select>
     </div>
@@ -210,7 +214,7 @@ __ITEMLIST_JSONLD_BLOCK__
       <button type="button" id="menuBrandsToggle" aria-expanded="false" data-i18n="menuBrands">Marken</button>
       <div class="menu-drawer__brands hidden" id="menuBrandList"></div>
       <button type="button" data-menu-status="Verkauft" data-i18n="menuArchive">Archiv</button>
-      <button type="button" id="menuRental" data-i18n="menuRental">Verleih</button>
+      <a href="/mieten/" id="menuRental" data-i18n="menuRental">Mieten &amp; Ausleihen</a>
     </nav>
 
     <div class="menu-drawer__section">

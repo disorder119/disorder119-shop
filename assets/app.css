@@ -3040,7 +3040,9 @@
 
   .menu-drawer__nav button,
   .menu-drawer__section button,
-  .menu-drawer__brands button {
+  .menu-drawer__brands button,
+  .menu-drawer__nav a {
+    display: block;
     width: 100%;
     border: 0;
     background: transparent;
@@ -3050,13 +3052,15 @@
     letter-spacing: 0.075em;
     text-align: left;
     text-transform: uppercase;
+    text-decoration: none;
     padding: 9px 0;
     cursor: pointer;
   }
 
   .menu-drawer__nav button:hover,
   .menu-drawer__section button:hover,
-  .menu-drawer__brands button:hover { color: var(--accent-text); }
+  .menu-drawer__brands button:hover,
+  .menu-drawer__nav a:hover { color: var(--accent-text); }
 
   .menu-drawer__brands {
     max-height: 230px;

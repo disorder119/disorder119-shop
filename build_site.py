@@ -53,13 +53,20 @@ SPECIAL_PAGES = {
     "match": {"de": "Match", "en": "Match", "fr": "Match"},
     "chaos": {"de": "Chaos", "en": "Chaos", "fr": "Chaos"},
     "baukasten": {"de": "Outfit-Baukasten", "en": "Outfit Builder", "fr": "Configurateur de tenues"},
+    # Eigene Kategorie statt nur ein Button auf jeder Archiv-Kachel (frueher):
+    # /mieten/ zeigt den Katalog wie das normale Archiv, aber mit
+    # "Anfragen"-Button pro Stueck (RENTAL_CATALOG_MODE in assets/app.js)
+    # und einer Einleitung inkl. Konditionen (MIETEN_INTRO_HTML oben) - nicht
+    # mehr nur fuer Shooting/Musikvideo, sondern breiter (Film/Theater,
+    # Redaktion, Event, privater Anlass).
+    "mieten": {"de": "Mieten & Ausleihen", "en": "Rent & Borrow", "fr": "Location"},
 }
 
 # Diese drei zeigen exakt denselben Katalog wie die Archiv-Startseite, nur
 # in einer anderen Ansicht/Interaktionsform - fuer Suchmaschinen ist die
 # Startseite die kanonische Quelle dieser Produktdaten (dieselbe Logik wie
 # bei ItemList-JSON-LD, das ebenfalls nur auf der Startseite steht).
-CATALOG_VARIANT_SLUGS = {"match", "chaos", "baukasten"}
+CATALOG_VARIANT_SLUGS = {"match", "chaos", "baukasten", "mieten"}
 
 # ---------------------------------------------------------------------------
 # Mehrsprachigkeit: echte eigene URLs pro Sprache (/, /en/, /fr/) statt nur
@@ -183,6 +190,75 @@ INFO_CONTENT_HTML = {
         "en": '<h2>FAQ</h2><h3>Is every item one of a kind?</h3><p>Yes. Every available item is a curated one-off piece.</p><h3>How do orders work?</h3><p>Add available pieces to the cart and send a non-binding enquiry by e-mail.</p><h3>Why do sold pieces remain visible?</h3><p>Sold pieces remain part of the DISORDER119 archive.</p>',
         "fr": '<h2>FAQ</h2><h3>Chaque article est-il unique ?</h3><p>Oui. Chaque article disponible est une pièce unique sélectionnée.</p><h3>Comment commander ?</h3><p>Ajoute les articles disponibles au panier, puis envoie une demande sans engagement par e-mail.</p><h3>Pourquoi les articles vendus restent-ils visibles ?</h3><p>Les pièces vendues restent dans l’archive DISORDER119.</p>',
     },
+}
+
+MIETEN_INTRO_HTML = {
+    "de": (
+        "<h2>Mieten &amp; Ausleihen</h2>"
+        "<p>Jedes verfügbare Stück im Archiv kann auch geliehen statt gekauft werden — "
+        "für Shootings, Musikvideos, Film- und Theaterproduktionen, redaktionelle Strecken, "
+        "Events oder private Anlässe. Wähle unten ein Stück und sende eine unverbindliche "
+        "Anfrage mit deinem Wunschzeitraum.</p>"
+        "<h3>Wie die Miete funktiert</h3>"
+        "<ul>"
+        "<li><strong>Mietpreis:</strong> in der Regel ca. 15&nbsp;% des im Archiv angegebenen "
+        "Preises pro Zeitraum von bis zu 4 Tagen (Richtwert — der genaue Preis wird bei jeder "
+        "Anfrage persönlich bestätigt, abhängig von Stück und Zeitraum).</li>"
+        "<li><strong>Kaution:</strong> wird bei Abholung/Versand hinterlegt und nach unbeschädigter, "
+        "vollständiger Rückgabe innerhalb von 7 Tagen zurückerstattet.</li>"
+        "<li><strong>Reinigung:</strong> normale Gebrauchsspuren und einfache Verschmutzungen sind "
+        "im Mietpreis enthalten. Für die professionelle Reinigung nach der Nutzung wird ggf. eine "
+        "Reinigungspauschale einbehalten.</li>"
+        "<li><strong>Schäden:</strong> Reparable Schäden werden von der Kaution beglichen; bei nicht "
+        "behebbaren Schäden oder Verlust wird der aktuelle Archivwert des Stücks fällig.</li>"
+        "<li><strong>Zeitraum:</strong> Standard bis zu 4 Tage, längere Zeiträume auf Anfrage möglich.</li>"
+        "<li>Alle Angaben sind unverbindlich und werden bei jeder Anfrage individuell bestätigt — "
+        "dies ist kein automatisiertes Buchungssystem.</li>"
+        "</ul>"
+    ),
+    "en": (
+        "<h2>Rent &amp; Borrow</h2>"
+        "<p>Every available piece in the archive can also be rented instead of bought — for shoots, "
+        "music videos, film and theatre productions, editorial stories, events or personal occasions. "
+        "Pick a piece below and send a non-binding request with your preferred dates.</p>"
+        "<h3>How renting works</h3>"
+        "<ul>"
+        "<li><strong>Rental price:</strong> typically around 15% of the archive price per period of up "
+        "to 4 days (a guideline — the exact price is confirmed personally for every request, depending "
+        "on the piece and duration).</li>"
+        "<li><strong>Deposit:</strong> collected at pickup/shipping and refunded after undamaged, "
+        "complete return within 7 days.</li>"
+        "<li><strong>Cleaning:</strong> normal wear and light soiling are included in the rental price. "
+        "A cleaning fee may be withheld for professional cleaning after use.</li>"
+        "<li><strong>Damage:</strong> repairable damage is settled from the deposit; for damage beyond "
+        "repair or loss, the piece's current archive value becomes due.</li>"
+        "<li><strong>Duration:</strong> up to 4 days by default, longer periods on request.</li>"
+        "<li>All details are non-binding and confirmed individually for every request — this is not an "
+        "automated booking system.</li>"
+        "</ul>"
+    ),
+    "fr": (
+        "<h2>Location</h2>"
+        "<p>Chaque pièce disponible de l'archive peut aussi être louée plutôt qu'achetée — pour des "
+        "shootings, clips musicaux, productions de film ou de théâtre, sujets éditoriaux, événements ou "
+        "occasions privées. Choisis une pièce ci-dessous et envoie une demande sans engagement avec tes "
+        "dates souhaitées.</p>"
+        "<h3>Comment fonctionne la location</h3>"
+        "<ul>"
+        "<li><strong>Prix de location :</strong> environ 15&nbsp;% du prix indiqué dans l'archive par "
+        "période de 4 jours maximum (indicatif — le prix exact est confirmé personnellement pour chaque "
+        "demande, selon la pièce et la durée).</li>"
+        "<li><strong>Caution :</strong> déposée au retrait/à l'envoi et remboursée après un retour complet "
+        "et non endommagé sous 7 jours.</li>"
+        "<li><strong>Nettoyage :</strong> l'usure normale et les salissures légères sont incluses dans le "
+        "prix de location. Des frais de nettoyage professionnel peuvent être retenus après usage.</li>"
+        "<li><strong>Dommages :</strong> les dommages réparables sont réglés via la caution ; en cas de "
+        "dommage irréparable ou de perte, la valeur actuelle de la pièce dans l'archive est due.</li>"
+        "<li><strong>Durée :</strong> 4 jours maximum par défaut, périodes plus longues sur demande.</li>"
+        "<li>Toutes les informations sont sans engagement et confirmées individuellement pour chaque "
+        "demande — il ne s'agit pas d'un système de réservation automatisé.</li>"
+        "</ul>"
+    ),
 }
 
 LEGAL_EMAIL_PENDING = {
@@ -640,6 +716,12 @@ def static_page_content_html(slug, lang, shop_config):
         html = html.replace("{email}", legal_email_line(shop_config, lang))
     elif slug in INFO_SLUG_KEY:
         html = INFO_CONTENT_HTML[INFO_SLUG_KEY[slug]][lang]
+    elif slug == "mieten":
+        # Anders als bei den reinen Rechts-/Info-Seiten bleibt der Katalog
+        # auf /mieten/ NICHT versteckt - dieser Text ist nur die Einleitung
+        # oberhalb des (client-seitig nachgeladenen) Katalog-Grids in der
+        # eigenen Mieten-Kategorie (siehe showMieten() in assets/app.js).
+        html = MIETEN_INTRO_HTML[lang]
     else:
         return ""
     return '<div class="static-page"><div class="legal-panel">' + html + "</div></div>"

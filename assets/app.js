@@ -126,21 +126,30 @@
       pageTitleChaos: "Disorder119 — Chaos", pageTitleOutfit: "Disorder119 — Outfit-Baukasten",
       modeHint: "Entdecke auch Match, Chaos & Baukasten", hintCloseAria: "Hinweis schließen",
       modeRailAria: "Ansicht wechseln",
-      rentalCta: "📅 Für Shooting/Video anfragen", rentalCloseAria: "Schließen",
-      rentalModalTitle: "Für Shooting oder Musikvideo anfragen",
+      rentalCta: "📅 Für Miete anfragen", rentalCloseAria: "Schließen",
+      rentalModalTitle: "Stück ausleihen",
       rentalStartLabel: "Von", rentalEndLabel: "Bis",
       rentalDaysTemplate: "{days} Tag(e) ausgewählt",
       rentalPurposeLabel: "Verwendungszweck",
-      rentalPurposeVideo: "Musikvideo", rentalPurposePhoto: "Fotoshooting", rentalPurposeOther: "Sonstiges",
+      rentalPurposeVideo: "Musikvideo", rentalPurposePhoto: "Fotoshooting",
+      rentalPurposeFilmTheater: "Film/Theater/Bühne", rentalPurposeEditorial: "Redaktionell/Editorial",
+      rentalPurposeEvent: "Event/Ausstellung", rentalPurposePrivate: "Privater Anlass",
+      rentalPurposeOther: "Sonstiges",
       rentalMessageLabel: "Nachricht (optional)",
-      rentalMessagePh: "z. B. Produktion, Set, Ansprechpartner …",
-      rentalNote: "Dies ist eine unverbindliche Anfrage, keine Buchung. Verfügbarkeit und Konditionen bestätige ich dir persönlich.",
+      rentalMessagePh: "z. B. Produktion, Set, Anlass, Ansprechpartner …",
+      rentalNote: "Dies ist eine unverbindliche Anfrage, keine Buchung. Verfügbarkeit, Kaution und Konditionen bestätige ich dir persönlich.",
       rentalDateError: "Bitte wähle ein gültiges Zeitfenster (Ende nach oder gleich Beginn).",
       rentalWhatsapp: "Anfrage per WhatsApp senden", rentalEmail: "Anfrage per E-Mail senden",
       rentalConfigWarning: "Shop-Kontakt noch nicht eingerichtet: Trage in config/shop-config.json deine WhatsApp-Nummer oder E-Mail-Adresse ein, damit Verleih-Anfragen bei dir ankommen.",
       rentalSubject: "Verleih-Anfrage Disorder119",
-      rentalGreeting: "Hallo! Ich möchte folgendes Stück aus dem Disorder119-Archiv für ein Shooting/Musikvideo anfragen:",
+      rentalGreeting: "Hallo! Ich möchte folgendes Stück aus dem Disorder119-Archiv ausleihen:",
       rentalPeriodLabel: "Zeitraum", rentalPurposeMsgLabel: "Zweck", rentalMessageMsgLabel: "Nachricht",
+      pageTitleMieten: "Disorder119 — Mieten & Ausleihen",
+      mietenCatalogHeading: "Mieten & Ausleihen",
+      mietenIntroTitle: "Mieten & Ausleihen",
+      mietenIntroLead: "Jedes verfügbare Stück im Archiv kann auch geliehen statt gekauft werden — für Shootings, Musikvideos, Film- und Theaterproduktionen, redaktionelle Strecken, Events oder private Anlässe. Wähle unten ein Stück und sende eine unverbindliche Anfrage mit deinem Wunschzeitraum.",
+      mietenTermsHeading: "Wie die Miete funktiert",
+      mietenTermsHtml: "<ul><li><strong>Mietpreis:</strong> in der Regel ca. 15&nbsp;% des im Archiv angegebenen Preises pro Zeitraum von bis zu 4 Tagen (Richtwert — der genaue Preis wird bei jeder Anfrage persönlich bestätigt, abhängig von Stück und Zeitraum).</li><li><strong>Kaution:</strong> wird bei Abholung/Versand hinterlegt und nach unbeschädigter, vollständiger Rückgabe innerhalb von 7 Tagen zurückerstattet.</li><li><strong>Reinigung:</strong> normale Gebrauchsspuren und einfache Verschmutzungen sind im Mietpreis enthalten. Für die professionelle Reinigung nach der Nutzung wird ggf. eine Reinigungspauschale einbehalten.</li><li><strong>Schäden:</strong> Reparable Schäden werden von der Kaution beglichen; bei nicht behebbaren Schäden oder Verlust wird der aktuelle Archivwert des Stücks fällig.</li><li><strong>Zeitraum:</strong> Standard bis zu 4 Tage, längere Zeiträume auf Anfrage möglich.</li><li>Alle Angaben sind unverbindlich und werden bei jeder Anfrage individuell bestätigt — dies ist kein automatisiertes Buchungssystem.</li></ul>",
       toArchive: "Zum Archiv →",
       swipeHint: "Ziehen oder klicken — ✕ überspringen, ♥ merken",
       swipeRoundDone: "Runde beendet", swipeSavedInCart: "Teile gemerkt &amp; im Warenkorb",
@@ -281,21 +290,30 @@
       pageTitleChaos: "Disorder119 — Chaos", pageTitleOutfit: "Disorder119 — Outfit Builder",
       modeHint: "Also discover Match, Chaos & the outfit builder", hintCloseAria: "Close hint",
       modeRailAria: "Switch view",
-      rentalCta: "📅 Request for shoot/video", rentalCloseAria: "Close",
-      rentalModalTitle: "Request for a shoot or music video",
+      rentalCta: "📅 Request to rent", rentalCloseAria: "Close",
+      rentalModalTitle: "Rent this piece",
       rentalStartLabel: "From", rentalEndLabel: "To",
       rentalDaysTemplate: "{days} day(s) selected",
       rentalPurposeLabel: "Purpose",
-      rentalPurposeVideo: "Music video", rentalPurposePhoto: "Photo shoot", rentalPurposeOther: "Other",
+      rentalPurposeVideo: "Music video", rentalPurposePhoto: "Photo shoot",
+      rentalPurposeFilmTheater: "Film/theatre/stage", rentalPurposeEditorial: "Editorial",
+      rentalPurposeEvent: "Event/exhibition", rentalPurposePrivate: "Personal occasion",
+      rentalPurposeOther: "Other",
       rentalMessageLabel: "Message (optional)",
-      rentalMessagePh: "e.g. production, set, contact person …",
-      rentalNote: "This is a non-binding request, not a booking. I'll confirm availability and terms with you personally.",
+      rentalMessagePh: "e.g. production, set, occasion, contact person …",
+      rentalNote: "This is a non-binding request, not a booking. I'll confirm availability, deposit and terms with you personally.",
       rentalDateError: "Please choose a valid time window (end on or after start).",
       rentalWhatsapp: "Send request via WhatsApp", rentalEmail: "Send request via email",
       rentalConfigWarning: "Shop contact not set up yet: add your WhatsApp number or email address in config/shop-config.json so rental requests reach you.",
       rentalSubject: "Rental request Disorder119",
-      rentalGreeting: "Hi! I'd like to request the following piece from the Disorder119 archive for a shoot/music video:",
+      rentalGreeting: "Hi! I'd like to rent the following piece from the Disorder119 archive:",
       rentalPeriodLabel: "Period", rentalPurposeMsgLabel: "Purpose", rentalMessageMsgLabel: "Message",
+      pageTitleMieten: "Disorder119 — Rent & Borrow",
+      mietenCatalogHeading: "Rent & Borrow",
+      mietenIntroTitle: "Rent & Borrow",
+      mietenIntroLead: "Every available piece in the archive can also be rented instead of bought — for shoots, music videos, film and theatre productions, editorial stories, events or personal occasions. Pick a piece below and send a non-binding request with your preferred dates.",
+      mietenTermsHeading: "How renting works",
+      mietenTermsHtml: "<ul><li><strong>Rental price:</strong> typically around 15% of the archive price per period of up to 4 days (a guideline — the exact price is confirmed personally for every request, depending on the piece and duration).</li><li><strong>Deposit:</strong> collected at pickup/shipping and refunded after undamaged, complete return within 7 days.</li><li><strong>Cleaning:</strong> normal wear and light soiling are included in the rental price. A cleaning fee may be withheld for professional cleaning after use.</li><li><strong>Damage:</strong> repairable damage is settled from the deposit; for damage beyond repair or loss, the piece's current archive value becomes due.</li><li><strong>Duration:</strong> up to 4 days by default, longer periods on request.</li><li>All details are non-binding and confirmed individually for every request — this is not an automated booking system.</li></ul>",
       toArchive: "To the archive →",
       swipeHint: "Drag or click — ✕ skip, ♥ save",
       swipeRoundDone: "Round finished", swipeSavedInCart: "Pieces saved &amp; in cart",
@@ -437,21 +455,30 @@
       pageTitleChaos: "Disorder119 — Chaos", pageTitleOutfit: "Disorder119 — Configurateur de tenues",
       modeHint: "Découvre aussi Match, Chaos et le configurateur de tenues", hintCloseAria: "Fermer l'info",
       modeRailAria: "Changer de vue",
-      rentalCta: "📅 Demander pour tournage/shooting", rentalCloseAria: "Fermer",
-      rentalModalTitle: "Demande pour un shooting ou un clip",
+      rentalCta: "📅 Demander la location", rentalCloseAria: "Fermer",
+      rentalModalTitle: "Louer cette pièce",
       rentalStartLabel: "Du", rentalEndLabel: "Au",
       rentalDaysTemplate: "{days} jour(s) sélectionné(s)",
       rentalPurposeLabel: "Utilisation prévue",
-      rentalPurposeVideo: "Clip musical", rentalPurposePhoto: "Shooting photo", rentalPurposeOther: "Autre",
+      rentalPurposeVideo: "Clip musical", rentalPurposePhoto: "Shooting photo",
+      rentalPurposeFilmTheater: "Film/théâtre/scène", rentalPurposeEditorial: "Éditorial",
+      rentalPurposeEvent: "Événement/exposition", rentalPurposePrivate: "Occasion privée",
+      rentalPurposeOther: "Autre",
       rentalMessageLabel: "Message (facultatif)",
-      rentalMessagePh: "p. ex. production, plateau, contact …",
-      rentalNote: "Ceci est une demande sans engagement, pas une réservation. Je te confirme personnellement la disponibilité et les conditions.",
+      rentalMessagePh: "p. ex. production, plateau, occasion, contact …",
+      rentalNote: "Ceci est une demande sans engagement, pas une réservation. Je te confirme personnellement la disponibilité, la caution et les conditions.",
       rentalDateError: "Merci de choisir une période valide (fin après ou égale au début).",
       rentalWhatsapp: "Envoyer la demande via WhatsApp", rentalEmail: "Envoyer la demande par e-mail",
       rentalConfigWarning: "Le contact de la boutique n'est pas encore configuré : renseigne ton numéro WhatsApp ou ton adresse e-mail dans config/shop-config.json pour recevoir les demandes de location.",
       rentalSubject: "Demande de location Disorder119",
-      rentalGreeting: "Bonjour ! Je souhaite demander la pièce suivante de l'archive Disorder119 pour un shooting/clip :",
+      rentalGreeting: "Bonjour ! Je souhaite louer la pièce suivante de l'archive Disorder119 :",
       rentalPeriodLabel: "Période", rentalPurposeMsgLabel: "Utilisation", rentalMessageMsgLabel: "Message",
+      pageTitleMieten: "Disorder119 — Location",
+      mietenCatalogHeading: "Location",
+      mietenIntroTitle: "Location",
+      mietenIntroLead: "Chaque pièce disponible de l'archive peut aussi être louée plutôt qu'achetée — pour des shootings, clips musicaux, productions de film ou de théâtre, sujets éditoriaux, événements ou occasions privées. Choisis une pièce ci-dessous et envoie une demande sans engagement avec tes dates souhaitées.",
+      mietenTermsHeading: "Comment fonctionne la location",
+      mietenTermsHtml: "<ul><li><strong>Prix de location :</strong> environ 15&nbsp;% du prix indiqué dans l'archive par période de 4 jours maximum (indicatif — le prix exact est confirmé personnellement pour chaque demande, selon la pièce et la durée).</li><li><strong>Caution :</strong> déposée au retrait/à l'envoi et remboursée après un retour complet et non endommagé sous 7 jours.</li><li><strong>Nettoyage :</strong> l'usure normale et les salissures légères sont incluses dans le prix de location. Des frais de nettoyage professionnel peuvent être retenus après usage.</li><li><strong>Dommages :</strong> les dommages réparables sont réglés via la caution ; en cas de dommage irréparable ou de perte, la valeur actuelle de la pièce dans l'archive est due.</li><li><strong>Durée :</strong> 4 jours maximum par défaut, périodes plus longues sur demande.</li><li>Toutes les informations sont sans engagement et confirmées individuellement pour chaque demande — il ne s'agit pas d'un système de réservation automatisé.</li></ul>",
       toArchive: "Vers l'archive →",
       swipeHint: "Glisse ou clique — ✕ passer, ♥ garder",
       swipeRoundDone: "Manche terminée", swipeSavedInCart: "Pièces enregistrées &amp; dans le panier",
@@ -869,12 +896,19 @@
   }
 
   // ---- Verleih-Anfrage (Rental) ----
-  // Jedes verfuegbare Stueck laesst sich fuer Musikvideo-/Foto-Shootings
-  // anfragen - kein echtes Buchungssystem/Verfuegbarkeitskalender im Backend
-  // (es gibt noch keine Datenbank), sondern wie der Warenkorb eine
+  // Jedes verfuegbare Stueck laesst sich ausleihen statt kaufen - fuer
+  // Shootings, Musikvideos, Film-/Theaterproduktionen, redaktionelle
+  // Strecken, Events oder private Anlaesse (siehe eigene Mieten-Kategorie,
+  // showMieten()). Kein echtes Buchungssystem/Verfuegbarkeitskalender im
+  // Backend (es gibt noch keine Datenbank), sondern wie der Warenkorb eine
   // unverbindliche Anfrage per WhatsApp/E-Mail, hier zusaetzlich mit
   // Zeitraum (natives <input type="date">, also ein echter, barrierefreier
   // Systemkalender) und Verwendungszweck.
+  var RENTAL_PURPOSE_KEYS = {
+    photo: "rentalPurposePhoto", video: "rentalPurposeVideo",
+    filmTheater: "rentalPurposeFilmTheater", editorial: "rentalPurposeEditorial",
+    event: "rentalPurposeEvent", private: "rentalPurposePrivate", other: "rentalPurposeOther"
+  };
   var rentalBackdrop = document.getElementById("rentalModalBackdrop");
   var rentalItemEl = document.getElementById("rentalModalItem");
   var rentalStartEl = document.getElementById("rentalStart");
@@ -924,8 +958,7 @@
   function buildRentalText() {
     var it = rentalCurrentItem;
     if (!it) return "";
-    var purposeKey = rentalPurposeEl.value === "video" ? "rentalPurposeVideo"
-      : rentalPurposeEl.value === "photo" ? "rentalPurposePhoto" : "rentalPurposeOther";
+    var purposeKey = RENTAL_PURPOSE_KEYS[rentalPurposeEl.value] || "rentalPurposeOther";
     var lines = [
       t("rentalGreeting"),
       "",
@@ -1011,7 +1044,7 @@
     rentalEndEl.min = min;
     rentalStartEl.value = "";
     rentalEndEl.value = "";
-    rentalPurposeEl.value = "video";
+    rentalPurposeEl.value = "photo";
     rentalMessageEl.value = "";
     updateRentalSummary();
     rentalBackdrop.classList.remove("hidden");
@@ -1110,10 +1143,11 @@
     showClassic();
     openCart();
   });
-  document.getElementById("menuRental").addEventListener("click", function () {
+  document.getElementById("menuRental").href = langHome(LANG) + "mieten/";
+  document.getElementById("menuRental").addEventListener("click", function (e) {
+    e.preventDefault();
     closeMenu();
-    showClassic();
-    focusCatalog();
+    showMieten();
   });
   document.getElementById("cartClose").addEventListener("click", closeCart);
   document.getElementById("cartBackdrop").addEventListener("click", function (e) {
@@ -1555,7 +1589,7 @@
           '<div class="plate__row">' +
             priceHtml +
           "</div>" +
-          (isSold ? "" : '<button type="button" class="plate__rental-btn" data-rental="' + it.id + '">' + t("rentalCta") + "</button>") +
+          (isSold || !RENTAL_CATALOG_MODE ? "" : '<button type="button" class="plate__rental-btn" data-rental="' + it.id + '">' + t("rentalCta") + "</button>") +
         "</div>";
 
       var brandBtn = plate.querySelector("[data-brand-filter]");
@@ -1820,21 +1854,29 @@
   var SWIPE_PATH = langHome(LANG) + "match/";
   var CHAOS_PATH = langHome(LANG) + "chaos/";
   var OUTFIT_PATH = langHome(LANG) + "baukasten/";
+  var MIETEN_PATH = langHome(LANG) + "mieten/";
   function isCatalogPath(path) {
-    return path === CLASSIC_PATH || path === SWIPE_PATH || path === CHAOS_PATH || path === OUTFIT_PATH;
+    return path === CLASSIC_PATH || path === SWIPE_PATH || path === CHAOS_PATH || path === OUTFIT_PATH || path === MIETEN_PATH;
   }
   function modeFromPath(path) {
     if (path === SWIPE_PATH) return "swipe";
     if (path === CHAOS_PATH) return "chaos";
     if (path === OUTFIT_PATH) return "outfit";
+    if (path === MIETEN_PATH) return "mieten";
     return "classic";
   }
   function pathForMode(mode) {
     if (mode === "swipe") return SWIPE_PATH;
     if (mode === "chaos") return CHAOS_PATH;
     if (mode === "outfit") return OUTFIT_PATH;
+    if (mode === "mieten") return MIETEN_PATH;
     return CLASSIC_PATH;
   }
+  // true nur auf der eigenen Mieten/Ausleihen-Kategorieseite - steuert, ob
+  // die Katalogkacheln den "Anfragen"-Button zeigen. Vorher stand dieser
+  // Button auf JEDER Kachel im normalen Archiv, was dort nur unnoetig
+  // ablenkte; jetzt gehoert er ausschliesslich zur eigenen Mieten-Kategorie.
+  var RENTAL_CATALOG_MODE = false;
   // Sonderseiten wie /impressum/ oder /cart/ nutzen dieselbe Vorlage
   // (index_template.html), sind aber KEINE Katalog-Ansicht - der Katalog
   // darf dort nicht automatisch mitgeladen/angezeigt werden (frueher lief
@@ -1844,7 +1886,7 @@
   // Marke navigiert per echtem pushState zur jeweiligen Katalog-Seite.
   var IS_CATALOG_PAGE = isCatalogPath(location.pathname);
   var suppressModePush = false;
-  var MODE_TITLE_KEY = { classic: "pageTitleHome", swipe: "pageTitleMatch", chaos: "pageTitleChaos", outfit: "pageTitleOutfit" };
+  var MODE_TITLE_KEY = { classic: "pageTitleHome", swipe: "pageTitleMatch", chaos: "pageTitleChaos", outfit: "pageTitleOutfit", mieten: "pageTitleMieten" };
   function updateModeDocumentMeta(mode) {
     // pushState allein aendert weder <title> noch <link rel="canonical">
     // (der Browser macht das nur bei einem echten Seitenaufruf) - ohne das
@@ -1866,6 +1908,7 @@
     if (mode === "swipe") showSwipe();
     else if (mode === "chaos") showChaos();
     else if (mode === "outfit") showOutfit();
+    else if (mode === "mieten") showMieten();
     else showClassic();
     suppressModePush = false;
   });
@@ -2080,7 +2123,28 @@
     outfitPicker.classList.remove("open");
     appShell.classList.remove("hidden");
     syncModeRail("classic");
+    if (RENTAL_CATALOG_MODE) {
+      // Zurueck vom Mieten-Katalog ins normale Archiv - Anfragen-Button
+      // gehoert nur zur eigenen Mieten-Kategorie, hier wieder ausblenden.
+      RENTAL_CATALOG_MODE = false;
+      state.catalogLabelText = "";
+      render();
+    }
     pushModePath(CLASSIC_PATH);
+  }
+
+  // ---- Mieten & Ausleihen (eigene Katalog-Kategorie, siehe RENTAL_CATALOG_MODE) ----
+  function showMieten() {
+    swipeView.classList.add("hidden");
+    chaosView.classList.add("hidden");
+    outfitView.classList.add("hidden");
+    outfitPicker.classList.remove("open");
+    appShell.classList.remove("hidden");
+    syncModeRail("classic");
+    RENTAL_CATALOG_MODE = true;
+    state.catalogLabelText = t("mietenCatalogHeading");
+    render();
+    pushModePath(MIETEN_PATH);
   }
 
   // ---- Swipe-Minigame ----
@@ -3121,6 +3185,7 @@
     if (initialMode === "swipe") showSwipe();
     else if (initialMode === "chaos") showChaos();
     else if (initialMode === "outfit") showOutfit();
+    else if (initialMode === "mieten") showMieten();
     else showClassic();
     suppressModePush = false;
   } else {
