@@ -410,15 +410,14 @@ def json_ld(it, lang):
             "availability": "https://schema.org/InStock",
             "itemCondition": "https://schema.org/UsedCondition",
         }
-    elif sold:
-        # Bewusst OHNE price/priceCurrency: der ehemalige Verkaufspreis eines
-        # archivierten Stuecks darf auch in strukturierten Daten nicht mehr
-        # oeffentlich stehen (Task 2).
-        data["offers"] = {
-            "@type": "Offer", "url": data["url"],
-            "availability": "https://schema.org/OutOfStock",
-            "itemCondition": "https://schema.org/UsedCondition",
-        }
+    # SOLD-Artikel bekommen bewusst KEIN offers-Objekt (weder fuer verkaufte
+    # noch fuer "Preis auf Anfrage"-Stuecke mit price==0): Google verlangt in
+    # einem Offer zwingend price+priceCurrency - ein Offer ohne Preis ist ein
+    # struktureller Fehler in der Search Console ("Missing field 'price'"),
+    # kein gueltiger Zwischenzustand. Der alte Verkaufspreis eines
+    # archivierten Stuecks soll ohnehin nicht mehr oeffentlich stehen, und
+    # ein reines Product-Schema OHNE offers ist fuer sich genommen bereits
+    # gueltiges Schema.org - kein Offer noetig, um ein Produkt zu beschreiben.
     return json.dumps(data, ensure_ascii=False)
 
 

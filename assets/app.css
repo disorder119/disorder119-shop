@@ -3283,3 +3283,21 @@
     .footer__nav { padding: 34px 0; }
     .footer__cart { margin-top: 72px; }
   }
+
+  /* Nachtraeglicher, gezielter Fix fuer sehr schmale Handys (320-360px):
+     mehrere aeltere @media(max-width:...)-Regeln weiter oben setzen jeweils
+     ihre eigene .wordmark-Schriftgroesse fuer unterschiedliche Breiten -
+     bei einer Viewport-Breite, die GLEICHZEITIG mehrere dieser Bedingungen
+     erfuellt (320px erfuellt z.B. sowohl "max-width:480px" als auch
+     "max-width:720px"), gewinnt in CSS bei gleicher Spezifitaet die zuletzt
+     im Dokument stehende Regel - das war hier die fuer 720px gedachte,
+     groessere Schriftgroesse, nicht die eigentlich fuer 320px vorgesehene.
+     Ergebnis: der Schriftzug "DISORDER119" lief bei 320-360px ueber den
+     Viewport hinaus (verifiziert: 327px Inhaltsbreite bei 320px Breite,
+     42.4px statt der vorgesehenen ~34px Schriftgroesse). Diese Regel steht
+     bewusst als letzte im gesamten Stylesheet, damit sie in jedem Fall
+     gewinnt, unabhaengig davon, wie viele aeltere Breakpoints ebenfalls
+     zutreffen. */
+  @media (max-width: 380px) {
+    .wordmark { font-size: clamp(1.8rem, 10.5vw, 2.1rem); }
+  }

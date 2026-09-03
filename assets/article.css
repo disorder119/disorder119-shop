@@ -93,6 +93,15 @@ a { color: inherit; }
 
 @media (max-width: 480px) {
   .page-head { flex-wrap: wrap; gap: 10px; }
+  /* .page-head__back liegt (anders als es die urspruengliche Regel hier
+     annahm) NICHT direkt in .page-head, sondern verschachtelt in
+     .page-head__right zusammen mit Sprachumschalter und Warenkorb-Button -
+     "order:3; width:100%" allein griff deshalb nie, weil der umgebende
+     Flex-Container selbst nicht umbrach: bei 320-360px ragten alle drei
+     Elemente in einer Zeile ueber den Viewport hinaus. .page-head__right
+     muss daher selbst umbrechen koennen, erst dann wirkt width:100% auf
+     .page-head__back wie beabsichtigt (eigene, zentrierte Zeile). */
+  .page-head__right { flex-wrap: wrap; justify-content: center; row-gap: 10px; }
   .page-head__back { order: 3; width: 100%; text-align: center; }
 }
 
