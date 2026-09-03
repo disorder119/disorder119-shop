@@ -80,7 +80,7 @@ function isAllowedOrigin(origin) {
 function corsHeaders(origin) {
   return {
     "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0],
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
 }
@@ -420,6 +420,38 @@ export default {
         if (!isAdminAuthorized(request, env)) return json({ error: "Nicht autorisiert." }, 401, origin);
         const { requests } = await loadRentalRequests(env);
         return json({ requests }, 200, origin);
+      }
+
+      // /rental-request/<id> - Status im Admin-Dashboard aendern (z.B. "new"
+      // -> "contacted" -> "done"), damit bearbeitete Anfragen nicht jedes Mal
+      // neu durchsucht werden muessen.
+      if (url.pathname.startsWith("/rental-request/") && request.method === "PATCH") {
+        if (!isAdminAuthorized(request, env)) return json({ error: "Nicht autorisiert." }, 401, origin);
+        const id = url.pathname.slice("/rental-request/".length);
+        const body = await request.json();
+        const status = String(body.status || "");
+        if (["new", "contacted", "done"].indexOf(status) === -1) {
+          return json({ error: "Ungueltiger Status." }, 400, origin);
+        }
+        const { requests, sha } = await loadRentalRequests(env);
+        const record = requests.find((r) => r.id === id);
+        if (!record) return json({ error: "Anfrage nicht gefunden." }, 404, origin);
+        record.status = status;
+        record.updatedAt = new Date().toISOString();
+        const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(requests, null, 2))));
+        const putUrl = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.rentalRequestsPath}`;
+        const putRes = await fetch(putUrl, {
+          method: "PUT",
+          headers: ghHeaders(env),
+          body: JSON.stringify({
+            message: `Verleih-Anfrage ${id}: Status -> ${status}`,
+            content: newContent,
+            sha,
+            branch: CONFIG.githubBranch,
+          }),
+        });
+        if (!putRes.ok) return json({ error: "Status konnte nicht gespeichert werden." }, 500, origin);
+        return json({ ok: true }, 200, origin);
       }
 
       return json({ error: "Not found" }, 404, origin);
