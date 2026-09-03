@@ -2791,7 +2791,7 @@
         imgEl.style.top = ""; imgEl.style.bottom = "0";
       } else if (cropClass === "look-card--crop-feet") {
         imgEl.style.top = ""; imgEl.style.bottom = "0";
-        imgEl.style.transform = "scale(1.5)";
+        imgEl.style.transform = "scale(1.15)";
         imgEl.style.transformOrigin = "center bottom";
       }
     }

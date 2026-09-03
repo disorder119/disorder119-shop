@@ -2108,17 +2108,23 @@
     background: var(--surface);
     border: 1px solid var(--rule-strong);
     padding: 0 10px;
-    /* Feste statt maximale Hoehe - vorher durften leere/kuerzere Kaesten
-       (z.B. der optionale Jacke-Slot) auf ihre Inhaltsgroesse schrumpfen,
-       wirkte uneinheitlich neben den befuellten Kaesten. Jetzt sind alle
-       fuenf Kaesten immer exakt gleich hoch, egal ob befuellt oder leer. */
-    flex: 0 0 116px;
-    height: 116px;
+    /* Feste (aber viewport-abhaengige statt starr fixe) Hoehe - vorher
+       durften leere/kuerzere Kaesten (z.B. der optionale Jacke-Slot) auf
+       ihre Inhaltsgroesse schrumpfen, wirkte uneinheitlich neben den
+       befuellten Kaesten, daher weiterhin alle fuenf Kaesten exakt gleich
+       hoch. Der alte fixe Wert (116px, kein vh-Anteil) schrumpfte nie mit
+       der Fensterhoehe - fuenf Kaesten a 116px + Kopf-/Fussbereich waren in
+       gewoehnlich grossen Desktop-Fenstern zusammen hoeher als das Fenster
+       selbst, sodass der Baukasten nur noch mit Scrollen bedienbar war.
+       clamp() haelt ihn jetzt kompakt genug, um komplett ohne Scrollbalken
+       in eine normale Fensterhoehe zu passen. */
+    flex: 0 0 clamp(64px, 9.5vh, 100px);
+    height: clamp(64px, 9.5vh, 100px);
   }
 
   .outfit-slot__frame {
-    width: clamp(48px, 9vh, 88px);
-    height: clamp(62px, 11.5vh, 112px);
+    width: clamp(42px, 7.2vh, 76px);
+    height: clamp(50px, 8.6vh, 88px);
     flex: 0 0 auto;
     background: transparent;
     overflow: hidden;
