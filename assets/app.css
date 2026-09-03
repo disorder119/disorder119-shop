@@ -1851,7 +1851,19 @@
     flex-direction: column;
     align-items: center;
     padding: clamp(12px, 2.4vh, 24px) 18px clamp(10px, 2vh, 18px);
-    overflow: hidden;
+    /* War frueher "overflow: hidden" - das Layout sollte per flex-shrink
+       IMMER exakt in die Fensterhoehe passen, ohne je scrollen zu muessen.
+       Bricht aber in jedem normalen, nicht maximierten Desktop-Fenster mit
+       wenig Hoehe (z.B. ~700-800px, sehr uebliche Fenstergroesse): der
+       Inhalt (5 Auswahlfelder + Look-Vorschau) ist dann schlicht hoeher als
+       verfuegbar, und "overflow:hidden" hat die untere Haelfte samt der
+       Wuerfel-/Neu-/Warenkorb-Buttons komplett unerreichbar abgeschnitten -
+       kein Scrollbalken, keine Moeglichkeit, doch noch hinzukommen. Verifiziert
+       live auf disorder119.com in einem normalen Edge-Fenster (720px hoch):
+       outfitView-Inhalt 811px hoch bei nur 656px verfuegbarem Platz. auto
+       scrollt in diesem Fall einfach, statt stumm Bedienelemente zu killen. */
+    overflow-y: auto;
+    overflow-x: hidden;
     gap: clamp(6px, 1.4vh, 14px);
   }
 
