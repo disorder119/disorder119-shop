@@ -102,7 +102,7 @@
       orderAvailQuestion: "Sind diese Artikel noch verfügbar?", orderSubject: "Bestellanfrage Disorder119",
       orderSizeAbbrev: "Gr. ", orderArticleAbbrev: "Art.-Nr. ",
       modeArchiv: "Archiv", modeMatch: "Match", modeChaos: "Chaos", modeBaukasten: "Baukasten",
-      modeRental: "Verleih",
+      menuRental: "Verleih",
       modeHint: "Entdecke auch Match, Chaos & Baukasten", hintCloseAria: "Hinweis schließen",
       modeRailAria: "Ansicht wechseln",
       rentalCta: "📅 Für Shooting/Video anfragen", rentalCloseAria: "Schließen",
@@ -255,7 +255,7 @@
       orderAvailQuestion: "Are these pieces still available?", orderSubject: "Order request Disorder119",
       orderSizeAbbrev: "Size ", orderArticleAbbrev: "Item no. ",
       modeArchiv: "Archive", modeMatch: "Match", modeChaos: "Chaos", modeBaukasten: "Outfit builder",
-      modeRental: "Rental",
+      menuRental: "Rental",
       modeHint: "Also discover Match, Chaos & the outfit builder", hintCloseAria: "Close hint",
       modeRailAria: "Switch view",
       rentalCta: "📅 Request for shoot/video", rentalCloseAria: "Close",
@@ -409,7 +409,7 @@
       orderAvailQuestion: "Ces pièces sont-elles toujours disponibles ?", orderSubject: "Demande de commande Disorder119",
       orderSizeAbbrev: "Taille ", orderArticleAbbrev: "N° d'article ",
       modeArchiv: "Archive", modeMatch: "Match", modeChaos: "Chaos", modeBaukasten: "Configurateur",
-      modeRental: "Location",
+      menuRental: "Location",
       modeHint: "Découvre aussi Match, Chaos et le configurateur de tenues", hintCloseAria: "Fermer l'info",
       modeRailAria: "Changer de vue",
       rentalCta: "📅 Demander pour tournage/shooting", rentalCloseAria: "Fermer",
@@ -1075,6 +1075,11 @@
     closeMenu();
     showClassic();
     openCart();
+  });
+  document.getElementById("menuRental").addEventListener("click", function () {
+    closeMenu();
+    showClassic();
+    focusCatalog();
   });
   document.getElementById("cartClose").addEventListener("click", closeCart);
   document.getElementById("cartBackdrop").addEventListener("click", function (e) {
@@ -1818,7 +1823,6 @@
       else if (target === "swipe") showSwipe();
       else if (target === "chaos") showChaos();
       else if (target === "outfit") showOutfit();
-      else if (target === "rental") { showClassic(); focusCatalog(); }
       dismissModeRailHint();
     });
   });
