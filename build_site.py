@@ -16,6 +16,7 @@ Nutzung: python build_site.py [--thumbs]
   separater, laengerer Bildverarbeitungsschritt (PIL) und muss nur einmal
   bzw. nach neuen Fotos erneut laufen, nicht bei jeder Textaenderung.
 """
+import hashlib
 import html
 import json
 import re
@@ -25,6 +26,29 @@ from pathlib import Path
 BASE = Path(__file__).parent
 SITE_URL = "https://disorder119.com/"
 DATA_PATH = BASE / "data" / "items.json"
+
+
+def _asset_version(rel_path):
+    # app.css/app.js liegen mit Cache-Control:max-age=600 (10 Minuten) aus -
+    # ohne Cache-Busting sieht ein Browser, der die Seite kurz vor einem
+    # Deploy schon offen hatte oder kurz danach neu laedt, bis zu 10 Minuten
+    # lang die ALTE Datei, obwohl der neue Code laengst live ist (genau so
+    # als "Mieten-Mieten-Zufall/Reihenfolge falsch"-Meldung aufgefallen,
+    # obwohl der Fix bereits laenger deployt war). Der Query-Parameter aendert
+    # sich nur, wenn sich der tatsaechliche Dateiinhalt aendert (Content-Hash
+    # statt z.B. Build-Zeitstempel) - ein unveraenderter Deploy erzwingt so
+    # keinen unnoetigen Re-Download.
+    try:
+        data = (BASE / rel_path).read_bytes()
+    except FileNotFoundError:
+        return "0"
+    return hashlib.sha256(data).hexdigest()[:10]
+
+
+APP_CSS_VERSION = _asset_version("assets/app.css")
+APP_JS_VERSION = _asset_version("assets/app.js")
+ARTICLE_CSS_VERSION = _asset_version("assets/article.css")
+ARTICLE_JS_VERSION = _asset_version("assets/article.js")
 
 # Jede dieser Seiten ist inhaltlich die Startseite (gleiches HTML/JS/CSS-Bundle),
 # oeffnet beim Laden aber automatisch das passende Panel anhand von
@@ -570,7 +594,7 @@ def build_page(it, shop_config, lang):
 <link rel="canonical" href="{canonical}">
 {hreflang_links}
 <link rel="icon" type="image/png" href="/assets/favicon.png">
-<link rel="stylesheet" href="/assets/article.css">
+<link rel="stylesheet" href="/assets/article.css?v={ARTICLE_CSS_VERSION}">
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="Disorder119">
 <meta property="og:title" content="{esc(title_tag)}">
@@ -630,7 +654,7 @@ def build_page(it, shop_config, lang):
   window.ARTICLE_SHOP_CONFIG = {json.dumps(shop_config, ensure_ascii=False)};
   window.ARTICLE_LANG = "{lang}";
 </script>
-<script src="/assets/article.js"></script>
+<script src="/assets/article.js?v={ARTICLE_JS_VERSION}"></script>
 </body>
 </html>
 """
@@ -765,6 +789,8 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__ROBOTS_META__", f'<meta name="robots" content="{robots}">' if robots else "")
     out = out.replace("__STATIC_PAGE_CONTENT__", static_content)
     out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
+    out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
+    out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)
     return out
 
 
