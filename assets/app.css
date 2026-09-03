@@ -1937,7 +1937,7 @@
     align-items: stretch;
     justify-content: center;
     width: 100%;
-    max-width: 780px;
+    max-width: 840px;
     flex: 1 1 auto;
     min-height: 0;
   }
@@ -1951,12 +1951,16 @@
     min-height: 0;
   }
 
+  /* Gleiche Breite wie .outfit-main (die Liste bei "Oberteil") - vorher
+     bei 300px gedeckelt, wodurch der Look-Board-Kasten sichtbar schmaler
+     als die Liste daneben wirkte, obwohl er das eigentliche visuelle
+     Ergebnis zeigt und mindestens genauso viel Platz verdient. */
   .outfit-figure {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    width: min(300px, 100%);
+    width: min(360px, 100%);
     flex: 1 1 auto;
     min-height: 0;
   }
@@ -2672,6 +2676,19 @@
     }
     .outfit-main { display: contents; }
     .outfit-stack {
+      /* Ohne eigenes flex hier gilt die Basis-Regel weiter (flex:1 1 auto;
+         min-height:0, fuer die Desktop-Spalte gedacht) - dadurch wurde die
+         Chip-Reihe im mobilen Spalten-Layout mitgeschrumpft, sobald der
+         Look-Board-Kasten (ebenfalls flex:1 1 auto) Platz brauchte. Die
+         Karten selbst (flex:0 0 128px, schrumpfen nicht mit) liefen dadurch
+         optisch unten aus dem geschrumpften Container heraus und ueber-
+         lappten den Look-Board-Kasten darunter - unsichtbar, solange der
+         Artikelname ausgeblendet war (nichts stand an der ueberlappten
+         Stelle), aber sobald der Name hier wieder sichtbar gemacht wurde,
+         landete er verdeckt unter der Buehne. flex:0 0 auto fixiert die
+         Reihe auf ihre tatsaechlich benoetigte Hoehe - der Look-Board-Kasten
+         (mit flex:1 1 auto) uebernimmt wie vorgesehen den gesamten Rest. */
+      flex: 0 0 auto;
       order: 1;
       width: 100%;
       display: flex;
@@ -2708,22 +2725,38 @@
     .outfit-slot {
       flex-direction: column;
       align-items: stretch;
-      gap: 4px;
+      gap: 3px;
       padding: 5px;
       position: relative;
-      flex: 0 0 108px;
-      height: 108px;
+      flex: 0 0 128px;
+      height: 128px;
     }
     .outfit-slot__frame {
       width: 100%;
       height: 76px;
     }
-    .outfit-slot__label,
-    .outfit-slot__value {
+    /* Vorher komplett ausgeblendet (nur Bild + Preis) - dadurch war ohne
+       Antippen nicht erkennbar, WELCHES Teil man da eigentlich ausgewaehlt
+       hat, was sich kalt/leblos anfuehlte statt wie ein Styling-Tool mit den
+       eigenen, konkret ausgesuchten Stuecken. Name jetzt sichtbar, einzeilig
+       mit Ellipsis; die Kategorie-Beschriftung (z.B. "OBERTEIL/KLEID")
+       bleibt ausgeblendet, weil sie bei dieser Kartengroesse redundant zur
+       Position in der Reihe ist. */
+    .outfit-slot__label {
       display: none;
     }
+    .outfit-slot__value {
+      display: block;
+      font-size: 0.6rem;
+      line-height: 1.2;
+      margin-top: 0;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .outfit-slot__price {
-      font-size: 0.68rem;
+      font-size: 0.66rem;
       margin-top: 0;
       text-align: center;
       white-space: nowrap;
