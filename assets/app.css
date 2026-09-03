@@ -2663,53 +2663,53 @@
        Chips), gross genug um Bild UND Preis klar zu erkennen. Die Vorschau
        nutzt darunter die volle Breite und die Aktionen bleiben im normalen
        Fluss statt Artikel zu verdecken. */
+    /* Liste und Look-Board nebeneinander wie am Desktop (nicht mehr
+       uebereinander gestapelt - wirkte gedrungen und liess die Buehne
+       nicht wie einen gleichwertigen Teil des Layouts wirken). Grid statt
+       Flexbox-Wrap: ein flex-wrap-Layout mit zwei Zeilen (Spalten-Zeile +
+       volle-Breite-Footer-Zeile) berechnete die Hoehe der ersten Zeile beim
+       Testen falsch (Browser-Eigenheit, gleiche Ursache wie schon einmal
+       beim Desktop-Look-Board: bei einem auto-groessen Flex-Container mit
+       mehreren Zeilen wird fuer die Zeilenhoehe teils die Content-Groesse
+       statt der tatsaechlich verfuegbaren Hoehe herangezogen) - live
+       gemessen: Spalten wurden 792px hoch bei nur 679px verfuegbarem Platz,
+       sobald alle 5 Zeilen befuellt waren. Grid-Tracks (minmax(0,1fr) fuer
+       die Spaltenzeile, auto fuer die Footer-Zeile) berechnen das direkt
+       und zuverlaessig - exakt das gleiche Prinzip wie grid-auto-rows:
+       minmax(0,1fr) im Look-Board selbst (siehe .outfit-figure__stage). */
     .outfit-layout {
-      flex-direction: column;
-      flex-wrap: nowrap;
-      gap: 7px;
+      display: grid;
+      grid-template-columns: 38% 1fr;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 10px;
       max-width: 100%;
       align-items: stretch;
-      justify-content: flex-start;
       padding-bottom: 0;
       position: static;
       overflow: visible;
     }
     .outfit-main { display: contents; }
     .outfit-stack {
-      /* Ohne eigenes flex hier gilt die Basis-Regel weiter (flex:1 1 auto;
-         min-height:0, fuer die Desktop-Spalte gedacht) - dadurch wurde die
-         Chip-Reihe im mobilen Spalten-Layout mitgeschrumpft, sobald der
-         Look-Board-Kasten (ebenfalls flex:1 1 auto) Platz brauchte. Die
-         Karten selbst (flex:0 0 128px, schrumpfen nicht mit) liefen dadurch
-         optisch unten aus dem geschrumpften Container heraus und ueber-
-         lappten den Look-Board-Kasten darunter - unsichtbar, solange der
-         Artikelname ausgeblendet war (nichts stand an der ueberlappten
-         Stelle), aber sobald der Name hier wieder sichtbar gemacht wurde,
-         landete er verdeckt unter der Buehne. flex:0 0 auto fixiert die
-         Reihe auf ihre tatsaechlich benoetigte Hoehe - der Look-Board-Kasten
-         (mit flex:1 1 auto) uebernimmt wie vorgesehen den gesamten Rest. */
-      flex: 0 0 auto;
-      order: 1;
-      width: 100%;
-      display: flex;
-      flex-direction: row;
-      gap: 8px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      padding: 2px 2px 6px;
-      /* Weicher Ausblend-Rand statt hartem Anschnitt - gleiches Signal
-         "hier geht wischbar weiter" wie bei den Kategorie-Chips oben. */
-      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
-      mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
-    }
-    .outfit-stack::-webkit-scrollbar { display: none; }
-    .outfit-figure {
-      order: 2;
-      width: 100%;
-      flex: 1 1 auto;
+      grid-column: 1;
+      grid-row: 1;
+      min-width: 0;
       min-height: 0;
-      gap: 0;
+      display: flex;
+      flex-direction: column;
+      /* Zentriert statt oben ausgerichtet: die Buehne rechts fuellt ihre
+         gesamte Spaltenhoehe (Grid-Zelle), die fuenf Zeilen links dagegen
+         haben eine Hoechstgroesse (naechster Kommentar) und lassen bei viel
+         verfuegbarer Hoehe sonst einen haesslichen toten Bereich unten in
+         der Spalte stehen. */
+      justify-content: center;
+      gap: clamp(4px, 1vh, 10px);
+    }
+    .outfit-figure {
+      grid-column: 2;
+      grid-row: 1;
+      min-width: 0;
+      min-height: 0;
+      gap: 4px;
     }
     .outfit-figure__label {
       position: absolute;
@@ -2722,77 +2722,75 @@
       white-space: nowrap;
       border: 0;
     }
+    /* Zeilen-Layout wie am Desktop (Bild links, Name/Preis rechts) statt
+       der vorherigen breiten, horizontal wischbaren Kartenreihe - passt
+       jetzt in die schmale linke Spalte. Groesse ueber vh-Clamp wie beim
+       Desktop-Pendant, damit die 5 Zeilen unabhaengig von der Handy-
+       Bildschirmhoehe immer ohne Scrollen passen. */
     .outfit-slot {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 3px;
-      padding: 5px;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      padding: 0 8px;
       position: relative;
-      flex: 0 0 128px;
-      height: 128px;
+      flex: 0 0 clamp(54px, 11vh, 100px);
+      height: clamp(54px, 11vh, 100px);
     }
     .outfit-slot__frame {
-      width: 100%;
-      height: 76px;
+      width: clamp(36px, 7.5vh, 72px);
+      height: clamp(42px, 8.8vh, 86px);
+      flex: 0 0 auto;
     }
+    .outfit-slot__body { text-align: left; }
     /* Vorher komplett ausgeblendet (nur Bild + Preis) - dadurch war ohne
        Antippen nicht erkennbar, WELCHES Teil man da eigentlich ausgewaehlt
        hat, was sich kalt/leblos anfuehlte statt wie ein Styling-Tool mit den
-       eigenen, konkret ausgesuchten Stuecken. Name jetzt sichtbar, einzeilig
-       mit Ellipsis; die Kategorie-Beschriftung (z.B. "OBERTEIL/KLEID")
-       bleibt ausgeblendet, weil sie bei dieser Kartengroesse redundant zur
+       eigenen, konkret ausgesuchten Stuecken. Name jetzt sichtbar, zweizeilig
+       mit Ellipsis (bei der schmalen Spaltenbreite reicht eine Zeile oft
+       nicht); die Kategorie-Beschriftung (z.B. "OBERTEIL/KLEID") bleibt
+       ausgeblendet, weil sie bei dieser Kartengroesse redundant zur
        Position in der Reihe ist. */
     .outfit-slot__label {
       display: none;
     }
     .outfit-slot__value {
-      display: block;
-      font-size: 0.6rem;
+      display: -webkit-box;
+      font-size: 0.62rem;
       line-height: 1.2;
       margin-top: 0;
-      text-align: center;
-      white-space: nowrap;
+      text-align: left;
       overflow: hidden;
-      text-overflow: ellipsis;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
     }
     .outfit-slot__price {
-      font-size: 0.66rem;
-      margin-top: 0;
-      text-align: center;
+      font-size: 0.64rem;
+      margin-top: 2px;
+      text-align: left;
       white-space: nowrap;
     }
     .outfit-slot__remove {
       position: absolute;
-      top: 3px;
-      right: 3px;
-      width: 22px;
-      height: 22px;
+      top: 2px;
+      right: 2px;
+      width: 18px;
+      height: 18px;
       display: flex;
       align-items: center;
       justify-content: center;
       background: rgba(10, 10, 9, 0.72);
       color: var(--paper);
-      font-size: 0.72rem;
+      font-size: 0.62rem;
       padding: 0;
     }
-    .outfit-slot--empty .outfit-slot__value,
-    .outfit-slot--locked .outfit-slot__value {
-      display: block;
-      font-size: 0.56rem;
-      line-height: 1.2;
-      text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
     .outfit-view__footer {
-      order: 3;
+      grid-column: 1 / -1;
+      grid-row: 2;
       position: static;
       left: auto;
       right: auto;
       bottom: auto;
       width: 100%;
-      flex: 0 0 auto;
     }
 
     /* Bottom-Mode-Bar wuerde sonst den "Zum Archiv"-Button in Chaos ueberlagern */
