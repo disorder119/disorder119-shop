@@ -23,8 +23,21 @@ import sys
 from pathlib import Path
 
 BASE = Path(__file__).parent
-SITE_URL = "https://disorder119.github.io/disorder119-shop/"
+SITE_URL = "https://disorder119.com/"
 DATA_PATH = BASE / "data" / "items.json"
+
+# Jede dieser Seiten ist inhaltlich die Startseite (gleiches HTML/JS/CSS-Bundle),
+# oeffnet beim Laden aber automatisch das passende Panel anhand von
+# location.pathname (siehe index_template.html). So bekommt jede "Einstellung"
+# eine echte, eigenstaendige, teilbare URL statt eines reinen JS-Modals.
+SPECIAL_PAGES = {
+    "cart": "Warenkorb",
+    "impressum": "Impressum",
+    "agb": "AGB",
+    "datenschutz": "Datenschutz",
+    "ueber-uns": "Über Disorder119",
+    "faq": "FAQ",
+}
 
 ITEMS = json.loads(DATA_PATH.read_text(encoding="utf-8"))
 
@@ -141,9 +154,9 @@ def related_card_html(x):
             else '<span class="related-card__price" data-price-on-request>Preis auf Anfrage</span>'
         )
     return (
-        '<a class="related-card" href="' + str(x["id"]) + '.html">'
+        '<a class="related-card" href="../' + str(x["id"]) + '/">'
         '<div class="related-card__frame">'
-        '<img src="../' + esc(x["gallery"][0]) + '" alt="" loading="lazy" />' +
+        '<img src="../../' + esc(x["gallery"][0]) + '" alt="" loading="lazy" />' +
         (price_html if sold else "") +
         "</div>"
         '<span class="related-card__brand">' + esc(x.get("brand") or "Ohne Marke") + "</span>"
@@ -238,7 +251,7 @@ def json_ld(it):
         "@context": "https://schema.org",
         "@type": "Product",
         "name": it["title"],
-        "url": SITE_URL + "artikel/" + str(it["id"]) + ".html",
+        "url": SITE_URL + "artikel/" + str(it["id"]) + "/",
         "image": [SITE_URL + g for g in it.get("gallery") or []],
         "description": (it.get("desc_de") or it.get("desc") or meta_description(it))[:500],
         "sku": it.get("article") or str(it["id"]),
@@ -276,7 +289,7 @@ def build_page(it, shop_config):
     desc = meta_description(it)
     gallery = it.get("gallery") or []
     hero = gallery[0] if gallery else "assets/favicon.png"
-    canonical = SITE_URL + "artikel/" + str(it["id"]) + ".html"
+    canonical = SITE_URL + "artikel/" + str(it["id"]) + "/"
     sold = it.get("public_status") == "SOLD"
     paypal_sdk_tag = ""
     if shop_config.get("paypalClientId") and shop_config.get("shopWorkerUrl") and not sold and it.get("price", 0) > 0:
@@ -317,8 +330,8 @@ def build_page(it, shop_config):
 <meta name="description" content="{esc(desc)}">
 {'<meta name="robots" content="noindex,nofollow">' if it.get("public_status") == "DRAFT" else ""}
 <link rel="canonical" href="{canonical}">
-<link rel="icon" type="image/png" href="../assets/favicon.png">
-<link rel="stylesheet" href="../assets/article.css">
+<link rel="icon" type="image/png" href="../../assets/favicon.png">
+<link rel="stylesheet" href="../../assets/article.css">
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="Disorder119">
 <meta property="og:title" content="{esc(title_tag)}">
@@ -333,21 +346,21 @@ def build_page(it, shop_config):
 </head>
 <body>
 <div class="page-head">
-  <a class="page-head__brand" href="../index.html">DISORDER119</a>
+  <a class="page-head__brand" href="../../">DISORDER119</a>
   <div class="page-head__right">
     <div class="lang-switch" id="langSwitch" role="group" aria-label="Sprache wählen">
       <button type="button" class="lang-switch__btn" data-lang="de">DE</button>
       <button type="button" class="lang-switch__btn" data-lang="en">EN</button>
       <button type="button" class="lang-switch__btn" data-lang="fr">FR</button>
     </div>
-    <a class="page-head__back" href="../index.html" data-i18n="backToArchive">← Zum Archiv</a>
+    <a class="page-head__back" href="../../" data-i18n="backToArchive">← Zum Archiv</a>
   </div>
 </div>
 <div class="product">
   <div class="gallery">
     <div class="gallery__stage">
       {'<span class="gallery__badge">SOLD</span>' if sold else ""}
-      <img id="galleryMain" src="../{esc(hero)}" alt="{esc(name)}">
+      <img id="galleryMain" src="../../{esc(hero)}" alt="{esc(name)}">
       <button type="button" class="gallery__nav gallery__nav--prev" id="galleryPrev" data-i18n-aria="prevPhotoAria" aria-label="Vorheriges Foto">‹</button>
       <button type="button" class="gallery__nav gallery__nav--next" id="galleryNext" data-i18n-aria="nextPhotoAria" aria-label="Nächstes Foto">›</button>
       <span class="gallery__counter" id="galleryCounter">1 / {max(len(gallery), 1)}</span>
@@ -355,7 +368,7 @@ def build_page(it, shop_config):
     <div class="gallery__thumbs" id="galleryThumbs"></div>
   </div>
   <div class="info">
-    <a class="info__brand" href="../index.html?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or "Ohne Marke")}</a>
+    <a class="info__brand" href="../../?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or "Ohne Marke")}</a>
     <h1>{esc(it["title"])}</h1>
     <div id="priceBlock">{price_block_html(it)}</div>
     <div class="info__facts">{facts_html(it)}</div>
@@ -366,7 +379,7 @@ def build_page(it, shop_config):
 {related_sections_html(it)}
 <div class="page-foot">
   <p data-i18n="footerNote">Disorder119 · Kuratiertes Archiv für Designer-, Vintage- und Contemporary-Mode. Jedes Stück wird einzeln ausgewählt, fotografiert und beschrieben.</p>
-  <p><a href="../index.html" data-i18n="footerFullArchive">Zum vollständigen Archiv</a></p>
+  <p><a href="../../" data-i18n="footerFullArchive">Zum vollständigen Archiv</a></p>
 </div>
 <div class="lightbox" id="lightbox">
   <button type="button" class="lightbox__close" id="lightboxClose" data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
@@ -376,7 +389,7 @@ def build_page(it, shop_config):
   window.ARTICLE_ITEM = {json.dumps(article_data, ensure_ascii=False)};
   window.ARTICLE_SHOP_CONFIG = {json.dumps(shop_config, ensure_ascii=False)};
 </script>
-<script src="../assets/article.js"></script>
+<script src="../../assets/article.js"></script>
 </body>
 </html>
 """
@@ -400,12 +413,59 @@ def get_shop_config():
     }
 
 
-def build_index():
+def item_list_jsonld(public_items):
+    entries = [
+        {"@type": "ListItem", "position": i + 1, "url": SITE_URL + "artikel/" + str(it["id"]) + "/"}
+        for i, it in enumerate(public_items)
+    ]
+    data = {"@context": "https://schema.org", "@type": "ItemList", "name": "Disorder119 — Archiv-Katalog", "itemListElement": entries}
+    return json.dumps(data, ensure_ascii=False)
+
+
+def render_index_html():
+    # Einzige Quelle fuer das Homepage-Bundle: wird sowohl fuer index.html
+    # als auch (siehe build_special_pages) fuer /cart/, /impressum/ usw.
+    # verwendet - das sind inhaltlich exakt dieselbe Seite, sie oeffnen beim
+    # Laden nur automatisch ein anderes Panel (anhand von location.pathname,
+    # siehe index_template.html).
     tmpl = (BASE / "index_template.html").read_text(encoding="utf-8")
     data_safe = json.dumps(ITEMS, ensure_ascii=False).replace("</script>", "<\\/script>")
+    public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
     out = tmpl.replace("__ITEMS_JSON__", data_safe)
+    out = out.replace("__ITEMLIST_JSONLD__", item_list_jsonld(public_items))
+    return out
+
+
+def build_index():
+    out = render_index_html()
     (BASE / "index.html").write_text(out, encoding="utf-8")
     print(f"index.html geschrieben ({len(out)} Zeichen)")
+
+
+def build_special_pages():
+    # /cart/, /impressum/, /agb/, /datenschutz/, /ueber-uns/, /faq/ -
+    # jede davon bekommt eine echte, eigenstaendige, teilbare URL statt eines
+    # reinen JS-Modals (siehe openCart/openLegal/openInfo in
+    # index_template.html). Inhaltlich identisches Bundle wie index.html,
+    # nur Title/Canonical/OG-Tags zeigen auf die jeweilige Unterseite, damit
+    # Linkvorschauen (WhatsApp etc.) korrekt sind.
+    base_out = render_index_html()
+    for slug, label in SPECIAL_PAGES.items():
+        page_url = SITE_URL + slug + "/"
+        title_tag = ("Disorder119 — " + label) if slug != "cart" else "Warenkorb | Disorder119"
+        out = base_out
+        out = re.sub(r"<title>.*?</title>", "<title>" + esc(title_tag) + "</title>", out, count=1)
+        out = out.replace('href="https://disorder119.com/"', 'href="' + page_url + '"')
+        out = out.replace('content="https://disorder119.com/"', 'content="' + page_url + '"')
+        out = re.sub(
+            r'(<meta property="og:title" content=")[^"]*(")',
+            r"\g<1>" + esc(title_tag) + r"\g<2>",
+            out, count=1,
+        )
+        out_dir = BASE / slug
+        out_dir.mkdir(exist_ok=True)
+        (out_dir / "index.html").write_text(out, encoding="utf-8")
+    print(f"{len(SPECIAL_PAGES)} Sonderseiten geschrieben ({', '.join(SPECIAL_PAGES)}).")
 
 
 def build_articles():
@@ -414,7 +474,9 @@ def build_articles():
     out_dir.mkdir(exist_ok=True)
     for it in ITEMS:
         page = build_page(it, shop_config)
-        (out_dir / f"{it['id']}.html").write_text(page, encoding="utf-8")
+        item_dir = out_dir / str(it["id"])
+        item_dir.mkdir(exist_ok=True)
+        (item_dir / "index.html").write_text(page, encoding="utf-8")
     print(f"{len(ITEMS)} Produktseiten geschrieben.")
 
 
@@ -422,9 +484,14 @@ def build_sitemap():
     # DRAFT-Artikel (unklarer interner Zwischenstatus) werden nicht indexiert -
     # ihre Seite existiert zwar (falls direkt aufgerufen), ist aber nirgends
     # verlinkt und soll auch nicht von Suchmaschinen als oeffentliches Angebot
-    # gewertet werden.
+    # gewertet werden. Der Warenkorb (/cart/) hat keinen eigenen, indexierbaren
+    # Inhalt und wird bewusst nicht aufgenommen.
     public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
-    urls = [SITE_URL] + [SITE_URL + "artikel/" + str(it["id"]) + ".html" for it in public_items]
+    urls = (
+        [SITE_URL]
+        + [SITE_URL + "artikel/" + str(it["id"]) + "/" for it in public_items]
+        + [SITE_URL + slug + "/" for slug in SPECIAL_PAGES if slug != "cart"]
+    )
     body = "\n".join(f"  <url><loc>{u}</loc></url>" for u in urls)
     xml = f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{body}\n</urlset>\n'
     (BASE / "sitemap.xml").write_text(xml, encoding="utf-8")
@@ -452,8 +519,26 @@ def build_thumbs():
     print(f"{count} Thumbnails erzeugt.")
 
 
+def clean_old_flat_article_files():
+    # Umstellung von artikel/{id}.html auf artikel/{id}/index.html (echte,
+    # erweiterungslose URLs) - alte flache Dateien vom vorherigen Schema
+    # muessen weg, sonst blieben sie als toter, nie mehr aktualisierter
+    # Datenstand im Repo liegen.
+    out_dir = BASE / "artikel"
+    if not out_dir.is_dir():
+        return
+    removed = 0
+    for f in out_dir.glob("*.html"):
+        f.unlink()
+        removed += 1
+    if removed:
+        print(f"{removed} alte artikel/*.html (Vorgaenger-Schema) entfernt.")
+
+
 def main():
+    clean_old_flat_article_files()
     build_index()
+    build_special_pages()
     build_articles()
     build_sitemap()
     if "--thumbs" in sys.argv:

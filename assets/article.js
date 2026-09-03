@@ -228,13 +228,14 @@
   var nextBtn = document.getElementById("galleryNext");
   var idx = 0;
   // IT.gallery-Pfade sind relativ zur Site-Wurzel (z.B. "assets/img/123/0.webp"),
-  // die Produktseite selbst liegt aber unter /artikel/ - deshalb hier einmalig
-  // mit "../" auf Seiten-relative Pfade umrechnen. IT.thumbs (falls vorhanden)
-  // sind kleinere, eigens erzeugte Vorschaubilder - spart Datenvolumen, die
-  // grosse Version wird erst als Hauptbild/im Lightbox-Modus geladen.
-  var gallery = (IT.gallery || []).map(function (p) { return "../" + p; });
+  // die Produktseite selbst liegt aber unter /artikel/{id}/ - deshalb hier
+  // einmalig mit "../../" auf Seiten-relative Pfade umrechnen. IT.thumbs
+  // (falls vorhanden) sind kleinere, eigens erzeugte Vorschaubilder - spart
+  // Datenvolumen, die grosse Version wird erst als Hauptbild/im
+  // Lightbox-Modus geladen.
+  var gallery = (IT.gallery || []).map(function (p) { return "../../" + p; });
   var thumbs = (IT.thumbs && IT.thumbs.length === gallery.length ? IT.thumbs : IT.gallery || [])
-    .map(function (p) { return "../" + p; });
+    .map(function (p) { return "../../" + p; });
 
   function showPhoto(i) {
     if (!gallery.length) return;

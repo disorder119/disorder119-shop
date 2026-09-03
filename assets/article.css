@@ -96,6 +96,14 @@ a { color: inherit; }
 
 /* ---------- Galerie ---------- */
 
+/* min-width:0 ist noetig, weil Grid-Items ohne diese Angabe standardmaessig
+   nicht kleiner als der Inhalt ihres min-content werden - bei einem <img>
+   ist das dessen intrinsische (Original-)Breite. Ohne das hier wird die
+   Spalte auf mobilen Bildschirmen breiter als der Viewport und das Bild
+   erscheint stark hineingezoomt/abgeschnitten, weil overflow-x:hidden den
+   Ueberschuss nur unsichtbar macht statt die Spalte zu verkleinern. */
+.gallery, .info { min-width: 0; }
+
 .gallery { position: sticky; top: 16px; align-self: start; }
 @media (max-width: 860px) { .gallery { position: static; } }
 
