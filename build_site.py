@@ -137,6 +137,43 @@ META_PHRASES = {
     },
 }
 
+LEGAL_CONTENT_HTML = {
+    "legalImpressumHtml": {
+        "de": '<h2>Impressum</h2><p>Angaben gemäß § 5 DDG</p><p>Joel Bittner<br>Disorder119 (Einzelunternehmen)<br>Nelseestraße 25<br>63739 Aschaffenburg<br>Deutschland</p><h3>Kontakt</h3><p>E-Mail: {email}</p><h3>Umsatzsteuer</h3><p>Kleinunternehmer gemäß § 19 UStG — es wird keine Umsatzsteuer ausgewiesen.</p><h3>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h3><p>Joel Bittner (Anschrift wie oben)</p><h3>Streitschlichtung</h3><p>Wir sind nicht verpflichtet und nicht bereit, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>',
+        "en": '<h2>Legal notice</h2><p>This page is translated for convenience — the German version above is the legally binding one.</p><p>Information pursuant to § 5 DDG (German Digital Services Act)</p><p>Joel Bittner<br>Disorder119 (sole proprietorship)<br>Nelseestraße 25<br>63739 Aschaffenburg<br>Germany</p><h3>Contact</h3><p>E-mail: {email}</p><h3>VAT</h3><p>Small business as per § 19 UStG (German VAT Act) — no VAT is shown.</p><h3>Responsible for content pursuant to § 18 (2) MStV</h3><p>Joel Bittner (address as above)</p><h3>Dispute resolution</h3><p>We are neither obliged nor willing to take part in dispute resolution proceedings before a consumer arbitration board.</p>',
+        "fr": "<h2>Mentions légales</h2><p>Cette page est traduite par courtoisie — la version allemande ci-dessus fait foi juridiquement.</p><p>Informations selon le § 5 DDG (loi allemande sur les services numériques)</p><p>Joel Bittner<br>Disorder119 (entreprise individuelle)<br>Nelseestraße 25<br>63739 Aschaffenburg<br>Allemagne</p><h3>Contact</h3><p>E-mail : {email}</p><h3>TVA</h3><p>Micro-entreprise selon le § 19 UStG (loi allemande sur la TVA) — la TVA n'est pas indiquée.</p><h3>Responsable du contenu selon le § 18 al. 2 MStV</h3><p>Joel Bittner (adresse ci-dessus)</p><h3>Règlement des litiges</h3><p>Nous ne sommes ni tenus ni disposés à participer à une procédure de règlement des litiges devant un organisme de médiation de la consommation.</p>",
+    },
+    "legalAgbHtml": {
+        "de": '<h2>Allgemeine Geschäftsbedingungen</h2><h3>1. Geltungsbereich</h3><p>Diese Bedingungen gelten für Kaufanfragen über diese Website zwischen Joel Bittner (Disorder119) und Kundinnen und Kunden.</p><h3>2. Zustandekommen des Vertrags</h3><p>Über den Warenkorb kann eine unverbindliche Anfrage per WhatsApp oder E-Mail gestellt werden. Ein Kaufvertrag kommt erst durch gesonderte Bestätigung (Verfügbarkeit, Preis, Zahlungs- und Versandart) zustande — nicht bereits durch das Absenden der Anfrage.</p><h3>3. Artikel</h3><p>Alle angebotenen Artikel sind gebrauchte Einzelstücke (Vintage / Second Hand). Kleine gebrauchsbedingte Abweichungen sind möglich und werden nach bestem Wissen in der Artikelbeschreibung angegeben.</p><h3>4. Preise &amp; Zahlung</h3><p>Alle Preise verstehen sich in Euro. Kleinunternehmer gemäß § 19 UStG, keine Umsatzsteuer ausgewiesen. Zahlungs- und Versandart werden individuell vereinbart.</p><h3>5. Gewährleistung</h3><p>Es gelten die gesetzlichen Gewährleistungsrechte. Da alle Artikel gebrauchte Einzelstücke sind, wird der Zustand nach bestem Wissen in der jeweiligen Artikelbeschreibung angegeben.</p><h3>6. Widerrufsbelehrung für Verbraucher:innen</h3><p><strong>Widerrufsrecht</strong><br>Du hast das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag, an dem du oder ein von dir benannter Dritter, der nicht der Beförderer ist, die Waren in Besitz genommen hast bzw. hat. Um dein Widerrufsrecht auszuüben, musst du uns (Joel Bittner, Disorder119, Nelseestraße 25, 63739 Aschaffenburg, E-Mail: {email}) mittels einer eindeutigen Erklärung (z.\xa0B. ein mit der Post versandter Brief oder eine E-Mail) über deinen Entschluss, diesen Vertrag zu widerrufen, informieren. Du kannst dafür das unten stehende Muster-Widerrufsformular verwenden, das ist jedoch nicht vorgeschrieben. Zur Wahrung der Widerrufsfrist reicht es aus, dass du die Mitteilung über die Ausübung des Widerrufsrechts vor Ablauf der Widerrufsfrist absendest.</p><p><strong>Folgen des Widerrufs</strong><br>Wenn du diesen Vertrag widerrufst, haben wir dir alle Zahlungen, die wir von dir erhalten haben, einschließlich der Lieferkosten (mit Ausnahme der zusätzlichen Kosten, die sich daraus ergeben, dass du eine andere Art der Lieferung als die von uns angebotene, günstigste Standardlieferung gewählt hast), unverzüglich und spätestens binnen vierzehn Tagen ab dem Tag zurückzuzahlen, an dem die Mitteilung über deinen Widerruf dieses Vertrags bei uns eingegangen ist. Für diese Rückzahlung verwenden wir dasselbe Zahlungsmittel, das du bei der ursprünglichen Transaktion eingesetzt hast, es sei denn, mit dir wurde ausdrücklich etwas anderes vereinbart; in keinem Fall werden dir wegen dieser Rückzahlung Entgelte berechnet. Wir können die Rückzahlung verweigern, bis wir die Waren wieder zurückerhalten haben oder bis du den Nachweis erbracht hast, dass du die Waren zurückgesandt hast, je nachdem, welches der frühere Zeitpunkt ist. Du hast die Waren unverzüglich und in jedem Fall spätestens binnen vierzehn Tagen ab dem Tag, an dem du uns über den Widerruf dieses Vertrags unterrichtest, an uns zurückzusenden oder zu übergeben. Die Frist ist gewahrt, wenn du die Waren vor Ablauf der Frist von vierzehn Tagen absendest. Du trägst die unmittelbaren Kosten der Rücksendung der Waren. Du musst für einen etwaigen Wertverlust der Waren nur aufkommen, wenn dieser Wertverlust auf einen zur Prüfung der Beschaffenheit, Eigenschaften und Funktionsweise der Waren nicht notwendigen Umgang mit ihnen zurückzuführen ist.</p><p><strong>Muster-Widerrufsformular</strong><br>(Wenn du den Vertrag widerrufen willst, dann fülle bitte dieses Formular aus und sende es zurück.)</p><p>An: Joel Bittner, Disorder119, Nelseestraße 25, 63739 Aschaffenburg, E-Mail: {email}<br>Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen Vertrag über den Kauf der folgenden Waren (*)/die Erbringung der folgenden Dienstleistung (*)<br>Bestellt am (*)/erhalten am (*)<br>Name des/der Verbraucher(s)<br>Anschrift des/der Verbraucher(s)<br>Unterschrift des/der Verbraucher(s) (nur bei Mitteilung auf Papier)<br>Datum<br>(*) Unzutreffendes streichen.</p>',
+        "en": '<h2>Terms &amp; conditions</h2><p>This page is translated for convenience — the German version is the legally binding one.</p><h3>1. Scope</h3><p>These terms apply to purchase enquiries made via this website between Joel Bittner (Disorder119) and customers.</p><h3>2. Formation of contract</h3><p>A non-binding enquiry can be sent via WhatsApp or e-mail through the cart. A purchase contract is only formed once separately confirmed (availability, price, payment and shipping method) — not simply by sending the enquiry.</p><h3>3. Items</h3><p>All items offered are used one-off pieces (vintage / second-hand). Minor wear-related variations are possible and are noted to the best of our knowledge in the item description.</p><h3>4. Prices &amp; payment</h3><p>All prices are in euros. Small business as per § 19 UStG, no VAT shown. Payment and shipping method are agreed individually.</p><h3>5. Warranty</h3><p>Statutory warranty rights apply. As all items are used one-off pieces, condition is described to the best of our knowledge in the respective item description.</p><h3>6. Right of withdrawal for consumers</h3><p><strong>Right of withdrawal</strong><br>You have the right to withdraw from this contract within 14 days without giving any reason. The withdrawal period will expire 14 days from the day on which you, or a third party other than the carrier and indicated by you, acquire physical possession of the goods. To exercise the right of withdrawal, you must inform us (Joel Bittner, Disorder119, Nelseestraße 25, 63739 Aschaffenburg, Germany, e-mail: {email}) of your decision to withdraw from this contract by an unequivocal statement (e.g. a letter sent by post or e-mail). You may use the model withdrawal form below, but it is not obligatory. To meet the withdrawal deadline, it is sufficient for you to send your communication concerning the exercise of the right of withdrawal before the withdrawal period has expired.</p><p><strong>Effects of withdrawal</strong><br>If you withdraw from this contract, we shall reimburse all payments received from you, including delivery costs (except for the supplementary costs resulting from your choice of a delivery type other than the least expensive standard delivery offered by us), without undue delay and in any event not later than 14 days from the day on which we are informed about your decision to withdraw. We will use the same means of payment as you used for the initial transaction, unless expressly agreed otherwise; in any event, you will not incur any fees as a result of such reimbursement. We may withhold reimbursement until we have received the goods back, or you have supplied evidence of having sent back the goods, whichever is the earliest. You shall send back the goods without undue delay and in any event not later than 14 days from the day on which you communicate your withdrawal from this contract to us. The deadline is met if you send back the goods before the period of 14 days has expired. You will bear the direct cost of returning the goods. You are only liable for any diminished value of the goods resulting from handling other than what is necessary to establish the nature, characteristics and functioning of the goods.</p><p><strong>Model withdrawal form</strong><br>(Complete and return this form only if you wish to withdraw from the contract.)</p><p>To: Joel Bittner, Disorder119, Nelseestraße 25, 63739 Aschaffenburg, Germany, e-mail: {email}<br>I/We (*) hereby give notice that I/We (*) withdraw from my/our (*) contract for the sale of the following goods (*)/for the provision of the following service (*)<br>Ordered on (*)/received on (*)<br>Name of consumer(s)<br>Address of consumer(s)<br>Signature of consumer(s) (only if this form is notified on paper)<br>Date<br>(*) Delete as appropriate.</p>',
+        "fr": "<h2>Conditions générales de vente</h2><p>Cette page est traduite par courtoisie — la version allemande fait foi juridiquement.</p><h3>1. Champ d'application</h3><p>Ces conditions s'appliquent aux demandes d'achat effectuées via ce site entre Joel Bittner (Disorder119) et les client(e)s.</p><h3>2. Formation du contrat</h3><p>Une demande sans engagement peut être envoyée par WhatsApp ou e-mail via le panier. Un contrat de vente n'est conclu qu'après confirmation séparée (disponibilité, prix, mode de paiement et d'expédition) — pas par le simple envoi de la demande.</p><h3>3. Articles</h3><p>Tous les articles proposés sont des pièces uniques d'occasion (vintage / seconde main). De légères variations liées à l'usage sont possibles et sont indiquées au mieux de notre connaissance dans la description de l'article.</p><h3>4. Prix &amp; paiement</h3><p>Tous les prix s'entendent en euros. Micro-entreprise selon le § 19 UStG, TVA non indiquée. Le mode de paiement et d'expédition est convenu individuellement.</p><h3>5. Garantie</h3><p>Les droits de garantie légaux s'appliquent. Tous les articles étant des pièces uniques d'occasion, leur état est décrit au mieux de notre connaissance dans la description de l'article concerné.</p><h3>6. Droit de rétractation des consommateurs</h3><p><strong>Droit de rétractation</strong><br>Tu disposes d'un délai de 14 jours pour te rétracter du présent contrat sans avoir à motiver ta décision. Le délai de rétractation expire 14 jours après le jour où toi, ou un tiers autre que le transporteur et désigné par toi, prend physiquement possession du bien. Pour exercer le droit de rétractation, tu dois nous notifier (Joel Bittner, Disorder119, Nelseestraße 25, 63739 Aschaffenburg, Allemagne, e-mail : {email}) ta décision de te rétracter du présent contrat au moyen d'une déclaration dénuée d'ambiguïté (par exemple lettre envoyée par la poste ou e-mail). Tu peux utiliser le formulaire type de rétractation ci-dessous, sans que cela soit obligatoire. Pour respecter le délai de rétractation, il suffit que tu transmettes ta communication relative à l'exercice du droit de rétractation avant l'expiration du délai de rétractation.</p><p><strong>Effets de la rétractation</strong><br>En cas de rétractation, nous te rembourserons tous les paiements reçus, y compris les frais de livraison (à l'exception des frais supplémentaires découlant du fait que tu as choisi un mode de livraison autre que le mode le moins coûteux de livraison standard proposé par nous), sans retard excessif et en tout état de cause au plus tard 14 jours à compter du jour où nous sommes informés de ta décision de te rétracter. Nous procéderons au remboursement en utilisant le même moyen de paiement que celui utilisé pour la transaction initiale, sauf accord exprès contraire ; en tout état de cause, ce remboursement ne t'occasionnera aucun frais. Nous pouvons différer le remboursement jusqu'à ce que nous ayons reçu le bien ou jusqu'à ce que tu aies fourni une preuve de l'expédition du bien, la date retenue étant celle du premier de ces faits. Tu devras renvoyer ou restituer les biens sans retard excessif et en tout état de cause au plus tard 14 jours après nous avoir communiqué ta décision de te rétracter. Ce délai est réputé respecté si tu renvoies le bien avant l'expiration du délai de 14 jours. Les frais directs de renvoi du bien sont à ta charge. Ta responsabilité n'est engagée qu'à l'égard de la dépréciation du bien résultant de manipulations autres que celles nécessaires pour établir la nature, les caractéristiques et le bon fonctionnement de ce bien.</p><p><strong>Formulaire type de rétractation</strong><br>(Veuillez compléter et renvoyer le présent formulaire uniquement si vous souhaitez vous rétracter du contrat.)</p><p>À l'attention de : Joel Bittner, Disorder119, Nelseestraße 25, 63739 Aschaffenburg, Allemagne, e-mail : {email}<br>Je/nous (*) vous notifie/notifions par la présente ma/notre (*) rétractation du contrat portant sur la vente du bien (*)/pour la prestation de service (*) ci-dessous<br>Commandé le (*)/reçu le (*)<br>Nom du (des) consommateur(s)<br>Adresse du (des) consommateur(s)<br>Signature du (des) consommateur(s) (uniquement en cas de notification du présent formulaire sur papier)<br>Date<br>(*) Rayez la mention inutile.</p>",
+    },
+    "legalDatenschutzHtml": {
+        "de": '<h2>Datenschutzerklärung</h2><h3>Verantwortlicher</h3><p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg — Kontakt siehe Impressum.</p><h3>Lokale Speicherung (localStorage)</h3><p>Warenkorb und Outfit-Baukasten speichern deine Auswahl ausschließlich lokal in deinem Browser (localStorage). Diese Daten werden nicht an uns oder Dritte übertragen und verlassen nie dein Gerät. Du kannst sie jederzeit über die Browser-Einstellungen löschen.</p><h3>Bestellanfragen</h3><p>Wenn du über WhatsApp oder E-Mail eine Anfrage sendest, werden die von dir eingegebenen Daten (z. B. Name, Nachricht) an den jeweiligen Dienst (WhatsApp/Meta bzw. deinen E-Mail-Anbieter) und an uns übermittelt, um deine Anfrage zu bearbeiten. Es findet keine Weitergabe an weitere Dritte statt.</p><h3>Hosting</h3><p>Diese Seite wird bei GitHub Pages (GitHub Inc.) gehostet. Beim Aufruf verarbeitet GitHub technisch notwendige Zugriffsdaten (u. a. IP-Adresse) zur Auslieferung der Seite. Näheres in der <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p><h3>Keine Tracking-Cookies</h3><p>Diese Seite verwendet keine Analyse-, Marketing- oder Tracking-Cookies.</p>',
+        "en": '<h2>Privacy policy</h2><p>This page is translated for convenience — the German version is the legally binding one.</p><h3>Controller</h3><p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg, Germany — contact details in the legal notice.</p><h3>Local storage (localStorage)</h3><p>The cart and outfit builder save your selection exclusively locally in your browser (localStorage). This data is never transmitted to us or third parties and never leaves your device. You can delete it at any time via your browser settings.</p><h3>Order enquiries</h3><p>If you send an enquiry via WhatsApp or e-mail, the data you enter (e.g. name, message) is transmitted to the respective service (WhatsApp/Meta or your e-mail provider) and to us in order to process your enquiry. It is not passed on to any further third parties.</p><h3>Hosting</h3><p>This site is hosted on GitHub Pages (GitHub Inc.). GitHub technically processes access data required for delivery (including IP address). See the <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub privacy statement</a> for details.</p><h3>No tracking cookies</h3><p>This site does not use analytics, marketing or tracking cookies.</p>',
+        "fr": '<h2>Politique de confidentialité</h2><p>Cette page est traduite par courtoisie — la version allemande fait foi juridiquement.</p><h3>Responsable</h3><p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg, Allemagne — contact, voir mentions légales.</p><h3>Stockage local (localStorage)</h3><p>Le panier et le configurateur de tenues enregistrent ta sélection exclusivement en local dans ton navigateur (localStorage). Ces données ne sont jamais transmises à nous ou à des tiers et ne quittent jamais ton appareil. Tu peux les supprimer à tout moment via les réglages de ton navigateur.</p><h3>Demandes de commande</h3><p>Si tu envoies une demande par WhatsApp ou e-mail, les données que tu saisis (par ex. nom, message) sont transmises au service concerné (WhatsApp/Meta ou ton fournisseur e-mail) ainsi qu\'à nous, afin de traiter ta demande. Aucune transmission à d\'autres tiers n\'a lieu.</p><h3>Hébergement</h3><p>Ce site est hébergé sur GitHub Pages (GitHub Inc.). Lors de l\'accès, GitHub traite les données techniques nécessaires (dont l\'adresse IP) pour la mise à disposition du site. Plus de détails dans la <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">politique de confidentialité de GitHub</a>.</p><h3>Aucun cookie de suivi</h3><p>Ce site n\'utilise aucun cookie d\'analyse, marketing ou de suivi.</p>',
+    },
+}
+
+INFO_CONTENT_HTML = {
+    "aboutHtml": {
+        "de": '<h2>Über Disorder119</h2><p>DISORDER119 ist ein kuratiertes Archiv für ausgewählte Designer-, Vintage- und Contemporary-Pieces mit Fokus auf Qualität, Authentizität und Zeitlosigkeit.</p>',
+        "en": '<h2>About Disorder119</h2><p>DISORDER119 is a curated archive of selected designer, vintage and contemporary pieces with a focus on quality, authenticity and timelessness.</p>',
+        "fr": '<h2>À propos de Disorder119</h2><p>DISORDER119 est une archive sélectionnée de pièces de créateurs, vintage et contemporaines, axée sur la qualité, l’authenticité et l’intemporalité.</p>',
+    },
+    "faqHtml": {
+        "de": '<h2>FAQ</h2><h3>Sind alle Artikel Einzelstücke?</h3><p>Ja. Alle verfügbaren Artikel sind kuratierte Einzelstücke.</p><h3>Wie funktioniert eine Bestellung?</h3><p>Lege verfügbare Artikel in den Warenkorb und sende anschließend eine unverbindliche Anfrage per E-Mail.</p><h3>Warum bleiben verkaufte Artikel sichtbar?</h3><p>Verkaufte Pieces bleiben als Teil des DISORDER119-Archivs erhalten.</p>',
+        "en": '<h2>FAQ</h2><h3>Is every item one of a kind?</h3><p>Yes. Every available item is a curated one-off piece.</p><h3>How do orders work?</h3><p>Add available pieces to the cart and send a non-binding enquiry by e-mail.</p><h3>Why do sold pieces remain visible?</h3><p>Sold pieces remain part of the DISORDER119 archive.</p>',
+        "fr": '<h2>FAQ</h2><h3>Chaque article est-il unique ?</h3><p>Oui. Chaque article disponible est une pièce unique sélectionnée.</p><h3>Comment commander ?</h3><p>Ajoute les articles disponibles au panier, puis envoie une demande sans engagement par e-mail.</p><h3>Pourquoi les articles vendus restent-ils visibles ?</h3><p>Les pièces vendues restent dans l’archive DISORDER119.</p>',
+    },
+}
+
+LEGAL_EMAIL_PENDING = {
+    "de": 'wird nachgereicht, sobald der Shop live geht',
+    "en": 'to be added once the shop goes live',
+    "fr": 'sera ajoutée dès la mise en ligne de la boutique',
+}
+
 ITEMS = json.loads(DATA_PATH.read_text(encoding="utf-8"))
 
 # Manche Marken im Rohbestand sind eigentlich Linien/Kollaborationen einer
@@ -496,22 +533,57 @@ def build_page(it, shop_config, lang):
 """
 
 
+SHOP_CONFIG_PATH = BASE / "config" / "shop-config.json"
+
+
 def get_shop_config():
-    # SHOP_CONFIG lebt (bewusst, s. Chat-Historie) weiterhin direkt in
-    # index_template.html, nicht in data/items.json - es ist Shop-Konfiguration,
-    # kein Artikeldatum. Wird von dort ausgelesen, damit es nur EINE Stelle
-    # zum Pflegen gibt.
-    tmpl = (BASE / "index_template.html").read_text(encoding="utf-8")
-    wa = re.search(r'whatsappNumber:\s*"([^"]*)"', tmpl)
-    em = re.search(r'\bemail:\s*"([^"]*)"', tmpl)
-    pp = re.search(r'paypalClientId:\s*"([^"]*)"', tmpl)
-    wk = re.search(r'shopWorkerUrl:\s*"([^"]*)"', tmpl)
-    return {
-        "whatsappNumber": wa.group(1) if wa else "",
-        "email": em.group(1) if em else "",
-        "paypalClientId": pp.group(1) if pp else "",
-        "shopWorkerUrl": wk.group(1) if wk else "",
+    # Einzige Quelle fuer nicht-geheime Shop-Konfiguration (config/shop-config.json) -
+    # wird identisch fuer Startseite (SHOP_CONFIG) und jede Produktseite
+    # (ARTICLE_SHOP_CONFIG) verwendet. Vorher stand dieselbe Config als
+    # JS-Literal doppelt im Code (einmal in index_template.html, einmal - nach
+    # dem Monolith-Split - in assets/app.js) und ist genau dadurch schon einmal
+    # auseinandergelaufen: get_shop_config() las weiter aus index_template.html,
+    # obwohl die echten Werte laengst nur noch in app.js standen, wodurch jede
+    # Produktseite eine leere Konfiguration bekam. Eine einzige Datei macht
+    # dieses Auseinanderlaufen strukturell unmoeglich.
+    if not SHOP_CONFIG_PATH.is_file():
+        raise SystemExit(f"FEHLER: {SHOP_CONFIG_PATH} fehlt - Build abgebrochen.")
+    raw = json.loads(SHOP_CONFIG_PATH.read_text(encoding="utf-8"))
+    cfg = {
+        "whatsappNumber": raw.get("whatsappNumber") or "",
+        "email": raw.get("email") or "",
+        "paypalClientId": raw.get("paypalClientId") or "",
+        "shopWorkerUrl": raw.get("shopWorkerUrl") or "",
     }
+    for secret_key in ("paypalClientSecret", "dhlApiSecret", "dpdApiSecret", "hermesApiSecret", "dbKey", "adminKey", "serviceRoleKey"):
+        if raw.get(secret_key):
+            raise SystemExit(
+                f"FEHLER: {SHOP_CONFIG_PATH} enthaelt '{secret_key}' - Secrets duerfen "
+                "niemals in der oeffentlichen Shop-Konfiguration stehen. Build abgebrochen."
+            )
+    return cfg
+
+
+def validate_shop_contact_consistency(shop_config, articles_html_by_id):
+    # Automatisierte Kontrolle fuer genau den Fehler, der frueher passiert ist:
+    # der Hauptshop kennt eine Kontaktadresse, aber verfuegbare Produktseiten
+    # zeigen "Shop-Kontakt noch nicht eingerichtet". Struktur allein verhindert
+    # das jetzt schon (eine Quelle fuer beide Seiten), diese Pruefung faengt
+    # zusaetzlich jede zukuenftige Regression ab, bevor sie deployt wird.
+    has_contact = bool(shop_config["whatsappNumber"] or shop_config["email"])
+    if not has_contact:
+        return
+    broken = [
+        item_id for item_id, html in articles_html_by_id.items()
+        if "info__config-warning" in html
+    ]
+    if broken:
+        raise SystemExit(
+            "FEHLER: Shop-Konfiguration hat eine Kontaktmoeglichkeit (E-Mail/WhatsApp), "
+            f"aber {len(broken)} verfuegbare Produktseite(n) zeigen trotzdem die "
+            "Konfigurationswarnung (kein Kontaktbutton). Betroffene Artikel-IDs: "
+            f"{sorted(broken)[:10]}{'...' if len(broken) > 10 else ''}. Build abgebrochen."
+        )
 
 
 def item_list_jsonld(public_items, lang):
@@ -530,30 +602,68 @@ def hreflang_block(urls_by_lang):
     return "\n".join(links)
 
 
-def render_bundle_page(lang, path_segment, title_tag, desc_text):
+def legal_email_line(shop_config, lang):
+    email = shop_config.get("email")
+    if email:
+        return '<a href="mailto:' + esc(email) + '">' + esc(email) + "</a>"
+    return esc(LEGAL_EMAIL_PENDING[lang])
+
+
+LEGAL_SLUG_KEY = {"impressum": "legalImpressumHtml", "agb": "legalAgbHtml", "datenschutz": "legalDatenschutzHtml"}
+INFO_SLUG_KEY = {"ueber-uns": "aboutHtml", "faq": "faqHtml"}
+
+
+def static_page_content_html(slug, lang, shop_config):
+    # Echte, serverseitig gerenderte Seiteninhalte fuer Impressum/AGB/
+    # Datenschutz/FAQ/Ueber-uns - direkter Aufruf dieser URLs enthaelt den
+    # Text bereits im HTML, unabhaengig von JavaScript (vorher steckte dieser
+    # Text ausschliesslich als JS-String in app.js und wurde erst nach dem
+    # Laden in ein leeres Modal-Panel geschrieben - ohne JS war die Seite leer).
+    if slug in LEGAL_SLUG_KEY:
+        html = LEGAL_CONTENT_HTML[LEGAL_SLUG_KEY[slug]][lang]
+        html = html.replace("{email}", legal_email_line(shop_config, lang))
+    elif slug in INFO_SLUG_KEY:
+        html = INFO_CONTENT_HTML[INFO_SLUG_KEY[slug]][lang]
+    else:
+        return ""
+    return '<div class="static-page"><div class="legal-panel">' + html + "</div></div>"
+
+
+def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
+                        include_item_list=False, robots=None, static_content=""):
     # Einzige Quelle fuer das Homepage-Bundle: wird sowohl fuer index.html
     # (path_segment="") als auch fuer /cart/, /impressum/ usw. verwendet -
-    # inhaltlich exakt dieselbe Seite, sie oeffnet beim Laden nur automatisch
-    # ein anderes Panel (anhand von location.pathname, siehe index_template.html).
-    # path_segment ist relativ zur jeweiligen Sprach-Wurzel (z.B. "cart/").
+    # inhaltlich dieselbe App-Shell (Katalog-JS, Warenkorb, Match/Chaos/
+    # Baukasten), aber mit pro Seite unterschiedlichem SEO-Kopf und - bei den
+    # rechtlichen/Info-Seiten - bereits serverseitig gerendertem Inhalt.
     tmpl = (BASE / "index_template.html").read_text(encoding="utf-8")
-    public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
     urls_by_lang = {l: SITE_URL.rstrip("/") + lang_home(l) + path_segment for l in LANGS}
     canonical = urls_by_lang[lang]
+
+    if include_item_list:
+        public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
+        item_list_block = '<script type="application/ld+json">' + item_list_jsonld(public_items, lang) + "</script>"
+    else:
+        item_list_block = ""
+
     out = tmpl
-    out = out.replace("__ITEMLIST_JSONLD__", item_list_jsonld(public_items, lang))
+    out = out.replace("__ITEMLIST_JSONLD_BLOCK__", item_list_block)
     out = out.replace("__HTML_LANG__", lang)
     out = out.replace("__CANONICAL_URL__", canonical)
     out = out.replace("__HREFLANG_TAGS__", hreflang_block(urls_by_lang))
     out = out.replace("__META_TITLE__", esc(title_tag))
     out = out.replace("__META_DESC__", esc(desc_text))
+    out = out.replace("__ROBOTS_META__", f'<meta name="robots" content="{robots}">' if robots else "")
+    out = out.replace("__STATIC_PAGE_CONTENT__", static_content)
+    out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
     return out
 
 
 def build_index():
+    shop_config = get_shop_config()
     for lang in LANGS:
         ph = META_PHRASES[lang]
-        out = render_bundle_page(lang, "", ph["home_title"], ph["home_desc"])
+        out = render_bundle_page(lang, "", ph["home_title"], ph["home_desc"], shop_config, include_item_list=True)
         path = BASE / "index.html" if lang == "de" else BASE / lang / "index.html"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(out, encoding="utf-8")
@@ -563,15 +673,23 @@ def build_index():
 def build_special_pages():
     # /cart/, /impressum/, /agb/, /datenschutz/, /ueber-uns/, /faq/ - jede
     # davon bekommt eine echte, eigenstaendige, teilbare URL statt eines
-    # reinen JS-Modals (siehe openCart/openLegal/openInfo in app.js), und
-    # zwar in allen drei Sprachen (/cart/, /en/cart/, /fr/cart/ usw.).
+    # reinen JS-Modals, und zwar in allen drei Sprachen. Warenkorb bleibt
+    # bewusst nicht-indexierbar (kein oeffentlich relevanter Inhalt, individueller
+    # Zustand), die rechtlichen/Info-Seiten sind normal indexierbar und
+    # bekommen echten statischen Inhalt (siehe static_page_content_html()).
+    shop_config = get_shop_config()
     n = 0
     for lang in LANGS:
         ph = META_PHRASES[lang]
         for slug, labels in SPECIAL_PAGES.items():
             label = labels[lang]
             title_tag = ("Disorder119 — " + label) if slug != "cart" else (label + " | Disorder119")
-            out = render_bundle_page(lang, slug + "/", title_tag, ph["home_desc"])
+            robots = "noindex,follow" if slug == "cart" else None
+            static_content = static_page_content_html(slug, lang, shop_config)
+            out = render_bundle_page(
+                lang, slug + "/", title_tag, ph["home_desc"], shop_config,
+                include_item_list=False, robots=robots, static_content=static_content,
+            )
             out_dir = (BASE / slug) if lang == "de" else (BASE / lang / slug)
             out_dir.mkdir(parents=True, exist_ok=True)
             (out_dir / "index.html").write_text(out, encoding="utf-8")
@@ -587,13 +705,17 @@ def article_dir(lang, item_id):
 def build_articles():
     shop_config = get_shop_config()
     count = 0
+    de_pages_by_id = {}
     for it in ITEMS:
         for lang in LANGS:
             page = build_page(it, shop_config, lang)
             item_dir = article_dir(lang, it["id"])
             item_dir.mkdir(parents=True, exist_ok=True)
             (item_dir / "index.html").write_text(page, encoding="utf-8")
+            if lang == "de" and it.get("public_status") != "SOLD":
+                de_pages_by_id[it["id"]] = page
             count += 1
+    validate_shop_contact_consistency(shop_config, de_pages_by_id)
     print(f"{count} Produktseiten geschrieben ({len(ITEMS)} Artikel x {len(LANGS)} Sprachen).")
 
 
@@ -631,6 +753,44 @@ def build_sitemap():
     )
     (BASE / "sitemap.xml").write_text(xml, encoding="utf-8")
     print(f"sitemap.xml geschrieben ({len(entries)} URLs, {len(path_segments)} Seiten x {len(LANGS)} Sprachen).")
+
+
+CATALOG_PATH = BASE / "data" / "catalog.json"
+
+# Felder, die der Client (assets/app.js) tatsaechlich fuer Grid, Filter,
+# Match-Modus, Chaos-Modus und Outfit-Baukasten braucht (per grep auf
+# it.<feld> in assets/app.js verifiziert). desc/desc_de/desc_en/desc_fr
+# fehlen bewusst - die werden nur auf der einzelnen Produktseite gebraucht
+# (dort direkt von build_page() aus ITEMS gerendert, nicht ueber diese
+# JSON-Datei), nicht fuer alle 237 Artikel im Grid-Payload.
+CATALOG_FIELDS = [
+    "id", "article", "title", "brand", "price", "price_estimated",
+    "public_status", "status", "category", "size", "color", "condition",
+    "brightness", "gallery", "look",
+]
+
+
+def build_catalog_json():
+    # Oeffentlicher Katalog fuer den Browser (assets/app.js laedt jetzt
+    # /data/catalog.json statt /data/items.json). Zwei Gruende, warum das
+    # eine eigene Datei sein muss statt einfach data/items.json direkt
+    # auszuliefern: (1) DRAFT-Artikel duerfen nie ueber das Netzwerk
+    # sichtbar sein, auch nicht im rohen JSON-Payload, bevor JS sie
+    # herausfiltert - vorher waren sie das. (2) Markennormalisierung
+    # (BRAND_ALIASES) passierte bisher nur im Python-Speicher fuer die
+    # generierten HTML-Seiten, nie in der an den Browser ausgelieferten
+    # items.json selbst - das Grid haette also unnormalisierte Markennamen
+    # gesehen. catalog.json ist die einzige Quelle, die beides korrekt macht.
+    public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
+    catalog = [
+        {k: it.get(k) for k in CATALOG_FIELDS if k in it}
+        for it in public_items
+    ]
+    CATALOG_PATH.write_text(
+        json.dumps(catalog, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+    print(f"catalog.json geschrieben ({len(catalog)} Artikel, {len(ITEMS) - len(public_items)} DRAFT ausgeschlossen).")
 
 
 def build_thumbs():
@@ -675,6 +835,7 @@ def main():
     build_index()
     build_special_pages()
     build_articles()
+    build_catalog_json()
     build_sitemap()
     if "--thumbs" in sys.argv:
         build_thumbs()

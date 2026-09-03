@@ -3,8 +3,11 @@
 
   // Artikeldaten liegen als eigene Datei vor (nicht mehr in dieses Skript
   // eingebettet) - das haelt index.html/cart/impressum/... klein und laesst
-  // den Browser diese Datei wie app.css/app.js separat cachen.
-  fetch("/data/items.json").then(function (r) { return r.json(); }).then(function (ITEMS) {
+  // den Browser diese Datei wie app.css/app.js separat cachen. catalog.json
+  // statt items.json: von build_catalog_json() erzeugt, enthaelt keine
+  // DRAFT-Artikel (die duerfen nie im Netzwerk-Payload landen) und hat
+  // bereits normalisierte Markennamen (siehe BRAND_ALIASES in build_site.py).
+  fetch("/data/catalog.json").then(function (r) { return r.json(); }).then(function (ITEMS) {
 
   var canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
@@ -586,18 +589,17 @@
     }
   });
 
-  // ---- Shop-Kontakt: bitte vor dem Veröffentlichen eintragen ----
-  // whatsappNumber: internationales Format OHNE "+" und ohne führende 0,
-  // z. B. für die deutsche Nummer 0170 1234567 -> "491701234567"
-  // paypalClientId/shopWorkerUrl: bleiben leer, bis der Shop-Automat steht
-  // (siehe shop-worker/README.md) - der "Jetzt kaufen"-Button auf den
-  // Artikelseiten erscheint erst, wenn beide gesetzt sind, vorher laeuft
-  // alles unveraendert ueber die WhatsApp-/E-Mail-Anfrage.
-  var SHOP_CONFIG = {
-    whatsappNumber: "",
-    email: "disorder119shop@gmail.com",
-    paypalClientId: "",
-    shopWorkerUrl: ""
+  // ---- Shop-Kontakt ----
+  // Kommt jetzt aus config/shop-config.json (einzige Quelle, siehe
+  // build_site.py:get_shop_config()) und wird von build_site.py als
+  // window.SHOP_CONFIG in JEDE erzeugte Seite eingebaut (Startseite UND
+  // jede Produktseite als window.ARTICLE_SHOP_CONFIG) - vorher stand
+  // dieselbe Config als JS-Literal zusaetzlich hier hart im Code und ist
+  // genau dadurch schon einmal von der tatsaechlich verwendeten Config
+  // auseinandergelaufen (Produktseiten bekamen eine leere Konfiguration,
+  // obwohl hier eine echte E-Mail-Adresse stand).
+  var SHOP_CONFIG = window.SHOP_CONFIG || {
+    whatsappNumber: "", email: "", paypalClientId: "", shopWorkerUrl: ""
   };
 
   // Bild-/Asset-Pfade aus items.json sind Site-Wurzel-relativ ohne fuehrenden
@@ -823,7 +825,12 @@
   }
 
   function closeCart() {
-    if (location.pathname === CART_PATH) history.back();
+    // Bewusst kein history.back(): wenn /cart/ direkt (neuer Tab, geteilter
+    // Link) statt per Klick von der Startseite aus geoeffnet wurde, gibt es
+    // in der Tab-Historie u.U. gar keinen eigenen vorherigen Eintrag mehr -
+    // "Zurueck" wuerde dann auf eine fremde Seite oder eine leere Seite
+    // fuehren statt auf disorder119.com. Immer gezielt zur Sprach-Startseite.
+    if (location.pathname === CART_PATH) location.href = langHome(LANG);
     else hideCartUI();
   }
 
@@ -2638,12 +2645,11 @@
     }
   });
 
-  // Direktaufruf einer der Rechts-/Infoseiten - passendes Panel sofort zeigen.
-  (function () {
-    var path = location.pathname;
-    Object.keys(LEGAL_PATHS).forEach(function (k) { if (LEGAL_PATHS[k] === path) openLegal(k); });
-    Object.keys(INFO_PATHS).forEach(function (k) { if (INFO_PATHS[k] === path) openInfo(k); });
-  })();
+  // Kein Auto-Open des JS-Panels mehr bei Direktaufruf von /impressum/ usw. -
+  // diese Seiten haben jetzt echten, serverseitig gerenderten Inhalt direkt
+  // im HTML (siehe static_page_content_html() in build_site.py), das Panel
+  // bleibt nur fuer die schnelle Schnellansicht per Klick von der Startseite
+  // aus da (openLegal()/openInfo() oben, per pushState statt Neuladen).
 
   // ---- Hinweis zur lokalen Speicherung (kein Tracking, daher kein Consent-Banner mit Ablehnen-Option) ----
   var COOKIE_NOTE_KEY = "disorder119_cookie_note_seen";

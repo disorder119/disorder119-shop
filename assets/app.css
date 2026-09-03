@@ -1233,6 +1233,20 @@
   .legal-panel ul { padding-left: 18px; margin: 6px 0; }
   .legal-panel a { color: var(--accent); }
 
+  /* Echte, serverseitig gerenderte Seiteninhalte (Impressum/AGB/Datenschutz/
+     FAQ/Ueber-uns) - dieselbe Typografie wie das JS-Schnellansicht-Panel
+     (.legal-panel), aber als normaler Seiteninhalt statt fixiertes Overlay,
+     damit /impressum/ usw. auch ohne JavaScript den echten Text zeigen. */
+  .static-page {
+    display: flex;
+    justify-content: center;
+    padding: clamp(24px, 6vw, 64px) clamp(16px, 4vw, 24px);
+  }
+  .static-page .legal-panel {
+    position: static;
+    max-width: 640px;
+  }
+
   .cookie-note {
     position: fixed;
     left: 16px;

@@ -1,0 +1,12 @@
+{
+  "_comment": "Einzige Quelle fuer nicht-geheime, oeffentliche Shop-Konfiguration. Wird von build_site.py gelesen und identisch in Startseite (SHOP_CONFIG) und jede Produktseite (ARTICLE_SHOP_CONFIG) eingebaut - keine zwei Stellen mehr, die auseinanderlaufen koennen. NIEMALS Secrets (PayPal Client Secret, DHL/DPD/Hermes Zugangsdaten, DB-Keys, Admin-Keys) hier eintragen - die gehoeren ausschliesslich in Server-/Worker-Umgebungsvariablen, siehe .env.example.",
+  "whatsappNumber": "",
+  "email": "disorder119shop@gmail.com",
+  "paypalClientId": "",
+  "shopWorkerUrl": "",
+  "environment": "sandbox",
+  "features": {
+    "paypalCheckout": false,
+    "customerAccounts": false
+  }
+}

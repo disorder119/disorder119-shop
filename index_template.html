@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="__META_DESC__">
+__ROBOTS_META__
 <link rel="canonical" href="__CANONICAL_URL__">
 __HREFLANG_TAGS__
 <link rel="icon" type="image/png" href="/assets/favicon.png">
@@ -20,7 +21,7 @@ __HREFLANG_TAGS__
 <meta name="twitter:title" content="__META_TITLE__">
 <meta name="twitter:description" content="__META_DESC__">
 <meta name="twitter:image" content="https://disorder119.com/assets/og-image.png">
-<script type="application/ld+json">__ITEMLIST_JSONLD__</script>
+__ITEMLIST_JSONLD_BLOCK__
 <title>__META_TITLE__</title>
 <link rel="stylesheet" href="/assets/app.css">
 </head>
@@ -185,6 +186,7 @@ __HREFLANG_TAGS__
   </aside>
 </div>
 
+__STATIC_PAGE_CONTENT__
 <div class="app-shell hidden" id="appShell">
 <div class="masthead">
   <div class="masthead__top reveal" style="animation-delay:0.05s">
@@ -228,7 +230,7 @@ __HREFLANG_TAGS__
   </div>
   <div class="catalog-heading">
     <span id="catalogTitle">Verfügbar</span>
-    <span class="rail__count" id="railCount">180 Objekte</span>
+    <span class="rail__count" id="railCount"></span>
   </div>
   <div class="catalog-controls" aria-hidden="true">
     <div class="chip-row" id="statusChips"></div>
@@ -372,6 +374,7 @@ __HREFLANG_TAGS__
 </div>
 </div>
 
+<script>window.SHOP_CONFIG = __SHOP_CONFIG_JSON__;</script>
 <script src="/assets/app.js"></script>
 
 </body>
