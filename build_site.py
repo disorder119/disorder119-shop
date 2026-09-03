@@ -42,7 +42,24 @@ SPECIAL_PAGES = {
     "datenschutz": {"de": "Datenschutz", "en": "Privacy Policy", "fr": "Politique de confidentialité"},
     "ueber-uns": {"de": "Über Disorder119", "en": "About Disorder119", "fr": "À propos de Disorder119"},
     "faq": {"de": "FAQ", "en": "FAQ", "fr": "FAQ"},
+    # Frueher nur clientseitig ein-/ausgeblendeter Zustand auf derselben
+    # Adresse (kein eigener Link, kein Direktaufruf, Browser-Zurueck sprang
+    # dadurch unzuverlaessig hin und her) - jetzt echte, eigene Seiten wie
+    # /cart/, mit denselben Vorteilen (direkt aufrufbar, teilbar, echter
+    # Verlaufseintrag). Das Umschalten dorthin bleibt trotzdem schnell/ohne
+    # Neuladen, weil app.js beim Klick per pushState navigiert (siehe
+    # showSwipe()/showChaos()/showOutfit() in assets/app.js) - ein
+    # Direktaufruf/Reload rendert dieselbe Seite ganz normal serverseitig.
+    "match": {"de": "Match", "en": "Match", "fr": "Match"},
+    "chaos": {"de": "Chaos", "en": "Chaos", "fr": "Chaos"},
+    "baukasten": {"de": "Outfit-Baukasten", "en": "Outfit Builder", "fr": "Configurateur de tenues"},
 }
+
+# Diese drei zeigen exakt denselben Katalog wie die Archiv-Startseite, nur
+# in einer anderen Ansicht/Interaktionsform - fuer Suchmaschinen ist die
+# Startseite die kanonische Quelle dieser Produktdaten (dieselbe Logik wie
+# bei ItemList-JSON-LD, das ebenfalls nur auf der Startseite steht).
+CATALOG_VARIANT_SLUGS = {"match", "chaos", "baukasten"}
 
 # ---------------------------------------------------------------------------
 # Mehrsprachigkeit: echte eigene URLs pro Sprache (/, /en/, /fr/) statt nur

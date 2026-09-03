@@ -103,6 +103,8 @@
       orderSizeAbbrev: "Gr. ", orderArticleAbbrev: "Art.-Nr. ",
       modeArchiv: "Archiv", modeMatch: "Match", modeChaos: "Chaos", modeBaukasten: "Baukasten",
       menuRental: "Verleih",
+      pageTitleHome: "Disorder119 — Archiv-Katalog", pageTitleMatch: "Disorder119 — Match",
+      pageTitleChaos: "Disorder119 — Chaos", pageTitleOutfit: "Disorder119 — Outfit-Baukasten",
       modeHint: "Entdecke auch Match, Chaos & Baukasten", hintCloseAria: "Hinweis schließen",
       modeRailAria: "Ansicht wechseln",
       rentalCta: "📅 Für Shooting/Video anfragen", rentalCloseAria: "Schließen",
@@ -256,6 +258,8 @@
       orderSizeAbbrev: "Size ", orderArticleAbbrev: "Item no. ",
       modeArchiv: "Archive", modeMatch: "Match", modeChaos: "Chaos", modeBaukasten: "Outfit builder",
       menuRental: "Rental",
+      pageTitleHome: "Disorder119 — Curated Archive", pageTitleMatch: "Disorder119 — Match",
+      pageTitleChaos: "Disorder119 — Chaos", pageTitleOutfit: "Disorder119 — Outfit Builder",
       modeHint: "Also discover Match, Chaos & the outfit builder", hintCloseAria: "Close hint",
       modeRailAria: "Switch view",
       rentalCta: "📅 Request for shoot/video", rentalCloseAria: "Close",
@@ -410,6 +414,8 @@
       orderSizeAbbrev: "Taille ", orderArticleAbbrev: "N° d'article ",
       modeArchiv: "Archive", modeMatch: "Match", modeChaos: "Chaos", modeBaukasten: "Configurateur",
       menuRental: "Location",
+      pageTitleHome: "Disorder119 — Archive Sélectionnée", pageTitleMatch: "Disorder119 — Match",
+      pageTitleChaos: "Disorder119 — Chaos", pageTitleOutfit: "Disorder119 — Configurateur de tenues",
       modeHint: "Découvre aussi Match, Chaos et le configurateur de tenues", hintCloseAria: "Fermer l'info",
       modeRailAria: "Changer de vue",
       rentalCta: "📅 Demander pour tournage/shooting", rentalCloseAria: "Fermer",
@@ -1756,28 +1762,59 @@
 
   var modeRail = document.getElementById("modeRail");
 
-  // Bislang legten Match/Chaos/Baukasten keinen eigenen Verlaufseintrag an.
-  // Ein Klick auf einen Artikel aus einem dieser Modi (echte Navigation zur
-  // Artikelseite) gefolgt vom Zurueck-Button des Browsers sprang deshalb
-  // nicht in den Modus zurueck, sondern direkt zum zuvor bestehenden
-  // Zustand - meist dem Archiv, der Modus wurde dabei uebersprungen ("zu
-  // schnell wieder auf Archiv"). pushModeState() legt fuer jeden
-  // Moduswechsel einen eigenen Verlaufseintrag an (gleiche URL, eigener
-  // state.mode), damit Zurueck/Vorwaerts die Modi einzeln durchgeht statt
-  // sie zu ueberspringen. Wirkt nur auf der Archiv-Startseite selbst - auf
-  // Warenkorb-/Rechtstexte-URLs kuemmern sich deren eigene Popstate-Handler
-  // weiter oben/unten in dieser Datei um sich selbst.
-  var MODE_HOME_PATH = langHome(LANG);
-  var suppressModePush = false;
-  function pushModeState(mode) {
-    if (suppressModePush) return;
-    if (location.pathname !== MODE_HOME_PATH) return;
-    if (history.state && history.state.mode === mode) return;
-    history.pushState({ mode: mode }, "", location.pathname + location.search);
+  // Match/Chaos/Baukasten sind echte, eigenstaendige Seiten mit eigener URL
+  // (/match/, /chaos/, /baukasten/ - siehe SPECIAL_PAGES in build_site.py),
+  // genau wie /cart/ - kein reiner Client-Zustand auf derselben Adresse
+  // mehr. Direktaufruf, Teilen, Lesezeichen und Browser-Zurueck/Vorwaerts
+  // funktionieren dadurch wie bei jeder normalen Seite. Der Wechsel
+  // zwischen ihnen bleibt trotzdem schnell (kein Neuladen): ein Klick
+  // navigiert per pushState, genau wie beim Warenkorb.
+  var CLASSIC_PATH = langHome(LANG);
+  var SWIPE_PATH = langHome(LANG) + "match/";
+  var CHAOS_PATH = langHome(LANG) + "chaos/";
+  var OUTFIT_PATH = langHome(LANG) + "baukasten/";
+  function isCatalogPath(path) {
+    return path === CLASSIC_PATH || path === SWIPE_PATH || path === CHAOS_PATH || path === OUTFIT_PATH;
   }
-  window.addEventListener("popstate", function (e) {
-    if (location.pathname !== MODE_HOME_PATH) return;
-    var mode = (e.state && e.state.mode) || "classic";
+  function modeFromPath(path) {
+    if (path === SWIPE_PATH) return "swipe";
+    if (path === CHAOS_PATH) return "chaos";
+    if (path === OUTFIT_PATH) return "outfit";
+    return "classic";
+  }
+  function pathForMode(mode) {
+    if (mode === "swipe") return SWIPE_PATH;
+    if (mode === "chaos") return CHAOS_PATH;
+    if (mode === "outfit") return OUTFIT_PATH;
+    return CLASSIC_PATH;
+  }
+  // Sonderseiten wie /impressum/ oder /cart/ nutzen dieselbe Vorlage
+  // (index_template.html), sind aber KEINE Katalog-Ansicht - der Katalog
+  // darf dort nicht automatisch mitgeladen/angezeigt werden (frueher lief
+  // er dort unsichtbar unterhalb des eigentlichen Inhalts mit, siehe
+  // Kommentar beim Skript-Einstiegspunkt weiter unten). Dort bleibt nur die
+  // persistente Kopfzeile sichtbar; ein Klick auf Match/Chaos/Baukasten/
+  // Marke navigiert per echtem pushState zur jeweiligen Katalog-Seite.
+  var IS_CATALOG_PAGE = isCatalogPath(location.pathname);
+  var suppressModePush = false;
+  var MODE_TITLE_KEY = { classic: "pageTitleHome", swipe: "pageTitleMatch", chaos: "pageTitleChaos", outfit: "pageTitleOutfit" };
+  function updateModeDocumentMeta(mode) {
+    // pushState allein aendert weder <title> noch <link rel="canonical">
+    // (der Browser macht das nur bei einem echten Seitenaufruf) - ohne das
+    // haette der Tab/Verlaufseintrag nach einem In-Page-Wechsel weiterhin
+    // den Titel der vorher besuchten Seite.
+    document.title = t(MODE_TITLE_KEY[mode]);
+    var canonicalEl = document.querySelector('link[rel="canonical"]');
+    if (canonicalEl) canonicalEl.href = location.origin + pathForMode(mode);
+  }
+  function pushModePath(path) {
+    updateModeDocumentMeta(modeFromPath(path));
+    if (suppressModePush) return;
+    if (location.pathname !== path) history.pushState({}, "", path);
+  }
+  window.addEventListener("popstate", function () {
+    if (!isCatalogPath(location.pathname)) return;
+    var mode = modeFromPath(location.pathname);
     suppressModePush = true;
     if (mode === "swipe") showSwipe();
     else if (mode === "chaos") showChaos();
@@ -1816,8 +1853,17 @@
     });
   }
 
+  // Match/Chaos/Baukasten sind jetzt echte <a href> (siehe index_template.
+  // html) - echte Ziel-URL fuer Rechtsklick/neuer Tab/Hover, per Klick aber
+  // schnelle pushState-Navigation ohne Neuladen (gleiches Muster wie beim
+  // Warenkorb-Icon). Href pro Sprache korrigieren, da die Vorlage nur die
+  // deutschen Pfade fest verlinkt.
+  document.querySelector('.mode-rail__btn[data-mode-view="swipe"]').href = SWIPE_PATH;
+  document.querySelector('.mode-rail__btn[data-mode-view="chaos"]').href = CHAOS_PATH;
+  document.querySelector('.mode-rail__btn[data-mode-view="outfit"]').href = OUTFIT_PATH;
   Array.prototype.forEach.call(modeRail.querySelectorAll(".mode-rail__btn"), function (btn) {
-    btn.addEventListener("click", function () {
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
       var target = btn.getAttribute("data-mode-view");
       if (target === "classic") showClassic();
       else if (target === "swipe") showSwipe();
@@ -1982,7 +2028,7 @@
     outfitPicker.classList.remove("open");
     appShell.classList.remove("hidden");
     syncModeRail("classic");
-    pushModeState("classic");
+    pushModePath(CLASSIC_PATH);
   }
 
   // ---- Swipe-Minigame ----
@@ -2169,7 +2215,7 @@
     renderSwipeCard();
     swipeView.classList.remove("hidden");
     syncModeRail("swipe");
-    pushModeState("swipe");
+    pushModePath(SWIPE_PATH);
   }
 
   function chaosItemCount() {
@@ -2484,7 +2530,7 @@
     chaosView.classList.remove("hidden");
     buildChaos();
     syncModeRail("chaos");
-    pushModeState("chaos");
+    pushModePath(CHAOS_PATH);
   }
 
   // ---- Outfit-Baukasten ----
@@ -2883,7 +2929,7 @@
     renderOutfitStack();
     outfitView.classList.remove("hidden");
     syncModeRail("outfit");
-    pushModeState("outfit");
+    pushModePath(OUTFIT_PATH);
   }
 
   loadOutfit();
@@ -2991,13 +3037,35 @@
     try { window.localStorage.setItem(COOKIE_NOTE_KEY, "1"); } catch (e) {}
   });
 
+  // "DISORDER119"-Marke, "Zum Archiv"-Buttons und das Baukasten-Schliessen-
+  // Kreuz sind jetzt echte <a href="/"> (siehe index_template.html) - Href
+  // pro Sprache korrigieren, Klick per pushState statt Neuladen abfangen.
   Array.prototype.forEach.call(document.querySelectorAll("[data-enter-classic]"), function (btn) {
-    btn.addEventListener("click", showClassic);
+    if (btn.tagName === "A") btn.href = CLASSIC_PATH;
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      showClassic();
+    });
   });
 
-  // Direkter Einstieg ins Archiv - die Fun-Modi (Match/Chaos/Baukasten)
-  // sind ausschliesslich ueber die Moduswechsel-Leiste (#modeRail) erreichbar.
-  showClassic();
+  // Direkter Einstieg: auf /, /match/, /chaos/ oder /baukasten/ startet
+  // sofort in der passenden Ansicht (wie bei jeder normalen Seite - Direkt-
+  // aufruf/Reload/geteilter Link landen exakt dort, wo sie hinzeigen). Auf
+  // allen anderen Seiten (Warenkorb, Rechtstexte, Info) bleibt der Katalog
+  // unsichtbar - dort zeigt stattdessen der jeweils eigene Seiteninhalt,
+  // nur die persistente Kopfzeile (Menue, Marke, Match/Chaos/Baukasten)
+  // bleibt sichtbar, damit von ueberall aus echt navigiert werden kann.
+  if (IS_CATALOG_PAGE) {
+    suppressModePush = true;
+    var initialMode = modeFromPath(location.pathname);
+    if (initialMode === "swipe") showSwipe();
+    else if (initialMode === "chaos") showChaos();
+    else if (initialMode === "outfit") showOutfit();
+    else showClassic();
+    suppressModePush = false;
+  } else {
+    modeRail.classList.remove("hidden");
+  }
   // Sprache VOR dem ersten render() anwenden (nicht danach) - sonst wuerde ein
   // EN/FR-Erstbesucher kurz deutschen Text sehen, bevor auf seine gespeicherte
   // Sprache umgeschaltet wird. applyLanguage() ruft render() bereits selbst auf.

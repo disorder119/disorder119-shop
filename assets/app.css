@@ -1344,6 +1344,7 @@
     cursor: pointer;
     white-space: nowrap;
     flex: 0 0 auto;
+    text-decoration: none;
   }
 
   .mode-rail__btn:hover { color: var(--text); border-color: var(--text-muted); }
@@ -1630,6 +1631,7 @@
   }
 
   .view-enter-btn {
+    display: inline-block;
     background: transparent;
     border: 1px solid rgba(242, 239, 231, 0.3);
     color: var(--paper);
@@ -1640,6 +1642,7 @@
     text-transform: uppercase;
     padding: 12px 22px;
     cursor: pointer;
+    text-decoration: none;
   }
 
   .view-enter-btn:hover { border-color: var(--accent); }
@@ -1864,6 +1867,7 @@
     background: transparent;
     border: 1px solid var(--rule-strong);
     color: var(--text-muted);
+    text-decoration: none;
     font-size: 0.9rem;
     line-height: 1;
     cursor: pointer;
@@ -2789,6 +2793,8 @@
     color: var(--paper);
     font-family: inherit;
     cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
   }
 
   .site-header__menu {

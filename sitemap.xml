@@ -5061,4 +5061,67 @@
     <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/faq/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://disorder119.com/faq/"/>
   </url>
+  <url>
+    <loc>https://disorder119.com/match/</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/match/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/match/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/match/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://disorder119.com/match/"/>
+  </url>
+  <url>
+    <loc>https://disorder119.com/en/match/</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/match/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/match/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/match/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://disorder119.com/match/"/>
+  </url>
+  <url>
+    <loc>https://disorder119.com/fr/match/</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/match/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/match/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/match/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://disorder119.com/match/"/>
+  </url>
+  <url>
+    <loc>https://disorder119.com/chaos/</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/chaos/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/chaos/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/chaos/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://disorder119.com/chaos/"/>
+  </url>
+  <url>
+    <loc>https://disorder119.com/en/chaos/</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/chaos/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/chaos/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/chaos/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://disorder119.com/chaos/"/>
+  </url>
+  <url>
+    <loc>https://disorder119.com/fr/chaos/</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/chaos/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/chaos/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/chaos/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://disorder119.com/chaos/"/>
+  </url>
+  <url>
+    <loc>https://disorder119.com/baukasten/</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/baukasten/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/baukasten/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/baukasten/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://disorder119.com/baukasten/"/>
+  </url>
+  <url>
+    <loc>https://disorder119.com/en/baukasten/</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/baukasten/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/baukasten/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/baukasten/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://disorder119.com/baukasten/"/>
+  </url>
+  <url>
+    <loc>https://disorder119.com/fr/baukasten/</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/baukasten/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/baukasten/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/baukasten/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://disorder119.com/baukasten/"/>
+  </url>
 </urlset>

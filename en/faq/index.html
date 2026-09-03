@@ -45,7 +45,7 @@
     <button type="button" class="swipe-btn swipe-btn--like" id="swipeLike" data-i18n-aria="swipeLikeAria" aria-label="Merken">♥</button>
   </div>
   <p class="swipe-view__hint" id="swipeHintText" data-i18n="swipeHint">Ziehen oder klicken — ✕ überspringen, ♥ merken</p>
-  <button type="button" class="view-enter-btn" data-enter-classic data-i18n="toArchive">Zum Archiv →</button>
+  <a href="/" class="view-enter-btn" data-enter-classic data-i18n="toArchive">Zum Archiv →</a>
 </div>
 
 <div class="chaos-view hidden" id="chaosView">
@@ -56,12 +56,12 @@
   <span class="chaos-tooltip" id="chaosTooltip"></span>
   <div class="chaos-view__actions">
     <button type="button" class="view-enter-btn" id="chaosShuffle" data-i18n="chaosShuffle">Neu mischen</button>
-    <button type="button" class="view-enter-btn" data-enter-classic data-i18n="toArchive">Zum Archiv →</button>
+    <a href="/" class="view-enter-btn" data-enter-classic data-i18n="toArchive">Zum Archiv →</a>
   </div>
 </div>
 
 <div class="outfit-view hidden" id="outfitView">
-  <button type="button" class="outfit-view__close" data-enter-classic data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
+  <a href="/" class="outfit-view__close" data-enter-classic data-i18n-aria="closeAria" aria-label="Schließen">✕</a>
 
   <div class="outfit-view__head">
     <p class="outfit-view__eyebrow" data-i18n="outfitEyebrow">Outfit-Baukasten</p>
@@ -117,20 +117,20 @@
   <button type="button" class="site-header__menu" id="menuToggle" aria-label="Menü öffnen" aria-expanded="false">
     <span class="mode-rail__icon" aria-hidden="true">▦</span>
   </button>
-  <button type="button" class="site-header__brand" data-enter-classic aria-label="DISORDER119 Startseite">DISORDER119</button>
+  <a href="/" class="site-header__brand" data-enter-classic aria-label="DISORDER119 Startseite">DISORDER119</a>
   <div class="site-header__actions">
-    <button type="button" class="mode-rail__btn" data-mode-view="swipe" aria-label="Match">
+    <a href="/match/" class="mode-rail__btn" data-mode-view="swipe" aria-label="Match">
       <span class="mode-rail__icon" aria-hidden="true">♥</span>
       <span class="mode-rail__label" data-i18n="modeMatch">Match</span>
-    </button>
-    <button type="button" class="mode-rail__btn" data-mode-view="chaos" aria-label="Chaos">
+    </a>
+    <a href="/chaos/" class="mode-rail__btn" data-mode-view="chaos" aria-label="Chaos">
       <span class="mode-rail__icon" aria-hidden="true">✦</span>
       <span class="mode-rail__label" data-i18n="modeChaos">Chaos</span>
-    </button>
-    <button type="button" class="mode-rail__btn" data-mode-view="outfit" aria-label="Outfit-Baukasten">
+    </a>
+    <a href="/baukasten/" class="mode-rail__btn" data-mode-view="outfit" aria-label="Outfit-Baukasten">
       <span class="mode-rail__icon" aria-hidden="true">⛃</span>
       <span class="mode-rail__label" data-i18n="modeBaukasten">Baukasten</span>
-    </button>
+    </a>
   </div>
 </nav>
 
@@ -350,7 +350,14 @@
     <span>(<span id="footerCartCount">0</span>)</span>
   </a>
 </footer>
-
+</div>
+<!-- Ab hier bewusst AUSSERHALB von #appShell: Warenkorb-Schublade, Produkt-
+     Schnellansicht, Rechtstexte-Schnellansicht und Cookie-Hinweis duerfen
+     unabhaengig vom Katalog-Grid sichtbar sein - sonst wuerde das
+     Ausblenden von #appShell (z.B. auf /cart/, /impressum/ usw., wo der
+     Katalog gar nicht angezeigt werden soll, siehe app.js) diese Overlays
+     gleich mit verstecken. Jedes davon hat ohnehin seine eigene
+     open/visible-Klasse und ist standardmaessig unsichtbar. -->
 <div class="legal-backdrop" id="legalBackdrop">
   <div class="legal-panel">
     <button type="button" class="legal-panel__close" id="legalClose" data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
@@ -416,7 +423,6 @@
     <div class="cart-drawer__body" id="cartBody"></div>
     <div class="cart-drawer__foot" id="cartFoot"></div>
   </div>
-</div>
 </div>
 
 <script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "paypalClientId": "", "shopWorkerUrl": ""};</script>
