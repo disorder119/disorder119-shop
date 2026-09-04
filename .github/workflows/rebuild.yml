@@ -82,6 +82,9 @@ jobs:
       - name: Commerce-, Mietpreis- und Security-Invarianten pruefen
         run: python scripts/validate_commerce.py
 
+      - name: D1 State- und Mietpreis-Integritaet pruefen
+        run: python scripts/validate_state_integrity.py
+
       - name: Ergebnis committen
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
