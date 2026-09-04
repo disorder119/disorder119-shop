@@ -772,13 +772,10 @@
       "assets/img/b2-214/0.webp",
       "assets/img/b2-214/1.webp",
       "assets/img/b2-214/2.webp",
-      "assets/img/b2-214/3.webp",
-      "assets/img/b2-214/4.webp",
       "assets/img/b2-214/5.webp",
       "assets/img/b2-214/6.webp",
       "assets/img/b2-214/7.webp",
-      "assets/img/b2-214/8.webp",
-      "assets/img/b2-214/9.webp"
+      "assets/img/b2-214/8.webp"
     ],
     "look": "assets/img/b2-214/look.webp",
     "price_estimated": false,
@@ -1169,7 +1166,6 @@
     "desc_fr": "Issu des archives sélectionnées de Disorder119.\n\nDior Black Knit Top par Dior.",
     "gallery": [
       "assets/img/b2-200/0.webp",
-      "assets/img/b2-200/1.webp",
       "assets/img/b2-200/2.webp",
       "assets/img/b2-200/3.webp",
       "assets/img/b2-200/4.webp",
@@ -1340,7 +1336,6 @@
       "assets/img/b2-194/0.webp",
       "assets/img/b2-194/1.webp",
       "assets/img/b2-194/2.webp",
-      "assets/img/b2-194/3.webp",
       "assets/img/b2-194/4.webp",
       "assets/img/b2-194/5.webp"
     ],
@@ -1514,8 +1509,7 @@
     "gallery": [
       "assets/img/b2-188/0.webp",
       "assets/img/b2-188/1.webp",
-      "assets/img/b2-188/2.webp",
-      "assets/img/b2-188/3.webp"
+      "assets/img/b2-188/2.webp"
     ],
     "look": "assets/img/b2-188/look.webp",
     "price_estimated": false,
@@ -1542,7 +1536,6 @@
       "assets/img/b2-187/1.webp",
       "assets/img/b2-187/2.webp",
       "assets/img/b2-187/3.webp",
-      "assets/img/b2-187/4.webp",
       "assets/img/b2-187/5.webp",
       "assets/img/b2-187/6.webp",
       "assets/img/b2-187/7.webp",
@@ -1606,10 +1599,7 @@
       "assets/img/b2-185/1.webp",
       "assets/img/b2-185/2.webp",
       "assets/img/b2-185/3.webp",
-      "assets/img/b2-185/4.webp",
-      "assets/img/b2-185/5.webp",
       "assets/img/b2-185/6.webp",
-      "assets/img/b2-185/7.webp",
       "assets/img/b2-185/8.webp"
     ],
     "look": "assets/img/b2-185/look.webp",
@@ -1662,7 +1652,6 @@
     "desc_fr": "Issu des archives sélectionnées de Disorder119.\n\nWalter Van Beirendonck Rock Nr. 2 par Walter Van Beirendonck.",
     "gallery": [
       "assets/img/b2-42/0.webp",
-      "assets/img/b2-42/1.webp",
       "assets/img/b2-42/2.webp",
       "assets/img/b2-42/3.webp",
       "assets/img/b2-42/4.webp",
@@ -2121,8 +2110,7 @@
       "assets/img/9520/5.webp",
       "assets/img/9520/6.webp",
       "assets/img/9520/7.webp",
-      "assets/img/9520/8.webp",
-      "assets/img/9520/9.webp"
+      "assets/img/9520/8.webp"
     ],
     "look": "assets/img/9520/look.webp",
     "price_estimated": false,
@@ -2283,7 +2271,6 @@
       "assets/img/9515/5.webp",
       "assets/img/9515/6.webp",
       "assets/img/9515/7.webp",
-      "assets/img/9515/8.webp",
       "assets/img/9515/9.webp"
     ],
     "look": "assets/img/9515/look.webp",
@@ -2345,18 +2332,14 @@
       "assets/img/9513/3.webp",
       "assets/img/9513/4.webp",
       "assets/img/9513/5.webp",
-      "assets/img/9513/6.webp",
       "assets/img/9513/7.webp",
-      "assets/img/9513/8.webp",
       "assets/img/9513/9.webp",
       "assets/img/9513/10.webp",
       "assets/img/9513/11.webp",
       "assets/img/9513/12.webp",
       "assets/img/9513/13.webp",
       "assets/img/9513/14.webp",
-      "assets/img/9513/15.webp",
-      "assets/img/9513/16.webp",
-      "assets/img/9513/17.webp"
+      "assets/img/9513/16.webp"
     ],
     "look": "assets/img/9513/look.webp",
     "price_estimated": false,
@@ -2495,8 +2478,7 @@
       "assets/img/9530/0.webp",
       "assets/img/9530/1.webp",
       "assets/img/9530/2.webp",
-      "assets/img/9530/3.webp",
-      "assets/img/9530/4.webp"
+      "assets/img/9530/3.webp"
     ],
     "look": "assets/img/9530/look.webp",
     "price_estimated": false,
@@ -2683,7 +2665,6 @@
       "assets/img/9507/2.webp",
       "assets/img/9507/3.webp",
       "assets/img/9507/4.webp",
-      "assets/img/9507/5.webp",
       "assets/img/9507/6.webp"
     ],
     "look": "assets/img/9507/look.webp",
@@ -3708,7 +3689,6 @@
       "assets/img/9477/8.webp",
       "assets/img/9477/9.webp",
       "assets/img/9477/10.webp",
-      "assets/img/9477/11.webp",
       "assets/img/9477/12.webp",
       "assets/img/9477/13.webp"
     ],
@@ -4917,8 +4897,7 @@
       "assets/img/9438/6.webp",
       "assets/img/9438/7.webp",
       "assets/img/9438/8.webp",
-      "assets/img/9438/9.webp",
-      "assets/img/9438/10.webp"
+      "assets/img/9438/9.webp"
     ],
     "look": "assets/img/9438/look.webp",
     "price_estimated": false,
@@ -5143,7 +5122,6 @@
       "assets/img/9433/0.webp",
       "assets/img/9433/1.webp",
       "assets/img/9433/2.webp",
-      "assets/img/9433/3.webp",
       "assets/img/9433/4.webp"
     ],
     "look": "assets/img/9433/look.webp",
@@ -5570,7 +5548,6 @@
       "assets/img/9400/6.webp",
       "assets/img/9400/7.webp",
       "assets/img/9400/8.webp",
-      "assets/img/9400/9.webp",
       "assets/img/9400/10.webp",
       "assets/img/9400/11.webp",
       "assets/img/9400/12.webp",
@@ -6510,14 +6487,12 @@
       "assets/img/9412/0.webp",
       "assets/img/9412/1.webp",
       "assets/img/9412/2.webp",
-      "assets/img/9412/3.webp",
       "assets/img/9412/4.webp",
       "assets/img/9412/5.webp",
       "assets/img/9412/6.webp",
       "assets/img/9412/7.webp",
       "assets/img/9412/8.webp",
       "assets/img/9412/9.webp",
-      "assets/img/9412/10.webp",
       "assets/img/9412/11.webp",
       "assets/img/9412/12.webp",
       "assets/img/9412/13.webp"
@@ -7056,8 +7031,7 @@
       "assets/img/9368/1.webp",
       "assets/img/9368/2.webp",
       "assets/img/9368/3.webp",
-      "assets/img/9368/4.webp",
-      "assets/img/9368/5.webp"
+      "assets/img/9368/4.webp"
     ],
     "look": "assets/img/9368/look.webp",
     "price_estimated": false,
