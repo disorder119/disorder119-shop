@@ -1,9 +1,9 @@
 name: Seite automatisch neu bauen
 
 # Baut die statischen Seiten aus data/items.json und den Quelltemplates neu.
-# Professional-Shop-Pass: harte Validierung vor jedem Commit. Match, Chaos
-# und Baukasten werden ueber config/mode-guard.json gegen unbeabsichtigte
-# Aenderungen geschuetzt.
+# Vor jedem Commit laufen Syntax-, Katalog- und Regressionstests. Match,
+# Chaos und Baukasten sind ueber config/mode-guard.json gegen unbeabsichtigte
+# Aenderungen geschuetzt; der Guard wird niemals automatisch neu gesetzt.
 
 on:
   push:
@@ -46,14 +46,6 @@ jobs:
       - name: Abhaengigkeiten installieren
         run: pip install pillow
 
-      - name: Einmaligen Professional-Shop-Patch anwenden
-        if: hashFiles('scripts/pro_shop_upgrade_once.py') != ''
-        run: python scripts/pro_shop_upgrade_once.py
-
-      - name: Validierungsregeln fuer Altbestand aktualisieren
-        if: hashFiles('scripts/validate_shop_fix_once.py') != ''
-        run: python scripts/validate_shop_fix_once.py
-
       - name: Python Syntax pruefen
         run: python -m py_compile build_site.py scripts/*.py
 
@@ -66,12 +58,6 @@ jobs:
       - name: Seite bauen
         run: python build_site.py
 
-      - name: Mode-Guard initialisieren falls noch nicht vorhanden
-        run: |
-          if [ ! -f config/mode-guard.json ]; then
-            python scripts/validate_shop.py --init-mode-guard
-          fi
-
       - name: Shop, Katalog und geschuetzte Modi pruefen
         run: python scripts/validate_shop.py
 
@@ -79,11 +65,11 @@ jobs:
         run: |
           git config user.name "disorder119-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add build_site.py assets/article.js shop-worker/worker.js scripts/validate_shop.py config/mode-guard.json data/shop-quality.json
+          git add data/shop-quality.json
           git add index.html artikel sitemap.xml cart impressum agb datenschutz ueber-uns faq match chaos baukasten en fr data/catalog.json
           if git diff --cached --quiet; then
             echo "Keine Aenderungen am generierten Output - nichts zu committen."
           else
-            git commit -m "Professional-Shop-Pass anwenden und validieren"
+            git commit -m "Automatischer Rebuild nach Shop-Validierung"
             git push
           fi
