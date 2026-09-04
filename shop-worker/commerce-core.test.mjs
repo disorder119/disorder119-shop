@@ -91,6 +91,19 @@ test("worker no longer contains public GitHub JSON rental storage", () => {
   assert.equal(worker.includes("loadRentalRequests(env"), false);
 });
 
+test("worker binds idempotency to request payload and keeps provider IDs private", () => {
+  const worker = fs.readFileSync(path.join(here, "worker.js"), "utf8");
+  assert.match(worker, /request_hash/);
+  assert.match(worker, /IDEMPOTENCY_KEY_REUSED/);
+  assert.match(worker, /requestHash\("create-order", body\)/);
+  assert.match(worker, /requestHash\("rental-request", body\)/);
+  assert.match(worker, /requestHash\("capture-order", body\)/);
+  assert.equal(worker.includes("item.paypal_order_id = providerOrderId"), false);
+  assert.match(worker, /delete item\.paypal_order_id/);
+  assert.match(worker, /canTransitionRental\(row\.status, status\)/);
+  assert.match(worker, /payload_hash/);
+});
+
 test("commerce migrations have required tables, overlap lock and state guards", () => {
   const foundation = fs.readFileSync(path.join(here, "migrations", "0002_commerce_foundation.sql"), "utf8");
   for (const table of [
