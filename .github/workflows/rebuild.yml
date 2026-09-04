@@ -1,8 +1,8 @@
 name: Seite automatisch neu bauen
 
 # Baut die statischen Seiten aus data/items.json und den Quelltemplates neu.
-# Vor jedem Commit laufen Syntax-, Katalog-, SEO- und Regressionstests. Match,
-# Chaos und Baukasten sind ueber config/mode-guard.json gegen unbeabsichtigte
+# Vor jedem Commit laufen Syntax-, Katalog-, SEO-, Commerce- und Regressionstests.
+# Match, Chaos und Baukasten sind ueber config/mode-guard.json gegen unbeabsichtigte
 # Aenderungen geschuetzt; der Guard wird niemals automatisch neu gesetzt.
 
 on:
@@ -19,6 +19,19 @@ on:
       - "assets/app.css"
       - "assets/article.js"
       - "assets/article.css"
+      - "shop-worker/**"
+      - "scripts/**"
+      - ".github/workflows/rebuild.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "data/items.json"
+      - "index_template.html"
+      - "build_site.py"
+      - "robots.txt"
+      - "config/shop-config.json"
+      - "config/mode-guard.json"
+      - "assets/**"
       - "shop-worker/**"
       - "scripts/**"
       - ".github/workflows/rebuild.yml"
@@ -54,7 +67,11 @@ jobs:
         run: |
           node --check assets/app.js
           node --check assets/article.js
+          node --check shop-worker/commerce-core.js
           node --check shop-worker/worker.js
+
+      - name: Commerce Unit Tests
+        run: node --test shop-worker/commerce-core.test.mjs
 
       - name: Seite bauen
         run: python build_site.py
@@ -62,7 +79,11 @@ jobs:
       - name: Shop, SEO, Katalog und geschuetzte Modi pruefen
         run: python scripts/validate_shop.py
 
+      - name: Commerce-, Mietpreis- und Security-Invarianten pruefen
+        run: python scripts/validate_commerce.py
+
       - name: Ergebnis committen
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           git config user.name "disorder119-bot"
           git config user.email "actions@users.noreply.github.com"
