@@ -102,3 +102,4 @@ jobs:
           else
             git commit -m "Automatischer Rebuild nach Shop- und SEO-Validierung"
             git push
+          fi
