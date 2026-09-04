@@ -7,7 +7,7 @@ name: Seite automatisch neu bauen
 
 on:
   push:
-    branches: [main]
+    branches: [main, seo-10-pass]
     paths:
       - "data/items.json"
       - "index_template.html"
@@ -46,6 +46,10 @@ jobs:
       - name: Abhaengigkeiten installieren
         run: pip install pillow
 
+      - name: Einmaligen SEO-Patch anwenden
+        if: hashFiles('scripts/seo_upgrade_once.py') != ''
+        run: python scripts/seo_upgrade_once.py
+
       - name: Python Syntax pruefen
         run: python -m py_compile build_site.py scripts/*.py
 
@@ -65,11 +69,11 @@ jobs:
         run: |
           git config user.name "disorder119-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/shop-quality.json
-          git add index.html artikel sitemap.xml cart impressum agb datenschutz ueber-uns faq match chaos baukasten en fr data/catalog.json
+          git add build_site.py index_template.html scripts/validate_shop.py data/shop-quality.json
+          git add index.html artikel sitemap.xml cart impressum agb datenschutz ueber-uns faq match chaos baukasten mieten en fr data/catalog.json
           if git diff --cached --quiet; then
             echo "Keine Aenderungen am generierten Output - nichts zu committen."
           else
-            git commit -m "Automatischer Rebuild nach Shop-Validierung"
+            git commit -m "SEO technisch erweitern und validieren"
             git push
           fi
