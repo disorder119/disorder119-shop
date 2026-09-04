@@ -7,7 +7,7 @@ name: Seite automatisch neu bauen
 
 on:
   push:
-    branches: [main, professional-shop-pass]
+    branches: [main]
     paths:
       - "data/items.json"
       - "index_template.html"
