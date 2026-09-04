@@ -46,6 +46,10 @@ jobs:
       - name: Abhaengigkeiten installieren
         run: pip install pillow
 
+      - name: SEO-Patch-Helfer korrigieren
+        if: hashFiles('scripts/seo_upgrade_fix.py') != ''
+        run: python scripts/seo_upgrade_fix.py
+
       - name: Einmaligen SEO-Patch anwenden
         if: hashFiles('scripts/seo_upgrade_once.py') != ''
         run: python scripts/seo_upgrade_once.py
