@@ -435,7 +435,7 @@ def related_card_html(x, lang):
     return (
         '<a class="related-card" href="' + href + '">'
         '<div class="related-card__frame">'
-        '<img src="/' + esc(x["gallery"][0]) + '" alt="" loading="lazy" />' +
+        '<img src="/' + esc(x["gallery"][0]) + '" alt="' + esc(display_name(x)) + '" loading="lazy" decoding="async" />' +
         (price_html if sold else "") +
         "</div>"
         '<span class="related-card__brand">' + esc(x.get("brand") or ph["no_brand"]) + "</span>"
@@ -449,31 +449,42 @@ def related_sections_html(it, lang):
     brand_items = related_same_brand(it)
     exclude = {it["id"]} | {b["id"] for b in brand_items}
     cat_items = related_same_category(it, exclude)
+    labels = {
+        "de": {"brand": "MEHR VON {brand}", "category": "ÄHNLICHE ARCHIVSTÜCKE"},
+        "en": {"brand": "MORE FROM {brand}", "category": "SIMILAR ARCHIVE PIECES"},
+        "fr": {"brand": "PLUS DE {brand}", "category": "PIÈCES D’ARCHIVE SIMILAIRES"},
+    }[lang]
     parts = []
     if brand_items:
         parts.append(
             '<div class="related"><h2 class="related__title" data-related-heading="brand">'
-            + esc("MEHR VON " + (it.get("brand") or "").upper()) + "</h2>"
+            + esc(labels["brand"].format(brand=(it.get("brand") or "").upper())) + "</h2>"
             '<div class="related__grid">' + "".join(related_card_html(x, lang) for x in brand_items) + "</div></div>"
         )
     if cat_items:
         parts.append(
-            '<div class="related"><h2 class="related__title" data-related-heading="category">ÄHNLICHE ARCHIVSTÜCKE</h2>'
+            '<div class="related"><h2 class="related__title" data-related-heading="category">'
+            + esc(labels["category"]) + "</h2>"
             '<div class="related__grid">' + "".join(related_card_html(x, lang) for x in cat_items) + "</div></div>"
         )
     return "".join(parts)
 
 
-def facts_html(it):
+def facts_html(it, lang):
+    labels = {
+        "de": {"category": "Kategorie", "size": "Größe", "color": "Farbe", "condition": "Zustand", "article": "Artikelnummer"},
+        "en": {"category": "Category", "size": "Size", "color": "Color", "condition": "Condition", "article": "Article number"},
+        "fr": {"category": "Catégorie", "size": "Taille", "color": "Couleur", "condition": "État", "article": "Numéro d’article"},
+    }[lang]
     facts = []
     if it.get("category"):
-        facts.append(('factCategory', "Kategorie", "factCategoryValue", cat_tr(it["category"], "de")))
+        facts.append(('factCategory', labels["category"], "factCategoryValue", cat_tr(it["category"], lang)))
     if it.get("size"):
-        facts.append(('factSize', "Größe", "factSizeValue", it["size"]))
+        facts.append(('factSize', labels["size"], "factSizeValue", size_tr(it["size"], lang)))
     if it.get("color"):
-        facts.append(('factColor', "Farbe", None, it["color"]))
+        facts.append(('factColor', labels["color"], None, it["color"]))
     if it.get("condition"):
-        facts.append(('factCondition', "Zustand", "factConditionValue", it["condition"]))
+        facts.append(('factCondition', labels["condition"], "factConditionValue", cond_tr(it["condition"], lang)))
     out = []
     for i18n_key, label, value_id, value in facts:
         value_attr = f' id="{value_id}"' if value_id else ""
@@ -483,7 +494,7 @@ def facts_html(it):
         )
     art_no = it.get("article") or str(it["id"])
     out.append(
-        '<div><div class="fact__label" data-i18n="factArticleNo">Artikelnummer</div>'
+        '<div><div class="fact__label" data-i18n="factArticleNo">' + esc(labels["article"]) + "</div>"
         '<div class="fact__value">' + esc(art_no) + "</div></div>"
     )
     return "".join(out)
@@ -627,6 +638,10 @@ def build_page(it, shop_config, lang):
         + SITE_URL.rstrip("/") + lang_home(l) + "artikel/" + str(it["id"]) + '/">'
         for l in LANGS
     ) + '\n<link rel="alternate" hreflang="x-default" href="' + SITE_URL.rstrip("/") + lang_home("de") + "artikel/" + str(it["id"]) + '/">'
+    og_locale_alternates = "\n".join(
+        '<meta property="og:locale:alternate" content="' + OG_LOCALES[l] + '">'
+        for l in LANGS if l != lang
+    )
     sold = it.get("public_status") == "SOLD"
     paypal_sdk_tag = ""
     paypal_enabled = bool((shop_config.get("features") or {}).get("paypalCheckout"))
@@ -675,6 +690,7 @@ def build_page(it, shop_config, lang):
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="Disorder119">
 <meta property="og:locale" content="{OG_LOCALES[lang]}">
+{og_locale_alternates}
 <meta property="og:title" content="{esc(title_tag)}">
 <meta property="og:description" content="{esc(desc)}">
 <meta property="og:url" content="{canonical}">
@@ -717,7 +733,7 @@ def build_page(it, shop_config, lang):
     <a class="info__brand" href="{home}?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or "Ohne Marke")}</a>
     <h1>{esc(it["title"])}</h1>
     <div id="priceBlock">{price_block_html(it)}</div>
-    <div class="info__facts">{facts_html(it)}</div>
+    <div class="info__facts">{facts_html(it, lang)}</div>
     <p class="info__desc" id="itemDesc">{esc(body_desc)}</p>
     {cta_html(it, shop_config, home, lang)}
   </div>

@@ -272,6 +272,13 @@ def validate_and_report() -> None:
 
     # Technische SEO-Invarianten: Homepage-Entitaeten, Produkt-Metadaten,
     # Duplicate-Control fuer alternative Katalogansichten und saubere Sitemap.
+    robots_text = (BASE / "robots.txt").read_text(encoding="utf-8", errors="replace")
+    if "Sitemap: https://disorder119.com/sitemap.xml" not in robots_text:
+        severe.append("robots.txt: Sitemap-Verweis fehlt")
+    for blocked in ["/admin/", "/config/", "/scripts/", "/shop-worker/", "/data/items.json", "/data/shop-quality.json"]:
+        if f"Disallow: {blocked}" not in robots_text:
+            severe.append(f"robots.txt: interner Pfad nicht ausgeschlossen: {blocked}")
+
     home_html = (BASE / "index.html").read_text(encoding="utf-8", errors="replace")
     for needle, label in [
         ('"@type": "OnlineStore"', "OnlineStore JSON-LD"),
