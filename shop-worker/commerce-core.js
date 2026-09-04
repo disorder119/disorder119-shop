@@ -41,8 +41,40 @@ const INVENTORY_TRANSITIONS = Object.freeze({
   CANCELLED: ["AVAILABLE"],
 });
 
+const ORDER_TRANSITIONS = Object.freeze({
+  RESERVED: ["PAYMENT_PENDING", "CANCELLED"],
+  PAYMENT_PENDING: ["PAID", "CANCELLED"],
+  PAID: ["PREPARING", "REFUNDED"],
+  PREPARING: ["SHIPPED", "REFUNDED"],
+  SHIPPED: ["DELIVERED", "RETURN_REQUESTED"],
+  DELIVERED: ["RETURN_REQUESTED"],
+  RETURN_REQUESTED: ["RETURNED"],
+  RETURNED: ["REFUNDED"],
+  REFUNDED: [],
+  CANCELLED: [],
+});
+
+const RENTAL_TRANSITIONS = Object.freeze({
+  RESERVED: ["PAYMENT_PENDING", "CONFIRMED", "CANCELLED"],
+  PAYMENT_PENDING: ["RESERVED", "CONFIRMED", "CANCELLED"],
+  CONFIRMED: ["ACTIVE", "CANCELLED", "REFUNDED"],
+  ACTIVE: ["RETURN_DUE", "RETURNED"],
+  RETURN_DUE: ["RETURNED"],
+  RETURNED: ["REFUNDED"],
+  CANCELLED: [],
+  REFUNDED: [],
+});
+
 export function canTransitionInventory(from, to) {
   return from === to || (INVENTORY_TRANSITIONS[from] || []).includes(to);
+}
+
+export function canTransitionOrder(from, to) {
+  return from === to || (ORDER_TRANSITIONS[from] || []).includes(to);
+}
+
+export function canTransitionRental(from, to) {
+  return from === to || (RENTAL_TRANSITIONS[from] || []).includes(to);
 }
 
 export function parsePriceToCents(value) {
