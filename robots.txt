@@ -1,4 +1,10 @@
 User-agent: *
 Allow: /
 Disallow: /admin/
+Disallow: /.github/
+Disallow: /config/
+Disallow: /scripts/
+Disallow: /shop-worker/
+Disallow: /data/items.json
+Disallow: /data/shop-quality.json
 Sitemap: https://disorder119.com/sitemap.xml
