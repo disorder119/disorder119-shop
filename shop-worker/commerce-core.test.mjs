@@ -7,6 +7,8 @@ import {
   CURRENCY,
   INVENTORY_STATUSES,
   canTransitionInventory,
+  canTransitionOrder,
+  canTransitionRental,
   isValidIdempotencyKey,
   money,
   parsePriceToCents,
@@ -66,6 +68,22 @@ test("inventory state machine blocks arbitrary jumps", () => {
   assert.equal(canTransitionInventory("PREPARING", "SHIPPED"), true);
 });
 
+test("order state machine blocks skipped fulfilment and payment states", () => {
+  assert.equal(canTransitionOrder("PAYMENT_PENDING", "PAID"), true);
+  assert.equal(canTransitionOrder("PAYMENT_PENDING", "SHIPPED"), false);
+  assert.equal(canTransitionOrder("PAID", "PREPARING"), true);
+  assert.equal(canTransitionOrder("PAID", "DELIVERED"), false);
+  assert.equal(canTransitionOrder("REFUNDED", "PAID"), false);
+});
+
+test("rental state machine blocks arbitrary admin jumps", () => {
+  assert.equal(canTransitionRental("RESERVED", "CONFIRMED"), true);
+  assert.equal(canTransitionRental("RESERVED", "RETURNED"), false);
+  assert.equal(canTransitionRental("CONFIRMED", "ACTIVE"), true);
+  assert.equal(canTransitionRental("ACTIVE", "RETURNED"), true);
+  assert.equal(canTransitionRental("RETURNED", "ACTIVE"), false);
+});
+
 test("worker no longer contains public GitHub JSON rental storage", () => {
   const worker = fs.readFileSync(path.join(here, "worker.js"), "utf8");
   assert.equal(worker.includes("rental-requests.json"), false);
@@ -73,13 +91,20 @@ test("worker no longer contains public GitHub JSON rental storage", () => {
   assert.equal(worker.includes("loadRentalRequests(env"), false);
 });
 
-test("migration has required commerce tables and overlap lock", () => {
-  const migration = fs.readFileSync(path.join(here, "migrations", "0002_commerce_foundation.sql"), "utf8");
+test("commerce migrations have required tables, overlap lock and state guards", () => {
+  const foundation = fs.readFileSync(path.join(here, "migrations", "0002_commerce_foundation.sql"), "utf8");
   for (const table of [
     "customers", "customer_addresses", "inventory", "reservations", "commerce_orders", "order_items",
     "payments", "payment_events", "shipments", "rental_reservations", "rentals", "returns", "refunds", "audit_events",
   ]) {
-    assert.match(migration, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\b`));
+    assert.match(foundation, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\b`));
   }
-  assert.match(migration, /PRIMARY KEY\(inventory_id, rental_date\)/);
+  assert.match(foundation, /PRIMARY KEY\(inventory_id, rental_date\)/);
+
+  const integrity = fs.readFileSync(path.join(here, "migrations", "0003_state_integrity.sql"), "utf8");
+  assert.match(integrity, /trg_inventory_status_transition/);
+  assert.match(integrity, /trg_order_status_transition/);
+  assert.match(integrity, /trg_rental_status_transition/);
+  assert.match(integrity, /trg_rental_price_integrity_insert/);
+  assert.match(integrity, /invalid_rental_price/);
 });
