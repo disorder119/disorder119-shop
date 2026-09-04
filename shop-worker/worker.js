@@ -2,6 +2,7 @@ import {
   CURRENCY,
   MAX_REQUEST_BYTES,
   RESERVATION_TTL_SECONDS,
+  canTransitionRental,
   isValidIdempotencyKey,
   money,
   parsePriceToCents,
@@ -23,8 +24,6 @@ const ALLOWED_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
   "http://localhost:8765",
 ]);
-
-const ACTIVE_RENTAL_STATUSES = ["RESERVED", "PAYMENT_PENDING", "CONFIRMED", "ACTIVE", "RETURN_DUE"];
 
 class PublicError extends Error {
   constructor(code, status = 400, message = code) {
@@ -103,6 +102,28 @@ function idempotencyKey(request, body) {
   const key = request.headers.get("Idempotency-Key") || body?.idempotencyKey;
   if (!isValidIdempotencyKey(key)) throw new PublicError("IDEMPOTENCY_KEY_REQUIRED", 400);
   return key;
+}
+
+function canonicalRequestValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalRequestValue);
+  if (value && typeof value === "object") {
+    const result = {};
+    for (const key of Object.keys(value).sort()) {
+      if (key === "idempotencyKey" || key === "turnstileToken") continue;
+      result[key] = canonicalRequestValue(value[key]);
+    }
+    return result;
+  }
+  return value;
+}
+
+async function sha256Hex(text) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function requestHash(scope, body) {
+  return sha256Hex(JSON.stringify({ scope, body: canonicalRequestValue(body) }));
 }
 
 async function rateLimit(request, env, scope) {
@@ -205,18 +226,22 @@ async function cleanupExpired(env, inventoryId) {
   ]);
 }
 
-async function claimIdempotency(env, scope, key, ownerRequestId) {
+async function claimIdempotency(env, scope, key, ownerRequestId, fingerprint) {
   const db = requireDb(env);
   const now = new Date();
+  const nowIso = now.toISOString();
   const expires = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+  await db.prepare("DELETE FROM idempotency_keys WHERE scope=? AND idempotency_key=? AND expires_at<=?")
+    .bind(scope, key, nowIso).run();
   await db.prepare(`INSERT OR IGNORE INTO idempotency_keys
-    (scope,idempotency_key,resource_id,created_at,expires_at) VALUES (?,?,?,?,?)`)
-    .bind(scope, key, ownerRequestId, now.toISOString(), expires).run();
+    (scope,idempotency_key,request_hash,resource_id,created_at,expires_at) VALUES (?,?,?,?,?,?)`)
+    .bind(scope, key, fingerprint, ownerRequestId, nowIso, expires).run();
   const row = await db.prepare("SELECT * FROM idempotency_keys WHERE scope=? AND idempotency_key=?").bind(scope, key).first();
-  if (row?.response_json) {
+  if (!row || !row.request_hash || row.request_hash !== fingerprint) throw new PublicError("IDEMPOTENCY_KEY_REUSED", 409);
+  if (row.response_json) {
     return { replay: true, status: row.response_status || 200, data: JSON.parse(row.response_json) };
   }
-  if (row?.resource_id !== ownerRequestId) throw new PublicError("IDEMPOTENT_REQUEST_IN_PROGRESS", 409);
+  if (row.resource_id !== ownerRequestId) throw new PublicError("IDEMPOTENT_REQUEST_IN_PROGRESS", 409);
   return { replay: false };
 }
 
@@ -390,18 +415,17 @@ async function verifyPaypalWebhook(env, headers, body) {
   return (await res.json()).verification_status === "SUCCESS";
 }
 
-async function markCatalogSold(env, itemId, providerOrderId) {
+async function markCatalogSold(env, itemId) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const { items, sha } = await loadItems(env);
     const item = items.find(it => String(it.id) === String(itemId));
     if (!item) throw new Error("catalog_item_missing");
-    if (item.public_status === "SOLD") {
-      if (!item.paypal_order_id || item.paypal_order_id === providerOrderId) return;
-      throw new Error("catalog_sale_conflict");
-    }
+    const alreadySold = String(item.public_status || "").toUpperCase() === "SOLD";
+    const hadPrivateProviderField = Object.prototype.hasOwnProperty.call(item, "paypal_order_id");
+    if (alreadySold && !hadPrivateProviderField) return;
     item.public_status = "SOLD";
     item.status = "Verkauft";
-    item.paypal_order_id = providerOrderId;
+    delete item.paypal_order_id;
     delete item.reserved_order_id;
     delete item.reserved_until;
     delete item.reserved_price;
@@ -409,7 +433,7 @@ async function markCatalogSold(env, itemId, providerOrderId) {
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(items, null, 2))));
     const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.itemsPath}`;
     const res = await fetch(url, { method: "PUT", headers: ghHeaders(env), body: JSON.stringify({
-      message: `Verkauft via PayPal: Artikel ${itemId}`, content, sha, branch: CONFIG.githubBranch,
+      message: `Verkauft: Artikel ${itemId}`, content, sha, branch: CONFIG.githubBranch,
     }) });
     if (res.ok) return;
     if (res.status !== 409) throw new Error(`catalog_mark_sold_${res.status}`);
@@ -469,9 +493,10 @@ async function recordWebhookEvent(env, event, verified) {
   if (!providerEventId) throw new PublicError("WEBHOOK_EVENT_ID_MISSING", 400);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
+  const payloadHash = await sha256Hex(JSON.stringify(canonicalRequestValue(event)));
   const result = await db.prepare(`INSERT OR IGNORE INTO payment_events
-    (id,provider,provider_event_id,event_type,verified,received_at) VALUES (?,'PAYPAL',?,?,?,?)`)
-    .bind(id, providerEventId, safeText(event.event_type, 100), verified ? 1 : 0, now).run();
+    (id,provider,provider_event_id,event_type,verified,received_at,payload_hash) VALUES (?,'PAYPAL',?,?,?,?,?)`)
+    .bind(id, providerEventId, safeText(event.event_type, 100), verified ? 1 : 0, now, payloadHash).run();
   return Boolean(result.meta?.changes);
 }
 
@@ -492,6 +517,7 @@ async function updateRentalStatus(env, id, status, reqId) {
   const now = new Date().toISOString();
   const row = await db.prepare("SELECT inventory_id,status FROM rental_reservations WHERE id=?").bind(id).first();
   if (!row) throw new PublicError("RENTAL_NOT_FOUND", 404);
+  if (!canTransitionRental(row.status, status)) throw new PublicError("INVALID_RENTAL_STATUS_TRANSITION", 409);
   await db.prepare("UPDATE rental_reservations SET status=?,updated_at=? WHERE id=?").bind(status, now, id).run();
   if (["RETURNED","CANCELLED","REFUNDED"].includes(status)) {
     await db.batch([
@@ -545,7 +571,8 @@ export default {
         const body = await readJson(request);
         await verifyTurnstile(env, request, body);
         const key = idempotencyKey(request, body);
-        const claimed = await claimIdempotency(env, "rental-request", key, reqId);
+        const fingerprint = await requestHash("rental-request", body);
+        const claimed = await claimIdempotency(env, "rental-request", key, reqId, fingerprint);
         if (claimed.replay) return json(claimed.data, claimed.status, origin);
         if (!/^\d+$/.test(String(body.itemId || ""))) throw new PublicError("INVALID_ITEM_ID", 400);
         const item = await findItem(env, body.itemId);
@@ -569,7 +596,8 @@ export default {
         const body = await readJson(request);
         await verifyTurnstile(env, request, body);
         const key = idempotencyKey(request, body);
-        const claimed = await claimIdempotency(env, "create-order", key, reqId);
+        const fingerprint = await requestHash("create-order", body);
+        const claimed = await claimIdempotency(env, "create-order", key, reqId, fingerprint);
         if (claimed.replay) return json(claimed.data, claimed.status, origin);
         if (!/^\d+$/.test(String(body.itemId || ""))) throw new PublicError("INVALID_ITEM_ID", 400);
         const item = await findItem(env, body.itemId);
@@ -592,7 +620,8 @@ export default {
         await rateLimit(request, env, "capture-order");
         const body = await readJson(request);
         const key = idempotencyKey(request, body);
-        const claimed = await claimIdempotency(env, "capture-order", key, reqId);
+        const fingerprint = await requestHash("capture-order", body);
+        const claimed = await claimIdempotency(env, "capture-order", key, reqId, fingerprint);
         if (claimed.replay) return json(claimed.data, claimed.status, origin);
         const providerOrderId = safeText(body.orderId, 128);
         if (!providerOrderId) throw new PublicError("ORDER_ID_REQUIRED", 400);
@@ -610,7 +639,7 @@ export default {
         if (!reservation || reservation.status !== "RESERVED" || reservation.expires_at <= new Date().toISOString()) throw new PublicError("RESERVATION_EXPIRED", 409);
         const capture = await capturePaypalOrder(env, providerOrderId, key);
         const completed = await completePayment(env, providerOrderId, capture, reqId);
-        try { await markCatalogSold(env, completed.item_id, providerOrderId); }
+        try { await markCatalogSold(env, completed.item_id); }
         catch (catalogErr) {
           await audit(env, "order", completed.commerce_order_id, "CATALOG_SYNC_FAILED", reqId, { code: safeText(catalogErr.message, 80) });
           console.error(JSON.stringify({ level: "error", event: "catalog_sync_failed", requestId: reqId, orderId: completed.commerce_order_id }));
@@ -635,7 +664,7 @@ export default {
             if (res.ok) {
               const order = await res.json();
               const completed = await completePayment(env, providerOrderId, order, reqId);
-              try { await markCatalogSold(env, completed.item_id, providerOrderId); } catch (err) {
+              try { await markCatalogSold(env, completed.item_id); } catch (err) {
                 await audit(env, "order", completed.commerce_order_id, "CATALOG_SYNC_FAILED", reqId, { code: safeText(err.message, 80) });
               }
             }
