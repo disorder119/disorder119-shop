@@ -162,8 +162,8 @@ META_PHRASES = {
         "price_on_request": "Preis auf Anfrage",
         "tail_suffix": ". Aus dem kuratierten Second-Hand-Archiv von Disorder119.",
         "auto_suffix": ". Aus dem kuratierten Archiv von Disorder119.",
-        "home_title": "Disorder119 — Archiv-Katalog",
-        "home_desc": "Kuratiertes Archiv für Designer-Mode aus zweiter Hand: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent u.v.m. Jedes Stück handverlesen, einzeln fotografiert und genau beschrieben.",
+        "home_title": "Designer Second Hand & Vintage Mode | Disorder119",
+        "home_desc": "Kuratiertes Designer-Second-Hand-Archiv mit Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 und mehr. Einzelstücke, individuell fotografiert und archiviert.",
     },
     "en": {
         "sold": "{name} – already sold, part of the curated Disorder119 archive for designer and vintage fashion.",
@@ -171,8 +171,8 @@ META_PHRASES = {
         "price_on_request": "Price on request",
         "tail_suffix": ". From the curated second-hand archive of Disorder119.",
         "auto_suffix": ". From the curated archive of Disorder119.",
-        "home_title": "Disorder119 — Curated Archive",
-        "home_desc": "Curated archive of pre-owned designer fashion: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent and more. Every piece hand-picked, individually photographed and precisely described.",
+        "home_title": "Pre-Owned Designer & Vintage Fashion | Disorder119",
+        "home_desc": "Curated archive of pre-owned designer fashion including Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 and more. One-off pieces, individually photographed and archived.",
     },
     "fr": {
         "sold": "{name} – déjà vendu, fait partie de l'archive sélectionnée Disorder119 pour la mode de créateurs et vintage.",
@@ -180,10 +180,45 @@ META_PHRASES = {
         "price_on_request": "Prix sur demande",
         "tail_suffix": ". Issu de l'archive seconde main sélectionnée de Disorder119.",
         "auto_suffix": ". Issu de l'archive sélectionnée de Disorder119.",
-        "home_title": "Disorder119 — Archive Sélectionnée",
-        "home_desc": "Archive sélectionnée de mode de créateurs de seconde main : Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent et bien plus. Chaque pièce choisie à la main, photographiée individuellement et décrite avec précision.",
+        "home_title": "Mode Designer Seconde Main & Vintage | Disorder119",
+        "home_desc": "Archive sélectionnée de mode de créateurs de seconde main avec Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 et plus. Pièces uniques, photographiées individuellement et archivées.",
     },
 }
+
+SPECIAL_META_DESCRIPTIONS = {
+    "ueber-uns": {
+        "de": "Über Disorder119: unabhängig kuratiertes Archiv für Designer-, Vintage- und Contemporary-Mode aus zweiter Hand.",
+        "en": "About Disorder119: an independently curated archive of pre-owned designer, vintage and contemporary fashion.",
+        "fr": "À propos de Disorder119 : archive indépendante et sélectionnée de mode designer, vintage et contemporaine de seconde main.",
+    },
+    "faq": {
+        "de": "Antworten zu Bestellung, Zustand, Authentizität, Versand, Widerruf und dem Designer-Second-Hand-Archiv von Disorder119.",
+        "en": "Answers about ordering, condition, authenticity, shipping, returns and the Disorder119 pre-owned designer archive.",
+        "fr": "Réponses sur les commandes, l’état, l’authenticité, l’expédition, les retours et l’archive designer seconde main Disorder119.",
+    },
+    "mieten": {
+        "de": "Designer- und Vintage-Mode von Disorder119 für Shootings, Film, Theater, Events und private Anlässe mieten oder ausleihen.",
+        "en": "Rent or borrow designer and vintage fashion from Disorder119 for shoots, film, theatre, events and private occasions.",
+        "fr": "Louez des pièces designer et vintage Disorder119 pour shootings, film, théâtre, événements et occasions privées.",
+    },
+    "impressum": {
+        "de": "Impressum und Anbieterinformationen von Disorder119.",
+        "en": "Legal notice and provider information for Disorder119.",
+        "fr": "Mentions légales et informations sur Disorder119.",
+    },
+    "agb": {
+        "de": "Allgemeine Geschäftsbedingungen von Disorder119 für Bestellungen und Käufe.",
+        "en": "Terms and conditions for orders and purchases from Disorder119.",
+        "fr": "Conditions générales applicables aux commandes et achats chez Disorder119.",
+    },
+    "datenschutz": {
+        "de": "Datenschutzhinweise von Disorder119 zur Verarbeitung personenbezogener Daten.",
+        "en": "Disorder119 privacy information on the processing of personal data.",
+        "fr": "Politique de confidentialité Disorder119 concernant le traitement des données personnelles.",
+    },
+}
+
+OG_LOCALES = {"de": "de_DE", "en": "en_US", "fr": "fr_FR"}
 
 LEGAL_CONTENT_HTML = {
     "legalImpressumHtml": {
@@ -511,35 +546,43 @@ def cta_html(it, shop_config, home, lang):
 
 
 def json_ld(it, lang):
-    sold = it.get("public_status") == "SOLD"
+    status = it.get("public_status") or "DRAFT"
+    sold = status == "SOLD"
     url = SITE_URL.rstrip("/") + lang_home(lang) + "artikel/" + str(it["id"]) + "/"
     desc_field = {"de": it.get("desc_de") or it.get("desc"), "en": it.get("desc_en"), "fr": it.get("desc_fr")}[lang]
     data = {
         "@context": "https://schema.org",
         "@type": "Product",
-        "name": it["title"],
+        "@id": url + "#product",
+        "name": display_name(it),
         "url": url,
         "image": [SITE_URL + g for g in it.get("gallery") or []],
         "description": (desc_field or meta_description(it, lang))[:500],
         "sku": it.get("article") or str(it["id"]),
         "brand": {"@type": "Brand", "name": it.get("brand") or "Disorder119"},
-        "seller": {"@type": "OnlineStore", "name": "Disorder119", "url": SITE_URL},
+        "seller": {"@id": SITE_URL + "#store"},
     }
+    if it.get("category"):
+        data["category"] = cat_tr(it["category"], lang)
+    if it.get("color"):
+        data["color"] = it["color"]
+    if it.get("size"):
+        data["size"] = size_tr(it["size"], lang)
     if not sold and it.get("price", 0) > 0:
+        availability = (
+            "https://schema.org/LimitedAvailability"
+            if status == "RESERVED"
+            else "https://schema.org/InStock"
+        )
         data["offers"] = {
-            "@type": "Offer", "url": data["url"], "priceCurrency": "EUR",
+            "@type": "Offer",
+            "url": data["url"],
+            "priceCurrency": "EUR",
             "price": f'{it["price"]:.2f}',
-            "availability": "https://schema.org/InStock",
+            "availability": availability,
             "itemCondition": "https://schema.org/UsedCondition",
+            "seller": {"@id": SITE_URL + "#store"},
         }
-    # SOLD-Artikel bekommen bewusst KEIN offers-Objekt (weder fuer verkaufte
-    # noch fuer "Preis auf Anfrage"-Stuecke mit price==0): Google verlangt in
-    # einem Offer zwingend price+priceCurrency - ein Offer ohne Preis ist ein
-    # struktureller Fehler in der Search Console ("Missing field 'price'"),
-    # kein gueltiger Zwischenzustand. Der alte Verkaufspreis eines
-    # archivierten Stuecks soll ohnehin nicht mehr oeffentlich stehen, und
-    # ein reines Product-Schema OHNE offers ist fuer sich genommen bereits
-    # gueltiges Schema.org - kein Offer noetig, um ein Produkt zu beschreiben.
     return json.dumps(data, ensure_ascii=False)
 
 
@@ -569,6 +612,12 @@ def build_page(it, shop_config, lang):
     name = display_name(it)
     title_tag = name + " | Disorder119"
     desc = meta_description(it, lang)
+    raw_body_desc = {
+        "de": it.get("desc_de") or it.get("desc") or "",
+        "en": it.get("desc_en") or "",
+        "fr": it.get("desc_fr") or "",
+    }[lang]
+    body_desc = raw_body_desc.strip() or auto_description(it, lang)
     gallery = it.get("gallery") or []
     hero = gallery[0] if gallery else "assets/favicon.png"
     home = lang_home(lang)
@@ -617,21 +666,26 @@ def build_page(it, shop_config, lang):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{esc(title_tag)}</title>
 <meta name="description" content="{esc(desc)}">
-{'<meta name="robots" content="noindex,nofollow">' if it.get("public_status") == "DRAFT" else ""}
+{'<meta name="robots" content="noindex,nofollow">' if it.get("public_status") == "DRAFT" else '<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">'}
 <link rel="canonical" href="{canonical}">
 {hreflang_links}
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <link rel="stylesheet" href="/assets/article.css?v={ARTICLE_CSS_VERSION}">
+<link rel="preload" as="image" href="/{esc(hero)}" fetchpriority="high">
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="Disorder119">
+<meta property="og:locale" content="{OG_LOCALES[lang]}">
 <meta property="og:title" content="{esc(title_tag)}">
 <meta property="og:description" content="{esc(desc)}">
 <meta property="og:url" content="{canonical}">
 <meta property="og:image" content="{SITE_URL}{esc(hero)}">
+<meta property="og:image:alt" content="{esc(name)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{esc(title_tag)}">
 <meta name="twitter:description" content="{esc(desc)}">
 <meta name="twitter:image" content="{SITE_URL}{esc(hero)}">
+<meta name="twitter:image:alt" content="{esc(name)}">
+<script type="application/ld+json">{site_entities_jsonld(shop_config)}</script>
 <script type="application/ld+json">{json_ld(it, lang)}</script>
 <script type="application/ld+json">{breadcrumb_json_ld(it, lang)}</script>
 </head>
@@ -652,7 +706,7 @@ def build_page(it, shop_config, lang):
   <div class="gallery">
     <div class="gallery__stage">
       {'<span class="gallery__badge">SOLD</span>' if sold else ""}
-      <img id="galleryMain" src="/{esc(hero)}" alt="{esc(name)}">
+      <img id="galleryMain" src="/{esc(hero)}" alt="{esc(name)}" fetchpriority="high" decoding="async">
       <button type="button" class="gallery__nav gallery__nav--prev" id="galleryPrev" data-i18n-aria="prevPhotoAria" aria-label="Vorheriges Foto">‹</button>
       <button type="button" class="gallery__nav gallery__nav--next" id="galleryNext" data-i18n-aria="nextPhotoAria" aria-label="Nächstes Foto">›</button>
       <span class="gallery__counter" id="galleryCounter">1 / {max(len(gallery), 1)}</span>
@@ -664,7 +718,7 @@ def build_page(it, shop_config, lang):
     <h1>{esc(it["title"])}</h1>
     <div id="priceBlock">{price_block_html(it)}</div>
     <div class="info__facts">{facts_html(it)}</div>
-    <p class="info__desc" id="itemDesc">{esc((it.get("desc_de") or it.get("desc") or "").strip() or auto_description(it, "de"))}</p>
+    <p class="info__desc" id="itemDesc">{esc(body_desc)}</p>
     {cta_html(it, shop_config, home, lang)}
   </div>
 </div>
@@ -757,6 +811,72 @@ def validate_shop_contact_consistency(shop_config, articles_html_by_id):
         )
 
 
+def site_entities_jsonld(shop_config):
+    store = {
+        "@type": "OnlineStore",
+        "@id": SITE_URL + "#store",
+        "name": "Disorder119",
+        "url": SITE_URL,
+        "logo": SITE_URL + "assets/favicon.png",
+        "image": SITE_URL + "assets/og-image.png",
+        "currenciesAccepted": "EUR",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Nelseestraße 25",
+            "postalCode": "63739",
+            "addressLocality": "Aschaffenburg",
+            "addressCountry": "DE",
+        },
+    }
+    if shop_config.get("email"):
+        store["email"] = shop_config["email"]
+    data = {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": SITE_URL + "#website",
+                "url": SITE_URL,
+                "name": "Disorder119",
+                "inLanguage": LANGS,
+                "publisher": {"@id": SITE_URL + "#store"},
+            },
+            store,
+        ],
+    }
+    return json.dumps(data, ensure_ascii=False)
+
+
+def webpage_jsonld(title, description, canonical, lang, slug=""):
+    page_type = "AboutPage" if slug == "ueber-uns" else "WebPage"
+    data = {
+        "@context": "https://schema.org",
+        "@type": page_type,
+        "@id": canonical + "#webpage",
+        "url": canonical,
+        "name": title,
+        "description": description,
+        "inLanguage": lang,
+        "isPartOf": {"@id": SITE_URL + "#website"},
+        "publisher": {"@id": SITE_URL + "#store"},
+    }
+    return json.dumps(data, ensure_ascii=False)
+
+
+def page_breadcrumb_jsonld(title, canonical, lang):
+    home = SITE_URL.rstrip("/") + lang_home(lang)
+    label = {"de": "Archiv", "en": "Archive", "fr": "Archive"}[lang]
+    data = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": label, "item": home},
+            {"@type": "ListItem", "position": 2, "name": title, "item": canonical},
+        ],
+    }
+    return json.dumps(data, ensure_ascii=False)
+
+
 def item_list_jsonld(public_items, lang):
     home = SITE_URL.rstrip("/") + lang_home(lang)
     entries = [
@@ -807,30 +927,40 @@ def static_page_content_html(slug, lang, shop_config):
 
 
 def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
-                        include_item_list=False, robots=None, static_content=""):
-    # Einzige Quelle fuer das Homepage-Bundle: wird sowohl fuer index.html
-    # (path_segment="") als auch fuer /cart/, /impressum/ usw. verwendet -
-    # inhaltlich dieselbe App-Shell (Katalog-JS, Warenkorb, Match/Chaos/
-    # Baukasten), aber mit pro Seite unterschiedlichem SEO-Kopf und - bei den
-    # rechtlichen/Info-Seiten - bereits serverseitig gerendertem Inhalt.
+                        include_item_list=False, robots=None, static_content="",
+                        canonical_path_segment=None, slug=""):
     tmpl = (BASE / "index_template.html").read_text(encoding="utf-8")
-    urls_by_lang = {l: SITE_URL.rstrip("/") + lang_home(l) + path_segment for l in LANGS}
+    canonical_segment = path_segment if canonical_path_segment is None else canonical_path_segment
+    urls_by_lang = {l: SITE_URL.rstrip("/") + lang_home(l) + canonical_segment for l in LANGS}
     canonical = urls_by_lang[lang]
 
+    structured = []
     if include_item_list:
         public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
-        item_list_block = '<script type="application/ld+json">' + item_list_jsonld(public_items, lang) + "</script>"
-    else:
-        item_list_block = ""
+        structured.append(site_entities_jsonld(shop_config))
+        structured.append(item_list_jsonld(public_items, lang))
+    elif robots != "noindex,follow":
+        structured.append(webpage_jsonld(title_tag, desc_text, canonical, lang, slug))
+        if path_segment:
+            structured.append(page_breadcrumb_jsonld(title_tag, canonical, lang))
+    structured_block = "\n".join('<script type="application/ld+json">' + block + "</script>" for block in structured)
+
+    robots_value = robots or "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
+    locale_alternates = "\n".join(
+        f'<meta property="og:locale:alternate" content="{OG_LOCALES[l]}">'
+        for l in LANGS if l != lang
+    )
 
     out = tmpl
-    out = out.replace("__ITEMLIST_JSONLD_BLOCK__", item_list_block)
+    out = out.replace("__ITEMLIST_JSONLD_BLOCK__", structured_block)
     out = out.replace("__HTML_LANG__", lang)
     out = out.replace("__CANONICAL_URL__", canonical)
     out = out.replace("__HREFLANG_TAGS__", hreflang_block(urls_by_lang))
     out = out.replace("__META_TITLE__", esc(title_tag))
     out = out.replace("__META_DESC__", esc(desc_text))
-    out = out.replace("__ROBOTS_META__", f'<meta name="robots" content="{robots}">' if robots else "")
+    out = out.replace("__ROBOTS_META__", f'<meta name="robots" content="{robots_value}">')
+    out = out.replace("__OG_LOCALE__", OG_LOCALES[lang])
+    out = out.replace("__OG_LOCALE_ALTERNATES__", locale_alternates)
     out = out.replace("__STATIC_PAGE_CONTENT__", static_content)
     out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
     out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
@@ -850,24 +980,22 @@ def build_index():
 
 
 def build_special_pages():
-    # /cart/, /impressum/, /agb/, /datenschutz/, /ueber-uns/, /faq/ - jede
-    # davon bekommt eine echte, eigenstaendige, teilbare URL statt eines
-    # reinen JS-Modals, und zwar in allen drei Sprachen. Warenkorb bleibt
-    # bewusst nicht-indexierbar (kein oeffentlich relevanter Inhalt, individueller
-    # Zustand), die rechtlichen/Info-Seiten sind normal indexierbar und
-    # bekommen echten statischen Inhalt (siehe static_page_content_html()).
     shop_config = get_shop_config()
     n = 0
+    duplicate_variants = {"match", "chaos", "baukasten"}
     for lang in LANGS:
         ph = META_PHRASES[lang]
         for slug, labels in SPECIAL_PAGES.items():
             label = labels[lang]
             title_tag = ("Disorder119 — " + label) if slug != "cart" else (label + " | Disorder119")
-            robots = "noindex,follow" if slug == "cart" else None
+            desc_text = SPECIAL_META_DESCRIPTIONS.get(slug, {}).get(lang, ph["home_desc"])
+            robots = "noindex,follow" if slug == "cart" or slug in duplicate_variants else None
+            canonical_segment = "" if slug in duplicate_variants else None
             static_content = static_page_content_html(slug, lang, shop_config)
             out = render_bundle_page(
-                lang, slug + "/", title_tag, ph["home_desc"], shop_config,
+                lang, slug + "/", title_tag, desc_text, shop_config,
                 include_item_list=False, robots=robots, static_content=static_content,
+                canonical_path_segment=canonical_segment, slug=slug,
             )
             out_dir = (BASE / slug) if lang == "de" else (BASE / lang / slug)
             out_dir.mkdir(parents=True, exist_ok=True)
@@ -899,39 +1027,44 @@ def build_articles():
 
 
 def build_sitemap():
-    # DRAFT-Artikel (unklarer interner Zwischenstatus) werden nicht indexiert -
-    # ihre Seite existiert zwar (falls direkt aufgerufen), ist aber nirgends
-    # verlinkt und soll auch nicht von Suchmaschinen als oeffentliches Angebot
-    # gewertet werden. Der Warenkorb (/cart/) hat keinen eigenen, indexierbaren
-    # Inhalt und wird bewusst nicht aufgenommen. Jede URL bekommt zusaetzlich
-    # xhtml:link-Alternates fuer die jeweils anderen Sprachversionen - dasselbe
-    # Signal wie die hreflang-<link>-Tags im <head>, nur fuer Crawler, die
-    # direkt die Sitemap statt jede einzelne Seite auswerten.
     public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
-    path_segments = (
-        [""]
-        + ["artikel/" + str(it["id"]) + "/" for it in public_items]
-        + [slug + "/" for slug in SPECIAL_PAGES if slug != "cart"]
+    indexable_specials = [
+        slug for slug in SPECIAL_PAGES
+        if slug not in {"cart", "match", "chaos", "baukasten"}
+    ]
+    page_specs = (
+        [("", None)]
+        + [("artikel/" + str(it["id"]) + "/", it) for it in public_items]
+        + [(slug + "/", None) for slug in indexable_specials]
     )
 
-    def url_entry(lang, segment):
+    def url_entry(lang, segment, item=None):
         urls_by_lang = {l: SITE_URL.rstrip("/") + lang_home(l) + segment for l in LANGS}
         alt = "\n".join(
             f'    <xhtml:link rel="alternate" hreflang="{l}" href="{urls_by_lang[l]}"/>' for l in LANGS
         )
         alt += f'\n    <xhtml:link rel="alternate" hreflang="x-default" href="{urls_by_lang["de"]}"/>'
-        return f"  <url>\n    <loc>{urls_by_lang[lang]}</loc>\n{alt}\n  </url>"
+        images = ""
+        if item:
+            image_nodes = []
+            for rel in item.get("gallery") or []:
+                loc = html.escape(SITE_URL + rel, quote=True)
+                image_nodes.append(f"    <image:image><image:loc>{loc}</image:loc></image:image>")
+            if image_nodes:
+                images = "\n" + "\n".join(image_nodes)
+        return f"  <url>\n    <loc>{urls_by_lang[lang]}</loc>\n{alt}{images}\n  </url>"
 
-    entries = [url_entry(lang, seg) for seg in path_segments for lang in LANGS]
+    entries = [url_entry(lang, seg, item) for seg, item in page_specs for lang in LANGS]
     body = "\n".join(entries)
     xml = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
-        'xmlns:xhtml="http://www.w3.org/1999/xhtml">\n'
+        'xmlns:xhtml="http://www.w3.org/1999/xhtml" '
+        'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n'
         f"{body}\n</urlset>\n"
     )
     (BASE / "sitemap.xml").write_text(xml, encoding="utf-8")
-    print(f"sitemap.xml geschrieben ({len(entries)} URLs, {len(path_segments)} Seiten x {len(LANGS)} Sprachen).")
+    print(f"sitemap.xml geschrieben ({len(entries)} indexierbare URLs, inklusive Produktbildern).")
 
 
 CATALOG_PATH = BASE / "data" / "catalog.json"

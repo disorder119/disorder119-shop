@@ -270,6 +270,48 @@ def validate_and_report() -> None:
         if '"@type": "Product"' not in html:
             severe.append(f"Artikel {item_id}: Product JSON-LD fehlt")
 
+    # Technische SEO-Invarianten: Homepage-Entitaeten, Produkt-Metadaten,
+    # Duplicate-Control fuer alternative Katalogansichten und saubere Sitemap.
+    home_html = (BASE / "index.html").read_text(encoding="utf-8", errors="replace")
+    for needle, label in [
+        ('"@type": "OnlineStore"', "OnlineStore JSON-LD"),
+        ('"@type": "WebSite"', "WebSite JSON-LD"),
+        ('hreflang="x-default"', "x-default hreflang"),
+        ('max-image-preview:large', "Robots Rich Preview Directive"),
+    ]:
+        if needle not in home_html:
+            severe.append(f"Homepage: {label} fehlt")
+
+    sample_public = next((it for it in items if (it.get("public_status") or "DRAFT") != "DRAFT"), None)
+    if sample_public:
+        sample_path = BASE / "artikel" / str(sample_public["id"]) / "index.html"
+        sample_html = sample_path.read_text(encoding="utf-8", errors="replace")
+        for needle, label in [
+            ('"@type": "Product"', "Product JSON-LD"),
+            ('"@type": "BreadcrumbList"', "Breadcrumb JSON-LD"),
+            ('property="og:image:alt"', "OpenGraph Bild-Alt"),
+            ('name="twitter:image:alt"', "Twitter Bild-Alt"),
+            ('fetchpriority="high"', "LCP Bildpriorisierung"),
+        ]:
+            if needle not in sample_html:
+                severe.append(f"Produktseite {sample_public['id']}: {label} fehlt")
+
+    for variant in ["match", "chaos", "baukasten"]:
+        variant_html = (BASE / variant / "index.html").read_text(encoding="utf-8", errors="replace")
+        if 'name="robots" content="noindex,follow"' not in variant_html:
+            severe.append(f"/{variant}/: noindex,follow fehlt")
+        if '<link rel="canonical" href="https://disorder119.com/">' not in variant_html:
+            severe.append(f"/{variant}/: Canonical auf Archiv fehlt")
+
+    sitemap_text = (BASE / "sitemap.xml").read_text(encoding="utf-8", errors="replace")
+    for forbidden_slug in ["/cart/", "/match/", "/chaos/", "/baukasten/"]:
+        if forbidden_slug in sitemap_text:
+            severe.append(f"Sitemap enthaelt nicht-indexierbare URL: {forbidden_slug}")
+    if 'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"' not in sitemap_text:
+        severe.append("Sitemap: Image-Sitemap Namespace fehlt")
+    if "<image:image>" not in sitemap_text:
+        severe.append("Sitemap: Produktbilder fehlen")
+
     # Kunden-/Bestelldaten duerfen in diesem oeffentlichen Repo nicht als JSON liegen.
     for forbidden in [
         BASE / "data" / "rental-requests.json",
