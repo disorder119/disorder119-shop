@@ -47,18 +47,6 @@ jobs:
       - name: Abhaengigkeiten installieren
         run: pip install pillow
 
-      - name: SEO-Patch-Helfer korrigieren
-        if: hashFiles('scripts/seo_upgrade_fix.py') != ''
-        run: python scripts/seo_upgrade_fix.py
-
-      - name: Einmaligen SEO-Patch anwenden
-        if: hashFiles('scripts/seo_upgrade_once.py') != ''
-        run: python scripts/seo_upgrade_once.py
-
-      - name: SEO-Polish anwenden
-        if: hashFiles('scripts/seo_polish_once.py') != ''
-        run: python scripts/seo_polish_once.py
-
       - name: Python Syntax pruefen
         run: python -m py_compile build_site.py scripts/*.py
 
@@ -78,11 +66,11 @@ jobs:
         run: |
           git config user.name "disorder119-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add build_site.py index_template.html robots.txt scripts/validate_shop.py data/shop-quality.json
+          git add data/shop-quality.json
           git add index.html artikel sitemap.xml cart impressum agb datenschutz ueber-uns faq match chaos baukasten mieten en fr data/catalog.json
           if git diff --cached --quiet; then
             echo "Keine Aenderungen am generierten Output - nichts zu committen."
           else
-            git commit -m "SEO technisch erweitern und validieren"
+            git commit -m "Automatischer Rebuild nach Shop- und SEO-Validierung"
             git push
           fi
