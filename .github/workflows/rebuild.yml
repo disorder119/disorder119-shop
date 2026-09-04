@@ -1,7 +1,7 @@
 name: Seite automatisch neu bauen
 
 # Baut die statischen Seiten aus data/items.json und den Quelltemplates neu.
-# Vor jedem Commit laufen Syntax-, Katalog- und Regressionstests. Match,
+# Vor jedem Commit laufen Syntax-, Katalog-, SEO- und Regressionstests. Match,
 # Chaos und Baukasten sind ueber config/mode-guard.json gegen unbeabsichtigte
 # Aenderungen geschuetzt; der Guard wird niemals automatisch neu gesetzt.
 
@@ -12,6 +12,7 @@ on:
       - "data/items.json"
       - "index_template.html"
       - "build_site.py"
+      - "robots.txt"
       - "config/shop-config.json"
       - "config/mode-guard.json"
       - "assets/app.js"
@@ -54,6 +55,10 @@ jobs:
         if: hashFiles('scripts/seo_upgrade_once.py') != ''
         run: python scripts/seo_upgrade_once.py
 
+      - name: SEO-Polish anwenden
+        if: hashFiles('scripts/seo_polish_once.py') != ''
+        run: python scripts/seo_polish_once.py
+
       - name: Python Syntax pruefen
         run: python -m py_compile build_site.py scripts/*.py
 
@@ -66,14 +71,14 @@ jobs:
       - name: Seite bauen
         run: python build_site.py
 
-      - name: Shop, Katalog und geschuetzte Modi pruefen
+      - name: Shop, SEO, Katalog und geschuetzte Modi pruefen
         run: python scripts/validate_shop.py
 
       - name: Ergebnis committen
         run: |
           git config user.name "disorder119-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add build_site.py index_template.html scripts/validate_shop.py data/shop-quality.json
+          git add build_site.py index_template.html robots.txt scripts/validate_shop.py data/shop-quality.json
           git add index.html artikel sitemap.xml cart impressum agb datenschutz ueber-uns faq match chaos baukasten mieten en fr data/catalog.json
           if git diff --cached --quiet; then
             echo "Keine Aenderungen am generierten Output - nichts zu committen."
