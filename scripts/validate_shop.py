@@ -177,6 +177,8 @@ def validate_and_report() -> None:
         "missing_gallery": [],
         "single_photo_only": [],
         "price_on_request": [],
+        "missing_brand": [],
+        "duplicate_article_number": [],
     }
 
     counts = {"AVAILABLE": 0, "SOLD": 0, "RESERVED": 0, "DRAFT": 0}
@@ -202,7 +204,7 @@ def validate_and_report() -> None:
         if not str(item.get("title") or "").strip():
             severe.append(f"Artikel {item_id}: Titel fehlt")
         if status in PUBLIC_STATUSES and not str(item.get("brand") or "").strip():
-            severe.append(f"Artikel {item_id}: oeffentlicher Artikel ohne Marke")
+            issues["missing_brand"].append(item_id)
 
         gallery = item.get("gallery") or []
         if not gallery:
@@ -238,7 +240,7 @@ def validate_and_report() -> None:
     if len(article_numbers) != len(set(article_numbers)):
         seen_art = set()
         dupes = sorted({x for x in article_numbers if x in seen_art or seen_art.add(x)})
-        severe.append("Doppelte Artikelnummern: " + ", ".join(dupes))
+        issues["duplicate_article_number"].extend(dupes)
 
     catalog_ids = []
     for item in catalog:

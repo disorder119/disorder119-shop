@@ -473,7 +473,11 @@ def cta_html(it, shop_config, home, lang):
     if sold:
         return '<p class="info__note" id="soldNote">Dieses Stück ist bereits verkauft und bleibt als Teil des Disorder119-Archivs sichtbar.</p>'
     has_price = it.get("price", 0) > 0
-    paypal_ready = bool(shop_config.get("paypalClientId")) and bool(shop_config.get("shopWorkerUrl"))
+    paypal_ready = (
+        bool((shop_config.get("features") or {}).get("paypalCheckout"))
+        and bool(shop_config.get("paypalClientId"))
+        and bool(shop_config.get("shopWorkerUrl"))
+    )
     parts = ['<div class="info__cta">']
     if has_price:
         parts.append('<button type="button" class="btn" id="addToCartBtn" data-i18n="addToCart">In den Warenkorb</button>')
@@ -519,6 +523,7 @@ def json_ld(it, lang):
         "description": (desc_field or meta_description(it, lang))[:500],
         "sku": it.get("article") or str(it["id"]),
         "brand": {"@type": "Brand", "name": it.get("brand") or "Disorder119"},
+        "seller": {"@type": "OnlineStore", "name": "Disorder119", "url": SITE_URL},
     }
     if not sold and it.get("price", 0) > 0:
         data["offers"] = {
@@ -535,6 +540,21 @@ def json_ld(it, lang):
     # archivierten Stuecks soll ohnehin nicht mehr oeffentlich stehen, und
     # ein reines Product-Schema OHNE offers ist fuer sich genommen bereits
     # gueltiges Schema.org - kein Offer noetig, um ein Produkt zu beschreiben.
+    return json.dumps(data, ensure_ascii=False)
+
+
+def breadcrumb_json_ld(it, lang):
+    home_url = SITE_URL.rstrip("/") + lang_home(lang)
+    product_url = home_url + "artikel/" + str(it["id"]) + "/"
+    labels = {"de": "Archiv", "en": "Archive", "fr": "Archive"}
+    data = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": labels.get(lang, "Archiv"), "item": home_url},
+            {"@type": "ListItem", "position": 2, "name": display_name(it), "item": product_url},
+        ],
+    }
     return json.dumps(data, ensure_ascii=False)
 
 
@@ -560,7 +580,8 @@ def build_page(it, shop_config, lang):
     ) + '\n<link rel="alternate" hreflang="x-default" href="' + SITE_URL.rstrip("/") + lang_home("de") + "artikel/" + str(it["id"]) + '/">'
     sold = it.get("public_status") == "SOLD"
     paypal_sdk_tag = ""
-    if shop_config.get("paypalClientId") and shop_config.get("shopWorkerUrl") and not sold and it.get("price", 0) > 0:
+    paypal_enabled = bool((shop_config.get("features") or {}).get("paypalCheckout"))
+    if paypal_enabled and shop_config.get("paypalClientId") and shop_config.get("shopWorkerUrl") and not sold and it.get("price", 0) > 0:
         paypal_sdk_tag = (
             '<script src="https://www.paypal.com/sdk/js?client-id='
             + esc(shop_config["paypalClientId"]) + '&currency=EUR"></script>\n'
@@ -612,6 +633,7 @@ def build_page(it, shop_config, lang):
 <meta name="twitter:description" content="{esc(desc)}">
 <meta name="twitter:image" content="{SITE_URL}{esc(hero)}">
 <script type="application/ld+json">{json_ld(it, lang)}</script>
+<script type="application/ld+json">{breadcrumb_json_ld(it, lang)}</script>
 </head>
 <body>
 <div class="page-head">
@@ -682,12 +704,28 @@ def get_shop_config():
     if not SHOP_CONFIG_PATH.is_file():
         raise SystemExit(f"FEHLER: {SHOP_CONFIG_PATH} fehlt - Build abgebrochen.")
     raw = json.loads(SHOP_CONFIG_PATH.read_text(encoding="utf-8"))
+    features_raw = raw.get("features") or {}
+    if not isinstance(features_raw, dict):
+        raise SystemExit(f"FEHLER: {SHOP_CONFIG_PATH} Feld 'features' muss ein Objekt sein.")
+    environment = raw.get("environment") or "sandbox"
+    if environment not in ("sandbox", "live"):
+        raise SystemExit(f"FEHLER: {SHOP_CONFIG_PATH} environment muss 'sandbox' oder 'live' sein.")
     cfg = {
         "whatsappNumber": raw.get("whatsappNumber") or "",
         "email": raw.get("email") or "",
         "paypalClientId": raw.get("paypalClientId") or "",
         "shopWorkerUrl": raw.get("shopWorkerUrl") or "",
+        "environment": environment,
+        "features": {
+            "paypalCheckout": bool(features_raw.get("paypalCheckout")),
+            "customerAccounts": bool(features_raw.get("customerAccounts")),
+        },
     }
+    if cfg["features"]["paypalCheckout"] and (not cfg["paypalClientId"] or not cfg["shopWorkerUrl"]):
+        raise SystemExit(
+            "FEHLER: paypalCheckout=true, aber paypalClientId oder shopWorkerUrl fehlt. "
+            "Checkout bleibt aus, bis die Sandbox-Konfiguration vollstaendig ist."
+        )
     for secret_key in ("paypalClientSecret", "dhlApiSecret", "dpdApiSecret", "hermesApiSecret", "dbKey", "adminKey", "serviceRoleKey"):
         if raw.get(secret_key):
             raise SystemExit(

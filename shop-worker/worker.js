@@ -74,6 +74,15 @@ const CONFIG = {
   currency: "EUR",
 };
 
+function paypalApiBase(env) {
+  const mode = String(env.PAYPAL_ENVIRONMENT || "sandbox").toLowerCase();
+  return mode === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
+}
+
+function isLiveEnvironment(env) {
+  return String(env.PAYPAL_ENVIRONMENT || "sandbox").toLowerCase() === "live";
+}
+
 // Production darf keine beliebige Origin spiegeln (frueher: origin || "*") -
 // nur die tatsaechlichen Disorder119-Domains + das kuenftige Admin-Dashboard
 // + localhost fuers lokale Testen duerfen den Worker aufrufen.
@@ -108,7 +117,12 @@ function isAdminAuthorized(request, env) {
 function json(data, status, origin) {
   return new Response(JSON.stringify(data), {
     status: status || 200,
-    headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+      "Vary": "Origin",
+      ...corsHeaders(origin),
+    },
   });
 }
 
@@ -116,7 +130,7 @@ function json(data, status, origin) {
 
 async function paypalAccessToken(env) {
   const creds = btoa(`${env.PAYPAL_CLIENT_ID}:${env.PAYPAL_CLIENT_SECRET}`);
-  const res = await fetch(`${CONFIG.paypalApiBase}/v1/oauth2/token`, {
+  const res = await fetch(`${paypalApiBase(env)}/v1/oauth2/token`, {
     method: "POST",
     headers: {
       Authorization: `Basic ${creds}`,
@@ -131,7 +145,7 @@ async function paypalAccessToken(env) {
 
 async function createPaypalOrder(env, item) {
   const token = await paypalAccessToken(env);
-  const res = await fetch(`${CONFIG.paypalApiBase}/v2/checkout/orders`, {
+  const res = await fetch(`${paypalApiBase(env)}/v2/checkout/orders`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -158,7 +172,7 @@ async function createPaypalOrder(env, item) {
 
 async function capturePaypalOrder(env, orderId) {
   const token = await paypalAccessToken(env);
-  const res = await fetch(`${CONFIG.paypalApiBase}/v2/checkout/orders/${orderId}/capture`, {
+  const res = await fetch(`${paypalApiBase(env)}/v2/checkout/orders/${orderId}/capture`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
   });
@@ -168,7 +182,7 @@ async function capturePaypalOrder(env, orderId) {
 
 async function verifyPaypalWebhook(env, headers, body) {
   const token = await paypalAccessToken(env);
-  const res = await fetch(`${CONFIG.paypalApiBase}/v1/notifications/verify-webhook-signature`, {
+  const res = await fetch(`${paypalApiBase(env)}/v1/notifications/verify-webhook-signature`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -224,6 +238,8 @@ async function markSold(env, id, orderId) {
   item.paypal_order_id = orderId;
   delete item.reserved_order_id;
   delete item.reserved_until;
+  delete item.reserved_price;
+  delete item.reserved_currency;
 
   const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(items, null, 2))));
   const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.itemsPath}`;
@@ -288,6 +304,8 @@ async function reserveItem(env, id, orderId) {
     item.public_status = "RESERVED";
     item.reserved_order_id = orderId;
     item.reserved_until = Date.now() + RESERVATION_TTL_MS;
+    item.reserved_price = Number(item.price);
+    item.reserved_currency = CONFIG.currency;
 
     const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(items, null, 2))));
     const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.itemsPath}`;
@@ -410,6 +428,69 @@ async function createDhlLabel(env, item, shipping) {
   return shipment && shipment.label ? shipment.label.url : null;
 }
 
+// ---------- Private Betriebsdaten (Cloudflare D1) ----------
+// Kunden-/Anfragedaten duerfen niemals in das oeffentliche GitHub-Repo.
+async function appendRentalRequestPrivate(env, record) {
+  if (!env.DB) throw new Error("Private D1-Datenbank ist fuer Verleih-Anfragen nicht konfiguriert.");
+  await env.DB.prepare(
+    `INSERT INTO rental_requests
+      (id, item_id, item_title, article_no, start_date, end_date, days, purpose, message, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    record.id, record.itemId, record.itemTitle, String(record.articleNo || ""),
+    record.start, record.end, record.days, record.purpose, record.message,
+    record.status, record.createdAt
+  ).run();
+  return record;
+}
+
+async function listRentalRequestsPrivate(env) {
+  if (!env.DB) throw new Error("Private D1-Datenbank ist nicht konfiguriert.");
+  const result = await env.DB.prepare(
+    `SELECT id, item_id AS itemId, item_title AS itemTitle, article_no AS articleNo,
+            start_date AS start, end_date AS end, days, purpose, message, status,
+            created_at AS createdAt, updated_at AS updatedAt
+       FROM rental_requests ORDER BY created_at DESC LIMIT 500`
+  ).all();
+  return result.results || [];
+}
+
+async function updateRentalRequestPrivate(env, id, status) {
+  if (!env.DB) throw new Error("Private D1-Datenbank ist nicht konfiguriert.");
+  const existing = await env.DB.prepare("SELECT id FROM rental_requests WHERE id = ?").bind(id).first();
+  if (!existing) return false;
+  await env.DB.prepare("UPDATE rental_requests SET status = ?, updated_at = ? WHERE id = ?")
+    .bind(status, new Date().toISOString(), id).run();
+  return true;
+}
+
+function captureMatchesItem(capture, item) {
+  if (!capture || capture.status !== "COMPLETED") return false;
+  const unit = capture.purchase_units && capture.purchase_units[0];
+  const payment = unit && unit.payments && unit.payments.captures && unit.payments.captures[0];
+  const amount = payment && payment.amount;
+  if (!unit || String(unit.custom_id || "") !== String(item.id)) return false;
+  if (!amount || amount.currency_code !== CONFIG.currency) return false;
+  return Number(amount.value).toFixed(2) === Number(item.price).toFixed(2);
+}
+
+async function recordCompletedOrder(env, item, orderId, capture) {
+  if (!env.DB) return; // Sandbox darf ohne D1 getestet werden; live wird unten blockiert.
+  const unit = capture && capture.purchase_units && capture.purchase_units[0];
+  const payment = unit && unit.payments && unit.payments.captures && unit.payments.captures[0];
+  const amount = payment && payment.amount ? Number(payment.amount.value) : Number(item.price);
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO orders
+      (id, paypal_order_id, item_id, article_no, item_title, amount_cents, currency, payment_status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    crypto.randomUUID(), orderId, item.id, String(item.article || item.id),
+    `${item.brand || ""} ${item.title}`.trim(), Math.round(amount * 100), CONFIG.currency,
+    "COMPLETED", now
+  ).run();
+}
+
 // ---------- Routen ----------
 
 export default {
@@ -419,9 +500,41 @@ export default {
 
     if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
 
+    // POST-Endpunkte, die einen Kauf/Datensatz ausloesen, akzeptieren nur
+    // Aufrufe von den echten Shop-Domains. CORS allein reicht nicht: eine
+    // fremde Seite koennte einen POST sonst trotzdem absenden, auch wenn sie
+    // die Antwort anschliessend nicht lesen darf.
+    const protectedPost = ["/create-order", "/capture-order", "/rental-request"].indexOf(url.pathname) !== -1;
+    if (request.method === "POST" && protectedPost && !isAllowedOrigin(origin)) {
+      return json({ error: "Origin nicht erlaubt." }, 403, origin);
+    }
+    if (request.method === "POST" && protectedPost && !(request.headers.get("Content-Type") || "").toLowerCase().includes("application/json")) {
+      return json({ error: "Content-Type application/json erforderlich." }, 415, origin);
+    }
+
     try {
+      if (url.pathname === "/health" && request.method === "GET") {
+        const paypalConfigured = !!env.PAYPAL_CLIENT_ID && !!env.PAYPAL_CLIENT_SECRET && !!env.PAYPAL_WEBHOOK_ID;
+        const githubConfigured = !!env.GITHUB_TOKEN;
+        const dhlConfigured = !!env.DHL_API_KEY && !!env.DHL_API_SECRET && !!env.DHL_PORTAL_USER &&
+          !!env.DHL_PORTAL_PASSWORD && !!env.DHL_BILLING_NUMBER && !!env.DHL_SHIPPER_ADDRESS;
+        const dbConfigured = !!env.DB;
+        return json({
+          ok: true,
+          environment: isLiveEnvironment(env) ? "live" : "sandbox",
+          paypalConfigured,
+          githubConfigured,
+          dhlConfigured,
+          dbConfigured,
+          readyForLive: paypalConfigured && githubConfigured && dbConfigured,
+        }, 200, origin);
+      }
       if (url.pathname === "/create-order" && request.method === "POST") {
+        if (isLiveEnvironment(env) && !env.DB) {
+          return json({ error: "Live-Checkout ist ohne privaten Bestellspeicher nicht freigeschaltet." }, 503, origin);
+        }
         const { itemId } = await request.json();
+        if (!/^\d+$/.test(String(itemId || ""))) return json({ error: "Ungueltige Artikel-ID." }, 400, origin);
         const item = await findItem(env, itemId);
         if (!item || !isReleasable(item)) {
           return json({ error: "Artikel nicht mehr verfuegbar." }, 409, origin);
@@ -461,15 +574,24 @@ export default {
           if (!preCheckItem || preCheckItem.reserved_order_id !== orderId || !reservationActive(preCheckItem)) {
             return json({ error: "Reservierung abgelaufen oder ungueltig - bitte Kauf neu starten." }, 409, origin);
           }
+          if (preCheckItem.reserved_price != null &&
+              Number(preCheckItem.reserved_price).toFixed(2) !== Number(preCheckItem.price).toFixed(2)) {
+            return json({ error: "Der Artikelpreis hat sich waehrend des Checkouts geaendert. Bitte Kauf neu starten." }, 409, origin);
+          }
         }
         const capture = alreadyDoneForThisOrder ? null : await capturePaypalOrder(env, orderId);
-        if (capture && capture.status !== "COMPLETED") {
-          return json({ error: "Zahlung nicht abgeschlossen." }, 402, origin);
+        if (capture && !captureMatchesItem(capture, preCheckItem)) {
+          // Capture ist serverseitig mit dem autoritativen Katalogpreis erstellt;
+          // diese zusaetzliche Kontrolle erkennt trotzdem unerwartete Provider-
+          // oder Zuordnungsfehler, bevor das Inventar auf SOLD gesetzt wird.
+          console.error("PayPal Capture passt nicht zum reservierten Artikel", { orderId, itemId });
+          return json({ error: "Zahlung konnte dem Artikel nicht eindeutig zugeordnet werden." }, 409, origin);
         }
         const { item, alreadySold } = alreadyDoneForThisOrder
           ? { item: preCheckItem, alreadySold: true }
           : await markSold(env, itemId, orderId);
         if (!alreadySold) {
+          await recordCompletedOrder(env, item, orderId, capture);
           const shippingRaw = capture.purchase_units?.[0]?.shipping;
           if (shippingRaw) {
             try {
@@ -531,13 +653,13 @@ export default {
           status: "new",
           createdAt: new Date().toISOString(),
         };
-        await appendRentalRequest(env, record);
+        await appendRentalRequestPrivate(env, record);
         return json({ ok: true }, 200, origin);
       }
 
       if (url.pathname === "/rental-requests" && request.method === "GET") {
         if (!isAdminAuthorized(request, env)) return json({ error: "Nicht autorisiert." }, 401, origin);
-        const { requests } = await loadRentalRequests(env);
+        const requests = await listRentalRequestsPrivate(env);
         return json({ requests }, 200, origin);
       }
 
@@ -552,31 +674,16 @@ export default {
         if (["new", "contacted", "done"].indexOf(status) === -1) {
           return json({ error: "Ungueltiger Status." }, 400, origin);
         }
-        const { requests, sha } = await loadRentalRequests(env);
-        const record = requests.find((r) => r.id === id);
-        if (!record) return json({ error: "Anfrage nicht gefunden." }, 404, origin);
-        record.status = status;
-        record.updatedAt = new Date().toISOString();
-        const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(requests, null, 2))));
-        const putUrl = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.rentalRequestsPath}`;
-        const putRes = await fetch(putUrl, {
-          method: "PUT",
-          headers: ghHeaders(env),
-          body: JSON.stringify({
-            message: `Verleih-Anfrage ${id}: Status -> ${status}`,
-            content: newContent,
-            sha,
-            branch: CONFIG.githubBranch,
-          }),
-        });
-        if (!putRes.ok) return json({ error: "Status konnte nicht gespeichert werden." }, 500, origin);
+        const updated = await updateRentalRequestPrivate(env, id, status);
+        if (!updated) return json({ error: "Anfrage nicht gefunden." }, 404, origin);
         return json({ ok: true }, 200, origin);
       }
 
       return json({ error: "Not found" }, 404, origin);
     } catch (err) {
       console.error(err);
-      return json({ error: err.message }, 500, origin);
+      // Keine internen Provider-/Token-/API-Details an den Browser leaken.
+      return json({ error: "Interner Shop-Fehler." }, 500, origin);
     }
   },
 };

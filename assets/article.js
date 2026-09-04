@@ -345,7 +345,8 @@
   // shopWorkerUrl gesetzt sind - build_site.py laesst den Container sonst
   // ganz weg, siehe shop-worker/README.md fuer die Einrichtung) ----
   var paypalContainer = document.getElementById("paypalButtons");
-  if (paypalContainer && window.paypal && SHOP_CONFIG.shopWorkerUrl) {
+  if (paypalContainer && window.paypal && SHOP_CONFIG.shopWorkerUrl &&
+      SHOP_CONFIG.features && SHOP_CONFIG.features.paypalCheckout) {
     var workerUrl = SHOP_CONFIG.shopWorkerUrl.replace(/\/$/, "");
     paypal.Buttons({
       style: { shape: "rect", color: "black", layout: "vertical", label: "paypal" },
@@ -368,7 +369,18 @@
           body: JSON.stringify({ orderId: data.orderID, itemId: IT.id }),
         })
           .then(function (r) { if (!r.ok) throw new Error("Zahlung fehlgeschlagen"); })
-          .then(function () { location.reload(); }); // Seite neu laden -> Artikel zeigt sich als verkauft, sobald der Rebuild durch ist
+          .then(function () {
+            // Erfolgreich bezahltes Einzelstueck sofort aus dem lokalen
+            // Warenkorb entfernen. Der serverseitige SOLD-Status bleibt die
+            // autoritative Quelle; der anschliessende Reload zeigt ihn nach
+            // dem automatischen Rebuild auch auf der Produktseite.
+            var cart = loadCart();
+            var pos = cart.indexOf(IT.id);
+            if (pos !== -1) cart.splice(pos, 1);
+            saveCart(cart);
+            refreshCartCount();
+            location.reload();
+          });
       },
       onError: function (err) {
         console.error(err);
