@@ -1,8 +1,8 @@
 name: Seite automatisch neu bauen
 
-# Baut index.html / artikel/*.html / sitemap.xml aus data/items.json +
-# index_template.html neu und haelt die vertrauensbildenden Shoptexte in der
-# zentralen Build-Quelle konsistent. Das Design/CSS wird dabei nicht geaendert.
+# Baut die statischen Seiten aus data/items.json und den Quelltemplates neu.
+# Asset- und Shop-Konfigurationsaenderungen loesen ebenfalls einen Rebuild aus,
+# damit Cache-Busting und eingebettete Shop-Konfiguration aktuell bleiben.
 
 on:
   push:
@@ -11,7 +11,11 @@ on:
       - "data/items.json"
       - "index_template.html"
       - "build_site.py"
-      - "scripts/trust_upgrade.py"
+      - "config/shop-config.json"
+      - "assets/app.js"
+      - "assets/app.css"
+      - "assets/article.js"
+      - "assets/article.css"
       - ".github/workflows/rebuild.yml"
   workflow_dispatch: {}
 
@@ -33,9 +37,6 @@ jobs:
       - name: Abhaengigkeiten installieren
         run: pip install pillow
 
-      - name: Vertrauen und Shop-Klarheit aktualisieren
-        run: python scripts/trust_upgrade.py
-
       - name: Seite bauen
         run: python build_site.py
 
@@ -43,10 +44,10 @@ jobs:
         run: |
           git config user.name "disorder119-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add build_site.py assets/app.js index.html artikel sitemap.xml cart impressum agb datenschutz ueber-uns faq match chaos baukasten en fr data/catalog.json
+          git add index.html artikel sitemap.xml cart impressum agb datenschutz ueber-uns faq match chaos baukasten en fr data/catalog.json
           if git diff --cached --quiet; then
             echo "Keine Aenderungen am generierten Output - nichts zu committen."
           else
-            git commit -m "Trust und Shop-Klarheit verbessern"
+            git commit -m "Automatischer Rebuild"
             git push
           fi
