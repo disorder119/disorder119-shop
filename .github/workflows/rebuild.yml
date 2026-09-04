@@ -50,6 +50,10 @@ jobs:
         if: hashFiles('scripts/pro_shop_upgrade_once.py') != ''
         run: python scripts/pro_shop_upgrade_once.py
 
+      - name: Validierungsregeln fuer Altbestand aktualisieren
+        if: hashFiles('scripts/validate_shop_fix_once.py') != ''
+        run: python scripts/validate_shop_fix_once.py
+
       - name: Python Syntax pruefen
         run: python -m py_compile build_site.py scripts/*.py
 
@@ -75,7 +79,7 @@ jobs:
         run: |
           git config user.name "disorder119-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add build_site.py assets/article.js shop-worker/worker.js config/mode-guard.json data/shop-quality.json
+          git add build_site.py assets/article.js shop-worker/worker.js scripts/validate_shop.py config/mode-guard.json data/shop-quality.json
           git add index.html artikel sitemap.xml cart impressum agb datenschutz ueber-uns faq match chaos baukasten en fr data/catalog.json
           if git diff --cached --quiet; then
             echo "Keine Aenderungen am generierten Output - nichts zu committen."
