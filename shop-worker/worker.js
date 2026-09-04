@@ -1,208 +1,144 @@
-/**
- * Disorder119 Shop-Automat (Cloudflare Worker)
- * ---------------------------------------------
- * Sitzt zwischen dem PayPal-Button auf den Artikelseiten und dem Repo:
- *
- *   1. Frontend ruft POST /create-order -> Worker legt bei PayPal eine
- *      Bestellung ueber den ECHTEN, in items.json hinterlegten Preis an
- *      (nie dem Browser vertrauen - der Preis kommt server-seitig aus dem
- *      Katalog, nicht vom Client) und reserviert das Einzelstueck DANACH
- *      atomar fuer genau diese PayPal-Order-ID (15 Minuten TTL, siehe
- *      reserveItem()/RESERVATION_TTL_MS) - schlaegt die Reservierung fehl
- *      (inzwischen von jemand anderem geschnappt oder verkauft), bleibt die
- *      PayPal-Order einfach ungenutzt liegen, es wurde noch kein Cent
- *      abgebucht.
- *   2. Kaeufer bestaetigt bei PayPal.
- *   3. Frontend ruft POST /capture-order -> Worker prueft ZUERST, ob fuer
- *      dieses Item noch eine gueltige, nicht abgelaufene Reservierung mit
- *      exakt dieser Order-ID existiert - NUR dann wird ueberhaupt Geld
- *      eingezogen. Das ist der Kern des Schutzes gegen Doppelverkauf: ein
- *      Einzelstueck kann nie zweimal erfolgreich bezahlt werden, weil eine
- *      zweite, konkurrierende Anfrage schon in Schritt 1 keine Reservierung
- *      mehr bekommen haette. Klappt der Zahlungseinzug:
- *        a) markiert den Artikel in data/items.json als SOLD (ueber die
- *           GitHub Contents API) - der Rebuild-Workflow baut die Seite
- *           danach automatisch neu, der Artikel verschwindet aus dem
- *           Katalog.
- *        b) erstellt ein DHL-Versandlabel mit der vom Kaeufer bei PayPal
- *           hinterlegten Lieferadresse.
- *   4. POST /paypal-webhook ist ein Sicherheitsnetz: falls Schritt 3 durch
- *      einen geschlossenen Tab o.ae. nie ausgeloest wurde, markiert PayPals
- *      eigener Webhook (PAYMENT.CAPTURE.COMPLETED) den Artikel trotzdem als
- *      verkauft. Alle Wege sind idempotent (pruefen erst, ob der Artikel
- *      nicht schon SOLD ist bzw. ob genau diese Order schon abgeschlossen
- *      wurde), doppeltes Ausfuehren richtet nichts an.
- *
- * Zusaetzlich zum Kauf-Ablauf nimmt der Worker auch Verleih-Anfragen
- * (Musikvideo/Shooting) entgegen und macht sie fuer ein spaeteres
- * Admin-Dashboard abrufbar:
- *   5. POST /rental-request  -> vom Verleih-Modal auf der Startseite
- *      aufgerufen (sofern SHOP_CONFIG.shopWorkerUrl gesetzt ist), validiert
- *      Artikel/Zeitraum server-seitig und haengt die Anfrage an
- *      data/rental-requests.json an (gleiche GitHub-Contents-API-Technik
- *      wie markSold() - keine eigene Datenbank noetig fuer dieses
- *      Datenvolumen).
- *   6. GET  /rental-requests -> fuers Admin-Dashboard, nur mit gueltigem
- *      ADMIN_TOKEN (Bearer-Header) abrufbar. Das ist bewusst nur ein
- *      simples geteiltes Geheimnis als UEBERGANGSLOESUNG, bis ein echtes
- *      Admin-Auth-System (Supabase Auth + Cloudflare Access, siehe
- *      README.md im disorder119-admin-Repo) steht - dann re-checkt
- *      dieser Worker zusaetzlich die dortige Identitaet/JWT statt (oder
- *      zusaetzlich zu) diesem Token.
- *
- * Noetige Secrets (per `wrangler secret put NAME` setzen, s. README.md):
- *   PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_WEBHOOK_ID  (developer.paypal.com)
- *   DHL_API_KEY, DHL_API_SECRET, DHL_EKP, DHL_BILLING_NUMBER   (developer.dhl.com)
- *   GITHUB_TOKEN   (fein granulares PAT, nur "Contents: Read & write" auf
- *                    dieses eine Repo - siehe README.md)
- *   ADMIN_TOKEN    (frei gewaehltes, langes Zufallsgeheimnis - Uebergangs-
- *                    Login fuers Admin-Dashboard, s.o.)
- *
- * Nicht-geheime Konfiguration (unten in CONFIG):
- *   GITHUB_REPO, PAYPAL_API_BASE (sandbox waehrend des Testens, live danach)
- */
+import {
+  CURRENCY,
+  MAX_REQUEST_BYTES,
+  RESERVATION_TTL_SECONDS,
+  isValidIdempotencyKey,
+  money,
+  parsePriceToCents,
+  publicOrderNumber,
+  rentalQuoteFromItem,
+  safeText,
+} from "./commerce-core.js";
 
-const CONFIG = {
+const CONFIG = Object.freeze({
   githubOwner: "disorder119",
   githubRepo: "disorder119-shop",
   githubBranch: "main",
   itemsPath: "data/items.json",
-  rentalRequestsPath: "data/rental-requests.json",
-  // https://api-m.sandbox.paypal.com waehrend des Testens,
-  // https://api-m.paypal.com sobald es mit echtem Geld laufen soll.
-  paypalApiBase: "https://api-m.sandbox.paypal.com",
-  currency: "EUR",
-};
+});
 
-function paypalApiBase(env) {
-  const mode = String(env.PAYPAL_ENVIRONMENT || "sandbox").toLowerCase();
-  return mode === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
-}
-
-function isLiveEnvironment(env) {
-  return String(env.PAYPAL_ENVIRONMENT || "sandbox").toLowerCase() === "live";
-}
-
-// Production darf keine beliebige Origin spiegeln (frueher: origin || "*") -
-// nur die tatsaechlichen Disorder119-Domains + das kuenftige Admin-Dashboard
-// + localhost fuers lokale Testen duerfen den Worker aufrufen.
-const ALLOWED_ORIGINS = [
+const ALLOWED_ORIGINS = Object.freeze([
   "https://disorder119.com",
   "https://www.disorder119.com",
   "https://admin.disorder119.com",
   "http://localhost:8765",
-];
+]);
+
+const ACTIVE_RENTAL_STATUSES = ["RESERVED", "PAYMENT_PENDING", "CONFIRMED", "ACTIVE", "RETURN_DUE"];
+
+class PublicError extends Error {
+  constructor(code, status = 400, message = code) {
+    super(message);
+    this.code = code;
+    this.status = status;
+  }
+}
+
+function paypalApiBase(env) {
+  return String(env.PAYPAL_ENVIRONMENT || "sandbox").toLowerCase() === "live"
+    ? "https://api-m.paypal.com"
+    : "https://api-m.sandbox.paypal.com";
+}
+
+function isLive(env) {
+  return String(env.PAYPAL_ENVIRONMENT || "sandbox").toLowerCase() === "live";
+}
 
 function isAllowedOrigin(origin) {
-  return ALLOWED_ORIGINS.indexOf(origin) !== -1;
+  return ALLOWED_ORIGINS.includes(origin);
 }
 
 function corsHeaders(origin) {
   return {
     "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0],
     "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, Idempotency-Key, X-Turnstile-Token",
+    "Access-Control-Max-Age": "600",
   };
 }
 
-/** Uebergangsloesung bis Supabase Auth + Cloudflare Access stehen (siehe
- *  Kommentar oben): ein einzelnes, langes, per `wrangler secret put
- *  ADMIN_TOKEN` gesetztes Geheimnis. Nie im Code hinterlegen. */
-function isAdminAuthorized(request, env) {
-  const auth = request.headers.get("Authorization") || "";
-  const token = auth.replace(/^Bearer\s+/i, "").trim();
-  return !!env.ADMIN_TOKEN && token.length > 0 && token === env.ADMIN_TOKEN;
+function securityHeaders() {
+  return {
+    "Cache-Control": "no-store",
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  };
 }
 
-function json(data, status, origin) {
+function json(data, status = 200, origin = null) {
   return new Response(JSON.stringify(data), {
-    status: status || 200,
+    status,
     headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
+      "Content-Type": "application/json; charset=utf-8",
       "Vary": "Origin",
+      ...securityHeaders(),
       ...corsHeaders(origin),
     },
   });
 }
 
-// ---------- PayPal ----------
-
-async function paypalAccessToken(env) {
-  const creds = btoa(`${env.PAYPAL_CLIENT_ID}:${env.PAYPAL_CLIENT_SECRET}`);
-  const res = await fetch(`${paypalApiBase(env)}/v1/oauth2/token`, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${creds}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: "grant_type=client_credentials",
-  });
-  if (!res.ok) throw new Error("PayPal-Login fehlgeschlagen: " + (await res.text()));
-  const data = await res.json();
-  return data.access_token;
+function requestId(request) {
+  const existing = request.headers.get("cf-ray");
+  return existing ? `cf-${existing}` : crypto.randomUUID();
 }
 
-async function createPaypalOrder(env, item) {
-  const token = await paypalAccessToken(env);
-  const res = await fetch(`${paypalApiBase(env)}/v2/checkout/orders`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      intent: "CAPTURE",
-      purchase_units: [
-        {
-          custom_id: String(item.id),
-          description: `${item.brand || ""} ${item.title}`.trim().slice(0, 127),
-          amount: { currency_code: CONFIG.currency, value: item.price.toFixed(2) },
-        },
-      ],
-      application_context: {
-        shipping_preference: "GET_FROM_FILE",
-        brand_name: "Disorder119",
-      },
-    }),
-  });
-  if (!res.ok) throw new Error("PayPal-Bestellung fehlgeschlagen: " + (await res.text()));
-  return res.json();
+async function readJson(request) {
+  const type = (request.headers.get("Content-Type") || "").toLowerCase();
+  if (!type.includes("application/json")) throw new PublicError("CONTENT_TYPE_REQUIRED", 415);
+  const declared = Number(request.headers.get("Content-Length") || 0);
+  if (declared > MAX_REQUEST_BYTES) throw new PublicError("REQUEST_TOO_LARGE", 413);
+  const raw = await request.text();
+  if (new TextEncoder().encode(raw).byteLength > MAX_REQUEST_BYTES) throw new PublicError("REQUEST_TOO_LARGE", 413);
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    throw new PublicError("INVALID_JSON", 400);
+  }
 }
 
-async function capturePaypalOrder(env, orderId) {
-  const token = await paypalAccessToken(env);
-  const res = await fetch(`${paypalApiBase(env)}/v2/checkout/orders/${orderId}/capture`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-  });
-  if (!res.ok) throw new Error("PayPal-Zahlungseinzug fehlgeschlagen: " + (await res.text()));
-  return res.json();
+function idempotencyKey(request, body) {
+  const key = request.headers.get("Idempotency-Key") || body?.idempotencyKey;
+  if (!isValidIdempotencyKey(key)) throw new PublicError("IDEMPOTENCY_KEY_REQUIRED", 400);
+  return key;
 }
 
-async function verifyPaypalWebhook(env, headers, body) {
-  const token = await paypalAccessToken(env);
-  const res = await fetch(`${paypalApiBase(env)}/v1/notifications/verify-webhook-signature`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      auth_algo: headers.get("paypal-auth-algo"),
-      cert_url: headers.get("paypal-cert-url"),
-      transmission_id: headers.get("paypal-transmission-id"),
-      transmission_sig: headers.get("paypal-transmission-sig"),
-      transmission_time: headers.get("paypal-transmission-time"),
-      webhook_id: env.PAYPAL_WEBHOOK_ID,
-      webhook_event: body,
-    }),
-  });
-  if (!res.ok) return false;
-  const data = await res.json();
-  return data.verification_status === "SUCCESS";
+async function rateLimit(request, env, scope) {
+  if (!env.RATE_LIMITER || typeof env.RATE_LIMITER.limit !== "function") return;
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const result = await env.RATE_LIMITER.limit({ key: `${scope}:${ip}` });
+  if (result && result.success === false) throw new PublicError("RATE_LIMITED", 429);
 }
 
-// ---------- Katalog (GitHub) ----------
+async function verifyTurnstile(env, request, body) {
+  if (!env.TURNSTILE_SECRET) return;
+  const token = request.headers.get("X-Turnstile-Token") || body?.turnstileToken;
+  if (!token) throw new PublicError("TURNSTILE_REQUIRED", 403);
+  const form = new FormData();
+  form.append("secret", env.TURNSTILE_SECRET);
+  form.append("response", token);
+  const ip = request.headers.get("CF-Connecting-IP");
+  if (ip) form.append("remoteip", ip);
+  const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: form });
+  const result = await res.json();
+  if (!result.success) throw new PublicError("TURNSTILE_FAILED", 403);
+}
+
+function requireDb(env) {
+  if (!env.DB) throw new PublicError("COMMERCE_DATABASE_NOT_CONFIGURED", 503);
+  return env.DB;
+}
+
+function isAdminAuthorized(request, env) {
+  const auth = request.headers.get("Authorization") || "";
+  const token = auth.replace(/^Bearer\s+/i, "").trim();
+  return Boolean(env.ADMIN_TOKEN && token && token === env.ADMIN_TOKEN);
+}
 
 function ghHeaders(env) {
+  if (!env.GITHUB_TOKEN) throw new PublicError("CATALOG_BACKEND_NOT_CONFIGURED", 503);
   return {
     Authorization: `Bearer ${env.GITHUB_TOKEN}`,
     Accept: "application/vnd.github+json",
@@ -213,477 +149,525 @@ function ghHeaders(env) {
 async function loadItems(env) {
   const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.itemsPath}?ref=${CONFIG.githubBranch}`;
   const res = await fetch(url, { headers: ghHeaders(env) });
-  if (!res.ok) throw new Error("Katalog konnte nicht geladen werden: " + (await res.text()));
+  if (!res.ok) throw new Error(`catalog_load_${res.status}`);
   const file = await res.json();
-  const text = new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g, "")), (c) => c.charCodeAt(0)));
+  const text = new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g, "")), c => c.charCodeAt(0)));
   return { items: JSON.parse(text), sha: file.sha };
 }
 
-async function findItem(env, id) {
+async function findItem(env, itemId) {
   const { items } = await loadItems(env);
-  return items.find((it) => String(it.id) === String(id));
+  return items.find(item => String(item.id) === String(itemId));
 }
 
-/** Markiert einen Artikel als verkauft. Idempotent: ist er schon SOLD,
- *  passiert nichts (wichtig, weil Capture UND Webhook denselben Artikel
- *  markieren koennten). Loescht dabei auch die Reservierungsfelder. */
-async function markSold(env, id, orderId) {
-  const { items, sha } = await loadItems(env);
-  const item = items.find((it) => String(it.id) === String(id));
-  if (!item) throw new Error("Unbekannter Artikel: " + id);
-  if (item.public_status === "SOLD") return { item, alreadySold: true };
-
-  item.public_status = "SOLD";
-  item.status = "Verkauft";
-  item.paypal_order_id = orderId;
-  delete item.reserved_order_id;
-  delete item.reserved_until;
-  delete item.reserved_price;
-  delete item.reserved_currency;
-
-  const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(items, null, 2))));
-  const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.itemsPath}`;
-  const res = await fetch(url, {
-    method: "PUT",
-    headers: ghHeaders(env),
-    body: JSON.stringify({
-      message: `Verkauft via PayPal: ${item.brand || ""} ${item.title} (Artikel ${id})`.trim(),
-      content: newContent,
-      sha,
-      branch: CONFIG.githubBranch,
-    }),
-  });
-  if (!res.ok) throw new Error("Konnte Artikel nicht als verkauft markieren: " + (await res.text()));
-  return { item, alreadySold: false };
+function assertCatalogItemForSale(item) {
+  if (!item) throw new PublicError("ITEM_NOT_FOUND", 404);
+  if (String(item.public_status || "").toUpperCase() === "SOLD") throw new PublicError("ITEM_UNAVAILABLE", 409);
+  const cents = parsePriceToCents(item.price);
+  if (cents === null) throw new PublicError("PRICE_ON_REQUEST", 409);
+  return cents;
 }
 
-// ---------- Reservierung (verhindert Doppelverkauf) ----------
-// data/items.json (ueber die GitHub-Contents-API) ist keine echte
-// Datenbank mit Transaktionen - aber die API bietet trotzdem ein echtes
-// Nebenlaeufigkeits-Primitiv: PUT verlangt den sha der zuletzt gelesenen
-// Version und schlaegt mit 409 fehl, wenn die Datei sich seitdem geaendert
-// hat. Zwei fast gleichzeitige Reservierungsversuche fuer DASSELBE
-// Einzelstueck lesen denselben sha, aber nur der ERSTE PUT wird
-// akzeptiert - der zweite bekommt 409 und weiss dadurch zuverlaessig,
-// dass er zu spaet war, statt (wie vorher) beide Kaeufe unbemerkt parallel
-// laufen zu lassen bis zum Zahlungseinzug.
-const RESERVATION_TTL_MS = 15 * 60 * 1000; // 15 Minuten Zeit fuer den PayPal-Checkout
-
-function reservationActive(item) {
-  return item.public_status === "RESERVED" && typeof item.reserved_until === "number" && Date.now() < item.reserved_until;
+async function ensureInventory(env, item) {
+  const db = requireDb(env);
+  const id = `inv_${item.id}`;
+  const now = new Date().toISOString();
+  const priceCents = parsePriceToCents(item.price);
+  const catalogStatus = String(item.public_status || "DRAFT").toUpperCase();
+  await db.batch([
+    db.prepare(`INSERT OR IGNORE INTO inventory
+      (id,item_id,article_no,status,sale_price_cents,currency,catalog_status,version,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?)`).bind(
+        id, Number(item.id), String(item.article || item.id), catalogStatus === "SOLD" ? "PAID" : "AVAILABLE",
+        priceCents, CURRENCY, catalogStatus, 1, now
+      ),
+    db.prepare(`UPDATE inventory SET article_no=?, sale_price_cents=?, catalog_status=?, updated_at=?, version=version+1
+      WHERE item_id=?`).bind(String(item.article || item.id), priceCents, catalogStatus, now, Number(item.id)),
+  ]);
+  return db.prepare("SELECT * FROM inventory WHERE item_id=?").bind(Number(item.id)).first();
 }
 
-/** true, wenn der Artikel gerade fuer eine neue Reservierung frei ist -
- *  entweder wirklich AVAILABLE, oder eine fruehere Reservierung ist
- *  abgelaufen (Kaeufer hat Tab geschlossen/PayPal abgebrochen, ohne dass
- *  je ein capture-order kam - es gibt keinen Cron-Job, der das aktiv
- *  aufraeumt, daher wird der Ablauf hier "lazy" beim naechsten Versuch
- *  erkannt). */
-function isReleasable(item) {
-  if (item.public_status === "AVAILABLE") return true;
-  if (item.public_status === "RESERVED" && !reservationActive(item)) return true;
-  return false;
+async function cleanupExpired(env, inventoryId) {
+  const db = requireDb(env);
+  const now = new Date().toISOString();
+  await db.batch([
+    db.prepare("UPDATE reservations SET status='EXPIRED', updated_at=? WHERE inventory_id=? AND status='RESERVED' AND expires_at<=?")
+      .bind(now, inventoryId, now),
+    db.prepare("UPDATE rental_reservations SET status='CANCELLED', updated_at=? WHERE inventory_id=? AND status='RESERVED' AND expires_at IS NOT NULL AND expires_at<=?")
+      .bind(now, inventoryId, now),
+    db.prepare(`DELETE FROM rental_days WHERE rental_reservation_id IN
+      (SELECT id FROM rental_reservations WHERE inventory_id=? AND status IN ('CANCELLED','REFUNDED','RETURNED'))`).bind(inventoryId),
+    db.prepare(`UPDATE inventory SET status='AVAILABLE', updated_at=?, version=version+1
+      WHERE id=? AND status='RESERVED'
+      AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.inventory_id=inventory.id AND r.status='RESERVED')
+      AND NOT EXISTS (SELECT 1 FROM rental_reservations rr WHERE rr.inventory_id=inventory.id AND rr.status IN ('RESERVED','PAYMENT_PENDING','CONFIRMED','ACTIVE','RETURN_DUE'))`)
+      .bind(now, inventoryId),
+  ]);
 }
 
-class ItemUnavailableError extends Error {}
-
-/** Reserviert ein Einzelstueck atomar fuer eine bestimmte PayPal-Order-ID.
- *  Wirft ItemUnavailableError, wenn der Artikel verkauft oder gerade aktiv
- *  von jemand anderem reserviert ist. Retry-Schleife faengt den Fall ab,
- *  dass zwei Anfragen exakt denselben sha gelesen haben - nach einem 409
- *  wird frisch neu gelesen und die Verfuegbarkeit erneut echt geprueft,
- *  nicht blind nochmal geschrieben. */
-async function reserveItem(env, id, orderId) {
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const { items, sha } = await loadItems(env);
-    const item = items.find((it) => String(it.id) === String(id));
-    if (!item) throw new Error("Unbekannter Artikel: " + id);
-    if (item.public_status === "SOLD") throw new ItemUnavailableError("Artikel bereits verkauft.");
-    if (!isReleasable(item)) throw new ItemUnavailableError("Artikel ist gerade reserviert.");
-
-    item.public_status = "RESERVED";
-    item.reserved_order_id = orderId;
-    item.reserved_until = Date.now() + RESERVATION_TTL_MS;
-    item.reserved_price = Number(item.price);
-    item.reserved_currency = CONFIG.currency;
-
-    const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(items, null, 2))));
-    const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.itemsPath}`;
-    const res = await fetch(url, {
-      method: "PUT",
-      headers: ghHeaders(env),
-      body: JSON.stringify({
-        message: `Reserviert (PayPal-Order ${orderId}): ${item.brand || ""} ${item.title} (Artikel ${id})`.trim(),
-        content: newContent,
-        sha,
-        branch: CONFIG.githubBranch,
-      }),
-    });
-    if (res.ok) return item;
-    if (res.status === 409) continue; // jemand anderes war minimal schneller - frisch neu pruefen
-    throw new Error("Reservierung fehlgeschlagen: " + (await res.text()));
+async function claimIdempotency(env, scope, key, ownerRequestId) {
+  const db = requireDb(env);
+  const now = new Date();
+  const expires = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+  await db.prepare(`INSERT OR IGNORE INTO idempotency_keys
+    (scope,idempotency_key,resource_id,created_at,expires_at) VALUES (?,?,?,?,?)`)
+    .bind(scope, key, ownerRequestId, now.toISOString(), expires).run();
+  const row = await db.prepare("SELECT * FROM idempotency_keys WHERE scope=? AND idempotency_key=?").bind(scope, key).first();
+  if (row?.response_json) {
+    return { replay: true, status: row.response_status || 200, data: JSON.parse(row.response_json) };
   }
-  throw new ItemUnavailableError("Artikel ist gerade reserviert (zu viele gleichzeitige Versuche).");
+  if (row?.resource_id !== ownerRequestId) throw new PublicError("IDEMPOTENT_REQUEST_IN_PROGRESS", 409);
+  return { replay: false };
 }
 
-// Bewusst KEINE explizite releaseReservation()-Funktion: bricht ein
-// Kaeufer ab (Tab/PayPal-Fenster geschlossen, Zahlung abgelehnt), bleibt
-// die Reservierung bis zum Ablauf der 15 Minuten stehen und wird beim
-// naechsten Kaufversuch desselben Artikels automatisch als frei erkannt
-// (isReleasable() oben) - einfacher und robuster als ein aktives
-// Freigeben um jeden moeglichen Fehlerpfad herum nachzuziehen.
-
-// ---------- Verleih-Anfragen ----------
-// Gleiche Technik wie loadItems()/markSold() oben: data/rental-requests.json
-// im Repo ist die "Datenbank" (kein eigener DB-Server fuer dieses geringe
-// Datenvolumen noetig). Datei existiert anfangs nicht - wird beim ersten
-// Request angelegt.
-
-async function loadRentalRequests(env) {
-  const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.rentalRequestsPath}?ref=${CONFIG.githubBranch}`;
-  const res = await fetch(url, { headers: ghHeaders(env) });
-  if (res.status === 404) return { requests: [], sha: null };
-  if (!res.ok) throw new Error("Verleih-Anfragen konnten nicht geladen werden: " + (await res.text()));
-  const file = await res.json();
-  const text = new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g, "")), (c) => c.charCodeAt(0)));
-  return { requests: JSON.parse(text), sha: file.sha };
+async function finishIdempotency(env, scope, key, status, data, resourceId = null) {
+  const db = requireDb(env);
+  await db.prepare(`UPDATE idempotency_keys SET response_status=?,response_json=?,resource_id=COALESCE(?,resource_id)
+    WHERE scope=? AND idempotency_key=?`).bind(status, JSON.stringify(data), resourceId, scope, key).run();
 }
 
-async function appendRentalRequest(env, record) {
-  const { requests, sha } = await loadRentalRequests(env);
-  requests.unshift(record); // neueste zuerst, praktisch fuers Admin-Dashboard
-  const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(requests, null, 2))));
-  const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.rentalRequestsPath}`;
-  const body = {
-    message: `Verleih-Anfrage: ${record.itemTitle} (${record.start} – ${record.end})`,
-    content: newContent,
-    branch: CONFIG.githubBranch,
-  };
-  if (sha) body.sha = sha;
-  const res = await fetch(url, { method: "PUT", headers: ghHeaders(env), body: JSON.stringify(body) });
-  if (!res.ok) throw new Error("Verleih-Anfrage konnte nicht gespeichert werden: " + (await res.text()));
-  return record;
+async function audit(env, entityType, entityId, eventType, reqId, metadata = null, actorType = "SYSTEM") {
+  if (!env.DB) return;
+  const clean = metadata ? JSON.stringify(metadata) : null;
+  await env.DB.prepare(`INSERT INTO audit_events
+    (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,?,?,?,?,?,?,?)`).bind(
+      crypto.randomUUID(), actorType, entityType, String(entityId), eventType, reqId, clean, new Date().toISOString()
+    ).run();
 }
 
-function rentalDayCount(start, end) {
-  const s = new Date(start + "T00:00:00");
-  const e = new Date(end + "T00:00:00");
-  if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
-  return Math.round((e - s) / 86400000) + 1;
+async function reserveForPurchase(env, item, key, reqId) {
+  const db = requireDb(env);
+  const inv = await ensureInventory(env, item);
+  await cleanupExpired(env, inv.id);
+  const reservationId = crypto.randomUUID();
+  const now = new Date();
+  const expires = new Date(now.getTime() + RESERVATION_TTL_SECONDS * 1000).toISOString();
+  const statements = await db.batch([
+    db.prepare(`INSERT INTO reservations (id,inventory_id,kind,status,idempotency_key,expires_at,created_at)
+      SELECT ?,id,'PURCHASE','RESERVED',?,?,? FROM inventory
+      WHERE id=? AND status='AVAILABLE' AND catalog_status!='SOLD'
+      AND NOT EXISTS (SELECT 1 FROM rental_reservations rr WHERE rr.inventory_id=inventory.id AND rr.status IN ('RESERVED','PAYMENT_PENDING','CONFIRMED','ACTIVE','RETURN_DUE'))`)
+      .bind(reservationId, key, expires, now.toISOString(), inv.id),
+    db.prepare(`UPDATE inventory SET status='RESERVED',updated_at=?,version=version+1
+      WHERE id=? AND status='AVAILABLE' AND EXISTS (SELECT 1 FROM reservations WHERE id=? AND status='RESERVED')`)
+      .bind(now.toISOString(), inv.id, reservationId),
+  ]);
+  if (!statements[0]?.meta?.changes) throw new PublicError("ITEM_UNAVAILABLE", 409);
+  await audit(env, "reservation", reservationId, "PURCHASE_RESERVED", reqId, { itemId: item.id, expiresAt: expires });
+  return { reservationId, inventoryId: inv.id, expiresAt: expires };
 }
 
-// ---------- DHL ----------
+async function releasePurchaseReservation(env, reservationId, reason, reqId) {
+  const db = requireDb(env);
+  const row = await db.prepare("SELECT inventory_id FROM reservations WHERE id=?").bind(reservationId).first();
+  if (!row) return;
+  const now = new Date().toISOString();
+  await db.batch([
+    db.prepare("UPDATE reservations SET status='CANCELLED',updated_at=? WHERE id=? AND status='RESERVED'").bind(now, reservationId),
+    db.prepare(`UPDATE inventory SET status='AVAILABLE',updated_at=?,version=version+1 WHERE id=? AND status='RESERVED'
+      AND NOT EXISTS (SELECT 1 FROM reservations WHERE inventory_id=? AND status='RESERVED' AND id<>?)`)
+      .bind(now, row.inventory_id, row.inventory_id, reservationId),
+  ]);
+  await audit(env, "reservation", reservationId, "RESERVATION_RELEASED", reqId, { reason });
+}
 
-async function dhlAccessToken(env) {
-  const res = await fetch("https://api-eu.dhl.com/parcel/de/account/auth/ropc/v1/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "password",
-      client_id: env.DHL_API_KEY,
-      client_secret: env.DHL_API_SECRET,
-      username: env.DHL_PORTAL_USER,
-      password: env.DHL_PORTAL_PASSWORD,
-    }),
+async function createRentalReservation(env, item, quote, body, key, reqId) {
+  const db = requireDb(env);
+  const inv = await ensureInventory(env, item);
+  await cleanupExpired(env, inv.id);
+  if (["PAID","PREPARING","SHIPPED","DELIVERED","RETURN_REQUESTED"].includes(inv.status) || inv.catalog_status === "SOLD") {
+    throw new PublicError("ITEM_UNAVAILABLE", 409);
+  }
+  const existingSale = await db.prepare("SELECT 1 AS yes FROM reservations WHERE inventory_id=? AND status='RESERVED' AND expires_at>? LIMIT 1")
+    .bind(inv.id, new Date().toISOString()).first();
+  if (existingSale) throw new PublicError("ITEM_UNAVAILABLE", 409);
+
+  const rentalId = crypto.randomUUID();
+  const now = new Date();
+  const expires = new Date(now.getTime() + RESERVATION_TTL_SECONDS * 1000).toISOString();
+  const statements = [
+    db.prepare(`INSERT INTO rental_reservations
+      (id,inventory_id,start_date,end_date,days,daily_price_cents,total_price_cents,currency,price_on_request,status,idempotency_key,expires_at,purpose,message,created_at)
+      VALUES (?,?,?,?,?,?,?,?,?,'RESERVED',?,?,?,?,?)`).bind(
+        rentalId, inv.id, body.start, body.end, quote.days, quote.dailyPriceCents, quote.totalPriceCents,
+        CURRENCY, quote.priceOnRequest ? 1 : 0, key, expires, safeText(body.purpose || "other", 40), safeText(body.message, 2000), now.toISOString()
+      ),
+  ];
+  for (let offset = 0; offset < quote.days; offset++) {
+    const d = new Date(`${body.start}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + offset);
+    statements.push(db.prepare("INSERT INTO rental_days (inventory_id,rental_date,rental_reservation_id) VALUES (?,?,?)")
+      .bind(inv.id, d.toISOString().slice(0,10), rentalId));
+  }
+  statements.push(db.prepare("UPDATE inventory SET status='RESERVED',updated_at=?,version=version+1 WHERE id=? AND status='AVAILABLE'")
+    .bind(now.toISOString(), inv.id));
+  try {
+    await db.batch(statements);
+  } catch (err) {
+    if (String(err?.message || err).toLowerCase().includes("unique")) throw new PublicError("RENTAL_DATES_UNAVAILABLE", 409);
+    throw err;
+  }
+  await audit(env, "rental_reservation", rentalId, "RENTAL_RESERVED", reqId, {
+    itemId: item.id, start: body.start, end: body.end, days: quote.days,
+    dailyPriceCents: quote.dailyPriceCents, totalPriceCents: quote.totalPriceCents, priceOnRequest: quote.priceOnRequest,
   });
-  if (!res.ok) throw new Error("DHL-Login fehlgeschlagen: " + (await res.text()));
-  const data = await res.json();
-  return data.access_token;
+  return { rentalId, expiresAt: expires };
 }
 
-/** shipping = { name, addressLine1, city, postalCode, countryCode } aus der
- *  PayPal-Order (purchase_units[0].shipping). */
-async function createDhlLabel(env, item, shipping) {
-  const token = await dhlAccessToken(env);
-  const res = await fetch("https://api-eu.dhl.com/parcel/de/shipping/v2/orders", {
+async function paypalAccessToken(env) {
+  if (!env.PAYPAL_CLIENT_ID || !env.PAYPAL_CLIENT_SECRET) throw new PublicError("PAYPAL_NOT_CONFIGURED", 503);
+  const creds = btoa(`${env.PAYPAL_CLIENT_ID}:${env.PAYPAL_CLIENT_SECRET}`);
+  const res = await fetch(`${paypalApiBase(env)}/v1/oauth2/token`, {
+    method: "POST",
+    headers: { Authorization: `Basic ${creds}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: "grant_type=client_credentials",
+  });
+  if (!res.ok) throw new Error(`paypal_auth_${res.status}`);
+  return (await res.json()).access_token;
+}
+
+async function createPaypalOrder(env, item, cents, idempotency) {
+  const token = await paypalAccessToken(env);
+  const res = await fetch(`${paypalApiBase(env)}/v2/checkout/orders`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      "DHL-API-Key": env.DHL_API_KEY,
+      "PayPal-Request-Id": idempotency,
     },
     body: JSON.stringify({
-      profile: "STANDARD_GRUPPENPROFIL",
-      shipments: [
-        {
-          product: "V01PAK",
-          billingNumber: env.DHL_BILLING_NUMBER, // EKP + Verfahren + Teilnahme, s. README
-          refNo: `disorder119-${item.id}`,
-          shipper: JSON.parse(env.DHL_SHIPPER_ADDRESS), // { name1, addressStreet, addressHouse, postalCode, city, country }
-          consignee: {
-            name1: shipping.name,
-            addressStreet: shipping.addressLine1,
-            postalCode: shipping.postalCode,
-            city: shipping.city,
-            country: shipping.countryCode,
-          },
-          details: { weight: { uom: "kg", value: 1 } },
-        },
-      ],
+      intent: "CAPTURE",
+      purchase_units: [{
+        custom_id: String(item.id),
+        description: `${item.brand || ""} ${item.title || ""}`.trim().slice(0,127),
+        amount: { currency_code: CURRENCY, value: money(cents) },
+      }],
+      application_context: { shipping_preference: "GET_FROM_FILE", brand_name: "Disorder119" },
     }),
   });
-  if (!res.ok) throw new Error("DHL-Label fehlgeschlagen: " + (await res.text()));
-  const data = await res.json();
-  const shipment = data.items && data.items[0];
-  return shipment && shipment.label ? shipment.label.url : null;
+  if (!res.ok) throw new Error(`paypal_create_${res.status}`);
+  return res.json();
 }
 
-// ---------- Private Betriebsdaten (Cloudflare D1) ----------
-// Kunden-/Anfragedaten duerfen niemals in das oeffentliche GitHub-Repo.
-async function appendRentalRequestPrivate(env, record) {
-  if (!env.DB) throw new Error("Private D1-Datenbank ist fuer Verleih-Anfragen nicht konfiguriert.");
-  await env.DB.prepare(
-    `INSERT INTO rental_requests
-      (id, item_id, item_title, article_no, start_date, end_date, days, purpose, message, status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(
-    record.id, record.itemId, record.itemTitle, String(record.articleNo || ""),
-    record.start, record.end, record.days, record.purpose, record.message,
-    record.status, record.createdAt
-  ).run();
-  return record;
+async function capturePaypalOrder(env, providerOrderId, idempotency) {
+  const token = await paypalAccessToken(env);
+  const res = await fetch(`${paypalApiBase(env)}/v2/checkout/orders/${encodeURIComponent(providerOrderId)}/capture`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "PayPal-Request-Id": idempotency },
+  });
+  if (!res.ok) throw new Error(`paypal_capture_${res.status}`);
+  return res.json();
 }
 
-async function listRentalRequestsPrivate(env) {
-  if (!env.DB) throw new Error("Private D1-Datenbank ist nicht konfiguriert.");
-  const result = await env.DB.prepare(
-    `SELECT id, item_id AS itemId, item_title AS itemTitle, article_no AS articleNo,
-            start_date AS start, end_date AS end, days, purpose, message, status,
-            created_at AS createdAt, updated_at AS updatedAt
-       FROM rental_requests ORDER BY created_at DESC LIMIT 500`
-  ).all();
+function capturePayment(capture) {
+  return capture?.purchase_units?.[0]?.payments?.captures?.[0] || null;
+}
+
+function captureMatches(capture, itemId, cents) {
+  const unit = capture?.purchase_units?.[0];
+  const payment = capturePayment(capture);
+  return capture?.status === "COMPLETED" && String(unit?.custom_id || "") === String(itemId) &&
+    payment?.status === "COMPLETED" && payment?.amount?.currency_code === CURRENCY &&
+    Math.round(Number(payment.amount.value) * 100) === cents;
+}
+
+async function verifyPaypalWebhook(env, headers, body) {
+  if (!env.PAYPAL_WEBHOOK_ID) return false;
+  const ts = Date.parse(headers.get("paypal-transmission-time") || "");
+  if (!Number.isFinite(ts) || Math.abs(Date.now() - ts) > 10 * 60 * 1000) return false;
+  const token = await paypalAccessToken(env);
+  const res = await fetch(`${paypalApiBase(env)}/v1/notifications/verify-webhook-signature`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      auth_algo: headers.get("paypal-auth-algo"), cert_url: headers.get("paypal-cert-url"),
+      transmission_id: headers.get("paypal-transmission-id"), transmission_sig: headers.get("paypal-transmission-sig"),
+      transmission_time: headers.get("paypal-transmission-time"), webhook_id: env.PAYPAL_WEBHOOK_ID, webhook_event: body,
+    }),
+  });
+  if (!res.ok) return false;
+  return (await res.json()).verification_status === "SUCCESS";
+}
+
+async function markCatalogSold(env, itemId, providerOrderId) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const { items, sha } = await loadItems(env);
+    const item = items.find(it => String(it.id) === String(itemId));
+    if (!item) throw new Error("catalog_item_missing");
+    if (item.public_status === "SOLD") {
+      if (!item.paypal_order_id || item.paypal_order_id === providerOrderId) return;
+      throw new Error("catalog_sale_conflict");
+    }
+    item.public_status = "SOLD";
+    item.status = "Verkauft";
+    item.paypal_order_id = providerOrderId;
+    delete item.reserved_order_id;
+    delete item.reserved_until;
+    delete item.reserved_price;
+    delete item.reserved_currency;
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(items, null, 2))));
+    const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.itemsPath}`;
+    const res = await fetch(url, { method: "PUT", headers: ghHeaders(env), body: JSON.stringify({
+      message: `Verkauft via PayPal: Artikel ${itemId}`, content, sha, branch: CONFIG.githubBranch,
+    }) });
+    if (res.ok) return;
+    if (res.status !== 409) throw new Error(`catalog_mark_sold_${res.status}`);
+  }
+  throw new Error("catalog_mark_sold_conflict");
+}
+
+async function createOrderRecords(env, item, cents, reservation, providerOrder, key, reqId) {
+  const db = requireDb(env);
+  const orderId = crypto.randomUUID();
+  const paymentId = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const orderNumber = publicOrderNumber(orderId, new Date());
+  await db.batch([
+    db.prepare(`INSERT INTO commerce_orders
+      (id,order_number,reservation_id,status,currency,subtotal_cents,shipping_cents,total_cents,idempotency_key,created_at)
+      VALUES (?,?,?,'PAYMENT_PENDING',?,?,0,?,?,?)`).bind(orderId, orderNumber, reservation.reservationId, CURRENCY, cents, cents, key, now),
+    db.prepare(`INSERT INTO order_items
+      (id,order_id,inventory_id,item_id,article_no,title_snapshot,unit_price_cents,quantity,currency)
+      VALUES (?,?,?,?,?,?,?,1,?)`).bind(crypto.randomUUID(), orderId, reservation.inventoryId, Number(item.id), String(item.article || item.id), `${item.brand || ""} ${item.title || ""}`.trim(), cents, CURRENCY),
+    db.prepare(`INSERT INTO payments
+      (id,order_id,provider,provider_order_id,status,amount_cents,currency,idempotency_key,created_at)
+      VALUES (?,?,'PAYPAL',?,'CREATED',?,?,?,?)`).bind(paymentId, orderId, providerOrder.id, cents, CURRENCY, `paypal-create:${key}`, now),
+    db.prepare("UPDATE reservations SET status='RESERVED',updated_at=? WHERE id=?").bind(now, reservation.reservationId),
+    db.prepare("UPDATE inventory SET status='PAYMENT_PENDING',updated_at=?,version=version+1 WHERE id=? AND status='RESERVED'").bind(now, reservation.inventoryId),
+  ]);
+  await audit(env, "order", orderId, "PAYMENT_STARTED", reqId, { orderNumber, itemId: item.id, provider: "PAYPAL" });
+  return { orderId, orderNumber, paymentId };
+}
+
+async function completePayment(env, providerOrderId, capture, reqId) {
+  const db = requireDb(env);
+  const payment = await db.prepare(`SELECT p.*,o.id AS commerce_order_id,o.order_number,o.reservation_id,oi.inventory_id,oi.item_id,oi.unit_price_cents
+    FROM payments p JOIN commerce_orders o ON o.id=p.order_id JOIN order_items oi ON oi.order_id=o.id
+    WHERE p.provider='PAYPAL' AND p.provider_order_id=?`).bind(providerOrderId).first();
+  if (!payment) throw new PublicError("ORDER_NOT_FOUND", 404);
+  if (payment.status === "COMPLETED") return payment;
+  if (!captureMatches(capture, payment.item_id, payment.unit_price_cents)) throw new PublicError("PAYMENT_MISMATCH", 409);
+  const providerPayment = capturePayment(capture);
+  const now = new Date().toISOString();
+  await db.batch([
+    db.prepare("UPDATE payments SET provider_payment_id=?,status='COMPLETED',updated_at=? WHERE id=? AND status!='COMPLETED'")
+      .bind(providerPayment.id, now, payment.id),
+    db.prepare("UPDATE commerce_orders SET status='PAID',updated_at=? WHERE id=? AND status IN ('PAYMENT_PENDING','RESERVED')")
+      .bind(now, payment.commerce_order_id),
+    db.prepare("UPDATE reservations SET status='CONSUMED',updated_at=? WHERE id=? AND status='RESERVED'").bind(now, payment.reservation_id),
+    db.prepare("UPDATE inventory SET status='PAID',updated_at=?,version=version+1 WHERE id=? AND status IN ('RESERVED','PAYMENT_PENDING')")
+      .bind(now, payment.inventory_id),
+  ]);
+  await audit(env, "payment", payment.id, "PAYMENT_COMPLETED", reqId, { orderId: payment.commerce_order_id, itemId: payment.item_id, provider: "PAYPAL" }, "PAYMENT_PROVIDER");
+  return payment;
+}
+
+async function recordWebhookEvent(env, event, verified) {
+  const db = requireDb(env);
+  const providerEventId = safeText(event?.id, 200);
+  if (!providerEventId) throw new PublicError("WEBHOOK_EVENT_ID_MISSING", 400);
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const result = await db.prepare(`INSERT OR IGNORE INTO payment_events
+    (id,provider,provider_event_id,event_type,verified,received_at) VALUES (?,'PAYPAL',?,?,?,?)`)
+    .bind(id, providerEventId, safeText(event.event_type, 100), verified ? 1 : 0, now).run();
+  return Boolean(result.meta?.changes);
+}
+
+async function listRentalRequests(env) {
+  const db = requireDb(env);
+  const result = await db.prepare(`SELECT rr.id, i.item_id AS itemId, i.article_no AS articleNo,
+    rr.start_date AS start, rr.end_date AS end, rr.days, rr.purpose, rr.message, rr.status,
+    rr.daily_price_cents AS dailyPriceCents, rr.total_price_cents AS totalPriceCents,
+    rr.price_on_request AS priceOnRequest, rr.created_at AS createdAt, rr.updated_at AS updatedAt
+    FROM rental_reservations rr JOIN inventory i ON i.id=rr.inventory_id ORDER BY rr.created_at DESC LIMIT 500`).all();
   return result.results || [];
 }
 
-async function updateRentalRequestPrivate(env, id, status) {
-  if (!env.DB) throw new Error("Private D1-Datenbank ist nicht konfiguriert.");
-  const existing = await env.DB.prepare("SELECT id FROM rental_requests WHERE id = ?").bind(id).first();
-  if (!existing) return false;
-  await env.DB.prepare("UPDATE rental_requests SET status = ?, updated_at = ? WHERE id = ?")
-    .bind(status, new Date().toISOString(), id).run();
-  return true;
-}
-
-function captureMatchesItem(capture, item) {
-  if (!capture || capture.status !== "COMPLETED") return false;
-  const unit = capture.purchase_units && capture.purchase_units[0];
-  const payment = unit && unit.payments && unit.payments.captures && unit.payments.captures[0];
-  const amount = payment && payment.amount;
-  if (!unit || String(unit.custom_id || "") !== String(item.id)) return false;
-  if (!amount || amount.currency_code !== CONFIG.currency) return false;
-  return Number(amount.value).toFixed(2) === Number(item.price).toFixed(2);
-}
-
-async function recordCompletedOrder(env, item, orderId, capture) {
-  if (!env.DB) return; // Sandbox darf ohne D1 getestet werden; live wird unten blockiert.
-  const unit = capture && capture.purchase_units && capture.purchase_units[0];
-  const payment = unit && unit.payments && unit.payments.captures && unit.payments.captures[0];
-  const amount = payment && payment.amount ? Number(payment.amount.value) : Number(item.price);
+async function updateRentalStatus(env, id, status, reqId) {
+  const allowed = ["RESERVED","PAYMENT_PENDING","CONFIRMED","ACTIVE","RETURN_DUE","RETURNED","CANCELLED","REFUNDED"];
+  if (!allowed.includes(status)) throw new PublicError("INVALID_RENTAL_STATUS", 400);
+  const db = requireDb(env);
   const now = new Date().toISOString();
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO orders
-      (id, paypal_order_id, item_id, article_no, item_title, amount_cents, currency, payment_status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(
-    crypto.randomUUID(), orderId, item.id, String(item.article || item.id),
-    `${item.brand || ""} ${item.title}`.trim(), Math.round(amount * 100), CONFIG.currency,
-    "COMPLETED", now
-  ).run();
+  const row = await db.prepare("SELECT inventory_id,status FROM rental_reservations WHERE id=?").bind(id).first();
+  if (!row) throw new PublicError("RENTAL_NOT_FOUND", 404);
+  await db.prepare("UPDATE rental_reservations SET status=?,updated_at=? WHERE id=?").bind(status, now, id).run();
+  if (["RETURNED","CANCELLED","REFUNDED"].includes(status)) {
+    await db.batch([
+      db.prepare("DELETE FROM rental_days WHERE rental_reservation_id=?").bind(id),
+      db.prepare(`UPDATE inventory SET status='AVAILABLE',updated_at=?,version=version+1 WHERE id=?
+        AND NOT EXISTS (SELECT 1 FROM reservations WHERE inventory_id=? AND status='RESERVED')
+        AND NOT EXISTS (SELECT 1 FROM rental_reservations WHERE inventory_id=? AND id<>? AND status IN ('RESERVED','PAYMENT_PENDING','CONFIRMED','ACTIVE','RETURN_DUE'))`)
+        .bind(now, row.inventory_id, row.inventory_id, row.inventory_id, id),
+    ]);
+  }
+  await audit(env, "rental_reservation", id, `RENTAL_${status}`, reqId, null, "ADMIN");
 }
-
-// ---------- Routen ----------
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin");
+    const reqId = requestId(request);
 
-    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
-
-    // POST-Endpunkte, die einen Kauf/Datensatz ausloesen, akzeptieren nur
-    // Aufrufe von den echten Shop-Domains. CORS allein reicht nicht: eine
-    // fremde Seite koennte einen POST sonst trotzdem absenden, auch wenn sie
-    // die Antwort anschliessend nicht lesen darf.
-    const protectedPost = ["/create-order", "/capture-order", "/rental-request"].indexOf(url.pathname) !== -1;
-    if (request.method === "POST" && protectedPost && !isAllowedOrigin(origin)) {
-      return json({ error: "Origin nicht erlaubt." }, 403, origin);
-    }
-    if (request.method === "POST" && protectedPost && !(request.headers.get("Content-Type") || "").toLowerCase().includes("application/json")) {
-      return json({ error: "Content-Type application/json erforderlich." }, 415, origin);
+    if (request.method === "OPTIONS") {
+      if (origin && !isAllowedOrigin(origin)) return new Response(null, { status: 403, headers: securityHeaders() });
+      return new Response(null, { status: 204, headers: { ...corsHeaders(origin), ...securityHeaders() } });
     }
 
     try {
       if (url.pathname === "/health" && request.method === "GET") {
-        const paypalConfigured = !!env.PAYPAL_CLIENT_ID && !!env.PAYPAL_CLIENT_SECRET && !!env.PAYPAL_WEBHOOK_ID;
-        const githubConfigured = !!env.GITHUB_TOKEN;
-        const dhlConfigured = !!env.DHL_API_KEY && !!env.DHL_API_SECRET && !!env.DHL_PORTAL_USER &&
-          !!env.DHL_PORTAL_PASSWORD && !!env.DHL_BILLING_NUMBER && !!env.DHL_SHIPPER_ADDRESS;
-        const dbConfigured = !!env.DB;
-        return json({
-          ok: true,
-          environment: isLiveEnvironment(env) ? "live" : "sandbox",
-          paypalConfigured,
-          githubConfigured,
-          dhlConfigured,
-          dbConfigured,
-          readyForLive: paypalConfigured && githubConfigured && dbConfigured,
-        }, 200, origin);
-      }
-      if (url.pathname === "/create-order" && request.method === "POST") {
-        if (isLiveEnvironment(env) && !env.DB) {
-          return json({ error: "Live-Checkout ist ohne privaten Bestellspeicher nicht freigeschaltet." }, 503, origin);
-        }
-        const { itemId } = await request.json();
-        if (!/^\d+$/.test(String(itemId || ""))) return json({ error: "Ungueltige Artikel-ID." }, 400, origin);
-        const item = await findItem(env, itemId);
-        if (!item || !isReleasable(item)) {
-          return json({ error: "Artikel nicht mehr verfuegbar." }, 409, origin);
-        }
-        // PayPal-Order zuerst anlegen (liefert die orderId, die als
-        // Reservierungs-Schluessel dient), dann ATOMAR reservieren. Schlaegt
-        // die Reservierung fehl (inzwischen von jemand anderem geschnappt),
-        // bleibt die PayPal-Order einfach ungenutzt liegen und verfaellt von
-        // selbst - es wird nie etwas abgebucht, kein Schaden entstanden.
-        const order = await createPaypalOrder(env, item);
-        try {
-          await reserveItem(env, itemId, order.id);
-        } catch (reserveErr) {
-          if (reserveErr instanceof ItemUnavailableError) {
-            return json({ error: "Artikel wurde soeben von jemand anderem reserviert." }, 409, origin);
-          }
-          throw reserveErr;
-        }
-        return json({ id: order.id }, 200, origin);
+        return json({ ok: true, version: "commerce-foundation-v2", environment: isLive(env) ? "live" : "sandbox", dbReady: Boolean(env.DB), checkoutReady: Boolean(env.DB && env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET && env.PAYPAL_WEBHOOK_ID && env.GITHUB_TOKEN) }, 200, origin);
       }
 
-      if (url.pathname === "/capture-order" && request.method === "POST") {
-        const { orderId, itemId } = await request.json();
-        const preCheckItem = await findItem(env, itemId);
-        // Idempotenz: wurde GENAU diese Order schon erfolgreich abgeschlossen
-        // (z.B. Doppelklick, oder Webhook kam parallel zum direkten Aufruf),
-        // einfach Erfolg zurueckmelden statt erneut zu pruefen/abzurechnen.
-        const alreadyDoneForThisOrder = preCheckItem && preCheckItem.public_status === "SOLD" && preCheckItem.paypal_order_id === orderId;
-        if (!alreadyDoneForThisOrder) {
-          // DAS ist der eigentliche Fix: erst hier, VOR jedem Zahlungseinzug,
-          // pruefen, ob wir fuer dieses Item noch eine gueltige, nicht
-          // abgelaufene Reservierung mit exakt dieser Order-ID halten.
-          // Vorher wurde immer zuerst abgebucht und erst danach geprueft, ob
-          // der Artikel ueberhaupt noch verfuegbar war - dadurch konnte eine
-          // zweite Person tatsaechlich zahlen, ohne je eine reelle Chance auf
-          // den Artikel gehabt zu haben.
-          if (!preCheckItem || preCheckItem.reserved_order_id !== orderId || !reservationActive(preCheckItem)) {
-            return json({ error: "Reservierung abgelaufen oder ungueltig - bitte Kauf neu starten." }, 409, origin);
-          }
-          if (preCheckItem.reserved_price != null &&
-              Number(preCheckItem.reserved_price).toFixed(2) !== Number(preCheckItem.price).toFixed(2)) {
-            return json({ error: "Der Artikelpreis hat sich waehrend des Checkouts geaendert. Bitte Kauf neu starten." }, 409, origin);
-          }
-        }
-        const capture = alreadyDoneForThisOrder ? null : await capturePaypalOrder(env, orderId);
-        if (capture && !captureMatchesItem(capture, preCheckItem)) {
-          // Capture ist serverseitig mit dem autoritativen Katalogpreis erstellt;
-          // diese zusaetzliche Kontrolle erkennt trotzdem unerwartete Provider-
-          // oder Zuordnungsfehler, bevor das Inventar auf SOLD gesetzt wird.
-          console.error("PayPal Capture passt nicht zum reservierten Artikel", { orderId, itemId });
-          return json({ error: "Zahlung konnte dem Artikel nicht eindeutig zugeordnet werden." }, 409, origin);
-        }
-        const { item, alreadySold } = alreadyDoneForThisOrder
-          ? { item: preCheckItem, alreadySold: true }
-          : await markSold(env, itemId, orderId);
-        if (!alreadySold) {
-          await recordCompletedOrder(env, item, orderId, capture);
-          const shippingRaw = capture.purchase_units?.[0]?.shipping;
-          if (shippingRaw) {
-            try {
-              await createDhlLabel(env, item, {
-                name: shippingRaw.name?.full_name,
-                addressLine1: shippingRaw.address?.address_line_1,
-                city: shippingRaw.address?.admin_area_2,
-                postalCode: shippingRaw.address?.postal_code,
-                countryCode: shippingRaw.address?.country_code,
-              });
-            } catch (dhlErr) {
-              // Zahlung ist bereits eingezogen und Artikel markiert - ein
-              // DHL-Fehler darf das nicht rueckgaengig machen, nur melden.
-              console.error("DHL-Label fehlgeschlagen, manuell nachholen:", dhlErr.message);
-            }
-          }
-        }
-        return json({ ok: true }, 200, origin);
-      }
+      const browserWrite = request.method !== "GET" && url.pathname !== "/paypal-webhook";
+      if (browserWrite && !isAllowedOrigin(origin)) throw new PublicError("ORIGIN_NOT_ALLOWED", 403);
 
-      if (url.pathname === "/paypal-webhook" && request.method === "POST") {
-        const body = await request.json();
-        const verified = await verifyPaypalWebhook(env, request.headers, body);
-        if (!verified) return json({ error: "Signatur ungueltig" }, 400, origin);
-        if (body.event_type === "PAYMENT.CAPTURE.COMPLETED") {
-          const itemId = body.resource?.custom_id;
-          if (itemId) await markSold(env, itemId, body.resource?.supplementary_data?.related_ids?.order_id);
+      if (url.pathname === "/rental-quote" && request.method === "POST") {
+        await rateLimit(request, env, "rental-quote");
+        const body = await readJson(request);
+        if (!/^\d+$/.test(String(body.itemId || ""))) throw new PublicError("INVALID_ITEM_ID", 400);
+        const item = await findItem(env, body.itemId);
+        if (!item) throw new PublicError("ITEM_NOT_FOUND", 404);
+        let quote;
+        try { quote = rentalQuoteFromItem(item, String(body.start || ""), String(body.end || "")); }
+        catch (err) {
+          if (err.message === "ITEM_SOLD") throw new PublicError("ITEM_UNAVAILABLE", 409);
+          if (err.message === "INVALID_RENTAL_DATES") throw new PublicError("INVALID_RENTAL_DATES", 400);
+          throw err;
         }
-        return json({ ok: true }, 200, origin);
+        return json({ itemId: item.id, currency: CURRENCY, days: quote.days, dailyPrice: quote.dailyPriceCents === null ? null : money(quote.dailyPriceCents), totalPrice: quote.totalPriceCents === null ? null : money(quote.totalPriceCents), priceOnRequest: quote.priceOnRequest }, 200, origin);
       }
 
       if (url.pathname === "/rental-request" && request.method === "POST") {
-        // Nur echte Disorder119-Seiten duerfen Anfragen anlegen - keine
-        // beliebige Website darf hier Datensaetze in unser Repo schreiben.
-        if (!isAllowedOrigin(origin)) return json({ error: "Origin nicht erlaubt." }, 403, origin);
-        const body = await request.json();
-        const itemId = body.itemId;
-        const start = String(body.start || "");
-        const end = String(body.end || "");
-        const purpose = String(body.purpose || "other").slice(0, 40);
-        const message = String(body.message || "").slice(0, 2000);
-        if (!itemId || !start || !end) return json({ error: "Fehlende Angaben." }, 400, origin);
-        const days = rentalDayCount(start, end);
-        if (!days || days < 1) return json({ error: "Ungueltiger Zeitraum." }, 400, origin);
-        // Server-seitig gegen den echten Katalog pruefen statt dem Client zu
-        // vertrauen - derselbe Grundsatz wie beim Kaufpreis in /create-order.
-        const item = await findItem(env, itemId);
-        if (!item) return json({ error: "Unbekannter Artikel." }, 404, origin);
-        const record = {
-          id: crypto.randomUUID(),
-          itemId: item.id,
-          itemTitle: `${item.brand || ""} ${item.title}`.trim(),
-          articleNo: item.article || item.id,
-          start,
-          end,
-          days,
-          purpose,
-          message,
-          status: "new",
-          createdAt: new Date().toISOString(),
-        };
-        await appendRentalRequestPrivate(env, record);
+        await rateLimit(request, env, "rental-request");
+        const body = await readJson(request);
+        await verifyTurnstile(env, request, body);
+        const key = idempotencyKey(request, body);
+        const claimed = await claimIdempotency(env, "rental-request", key, reqId);
+        if (claimed.replay) return json(claimed.data, claimed.status, origin);
+        if (!/^\d+$/.test(String(body.itemId || ""))) throw new PublicError("INVALID_ITEM_ID", 400);
+        const item = await findItem(env, body.itemId);
+        if (!item) throw new PublicError("ITEM_NOT_FOUND", 404);
+        let quote;
+        try { quote = rentalQuoteFromItem(item, String(body.start || ""), String(body.end || "")); }
+        catch (err) {
+          if (err.message === "ITEM_SOLD") throw new PublicError("ITEM_UNAVAILABLE", 409);
+          if (err.message === "INVALID_RENTAL_DATES") throw new PublicError("INVALID_RENTAL_DATES", 400);
+          throw err;
+        }
+        const rental = await createRentalReservation(env, item, quote, body, key, reqId);
+        const response = { ok: true, rentalReservationId: rental.rentalId, expiresAt: rental.expiresAt, currency: CURRENCY, days: quote.days, dailyPrice: quote.dailyPriceCents === null ? null : money(quote.dailyPriceCents), totalPrice: quote.totalPriceCents === null ? null : money(quote.totalPriceCents), priceOnRequest: quote.priceOnRequest };
+        await finishIdempotency(env, "rental-request", key, 201, response, rental.rentalId);
+        return json(response, 201, origin);
+      }
+
+      if (url.pathname === "/create-order" && request.method === "POST") {
+        await rateLimit(request, env, "create-order");
+        if (isLive(env) && !env.DB) throw new PublicError("COMMERCE_DATABASE_NOT_CONFIGURED", 503);
+        const body = await readJson(request);
+        await verifyTurnstile(env, request, body);
+        const key = idempotencyKey(request, body);
+        const claimed = await claimIdempotency(env, "create-order", key, reqId);
+        if (claimed.replay) return json(claimed.data, claimed.status, origin);
+        if (!/^\d+$/.test(String(body.itemId || ""))) throw new PublicError("INVALID_ITEM_ID", 400);
+        const item = await findItem(env, body.itemId);
+        const cents = assertCatalogItemForSale(item);
+        const reservation = await reserveForPurchase(env, item, key, reqId);
+        let providerOrder;
+        try {
+          providerOrder = await createPaypalOrder(env, item, cents, key);
+        } catch (err) {
+          await releasePurchaseReservation(env, reservation.reservationId, "provider_create_failed", reqId);
+          throw err;
+        }
+        const local = await createOrderRecords(env, item, cents, reservation, providerOrder, key, reqId);
+        const response = { id: providerOrder.id, orderId: local.orderId, orderNumber: local.orderNumber, expiresAt: reservation.expiresAt };
+        await finishIdempotency(env, "create-order", key, 200, response, local.orderId);
+        return json(response, 200, origin);
+      }
+
+      if (url.pathname === "/capture-order" && request.method === "POST") {
+        await rateLimit(request, env, "capture-order");
+        const body = await readJson(request);
+        const key = idempotencyKey(request, body);
+        const claimed = await claimIdempotency(env, "capture-order", key, reqId);
+        if (claimed.replay) return json(claimed.data, claimed.status, origin);
+        const providerOrderId = safeText(body.orderId, 128);
+        if (!providerOrderId) throw new PublicError("ORDER_ID_REQUIRED", 400);
+        const db = requireDb(env);
+        const payment = await db.prepare(`SELECT p.*,o.reservation_id,oi.inventory_id FROM payments p
+          JOIN commerce_orders o ON o.id=p.order_id JOIN order_items oi ON oi.order_id=o.id
+          WHERE p.provider='PAYPAL' AND p.provider_order_id=?`).bind(providerOrderId).first();
+        if (!payment) throw new PublicError("ORDER_NOT_FOUND", 404);
+        if (payment.status === "COMPLETED") {
+          const response = { ok: true, orderId: payment.order_id };
+          await finishIdempotency(env, "capture-order", key, 200, response, payment.order_id);
+          return json(response, 200, origin);
+        }
+        const reservation = await db.prepare("SELECT * FROM reservations WHERE id=?").bind(payment.reservation_id).first();
+        if (!reservation || reservation.status !== "RESERVED" || reservation.expires_at <= new Date().toISOString()) throw new PublicError("RESERVATION_EXPIRED", 409);
+        const capture = await capturePaypalOrder(env, providerOrderId, key);
+        const completed = await completePayment(env, providerOrderId, capture, reqId);
+        try { await markCatalogSold(env, completed.item_id, providerOrderId); }
+        catch (catalogErr) {
+          await audit(env, "order", completed.commerce_order_id, "CATALOG_SYNC_FAILED", reqId, { code: safeText(catalogErr.message, 80) });
+          console.error(JSON.stringify({ level: "error", event: "catalog_sync_failed", requestId: reqId, orderId: completed.commerce_order_id }));
+        }
+        const response = { ok: true, orderId: completed.commerce_order_id, orderNumber: completed.order_number };
+        await finishIdempotency(env, "capture-order", key, 200, response, completed.commerce_order_id);
+        return json(response, 200, origin);
+      }
+
+      if (url.pathname === "/paypal-webhook" && request.method === "POST") {
+        await rateLimit(request, env, "paypal-webhook");
+        const body = await readJson(request);
+        const verified = await verifyPaypalWebhook(env, request.headers, body);
+        if (!verified) throw new PublicError("WEBHOOK_SIGNATURE_INVALID", 400);
+        const isNew = await recordWebhookEvent(env, body, true);
+        if (!isNew) return json({ ok: true, duplicate: true }, 200, origin);
+        if (body.event_type === "PAYMENT.CAPTURE.COMPLETED") {
+          const providerOrderId = body.resource?.supplementary_data?.related_ids?.order_id;
+          if (providerOrderId) {
+            const token = await paypalAccessToken(env);
+            const res = await fetch(`${paypalApiBase(env)}/v2/checkout/orders/${encodeURIComponent(providerOrderId)}`, { headers: { Authorization: `Bearer ${token}` } });
+            if (res.ok) {
+              const order = await res.json();
+              const completed = await completePayment(env, providerOrderId, order, reqId);
+              try { await markCatalogSold(env, completed.item_id, providerOrderId); } catch (err) {
+                await audit(env, "order", completed.commerce_order_id, "CATALOG_SYNC_FAILED", reqId, { code: safeText(err.message, 80) });
+              }
+            }
+          }
+        }
+        await requireDb(env).prepare("UPDATE payment_events SET processed_at=? WHERE provider='PAYPAL' AND provider_event_id=?")
+          .bind(new Date().toISOString(), safeText(body.id, 200)).run();
         return json({ ok: true }, 200, origin);
       }
 
       if (url.pathname === "/rental-requests" && request.method === "GET") {
-        if (!isAdminAuthorized(request, env)) return json({ error: "Nicht autorisiert." }, 401, origin);
-        const requests = await listRentalRequestsPrivate(env);
-        return json({ requests }, 200, origin);
+        if (!isAdminAuthorized(request, env)) throw new PublicError("UNAUTHORIZED", 401);
+        return json({ requests: await listRentalRequests(env) }, 200, origin);
       }
 
-      // /rental-request/<id> - Status im Admin-Dashboard aendern (z.B. "new"
-      // -> "contacted" -> "done"), damit bearbeitete Anfragen nicht jedes Mal
-      // neu durchsucht werden muessen.
       if (url.pathname.startsWith("/rental-request/") && request.method === "PATCH") {
-        if (!isAdminAuthorized(request, env)) return json({ error: "Nicht autorisiert." }, 401, origin);
-        const id = url.pathname.slice("/rental-request/".length);
-        const body = await request.json();
-        const status = String(body.status || "");
-        if (["new", "contacted", "done"].indexOf(status) === -1) {
-          return json({ error: "Ungueltiger Status." }, 400, origin);
-        }
-        const updated = await updateRentalRequestPrivate(env, id, status);
-        if (!updated) return json({ error: "Anfrage nicht gefunden." }, 404, origin);
+        if (!isAdminAuthorized(request, env)) throw new PublicError("UNAUTHORIZED", 401);
+        const body = await readJson(request);
+        const id = safeText(url.pathname.slice("/rental-request/".length), 100);
+        await updateRentalStatus(env, id, String(body.status || "").toUpperCase(), reqId);
         return json({ ok: true }, 200, origin);
       }
 
-      return json({ error: "Not found" }, 404, origin);
+      if (url.pathname.startsWith("/account/") && ["GET","POST","PATCH","DELETE"].includes(request.method)) {
+        throw new PublicError("AUTH_PROVIDER_NOT_CONFIGURED", 501);
+      }
+
+      throw new PublicError("NOT_FOUND", 404);
     } catch (err) {
-      console.error(err);
-      // Keine internen Provider-/Token-/API-Details an den Browser leaken.
-      return json({ error: "Interner Shop-Fehler." }, 500, origin);
+      if (err instanceof PublicError) return json({ error: err.code, requestId: reqId }, err.status, origin);
+      console.error(JSON.stringify({ level: "error", event: "unhandled_worker_error", requestId: reqId, message: safeText(err?.message || "unknown", 160) }));
+      return json({ error: "INTERNAL_SHOP_ERROR", requestId: reqId }, 500, origin);
     }
   },
 };
