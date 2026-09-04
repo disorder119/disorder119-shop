@@ -54,7 +54,7 @@ jobs:
           python-version: "3.11"
 
       - name: Node einrichten
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
 
@@ -102,4 +102,3 @@ jobs:
           else
             git commit -m "Automatischer Rebuild nach Shop- und SEO-Validierung"
             git push
-          fi
