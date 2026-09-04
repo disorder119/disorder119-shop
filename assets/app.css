@@ -2072,8 +2072,14 @@
      zuunterst - unabhaengig davon, welches Accessoire gerade gewaehlt ist. */
   .look-card--jacket { order: 2; }
   .look-card--top { order: 3; }
-  .look-card--bottom { order: 4; }
-  .look-card--accessory { order: 5; }
+  /* Alle anderen Accessoires (Guertel, Taschen, Schals, Wallets, ...)
+     zwischen Oberteil und Unterteil statt danach - ein Guertel sitzt
+     koerperlich auf Hueft-/Taillenhoehe, eine Tasche wird getragen, nicht
+     "unter der Hose" - beides gehoerte vorher faelschlich zwischen
+     Unterteil und Schuhe (Nutzer-Feedback: "Guertel darf nie ganz oben
+     sein" / "Rucksack und Rock tauschen"). */
+  .look-card--accessory { order: 4; }
+  .look-card--bottom { order: 5; }
   .look-card--accessory-top { order: 1; }
   .look-card--shoes { order: 6; }
 

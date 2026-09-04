@@ -2894,12 +2894,14 @@
   // Feste Regel, WO ein Accessoire im Look-Board auftaucht - "Accessories"
   // ist im Katalog eine einzige grobe Kategorie (Muetzen, Sonnenbrillen,
   // Guertel, Taschen, Schals, ...), es gibt kein eigenes Datenfeld fuer den
-  // genauen Typ. Deshalb per Titel-Stichwort erkannt: Kopf-/Gesichts-
-  // Accessoires (Muetzen, Caps, Hueten, Sonnenbrillen) UND Guertel wandern
-  // ganz nach oben (per CSS order:1, noch vor Jacke/Oberteil) - alles
-  // andere (Taschen, Schals, Wallets, ...) bleibt an der bisherigen Stelle
-  // zwischen Unterteil und Schuhen.
-  var ACCESSORY_TOP_PATTERN = /(m[üu]tze|beanie|\bcap\b|kappe|h[uü]t(e|chen)?|sonnenbrille|brille|sunglasses|g[üu]rtel|belt)/i;
+  // genauen Typ. Deshalb per Titel-Stichwort erkannt: NUR echte Kopf-/
+  // Gesichts-Accessoires (Muetzen, Caps, Hueten, Sonnenbrillen) wandern
+  // ganz nach oben (CSS order:1, noch vor Jacke/Oberteil) - Guertel gehoert
+  // NICHT dazu (Nutzer-Feedback: "Guertel darf nie ganz oben sein"), sitzt
+  // koerperlich auf Taillenhoehe und bleibt daher bei der normalen
+  // Accessoire-Position zwischen Oberteil und Unterteil (order:4, siehe
+  // .look-card--accessory in app.css) - genau wie Taschen, Schals, Wallets.
+  var ACCESSORY_TOP_PATTERN = /(m[üu]tze|beanie|\bcap\b|kappe|h[uü]t(e|chen)?|sonnenbrille|brille|sunglasses)/i;
 
   function renderOutfitFigure() {
     var anyVisible = false;
