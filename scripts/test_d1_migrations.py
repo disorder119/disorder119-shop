@@ -12,6 +12,7 @@ FILES = [
     BASE / "shop-worker" / "migrations" / "0003_state_integrity.sql",
     BASE / "shop-worker" / "migrations" / "0004_admin_operations.sql",
     BASE / "shop-worker" / "migrations" / "0005_rental_groups.sql",
+    BASE / "shop-worker" / "migrations" / "0006_operations_cases.sql",
 ]
 
 
@@ -31,7 +32,7 @@ def main() -> None:
         "inventory", "commerce_orders", "order_items", "payments", "shipments",
         "rental_reservations", "rental_days", "rentals", "returns", "refunds",
         "audit_events", "idempotency_keys", "order_contact_snapshots", "admin_notes",
-        "rental_groups",
+        "rental_groups", "damage_cases", "operations_tasks",
     }
     missing = sorted(required_tables - tables)
     if missing:
@@ -46,6 +47,16 @@ def main() -> None:
     for name in ["item_count", "rental_total_cents", "deposit_total_cents", "idempotency_key", "expires_at"]:
         if name not in group_columns:
             raise SystemExit(f"FEHLER: rental_groups.{name} fehlt nach Migration")
+
+    damage_columns = {row[1] for row in db.execute("PRAGMA table_info(damage_cases)")}
+    for name in ["rental_id", "return_id", "severity", "estimated_amount_cents", "withheld_amount_cents", "resolved_at"]:
+        if name not in damage_columns:
+            raise SystemExit(f"FEHLER: damage_cases.{name} fehlt nach Migration")
+
+    task_columns = {row[1] for row in db.execute("PRAGMA table_info(operations_tasks)")}
+    for name in ["entity_type", "entity_id", "priority", "status", "due_at", "completed_at"]:
+        if name not in task_columns:
+            raise SystemExit(f"FEHLER: operations_tasks.{name} fehlt nach Migration")
 
     triggers = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='trigger'")}
     for name in [
@@ -119,6 +130,37 @@ def main() -> None:
     if returned != ("RETURNED", "2026-09-05T10:04:00Z"):
         raise SystemExit(f"FEHLER: Durable Rental RETURNED-Sync fehlgeschlagen: {returned!r}")
 
+    durable = db.execute("SELECT id FROM rentals WHERE rental_reservation_id='rr-materialize'").fetchone()
+    if not durable:
+        raise SystemExit("FEHLER: Durable Rental fehlt fuer Operations-Cases-Smoke-Test")
+    durable_id = durable[0]
+
+    # New operational records must be structurally usable without touching a
+    # payment provider. They are private D1 records only.
+    db.execute(
+        """INSERT INTO damage_cases
+        (id,rental_id,severity,status,description,estimated_amount_cents,withheld_amount_cents,created_at,updated_at)
+        VALUES ('damage-test',?,'MINOR','OPEN','Test damage',1200,600,'2026-09-05T10:05:00Z','2026-09-05T10:05:00Z')""",
+        (durable_id,),
+    )
+    damage = db.execute(
+        "SELECT severity,status,estimated_amount_cents,withheld_amount_cents FROM damage_cases WHERE id='damage-test'"
+    ).fetchone()
+    if damage != ("MINOR", "OPEN", 1200, 600):
+        raise SystemExit(f"FEHLER: Damage-Case-Schema unerwartet: {damage!r}")
+
+    db.execute(
+        """INSERT INTO operations_tasks
+        (id,entity_type,entity_id,title,priority,status,due_at,created_at,updated_at)
+        VALUES ('task-test','RENTAL',?,'Rueckgabe pruefen','HIGH','OPEN','2026-09-12T12:00:00Z','2026-09-05T10:05:00Z','2026-09-05T10:05:00Z')""",
+        (durable_id,),
+    )
+    task = db.execute(
+        "SELECT entity_type,priority,status FROM operations_tasks WHERE id='task-test'"
+    ).fetchone()
+    if task != ("RENTAL", "HIGH", "OPEN"):
+        raise SystemExit(f"FEHLER: Operations-Task-Schema unerwartet: {task!r}")
+
     count = db.execute("SELECT COUNT(*) FROM rentals WHERE rental_reservation_id='rr-materialize'").fetchone()[0]
     if count != 1:
         raise SystemExit(f"FEHLER: CONFIRMED darf genau einen Durable Rental erzeugen, gefunden: {count}")
@@ -139,8 +181,8 @@ def main() -> None:
         raise SystemExit("FEHLER: Ungueltiger Rental-Group-Statussprung wurde von D1 nicht blockiert")
 
     print(
-        "D1-Migrationskette: OK (schema + 0002 + 0003 + 0004 + 0005, "
-        "inkl. Durable-Rental-Materialisierung und Rental-Group-Lifecycle)"
+        "D1-Migrationskette: OK (schema + 0002 + 0003 + 0004 + 0005 + 0006, "
+        "inkl. Durable-Rental-Materialisierung, Rental-Group-Lifecycle und Operations-Cases)"
     )
 
 
