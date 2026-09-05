@@ -6,6 +6,7 @@ import {
 } from "./admin-api.js";
 import { handleAdminInsights } from "./admin-insights.js";
 import { handleAdminRentalGroups } from "./admin-rental-groups.js";
+import { handleAdminCases } from "./admin-cases.js";
 import { handleRentalBundle } from "./rental-bundle.js";
 
 function requestId(request) {
@@ -47,6 +48,15 @@ export default {
 
     if (url.pathname === "/admin/rental-groups" || url.pathname.startsWith("/admin/rental-groups/")) {
       return handleAdminRentalGroups(request, env, url, reqId, origin);
+    }
+
+    if (
+      url.pathname === "/admin/cases" ||
+      url.pathname === "/admin/returns" || url.pathname.startsWith("/admin/returns/") ||
+      url.pathname === "/admin/damages" || url.pathname.startsWith("/admin/damages/") ||
+      url.pathname === "/admin/tasks" || url.pathname.startsWith("/admin/tasks/")
+    ) {
+      return handleAdminCases(request, env, url, reqId, origin);
     }
 
     if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
