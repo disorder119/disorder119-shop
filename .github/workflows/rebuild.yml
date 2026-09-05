@@ -71,7 +71,7 @@ jobs:
         run: python -m py_compile build_site.py scripts/*.py
 
       - name: Archiv-Taxonomie-Filter anwenden
-        run: python scripts/apply_archive_taxonomy_filters.py
+        run: python scripts/apply_archive_taxonomy_filters_safe.py
 
       - name: Archiv-Filter-UX anwenden
         run: python scripts/apply_archive_filter_ux.py
