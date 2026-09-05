@@ -7,6 +7,7 @@ PRAGMA foreign_keys = ON;
 ALTER TABLE operations_tasks ADD COLUMN automation_key TEXT;
 ALTER TABLE operations_tasks ADD COLUMN automation_kind TEXT;
 ALTER TABLE operations_tasks ADD COLUMN auto_managed INTEGER NOT NULL DEFAULT 0 CHECK (auto_managed IN (0,1));
+ALTER TABLE operations_tasks ADD COLUMN automation_active INTEGER NOT NULL DEFAULT 0 CHECK (automation_active IN (0,1));
 ALTER TABLE operations_tasks ADD COLUMN first_seen_at TEXT;
 ALTER TABLE operations_tasks ADD COLUMN last_seen_at TEXT;
 ALTER TABLE operations_tasks ADD COLUMN occurrence_count INTEGER NOT NULL DEFAULT 0 CHECK (occurrence_count >= 0);
@@ -16,6 +17,6 @@ ALTER TABLE operations_tasks ADD COLUMN occurrence_count INTEGER NOT NULL DEFAUL
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_operations_tasks_automation_key
   ON operations_tasks(automation_key);
 CREATE INDEX IF NOT EXISTS idx_operations_tasks_auto_status
-  ON operations_tasks(auto_managed, status, priority, last_seen_at);
+  ON operations_tasks(auto_managed, automation_active, status, priority, last_seen_at);
 CREATE INDEX IF NOT EXISTS idx_operations_tasks_automation_kind
-  ON operations_tasks(automation_kind, status) WHERE auto_managed=1;
+  ON operations_tasks(automation_kind, automation_active, status) WHERE auto_managed=1;
