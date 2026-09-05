@@ -50,7 +50,7 @@ def main() -> None:
         9386: ("Unisex", "Hat", "Accessories"),
         9434: ("Men", "Sweatshirt", "Knitwear"),
         6202: ("Kids", "Jacket", "Jackets"),
-        6235: ("Men", "Sneakers", "Shoes"),
+        6235: ("Men", "Shoes", "Shoes"),
         9524: ("Women", "Bomber Jacket", "Jackets"),
         9534: ("Men", "Shoes", "Shoes"),
         9432: ("Women", "Underwear Shorts", "Pants"),
