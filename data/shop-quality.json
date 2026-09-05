@@ -402,10 +402,8 @@
       ]
     },
     "missing_brand": {
-      "count": 1,
-      "item_ids": [
-        9536
-      ]
+      "count": 0,
+      "item_ids": []
     },
     "duplicate_article_number": {
       "count": 3,
