@@ -21,7 +21,7 @@
       title: "Weiteres Piece hinzufügen",
       subtitle: "Wähle mehrere Pieces direkt hier aus. Deine bisherige Mietanfrage bleibt erhalten.",
       close: "Zurück zur Mietanfrage",
-      search: "Marke, Artikel oder Artikelnummer suchen …",
+      search: "Marke, Artikel oder Größe suchen …",
       all: "Alle",
       selected: "Ausgewählt",
       add: "Hinzufügen",
@@ -40,7 +40,7 @@
       title: "Add another piece",
       subtitle: "Choose several pieces here without leaving your rental request.",
       close: "Back to rental request",
-      search: "Search brand, item or article number …",
+      search: "Search brand, item or size …",
       all: "All",
       selected: "Selected",
       add: "Add",
@@ -59,7 +59,7 @@
       title: "Ajouter une autre pièce",
       subtitle: "Choisissez plusieurs pièces ici sans quitter votre demande de location.",
       close: "Retour à la demande",
-      search: "Rechercher une marque, une pièce ou un numéro …",
+      search: "Rechercher une marque, une pièce ou une taille …",
       all: "Tout",
       selected: "Sélection",
       add: "Ajouter",
@@ -184,7 +184,7 @@
       if (selectedOnly && ids.indexOf(id) < 0) return false;
       if (!selectedOnly && activeCategory !== "all" && String(item.category || "") !== activeCategory) return false;
       if (!q) return true;
-      return normalize([item.brand, item.title, item.article, item.category, item.size].join(" ")).indexOf(q) >= 0;
+      return normalize([item.brand, item.title, item.article, item.id, item.category, item.size].join(" ")).indexOf(q) >= 0;
     }).slice(0, 120);
   }
 
@@ -194,7 +194,6 @@
     var daily = dailyPrice(item);
     var meta = [];
     if (item.size) meta.push(fmt(t("size"), { size: item.size }));
-    if (item.category) meta.push(item.category);
     return '<article class="d119-rental-picker-card" data-picker-item="' + id + '">' +
       '<div class="d119-rental-picker-card__image"><img loading="lazy" src="' + esc(firstImage(item)) + '" alt="' + esc(title(item)) + '">' +
       (selected ? '<span class="d119-rental-picker-card__badge">✓ ' + esc(t("selected")) + '</span>' : '') + '</div>' +

@@ -492,11 +492,8 @@ def facts_html(it, lang):
             '<div><div class="fact__label" data-i18n="' + i18n_key + '">' + esc(label) + "</div>"
             '<div class="fact__value"' + value_attr + ">" + esc(value) + "</div></div>"
         )
-    art_no = it.get("article") or str(it["id"])
-    out.append(
-        '<div><div class="fact__label" data-i18n="factArticleNo">' + esc(labels["article"]) + "</div>"
-        '<div class="fact__value">' + esc(art_no) + "</div></div>"
-    )
+    # Interne Artikelnummern bleiben in ARTICLE_ITEM/Anfragen erhalten,
+    # werden aber nicht als sichtbarer Produkt-Fakt an Kundschaft ausgegeben.
     return "".join(out)
 
 

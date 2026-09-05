@@ -918,6 +918,7 @@
       var rows = [name, t("orderArticleAbbrev") + (it.article || it.id)];
       if (it.size) rows.push(t("factSize") + ": " + trSize(it.size));
       rows.push(fmtPrice(it.price));
+      rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + it.id + "/");
       return rows.join("\n");
     }).filter(Boolean);
     var total = cart.reduce(function (sum, id) {
@@ -927,6 +928,7 @@
     return t("orderGreeting") + "\n\n" +
       lines.join("\n\n") +
       "\n\n" + t("cartTotal") + ": " + fmtPrice(total) +
+      "\n" + (LANG === "de" ? "Zeitpunkt" : LANG === "fr" ? "Horodatage" : "Timestamp") + ": " + new Date().toLocaleString() +
       "\n\n" + t("orderAvailQuestion");
   }
 
@@ -1785,11 +1787,22 @@
     if (state.query) {
       var hay = [
         it.title, it.brand, browseCategory, it.product_type, it.department,
-        it.size, it.size_normalized
+        it.size, it.size_normalized, it.article, String(it.id || "")
       ].map(normalizeText).join(" ");
       if (!queryMatchesHay(hay, state.query)) return false;
     }
     return true;
+  }
+
+  // Kleine, untergeordnete Groessenangabe fuer Archivkarten. Bei
+  // Schuhgroessen wird eine rein numerische Angabe als EU-Groesse kenntlich
+  // gemacht; freie/mehrteilige Groessen bleiben vollstaendig lesbar.
+  function cardSizeLabel(it) {
+    var raw = trSize(it.size_normalized || it.size || "").trim();
+    if (!raw) return "";
+    var browseCategory = it.taxonomy_category || it.category;
+    if (browseCategory === "Shoes" && /^\d+(?:[.,]\d+)?$/.test(raw)) return "EU " + raw;
+    return raw;
   }
 
   function sortItems(list) {
@@ -1905,6 +1918,7 @@
         '<div class="plate__body">' +
           '<button type="button" class="plate__brand" data-brand-filter>' + escapeHtml(it.brand || t("noBrand")) + "</button>" +
           '<span class="plate__title">' + escapeHtml(it.title) + "</span>" +
+          (cardSizeLabel(it) ? '<span class="plate__size">' + escapeHtml(cardSizeLabel(it)) + "</span>" : "") +
           '<div class="plate__row">' +
             priceHtml +
           "</div>" +

@@ -526,7 +526,8 @@
     var total = daily !== null && days ? daily * days : null;
     return '<div class="d119-rental-item" data-rental-v2-item="' + Number(item.id) + '">' +
       '<img src="' + esc(img) + '" alt="' + esc(title) + '">' +
-      '<div class="d119-rental-item__meta"><strong>' + esc(title) + '</strong><span>Art.-Nr. ' + esc(item.article || item.id) + '</span>' +
+      '<div class="d119-rental-item__meta"><strong>' + esc(title) + '</strong>' +
+      (item.size ? '<span>' + esc((LANG === "de" ? "Größe: " : LANG === "fr" ? "Taille : " : "Size: ") + item.size) + '</span>' : '') +
       '<span>' + esc(daily === null ? t("onRequest") : fmt(t("daily"), { price: money(daily) })) + '</span>' +
       '<span>' + esc(t("deposit")) + ': ' + esc(dep === null ? t("onRequest") : money(dep)) + '</span>' +
       (days ? '<span>' + esc(t("rent")) + ': ' + esc(total === null ? t("onRequest") : money(total)) + '</span>' : '') + '</div>' +
@@ -687,6 +688,7 @@
       var daily = dailyCents(item), dep = depositCents(item), rent = daily !== null && days ? daily * days : null;
       lines.push((index + 1) + ". " + ((item.brand ? item.brand + " " : "") + (item.title || "")).trim());
       lines.push("   Art.-Nr.: " + (item.article || item.id));
+      lines.push("   URL: " + window.location.origin + HOME + "artikel/" + item.id + "/");
       lines.push("   " + t("rent") + ": " + (rent === null ? t("onRequest") : money(rent)) + (daily === null ? "" : " (" + money(daily) + " / " + (LANG === "de" ? "Tag" : LANG === "fr" ? "jour" : "day") + ")"));
       lines.push("   " + t("deposit") + ": " + (dep === null ? t("onRequest") : money(dep)));
     });
@@ -702,6 +704,7 @@
     lines.push(t("refundableDeposit") + " – " + t("totalLabel") + ": " + (quote.unknown ? t("partialRequest") : money(quote.depositTotal)));
     lines.push(t("provisional") + ": " + (quote.unknown ? t("partialRequest") : money(quote.rentTotal + quote.depositTotal)) + " + " + t("shippingConfirm"));
     lines.push("");
+    lines.push((LANG === "de" ? "Zeitpunkt" : LANG === "fr" ? "Horodatage" : "Timestamp") + ": " + new Date().toLocaleString());
     lines.push(t("termsVersion") + ": " + TERMS_VERSION + " · " + LANG);
     lines.push(t("noPayment"));
     return lines.join("\n");

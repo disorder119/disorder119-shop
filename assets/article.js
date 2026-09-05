@@ -395,6 +395,8 @@
     var rows = [name, t("orderArticleAbbrev") + (IT.article || IT.id)];
     if (IT.size) rows.push(t("factSize") + ": " + trSize(IT.size));
     rows.push(fmtPrice(IT.price));
+    rows.push("URL: " + window.location.href.split("?")[0].split("#")[0]);
+    rows.push((LANG === "de" ? "Zeitpunkt" : LANG === "fr" ? "Horodatage" : "Timestamp") + ": " + new Date().toLocaleString());
     return t("orderGreeting") + "\n\n" + rows.join("\n") + "\n\n" + t("orderAvailQuestion");
   }
 
