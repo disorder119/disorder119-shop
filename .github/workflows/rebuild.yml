@@ -71,6 +71,9 @@ jobs:
       - name: Python Syntax pruefen
         run: python -m py_compile build_site.py scripts/*.py
 
+      - name: Verifizierte Katalog-Quellfehler reparieren
+        run: python scripts/repair_catalog_source_integrity.py
+
       - name: Archiv-Taxonomie-Filter anwenden
         run: |
           if grep -q 'id="filterDepartment"' index_template.html \
@@ -87,6 +90,9 @@ jobs:
 
       - name: Archiv-Filter-Bugfixes anwenden
         run: python scripts/apply_archive_filter_bugfixes.py
+
+      - name: Live-Katalog-Polish anwenden
+        run: python scripts/apply_live_catalog_polish.py
 
       - name: JavaScript Syntax pruefen
         run: |
@@ -112,6 +118,9 @@ jobs:
 
       - name: Archiv-Taxonomie-Filter pruefen
         run: python scripts/validate_archive_taxonomy_filters.py
+
+      - name: Live-Katalog-Polish pruefen
+        run: python scripts/validate_live_catalog_polish.py
 
       - name: Commerce Unit Tests
         run: node --test shop-worker/commerce-core.test.mjs shop-worker/admin-api.test.mjs shop-worker/admin-insights.test.mjs shop-worker/admin-commerce-metrics.test.mjs shop-worker/admin-cases.test.mjs shop-worker/operations-monitor.test.mjs shop-worker/admin-system.test.mjs
