@@ -2,6 +2,7 @@ name: Seite automatisch neu bauen
 
 # Baut die statischen Seiten aus data/items.json und den Quelltemplates neu.
 # Vor jedem Commit laufen Syntax-, Katalog-, SEO-, Commerce- und Regressionstests.
+# Der Archivfilter hat zusaetzliche Regressionen fuer Sichtbarkeit, Reset und Facetten.
 # Match, Chaos und Baukasten sind ueber config/mode-guard.json gegen unbeabsichtigte
 # Aenderungen geschuetzt; der Guard wird niemals automatisch neu gesetzt.
 
@@ -83,6 +84,9 @@ jobs:
 
       - name: Archiv-Filter-UX anwenden
         run: python scripts/apply_archive_filter_ux.py
+
+      - name: Archiv-Filter-Bugfixes anwenden
+        run: python scripts/apply_archive_filter_bugfixes.py
 
       - name: JavaScript Syntax pruefen
         run: |
