@@ -138,13 +138,11 @@ async function audit(env, entityType, entityId, eventType, reqId, metadata = nul
 }
 
 function decorateReturn(row) {
-  if (!row) return row;
-  return { ...row, nextStatuses: returnNextStatuses(row.status) };
+  return row ? { ...row, nextStatuses: returnNextStatuses(row.status) } : row;
 }
 
 function decorateDamage(row) {
-  if (!row) return row;
-  return { ...row, nextStatuses: damageNextStatuses(row.status) };
+  return row ? { ...row, nextStatuses: damageNextStatuses(row.status) } : row;
 }
 
 async function getCases(env, url) {
@@ -155,7 +153,7 @@ async function getCases(env, url) {
       (SELECT COUNT(*) FROM returns WHERE status NOT IN ('CLOSED','REJECTED')) AS openReturns,
       (SELECT COUNT(*) FROM damage_cases WHERE status IN ('OPEN','REVIEW')) AS openDamages,
       (SELECT COUNT(*) FROM operations_tasks WHERE status='OPEN') AS openTasks,
-      (SELECT COUNT(*) FROM operations_tasks WHERE status='OPEN' AND due_at IS NOT NULL AND due_at<datetime('now')) AS overdueTasks,
+      (SELECT COUNT(*) FROM operations_tasks WHERE status='OPEN' AND due_at IS NOT NULL AND julianday(due_at)<julianday('now')) AS overdueTasks,
       (SELECT COUNT(*) FROM payment_events WHERE processed_at IS NULL) AS unprocessedPaymentEvents,
       (SELECT COUNT(*) FROM payments WHERE status IN ('CREATED','PENDING','AUTHORIZED','FAILED')) AS paymentAttention,
       (SELECT COUNT(*) FROM refunds WHERE status IN ('PENDING','FAILED')) AS refundAttention`),
@@ -235,8 +233,7 @@ async function createReturn(env, body, reqId) {
   await db.prepare(`INSERT INTO returns (id,order_id,rental_id,status,reason_code,created_at,updated_at)
     VALUES (?,?,?,'REQUESTED',?,?,?)`).bind(id, orderId, rentalId, reasonCode, now, now).run();
   await audit(env, "return", id, "RETURN_CREATED", reqId, { entityType, entityId: orderId || rentalId, reasonCode });
-  const row = await db.prepare("SELECT * FROM returns WHERE id=?").bind(id).first();
-  return decorateReturn(row);
+  return decorateReturn(await db.prepare("SELECT * FROM returns WHERE id=?").bind(id).first());
 }
 
 async function updateReturn(env, id, body, reqId) {
@@ -270,13 +267,18 @@ async function createDamage(env, body, reqId) {
   const withheld = normalizeNonNegativeCents(body.withheldAmountCents, true);
   if (!DAMAGE_SEVERITIES.includes(severity) || !description) throw new CasesAdminError("INVALID_DAMAGE_CASE", 400);
   if (estimated === undefined || withheld === undefined) throw new CasesAdminError("INVALID_DAMAGE_AMOUNT", 400);
+
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   await db.prepare(`INSERT INTO damage_cases
     (id,rental_id,return_id,severity,status,description,estimated_amount_cents,withheld_amount_cents,created_at,updated_at)
     VALUES (?,?,?,?,'OPEN',?,?,?,?,?)`).bind(id, rental.id, returnId, severity, description, estimated, withheld, now, now).run();
   await audit(env, "damage_case", id, "DAMAGE_CASE_CREATED", reqId, {
-    rentalId: rental.id, rentalReservationId: rental.rental_reservation_id, severity, estimatedAmountCents: estimated, withheldAmountCents: withheld,
+    rentalId: rental.id,
+    rentalReservationId: rental.rental_reservation_id,
+    severity,
+    estimatedAmountCents: estimated,
+    withheldAmountCents: withheld,
   });
   return decorateDamage(await db.prepare("SELECT * FROM damage_cases WHERE id=?").bind(id).first());
 }
@@ -285,24 +287,33 @@ async function updateDamage(env, id, body, reqId) {
   const db = env.DB;
   const row = await db.prepare("SELECT * FROM damage_cases WHERE id=?").bind(id).first();
   if (!row) throw new CasesAdminError("DAMAGE_CASE_NOT_FOUND", 404);
+
   const next = Object.prototype.hasOwnProperty.call(body, "status") ? safeText(body.status, 20).toUpperCase() : row.status;
   if (!DAMAGE_STATUSES.includes(next)) throw new CasesAdminError("INVALID_DAMAGE_STATUS", 400);
   if (next !== row.status && !damageNextStatuses(row.status).includes(next)) throw new CasesAdminError("INVALID_DAMAGE_STATUS_TRANSITION", 409);
+
   const severity = Object.prototype.hasOwnProperty.call(body, "severity") ? safeText(body.severity, 20).toUpperCase() : row.severity;
   if (!DAMAGE_SEVERITIES.includes(severity)) throw new CasesAdminError("INVALID_DAMAGE_SEVERITY", 400);
   const description = Object.prototype.hasOwnProperty.call(body, "description") ? safeText(body.description, 4000) : row.description;
   if (!description) throw new CasesAdminError("INVALID_DAMAGE_CASE", 400);
+
   const estimated = Object.prototype.hasOwnProperty.call(body, "estimatedAmountCents")
     ? normalizeNonNegativeCents(body.estimatedAmountCents, true) : row.estimated_amount_cents;
   const withheld = Object.prototype.hasOwnProperty.call(body, "withheldAmountCents")
     ? normalizeNonNegativeCents(body.withheldAmountCents, true) : row.withheld_amount_cents;
   if (estimated === undefined || withheld === undefined) throw new CasesAdminError("INVALID_DAMAGE_AMOUNT", 400);
+
   const now = new Date().toISOString();
-  const resolved = ["RESOLVED", "WAIVED"].includes(next) ? (row.resolved_at || now) : null;
-  await db.prepare(`UPDATE damage_cases SET status=?,severity=?,description=?,estimated_amount_cents=?,withheld_amount_cents=?,updated_at=?,resolved_at=? WHERE id=?`)
-    .bind(next, severity, description, estimated, withheld, now, resolved, id).run();
+  const resolvedAt = ["RESOLVED", "WAIVED"].includes(next) ? (row.resolved_at || now) : null;
+  await db.prepare(`UPDATE damage_cases
+    SET status=?,severity=?,description=?,estimated_amount_cents=?,withheld_amount_cents=?,updated_at=?,resolved_at=? WHERE id=?`)
+    .bind(next, severity, description, estimated, withheld, now, resolvedAt, id).run();
   await audit(env, "damage_case", id, "DAMAGE_CASE_UPDATED", reqId, {
-    from: row.status, to: next, severity, estimatedAmountCents: estimated, withheldAmountCents: withheld,
+    from: row.status,
+    to: next,
+    severity,
+    estimatedAmountCents: estimated,
+    withheldAmountCents: withheld,
   });
   return decorateDamage(await db.prepare("SELECT * FROM damage_cases WHERE id=?").bind(id).first());
 }
@@ -318,6 +329,7 @@ async function createTask(env, body, reqId) {
   if (!TASK_ENTITY_TYPES.includes(entityType) || !entityId || !title || !TASK_PRIORITIES.includes(priority)) {
     throw new CasesAdminError("INVALID_OPERATIONS_TASK", 400);
   }
+
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   await db.prepare(`INSERT INTO operations_tasks
@@ -331,15 +343,20 @@ async function updateTask(env, id, body, reqId) {
   const db = env.DB;
   const row = await db.prepare("SELECT * FROM operations_tasks WHERE id=?").bind(id).first();
   if (!row) throw new CasesAdminError("OPERATIONS_TASK_NOT_FOUND", 404);
+
   const status = Object.prototype.hasOwnProperty.call(body, "status") ? safeText(body.status, 20).toUpperCase() : row.status;
   const priority = Object.prototype.hasOwnProperty.call(body, "priority") ? safeText(body.priority, 20).toUpperCase() : row.priority;
   const title = Object.prototype.hasOwnProperty.call(body, "title") ? safeText(body.title, 240) : row.title;
   const text = Object.prototype.hasOwnProperty.call(body, "body") ? (safeText(body.body, 4000) || null) : row.body;
   const dueAt = Object.prototype.hasOwnProperty.call(body, "dueAt") ? nullableIso(body.dueAt) : row.due_at;
-  if (!TASK_STATUSES.includes(status) || !TASK_PRIORITIES.includes(priority) || !title) throw new CasesAdminError("INVALID_OPERATIONS_TASK", 400);
+  if (!TASK_STATUSES.includes(status) || !TASK_PRIORITIES.includes(priority) || !title) {
+    throw new CasesAdminError("INVALID_OPERATIONS_TASK", 400);
+  }
+
   const now = new Date().toISOString();
   const completedAt = status === "OPEN" ? null : (row.completed_at || now);
-  await db.prepare(`UPDATE operations_tasks SET title=?,body=?,priority=?,status=?,due_at=?,updated_at=?,completed_at=? WHERE id=?`)
+  await db.prepare(`UPDATE operations_tasks
+    SET title=?,body=?,priority=?,status=?,due_at=?,updated_at=?,completed_at=? WHERE id=?`)
     .bind(title, text, priority, status, dueAt, now, completedAt, id).run();
   await audit(env, "operations_task", id, "OPERATIONS_TASK_UPDATED", reqId, { from: row.status, to: status, priority, dueAt });
   return db.prepare("SELECT * FROM operations_tasks WHERE id=?").bind(id).first();
@@ -375,7 +392,12 @@ export async function handleAdminCases(request, env, url, reqId, origin = null) 
     throw new CasesAdminError("NOT_FOUND", 404);
   } catch (err) {
     if (err instanceof CasesAdminError) return json({ error: err.code, requestId: reqId }, err.status, origin);
-    console.error(JSON.stringify({ level: "error", event: "admin_cases_error", requestId: reqId, message: safeText(err?.message || "unknown", 180) }));
+    console.error(JSON.stringify({
+      level: "error",
+      event: "admin_cases_error",
+      requestId: reqId,
+      message: safeText(err?.message || "unknown", 180),
+    }));
     return json({ error: "INTERNAL_ADMIN_CASES_ERROR", requestId: reqId }, 500, origin);
   }
 }
