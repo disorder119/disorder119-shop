@@ -4,6 +4,7 @@ import {
   enrichRentalReservation,
   snapshotPaypalOrder,
 } from "./admin-api.js";
+import { handleAdminInsights } from "./admin-insights.js";
 
 function requestId(request) {
   const existing = request.headers.get("cf-ray");
@@ -33,6 +34,10 @@ export default {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin");
     const reqId = requestId(request);
+
+    if (url.pathname === "/admin/insights") {
+      return handleAdminInsights(request, env, url, reqId, origin);
+    }
 
     if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
       return handleAdminRequest(request, env, url, reqId, origin);
