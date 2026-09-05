@@ -299,6 +299,14 @@ __STATIC_PAGE_CONTENT__
   </div>
   <div class="filter-panel hidden" id="filterPanel">
     <div class="filter-field">
+      <label data-i18n="filterDepartmentLabel">Bereich</label>
+      <select id="filterDepartment"><option value="" data-i18n="filterAllDepartments">Alle Bereiche</option></select>
+    </div>
+    <div class="filter-field">
+      <label data-i18n="filterProductTypeLabel">Produkttyp</label>
+      <select id="filterProductType"><option value="" data-i18n="filterAllProductTypes">Alle Produkttypen</option></select>
+    </div>
+    <div class="filter-field">
       <label data-i18n="filterBrandLabel">Marke</label>
       <select id="filterBrand"><option value="" data-i18n="filterAllBrands">Alle Marken</option></select>
     </div>
@@ -433,6 +441,10 @@ __STATIC_PAGE_CONTENT__
 <script>window.SHOP_CONFIG = __SHOP_CONFIG_JSON__;</script>
 <script src="/assets/app.js?v=__APP_JS_VERSION__"></script>
 <script src="/assets/rental-commerce.js"></script>
+<script src="/assets/rental-v2.js"></script>
+<script src="/assets/rental-v2-ui.js"></script>
+<script src="/assets/rental-v2-picker.js"></script>
+<script src="/assets/rental-v2-bundle.js"></script>
 
 </body>
 </html>

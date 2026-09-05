@@ -79,6 +79,8 @@
       sortPriceDesc: "Preis absteigend", sortBrand: "Marke A–Z",
       mountBlack: "Fotomontage: Schwarz", mountWhite: "Fotomontage: Weiß",
       moreFilters: "Weitere Filter",
+      filterDepartmentLabel: "Bereich", filterAllDepartments: "Alle Bereiche",
+      filterProductTypeLabel: "Produkttyp", filterAllProductTypes: "Alle Produkttypen",
       filterBrandLabel: "Marke", filterAllBrands: "Alle Marken",
       filterSizeLabel: "Größe", filterAllSizes: "Alle Größen",
       filterColorLabel: "Farbe", filterAllColors: "Alle Farben",
@@ -246,6 +248,8 @@
       sortPriceDesc: "Price descending", sortBrand: "Brand A–Z",
       mountBlack: "Photo backdrop: black", mountWhite: "Photo backdrop: white",
       moreFilters: "More filters",
+      filterDepartmentLabel: "Department", filterAllDepartments: "All departments",
+      filterProductTypeLabel: "Product type", filterAllProductTypes: "All product types",
       filterBrandLabel: "Brand", filterAllBrands: "All brands",
       filterSizeLabel: "Size", filterAllSizes: "All sizes",
       filterColorLabel: "Colour", filterAllColors: "All colours",
@@ -414,6 +418,8 @@
       sortPriceDesc: "Prix décroissant", sortBrand: "Marque A–Z",
       mountBlack: "Fond photo : noir", mountWhite: "Fond photo : blanc",
       moreFilters: "Plus de filtres",
+      filterDepartmentLabel: "Rayon", filterAllDepartments: "Tous les rayons",
+      filterProductTypeLabel: "Type de produit", filterAllProductTypes: "Tous les types",
       filterBrandLabel: "Marque", filterAllBrands: "Toutes les marques",
       filterSizeLabel: "Taille", filterAllSizes: "Toutes les tailles",
       filterColorLabel: "Couleur", filterAllColors: "Toutes les couleurs",
@@ -592,12 +598,77 @@
     "Repariert": "condRepariert", "Mit Defekt": "condDefekt",
     "Gut": "condGut", "Sehr gut": "condSehrGut", "Zufriedenstellend": "condZufriedenstellend"
   };
+  var DEPARTMENT_LABELS = {
+    Women: { de: "Damen", en: "Women", fr: "Femme" },
+    Men: { de: "Herren", en: "Men", fr: "Homme" },
+    Unisex: { de: "Unisex", en: "Unisex", fr: "Unisexe" },
+    Objects: { de: "Objekte", en: "Objects", fr: "Objets" }
+  };
+  var PRODUCT_TYPE_LABELS = {
+    "Accessory": { de: "Accessoire", fr: "Accessoire" },
+    "Backpack": { de: "Rucksack", fr: "Sac à dos" },
+    "Bag": { de: "Tasche", fr: "Sac" },
+    "Beanie": { de: "Mütze / Beanie", fr: "Bonnet" },
+    "Belt": { de: "Gürtel", fr: "Ceinture" },
+    "Biker Jacket": { de: "Bikerjacke", fr: "Veste biker" },
+    "Blazer": { de: "Blazer", fr: "Blazer" },
+    "Blouse": { de: "Bluse", fr: "Blouse" },
+    "Bomber Jacket": { de: "Bomberjacke", fr: "Bomber" },
+    "Boots": { de: "Stiefel / Boots", fr: "Bottes" },
+    "Cap": { de: "Cap", fr: "Casquette" },
+    "Cardigan": { de: "Cardigan / Strickjacke", fr: "Cardigan" },
+    "Coat": { de: "Mantel", fr: "Manteau" },
+    "Design Object": { de: "Designobjekt", fr: "Objet design" },
+    "Dress": { de: "Kleid", fr: "Robe" },
+    "Hat": { de: "Hut", fr: "Chapeau" },
+    "Heels": { de: "Heels / Absatzschuhe", fr: "Chaussures à talons" },
+    "Jacket": { de: "Jacke", fr: "Veste" },
+    "Joggers": { de: "Jogginghose", fr: "Jogging" },
+    "Knit Top": { de: "Stricktop", fr: "Haut en maille" },
+    "Loafers": { de: "Loafer", fr: "Mocassins" },
+    "Long Sleeve": { de: "Longsleeve", fr: "Manches longues" },
+    "Polo Shirt": { de: "Poloshirt", fr: "Polo" },
+    "Sandals": { de: "Sandalen", fr: "Sandales" },
+    "Scarf": { de: "Schal", fr: "Écharpe" },
+    "Set": { de: "Set", fr: "Ensemble" },
+    "Shirt": { de: "Hemd / Shirt", fr: "Chemise" },
+    "Shoes": { de: "Schuhe", fr: "Chaussures" },
+    "Shorts": { de: "Shorts", fr: "Short" },
+    "Skirt": { de: "Rock", fr: "Jupe" },
+    "Sleepwear": { de: "Schlafanzug / Sleepwear", fr: "Vêtement de nuit" },
+    "Sneakers": { de: "Sneaker", fr: "Baskets" },
+    "Suit": { de: "Anzug", fr: "Costume" },
+    "Sunglasses": { de: "Sonnenbrille", fr: "Lunettes de soleil" },
+    "Sweater": { de: "Pullover", fr: "Pull" },
+    "Sweatshirt": { de: "Sweatshirt", fr: "Sweatshirt" },
+    "Swim Shorts": { de: "Badeshorts", fr: "Short de bain" },
+    "T-Shirt": { de: "T-Shirt", fr: "T-shirt" },
+    "Tank Top": { de: "Tanktop", fr: "Débardeur" },
+    "Toaster": { de: "Toaster / Designobjekt", fr: "Grille-pain / objet design" },
+    "Top": { de: "Top", fr: "Haut" },
+    "Trench Coat": { de: "Trenchcoat", fr: "Trench" },
+    "Trousers": { de: "Hose", fr: "Pantalon" },
+    "Tunic": { de: "Tunika", fr: "Tunique" },
+    "Underwear Shorts": { de: "Unterwäsche-Shorts", fr: "Sous-vêtement" },
+    "Vest": { de: "Weste", fr: "Gilet" },
+    "Wallet": { de: "Wallet / Geldbörse", fr: "Portefeuille" }
+  };
   var SIZE_MAP_DE_TO_KEY = {
     "Einheitsgröße": "sizeEinheitsgroesse", "verstellbar": "sizeVerstellbar",
     "Größenverstellbar": "sizeVerstellbar", "Kindergröße L": "sizeKidsL", "Sonstige": "catSonstiges"
   };
 
   function trCategory(cat) { var k = CATEGORY_MAP_DE_TO_KEY[cat]; return k ? t(k) : (cat || ""); }
+  function trDepartment(department) {
+    var labels = DEPARTMENT_LABELS[department];
+    return labels ? (labels[LANG] || labels.en || department) : (department || "");
+  }
+  function trProductType(productType) {
+    if (!productType) return "";
+    if (LANG === "en") return productType;
+    var labels = PRODUCT_TYPE_LABELS[productType];
+    return labels ? (labels[LANG] || productType) : productType;
+  }
   function trCondition(cond) { var k = CONDITION_MAP_DE_TO_KEY[cond]; return k ? t(k) : (cond || ""); }
   function trSize(size) { var k = SIZE_MAP_DE_TO_KEY[size]; return k ? t(k) : (size || ""); }
 
@@ -1227,6 +1298,8 @@
     category: "all",
     categoryGroup: null,
     sort: "brightness",
+    department: "",
+    productType: "",
     brand: "",
     size: "",
     color: "",
@@ -1294,7 +1367,8 @@
   var categoryChipsEl = document.getElementById("categoryChips");
   var categories = {};
   PUBLIC_ITEMS.forEach(function (it) {
-    if (it.category) categories[it.category] = (categories[it.category] || 0) + 1;
+    var browseCategory = it.taxonomy_category || it.category;
+    if (browseCategory) categories[browseCategory] = (categories[browseCategory] || 0) + 1;
   });
   var categoryList = Object.keys(categories).sort(function (a, b) {
     return categories[b] - categories[a];
@@ -1340,7 +1414,7 @@
     categoryChipsEl.appendChild(b);
   });
 
-  // ---- Weitere Filter: Marke, Groesse, Farbe, Zustand, Preis ----
+  // ---- Weitere Filter: Bereich, Produkttyp, Marke, Groesse, Farbe, Zustand, Preis ----
   // Bewusst hinter einem Umschalter versteckt (statt permanent in der Leiste),
   // damit die Oberflaeche bei "nur mal schnell stoebern" nicht ueberladen
   // wirkt - wer gezielt filtern will, klappt sie auf.
@@ -1352,6 +1426,8 @@
     moreFiltersToggle.setAttribute("aria-expanded", willShow ? "true" : "false");
   });
 
+  var filterDepartmentEl = document.getElementById("filterDepartment");
+  var filterProductTypeEl = document.getElementById("filterProductType");
   var filterBrandEl = document.getElementById("filterBrand");
   var filterSizeEl = document.getElementById("filterSize");
   var filterColorEl = document.getElementById("filterColor");
@@ -1368,11 +1444,28 @@
     });
   }
 
+  var departmentSet = {};
+  var productTypeSet = {};
+  PUBLIC_ITEMS.forEach(function (it) {
+    if (it.department) departmentSet[it.department] = true;
+    if (it.product_type) productTypeSet[it.product_type] = true;
+  });
+  ["Women", "Men", "Unisex", "Objects"].forEach(function (department) {
+    if (departmentSet[department]) fillSelect(filterDepartmentEl, [department], trDepartment);
+  });
+  fillSelect(
+    filterProductTypeEl,
+    Object.keys(productTypeSet).sort(function (a, b) { return trProductType(a).localeCompare(trProductType(b), LANG); }),
+    trProductType
+  );
+
   var brandList = Object.keys(brandsSet).sort(function (a, b) { return a.localeCompare(b, "de"); });
   fillSelect(filterBrandEl, brandList);
 
   var sizeSet = {};
-  PUBLIC_ITEMS.forEach(function (it) { if (it.size) sizeSet[it.size] = true; });
+  PUBLIC_ITEMS.forEach(function (it) {
+    if (it.size_normalized && it.size_normalized !== "Unknown") sizeSet[it.size_normalized] = true;
+  });
   fillSelect(filterSizeEl, Object.keys(sizeSet).sort(function (a, b) { return a.localeCompare(b, "de", { numeric: true }); }), trSize);
 
   var colorSet = {};
@@ -1389,6 +1482,8 @@
   var conditionList = Object.keys(conditionSet).sort();
   fillSelect(filterConditionEl, conditionList, trCondition);
 
+  filterDepartmentEl.addEventListener("change", function () { state.department = filterDepartmentEl.value; render(); });
+  filterProductTypeEl.addEventListener("change", function () { state.productType = filterProductTypeEl.value; render(); });
   filterBrandEl.addEventListener("change", function () { state.brand = filterBrandEl.value; render(); });
   filterSizeEl.addEventListener("change", function () { state.size = filterSizeEl.value; render(); });
   filterColorEl.addEventListener("change", function () { state.color = filterColorEl.value; render(); });
@@ -1403,9 +1498,10 @@
   });
 
   document.getElementById("filterReset").addEventListener("click", function () {
-    state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
+    state.department = ""; state.productType = ""; state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
     state.priceMin = null; state.priceMax = null;
-    state.categoryGroup = null;    filterBrandEl.value = ""; filterSizeEl.value = ""; filterColorEl.value = ""; filterConditionEl.value = "";
+    state.categoryGroup = null;
+    filterDepartmentEl.value = ""; filterProductTypeEl.value = ""; filterBrandEl.value = ""; filterSizeEl.value = ""; filterColorEl.value = ""; filterConditionEl.value = "";
     filterPriceMinEl.value = ""; filterPriceMaxEl.value = "";
     render();
   });
@@ -1505,8 +1601,10 @@
     });
     // Zusaetzliche Filter zuruecksetzen, damit sie einem Marken-Klick nicht
     // unerwartet Ergebnisse wegfiltern (z.B. eine vorher gewaehlte Farbe).
-    state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
+    state.department = ""; state.productType = ""; state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
     state.priceMin = null; state.priceMax = null;
+    if (filterDepartmentEl) filterDepartmentEl.value = "";
+    if (filterProductTypeEl) filterProductTypeEl.value = "";
     if (filterBrandEl) filterBrandEl.value = "";
     if (filterSizeEl) filterSizeEl.value = "";
     if (filterColorEl) filterColorEl.value = "";
@@ -1537,8 +1635,10 @@
     // die Beschriftung darf nicht etwas versprechen, was der Filter nicht haelt.
     if (state.status === "Verfügbar" && it.public_status !== "AVAILABLE") return false;
     if (state.status === "Verkauft" && it.public_status !== "SOLD") return false;
+    if (state.department && it.department !== state.department) return false;
+    if (state.productType && it.product_type !== state.productType) return false;
     if (state.brand && it.brand !== state.brand) return false;
-    if (state.size && it.size !== state.size) return false;
+    if (state.size && it.size_normalized !== state.size) return false;
     if (state.condition && it.condition !== state.condition) return false;
     if (state.color) {
       // Farbfeld ist teils Mehrfachangabe ("Schwarz, Weiß") - Treffer, wenn
@@ -1549,10 +1649,14 @@
     }
     if (state.priceMin != null && !(it.price >= state.priceMin)) return false;
     if (state.priceMax != null && !(it.price > 0 && it.price <= state.priceMax)) return false;
-    if (state.categoryGroup && state.categoryGroup.indexOf(it.category) === -1) return false;
-    if (state.category !== "all" && it.category !== state.category) return false;
+    var browseCategory = it.taxonomy_category || it.category;
+    if (state.categoryGroup && state.categoryGroup.indexOf(browseCategory) === -1) return false;
+    if (state.category !== "all" && browseCategory !== state.category) return false;
     if (state.query) {
-      var hay = normalizeText(it.title) + " " + normalizeText(it.brand) + " " + normalizeText(it.category);
+      var hay = [
+        it.title, it.brand, browseCategory, it.product_type, it.department,
+        it.size, it.size_normalized
+      ].map(normalizeText).join(" ");
       if (!queryMatchesHay(hay, state.query)) return false;
     }
     return true;
@@ -1589,7 +1693,7 @@
       (state.catalogLabelCategory ? trCategory(state.catalogLabelCategory) : t(state.catalogLabelKey || "statusAvailable"));
     var filterSignature = JSON.stringify([
       state.query, state.status, state.category, state.categoryGroup,
-      state.sort, state.brand, state.size, state.color,
+      state.sort, state.department, state.productType, state.brand, state.size, state.color,
       state.condition, state.priceMin, state.priceMax
     ]);
     if (filterSignature !== lastFilterSignature) {
@@ -2044,9 +2148,9 @@
   });
 
   function resetCatalogFilters() {
-    state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
+    state.department = ""; state.productType = ""; state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
     state.priceMin = null; state.priceMax = null;
-    filterBrandEl.value = ""; filterSizeEl.value = ""; filterColorEl.value = ""; filterConditionEl.value = "";
+    filterDepartmentEl.value = ""; filterProductTypeEl.value = ""; filterBrandEl.value = ""; filterSizeEl.value = ""; filterColorEl.value = ""; filterConditionEl.value = "";
     filterPriceMinEl.value = ""; filterPriceMaxEl.value = "";
   }
 
