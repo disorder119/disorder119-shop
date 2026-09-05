@@ -13,6 +13,7 @@ FILES = [
     BASE / "shop-worker" / "migrations" / "0004_admin_operations.sql",
     BASE / "shop-worker" / "migrations" / "0005_rental_groups.sql",
     BASE / "shop-worker" / "migrations" / "0006_operations_cases.sql",
+    BASE / "shop-worker" / "migrations" / "0007_operations_automation.sql",
 ]
 
 
@@ -54,9 +55,17 @@ def main() -> None:
             raise SystemExit(f"FEHLER: damage_cases.{name} fehlt nach Migration")
 
     task_columns = {row[1] for row in db.execute("PRAGMA table_info(operations_tasks)")}
-    for name in ["entity_type", "entity_id", "priority", "status", "due_at", "completed_at"]:
+    for name in [
+        "entity_type", "entity_id", "priority", "status", "due_at", "completed_at",
+        "automation_key", "automation_kind", "auto_managed", "first_seen_at",
+        "last_seen_at", "occurrence_count",
+    ]:
         if name not in task_columns:
             raise SystemExit(f"FEHLER: operations_tasks.{name} fehlt nach Migration")
+
+    indexes = {row[1] for row in db.execute("PRAGMA index_list(operations_tasks)")}
+    if "uniq_operations_tasks_automation_key" not in indexes:
+        raise SystemExit("FEHLER: Dedupe-Index fuer automatische Operations-Tasks fehlt")
 
     triggers = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='trigger'")}
     for name in [
@@ -135,8 +144,8 @@ def main() -> None:
         raise SystemExit("FEHLER: Durable Rental fehlt fuer Operations-Cases-Smoke-Test")
     durable_id = durable[0]
 
-    # New operational records must be structurally usable without touching a
-    # payment provider. They are private D1 records only.
+    # Operational records must be structurally usable without touching a payment
+    # provider. They are private D1 records only.
     db.execute(
         """INSERT INTO damage_cases
         (id,rental_id,severity,status,description,estimated_amount_cents,withheld_amount_cents,created_at,updated_at)
@@ -156,10 +165,36 @@ def main() -> None:
         (durable_id,),
     )
     task = db.execute(
-        "SELECT entity_type,priority,status FROM operations_tasks WHERE id='task-test'"
+        "SELECT entity_type,priority,status,auto_managed,automation_key FROM operations_tasks WHERE id='task-test'"
     ).fetchone()
-    if task != ("RENTAL", "HIGH", "OPEN"):
-        raise SystemExit(f"FEHLER: Operations-Task-Schema unerwartet: {task!r}")
+    if task != ("RENTAL", "HIGH", "OPEN", 0, None):
+        raise SystemExit(f"FEHLER: Manueller Operations-Task unerwartet: {task!r}")
+
+    # Automated tasks have a durable unique key while manual tasks retain NULL.
+    db.execute(
+        """INSERT INTO operations_tasks
+        (id,entity_type,entity_id,title,priority,status,created_at,updated_at,
+         automation_key,automation_kind,auto_managed,first_seen_at,last_seen_at,occurrence_count)
+        VALUES ('task-auto-1','SYSTEM','payment-event-1','Payment Event pruefen','URGENT','OPEN',
+                '2026-09-05T10:06:00Z','2026-09-05T10:06:00Z','ops-auto-v1:PAYMENT_EVENT_UNPROCESSED:event-1',
+                'PAYMENT_EVENT_UNPROCESSED',1,'2026-09-05T10:06:00Z','2026-09-05T10:06:00Z',1)"""
+    )
+    auto_task = db.execute(
+        "SELECT auto_managed,automation_kind,occurrence_count FROM operations_tasks WHERE id='task-auto-1'"
+    ).fetchone()
+    if auto_task != (1, "PAYMENT_EVENT_UNPROCESSED", 1):
+        raise SystemExit(f"FEHLER: Automatischer Operations-Task unerwartet: {auto_task!r}")
+    try:
+        db.execute(
+            """INSERT INTO operations_tasks
+            (id,entity_type,entity_id,title,priority,status,created_at,updated_at,automation_key,auto_managed)
+            VALUES ('task-auto-duplicate','SYSTEM','payment-event-1','Duplikat','URGENT','OPEN',
+                    '2026-09-05T10:06:01Z','2026-09-05T10:06:01Z','ops-auto-v1:PAYMENT_EVENT_UNPROCESSED:event-1',1)"""
+        )
+    except sqlite3.IntegrityError:
+        pass
+    else:
+        raise SystemExit("FEHLER: Automations-Dedupe-Key erlaubt doppelte Tasks")
 
     count = db.execute("SELECT COUNT(*) FROM rentals WHERE rental_reservation_id='rr-materialize'").fetchone()[0]
     if count != 1:
@@ -181,8 +216,8 @@ def main() -> None:
         raise SystemExit("FEHLER: Ungueltiger Rental-Group-Statussprung wurde von D1 nicht blockiert")
 
     print(
-        "D1-Migrationskette: OK (schema + 0002 + 0003 + 0004 + 0005 + 0006, "
-        "inkl. Durable-Rental-Materialisierung, Rental-Group-Lifecycle und Operations-Cases)"
+        "D1-Migrationskette: OK (schema + 0002 + 0003 + 0004 + 0005 + 0006 + 0007, "
+        "inkl. Durable-Rental-Materialisierung, Rental-Group-Lifecycle, Operations-Cases und Alert-Dedupe)"
     )
 
 

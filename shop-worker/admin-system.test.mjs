@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { SYSTEM_SCHEMA_TARGET, detectSchemaVersion } from "./admin-system.js";
 
-assert.equal(SYSTEM_SCHEMA_TARGET, "0006_operations_cases");
+assert.equal(SYSTEM_SCHEMA_TARGET, "0007_operations_automation");
 assert.equal(detectSchemaVersion([]), "schema_base_or_unknown");
 assert.equal(
   detectSchemaVersion(["commerce_orders", "rental_reservations"]),
@@ -21,6 +21,20 @@ assert.equal(
 );
 assert.equal(
   detectSchemaVersion(["rental_groups", "damage_cases", "operations_tasks"]),
+  "0006_operations_cases"
+);
+assert.equal(
+  detectSchemaVersion(
+    ["rental_groups", "damage_cases", "operations_tasks"],
+    ["automation_key", "automation_kind", "auto_managed", "automation_active", "first_seen_at", "last_seen_at", "occurrence_count"],
+  ),
+  "0007_operations_automation"
+);
+assert.equal(
+  detectSchemaVersion(
+    ["rental_groups", "damage_cases", "operations_tasks"],
+    ["automation_key", "auto_managed", "automation_active"],
+  ),
   "0006_operations_cases"
 );
 

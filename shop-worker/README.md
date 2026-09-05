@@ -18,7 +18,7 @@ Keine dieser Optionen darf nur fuer Tests auf Produktion aktiviert werden.
 ## Source of truth
 
 - `data/items.json`: kuratierter, oeffentlicher Produktkatalog.
-- Cloudflare D1: private operative Daten fuer Inventar, Reservierungen, Bestellungen, Zahlungen, Mietvorgaenge, Versand, Retouren, Refunds, Admin-Notizen und Audit-Events.
+- Cloudflare D1: private operative Daten fuer Inventar, Reservierungen, Bestellungen, Zahlungen, Mietvorgaenge, Versand, Retouren, Refunds, Admin-Notizen, Tasks und Audit-Events.
 - Zahlungs- und Kundeninformationen gehoeren niemals in oeffentliche GitHub-JSON-Dateien.
 - Preise werden serverseitig aus vertrauenswuerdigen Katalogdaten bestimmt; der Browser ist keine Preisquelle.
 
@@ -39,6 +39,7 @@ Die aktuelle Standard-Kaution wird bei der Mietanfrage serverseitig als Snapshot
 - `rental_days` verhindert ueberlappende aktive Mietbuchungen desselben Einzelstuecks fuer denselben Tag.
 - `0003_state_integrity.sql` validiert Mietpreis und Gesamtpreis zusaetzlich direkt in D1.
 - `0005_rental_groups.sql` schuetzt gebuendelte Mehrfachmieten auf Datenbankebene.
+- `0004_admin_operations.sql` materialisiert beim Bestaetigen einer Mietreservierung automatisch genau einen dauerhaften `rentals`-Datensatz fuer Kaution, Rueckgabe und Refund-Verknuepfung.
 
 ## Mehrfachmieten
 
@@ -74,15 +75,33 @@ Der Worker stellt unter `/admin/*` private Operations-Routen bereit fuer:
 - Bestellungen und Statuswechsel,
 - Payments,
 - Versand und Tracking,
-- Vermietungen,
+- Vermietungen und Rental Groups,
 - Inventar,
 - Kunden,
 - Retouren und Refunds,
+- Schadenfaelle und interne Tasks,
 - Audit-Aktivitaet,
 - Systemzustand,
 - interne Admin-Notizen.
 
 `ADMIN_TOKEN` ist nur eine temporaere Betriebsbruecke. Vor echtem breitem Produktivbetrieb sollte `admin.disorder119.com` zusaetzlich mit Cloudflare Access/MFA abgesichert werden.
+
+## Automatische Operations-Warnungen
+
+Migration `0007_operations_automation.sql` erweitert interne Tasks um deduplizierte Automations-Metadaten. Der Monitor erkennt ausschliesslich datenbankseitig belegbare Betriebszustaende und erstellt daraus interne Aufgaben, unter anderem fuer:
+
+- ueberfaellige Einzel- und Mehrfachmieten,
+- Rueckgaben, die geprueft oder abgeschlossen werden muessen,
+- offene Schadenfaelle,
+- fehlgeschlagene oder lange offene Refunds und Zahlungen,
+- Versandstatus `EXCEPTION`,
+- Payment-Events, die laenger als 15 Minuten unverarbeitet bleiben.
+
+Ein aktiver Zustand erzeugt pro Ursache nur einen Task. Eine manuell verworfene Warnung bleibt fuer dieselbe laufende Ursache verworfen. Verschwindet die Ursache, wird sie intern als inaktiv markiert; tritt sie spaeter erneut auf, wird der Task wieder geoeffnet und der Wiederholungszaehler erhoeht.
+
+`POST /admin/alerts/sync` fuehrt diese Pruefung nach Admin-Autorisierung manuell aus. `worker-entry.js` implementiert ausserdem einen `scheduled()`-Handler fuer einen spaeteren Cloudflare-Cron-Trigger. Das Vorhandensein dieses Handlers bedeutet **nicht**, dass ein Cron-Trigger bereits in Cloudflare konfiguriert oder deployed ist.
+
+Die Automatisierung fuehrt bewusst keine Provider-Aktion aus: Sie belastet keine Zahlung, erstattet nichts, versendet nichts und verschickt keine E-Mails.
 
 ## PayPal
 
@@ -120,7 +139,9 @@ Migrationen in dieser Reihenfolge anwenden:
 3. `shop-worker/migrations/0003_state_integrity.sql`.
 4. `shop-worker/migrations/0004_admin_operations.sql`.
 5. `shop-worker/migrations/0005_rental_groups.sql`.
-6. Datenbank als Worker-Binding `DB` konfigurieren.
+6. `shop-worker/migrations/0006_operations_cases.sql`.
+7. `shop-worker/migrations/0007_operations_automation.sql`.
+8. Datenbank als Worker-Binding `DB` konfigurieren.
 
 Die CI fuehrt die komplette Kette zusaetzlich in einer frischen SQLite-Datenbank aus. Vor Produktion muss die Migration dennoch in einer Cloudflare-D1-Testumgebung durchgespielt und ein Backup/Restore-Verfahren getestet werden.
 
@@ -167,14 +188,17 @@ Spaeter koennen auf Basis der gespeicherten Statuswechsel insbesondere folgende 
 
 `GET /health` liefert nur nicht-sensible Readiness-Informationen. Die privaten `/admin/system`- und `/admin/insights`-Routen liefern nur nach Admin-Autorisierung zusaetzliche Betriebsinformationen.
 
+`/admin/system` meldet den erkannten D1-Schemastand, fehlende Pflicht-Tabellen/-Spalten und die Konfigurationsflags. Fuer den Cron-Scheduler wird kein positiver Deploymentstatus erfunden: Ohne externe Cloudflare-Konfiguration bleibt dessen Status unbekannt.
+
 Fehlerantworten verwenden stabile Fehlercodes und eine `requestId`, ohne Provider-Secrets oder rohe interne Fehlerdetails offenzulegen.
 
 ## Vor Live-Start
 
 Mindestens erforderlich:
 
-- D1-Migrationen bis einschliesslich `0005` anwenden und Restore/Backup-Verfahren testen.
+- D1-Migrationen bis einschliesslich `0007` in einer Test-/Staging-D1 anwenden und Restore/Backup-Verfahren testen.
 - Worker deployen und `DB` binden.
+- Falls automatische Warnungen periodisch laufen sollen: Cloudflare Cron Trigger bewusst konfigurieren und danach den Scheduler real pruefen.
 - `ADMIN_TOKEN` als Secret setzen und Admin-Zugriff mit Cloudflare Access/MFA haerten.
 - PayPal Sandbox komplett durchtesten.
 - Mehrfachmiete mit Konkurrenz-/Ueberschneidungsfaellen testen.

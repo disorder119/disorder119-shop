@@ -8,6 +8,8 @@ import { handleAdminInsights } from "./admin-insights.js";
 import { handleAdminRentalGroups } from "./admin-rental-groups.js";
 import { handleAdminCases } from "./admin-cases.js";
 import { handleAdminSystem } from "./admin-system.js";
+import { handleAdminAlerts } from "./admin-alerts.js";
+import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
 
 function requestId(request) {
@@ -49,6 +51,10 @@ export default {
 
     if (url.pathname === "/admin/system") {
       return handleAdminSystem(request, env, url, reqId, origin);
+    }
+
+    if (url.pathname === "/admin/alerts/sync") {
+      return handleAdminAlerts(request, env, url, reqId, origin);
     }
 
     if (url.pathname === "/admin/rental-groups" || url.pathname.startsWith("/admin/rental-groups/")) {
@@ -119,5 +125,20 @@ export default {
     }
 
     return response;
+  },
+
+  async scheduled(event, env, ctx) {
+    const scheduledTime = Number(event?.scheduledTime || Date.now());
+    const reqId = `cron-${scheduledTime}`;
+    await runBackground(
+      ctx,
+      syncOperationsAlerts(env, {
+        now: new Date(scheduledTime).toISOString(),
+        requestId: reqId,
+        source: "CRON",
+      }),
+      "operations_automation_failed",
+      reqId,
+    );
   },
 };

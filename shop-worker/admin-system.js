@@ -1,6 +1,7 @@
 import { safeText } from "./commerce-core.js";
+import { OPERATIONS_AUTOMATION_SCHEMA_COLUMNS, OPERATIONS_AUTOMATION_VERSION } from "./operations-monitor.js";
 
-export const SYSTEM_SCHEMA_TARGET = "0006_operations_cases";
+export const SYSTEM_SCHEMA_TARGET = "0007_operations_automation";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -99,11 +100,13 @@ async function requireAdmin(request, env) {
   if (!env.DB) throw new AdminSystemError("COMMERCE_DATABASE_NOT_CONFIGURED", 503);
 }
 
-export function detectSchemaVersion(tableNames) {
+export function detectSchemaVersion(tableNames, operationsTaskColumns = []) {
   const names = new Set(Array.from(tableNames || [], String));
-  if (names.has("damage_cases") && names.has("operations_tasks") && names.has("rental_groups")) {
-    return "0006_operations_cases";
-  }
+  const taskColumns = new Set(Array.from(operationsTaskColumns || [], String));
+  const hasOperationsCases = names.has("damage_cases") && names.has("operations_tasks") && names.has("rental_groups");
+  const hasAutomation = OPERATIONS_AUTOMATION_SCHEMA_COLUMNS.every(name => taskColumns.has(name));
+  if (hasOperationsCases && hasAutomation) return "0007_operations_automation";
+  if (hasOperationsCases) return "0006_operations_cases";
   if (names.has("rental_groups")) return "0005_rental_groups";
   if (names.has("admin_notes") && names.has("order_contact_snapshots")) return "0004_admin_operations";
   if (names.has("payment_events") && names.has("audit_events")) return "0003_state_integrity";
@@ -129,6 +132,11 @@ async function getSystem(env) {
   ).all();
   const tables = (tablesResult.results || []).map(row => String(row.name));
   const present = new Set(tables);
+  const taskInfo = present.has("operations_tasks")
+    ? await env.DB.prepare("PRAGMA table_info(operations_tasks)").all()
+    : { results: [] };
+  const operationsTaskColumns = (taskInfo.results || []).map(row => String(row.name));
+  const taskColumnSet = new Set(operationsTaskColumns);
 
   const specs = [
     ["legacyOrders", "orders", "SELECT COUNT(*) AS value FROM orders"],
@@ -150,12 +158,15 @@ async function getSystem(env) {
     ["operationsTasks", "operations_tasks", "SELECT COUNT(*) AS value FROM operations_tasks"],
     ["openOperationsTasks", "operations_tasks", "SELECT COUNT(*) AS value FROM operations_tasks WHERE status='OPEN'"],
     ["overdueOperationsTasks", "operations_tasks", "SELECT COUNT(*) AS value FROM operations_tasks WHERE status='OPEN' AND due_at IS NOT NULL AND julianday(due_at)<julianday('now')"],
+    ["autoOperationsTasks", "operations_tasks", "SELECT COUNT(*) AS value FROM operations_tasks WHERE auto_managed=1", "auto_managed"],
+    ["openAutoOperationsTasks", "operations_tasks", "SELECT COUNT(*) AS value FROM operations_tasks WHERE auto_managed=1 AND status='OPEN'", "auto_managed"],
+    ["dismissedAutoOperationsTasks", "operations_tasks", "SELECT COUNT(*) AS value FROM operations_tasks WHERE auto_managed=1 AND status='DISMISSED'", "auto_managed"],
     ["auditEvents", "audit_events", "SELECT COUNT(*) AS value FROM audit_events"],
     ["unprocessedPaymentEvents", "payment_events", "SELECT COUNT(*) AS value FROM payment_events WHERE processed_at IS NULL"],
     ["expiredIdempotencyKeys", "idempotency_keys", "SELECT COUNT(*) AS value FROM idempotency_keys WHERE expires_at IS NOT NULL AND julianday(expires_at)<=julianday('now')"],
   ];
 
-  const runnable = specs.filter(([, table]) => present.has(table));
+  const runnable = specs.filter(([, table, , requiredColumn]) => present.has(table) && (!requiredColumn || taskColumnSet.has(requiredColumn)));
   const results = runnable.length
     ? await env.DB.batch(runnable.map(([, , sql]) => env.DB.prepare(sql)))
     : [];
@@ -165,13 +176,23 @@ async function getSystem(env) {
   });
 
   const missingRequiredTables = REQUIRED_TABLES.filter(name => !present.has(name));
+  const missingRequiredColumns = present.has("operations_tasks")
+    ? OPERATIONS_AUTOMATION_SCHEMA_COLUMNS.filter(name => !taskColumnSet.has(name)).map(name => `operations_tasks.${name}`)
+    : [];
   return {
     generatedAt: new Date().toISOString(),
     schemaTarget: SYSTEM_SCHEMA_TARGET,
-    schemaDetected: detectSchemaVersion(tables),
-    schemaReady: missingRequiredTables.length === 0,
+    schemaDetected: detectSchemaVersion(tables, operationsTaskColumns),
+    schemaReady: missingRequiredTables.length === 0 && missingRequiredColumns.length === 0,
     missingRequiredTables,
+    missingRequiredColumns,
     configured: configured(env),
+    operationsAutomation: {
+      version: OPERATIONS_AUTOMATION_VERSION,
+      schemaReady: missingRequiredColumns.length === 0 && present.has("operations_tasks"),
+      schedulerConfigured: null,
+      schedulerNote: "Scheduled handler is implemented, but cron configuration cannot be inferred from Worker runtime bindings.",
+    },
     tables,
     counts,
   };
