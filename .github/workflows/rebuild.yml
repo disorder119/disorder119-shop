@@ -71,7 +71,15 @@ jobs:
         run: python -m py_compile build_site.py scripts/*.py
 
       - name: Archiv-Taxonomie-Filter anwenden
-        run: python scripts/apply_archive_taxonomy_filters.py
+        run: |
+          if grep -q 'id="filterDepartment"' index_template.html \
+             && grep -q 'id="filterProductType"' index_template.html \
+             && grep -q 'var DEPARTMENT_LABELS = {' assets/app.js \
+             && grep -q 'it.taxonomy_category || it.category' assets/app.js; then
+            echo "Archiv-Taxonomie-Filter bereits im Quellstand vorhanden."
+          else
+            python scripts/apply_archive_taxonomy_filters.py
+          fi
 
       - name: Archiv-Filter-UX anwenden
         run: python scripts/apply_archive_filter_ux.py
@@ -121,6 +129,9 @@ jobs:
 
       - name: Katalog-Taxonomie in Browserdaten und Produktseiten uebernehmen
         run: python scripts/apply_catalog_taxonomy.py --generated-only
+
+      - name: Oeffentliche Produktseiten reparieren und DRAFT isolieren
+        run: python scripts/repair_public_article_integrity.py
 
       - name: Katalog-Taxonomie fuer jeden Artikel pruefen
         run: python scripts/validate_catalog_taxonomy.py
