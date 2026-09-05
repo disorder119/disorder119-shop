@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Regression checks for the browse-only archive taxonomy filters."""
+"""Regression checks for the browse-only archive taxonomy filters.
+
+Includes dedicated regressions for the September 2026 archive-filter bug hunt.
+"""
 from __future__ import annotations
 
 import json
@@ -28,9 +31,17 @@ def main() -> None:
         'id="activeFilters"', 'aria-live="polite"',
         'for="filterDepartment"', 'for="filterProductType"', 'for="filterBrand"',
         'for="filterSize"', 'for="filterColor"', 'for="filterCondition"',
+        '<div class="rail__right">',
     ):
         if needle not in template:
             fail(f"Archivfilter fehlt im Template: {needle}")
+
+    # The old class combination made the entire right-hand archive controls
+    # invisible because .catalog-controls is display:none !important.
+    if '<div class="rail__right catalog-controls"' in template:
+        fail("Weitere Filter/Sortierung sind durch catalog-controls unsichtbar")
+    if '<div class="rail__right" aria-hidden="true">' in template:
+        fail("sichtbare Archiv-Steuerung darf nicht aria-hidden sein")
 
     required_js = (
         'state.department = filterDepartmentEl.value',
@@ -52,14 +63,31 @@ def main() -> None:
         'activeFilterRemove',
         'key: "query"',
         'refreshFacetOptions();', 'renderActiveFilters();',
+        'normalizeText(state.catalogLabelText) !== state.query',
+        'state.catalogLabelKey = state.status === "Verkauft"',
+        '(state.status === "all" ? "statusAll" : "statusAvailable")',
+        'var filterBrandsSet = {};',
+        'Object.keys(filterBrandsSet)',
+        'category/categoryGroup belong to the main archive navigation',
     )
     for needle in required_js:
         if needle not in app:
             fail(f"Taxonomie-/Facet-Filterlogik fehlt: {needle}")
 
+    # Advanced reset must not destroy a category chosen in the main menu.
+    bad_reset = '''    state.priceMin = null; state.priceMax = null;\n    state.categoryGroup = null;\n    filterDepartmentEl.value = ""; filterProductTypeEl.value = "";'''
+    if bad_reset in app:
+        fail("Weitere-Filter-Reset entfernt weiterhin die Menuekategorie")
+
+    # The facet must not reuse the AVAILABLE-only set. Otherwise sold-only
+    # brands disappear exactly when the user switches to the archive.
+    if 'var brandList = Object.keys(brandsSet)' in app:
+        fail("Markenfacette blendet weiterhin reine Archiv-Marken aus")
+
     for needle in (
         '.active-filter-row {', '.active-filter-row.hidden { display: none; }',
         '.active-filter-clear {', '.filter-field select option:disabled',
+        '.catalog-controls { display: none !important; }',
     ):
         if needle not in css:
             fail(f"Archivfilter-UX CSS fehlt: {needle}")
@@ -93,7 +121,10 @@ def main() -> None:
         if item.get("taxonomy_category") != taxonomy or item.get("product_type") != product_type:
             fail(f"Browse-Taxonomie bei {item_id} ist nicht korrigiert")
 
-    print("Archiv-Taxonomie-Filter: OK – Facets, aktive Filter, Größenübersetzung und kein Kinder-Bereich.")
+    print(
+        "Archiv-Taxonomie-Filter: OK – sichtbare Steuerung, synchroner Titel, "
+        "reset-sichere Kategorie, komplette Archiv-Marken, Facets und kein Kinder-Bereich."
+    )
 
 
 if __name__ == "__main__":
