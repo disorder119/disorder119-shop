@@ -23,18 +23,11 @@ def main() -> None:
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
 
     for needle in (
-        'id="filterDepartment"',
-        'id="filterProductType"',
-        'data-i18n="filterAllDepartments"',
-        'data-i18n="filterAllProductTypes"',
-        'id="activeFilters"',
-        'aria-live="polite"',
-        'for="filterDepartment"',
-        'for="filterProductType"',
-        'for="filterBrand"',
-        'for="filterSize"',
-        'for="filterColor"',
-        'for="filterCondition"',
+        'id="filterDepartment"', 'id="filterProductType"',
+        'data-i18n="filterAllDepartments"', 'data-i18n="filterAllProductTypes"',
+        'id="activeFilters"', 'aria-live="polite"',
+        'for="filterDepartment"', 'for="filterProductType"', 'for="filterBrand"',
+        'for="filterSize"', 'for="filterColor"', 'for="filterCondition"',
     ):
         if needle not in template:
             fail(f"Archivfilter fehlt im Template: {needle}")
@@ -51,20 +44,22 @@ def main() -> None:
         'function refreshFacetOptions()',
         'function renderActiveFilters()',
         'function clearOneArchiveFilter(key)',
+        'function clearAllActiveArchiveFilters()',
         'opt.disabled = count === 0 && opt.value !== selectEl.value',
         'moreFiltersToggle.textContent = t("moreFilters")',
-        'refreshFacetOptions();',
-        'renderActiveFilters();',
+        'if (size === "One Size") return t("sizeEinheitsgroesse")',
+        'if (size === "Adjustable") return t("sizeVerstellbar")',
+        'activeFilterRemove',
+        'key: "query"',
+        'refreshFacetOptions();', 'renderActiveFilters();',
     )
     for needle in required_js:
         if needle not in app:
             fail(f"Taxonomie-/Facet-Filterlogik fehlt: {needle}")
 
     for needle in (
-        '.active-filter-row {',
-        '.active-filter-row.hidden { display: none; }',
-        '.active-filter-clear {',
-        '.filter-field select option:disabled',
+        '.active-filter-row {', '.active-filter-row.hidden { display: none; }',
+        '.active-filter-clear {', '.filter-field select option:disabled',
     ):
         if needle not in css:
             fail(f"Archivfilter-UX CSS fehlt: {needle}")
@@ -83,8 +78,6 @@ def main() -> None:
         if item.get("department") == "Kids":
             fail(f"Kinder-Bereich bei Artikel {item.get('id')} gefunden")
 
-    # Known corrected legacy-category cases must be browseable under the new
-    # taxonomy rather than their protected legacy category.
     by_id = {int(item["id"]): item for item in catalog}
     expected = {
         9463: ("Tops", "Shoes", "Heels"),
@@ -100,10 +93,7 @@ def main() -> None:
         if item.get("taxonomy_category") != taxonomy or item.get("product_type") != product_type:
             fail(f"Browse-Taxonomie bei {item_id} ist nicht korrigiert")
 
-    print(
-        "Archiv-Taxonomie-Filter: OK – geprüfte Kategorie, Bereich, Produkttyp, "
-        "normalisierte Größe, Facet-Zähler und aktive Filter sind vorhanden; kein Kinder-Bereich."
-    )
+    print("Archiv-Taxonomie-Filter: OK – Facets, aktive Filter, Größenübersetzung und kein Kinder-Bereich.")
 
 
 if __name__ == "__main__":
