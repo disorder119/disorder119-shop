@@ -122,6 +122,9 @@ jobs:
       - name: Katalog-Taxonomie in Browserdaten und Produktseiten uebernehmen
         run: python scripts/apply_catalog_taxonomy.py --generated-only
 
+      - name: Oeffentliche Produktseiten reparieren und DRAFT isolieren
+        run: python scripts/repair_public_article_integrity.py
+
       - name: Katalog-Taxonomie fuer jeden Artikel pruefen
         run: python scripts/validate_catalog_taxonomy.py
 
