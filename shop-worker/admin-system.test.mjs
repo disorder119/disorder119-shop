@@ -26,14 +26,14 @@ assert.equal(
 assert.equal(
   detectSchemaVersion(
     ["rental_groups", "damage_cases", "operations_tasks"],
-    ["automation_key", "automation_kind", "auto_managed", "first_seen_at", "last_seen_at", "occurrence_count"],
+    ["automation_key", "automation_kind", "auto_managed", "automation_active", "first_seen_at", "last_seen_at", "occurrence_count"],
   ),
   "0007_operations_automation"
 );
 assert.equal(
   detectSchemaVersion(
     ["rental_groups", "damage_cases", "operations_tasks"],
-    ["automation_key", "auto_managed"],
+    ["automation_key", "auto_managed", "automation_active"],
   ),
   "0006_operations_cases"
 );
