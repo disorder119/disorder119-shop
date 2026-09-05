@@ -76,6 +76,9 @@ jobs:
       - name: Archiv-Filter-UX anwenden
         run: python scripts/apply_archive_filter_ux.py
 
+      - name: Archiv-Filter-Bugfixes anwenden
+        run: python scripts/apply_archive_filter_bugfixes.py
+
       - name: JavaScript Syntax pruefen
         run: |
           node --check assets/app.js
