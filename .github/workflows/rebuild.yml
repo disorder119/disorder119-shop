@@ -10,6 +10,7 @@ on:
     branches: [main]
     paths:
       - "data/items.json"
+      - "data/catalog-taxonomy-report.json"
       - "index_template.html"
       - "build_site.py"
       - "robots.txt"
@@ -31,6 +32,7 @@ on:
     branches: [main]
     paths:
       - "data/items.json"
+      - "data/catalog-taxonomy-report.json"
       - "index_template.html"
       - "build_site.py"
       - "robots.txt"
@@ -96,6 +98,9 @@ jobs:
       - name: D1-Migrationskette ausfuehren
         run: python scripts/test_d1_migrations.py
 
+      - name: Katalog-Taxonomie auf Quelldaten anwenden
+        run: python scripts/apply_catalog_taxonomy.py
+
       - name: Seite bauen
         run: python build_site.py
 
@@ -104,6 +109,12 @@ jobs:
 
       - name: Rental V2 einbinden
         run: python scripts/inject_rental_v2.py
+
+      - name: Katalog-Taxonomie in Browserdaten und Produktseiten uebernehmen
+        run: python scripts/apply_catalog_taxonomy.py --generated-only
+
+      - name: Katalog-Taxonomie fuer jeden Artikel pruefen
+        run: python scripts/validate_catalog_taxonomy.py
 
       - name: Shop, SEO, Katalog und geschuetzte Modi pruefen
         run: python scripts/validate_shop.py
@@ -128,7 +139,7 @@ jobs:
         run: |
           git config user.name "disorder119-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/shop-quality.json
+          git add data/items.json data/catalog-taxonomy-report.json data/shop-quality.json
           git add index.html artikel sitemap.xml cart impressum agb datenschutz ueber-uns faq match chaos baukasten mieten en fr data/catalog.json
           if git diff --cached --quiet; then
             echo "Keine Aenderungen am generierten Output - nichts zu committen."
