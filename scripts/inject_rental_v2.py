@@ -13,6 +13,7 @@ BRIDGE = '<script src="/assets/rental-commerce.js"></script>'
 V2 = '<script src="/assets/rental-v2.js"></script>'
 V2_UI = '<script src="/assets/rental-v2-ui.js"></script>'
 V2_PICKER = '<script src="/assets/rental-v2-picker.js"></script>'
+V2_BUNDLE = '<script src="/assets/rental-v2-bundle.js"></script>'
 
 
 def main() -> None:
@@ -25,15 +26,15 @@ def main() -> None:
             continue
         seen += 1
         clean = text
-        for script in (V2, V2_UI, V2_PICKER):
+        for script in (V2, V2_UI, V2_PICKER, V2_BUNDLE):
             clean = clean.replace("\n" + script, "").replace(script + "\n", "").replace(script, "")
-        clean = clean.replace(BRIDGE, BRIDGE + "\n" + V2 + "\n" + V2_UI + "\n" + V2_PICKER, 1)
+        clean = clean.replace(BRIDGE, BRIDGE + "\n" + V2 + "\n" + V2_UI + "\n" + V2_PICKER + "\n" + V2_BUNDLE, 1)
         if clean != text:
             path.write_text(clean, encoding="utf-8")
             changed += 1
     if not seen:
         raise SystemExit("FEHLER: Keine generierte Bundle-Seite mit rental-commerce.js gefunden.")
-    print(f"Rental V2 + Multi-Piece-UI + integrierter Picker eingebunden: {changed} aktualisiert, {seen} Bundle-Seiten geprüft.")
+    print(f"Rental V2 + Multi-Piece-UI + Picker + atomarer Bundle-Bridge eingebunden: {changed} aktualisiert, {seen} Bundle-Seiten geprüft.")
 
 
 if __name__ == "__main__":
