@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Regression checks for the browse-only archive taxonomy filters."""
+"""Regression checks for the browse-only archive taxonomy filters.
+
+Includes dedicated regressions for the September 2026 archive-filter bug hunt.
+"""
 from __future__ import annotations
 
 import json
