@@ -9,10 +9,16 @@ const ADMIN_ORIGINS = Object.freeze([
 ]);
 
 const REQUIRED_TABLES = Object.freeze([
+  "orders",
+  "rental_requests",
+  "customers",
+  "customer_addresses",
   "inventory",
+  "reservations",
   "commerce_orders",
   "order_items",
   "payments",
+  "payment_events",
   "shipments",
   "rental_reservations",
   "rental_days",
@@ -21,6 +27,7 @@ const REQUIRED_TABLES = Object.freeze([
   "refunds",
   "audit_events",
   "idempotency_keys",
+  "account_privacy_requests",
   "order_contact_snapshots",
   "admin_notes",
   "rental_groups",
@@ -124,6 +131,9 @@ async function getSystem(env) {
   const present = new Set(tables);
 
   const specs = [
+    ["legacyOrders", "orders", "SELECT COUNT(*) AS value FROM orders"],
+    ["legacyRentalRequests", "rental_requests", "SELECT COUNT(*) AS value FROM rental_requests"],
+    ["customers", "customers", "SELECT COUNT(*) AS value FROM customers WHERE status<>'DELETED'"],
     ["orders", "commerce_orders", "SELECT COUNT(*) AS value FROM commerce_orders"],
     ["rentals", "rental_reservations", "SELECT COUNT(*) AS value FROM rental_reservations"],
     ["durableRentals", "rentals", "SELECT COUNT(*) AS value FROM rentals"],
