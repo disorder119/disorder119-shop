@@ -1480,7 +1480,9 @@
     trProductType
   );
 
-  var brandList = Object.keys(brandsSet).sort(function (a, b) { return a.localeCompare(b, "de"); });
+  var filterBrandsSet = {};
+  PUBLIC_ITEMS.forEach(function (it) { if (it.brand) filterBrandsSet[it.brand] = true; });
+  var brandList = Object.keys(filterBrandsSet).sort(function (a, b) { return a.localeCompare(b, "de"); });
   fillSelect(filterBrandEl, brandList);
 
   var sizeSet = {};
@@ -1628,7 +1630,7 @@
   document.getElementById("filterReset").addEventListener("click", function () {
     state.department = ""; state.productType = ""; state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
     state.priceMin = null; state.priceMax = null;
-    state.categoryGroup = null;
+    // category/categoryGroup belong to the main archive navigation, not this panel.
     filterDepartmentEl.value = ""; filterProductTypeEl.value = ""; filterBrandEl.value = ""; filterSizeEl.value = ""; filterColorEl.value = ""; filterConditionEl.value = "";
     filterPriceMinEl.value = ""; filterPriceMaxEl.value = "";
     render();
@@ -1819,6 +1821,27 @@
     refreshFacetOptions();
     renderActiveFilters();
     var filtered = sortItems(ITEMS.filter(function (it) { return matches(it); }));
+
+    // Die sichtbare Katalog-Ueberschrift muss immer zum tatsaechlichen
+    // Filterzustand passen. Aktive Filter koennen einzeln geloescht werden;
+    // davor blieben dabei alte Labels wie "Archiv", "Schuhe" oder eine
+    // zuvor angeklickte Marke stehen, obwohl bereits andere Artikel gezeigt
+    // wurden. Ein Markenlabel gilt nur solange die Suchquery noch exakt dazu
+    // passt; Kategorie/Gruppen-Labels haben ansonsten Vorrang vor dem Status.
+    if (state.catalogLabelText && normalizeText(state.catalogLabelText) !== state.query) {
+      state.catalogLabelText = "";
+    }
+    if (state.category !== "all") {
+      state.catalogLabelKey = "";
+      state.catalogLabelCategory = state.category;
+      state.catalogLabelText = "";
+    } else if (!state.categoryGroup && !state.catalogLabelText) {
+      state.catalogLabelCategory = "";
+      state.catalogLabelKey = state.status === "Verkauft"
+        ? "statusSold"
+        : (state.status === "all" ? "statusAll" : "statusAvailable");
+    }
+
     catalogTitleEl.textContent = state.catalogLabelText ||
       (state.catalogLabelCategory ? trCategory(state.catalogLabelCategory) : t(state.catalogLabelKey || "statusAvailable"));
     var filterSignature = JSON.stringify([
