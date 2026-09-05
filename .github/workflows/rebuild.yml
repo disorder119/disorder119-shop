@@ -101,6 +101,9 @@ jobs:
       - name: Kompakten Mobile-Filter anwenden
         run: python scripts/apply_catalog_filter_mobile_ux.py
 
+      - name: Quality-95-Polish anwenden
+        run: python scripts/apply_quality_95_polish.py
+
       - name: JavaScript Syntax pruefen
         run: |
           node --check assets/app.js
@@ -166,6 +169,9 @@ jobs:
       - name: Katalog-, Anfrage- und Size-Regressionen pruefen
         run: python scripts/validate_catalog_inquiry_ux.py
 
+      - name: Quality-95-Regressionen pruefen
+        run: python scripts/validate_quality_95_polish.py
+
       - name: Shop, SEO, Katalog und geschuetzte Modi pruefen
         run: python scripts/validate_shop.py
 
@@ -190,7 +196,7 @@ jobs:
           git config user.name "disorder119-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/items.json data/catalog-taxonomy-report.json data/shop-quality.json
-          git add index_template.html build_site.py assets/app.js assets/app.css assets/article.js assets/catalog-filter-simplify.js assets/rental-v2.js assets/rental-v2-picker.js
+          git add index_template.html build_site.py assets/app.js assets/app.css assets/article.js assets/article.css assets/catalog-filter-simplify.js assets/rental-v2.js assets/rental-v2-ui.js assets/rental-v2-picker.js
           git add index.html artikel sitemap.xml cart impressum agb datenschutz ueber-uns faq match chaos baukasten mieten en fr data/catalog.json
           if git diff --cached --quiet; then
             echo "Keine Aenderungen am generierten Output - nichts zu committen."
