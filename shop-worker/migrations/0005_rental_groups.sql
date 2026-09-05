@@ -22,11 +22,13 @@ CREATE TABLE IF NOT EXISTS rental_groups (
   terms_language TEXT,
   terms_accepted_at TEXT,
   idempotency_key TEXT NOT NULL UNIQUE,
+  expires_at TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_rental_groups_status_created ON rental_groups(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_rental_groups_dates ON rental_groups(start_date, end_date, status);
+CREATE INDEX IF NOT EXISTS idx_rental_groups_expiry ON rental_groups(expires_at) WHERE status='RESERVED';
 
 -- A bundle becomes RESERVED only when every expected child reservation exists.
 -- Because the final status change is part of the same D1 batch as the child
