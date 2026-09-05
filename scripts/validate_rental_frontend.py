@@ -8,6 +8,7 @@ TEMPLATE = BASE / "index_template.html"
 BRIDGE = BASE / "assets" / "rental-commerce.js"
 V2 = BASE / "assets" / "rental-v2.js"
 V2_UI = BASE / "assets" / "rental-v2-ui.js"
+V2_PICKER = BASE / "assets" / "rental-v2-picker.js"
 PATCHER = BASE / "scripts" / "apply_rental_terms.py"
 INJECTOR = BASE / "scripts" / "inject_rental_v2.py"
 RENTAL_PAGES = {
@@ -34,6 +35,8 @@ def main() -> None:
         fail("assets/rental-v2.js fehlt.")
     if not V2_UI.is_file():
         fail("assets/rental-v2-ui.js fehlt.")
+    if not V2_PICKER.is_file():
+        fail("assets/rental-v2-picker.js fehlt.")
     if not PATCHER.is_file():
         fail("scripts/apply_rental_terms.py fehlt.")
     if not INJECTOR.is_file():
@@ -43,6 +46,7 @@ def main() -> None:
     bridge = BRIDGE.read_text(encoding="utf-8")
     v2 = V2.read_text(encoding="utf-8")
     v2_ui = V2_UI.read_text(encoding="utf-8")
+    v2_picker = V2_PICKER.read_text(encoding="utf-8")
 
     require(template, '/assets/rental-commerce.js', "Script-Einbindung")
     require(bridge, "RENTAL_RATE_BPS = 1000", "10-Prozent-Regel")
@@ -75,8 +79,16 @@ def main() -> None:
     require(v2_ui, "d119-rental-add-inline", "Inline-Button fuer weitere Artikel")
     require(v2_ui, "d119-rental-set-thumb", "sichtbare Multi-Item-Auswahlleiste")
     require(v2_ui, "d119-rental-card-add", "Plus-Kennzeichnung im Mietkatalog")
-    require(v2_ui, "closeOverlayAndBrowse", "Ruecksprung zum Katalog fuer weitere Auswahl")
     require(v2_ui, "d119_rental_cart_v2", "gemeinsamer Rental-V2-Mietkorb")
+
+    # Integrated picker: stays in the drawer, provides search/category filters and toggles via the canonical rental UI.
+    require(v2_picker, "d119RentalIntegratedPicker", "integrierter Piece-Picker")
+    require(v2_picker, "d119-rental-picker__search", "Piece-Suche")
+    require(v2_picker, "data-picker-category", "Kategorie-Filter")
+    require(v2_picker, "data-picker-toggle", "direktes Hinzufuegen im Picker")
+    require(v2_picker, "RENTAL_RATE_BPS = 1000", "10-Prozent-Tagespreis im Picker")
+    require(v2_picker, "d119_rental_cart_v2", "gemeinsamer Rental-V2-State im Picker")
+    require(v2_picker, "#d119RentalAddSide,#d119RentalStripAdd,#d119RentalAddInline", "Uebernahme aller Plus-Einstiege")
 
     expected = {
         "de": ["Mietbedingungen", "10&nbsp;%", "50&nbsp;%", "Verspätete Rückgabe", "Keine Weitervermietung", "Nicht passend oder nicht gefallen"],
@@ -91,6 +103,7 @@ def main() -> None:
         require(html, 'id="rentalTermsCanonical"', f"kanonischer Rental-Terms-Sync ({lang})")
         require(html, '/assets/rental-v2.js', f"Rental-V2-Einbindung ({lang})")
         require(html, '/assets/rental-v2-ui.js', f"Rental-V2-UI-Einbindung ({lang})")
+        require(html, '/assets/rental-v2-picker.js', f"Rental-Picker-Einbindung ({lang})")
         for phrase in expected[lang]:
             require(html, phrase, f"Mietbedingung {phrase} ({lang})")
         for phrase in obsolete:
@@ -105,8 +118,10 @@ def main() -> None:
             fail(f"Rental V2 greift in geschuetzten Modus ein: {protected}")
         if protected in v2_ui:
             fail(f"Rental V2 UI greift in geschuetzten Modus ein: {protected}")
+        if protected in v2_picker:
+            fail(f"Rental Picker greift in geschuetzten Modus ein: {protected}")
 
-    print("Rental-Frontend: Multi-Piece-Plus-UI, V2-Mietkorb, automatische Kaution, Quote, Bedingungen und Fehlerbehandlung konsistent (DE/EN/FR).")
+    print("Rental-Frontend: integrierter Piece-Picker, Multi-Piece-Plus-UI, Mietkorb, automatische Kaution, Quote und Bedingungen konsistent (DE/EN/FR).")
 
 
 if __name__ == "__main__":
