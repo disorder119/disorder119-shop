@@ -42,6 +42,7 @@ DEPARTMENT_OVERRIDES = {
 # demonstrably wrong legacy category.  These were checked against descriptions.
 PRODUCT_TYPE_OVERRIDES = {
     6240: "Toaster",
+    9524: "Bomber Jacket",
     9463: "Heels",
     9386: "Hat",
     9434: "Sweatshirt",
@@ -217,7 +218,7 @@ def classify_product_type(item: dict[str, Any]) -> str:
         (r"\bdress\b|\bkleid\b", "Dress"),
         (r"\btrench", "Trench Coat"),
         (r"\bcoat\b|\bmantel\b", "Coat"),
-        (r"\bbomber\b", "Bomber Jacket"),
+        (r"bomber", "Bomber Jacket"),
         (r"\bbiker\b|\bmoto\b", "Biker Jacket"),
         (r"\bblazer\b", "Blazer"),
         (r"\bvest\b|\bweste\b|\bveste\b", "Vest"),
