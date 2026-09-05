@@ -8,6 +8,7 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parents[1]
 TEMPLATE = BASE / "index_template.html"
 APP_JS = BASE / "assets" / "app.js"
+APP_CSS = BASE / "assets" / "app.css"
 CATALOG = BASE / "data" / "catalog.json"
 
 
@@ -18,13 +19,15 @@ def fail(message: str) -> None:
 def main() -> None:
     template = TEMPLATE.read_text(encoding="utf-8")
     app = APP_JS.read_text(encoding="utf-8")
+    css = APP_CSS.read_text(encoding="utf-8")
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
 
     for needle in (
-        'id="filterDepartment"',
-        'id="filterProductType"',
-        'data-i18n="filterAllDepartments"',
-        'data-i18n="filterAllProductTypes"',
+        'id="filterDepartment"', 'id="filterProductType"',
+        'data-i18n="filterAllDepartments"', 'data-i18n="filterAllProductTypes"',
+        'id="activeFilters"', 'aria-live="polite"',
+        'for="filterDepartment"', 'for="filterProductType"', 'for="filterBrand"',
+        'for="filterSize"', 'for="filterColor"', 'for="filterCondition"',
     ):
         if needle not in template:
             fail(f"Archivfilter fehlt im Template: {needle}")
@@ -37,13 +40,34 @@ def main() -> None:
         'state.categoryGroup.indexOf(browseCategory)',
         'it.product_type, it.department',
         '["Women", "Men", "Unisex", "Objects"]',
+        'function matches(it, ignoreFacet)',
+        'function refreshFacetOptions()',
+        'function renderActiveFilters()',
+        'function clearOneArchiveFilter(key)',
+        'function clearAllActiveArchiveFilters()',
+        'opt.disabled = count === 0 && opt.value !== selectEl.value',
+        'moreFiltersToggle.textContent = t("moreFilters")',
+        'if (size === "One Size") return t("sizeEinheitsgroesse")',
+        'if (size === "Adjustable") return t("sizeVerstellbar")',
+        'activeFilterRemove',
+        'key: "query"',
+        'refreshFacetOptions();', 'renderActiveFilters();',
     )
     for needle in required_js:
         if needle not in app:
-            fail(f"Taxonomie-Filterlogik fehlt: {needle}")
+            fail(f"Taxonomie-/Facet-Filterlogik fehlt: {needle}")
+
+    for needle in (
+        '.active-filter-row {', '.active-filter-row.hidden { display: none; }',
+        '.active-filter-clear {', '.filter-field select option:disabled',
+    ):
+        if needle not in css:
+            fail(f"Archivfilter-UX CSS fehlt: {needle}")
 
     if '["Women", "Men", "Unisex", "Kids", "Objects"]' in app:
         fail("Kinder darf nicht als Archiv-Bereich angeboten werden")
+    if 'Kids:' in app or 'department == "Kids"' in app:
+        fail("Kinder-Bereich wurde erneut in die Archivfilterlogik aufgenommen")
 
     if not catalog:
         fail("catalog.json ist leer")
@@ -54,8 +78,6 @@ def main() -> None:
         if item.get("department") == "Kids":
             fail(f"Kinder-Bereich bei Artikel {item.get('id')} gefunden")
 
-    # Known corrected legacy-category cases must be browseable under the new
-    # taxonomy rather than their protected legacy category.
     by_id = {int(item["id"]): item for item in catalog}
     expected = {
         9463: ("Tops", "Shoes", "Heels"),
@@ -71,10 +93,7 @@ def main() -> None:
         if item.get("taxonomy_category") != taxonomy or item.get("product_type") != product_type:
             fail(f"Browse-Taxonomie bei {item_id} ist nicht korrigiert")
 
-    print(
-        "Archiv-Taxonomie-Filter: OK – geprüfte Kategorie, Bereich, Produkttyp "
-        "und normalisierte Größe sind filterbar; kein Kinder-Bereich."
-    )
+    print("Archiv-Taxonomie-Filter: OK – Facets, aktive Filter, Größenübersetzung und kein Kinder-Bereich.")
 
 
 if __name__ == "__main__":

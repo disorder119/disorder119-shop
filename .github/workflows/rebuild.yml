@@ -73,6 +73,9 @@ jobs:
       - name: Archiv-Taxonomie-Filter anwenden
         run: python scripts/apply_archive_taxonomy_filters.py
 
+      - name: Archiv-Filter-UX anwenden
+        run: python scripts/apply_archive_filter_ux.py
+
       - name: JavaScript Syntax pruefen
         run: |
           node --check assets/app.js
@@ -146,7 +149,7 @@ jobs:
           git config user.name "disorder119-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/items.json data/catalog-taxonomy-report.json data/shop-quality.json
-          git add index_template.html assets/app.js
+          git add index_template.html assets/app.js assets/app.css
           git add index.html artikel sitemap.xml cart impressum agb datenschutz ueber-uns faq match chaos baukasten mieten en fr data/catalog.json
           if git diff --cached --quiet; then
             echo "Keine Aenderungen am generierten Output - nichts zu committen."
