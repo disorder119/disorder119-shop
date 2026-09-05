@@ -2,7 +2,7 @@
 """Curated product taxonomy for the Disorder119 catalogue.
 
 The legacy ``category`` field is deliberately left untouched because Match, Chaos
-and Baukasten currently consume it.  The reviewed taxonomy lives in separate
+and Baukasten currently consume it. The reviewed taxonomy lives in separate
 fields so archive/product metadata can become more precise without changing the
 protected modes.
 """
@@ -12,23 +12,25 @@ import re
 from collections import Counter
 from typing import Any
 
-DEPARTMENTS = {"Women", "Men", "Unisex", "Kids", "Objects"}
+DEPARTMENTS = {"Women", "Men", "Unisex", "Objects"}
 TAXONOMY_CATEGORIES = {
     "Jackets", "Coats", "Tops", "Shirts", "Knitwear", "Pants", "Skirts",
     "Dresses", "Shoes", "Accessories", "Objects",
 }
 
 # Cases whose target group is explicit from the title/line or especially clear
-# from the reviewed description.  Keeping these as item IDs means future brand
+# from the reviewed description. Keeping these as item IDs means future brand
 # additions do not silently rewrite already-reviewed pieces.
 DEPARTMENT_OVERRIDES = {
-    6202: "Kids",   # Prada Light Blue Cropped Jacket – Kindergröße L
+    # Disorder119 has no separate children's department. Real child-size facts
+    # remain in the raw size field, while the browse department stays neutral.
+    6202: "Unisex", # Prada Light Blue Cropped Jacket – Kindergröße L
+    9533: "Unisex", # Prada Flops – EU 28
     6235: "Men",    # Dior Homme high-tops
     6233: "Men",    # Dior Homme high-tops
     6204: "Men",    # Raf Simons Kinetic Youth vest
     9534: "Men",    # title: Prada Herren Schuhe
     9524: "Women",  # title: Prada Frauenbomber
-    9533: "Kids",   # Prada Flops, size 28
     9520: "Women",  # description explicitly describes feminine tailoring
     9538: "Men",    # title: Gucci Blazer Herren
     9496: "Men",    # title: Dior Herrenpolo
@@ -39,7 +41,7 @@ DEPARTMENT_OVERRIDES = {
 }
 
 # Product-type overrides for titles that are too vague or currently have a
-# demonstrably wrong legacy category.  These were checked against descriptions.
+# demonstrably wrong legacy category. These were checked against descriptions.
 PRODUCT_TYPE_OVERRIDES = {
     6240: "Toaster",
     9524: "Bomber Jacket",
@@ -55,7 +57,7 @@ PRODUCT_TYPE_OVERRIDES = {
 }
 
 # A small number of data records are demonstrably misfiled in the old category
-# system.  We DO NOT mutate that protected legacy field; this maps them to the
+# system. We DO NOT mutate that protected legacy field; this maps them to the
 # reviewed taxonomy shown on product pages and exported in catalog.json.
 TAXONOMY_CATEGORY_OVERRIDES = {
     6240: "Objects",       # toaster, previously Accessories
@@ -98,9 +100,9 @@ PRODUCT_TYPE_CATEGORY = {
 }
 
 DEPARTMENT_LABELS = {
-    "de": {"Women": "Damen", "Men": "Herren", "Unisex": "Unisex", "Kids": "Kinder", "Objects": "Objekt"},
-    "en": {"Women": "Women", "Men": "Men", "Unisex": "Unisex", "Kids": "Kids", "Objects": "Object"},
-    "fr": {"Women": "Femme", "Men": "Homme", "Unisex": "Unisexe", "Kids": "Enfant", "Objects": "Objet"},
+    "de": {"Women": "Damen", "Men": "Herren", "Unisex": "Unisex", "Objects": "Objekt"},
+    "en": {"Women": "Women", "Men": "Men", "Unisex": "Unisex", "Objects": "Object"},
+    "fr": {"Women": "Femme", "Men": "Homme", "Unisex": "Unisexe", "Objects": "Objet"},
 }
 
 PRODUCT_TYPE_LABELS = {
@@ -283,8 +285,10 @@ def classify_department(item: dict[str, Any], product_type: str, tax_category: s
 
     if tax_category == "Objects" or product_type in {"Toaster", "Design Object"}:
         return "Objects", "explicit"
+    # There is intentionally no children's browse department. When an item is
+    # factually child-sized, keep that fact in ``size`` but use neutral Unisex.
     if re.search(r"kinder(?:größe|groesse)?|\bkids?\b|\bchild(?:ren)?\b|enfant", text):
-        return "Kids", "explicit"
+        return "Unisex", "explicit"
     if re.search(r"\bherren\b|\bmenswear\b|\bmen['’]?s\b|\bhomme\b", text):
         return "Men", "explicit"
     if re.search(r"\bfrauen\b|\bdamen\b|\bwomenswear\b|\bwomen['’]?s\b|feminin", text):
@@ -309,12 +313,18 @@ def classify_department(item: dict[str, Any], product_type: str, tax_category: s
     size = _clean(size_value)
     if product_type in {"Shoes", "Sneakers", "Boots", "Loafers", "Heels", "Sandals"}:
         n = _numeric_size(size)
-        if n is not None and n <= 32:
-            return "Kids", "high"
         if product_type == "Heels":
             return "Women", "high"
+        # Bare single-digit Prada shoe sizes in this catalogue are adult Prada
+        # sizing (e.g. 6, 7.5, 8, 8.5, 9), not children's EU sizes. Keep the
+        # size system unclaimed in size_normalized, but classify the department
+        # as menswear rather than inventing a Kids department.
         if brand == "Prada" and (re.search(r"(?i)\b(?:US|UK)\s*\d", size) or (n is not None and n < 15)):
             return "Men", "high"
+        # An actual small EU-like numeric size remains neutral when there is no
+        # reliable gender signal; the factual size itself remains untouched.
+        if n is not None and n <= 32:
+            return "Unisex", "high"
         if n is not None and 33 <= n <= 40:
             return "Women", "conservative"
         if n is not None and n >= 41:
@@ -350,8 +360,10 @@ def normalize_size(size_value: str, department: str, product_type: str) -> str:
     if "verstell" in lower or "adjustable" in lower:
         return "Adjustable"
     if "kinder" in lower:
+        # Preserve the factual raw value (e.g. "Kindergröße L") on the item,
+        # but keep normalized sizing independent from a non-existent department.
         suffix = re.search(r"\b(XXL|XL|L|M|S|XS)\b", raw, re.I)
-        return "Kids " + (suffix.group(1).upper() if suffix else raw)
+        return suffix.group(1).upper() if suffix else raw
     if re.search(r"\b(?:XS|S|M|L|XL|XXL)\s*/", raw, re.I):
         return re.search(r"\b(XXL|XL|L|M|S|XS)\b", raw, re.I).group(1).upper()
     if raw.upper() in {"XXL", "XL", "L", "M", "S", "XS"}:

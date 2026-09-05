@@ -27,12 +27,17 @@ def main() -> None:
     if len(by_id) != len(items):
         fail("doppelte Item-ID in data/items.json")
 
+    if "Kids" in DEPARTMENTS:
+        fail("Kids darf kein Katalogbereich sein")
+
     for item in items:
         missing = REQUIRED - set(item)
         if missing:
             fail(f"Taxonomie fehlt bei {item.get('id')}: {sorted(missing)}")
         if item["department"] not in DEPARTMENTS:
             fail(f"ungültiger Bereich bei {item['id']}: {item['department']}")
+        if item["department"] == "Kids":
+            fail(f"Artikel {item['id']} wurde weiterhin als Kids klassifiziert")
         if item["taxonomy_category"] not in TAXONOMY_CATEGORIES:
             fail(f"ungültige Taxonomie-Kategorie bei {item['id']}: {item['taxonomy_category']}")
         if not str(item["product_type"]).strip():
@@ -49,7 +54,14 @@ def main() -> None:
         9463: ("Women", "Heels", "Shoes"),
         9386: ("Unisex", "Hat", "Accessories"),
         9434: ("Men", "Sweatshirt", "Knitwear"),
-        6202: ("Kids", "Jacket", "Jackets"),
+        6202: ("Unisex", "Jacket", "Jackets"),
+        9533: ("Unisex", "Sandals", "Shoes"),
+        6237: ("Men", "Loafers", "Shoes"),
+        6231: ("Men", "Boots", "Shoes"),
+        6227: ("Men", "Sneakers", "Shoes"),
+        6225: ("Men", "Boots", "Shoes"),
+        6222: ("Men", "Sneakers", "Shoes"),
+        9446: ("Men", "Shoes", "Shoes"),
         6235: ("Men", "Shoes", "Shoes"),
         9524: ("Women", "Bomber Jacket", "Jackets"),
         9534: ("Men", "Shoes", "Shoes"),
@@ -63,6 +75,14 @@ def main() -> None:
         got = (row["department"], row["product_type"], row["taxonomy_category"])
         if got != wanted:
             fail(f"Taxonomie bei {item_id} unerwartet: {got!r} statt {wanted!r}")
+
+    # Child-size facts stay factual but must not create a child browse area.
+    if by_id[6202].get("size") != "Kindergröße L":
+        fail("Prada Cropped Jacket: faktische Größenangabe wurde verändert")
+    if by_id[6202].get("size_normalized") != "L":
+        fail("Prada Cropped Jacket: normalisierte Größe soll L sein")
+    if by_id[9533].get("size_normalized") != "EU 28":
+        fail("Prada Flops: EU 28 muss als Größenangabe erhalten bleiben")
 
     # The old field must remain unchanged for protected modes even where it is
     # clearly wrong; the new field carries the corrected classification.
@@ -87,6 +107,8 @@ def main() -> None:
         fail("Taxonomie-Report deckt nicht alle Artikel ab")
     if report.get("schema") != "catalog-taxonomy-v1":
         fail("unerwartete Taxonomie-Report-Version")
+    if report.get("departmentCounts", {}).get("Kids"):
+        fail("Taxonomie-Report enthält weiterhin Kids")
 
     catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
     public_expected = sum(1 for item in items if item.get("public_status") != "DRAFT")
@@ -96,6 +118,8 @@ def main() -> None:
         missing = REQUIRED - set(row)
         if missing:
             fail(f"Browser-Taxonomie fehlt bei {row.get('id')}: {sorted(missing)}")
+        if row.get("department") == "Kids":
+            fail(f"Browser-Katalog enthält weiterhin Kids bei {row.get('id')}")
 
     page_count = 0
     for item in items:
@@ -109,12 +133,14 @@ def main() -> None:
                 fail(f"Taxonomie-Fakten fehlen auf {page.relative_to(BASE)}")
             if '"department":' not in html or '"product_type":' not in html:
                 fail(f"ARTICLE_ITEM-Taxonomie fehlt auf {page.relative_to(BASE)}")
+            if '"department": "Kids"' in html:
+                fail(f"Produktseite enthält weiterhin Kids: {page.relative_to(BASE)}")
             page_count += 1
 
     print(
         "Katalog-Taxonomie: OK – "
-        f"{len(items)} Artikel vollständig klassifiziert, {len(catalog)} öffentlich, "
-        f"{page_count} Sprach-Produktseiten geprüft; "
+        f"{len(items)} Artikel vollständig ohne Kids-Bereich klassifiziert, "
+        f"{len(catalog)} öffentlich, {page_count} Sprach-Produktseiten geprüft; "
         f"{report.get('missingSizeCount', 0)} Größe(n) bleiben bewusst unbekannt."
     )
 
