@@ -6,7 +6,9 @@ import sys
 BASE = Path(__file__).resolve().parents[1]
 TEMPLATE = BASE / "index_template.html"
 BRIDGE = BASE / "assets" / "rental-commerce.js"
+V2 = BASE / "assets" / "rental-v2.js"
 PATCHER = BASE / "scripts" / "apply_rental_terms.py"
+INJECTOR = BASE / "scripts" / "inject_rental_v2.py"
 RENTAL_PAGES = {
     "de": BASE / "mieten" / "index.html",
     "en": BASE / "en" / "mieten" / "index.html",
@@ -27,10 +29,16 @@ def require(text: str, needle: str, label: str) -> None:
 def main() -> None:
     if not BRIDGE.is_file():
         fail("assets/rental-commerce.js fehlt.")
+    if not V2.is_file():
+        fail("assets/rental-v2.js fehlt.")
     if not PATCHER.is_file():
         fail("scripts/apply_rental_terms.py fehlt.")
+    if not INJECTOR.is_file():
+        fail("scripts/inject_rental_v2.py fehlt.")
+
     template = TEMPLATE.read_text(encoding="utf-8")
     bridge = BRIDGE.read_text(encoding="utf-8")
+    v2 = V2.read_text(encoding="utf-8")
 
     require(template, '/assets/rental-commerce.js', "Script-Einbindung")
     require(bridge, "RENTAL_RATE_BPS = 1000", "10-Prozent-Regel")
@@ -43,6 +51,20 @@ def main() -> None:
     require(bridge, "RENTAL_DATES_UNAVAILABLE", "Verfuegbarkeitsfehler")
     require(bridge, "ITEM_UNAVAILABLE", "Artikel-nicht-verfuegbar-Fehler")
 
+    # Rental V2: combined requests, automatic deposit and transparent summary.
+    require(v2, "DEPOSIT_RATE_BPS = 5000", "50-Prozent-Kaution")
+    require(v2, "DEPOSIT_MIN_CENTS = 5000", "Mindestkaution 50 Euro")
+    require(v2, "STANDARD_MAX_DAYS = 7", "Standard-Mietdauer")
+    require(v2, "d119_rental_cart_v2", "persistenter Mietkorb")
+    require(v2, "itemIds: state.ids.slice()", "Mehrfachartikel-Anfrage")
+    require(v2, "termsAccepted", "Mietbedingungen-Checkbox")
+    require(v2, "TERMS_VERSION", "versionierte Mietbedingungen")
+    require(v2, "refundableDeposit", "Kautions-Zusammenfassung")
+    require(v2, "moveRentalNavigation", "Verleih als eigener Service-Bereich")
+    require(v2, '"/rental-quote"', "V2-Verfuegbarkeitspruefung")
+    require(v2, '"/rental-request"', "V2-Backend-Anbindung")
+    require(v2, "MULTI_ITEM", "Backend-Kennzeichnung der Mehrfachanfrage")
+
     expected = {
         "de": ["Mietbedingungen", "10&nbsp;%", "50&nbsp;%", "Verspätete Rückgabe", "Keine Weitervermietung", "Nicht passend oder nicht gefallen"],
         "en": ["Rental terms", "exactly 10%", "50%", "Late return", "No sub-rental", "Does not fit or is not suitable"],
@@ -54,18 +76,21 @@ def main() -> None:
             fail(f"Rental-Seite fehlt: {page.relative_to(BASE)}")
         html = page.read_text(encoding="utf-8")
         require(html, 'id="rentalTermsCanonical"', f"kanonischer Rental-Terms-Sync ({lang})")
+        require(html, '/assets/rental-v2.js', f"Rental-V2-Einbindung ({lang})")
         for phrase in expected[lang]:
             require(html, phrase, f"Mietbedingung {phrase} ({lang})")
         for phrase in obsolete:
             if phrase in html:
                 fail(f"Rental-Frontend: veraltete Mietpreisregel in {page.relative_to(BASE)} gefunden: {phrase!r}")
 
-    # This bridge must stay outside the three protected creative modes.
+    # Neither rental bridge may directly manipulate protected creative-mode roots.
     for protected in ("swipeView", "chaosView", "outfitView"):
         if protected in bridge:
             fail(f"Rental-Frontend greift in geschuetzten Modus ein: {protected}")
+        if protected in v2:
+            fail(f"Rental V2 greift in geschuetzten Modus ein: {protected}")
 
-    print("Rental-Frontend: Preis, Quote, Idempotency, Bedingungen und Fehlerbehandlung konsistent (DE/EN/FR).")
+    print("Rental-Frontend: V2-Mietkorb, automatische Kaution, Multi-Item, Quote, Bedingungen und Fehlerbehandlung konsistent (DE/EN/FR).")
 
 
 if __name__ == "__main__":
