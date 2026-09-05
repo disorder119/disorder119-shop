@@ -113,6 +113,7 @@
     var backdrop = document.getElementById("d119RentalV2Backdrop");
     if (backdrop) backdrop.classList.remove("open");
     document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
     document.body.classList.add("d119-rental-picking");
     var grid = document.getElementById("grid") || document.querySelector(".grid-wrap");
     if (grid) {
@@ -219,7 +220,9 @@
 
   function observeUi() {
     if (typeof MutationObserver === "undefined") return;
-    new MutationObserver(scheduleEnhance).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-pressed", "class"] });
+    // Class-Aenderungen im gesamten Dokument sind sehr haeufig. Fuer diese
+    // UI reichen neue/entfernte Nodes sowie aria-pressed der Mietbuttons.
+    new MutationObserver(scheduleEnhance).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-pressed"] }); // QUALITY95_RENTAL_OBSERVER
   }
 
   function bootstrap() {

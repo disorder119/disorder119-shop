@@ -295,6 +295,7 @@
   var catalog = [];
   var catalogMap = {};
   var overlay = null;
+  var overlayPreviousFocus = null; // QUALITY95_RENTAL_FOCUS_RETURN
   var toastTimer = null;
   var availabilitySerial = 0;
   var availabilityBlocked = false;
@@ -329,7 +330,7 @@
       ".d119-rental-v2{width:min(620px,100%);height:100%;overflow:auto;background:var(--surface,#fff);color:var(--ink,#111);padding:20px;box-sizing:border-box}",
       ".d119-rental-v2__head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line,#bbb)}",
       ".d119-rental-v2__head h2{font-size:20px;margin:0}",
-      ".d119-rental-v2__close{border:0;background:transparent;color:inherit;font-size:22px;cursor:pointer}",
+      ".d119-rental-v2__close{min-width:44px;min-height:44px;border:0;background:transparent;color:inherit;font-size:22px;cursor:pointer}",
       ".d119-rental-v2__section{padding:18px 0;border-bottom:1px solid var(--line,#bbb)}",
       ".d119-rental-v2__section h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin:0 0 12px}",
       ".d119-rental-v2__items{display:grid;gap:12px}",
@@ -337,10 +338,10 @@
       ".d119-rental-item img{width:72px;height:92px;object-fit:cover;background:#eee}",
       ".d119-rental-item strong,.d119-rental-item span{display:block}",
       ".d119-rental-item__meta{font-size:12px;line-height:1.5}",
-      ".d119-rental-item__remove{border:0;background:transparent;color:inherit;text-decoration:underline;cursor:pointer;font:inherit;font-size:11px}",
+      ".d119-rental-item__remove{min-width:44px;min-height:44px;border:0;background:transparent;color:inherit;text-decoration:underline;cursor:pointer;font:inherit;font-size:11px}",
       ".d119-rental-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}",
       ".d119-rental-field label{display:block;font-size:11px;margin-bottom:6px;opacity:.75}",
-      ".d119-rental-field input,.d119-rental-field select,.d119-rental-field textarea{width:100%;box-sizing:border-box;border:1px solid var(--line,#aaa);background:transparent;color:inherit;padding:10px;font:inherit}",
+      ".d119-rental-field input,.d119-rental-field select,.d119-rental-field textarea{width:100%;min-height:44px;box-sizing:border-box;border:1px solid var(--line,#aaa);background:transparent;color:inherit;padding:10px;font:inherit}",
       ".d119-rental-field textarea{resize:vertical;min-height:76px}",
       ".d119-rental-note{font-size:11px;line-height:1.45;opacity:.72;margin:8px 0 0}",
       ".d119-rental-error{font-size:12px;line-height:1.4;margin:10px 0 0}",
@@ -354,7 +355,8 @@
       ".d119-rental-summary__row--total{font-weight:700;padding-top:9px;border-top:1px solid var(--line,#bbb);font-size:15px}",
       ".d119-rental-terms{display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:1.4}",
       ".d119-rental-actions{display:grid;gap:8px;margin-top:14px}",
-      ".d119-rental-actions a{display:block;text-align:center;text-decoration:none;border:1px solid currentColor;color:inherit;padding:12px}",
+      ".d119-rental-actions a{display:flex;min-height:46px;align-items:center;justify-content:center;text-align:center;text-decoration:none;border:1px solid currentColor;color:inherit;padding:12px}",
+      ".d119-rental-process-details{margin:0}.d119-rental-process-details summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:.08em}.d119-rental-process-details[open] summary{margin-bottom:14px}.d119-rental-v2 :focus-visible{outline:2px solid currentColor;outline-offset:2px}",
       ".d119-rental-actions a[aria-disabled='true']{opacity:.4;pointer-events:none}",
       ".d119-rental-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:160;background:#111;color:#fff;padding:10px 14px;font-size:12px}",
       ".d119-rental-terms-collapsed details{margin-top:12px}",
@@ -411,6 +413,8 @@
     var el = document.createElement("div");
     el.id = "d119RentalToast";
     el.className = "d119-rental-toast";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite"); // QUALITY95_RENTAL_LIVE
     el.textContent = message;
     document.body.appendChild(el);
     clearTimeout(toastTimer);
@@ -484,7 +488,17 @@
       '<div id="d119RentalV2Body"></div></div>';
     backdrop.addEventListener("click", function (e) { if (e.target === backdrop) closeOverlay(); });
     backdrop.querySelector(".d119-rental-v2__close").addEventListener("click", closeOverlay);
-    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && backdrop.classList.contains("open")) closeOverlay(); });
+    document.addEventListener("keydown", function (e) {
+      if (!backdrop.classList.contains("open") || document.getElementById("d119RentalIntegratedPicker")) return;
+      if (e.key === "Escape") { e.preventDefault(); closeOverlay(); return; }
+      if (e.key !== "Tab") return;
+      var focusables = backdrop.querySelectorAll('button:not([disabled]),[href]:not([aria-disabled="true"]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])');
+      if (!focusables.length) return;
+      var first = focusables[0], last = focusables[focusables.length - 1];
+      if (!backdrop.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+      else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }); // QUALITY95_RENTAL_FOCUS_TRAP
     document.body.appendChild(backdrop);
     overlay = backdrop;
     return backdrop;
@@ -493,8 +507,10 @@
   function openOverlay() {
     createOverlay();
     renderOverlay();
+    overlayPreviousFocus = document.activeElement;
     overlay.classList.add("open");
     document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
     var close = overlay.querySelector(".d119-rental-v2__close");
     if (close) close.focus();
   }
@@ -502,6 +518,10 @@
     if (!overlay) return;
     overlay.classList.remove("open");
     document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
+    var target = overlayPreviousFocus;
+    overlayPreviousFocus = null;
+    if (target && target.isConnected && target.focus) target.focus();
   }
 
   function quoteSummary(items) {
@@ -557,12 +577,12 @@
     var provisional = quote.unknown ? t("partialRequest") : money(quote.rentTotal + quote.depositTotal);
 
     body.innerHTML =
-      '<div class="d119-rental-v2__section"><h3>' + esc(t("processTitle")) + '</h3><div class="d119-rental-process">' + process + '</div><div class="d119-rental-trust" style="margin-top:16px">' + trust + '</div></div>' +
+      '<div class="d119-rental-v2__section"><details class="d119-rental-process-details"><summary>' + esc(t("processTitle")) + '</summary><div class="d119-rental-process">' + process + '</div><div class="d119-rental-trust" style="margin-top:16px">' + trust + '</div></details></div>' +
       '<div class="d119-rental-v2__section"><h3>' + esc(fmt(t("selected"), { count: items.length })) + '</h3><div class="d119-rental-v2__items">' + itemRows + '</div><p class="d119-rental-note">' + esc(t("deposit")) + ': ' + esc(t("depositRule")) + ' · ' + esc(t("depositAuto")) + '.</p></div>' +
       '<div class="d119-rental-v2__section"><h3>' + esc(t("period")) + '</h3><div class="d119-rental-grid2">' +
       '<div class="d119-rental-field"><label for="d119RentalStart">' + esc(t("start")) + '</label><input type="date" id="d119RentalStart" value="' + esc(state.start) + '"></div>' +
       '<div class="d119-rental-field"><label for="d119RentalEnd">' + esc(t("end")) + '</label><input type="date" id="d119RentalEnd" value="' + esc(state.end) + '"></div></div>' +
-      '<p class="d119-rental-note">' + esc(t("maxDays")) + '</p><p class="d119-rental-note">' + esc(t("longPeriod")) + '</p><p class="d119-rental-error" id="d119RentalDateStatus"></p></div>' +
+      '<p class="d119-rental-note">' + esc(t("maxDays")) + '</p><p class="d119-rental-error" id="d119RentalDateStatus" aria-live="polite"></p></div>' +
       '<div class="d119-rental-v2__section"><div class="d119-rental-grid2">' +
       '<div class="d119-rental-field"><label for="d119RentalPurpose">' + esc(t("purpose")) + '</label><select id="d119RentalPurpose">' +
       option("private", t("purposePrivate"), state.purpose) + option("photo", t("purposePhoto"), state.purpose) + option("video", t("purposeVideo"), state.purpose) + option("filmTheater", t("purposeFilm"), state.purpose) + option("editorial", t("purposeEditorial"), state.purpose) + option("event", t("purposeEvent"), state.purpose) + option("other", t("purposeOther"), state.purpose) + '</select></div>' +
@@ -576,7 +596,7 @@
       '<div class="d119-rental-summary__row"><span>' + esc(t("shippingCost")) + '</span><strong>' + esc(t("shippingConfirm")) + '</strong></div>' +
       '<div class="d119-rental-summary__row d119-rental-summary__row--total"><span>' + esc(t("provisional")) + '</span><strong id="d119Provisional">' + esc(provisional) + '</strong></div></div>' +
       '<p class="d119-rental-error" id="d119RentalBuyWarning">' + (quote.buyWarning ? esc(t("buyWarning")) : '') + '</p>' +
-      '<p class="d119-rental-error" id="d119RentalAvailability">' + esc(SHOP_CONFIG.shopWorkerUrl ? t("availabilityChecking") : t("availabilityManual")) + '</p></div>' +
+      '<p class="d119-rental-error" id="d119RentalAvailability" aria-live="polite">' + esc(SHOP_CONFIG.shopWorkerUrl ? t("availabilityChecking") : t("availabilityManual")) + '</p></div>' +
       '<div class="d119-rental-v2__section"><label class="d119-rental-terms"><input type="checkbox" id="d119RentalTerms"' + (state.termsAccepted ? ' checked' : '') + '><span>' + esc(t("terms")) + ' <a href="' + esc(RENTAL_PATH + '#mietbedingungen') + '" target="_blank" rel="noopener">' + esc(t("termsOpen")) + '</a></span></label>' +
       '<p class="d119-rental-note">' + esc(t("noPayment")) + '</p><div class="d119-rental-actions" id="d119RentalActions"></div></div>';
 

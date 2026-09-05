@@ -15,6 +15,15 @@
   var query = "";
   var picker = null;
   var previousFocus = null;
+  var CATEGORY_LABELS = { // QUALITY95_PICKER_I18N
+    Jackets: { de: "Jacken", en: "Jackets", fr: "Vestes" }, Coats: { de: "Mäntel", en: "Coats", fr: "Manteaux" },
+    Tops: { de: "Oberteile", en: "Tops", fr: "Hauts" }, Shirts: { de: "Hemden / Shirts", en: "Shirts", fr: "Chemises / T-shirts" },
+    Knitwear: { de: "Strick", en: "Knitwear", fr: "Maille" }, Pants: { de: "Hosen", en: "Pants", fr: "Pantalons" },
+    Skirts: { de: "Röcke", en: "Skirts", fr: "Jupes" }, Dresses: { de: "Kleider", en: "Dresses", fr: "Robes" },
+    Shoes: { de: "Schuhe", en: "Shoes", fr: "Chaussures" }, Accessories: { de: "Accessoires", en: "Accessories", fr: "Accessoires" },
+    Objects: { de: "Objekte", en: "Objects", fr: "Objets" }
+  };
+  function categoryLabel(value) { var row = CATEGORY_LABELS[value]; return row ? (row[LANG] || row.de) : value; }
 
   var TEXT = {
     de: {
@@ -129,7 +138,7 @@
       ".d119-rental-picker{position:absolute;inset:0;z-index:12;background:var(--surface,#fff);color:var(--ink,#111);display:flex;flex-direction:column;min-height:100%;animation:d119RentalPickerIn .16s ease-out}",
       "@keyframes d119RentalPickerIn{from{opacity:.4;transform:translateX(18px)}to{opacity:1;transform:none}}",
       ".d119-rental-picker__head{position:sticky;top:0;z-index:3;background:var(--surface,#fff);padding:18px 20px 14px;border-bottom:1px solid var(--line,#bbb)}",
-      ".d119-rental-picker__back{appearance:none;border:0;background:transparent;color:inherit;padding:0 0 12px;font:inherit;font-size:11px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}",
+      ".d119-rental-picker__back{appearance:none;min-height:44px;border:0;background:transparent;color:inherit;padding:8px 0 10px;font:inherit;font-size:11px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}",
       ".d119-rental-picker__title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}",
       ".d119-rental-picker__title-row h2{font-size:20px;line-height:1.1;margin:0}",
       ".d119-rental-picker__count{font-size:10px;line-height:1.25;text-align:right;opacity:.65;max-width:135px}",
@@ -138,7 +147,7 @@
       ".d119-rental-picker__search{width:100%;box-sizing:border-box;border:1px solid var(--line,#aaa);background:transparent;color:inherit;padding:12px 13px;font:inherit;font-size:13px}",
       ".d119-rental-picker__chips{display:flex;gap:6px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}",
       ".d119-rental-picker__chips::-webkit-scrollbar{display:none}",
-      ".d119-rental-picker__chip{appearance:none;white-space:nowrap;border:1px solid var(--line,#aaa);background:transparent;color:inherit;padding:7px 10px;font:inherit;font-size:10px;cursor:pointer}",
+      ".d119-rental-picker__chip{appearance:none;min-height:44px;white-space:nowrap;border:1px solid var(--line,#aaa);background:transparent;color:inherit;padding:8px 11px;font:inherit;font-size:10px;cursor:pointer}",
       ".d119-rental-picker__chip[aria-pressed='true']{background:var(--ink,#111);color:var(--surface,#fff);border-color:var(--ink,#111)}",
       ".d119-rental-picker__body{padding:8px 20px 30px;overflow:auto;flex:1}",
       ".d119-rental-picker__grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}",
@@ -151,14 +160,15 @@
       ".d119-rental-picker-card__title{font-size:12px;line-height:1.3;font-weight:600;min-height:31px}",
       ".d119-rental-picker-card__meta{font-size:10px;line-height:1.35;opacity:.62;min-height:14px}",
       ".d119-rental-picker-card__price{font-size:12px;line-height:1.3;margin-top:3px}",
-      ".d119-rental-picker-card__action{appearance:none;border:1px solid currentColor;background:transparent;color:inherit;width:100%;padding:9px 8px;margin-top:6px;font:inherit;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}",
+      ".d119-rental-picker-card__action{appearance:none;min-height:44px;border:1px solid currentColor;background:transparent;color:inherit;width:100%;padding:9px 8px;margin-top:6px;font:inherit;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}",
       ".d119-rental-picker-card__action:before{content:'+';display:grid;place-items:center;width:19px;height:19px;border:1px solid currentColor;border-radius:50%;font-size:16px;line-height:1}",
       ".d119-rental-picker-card__action[aria-pressed='true']{background:var(--ink,#111);color:var(--surface,#fff)}",
       ".d119-rental-picker-card__action[aria-pressed='true']:before{content:'✓';font-size:10px}",
       ".d119-rental-picker__empty{border:1px dashed var(--line,#aaa);padding:28px 18px;text-align:center;font-size:12px;line-height:1.5;opacity:.7}",
       ".d119-rental-picker__foot{position:sticky;bottom:0;z-index:3;background:var(--surface,#fff);border-top:1px solid var(--line,#bbb);padding:12px 20px 16px}",
       ".d119-rental-picker__hint{font-size:10px;line-height:1.4;opacity:.64;margin:0 0 10px}",
-      ".d119-rental-picker__done{appearance:none;width:100%;border:1px solid currentColor;background:var(--ink,#111);color:var(--surface,#fff);padding:12px 14px;font:inherit;font-size:12px;cursor:pointer}",
+      ".d119-rental-picker__done{appearance:none;width:100%;min-height:46px;border:1px solid currentColor;background:var(--ink,#111);color:var(--surface,#fff);padding:12px 14px;font:inherit;font-size:12px;cursor:pointer}",
+      ".d119-rental-picker :focus-visible{outline:2px solid currentColor;outline-offset:2px}",
       ".d119-rental-picker__alert{font-size:10px;line-height:1.35;margin:8px 0 0}",
       "@media(max-width:640px){.d119-rental-picker__head{padding:15px 16px 12px}.d119-rental-picker__tools{padding:12px 16px 8px}.d119-rental-picker__body{padding:6px 16px 24px}.d119-rental-picker__foot{padding:11px 16px 14px}.d119-rental-picker__grid{gap:9px}.d119-rental-picker-card__body{padding:8px}.d119-rental-picker-card__title{font-size:11px}.d119-rental-picker-card__action{padding:8px 5px}.d119-rental-picker__count{max-width:105px}}"
     ].join("");
@@ -171,7 +181,7 @@
       var cat = String(item.category || "").trim();
       if (cat) seen[cat] = true;
     });
-    return Object.keys(seen).sort(function (a, b) { return a.localeCompare(b, LOCALE); });
+    return Object.keys(seen).sort(function (a, b) { return categoryLabel(a).localeCompare(categoryLabel(b), LOCALE); });
   }
 
   function filteredItems() {
@@ -184,7 +194,11 @@
       if (selectedOnly && ids.indexOf(id) < 0) return false;
       if (!selectedOnly && activeCategory !== "all" && String(item.category || "") !== activeCategory) return false;
       if (!q) return true;
-      return normalize([item.brand, item.title, item.article, item.id, item.category, item.size].join(" ")).indexOf(q) >= 0;
+      var hay = normalize([item.brand, item.title, item.article, item.id, item.category, item.size].join(" "));
+      if (hay.indexOf(q) >= 0) return true;
+      var compactHay = hay.replace(/[^a-z0-9]+/g, "");
+      var compactQ = q.replace(/[^a-z0-9]+/g, "");
+      return compactQ.length >= 2 && compactHay.indexOf(compactQ) >= 0; // QUALITY95_PICKER_SEARCH
     }).slice(0, 120);
   }
 
@@ -215,7 +229,7 @@
       var html = '<button type="button" class="d119-rental-picker__chip" data-picker-category="all" aria-pressed="' + (activeCategory === "all" ? "true" : "false") + '">' + esc(t("all")) + '</button>' +
         '<button type="button" class="d119-rental-picker__chip" data-picker-category="__selected__" aria-pressed="' + (activeCategory === "__selected__" ? "true" : "false") + '">' + esc(t("selected")) + ' (' + ids.length + ')</button>';
       categories().forEach(function (cat) {
-        html += '<button type="button" class="d119-rental-picker__chip" data-picker-category="' + esc(cat) + '" aria-pressed="' + (activeCategory === cat ? "true" : "false") + '">' + esc(cat) + '</button>';
+        html += '<button type="button" class="d119-rental-picker__chip" data-picker-category="' + esc(cat) + '" aria-pressed="' + (activeCategory === cat ? "true" : "false") + '">' + esc(categoryLabel(cat)) + '</button>';
       });
       chips.innerHTML = html;
     }
@@ -269,14 +283,15 @@
     var el = document.createElement("section");
     el.id = "d119RentalIntegratedPicker";
     el.className = "d119-rental-picker";
-    el.setAttribute("aria-label", t("title"));
+    el.setAttribute("role", "region");
+    el.setAttribute("aria-labelledby", "d119PickerTitle");
     el.innerHTML = '<div class="d119-rental-picker__head">' +
       '<button type="button" class="d119-rental-picker__back" id="d119PickerBack">← ' + esc(t("close")) + '</button>' +
-      '<div class="d119-rental-picker__title-row"><h2>' + esc(t("title")) + '</h2><div class="d119-rental-picker__count" id="d119PickerCount"></div></div>' +
+      '<div class="d119-rental-picker__title-row"><h2 id="d119PickerTitle">' + esc(t("title")) + '</h2><div class="d119-rental-picker__count" id="d119PickerCount" aria-live="polite"></div></div>' +
       '<p class="d119-rental-picker__sub">' + esc(t("subtitle")) + '</p></div>' +
-      '<div class="d119-rental-picker__tools"><input class="d119-rental-picker__search" id="d119PickerSearch" type="search" autocomplete="off" placeholder="' + esc(t("search")) + '" value="' + esc(query) + '"><div class="d119-rental-picker__chips" id="d119PickerChips"></div></div>' +
+      '<div class="d119-rental-picker__tools"><input class="d119-rental-picker__search" id="d119PickerSearch" type="search" autocomplete="off" aria-label="' + esc(t("search")) + '" placeholder="' + esc(t("search")) + '" value="' + esc(query) + '"><div class="d119-rental-picker__chips" id="d119PickerChips"></div></div>' +
       '<div class="d119-rental-picker__body"><div class="d119-rental-picker__grid" id="d119PickerGrid"></div></div>' +
-      '<div class="d119-rental-picker__foot"><p class="d119-rental-picker__hint">' + esc(t("hint")) + '</p><button type="button" class="d119-rental-picker__done" id="d119PickerDone">' + esc(t("close")) + '</button><p class="d119-rental-picker__alert" id="d119PickerAlert"></p></div>';
+      '<div class="d119-rental-picker__foot"><p class="d119-rental-picker__hint">' + esc(t("hint")) + '</p><button type="button" class="d119-rental-picker__done" id="d119PickerDone">' + esc(t("close")) + '</button><p class="d119-rental-picker__alert" id="d119PickerAlert" role="status" aria-live="polite"></p></div>';
     drawer.appendChild(el);
     picker = el;
     el.querySelector("#d119PickerBack").addEventListener("click", closePicker);
@@ -334,12 +349,21 @@
     injectStyles();
     document.addEventListener("click", interceptPlusControls, true);
     document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape" && picker) {
+      if (!picker) return;
+      if (event.key === "Escape") {
         event.preventDefault();
         event.stopImmediatePropagation();
         closePicker();
+        return;
       }
-    }, true);
+      if (event.key !== "Tab") return;
+      var focusables = picker.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[href],[tabindex]:not([tabindex="-1"])');
+      if (!focusables.length) return;
+      var first = focusables[0], last = focusables[focusables.length - 1];
+      if (!picker.contains(document.activeElement)) { event.preventDefault(); first.focus(); }
+      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }, true); // QUALITY95_PICKER_FOCUS_TRAP
     observeDrawer();
     fetch("/data/catalog.json", { credentials: "same-origin" })
       .then(function (response) { return response.ok ? response.json() : []; })

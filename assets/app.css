@@ -3398,3 +3398,10 @@
   @media (max-width: 380px) {
     .wordmark { font-size: clamp(1.8rem, 10.5vw, 2.1rem); }
   }
+
+/* QUALITY95_CART_MESSAGE_STYLE — scoped to the classic cart only. */
+.cart-order-message{display:block;margin:12px 0 14px;font-size:.68rem;line-height:1.35;color:var(--text-muted)}
+.cart-order-message>span{display:block;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase}
+.cart-order-message small{font-size:inherit;text-transform:none;letter-spacing:0;color:var(--text-faint)}
+.cart-order-message textarea{display:block;width:100%;min-height:72px;max-height:150px;resize:vertical;border:1px solid var(--rule-strong);border-radius:0;background:transparent;color:var(--text);font:inherit;font-size:.78rem;line-height:1.45;padding:10px}
+.cart-order-message textarea:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px;border-color:var(--accent-text)}

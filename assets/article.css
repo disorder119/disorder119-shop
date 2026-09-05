@@ -425,3 +425,10 @@ a { color: inherit; }
 }
 .page-foot a { color: var(--text-muted); text-decoration: underline; }
 .page-foot a:hover { color: var(--accent-text); }
+
+/* QUALITY95_ARTICLE_A11Y — product pages only. */
+.gallery__stage>img:focus-visible,.lightbox__close:focus-visible,.article-order-message textarea:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
+.lightbox__close{min-width:44px;min-height:44px}
+.article-order-message{display:block;margin:4px 0 2px;font-size:.68rem;line-height:1.35;color:var(--text-muted)}
+.article-order-message>span{display:block;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase}
+.article-order-message textarea{display:block;width:100%;min-height:72px;max-height:150px;resize:vertical;border:1px solid var(--rule-strong);border-radius:0;background:transparent;color:var(--paper);font:inherit;font-size:.78rem;line-height:1.45;padding:10px}

@@ -814,6 +814,15 @@
   // ---- Warenkorb ----
   var CART_KEY = "disorder119_cart";
   var cart = loadCart();
+  // Nur fuer die aktuelle Sitzung: optionale Kundennachricht wird nicht
+  // dauerhaft gespeichert, aber in jede erzeugte Kaufanfrage übernommen.
+  var cartOrderMessage = ""; // QUALITY95_CART_MESSAGE
+  function purchaseMessageLabel() {
+    return LANG === "fr" ? "Message client" : LANG === "en" ? "Customer message" : "Kundennachricht";
+  }
+  function purchaseMessagePlaceholder() {
+    return LANG === "fr" ? "Question, mesures, souhait de livraison …" : LANG === "en" ? "Question, measurements, shipping request …" : "Frage, Maße, Versandwunsch …";
+  }
 
   function loadCart() {
     try {
@@ -928,6 +937,7 @@
     return t("orderGreeting") + "\n\n" +
       lines.join("\n\n") +
       "\n\n" + t("cartTotal") + ": " + fmtPrice(total) +
+      (cartOrderMessage.trim() ? "\n" + purchaseMessageLabel() + ": " + cartOrderMessage.trim() : "") +
       "\n" + (LANG === "de" ? "Zeitpunkt" : LANG === "fr" ? "Horodatage" : "Timestamp") + ": " + new Date().toLocaleString() +
       "\n\n" + t("orderAvailQuestion");
   }
@@ -979,22 +989,34 @@
 
     var hasWhatsapp = !!SHOP_CONFIG.whatsappNumber;
     var hasEmail = !!SHOP_CONFIG.email;
-    var encoded = encodeURIComponent(buildOrderText());
-
-    var footHtml = '<div class="cart-total"><span>' + t("cartTotal") + '</span><span>' + fmtPrice(total) + "</span></div>";
+    var footHtml = '<div class="cart-total"><span>' + t("cartTotal") + '</span><span>' + fmtPrice(total) + "</span></div>" +
+      '<label class="cart-order-message"><span>' + purchaseMessageLabel() + ' <small>(' + (LANG === "de" ? "optional" : LANG === "fr" ? "facultatif" : "optional") + ')</small></span>' +
+      '<textarea id="cartOrderMessage" maxlength="500" placeholder="' + escapeHtml(purchaseMessagePlaceholder()) + '">' + escapeHtml(cartOrderMessage) + '</textarea></label>';
     if (hasWhatsapp) {
-      footHtml += '<a class="cart-checkout-btn cart-checkout-btn--whatsapp" target="_blank" rel="noopener" href="https://wa.me/' +
-        SHOP_CONFIG.whatsappNumber + '?text=' + encoded + '">' + t("cartWhatsapp") + '</a>';
+      footHtml += '<a class="cart-checkout-btn cart-checkout-btn--whatsapp" data-cart-inquiry="whatsapp" target="_blank" rel="noopener" href="#">' + t("cartWhatsapp") + '</a>';
     }
     if (hasEmail) {
-      footHtml += '<a class="cart-checkout-btn cart-checkout-btn--email" href="mailto:' + SHOP_CONFIG.email +
-        '?subject=' + encodeURIComponent(t("orderSubject")) + '&body=' + encoded + '">' + t("cartEmail") + '</a>';
+      footHtml += '<a class="cart-checkout-btn cart-checkout-btn--email" data-cart-inquiry="email" href="#">' + t("cartEmail") + '</a>';
     }
     if (!hasWhatsapp && !hasEmail) {
       footHtml += '<p class="cart-config-warning">' + t("cartConfigWarning") + '</p>';
     }
     footHtml += '<p class="cart-note">' + t("cartNote") + '</p>';
     foot.innerHTML = footHtml;
+
+    function refreshCartInquiryLinks() {
+      var encoded = encodeURIComponent(buildOrderText());
+      var wa = foot.querySelector('[data-cart-inquiry="whatsapp"]');
+      var email = foot.querySelector('[data-cart-inquiry="email"]');
+      if (wa) wa.href = "https://wa.me/" + SHOP_CONFIG.whatsappNumber + "?text=" + encoded;
+      if (email) email.href = "mailto:" + SHOP_CONFIG.email + "?subject=" + encodeURIComponent(t("orderSubject")) + "&body=" + encoded;
+    }
+    var messageInput = foot.querySelector("#cartOrderMessage");
+    if (messageInput) messageInput.addEventListener("input", function () {
+      cartOrderMessage = messageInput.value.slice(0, 500);
+      refreshCartInquiryLinks();
+    });
+    refreshCartInquiryLinks(); // QUALITY95_CART_LINK_REFRESH
   }
 
   // ---- Verleih-Anfrage (Rental) ----
@@ -1681,6 +1703,12 @@
   function fuzzyIncludes(haystack, needle) {
     if (!needle) return true;
     if (haystack.indexOf(needle) !== -1) return true;
+    // Exakte Schreibvarianten mit Bindestrich, Punkt, Slash oder Leerzeichen
+    // sollen gleich behandelt werden (z. B. Y3 / Y-3 / Y 3), ohne die
+    // Tippfehlertoleranz aggressiver zu machen. QUALITY95_SEARCH_COMPACT
+    var compactHay = haystack.replace(/[^a-z0-9]+/g, "");
+    var compactNeedle = needle.replace(/[^a-z0-9]+/g, "");
+    if (compactNeedle.length >= 2 && compactHay.indexOf(compactNeedle) !== -1) return true;
     if (needle.length < 4) return false;
     var maxDist = needle.length <= 6 ? 1 : 2;
     var words = haystack.split(/\s+/);

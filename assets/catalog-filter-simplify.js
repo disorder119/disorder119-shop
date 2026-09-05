@@ -118,11 +118,13 @@
   else init();
 })();
 
-/* Compact desktop controls + mobile bottom drawer. */
+/* Compact desktop controls + accessible mobile bottom drawer. QUALITY95_FILTER_DRAWER */
 (function () {
   "use strict";
   var MARKER_ID = "d119CompactFilterDrawer";
   var MOBILE = "(max-width: 720px)";
+  var wasOpen = false;
+  var previousFocus = null;
   var COPY = {
     de: { filter: "Filter", close: "Schließen", apply: "{count} Artikel anzeigen" },
     en: { filter: "Filters", close: "Close", apply: "Show {count} items" },
@@ -159,10 +161,15 @@
     style.textContent = [
       ".filter-panel{gap:10px;padding-top:12px}.filter-field{gap:5px}.active-filter-row{gap:6px}.active-filter-row .chip{font-size:.66rem;padding:4px 8px}",
       ".plate__size{display:inline-flex;align-self:flex-start;max-width:100%;margin-top:5px;padding:2px 5px;border:1px solid var(--mount-rule);color:var(--mount-text);font-size:.58rem;line-height:1.3;letter-spacing:.08em;text-transform:uppercase;font-weight:500;white-space:normal;overflow-wrap:anywhere;opacity:.72}",
-      ".d119-filter-drawer__head,.d119-filter-drawer__foot{display:none}",
-      "@media(max-width:720px){body.d119-filter-open{overflow:hidden}.filter-panel.d119-filter-drawer{position:fixed;inset:auto 0 0;z-index:130;width:100%;max-height:82dvh;display:grid;grid-template-columns:1fr;gap:0;margin:0;padding:0 0 max(12px,env(safe-area-inset-bottom));overflow:auto;background:var(--bg);border-top:1px solid var(--rule-strong);box-shadow:0 -18px 50px rgba(0,0,0,.4)}.filter-panel.d119-filter-drawer.hidden{display:none}.d119-filter-drawer .filter-field{padding:0 18px 12px}.d119-filter-drawer .filter-field select,.d119-filter-drawer .filter-price-inputs input{min-height:42px;font-size:.82rem}.d119-filter-drawer .filter-reset{margin:0 18px 12px;padding:8px 0}.d119-filter-drawer__head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px 13px;background:var(--bg);border-bottom:1px solid var(--rule);margin-bottom:14px}.d119-filter-drawer__title{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600}.d119-filter-drawer__close{appearance:none;border:0;background:transparent;color:var(--text-muted);font:inherit;font-size:.7rem;text-decoration:underline;text-underline-offset:3px;padding:4px;cursor:pointer}.d119-filter-drawer__foot{position:sticky;bottom:0;z-index:2;display:block;padding:12px 18px max(14px,env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--rule)}.d119-filter-drawer__apply{appearance:none;width:100%;border:1px solid var(--text);background:var(--text);color:var(--bg);font:inherit;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:12px 14px;cursor:pointer}.rail__right{gap:8px}.plate__size{font-size:.56rem;margin-top:4px}}"
+      ".d119-filter-drawer__head,.d119-filter-drawer__foot{display:none}.d119-filter-backdrop{display:none}",
+      "@media(max-width:720px){body.d119-filter-open{overflow:hidden;touch-action:none}.d119-filter-backdrop{position:fixed;inset:0;z-index:129;display:block;background:rgba(0,0,0,.56);border:0;padding:0}.d119-filter-backdrop[hidden]{display:none}.filter-panel.d119-filter-drawer{position:fixed;inset:auto 0 0;z-index:130;width:100%;max-height:min(82dvh,680px);display:grid;grid-template-columns:1fr;gap:0;margin:0;padding:0 0 max(12px,env(safe-area-inset-bottom));overflow:auto;overscroll-behavior:contain;background:var(--bg);border-top:1px solid var(--rule-strong);box-shadow:0 -18px 50px rgba(0,0,0,.4)}.filter-panel.d119-filter-drawer.hidden{display:none}.d119-filter-drawer .filter-field{padding:0 18px 12px}.d119-filter-drawer .filter-field select,.d119-filter-drawer .filter-price-inputs input{min-height:44px;font-size:.82rem}.d119-filter-drawer .filter-reset{min-height:44px;margin:0 18px 12px;padding:8px 0}.d119-filter-drawer__head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 11px 18px;background:var(--bg);border-bottom:1px solid var(--rule);margin-bottom:14px}.d119-filter-drawer__title{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600}.d119-filter-drawer__close{appearance:none;min-width:44px;min-height:44px;border:0;background:transparent;color:var(--text-muted);font:inherit;font-size:.7rem;text-decoration:underline;text-underline-offset:3px;padding:8px;cursor:pointer}.d119-filter-drawer__foot{position:sticky;bottom:0;z-index:2;display:block;padding:12px 18px max(14px,env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--rule)}.d119-filter-drawer__apply{appearance:none;width:100%;min-height:46px;border:1px solid var(--text);background:var(--text);color:var(--bg);font:inherit;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:12px 14px;cursor:pointer}.d119-filter-drawer :focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}.rail__right{gap:8px}.plate__size{font-size:.56rem;margin-top:4px}}"
     ].join("");
     document.head.appendChild(style);
+  }
+  function focusables(panel) {
+    return Array.prototype.filter.call(panel.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[href],[tabindex]:not([tabindex="-1"])'), function (el) {
+      return !el.hidden && el.getAttribute("aria-hidden") !== "true";
+    });
   }
   function closeDrawer() {
     var panel = document.getElementById("filterPanel");
@@ -170,12 +177,14 @@
     if (!panel) return;
     panel.classList.add("hidden");
     if (toggle) toggle.setAttribute("aria-expanded", "false");
-    document.body.classList.remove("d119-filter-open");
-    if (toggle && toggle.focus) toggle.focus();
+    refresh();
+    var target = previousFocus && previousFocus.isConnected ? previousFocus : toggle;
+    if (target && target.focus) target.focus();
   }
   function refresh() {
     var panel = document.getElementById("filterPanel");
     var toggle = document.getElementById("moreFiltersToggle");
+    var backdrop = document.getElementById(MARKER_ID + "Backdrop");
     if (!panel) return;
     var title = panel.querySelector(".d119-filter-drawer__title");
     var close = panel.querySelector(".d119-filter-drawer__close");
@@ -184,7 +193,26 @@
     if (close) close.textContent = t("close");
     if (apply) apply.textContent = t("apply", resultCount());
     if (toggle) toggle.textContent = t("filter") + (activeCount() ? " · " + activeCount() : "");
-    document.body.classList.toggle("d119-filter-open", isMobile() && !panel.classList.contains("hidden"));
+    var open = isMobile() && !panel.classList.contains("hidden");
+    document.body.classList.toggle("d119-filter-open", open);
+    if (backdrop) backdrop.hidden = !open;
+    if (open) {
+      panel.setAttribute("role", "dialog");
+      panel.setAttribute("aria-modal", "true");
+      panel.setAttribute("aria-labelledby", MARKER_ID + "Title");
+      if (!wasOpen) {
+        previousFocus = document.activeElement;
+        window.setTimeout(function () {
+          var first = panel.querySelector(".d119-filter-drawer__close");
+          if (first && first.focus) first.focus();
+        }, 0);
+      }
+    } else {
+      panel.removeAttribute("role");
+      panel.removeAttribute("aria-modal");
+      panel.removeAttribute("aria-labelledby");
+    }
+    wasOpen = open;
   }
   function init() {
     var panel = document.getElementById("filterPanel");
@@ -197,20 +225,41 @@
     panel.appendChild(marker);
     var head = document.createElement("div");
     head.className = "d119-filter-drawer__head";
-    head.innerHTML = '<span class="d119-filter-drawer__title"></span><button type="button" class="d119-filter-drawer__close"></button>';
+    head.innerHTML = '<span class="d119-filter-drawer__title" id="' + MARKER_ID + 'Title"></span><button type="button" class="d119-filter-drawer__close"></button>';
     panel.insertBefore(head, panel.firstChild);
     var foot = document.createElement("div");
     foot.className = "d119-filter-drawer__foot";
     foot.innerHTML = '<button type="button" class="d119-filter-drawer__apply"></button>';
     panel.appendChild(foot);
+    var backdrop = document.createElement("button");
+    backdrop.type = "button";
+    backdrop.id = MARKER_ID + "Backdrop";
+    backdrop.className = "d119-filter-backdrop";
+    backdrop.tabIndex = -1;
+    backdrop.setAttribute("aria-hidden", "true");
+    backdrop.hidden = true;
+    panel.parentNode.insertBefore(backdrop, panel);
     head.querySelector("button").addEventListener("click", closeDrawer);
     foot.querySelector("button").addEventListener("click", closeDrawer);
+    backdrop.addEventListener("click", closeDrawer);
     document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape" && isMobile() && !panel.classList.contains("hidden")) closeDrawer();
+      if (!isMobile() || panel.classList.contains("hidden")) return;
+      if (event.key === "Escape") { event.preventDefault(); closeDrawer(); return; }
+      if (event.key !== "Tab") return;
+      var list = focusables(panel);
+      if (!list.length) return;
+      var first = list[0], last = list[list.length - 1];
+      if (!panel.contains(document.activeElement)) { event.preventDefault(); first.focus(); }
+      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    });
+    ["filterDepartment", "filterBrand", "filterSize", "filterColor", "filterCondition", "filterPriceMin", "filterPriceMax"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) { el.addEventListener("change", refresh); el.addEventListener("input", refresh); }
     });
     window.addEventListener("resize", refresh, { passive: true });
     if (typeof MutationObserver !== "undefined") {
-      new MutationObserver(refresh).observe(panel, { attributes: true, attributeFilter: ["class"], subtree: true, childList: true, characterData: true });
+      new MutationObserver(refresh).observe(panel, { attributes: true, attributeFilter: ["class"] });
       var count = document.getElementById("railCount");
       if (count) new MutationObserver(refresh).observe(count, { childList: true, subtree: true, characterData: true });
     }
@@ -219,4 +268,3 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
   else init();
 })();
-

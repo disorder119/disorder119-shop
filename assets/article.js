@@ -280,16 +280,33 @@
   // ---- Lightbox (Zoom/Vollbild) - immer die grosse Version, nie das Thumbnail ----
   var lightbox = document.getElementById("lightbox");
   var lightboxImg = document.getElementById("lightboxImg");
+  var lightboxLastFocus = null; // QUALITY95_ARTICLE_LIGHTBOX
   function openLightbox() {
+    lightboxLastFocus = document.activeElement;
     lightboxImg.src = gallery[idx];
     lightbox.classList.add("open");
+    lightbox.setAttribute("role", "dialog");
+    lightbox.setAttribute("aria-modal", "true");
+    lightbox.setAttribute("aria-label", LANG === "fr" ? "Image produit agrandie" : LANG === "en" ? "Enlarged product image" : "Vergrößertes Produktbild");
     document.body.style.overflow = "hidden";
+    var close = document.getElementById("lightboxClose");
+    if (close) close.focus();
   }
   function closeLightbox() {
+    if (!lightbox.classList.contains("open")) return;
     lightbox.classList.remove("open");
     document.body.style.overflow = "";
+    var target = lightboxLastFocus && lightboxLastFocus.isConnected ? lightboxLastFocus : mainImg;
+    lightboxLastFocus = null;
+    if (target && target.focus) target.focus();
   }
+  mainImg.tabIndex = 0;
+  mainImg.setAttribute("role", "button");
+  mainImg.setAttribute("aria-label", LANG === "fr" ? "Agrandir l’image produit" : LANG === "en" ? "Enlarge product image" : "Produktbild vergrößern");
   mainImg.addEventListener("click", openLightbox);
+  mainImg.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openLightbox(); }
+  });
   var lightboxClose = document.getElementById("lightboxClose");
   if (lightboxClose) lightboxClose.addEventListener("click", closeLightbox);
   if (lightbox) {
@@ -396,13 +413,37 @@
     if (IT.size) rows.push(t("factSize") + ": " + trSize(IT.size));
     rows.push(fmtPrice(IT.price));
     rows.push("URL: " + window.location.href.split("?")[0].split("#")[0]);
+    if (articleOrderMessage.trim()) rows.push(articleMessageLabel() + ": " + articleOrderMessage.trim());
     rows.push((LANG === "de" ? "Zeitpunkt" : LANG === "fr" ? "Horodatage" : "Timestamp") + ": " + new Date().toLocaleString());
     return t("orderGreeting") + "\n\n" + rows.join("\n") + "\n\n" + t("orderAvailQuestion");
   }
 
   var waBtn = document.getElementById("inquireWhatsapp");
   var emailBtn = document.getElementById("inquireEmail");
+  var articleOrderMessage = ""; // QUALITY95_ARTICLE_MESSAGE
+  function articleMessageLabel() { return LANG === "fr" ? "Message client" : LANG === "en" ? "Customer message" : "Kundennachricht"; }
+  function articleMessagePlaceholder() { return LANG === "fr" ? "Question, mesures, souhait de livraison …" : LANG === "en" ? "Question, measurements, shipping request …" : "Frage, Maße, Versandwunsch …"; }
+  function ensureArticleMessageField() {
+    var anchor = waBtn || emailBtn;
+    if (!anchor || (!SHOP_CONFIG.whatsappNumber && !SHOP_CONFIG.email)) return;
+    var field = document.getElementById("articleOrderMessageField");
+    if (!field) {
+      field = document.createElement("label");
+      field.id = "articleOrderMessageField";
+      field.className = "article-order-message";
+      field.innerHTML = '<span></span><textarea id="articleOrderMessage" maxlength="500"></textarea>';
+      anchor.parentNode.insertBefore(field, anchor);
+      field.querySelector("textarea").addEventListener("input", function (e) {
+        articleOrderMessage = e.target.value.slice(0, 500);
+        updateOrderLinks();
+      });
+    }
+    field.querySelector("span").textContent = articleMessageLabel() + " (" + (LANG === "fr" ? "facultatif" : "optional") + ")";
+    field.querySelector("textarea").placeholder = articleMessagePlaceholder();
+  }
+
   function updateOrderLinks() {
+    ensureArticleMessageField();
     if (IT.sold) {
       if (waBtn) waBtn.style.display = "none";
       if (emailBtn) emailBtn.style.display = "none";
