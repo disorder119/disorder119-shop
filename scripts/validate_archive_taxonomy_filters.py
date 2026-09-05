@@ -28,9 +28,17 @@ def main() -> None:
         'id="activeFilters"', 'aria-live="polite"',
         'for="filterDepartment"', 'for="filterProductType"', 'for="filterBrand"',
         'for="filterSize"', 'for="filterColor"', 'for="filterCondition"',
+        '<div class="rail__right">',
     ):
         if needle not in template:
             fail(f"Archivfilter fehlt im Template: {needle}")
+
+    # The old class combination made the entire right-hand archive controls
+    # invisible because .catalog-controls is display:none !important.
+    if '<div class="rail__right catalog-controls"' in template:
+        fail("Weitere Filter/Sortierung sind durch catalog-controls unsichtbar")
+    if '<div class="rail__right" aria-hidden="true">' in template:
+        fail("sichtbare Archiv-Steuerung darf nicht aria-hidden sein")
 
     required_js = (
         'state.department = filterDepartmentEl.value',
@@ -52,6 +60,9 @@ def main() -> None:
         'activeFilterRemove',
         'key: "query"',
         'refreshFacetOptions();', 'renderActiveFilters();',
+        'normalizeText(state.catalogLabelText) !== state.query',
+        'state.catalogLabelKey = state.status === "Verkauft"',
+        '(state.status === "all" ? "statusAll" : "statusAvailable")',
     )
     for needle in required_js:
         if needle not in app:
@@ -60,6 +71,7 @@ def main() -> None:
     for needle in (
         '.active-filter-row {', '.active-filter-row.hidden { display: none; }',
         '.active-filter-clear {', '.filter-field select option:disabled',
+        '.catalog-controls { display: none !important; }',
     ):
         if needle not in css:
             fail(f"Archivfilter-UX CSS fehlt: {needle}")
@@ -93,7 +105,10 @@ def main() -> None:
         if item.get("taxonomy_category") != taxonomy or item.get("product_type") != product_type:
             fail(f"Browse-Taxonomie bei {item_id} ist nicht korrigiert")
 
-    print("Archiv-Taxonomie-Filter: OK – Facets, aktive Filter, Größenübersetzung und kein Kinder-Bereich.")
+    print(
+        "Archiv-Taxonomie-Filter: OK – sichtbare Steuerung, synchroner Titel, "
+        "Facets, aktive Filter, Größenübersetzung und kein Kinder-Bereich."
+    )
 
 
 if __name__ == "__main__":
