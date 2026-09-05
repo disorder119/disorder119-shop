@@ -78,10 +78,11 @@ jobs:
           node --check shop-worker/commerce-core.js
           node --check shop-worker/worker.js
           node --check shop-worker/admin-api.js
+          node --check shop-worker/admin-insights.js
           node --check shop-worker/worker-entry.js
 
       - name: Commerce Unit Tests
-        run: node --test shop-worker/commerce-core.test.mjs shop-worker/admin-api.test.mjs
+        run: node --test shop-worker/commerce-core.test.mjs shop-worker/admin-api.test.mjs shop-worker/admin-insights.test.mjs
 
       - name: Seite bauen
         run: python build_site.py
