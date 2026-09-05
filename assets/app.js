@@ -87,6 +87,11 @@
       filterConditionLabel: "Zustand", filterAllConditions: "Alle Zustände",
       filterPriceLabel: "Preis (€)", filterPriceFrom: "von", filterPriceTo: "bis",
       filterResetLabel: "Filter zurücksetzen",
+      activeFiltersAria: "Aktive Filter", activeFilterSearch: "Suche",
+      activeFilterDepartment: "Bereich", activeFilterProductType: "Produkttyp",
+      activeFilterBrand: "Marke", activeFilterSize: "Größe", activeFilterColor: "Farbe",
+      activeFilterCondition: "Zustand", activeFilterPrice: "Preis", activeFilterCategory: "Kategorie",
+      activeFilterStatus: "Status", activeFilterRemove: "entfernen", activeFilterClear: "Alle Filter löschen",
       railCountTemplate: "{filtered} von {total} Objekten",
       emptyTitle: "Keine Treffer im Archiv",
       emptyBody: "Versuche einen anderen Suchbegriff oder setze die Filter zurück.",
@@ -256,6 +261,11 @@
       filterConditionLabel: "Condition", filterAllConditions: "All conditions",
       filterPriceLabel: "Price (€)", filterPriceFrom: "from", filterPriceTo: "to",
       filterResetLabel: "Reset filters",
+      activeFiltersAria: "Active filters", activeFilterSearch: "Search",
+      activeFilterDepartment: "Department", activeFilterProductType: "Product type",
+      activeFilterBrand: "Brand", activeFilterSize: "Size", activeFilterColor: "Colour",
+      activeFilterCondition: "Condition", activeFilterPrice: "Price", activeFilterCategory: "Category",
+      activeFilterStatus: "Status", activeFilterRemove: "remove", activeFilterClear: "Clear all filters",
       railCountTemplate: "{filtered} of {total} pieces",
       emptyTitle: "No matches in the archive",
       emptyBody: "Try a different search term or reset the filters.",
@@ -426,6 +436,11 @@
       filterConditionLabel: "État", filterAllConditions: "Tous les états",
       filterPriceLabel: "Prix (€)", filterPriceFrom: "de", filterPriceTo: "à",
       filterResetLabel: "Réinitialiser les filtres",
+      activeFiltersAria: "Filtres actifs", activeFilterSearch: "Recherche",
+      activeFilterDepartment: "Rayon", activeFilterProductType: "Type de produit",
+      activeFilterBrand: "Marque", activeFilterSize: "Taille", activeFilterColor: "Couleur",
+      activeFilterCondition: "État", activeFilterPrice: "Prix", activeFilterCategory: "Catégorie",
+      activeFilterStatus: "Statut", activeFilterRemove: "supprimer", activeFilterClear: "Effacer tous les filtres",
       railCountTemplate: "{filtered} sur {total} objets",
       emptyTitle: "Aucun résultat dans l'archive",
       emptyBody: "Essaie un autre terme de recherche ou réinitialise les filtres.",
@@ -670,7 +685,12 @@
     return labels ? (labels[LANG] || productType) : productType;
   }
   function trCondition(cond) { var k = CONDITION_MAP_DE_TO_KEY[cond]; return k ? t(k) : (cond || ""); }
-  function trSize(size) { var k = SIZE_MAP_DE_TO_KEY[size]; return k ? t(k) : (size || ""); }
+  function trSize(size) {
+    if (size === "One Size") return t("sizeEinheitsgroesse");
+    if (size === "Adjustable") return t("sizeVerstellbar");
+    var k = SIZE_MAP_DE_TO_KEY[size];
+    return k ? t(k) : (size || "");
+  }
 
   // Jede Sprache verwendet die fest im Artikeldatensatz hinterlegte Beschreibung.
   // Manche Artikel haben (noch) gar keine Beschreibung im Manager hinterlegt
@@ -1419,6 +1439,7 @@
   // damit die Oberflaeche bei "nur mal schnell stoebern" nicht ueberladen
   // wirkt - wer gezielt filtern will, klappt sie auf.
   var filterPanel = document.getElementById("filterPanel");
+  var activeFiltersEl = document.getElementById("activeFilters");
   var moreFiltersToggle = document.getElementById("moreFiltersToggle");
   moreFiltersToggle.addEventListener("click", function () {
     var willShow = filterPanel.classList.contains("hidden");
@@ -1496,6 +1517,113 @@
     state.priceMax = filterPriceMaxEl.value === "" ? null : Number(filterPriceMaxEl.value);
     render();
   });
+
+  function facetValues(it, facet) {
+    if (facet === "department") return it.department ? [it.department] : [];
+    if (facet === "productType") return it.product_type ? [it.product_type] : [];
+    if (facet === "brand") return it.brand ? [it.brand] : [];
+    if (facet === "size") return it.size_normalized && it.size_normalized !== "Unknown" ? [it.size_normalized] : [];
+    if (facet === "condition") return it.condition ? [it.condition] : [];
+    if (facet === "color") return (it.color || "").split(",").map(function (c) { return c.trim(); }).filter(Boolean);
+    return [];
+  }
+
+  function updateFacetSelect(selectEl, facet, labelFn, allLabelKey) {
+    var eligible = PUBLIC_ITEMS.filter(function (it) { return matches(it, facet); });
+    var counts = {};
+    eligible.forEach(function (it) {
+      facetValues(it, facet).forEach(function (value) { counts[value] = (counts[value] || 0) + 1; });
+    });
+    if (selectEl.options.length) selectEl.options[0].textContent = t(allLabelKey) + " (" + eligible.length + ")";
+    for (var i = 1; i < selectEl.options.length; i++) {
+      var opt = selectEl.options[i];
+      var count = counts[opt.value] || 0;
+      opt.textContent = labelFn(opt.value) + " (" + count + ")";
+      opt.disabled = count === 0 && opt.value !== selectEl.value;
+    }
+  }
+
+  function refreshFacetOptions() {
+    updateFacetSelect(filterDepartmentEl, "department", trDepartment, "filterAllDepartments");
+    updateFacetSelect(filterProductTypeEl, "productType", trProductType, "filterAllProductTypes");
+    updateFacetSelect(filterBrandEl, "brand", function (v) { return v; }, "filterAllBrands");
+    updateFacetSelect(filterSizeEl, "size", trSize, "filterAllSizes");
+    updateFacetSelect(filterColorEl, "color", function (v) { return v; }, "filterAllColors");
+    updateFacetSelect(filterConditionEl, "condition", trCondition, "filterAllConditions");
+  }
+
+  function clearOneArchiveFilter(key) {
+    if (key === "query") { state.query = ""; searchInputEl.value = ""; }
+    else if (key === "department") { state.department = ""; filterDepartmentEl.value = ""; }
+    else if (key === "productType") { state.productType = ""; filterProductTypeEl.value = ""; }
+    else if (key === "brand") { state.brand = ""; filterBrandEl.value = ""; }
+    else if (key === "size") { state.size = ""; filterSizeEl.value = ""; }
+    else if (key === "color") { state.color = ""; filterColorEl.value = ""; }
+    else if (key === "condition") { state.condition = ""; filterConditionEl.value = ""; }
+    else if (key === "price") { state.priceMin = null; state.priceMax = null; filterPriceMinEl.value = ""; filterPriceMaxEl.value = ""; }
+    else if (key === "category") { state.category = "all"; state.categoryGroup = null; syncCatalogChips(); }
+    else if (key === "status") { state.status = "Verfügbar"; syncCatalogChips(); }
+    render();
+  }
+
+  function clearAllActiveArchiveFilters() {
+    state.query = ""; searchInputEl.value = "";
+    state.department = ""; state.productType = ""; state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
+    state.priceMin = null; state.priceMax = null;
+    state.category = "all"; state.categoryGroup = null; state.status = "Verfügbar";
+    filterDepartmentEl.value = ""; filterProductTypeEl.value = ""; filterBrandEl.value = ""; filterSizeEl.value = "";
+    filterColorEl.value = ""; filterConditionEl.value = ""; filterPriceMinEl.value = ""; filterPriceMaxEl.value = "";
+    syncCatalogChips();
+    render();
+  }
+
+  function renderActiveFilters() {
+    var filters = [];
+    if (state.query) filters.push({ key: "query", label: t("activeFilterSearch"), value: searchInputEl.value.trim() });
+    if (state.department) filters.push({ key: "department", label: t("activeFilterDepartment"), value: trDepartment(state.department) });
+    if (state.productType) filters.push({ key: "productType", label: t("activeFilterProductType"), value: trProductType(state.productType) });
+    if (state.brand) filters.push({ key: "brand", label: t("activeFilterBrand"), value: state.brand });
+    if (state.size) filters.push({ key: "size", label: t("activeFilterSize"), value: trSize(state.size) });
+    if (state.color) filters.push({ key: "color", label: t("activeFilterColor"), value: state.color });
+    if (state.condition) filters.push({ key: "condition", label: t("activeFilterCondition"), value: trCondition(state.condition) });
+    if (state.priceMin != null || state.priceMax != null) {
+      var priceValue = (state.priceMin != null ? state.priceMin : "0") + "–" + (state.priceMax != null ? state.priceMax : "∞") + " €";
+      filters.push({ key: "price", label: t("activeFilterPrice"), value: priceValue });
+    }
+    if (state.category !== "all") filters.push({ key: "category", label: t("activeFilterCategory"), value: trCategory(state.category) });
+    else if (state.categoryGroup && state.categoryGroup.length) {
+      filters.push({ key: "category", label: t("activeFilterCategory"), value: state.categoryGroup.map(trCategory).join(" + ") });
+    }
+    if (state.status !== "Verfügbar") {
+      var statusValue = state.status === "Verkauft" ? t("statusSold") : t("statusAll");
+      filters.push({ key: "status", label: t("activeFilterStatus"), value: statusValue });
+    }
+
+    activeFiltersEl.setAttribute("aria-label", t("activeFiltersAria"));
+    activeFiltersEl.innerHTML = "";
+    filters.forEach(function (filter) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chip";
+      btn.textContent = filter.label + ": " + filter.value + " ×";
+      btn.setAttribute("aria-label", filter.label + " " + filter.value + " " + t("activeFilterRemove"));
+      btn.addEventListener("click", function () { clearOneArchiveFilter(filter.key); });
+      activeFiltersEl.appendChild(btn);
+    });
+    if (filters.length > 1) {
+      var clear = document.createElement("button");
+      clear.type = "button";
+      clear.className = "active-filter-clear";
+      clear.textContent = t("activeFilterClear");
+      clear.addEventListener("click", clearAllActiveArchiveFilters);
+      activeFiltersEl.appendChild(clear);
+    }
+    activeFiltersEl.classList.toggle("hidden", filters.length === 0);
+
+    var panelFilterCount = [state.department, state.productType, state.brand, state.size, state.color, state.condition].filter(Boolean).length +
+      ((state.priceMin != null || state.priceMax != null) ? 1 : 0);
+    moreFiltersToggle.textContent = t("moreFilters") + (panelFilterCount ? " · " + panelFilterCount : "");
+  }
 
   document.getElementById("filterReset").addEventListener("click", function () {
     state.department = ""; state.productType = ""; state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
@@ -1624,7 +1752,7 @@
   var visibleLimit = 12;
   var lastFilterSignature = "";
 
-  function matches(it) {
+  function matches(it, ignoreFacet) {
     // Klare, konsistente Statuslogik (statt der vorherigen impliziten
     // Sonderbehandlung): public_status kommt bereits fertig aus den
     // Artikeldaten (AVAILABLE/SOLD/DRAFT) - interne Manager-Zwischenstatus
@@ -1635,20 +1763,20 @@
     // die Beschriftung darf nicht etwas versprechen, was der Filter nicht haelt.
     if (state.status === "Verfügbar" && it.public_status !== "AVAILABLE") return false;
     if (state.status === "Verkauft" && it.public_status !== "SOLD") return false;
-    if (state.department && it.department !== state.department) return false;
-    if (state.productType && it.product_type !== state.productType) return false;
-    if (state.brand && it.brand !== state.brand) return false;
-    if (state.size && it.size_normalized !== state.size) return false;
-    if (state.condition && it.condition !== state.condition) return false;
-    if (state.color) {
+    if (ignoreFacet !== "department" && state.department && it.department !== state.department) return false;
+    if (ignoreFacet !== "productType" && state.productType && it.product_type !== state.productType) return false;
+    if (ignoreFacet !== "brand" && state.brand && it.brand !== state.brand) return false;
+    if (ignoreFacet !== "size" && state.size && it.size_normalized !== state.size) return false;
+    if (ignoreFacet !== "condition" && state.condition && it.condition !== state.condition) return false;
+    if (ignoreFacet !== "color" && state.color) {
       // Farbfeld ist teils Mehrfachangabe ("Schwarz, Weiß") - Treffer, wenn
       // die gewaehlte Farbe EINE der genannten Farben ist, nicht nur bei
       // exakter Gleichheit des ganzen Textfelds.
       var itColors = (it.color || "").split(",").map(function (c) { return c.trim(); });
       if (itColors.indexOf(state.color) === -1) return false;
     }
-    if (state.priceMin != null && !(it.price >= state.priceMin)) return false;
-    if (state.priceMax != null && !(it.price > 0 && it.price <= state.priceMax)) return false;
+    if (ignoreFacet !== "price" && state.priceMin != null && !(it.price >= state.priceMin)) return false;
+    if (ignoreFacet !== "price" && state.priceMax != null && !(it.price > 0 && it.price <= state.priceMax)) return false;
     var browseCategory = it.taxonomy_category || it.category;
     if (state.categoryGroup && state.categoryGroup.indexOf(browseCategory) === -1) return false;
     if (state.category !== "all" && browseCategory !== state.category) return false;
@@ -1688,7 +1816,9 @@
   var firstGridRenderDone = false;
 
   function render() {
-    var filtered = sortItems(ITEMS.filter(matches));
+    refreshFacetOptions();
+    renderActiveFilters();
+    var filtered = sortItems(ITEMS.filter(function (it) { return matches(it); }));
     catalogTitleEl.textContent = state.catalogLabelText ||
       (state.catalogLabelCategory ? trCategory(state.catalogLabelCategory) : t(state.catalogLabelKey || "statusAvailable"));
     var filterSignature = JSON.stringify([

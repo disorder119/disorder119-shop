@@ -32,7 +32,7 @@
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "AboutPage", "@id": "https://disorder119.com/fr/ueber-uns/#webpage", "url": "https://disorder119.com/fr/ueber-uns/", "name": "Disorder119 — À propos de Disorder119", "description": "À propos de Disorder119 : archive indépendante et sélectionnée de mode designer, vintage et contemporaine de seconde main.", "inLanguage": "fr", "isPartOf": {"@id": "https://disorder119.com/#website"}, "publisher": {"@id": "https://disorder119.com/#store"}}</script>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Archive", "item": "https://disorder119.com/fr/"}, {"@type": "ListItem", "position": 2, "name": "Disorder119 — À propos de Disorder119", "item": "https://disorder119.com/fr/ueber-uns/"}]}</script>
 <title>Disorder119 — À propos de Disorder119</title>
-<link rel="stylesheet" href="/assets/app.css?v=cd9f8f9ae2">
+<link rel="stylesheet" href="/assets/app.css?v=9bc16b4589">
 </head>
 <body>
 
@@ -304,27 +304,27 @@
   </div>
   <div class="filter-panel hidden" id="filterPanel">
     <div class="filter-field">
-      <label data-i18n="filterDepartmentLabel">Bereich</label>
+      <label for="filterDepartment" data-i18n="filterDepartmentLabel">Bereich</label>
       <select id="filterDepartment"><option value="" data-i18n="filterAllDepartments">Alle Bereiche</option></select>
     </div>
     <div class="filter-field">
-      <label data-i18n="filterProductTypeLabel">Produkttyp</label>
+      <label for="filterProductType" data-i18n="filterProductTypeLabel">Produkttyp</label>
       <select id="filterProductType"><option value="" data-i18n="filterAllProductTypes">Alle Produkttypen</option></select>
     </div>
     <div class="filter-field">
-      <label data-i18n="filterBrandLabel">Marke</label>
+      <label for="filterBrand" data-i18n="filterBrandLabel">Marke</label>
       <select id="filterBrand"><option value="" data-i18n="filterAllBrands">Alle Marken</option></select>
     </div>
     <div class="filter-field">
-      <label data-i18n="filterSizeLabel">Größe</label>
+      <label for="filterSize" data-i18n="filterSizeLabel">Größe</label>
       <select id="filterSize"><option value="" data-i18n="filterAllSizes">Alle Größen</option></select>
     </div>
     <div class="filter-field">
-      <label data-i18n="filterColorLabel">Farbe</label>
+      <label for="filterColor" data-i18n="filterColorLabel">Farbe</label>
       <select id="filterColor"><option value="" data-i18n="filterAllColors">Alle Farben</option></select>
     </div>
     <div class="filter-field">
-      <label data-i18n="filterConditionLabel">Zustand</label>
+      <label for="filterCondition" data-i18n="filterConditionLabel">Zustand</label>
       <select id="filterCondition"><option value="" data-i18n="filterAllConditions">Alle Zustände</option></select>
     </div>
     <div class="filter-field filter-field--price">
@@ -337,6 +337,7 @@
     </div>
     <button type="button" class="filter-reset" id="filterReset" data-i18n="filterResetLabel">Filter zurücksetzen</button>
   </div>
+  <div class="active-filter-row hidden" id="activeFilters" aria-live="polite"></div>
 </div>
 
 <div class="grid-wrap">
@@ -444,7 +445,7 @@
 </div>
 
 <script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "paypalClientId": "", "shopWorkerUrl": "", "environment": "sandbox", "features": {"paypalCheckout": false, "customerAccounts": false}};</script>
-<script src="/assets/app.js?v=4208c4eee8"></script>
+<script src="/assets/app.js?v=46ff7a5106"></script>
 <script src="/assets/rental-commerce.js"></script>
 <script src="/assets/rental-v2.js"></script>
 <script src="/assets/rental-v2-ui.js"></script>

@@ -299,27 +299,27 @@ __STATIC_PAGE_CONTENT__
   </div>
   <div class="filter-panel hidden" id="filterPanel">
     <div class="filter-field">
-      <label data-i18n="filterDepartmentLabel">Bereich</label>
+      <label for="filterDepartment" data-i18n="filterDepartmentLabel">Bereich</label>
       <select id="filterDepartment"><option value="" data-i18n="filterAllDepartments">Alle Bereiche</option></select>
     </div>
     <div class="filter-field">
-      <label data-i18n="filterProductTypeLabel">Produkttyp</label>
+      <label for="filterProductType" data-i18n="filterProductTypeLabel">Produkttyp</label>
       <select id="filterProductType"><option value="" data-i18n="filterAllProductTypes">Alle Produkttypen</option></select>
     </div>
     <div class="filter-field">
-      <label data-i18n="filterBrandLabel">Marke</label>
+      <label for="filterBrand" data-i18n="filterBrandLabel">Marke</label>
       <select id="filterBrand"><option value="" data-i18n="filterAllBrands">Alle Marken</option></select>
     </div>
     <div class="filter-field">
-      <label data-i18n="filterSizeLabel">Größe</label>
+      <label for="filterSize" data-i18n="filterSizeLabel">Größe</label>
       <select id="filterSize"><option value="" data-i18n="filterAllSizes">Alle Größen</option></select>
     </div>
     <div class="filter-field">
-      <label data-i18n="filterColorLabel">Farbe</label>
+      <label for="filterColor" data-i18n="filterColorLabel">Farbe</label>
       <select id="filterColor"><option value="" data-i18n="filterAllColors">Alle Farben</option></select>
     </div>
     <div class="filter-field">
-      <label data-i18n="filterConditionLabel">Zustand</label>
+      <label for="filterCondition" data-i18n="filterConditionLabel">Zustand</label>
       <select id="filterCondition"><option value="" data-i18n="filterAllConditions">Alle Zustände</option></select>
     </div>
     <div class="filter-field filter-field--price">
@@ -332,6 +332,7 @@ __STATIC_PAGE_CONTENT__
     </div>
     <button type="button" class="filter-reset" id="filterReset" data-i18n="filterResetLabel">Filter zurücksetzen</button>
   </div>
+  <div class="active-filter-row hidden" id="activeFilters" aria-live="polite"></div>
 </div>
 
 <div class="grid-wrap">

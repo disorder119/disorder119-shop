@@ -392,6 +392,37 @@
   }
   .filter-reset:hover { color: var(--accent-text); }
 
+  /* Aktive Filter bleiben auch bei eingeklapptem Filterpanel sichtbar.
+     Ausschliesslich Teil des klassischen Archiv-Rails; geschuetzte Modi
+     verwenden diese Elemente nicht. */
+  .active-filter-row {
+    flex: 1 0 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .active-filter-row.hidden { display: none; }
+  .active-filter-row .chip {
+    text-transform: none;
+    letter-spacing: 0.02em;
+    font-size: 0.68rem;
+    padding: 5px 9px;
+  }
+  .active-filter-clear {
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.68rem;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 5px 2px;
+  }
+  .active-filter-clear:hover { color: var(--accent-text); }
+  .filter-field select option:disabled { color: var(--text-faint); }
+
   /* Das Dropdown-Popup rendert der Browser mit eigenem (meist weissem)
      Hintergrund, unabhaengig vom transparenten <select> - ohne das hier
      waren die Optionen (helle Schrift fuers dunkle Theme) darauf fast
