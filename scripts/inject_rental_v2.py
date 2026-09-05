@@ -11,6 +11,7 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parents[1]
 BRIDGE = '<script src="/assets/rental-commerce.js"></script>'
 V2 = '<script src="/assets/rental-v2.js"></script>'
+V2_UI = '<script src="/assets/rental-v2-ui.js"></script>'
 
 
 def main() -> None:
@@ -22,14 +23,16 @@ def main() -> None:
         if BRIDGE not in text:
             continue
         seen += 1
-        clean = text.replace("\n" + V2, "").replace(V2 + "\n", "").replace(V2, "")
-        clean = clean.replace(BRIDGE, BRIDGE + "\n" + V2, 1)
+        clean = text
+        for script in (V2, V2_UI):
+            clean = clean.replace("\n" + script, "").replace(script + "\n", "").replace(script, "")
+        clean = clean.replace(BRIDGE, BRIDGE + "\n" + V2 + "\n" + V2_UI, 1)
         if clean != text:
             path.write_text(clean, encoding="utf-8")
             changed += 1
     if not seen:
         raise SystemExit("FEHLER: Keine generierte Bundle-Seite mit rental-commerce.js gefunden.")
-    print(f"Rental V2 eingebunden: {changed} aktualisiert, {seen} Bundle-Seiten geprüft.")
+    print(f"Rental V2 + Multi-Piece-UI eingebunden: {changed} aktualisiert, {seen} Bundle-Seiten geprüft.")
 
 
 if __name__ == "__main__":
