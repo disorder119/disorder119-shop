@@ -81,6 +81,7 @@ jobs:
           node --check shop-worker/worker.js
           node --check shop-worker/admin-api.js
           node --check shop-worker/admin-insights.js
+          node --check shop-worker/admin-commerce-metrics.js
           node --check shop-worker/admin-rental-groups.js
           node --check shop-worker/admin-cases.js
           node --check shop-worker/admin-alerts.js
@@ -90,7 +91,7 @@ jobs:
           node --check shop-worker/worker-entry.js
 
       - name: Commerce Unit Tests
-        run: node --test shop-worker/commerce-core.test.mjs shop-worker/admin-api.test.mjs shop-worker/admin-insights.test.mjs shop-worker/admin-cases.test.mjs shop-worker/operations-monitor.test.mjs shop-worker/admin-system.test.mjs
+        run: node --test shop-worker/commerce-core.test.mjs shop-worker/admin-api.test.mjs shop-worker/admin-insights.test.mjs shop-worker/admin-commerce-metrics.test.mjs shop-worker/admin-cases.test.mjs shop-worker/operations-monitor.test.mjs shop-worker/admin-system.test.mjs
 
       - name: D1-Migrationskette ausfuehren
         run: python scripts/test_d1_migrations.py
