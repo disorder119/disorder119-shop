@@ -63,10 +63,23 @@ def main() -> None:
         'normalizeText(state.catalogLabelText) !== state.query',
         'state.catalogLabelKey = state.status === "Verkauft"',
         '(state.status === "all" ? "statusAll" : "statusAvailable")',
+        'var filterBrandsSet = {};',
+        'Object.keys(filterBrandsSet)',
+        'category/categoryGroup belong to the main archive navigation',
     )
     for needle in required_js:
         if needle not in app:
             fail(f"Taxonomie-/Facet-Filterlogik fehlt: {needle}")
+
+    # Advanced reset must not destroy a category chosen in the main menu.
+    bad_reset = '''    state.priceMin = null; state.priceMax = null;\n    state.categoryGroup = null;\n    filterDepartmentEl.value = ""; filterProductTypeEl.value = "";'''
+    if bad_reset in app:
+        fail("Weitere-Filter-Reset entfernt weiterhin die Menuekategorie")
+
+    # The facet must not reuse the AVAILABLE-only set. Otherwise sold-only
+    # brands disappear exactly when the user switches to the archive.
+    if 'var brandList = Object.keys(brandsSet)' in app:
+        fail("Markenfacette blendet weiterhin reine Archiv-Marken aus")
 
     for needle in (
         '.active-filter-row {', '.active-filter-row.hidden { display: none; }',
@@ -107,7 +120,7 @@ def main() -> None:
 
     print(
         "Archiv-Taxonomie-Filter: OK – sichtbare Steuerung, synchroner Titel, "
-        "Facets, aktive Filter, Größenübersetzung und kein Kinder-Bereich."
+        "reset-sichere Kategorie, komplette Archiv-Marken, Facets und kein Kinder-Bereich."
     )
 
 
