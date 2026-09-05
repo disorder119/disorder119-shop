@@ -21,6 +21,17 @@ CREATE INDEX IF NOT EXISTS idx_damage_cases_status_created ON damage_cases(statu
 CREATE INDEX IF NOT EXISTS idx_damage_cases_rental ON damage_cases(rental_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_damage_cases_return ON damage_cases(return_id) WHERE return_id IS NOT NULL;
 
+CREATE TRIGGER IF NOT EXISTS trg_damage_case_status_transition
+BEFORE UPDATE OF status ON damage_cases
+FOR EACH ROW
+WHEN NEW.status <> OLD.status AND NOT (
+  (OLD.status='OPEN' AND NEW.status IN ('REVIEW','RESOLVED','WAIVED')) OR
+  (OLD.status='REVIEW' AND NEW.status IN ('OPEN','RESOLVED','WAIVED'))
+)
+BEGIN
+  SELECT RAISE(ABORT, 'invalid_damage_case_status_transition');
+END;
+
 CREATE TABLE IF NOT EXISTS operations_tasks (
   id TEXT PRIMARY KEY,
   entity_type TEXT NOT NULL CHECK (entity_type IN ('ORDER','RENTAL','RENTAL_GROUP','RETURN','REFUND','PAYMENT','SHIPMENT','CUSTOMER','INVENTORY','SYSTEM')),
@@ -36,3 +47,14 @@ CREATE TABLE IF NOT EXISTS operations_tasks (
 );
 CREATE INDEX IF NOT EXISTS idx_operations_tasks_status_priority ON operations_tasks(status, priority, due_at, created_at);
 CREATE INDEX IF NOT EXISTS idx_operations_tasks_entity ON operations_tasks(entity_type, entity_id, created_at);
+
+CREATE TRIGGER IF NOT EXISTS trg_operations_task_status_transition
+BEFORE UPDATE OF status ON operations_tasks
+FOR EACH ROW
+WHEN NEW.status <> OLD.status AND NOT (
+  (OLD.status='OPEN' AND NEW.status IN ('DONE','DISMISSED')) OR
+  (OLD.status IN ('DONE','DISMISSED') AND NEW.status='OPEN')
+)
+BEGIN
+  SELECT RAISE(ABORT, 'invalid_operations_task_status_transition');
+END;
