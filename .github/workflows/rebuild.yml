@@ -78,6 +78,9 @@ jobs:
       - name: Seite bauen
         run: python build_site.py
 
+      - name: Mietbedingungen anwenden
+        run: python scripts/apply_rental_terms.py
+
       - name: Shop, SEO, Katalog und geschuetzte Modi pruefen
         run: python scripts/validate_shop.py
 
