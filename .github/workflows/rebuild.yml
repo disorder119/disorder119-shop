@@ -70,6 +70,9 @@ jobs:
       - name: Python Syntax pruefen
         run: python -m py_compile build_site.py scripts/*.py
 
+      - name: Archiv-Taxonomie-Filter anwenden
+        run: python scripts/apply_archive_taxonomy_filters.py
+
       - name: JavaScript Syntax pruefen
         run: |
           node --check assets/app.js
@@ -91,6 +94,9 @@ jobs:
           node --check shop-worker/admin-system.js
           node --check shop-worker/rental-bundle.js
           node --check shop-worker/worker-entry.js
+
+      - name: Archiv-Taxonomie-Filter pruefen
+        run: python scripts/validate_archive_taxonomy_filters.py
 
       - name: Commerce Unit Tests
         run: node --test shop-worker/commerce-core.test.mjs shop-worker/admin-api.test.mjs shop-worker/admin-insights.test.mjs shop-worker/admin-commerce-metrics.test.mjs shop-worker/admin-cases.test.mjs shop-worker/operations-monitor.test.mjs shop-worker/admin-system.test.mjs
@@ -140,6 +146,7 @@ jobs:
           git config user.name "disorder119-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/items.json data/catalog-taxonomy-report.json data/shop-quality.json
+          git add index_template.html assets/app.js
           git add index.html artikel sitemap.xml cart impressum agb datenschutz ueber-uns faq match chaos baukasten mieten en fr data/catalog.json
           if git diff --cached --quiet; then
             echo "Keine Aenderungen am generierten Output - nichts zu committen."
