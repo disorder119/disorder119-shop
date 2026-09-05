@@ -7,6 +7,7 @@ import {
 import { handleAdminInsights } from "./admin-insights.js";
 import { handleAdminRentalGroups } from "./admin-rental-groups.js";
 import { handleAdminCases } from "./admin-cases.js";
+import { handleAdminSystem } from "./admin-system.js";
 import { handleRentalBundle } from "./rental-bundle.js";
 
 function requestId(request) {
@@ -44,6 +45,10 @@ export default {
 
     if (url.pathname === "/admin/insights") {
       return handleAdminInsights(request, env, url, reqId, origin);
+    }
+
+    if (url.pathname === "/admin/system") {
+      return handleAdminSystem(request, env, url, reqId, origin);
     }
 
     if (url.pathname === "/admin/rental-groups" || url.pathname.startsWith("/admin/rental-groups/")) {
