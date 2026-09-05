@@ -14,8 +14,12 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parents[1]
 ITEMS = BASE / "data" / "items.json"
 WORKER = BASE / "shop-worker" / "worker.js"
+ENTRY = BASE / "shop-worker" / "worker-entry.js"
+ADMIN_API = BASE / "shop-worker" / "admin-api.js"
 CORE = BASE / "shop-worker" / "commerce-core.js"
 MIGRATION = BASE / "shop-worker" / "migrations" / "0002_commerce_foundation.sql"
+ADMIN_MIGRATION = BASE / "shop-worker" / "migrations" / "0004_admin_operations.sql"
+WRANGLER = BASE / "shop-worker" / "wrangler.toml"
 CONFIG = BASE / "config" / "shop-config.json"
 
 INVENTORY_STATUSES = {
@@ -69,6 +73,17 @@ def main() -> None:
     core = CORE.read_text(encoding="utf-8")
     migration = MIGRATION.read_text(encoding="utf-8")
 
+    for required in (ENTRY, ADMIN_API, ADMIN_MIGRATION, WRANGLER):
+        if not required.is_file():
+            errors.append(f"Backend-Datei fehlt: {required.relative_to(BASE)}")
+    if errors:
+        fail(errors)
+
+    entry = ENTRY.read_text(encoding="utf-8")
+    admin_api = ADMIN_API.read_text(encoding="utf-8")
+    admin_migration = ADMIN_MIGRATION.read_text(encoding="utf-8")
+    wrangler = WRANGLER.read_text(encoding="utf-8")
+
     # Central rental rule: no catalogue item may override the server rule with a conflicting fixed field.
     for item in items:
         if not isinstance(item, dict):
@@ -92,7 +107,7 @@ def main() -> None:
 
     required_core = [
         "RENTAL_RATE_BPS = 1000", "rentalDailyPriceCents", "rentalQuoteFromItem",
-        "isValidIdempotencyKey", "canTransitionInventory",
+        "isValidIdempotencyKey", "canTransitionInventory", "canTransitionOrder", "canTransitionRental",
     ]
     for needle in required_core:
         if needle not in core:
@@ -125,9 +140,37 @@ def main() -> None:
         if not re.search(rf"CREATE TABLE IF NOT EXISTS\s+{re.escape(table)}\b", migration, re.I):
             errors.append(f"D1-Migration: Tabelle fehlt: {table}")
     if "PRIMARY KEY(inventory_id, rental_date)" not in migration.replace(" ", ""):
-        # Keep a whitespace-tolerant fallback because formatting is not an invariant.
         if not re.search(r"PRIMARY\s+KEY\s*\(\s*inventory_id\s*,\s*rental_date\s*\)", migration, re.I):
             errors.append("D1-Migration: harte Sperre gegen ueberlappende Miettage fehlt")
+
+    # Private admin/operations layer: no second public data store, only D1.
+    for needle in [
+        'main = "worker-entry.js"',
+    ]:
+        if needle not in wrangler:
+            errors.append(f"wrangler.toml: Admin-Entry fehlt: {needle}")
+    for needle in [
+        'url.pathname === "/admin"', "handleAdminRequest", "enrichRentalReservation", "snapshotPaypalOrder",
+        'url.pathname === "/rental-request"', 'url.pathname === "/capture-order"', 'url.pathname === "/paypal-webhook"',
+    ]:
+        if needle not in entry:
+            errors.append(f"worker-entry.js: Operations-Verdrahtung fehlt: {needle}")
+    for needle in [
+        '"/admin/overview"', '"/admin/orders"', '"/admin/rentals"', '"/admin/inventory"',
+        '"/admin/customers"', '"/admin/activity"', '"/admin/system"', '"/admin/notes"',
+        "orderNextStatuses", "rentalNextStatuses", "ADMIN_TOKEN", "order_contact_snapshots", "admin_notes",
+    ]:
+        if needle not in admin_api:
+            errors.append(f"admin-api.js: Admin-Funktion fehlt: {needle}")
+    for needle in [
+        "deposit_cents", "group_id", "terms_version", "terms_accepted_at",
+        "order_contact_snapshots", "admin_notes", "idx_orders_created_status", "idx_payments_created_status",
+    ]:
+        if needle not in admin_migration:
+            errors.append(f"0004_admin_operations.sql: Operations-Invariante fehlt: {needle}")
+    for forbidden in ["raw_payload", "payload_json", "paypal_payload"]:
+        if forbidden in admin_migration.lower():
+            errors.append(f"0004_admin_operations.sql: roher Provider-Payload darf nicht gespeichert werden: {forbidden}")
 
     features = cfg.get("features") or {}
     if features.get("paypalCheckout"):
@@ -136,14 +179,13 @@ def main() -> None:
     if features.get("customerAccounts") and not cfg.get("authProvider"):
         errors.append("customerAccounts darf ohne externen Auth-Provider nicht aktiviert sein")
 
-    # Pure arithmetic regression examples from the product requirement.
     for sale, daily in [(12500, 1250), (25000, 2500), (49000, 4900)]:
         if expected_daily_cents(sale) != daily:
             errors.append(f"Interner Mietpreis-Test fehlgeschlagen: {sale} -> {daily}")
 
     if errors:
         fail(errors)
-    print("Commerce-Invarianten: OK (10%-Miete, D1-Lifecycle, Idempotenz, Security-Grundlagen)")
+    print("Commerce-Invarianten: OK (10%-Miete, D1-Lifecycle, Idempotenz, Security + private Admin-Operations)")
 
 
 if __name__ == "__main__":
