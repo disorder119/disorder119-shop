@@ -59,3 +59,21 @@ WHEN NEW.status='RESERVED' AND OLD.status='BUILDING' AND (
 BEGIN
   SELECT RAISE(ABORT, 'invalid_rental_group_totals');
 END;
+
+-- Group lifecycle mirrors the authoritative rental lifecycle. BUILDING is only
+-- an internal transaction state used while the child reservations are created.
+CREATE TRIGGER IF NOT EXISTS trg_rental_group_status_transition
+BEFORE UPDATE OF status ON rental_groups
+FOR EACH ROW
+WHEN NEW.status <> OLD.status AND NOT (
+  (OLD.status='BUILDING' AND NEW.status='RESERVED') OR
+  (OLD.status='RESERVED' AND NEW.status IN ('PAYMENT_PENDING','CONFIRMED','CANCELLED')) OR
+  (OLD.status='PAYMENT_PENDING' AND NEW.status IN ('RESERVED','CONFIRMED','CANCELLED')) OR
+  (OLD.status='CONFIRMED' AND NEW.status IN ('ACTIVE','CANCELLED','REFUNDED')) OR
+  (OLD.status='ACTIVE' AND NEW.status IN ('RETURN_DUE','RETURNED')) OR
+  (OLD.status='RETURN_DUE' AND NEW.status='RETURNED') OR
+  (OLD.status='RETURNED' AND NEW.status='REFUNDED')
+)
+BEGIN
+  SELECT RAISE(ABORT, 'invalid_rental_group_status_transition');
+END;

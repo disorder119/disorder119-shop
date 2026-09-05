@@ -81,6 +81,7 @@ jobs:
           node --check shop-worker/worker.js
           node --check shop-worker/admin-api.js
           node --check shop-worker/admin-insights.js
+          node --check shop-worker/admin-rental-groups.js
           node --check shop-worker/rental-bundle.js
           node --check shop-worker/worker-entry.js
 
