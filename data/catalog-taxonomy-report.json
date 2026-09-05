@@ -1,0 +1,860 @@
+{
+  "schema": "catalog-taxonomy-v1",
+  "totalItems": 237,
+  "reviewedItems": 237,
+  "departmentCounts": {
+    "Kids": 8,
+    "Men": 33,
+    "Objects": 2,
+    "Unisex": 85,
+    "Women": 109
+  },
+  "productTypeCounts": {
+    "Accessory": 2,
+    "Backpack": 1,
+    "Bag": 2,
+    "Beanie": 2,
+    "Belt": 4,
+    "Biker Jacket": 2,
+    "Blazer": 4,
+    "Blouse": 2,
+    "Bomber Jacket": 1,
+    "Boots": 7,
+    "Cap": 3,
+    "Cardigan": 3,
+    "Coat": 2,
+    "Design Object": 1,
+    "Dress": 30,
+    "Hat": 1,
+    "Heels": 1,
+    "Jacket": 41,
+    "Joggers": 1,
+    "Knit Top": 1,
+    "Loafers": 2,
+    "Long Sleeve": 4,
+    "Polo Shirt": 3,
+    "Sandals": 2,
+    "Scarf": 2,
+    "Set": 1,
+    "Shirt": 6,
+    "Shoes": 9,
+    "Shorts": 3,
+    "Skirt": 14,
+    "Sleepwear": 1,
+    "Sneakers": 10,
+    "Suit": 2,
+    "Sunglasses": 2,
+    "Sweater": 3,
+    "Sweatshirt": 2,
+    "Swim Shorts": 1,
+    "T-Shirt": 2,
+    "Tank Top": 1,
+    "Toaster": 1,
+    "Top": 29,
+    "Trench Coat": 1,
+    "Trousers": 15,
+    "Tunic": 1,
+    "Underwear Shorts": 1,
+    "Vest": 7,
+    "Wallet": 1
+  },
+  "missingSizeCount": 49,
+  "missingSize": [
+    {
+      "id": 6239,
+      "article": "2239",
+      "title": "Yohji Yamamoto Dark Blue Cat-Eye Sunglasses"
+    },
+    {
+      "id": 6238,
+      "article": "2238",
+      "title": "Yohji Yamamoto Script-Temple Sunglasses"
+    },
+    {
+      "id": 6220,
+      "article": "2220",
+      "title": "Y-3 SS25 Oversized Cargo Trousers"
+    },
+    {
+      "id": 6219,
+      "article": "2219",
+      "title": "Prada Sport Brown Nylon Swim Shorts"
+    },
+    {
+      "id": 6208,
+      "article": "2208",
+      "title": "Prada Challenge Navy Technical Jacket"
+    },
+    {
+      "id": 6207,
+      "article": "2207",
+      "title": "Yves Saint Laurent Black Winter Jacket"
+    },
+    {
+      "id": 6205,
+      "article": "2205",
+      "title": "Jean Paul Gaultier Schwanengürtel"
+    },
+    {
+      "id": 6199,
+      "article": "2199",
+      "title": "Rundholz Ivory Asymmetric Cardigan"
+    },
+    {
+      "id": 6195,
+      "article": "2195",
+      "title": "A.F. Vandevorst Bluse Blau"
+    },
+    {
+      "id": 6194,
+      "article": "2194",
+      "title": "A.F. Vandevorst Patterned Cardigan"
+    },
+    {
+      "id": 6190,
+      "article": "2190",
+      "title": "Rundholz Asymmetric Tunic"
+    },
+    {
+      "id": 6185,
+      "article": "2185",
+      "title": "Yohji Yamamoto Wollhut"
+    },
+    {
+      "id": 6184,
+      "article": "2184",
+      "title": "Y-3 Strohhut"
+    },
+    {
+      "id": 6042,
+      "article": "2042",
+      "title": "Walter Van Beirendonck Rock Nr. 2"
+    },
+    {
+      "id": 9503,
+      "article": "146",
+      "title": "Dior Biene Alt"
+    },
+    {
+      "id": 9486,
+      "article": "140",
+      "title": "Y-3 Cap Bänder"
+    },
+    {
+      "id": 9483,
+      "article": "128",
+      "title": "A.F. Vandevorst Gürtel"
+    },
+    {
+      "id": 9464,
+      "article": "108",
+      "title": "Prada Loafer"
+    },
+    {
+      "id": 9537,
+      "article": "106",
+      "title": "Y-3 Wallet"
+    },
+    {
+      "id": 9460,
+      "article": "101",
+      "title": "Prada Funny Shoes Size"
+    },
+    {
+      "id": 9457,
+      "article": "98",
+      "title": "Prada Schal Furry"
+    },
+    {
+      "id": 9426,
+      "article": "71",
+      "title": "Burberry Hose"
+    },
+    {
+      "id": 9390,
+      "article": "59",
+      "title": "Jean Paul Gaultier Pearl Rock"
+    },
+    {
+      "id": 9395,
+      "article": "58",
+      "title": "Rundholz Dip Top"
+    },
+    {
+      "id": 9385,
+      "article": "57",
+      "title": "Rundholz Angeblich"
+    },
+    {
+      "id": 9396,
+      "article": "56",
+      "title": "Rundholz Kleid"
+    },
+    {
+      "id": 9411,
+      "article": "52",
+      "title": "Raf Simons Oberteil"
+    },
+    {
+      "id": 9388,
+      "article": "51",
+      "title": "Jean Paul Gaultier Jacke"
+    },
+    {
+      "id": 9392,
+      "article": "50",
+      "title": "Alexander McQueen Blazer"
+    },
+    {
+      "id": 9386,
+      "article": "46",
+      "title": "Jean Paul Gaultier Hat"
+    },
+    {
+      "id": 9402,
+      "article": "45",
+      "title": "Jean Paul Gaultier Mesh Blus"
+    },
+    {
+      "id": 9393,
+      "article": "44",
+      "title": "Oakley Top"
+    },
+    {
+      "id": 9415,
+      "article": "42",
+      "title": "Walter Van Beirendonck Rock"
+    },
+    {
+      "id": 9394,
+      "article": "41",
+      "title": "Ottolinger Hose"
+    },
+    {
+      "id": 9391,
+      "article": "37",
+      "title": "Maison Margiela Pants"
+    },
+    {
+      "id": 9387,
+      "article": "34",
+      "title": "Jean Paul Gaultier Hose"
+    },
+    {
+      "id": 9384,
+      "article": "33",
+      "title": "Walter Van Beirendonck ^ Hose"
+    },
+    {
+      "id": 9397,
+      "article": "32",
+      "title": "Walter Van Beirendonck Hose Patchwork"
+    },
+    {
+      "id": 9366,
+      "article": "28",
+      "title": "A.F. Vandevorst Top Grau"
+    },
+    {
+      "id": 9502,
+      "article": "22",
+      "title": "CP Company Tasche"
+    },
+    {
+      "id": 9375,
+      "article": "20",
+      "title": "Y-3 Top Grau"
+    },
+    {
+      "id": 9369,
+      "article": "19",
+      "title": "MM6 Maison Margiela Kleid Schwarz"
+    },
+    {
+      "id": 9374,
+      "article": "17",
+      "title": "MM6 Maison Margiela Top"
+    },
+    {
+      "id": 9367,
+      "article": "17",
+      "title": "Ann Demeulemeester Kleid Grau"
+    },
+    {
+      "id": 9370,
+      "article": "15",
+      "title": "MM6 Maison Margiela Top"
+    },
+    {
+      "id": 9373,
+      "article": "14",
+      "title": "Ravani Tshirt"
+    },
+    {
+      "id": 9376,
+      "article": "12",
+      "title": "Yves Saint Laurent Anzug Gross"
+    },
+    {
+      "id": 9365,
+      "article": "11",
+      "title": "Prada Jacke Lila"
+    },
+    {
+      "id": 9368,
+      "article": "10",
+      "title": "Balmain Fake Fur Jacke"
+    }
+  ],
+  "sizeConflictCount": 48,
+  "sizeConflicts": [
+    {
+      "id": 9524,
+      "article": "173",
+      "title": "Prada Frauenbomber",
+      "structuredSize": "XS",
+      "descriptionLabelSize": "S"
+    },
+    {
+      "id": 9513,
+      "article": "162",
+      "title": "Isaac Sellam Hose Weiss",
+      "structuredSize": "S",
+      "descriptionLabelSize": "Nicht eindeutig lesbar"
+    },
+    {
+      "id": 9538,
+      "article": "161",
+      "title": "Gucci Blazer Herren",
+      "structuredSize": "M",
+      "descriptionLabelSize": "40"
+    },
+    {
+      "id": 9510,
+      "article": "156",
+      "title": "Balenciaga Weste Gr",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "3"
+    },
+    {
+      "id": 9508,
+      "article": "154",
+      "title": "Ann Demeulemeester Holy",
+      "structuredSize": "S",
+      "descriptionLabelSize": "S (F36 / I40)"
+    },
+    {
+      "id": 9498,
+      "article": "149",
+      "title": "Helmut Lang Hemd",
+      "structuredSize": "L",
+      "descriptionLabelSize": "M/L (geschätzt)"
+    },
+    {
+      "id": 9506,
+      "article": "145",
+      "title": "Yves Saint Laurent Bunt Kleid",
+      "structuredSize": "S / 36 / 8",
+      "descriptionLabelSize": "36"
+    },
+    {
+      "id": 9497,
+      "article": "142",
+      "title": "Dior Gürtel",
+      "structuredSize": "80cm",
+      "descriptionLabelSize": "80"
+    },
+    {
+      "id": 9493,
+      "article": "137",
+      "title": "Prada Stiefel Gr 36",
+      "structuredSize": "37",
+      "descriptionLabelSize": "39"
+    },
+    {
+      "id": 9489,
+      "article": "132",
+      "title": "Dior I Love Set",
+      "structuredSize": "S / 36 / 8",
+      "descriptionLabelSize": "Nicht angegeben, geschätzt ca. S"
+    },
+    {
+      "id": 9487,
+      "article": "130",
+      "title": "Celine Top Burgunderorange",
+      "structuredSize": "S / 36 / 8",
+      "descriptionLabelSize": "S"
+    },
+    {
+      "id": 9472,
+      "article": "126",
+      "title": "Rundholz Top Small",
+      "structuredSize": "S / 36 / 8",
+      "descriptionLabelSize": "Small"
+    },
+    {
+      "id": 9480,
+      "article": "124",
+      "title": "Y-3 Schuhe",
+      "structuredSize": "36",
+      "descriptionLabelSize": "EU 36"
+    },
+    {
+      "id": 9469,
+      "article": "115",
+      "title": "Armani Jacke",
+      "structuredSize": "L",
+      "descriptionLabelSize": "52"
+    },
+    {
+      "id": 9410,
+      "article": "112",
+      "title": "Prada Jacke",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "M"
+    },
+    {
+      "id": 9419,
+      "article": "94",
+      "title": "Balmain Jacke",
+      "structuredSize": "38",
+      "descriptionLabelSize": "EU 38"
+    },
+    {
+      "id": 9455,
+      "article": "90",
+      "title": "Prada Jacke Schwarz",
+      "structuredSize": "52",
+      "descriptionLabelSize": "IT 42"
+    },
+    {
+      "id": 9440,
+      "article": "85",
+      "title": "Prada Shirt Grau",
+      "structuredSize": "M",
+      "descriptionLabelSize": "L"
+    },
+    {
+      "id": 9422,
+      "article": "81",
+      "title": "Prada Karriert Hose",
+      "structuredSize": "M",
+      "descriptionLabelSize": "IT 46"
+    },
+    {
+      "id": 9435,
+      "article": "79",
+      "title": "Prada Cardigan Grau Bunt",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "44"
+    },
+    {
+      "id": 9432,
+      "article": "76",
+      "title": "Jean Paul Gaultier Unnterhose",
+      "structuredSize": "S / 36 / 8",
+      "descriptionLabelSize": "S"
+    },
+    {
+      "id": 9429,
+      "article": "72",
+      "title": "Jean Paul Gaultier Hose Grau",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "38"
+    },
+    {
+      "id": 9427,
+      "article": "72",
+      "title": "Jean Paul Gaultier Jeans Blau",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "38"
+    },
+    {
+      "id": 9418,
+      "article": "70",
+      "title": "Balmain Jacke 3",
+      "structuredSize": "40",
+      "descriptionLabelSize": "EU 40"
+    },
+    {
+      "id": 9404,
+      "article": "66",
+      "title": "Jean Paul Gaultier Rare Belt",
+      "structuredSize": "Größenverstellbar",
+      "descriptionLabelSize": "One Size"
+    },
+    {
+      "id": 9400,
+      "article": "65",
+      "title": "Isabel Marant Top",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "0"
+    },
+    {
+      "id": 9403,
+      "article": "64",
+      "title": "Jean Paul Gaultier Mesh Bluse",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "M"
+    },
+    {
+      "id": 9409,
+      "article": "63",
+      "title": "Ottolinger Mesh Top",
+      "structuredSize": "XS / 34 / 6",
+      "descriptionLabelSize": "XS"
+    },
+    {
+      "id": 9398,
+      "article": "62",
+      "title": "Comme des Garçons Runway Top",
+      "structuredSize": "S / 36 / 8",
+      "descriptionLabelSize": "S"
+    },
+    {
+      "id": 9406,
+      "article": "61",
+      "title": "Jean Paul Gaultier Top Weiss",
+      "structuredSize": "S / 36 / 8",
+      "descriptionLabelSize": "S"
+    },
+    {
+      "id": 9399,
+      "article": "55",
+      "title": "Hysteric Glamour Top",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "M"
+    },
+    {
+      "id": 9405,
+      "article": "53",
+      "title": "Jean Paul Gaultier Top",
+      "structuredSize": "S / 36 / 8",
+      "descriptionLabelSize": "S"
+    },
+    {
+      "id": 9389,
+      "article": "47",
+      "title": "Jean Paul Gaultier Jacke",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "M"
+    },
+    {
+      "id": 9416,
+      "article": "45",
+      "title": "Y-3 Jacke",
+      "structuredSize": "XS / 34 / 6",
+      "descriptionLabelSize": "XS"
+    },
+    {
+      "id": 9407,
+      "article": "43",
+      "title": "Walter Van Beirendonck Rock 26",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "M"
+    },
+    {
+      "id": 9413,
+      "article": "40",
+      "title": "Walter Van Beirendonck Rock",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "M (Tag: W26)"
+    },
+    {
+      "id": 9414,
+      "article": "39",
+      "title": "Walter Van Beirendonck Shorts",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "M"
+    },
+    {
+      "id": 9408,
+      "article": "38",
+      "title": "Jean Paul Gaultier Noch Eine Hose",
+      "structuredSize": "Sonstige",
+      "descriptionLabelSize": "30"
+    },
+    {
+      "id": 9417,
+      "article": "36",
+      "title": "Y-3 Veste",
+      "structuredSize": "S / 36 / 8",
+      "descriptionLabelSize": "S"
+    },
+    {
+      "id": 9362,
+      "article": "27",
+      "title": "MM6 Maison Margiela Top Schwarz",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "M"
+    },
+    {
+      "id": 9378,
+      "article": "18",
+      "title": "Walter Van Beirendonck Top Neongrün",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "M"
+    },
+    {
+      "id": 9377,
+      "article": "16",
+      "title": "Walter Van Beirendonck Kleid Bund",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "M"
+    },
+    {
+      "id": 9360,
+      "article": "9",
+      "title": "Jean Paul Gaultier Jacke Schwarz",
+      "structuredSize": "S / 36 / 8",
+      "descriptionLabelSize": "S"
+    },
+    {
+      "id": 9361,
+      "article": "6",
+      "title": "Jean Paul Gaultier Rock schwarz",
+      "structuredSize": "S / 36 / 8",
+      "descriptionLabelSize": "EUR 36"
+    },
+    {
+      "id": 9359,
+      "article": "5",
+      "title": "Maison Margiela x H&M Rock",
+      "structuredSize": "M",
+      "descriptionLabelSize": "EUR 36"
+    },
+    {
+      "id": 9358,
+      "article": "4",
+      "title": "Giorgio Brato Jacke",
+      "structuredSize": "M",
+      "descriptionLabelSize": "One Size"
+    },
+    {
+      "id": 9364,
+      "article": "3",
+      "title": "Prada Bunny Sweater",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "38"
+    },
+    {
+      "id": 9363,
+      "article": "2",
+      "title": "Pierre Balmain Jacke",
+      "structuredSize": "M / 38 / 10",
+      "descriptionLabelSize": "M"
+    }
+  ],
+  "legacyCategoryMismatchCount": 26,
+  "legacyCategoryMismatches": [
+    {
+      "id": 6240,
+      "article": "2240",
+      "title": "Hysteric Glamour Pop-Up Toaster",
+      "legacyCategory": "Accessories",
+      "taxonomyCategory": "Objects",
+      "productType": "Toaster"
+    },
+    {
+      "id": 6201,
+      "article": "2201",
+      "title": "Walter Van Beirendonck Don't Worry Long Sleeve",
+      "legacyCategory": "Tops",
+      "taxonomyCategory": "Shirts",
+      "productType": "Long Sleeve"
+    },
+    {
+      "id": 6199,
+      "article": "2199",
+      "title": "Rundholz Ivory Asymmetric Cardigan",
+      "legacyCategory": "Jackets",
+      "taxonomyCategory": "Knitwear",
+      "productType": "Cardigan"
+    },
+    {
+      "id": 6194,
+      "article": "2194",
+      "title": "A.F. Vandevorst Patterned Cardigan",
+      "legacyCategory": "Jackets",
+      "taxonomyCategory": "Knitwear",
+      "productType": "Cardigan"
+    },
+    {
+      "id": 9519,
+      "article": "179",
+      "title": "Jil Sander Sweet Angel 2003 Wendetop",
+      "legacyCategory": "Tops",
+      "taxonomyCategory": "Dresses",
+      "productType": "Dress"
+    },
+    {
+      "id": 9527,
+      "article": "176",
+      "title": "Rick Owens Drkshdw",
+      "legacyCategory": "Tops",
+      "taxonomyCategory": "Dresses",
+      "productType": "Dress"
+    },
+    {
+      "id": 9512,
+      "article": "160",
+      "title": "Dsquared2 Suf Camp Gelb",
+      "legacyCategory": "Jackets",
+      "taxonomyCategory": "Dresses",
+      "productType": "Dress"
+    },
+    {
+      "id": 9511,
+      "article": "159",
+      "title": "Dsquared2 Asymetric",
+      "legacyCategory": "Jackets",
+      "taxonomyCategory": "Dresses",
+      "productType": "Dress"
+    },
+    {
+      "id": 9508,
+      "article": "154",
+      "title": "Ann Demeulemeester Holy",
+      "legacyCategory": "Tops",
+      "taxonomyCategory": "Dresses",
+      "productType": "Dress"
+    },
+    {
+      "id": 9500,
+      "article": "151",
+      "title": "Prada Knitterjacke",
+      "legacyCategory": "Jackets",
+      "taxonomyCategory": "Pants",
+      "productType": "Shorts"
+    },
+    {
+      "id": 9496,
+      "article": "148",
+      "title": "Dior Herrenpolo Schwarz",
+      "legacyCategory": "Tops",
+      "taxonomyCategory": "Dresses",
+      "productType": "Dress"
+    },
+    {
+      "id": 9499,
+      "article": "143",
+      "title": "Isaac Sellam",
+      "legacyCategory": "Jackets",
+      "taxonomyCategory": "Dresses",
+      "productType": "Dress"
+    },
+    {
+      "id": 9477,
+      "article": "121",
+      "title": "Luna Rossa Sweatjacke",
+      "legacyCategory": "Jackets",
+      "taxonomyCategory": "Knitwear",
+      "productType": "Sweatshirt"
+    },
+    {
+      "id": 9463,
+      "article": "107",
+      "title": "Prada Heels",
+      "legacyCategory": "Tops",
+      "taxonomyCategory": "Shoes",
+      "productType": "Heels"
+    },
+    {
+      "id": 9462,
+      "article": "105",
+      "title": "Maison Margiela X H und M",
+      "legacyCategory": "Skirts",
+      "taxonomyCategory": "Dresses",
+      "productType": "Dress"
+    },
+    {
+      "id": 9456,
+      "article": "97",
+      "title": "Prada Ls",
+      "legacyCategory": "Tops",
+      "taxonomyCategory": "Shirts",
+      "productType": "Long Sleeve"
+    },
+    {
+      "id": 9442,
+      "article": "95",
+      "title": "Balmain Furry",
+      "legacyCategory": "Jackets",
+      "taxonomyCategory": "Pants",
+      "productType": "Shorts"
+    },
+    {
+      "id": 9454,
+      "article": "93",
+      "title": "Prada Goretex Weiss",
+      "legacyCategory": "Jackets",
+      "taxonomyCategory": "Dresses",
+      "productType": "Dress"
+    },
+    {
+      "id": 9449,
+      "article": "89",
+      "title": "Yves Saint Laurent Kaschmir",
+      "legacyCategory": "Tops",
+      "taxonomyCategory": "Knitwear",
+      "productType": "Sweater"
+    },
+    {
+      "id": 9423,
+      "article": "87",
+      "title": "Y-3 Weis Ls",
+      "legacyCategory": "Tops",
+      "taxonomyCategory": "Shirts",
+      "productType": "Long Sleeve"
+    },
+    {
+      "id": 9435,
+      "article": "79",
+      "title": "Prada Cardigan Grau Bunt",
+      "legacyCategory": "Jackets",
+      "taxonomyCategory": "Knitwear",
+      "productType": "Cardigan"
+    },
+    {
+      "id": 9434,
+      "article": "78",
+      "title": "Pierre Cardin",
+      "legacyCategory": "Objects",
+      "taxonomyCategory": "Knitwear",
+      "productType": "Sweatshirt"
+    },
+    {
+      "id": 9443,
+      "article": "69",
+      "title": "Balmain Braun",
+      "legacyCategory": "Jackets",
+      "taxonomyCategory": "Dresses",
+      "productType": "Dress"
+    },
+    {
+      "id": 9383,
+      "article": "60",
+      "title": "Balenciaga Speedhunters Ls",
+      "legacyCategory": "Tops",
+      "taxonomyCategory": "Shirts",
+      "productType": "Long Sleeve"
+    },
+    {
+      "id": 9401,
+      "article": "54",
+      "title": "Jean Paul Gaultier Spidertop",
+      "legacyCategory": "Tops",
+      "taxonomyCategory": "Dresses",
+      "productType": "Dress"
+    },
+    {
+      "id": 9386,
+      "article": "46",
+      "title": "Jean Paul Gaultier Hat",
+      "legacyCategory": "Tops",
+      "taxonomyCategory": "Accessories",
+      "productType": "Hat"
+    }
+  ],
+  "note": "Legacy category is intentionally preserved for protected Match/Chaos/Baukasten behavior; reviewed taxonomy is exported separately."
+}
