@@ -5,6 +5,7 @@ import {
   snapshotPaypalOrder,
 } from "./admin-api.js";
 import { handleAdminInsights } from "./admin-insights.js";
+import { handleAdminCommerceMetrics } from "./admin-commerce-metrics.js";
 import { handleAdminRentalGroups } from "./admin-rental-groups.js";
 import { handleAdminCases } from "./admin-cases.js";
 import { handleAdminSystem } from "./admin-system.js";
@@ -47,6 +48,10 @@ export default {
 
     if (url.pathname === "/admin/insights") {
       return handleAdminInsights(request, env, url, reqId, origin);
+    }
+
+    if (url.pathname === "/admin/commerce-metrics") {
+      return handleAdminCommerceMetrics(request, env, url, reqId, origin);
     }
 
     if (url.pathname === "/admin/system") {
