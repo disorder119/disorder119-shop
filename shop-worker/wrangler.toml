@@ -1,5 +1,5 @@
 name = "disorder119-shop-worker"
-main = "worker.js"
+main = "worker-entry.js"
 compatibility_date = "2025-01-01"
 
 # Alle echten Zugangsdaten sind Secrets (nie hier eintragen, nie committen) -
