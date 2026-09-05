@@ -5,6 +5,7 @@ export const OPERATIONS_AUTOMATION_SCHEMA_COLUMNS = Object.freeze([
   "automation_key",
   "automation_kind",
   "auto_managed",
+  "automation_active",
   "first_seen_at",
   "last_seen_at",
   "occurrence_count",
@@ -185,8 +186,8 @@ function conditionQueries(db, nowIso) {
 function upsertStatement(db, candidate, nowIso) {
   return db.prepare(`INSERT INTO operations_tasks
       (id,entity_type,entity_id,title,body,priority,status,due_at,created_at,updated_at,
-       automation_key,automation_kind,auto_managed,first_seen_at,last_seen_at,occurrence_count)
-    VALUES (?,?,?,?,?,?,'OPEN',?,?,?, ?,?,1,?,?,1)
+       automation_key,automation_kind,auto_managed,automation_active,first_seen_at,last_seen_at,occurrence_count)
+    VALUES (?,?,?,?,?,?,'OPEN',?,?,?, ?,?,1,1,?,?,1)
     ON CONFLICT(automation_key) DO UPDATE SET
       entity_type=excluded.entity_type,
       entity_id=excluded.entity_id,
@@ -199,11 +200,18 @@ function upsertStatement(db, candidate, nowIso) {
       first_seen_at=COALESCE(operations_tasks.first_seen_at,excluded.first_seen_at),
       last_seen_at=excluded.last_seen_at,
       occurrence_count=CASE
-        WHEN operations_tasks.status='DONE' THEN operations_tasks.occurrence_count + 1
+        WHEN operations_tasks.automation_active=0 THEN operations_tasks.occurrence_count + 1
         ELSE MAX(operations_tasks.occurrence_count,1)
       END,
-      status=CASE WHEN operations_tasks.status='DONE' THEN 'OPEN' ELSE operations_tasks.status END,
-      completed_at=CASE WHEN operations_tasks.status='DONE' THEN NULL ELSE operations_tasks.completed_at END,
+      status=CASE
+        WHEN operations_tasks.automation_active=0 AND operations_tasks.status IN ('DONE','DISMISSED') THEN 'OPEN'
+        ELSE operations_tasks.status
+      END,
+      completed_at=CASE
+        WHEN operations_tasks.automation_active=0 AND operations_tasks.status IN ('DONE','DISMISSED') THEN NULL
+        ELSE operations_tasks.completed_at
+      END,
+      automation_active=1,
       updated_at=excluded.updated_at`).bind(
         crypto.randomUUID(),
         candidate.entityType,
@@ -264,18 +272,23 @@ export async function syncOperationsAlerts(env, options = {}) {
   let autoResolved = 0;
   if (!truncated) {
     const closeResult = await db.prepare(`UPDATE operations_tasks
-      SET status='DONE',completed_at=COALESCE(completed_at,?),updated_at=?
-      WHERE auto_managed=1 AND automation_key IS NOT NULL
-        AND status IN ('OPEN','DISMISSED')
-        AND (last_seen_at IS NULL OR last_seen_at<>?)`).bind(nowIso, nowIso, nowIso).run();
+      SET status='DONE',automation_active=0,completed_at=COALESCE(completed_at,?),updated_at=?
+      WHERE auto_managed=1 AND automation_key IS NOT NULL AND automation_active=1
+        AND status='OPEN' AND (last_seen_at IS NULL OR last_seen_at<>?)`).bind(nowIso, nowIso, nowIso).run();
     autoResolved = Number(closeResult?.meta?.changes || 0);
+
+    await db.prepare(`UPDATE operations_tasks
+      SET automation_active=0,updated_at=?
+      WHERE auto_managed=1 AND automation_key IS NOT NULL AND automation_active=1
+        AND status IN ('DONE','DISMISSED') AND (last_seen_at IS NULL OR last_seen_at<>?)`).bind(nowIso, nowIso).run();
   }
 
   const state = await db.prepare(`SELECT
       COUNT(*) AS totalAutoTasks,
-      SUM(CASE WHEN status='OPEN' THEN 1 ELSE 0 END) AS openAutoTasks,
-      SUM(CASE WHEN status='DISMISSED' THEN 1 ELSE 0 END) AS dismissedAutoTasks,
-      SUM(CASE WHEN status='DONE' THEN 1 ELSE 0 END) AS doneAutoTasks
+      SUM(CASE WHEN automation_active=1 THEN 1 ELSE 0 END) AS activeAutoTasks,
+      SUM(CASE WHEN automation_active=1 AND status='OPEN' THEN 1 ELSE 0 END) AS openAutoTasks,
+      SUM(CASE WHEN automation_active=1 AND status='DISMISSED' THEN 1 ELSE 0 END) AS dismissedAutoTasks,
+      SUM(CASE WHEN automation_active=0 THEN 1 ELSE 0 END) AS inactiveAutoTasks
     FROM operations_tasks WHERE auto_managed=1`).first();
 
   const metadata = {
@@ -303,9 +316,10 @@ export async function syncOperationsAlerts(env, options = {}) {
     truncated,
     counts: {
       totalAutoTasks: Number(state?.totalAutoTasks || 0),
+      activeAutoTasks: Number(state?.activeAutoTasks || 0),
       openAutoTasks: Number(state?.openAutoTasks || 0),
       dismissedAutoTasks: Number(state?.dismissedAutoTasks || 0),
-      doneAutoTasks: Number(state?.doneAutoTasks || 0),
+      inactiveAutoTasks: Number(state?.inactiveAutoTasks || 0),
     },
   };
 }
