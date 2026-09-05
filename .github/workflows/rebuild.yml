@@ -22,6 +22,7 @@ on:
       - "assets/rental-commerce.js"
       - "assets/rental-v2.js"
       - "assets/rental-v2-ui.js"
+      - "assets/rental-v2-picker.js"
       - "shop-worker/**"
       - "scripts/**"
       - ".github/workflows/rebuild.yml"
@@ -56,7 +57,7 @@ jobs:
           python-version: "3.11"
 
       - name: Node einrichten
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
 
@@ -73,6 +74,7 @@ jobs:
           node --check assets/rental-commerce.js
           node --check assets/rental-v2.js
           node --check assets/rental-v2-ui.js
+          node --check assets/rental-v2-picker.js
           node --check shop-worker/commerce-core.js
           node --check shop-worker/worker.js
 
