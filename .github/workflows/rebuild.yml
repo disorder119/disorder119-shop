@@ -21,6 +21,7 @@ on:
       - "assets/app.css"
       - "assets/article.js"
       - "assets/article.css"
+      - "assets/catalog-filter-simplify.js"
       - "assets/rental-commerce.js"
       - "assets/rental-v2.js"
       - "assets/rental-v2-ui.js"
@@ -98,6 +99,7 @@ jobs:
         run: |
           node --check assets/app.js
           node --check assets/article.js
+          node --check assets/catalog-filter-simplify.js
           node --check assets/rental-commerce.js
           node --check assets/rental-v2.js
           node --check assets/rental-v2-ui.js
@@ -140,6 +142,9 @@ jobs:
       - name: Rental V2 einbinden
         run: python scripts/inject_rental_v2.py
 
+      - name: Vereinfachte Archivfilter einbinden
+        run: python scripts/inject_catalog_filter_simplify.py
+
       - name: Katalog-Taxonomie in Browserdaten und Produktseiten uebernehmen
         run: python scripts/apply_catalog_taxonomy.py --generated-only
 
@@ -148,6 +153,9 @@ jobs:
 
       - name: Katalog-Taxonomie fuer jeden Artikel pruefen
         run: python scripts/validate_catalog_taxonomy.py
+
+      - name: Vereinfachte Archivfilter pruefen
+        run: python scripts/validate_catalog_filter_simplify.py
 
       - name: Shop, SEO, Katalog und geschuetzte Modi pruefen
         run: python scripts/validate_shop.py
