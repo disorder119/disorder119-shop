@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Execute the complete Disorder119 D1 schema/migration chain in SQLite CI.
-
-Cloudflare D1 is SQLite-compatible. This catches placeholder-independent SQL
-syntax, missing dependencies and trigger/table definition regressions before a
-production migration is attempted.
-"""
+"""Execute and smoke-test the complete Disorder119 D1 migration chain in SQLite CI."""
 from __future__ import annotations
 
 import sqlite3
@@ -59,11 +54,27 @@ def main() -> None:
         "trg_rental_status_transition",
         "trg_rental_group_complete_before_reserve",
         "trg_rental_group_totals_before_reserve",
+        "trg_rental_group_status_transition",
     ]:
         if name not in triggers:
             raise SystemExit(f"FEHLER: Trigger fehlt nach Migration: {name}")
 
-    print("D1-Migrationskette: OK (schema + 0002 + 0003 + 0004 + 0005)")
+    # Directly smoke-test that the group lifecycle cannot skip from RESERVED to RETURNED.
+    db.execute(
+        """INSERT INTO rental_groups
+        (id,status,item_count,start_date,end_date,days,rental_total_cents,deposit_total_cents,currency,price_on_request,
+         idempotency_key,expires_at,created_at,updated_at)
+        VALUES ('test-group','RESERVED',1,'2026-09-10','2026-09-10',1,1000,5000,'EUR',0,'test-key',NULL,'2026-09-05','2026-09-05')"""
+    )
+    try:
+        db.execute("UPDATE rental_groups SET status='RETURNED' WHERE id='test-group'")
+    except sqlite3.IntegrityError as exc:
+        if "invalid_rental_group_status_transition" not in str(exc):
+            raise SystemExit(f"FEHLER: falscher Lifecycle-Triggerfehler: {exc}") from exc
+    else:
+        raise SystemExit("FEHLER: Ungueltiger Rental-Group-Statussprung wurde von D1 nicht blockiert")
+
+    print("D1-Migrationskette: OK (schema + 0002 + 0003 + 0004 + 0005, inkl. Rental-Group-Lifecycle)")
 
 
 if __name__ == "__main__":
