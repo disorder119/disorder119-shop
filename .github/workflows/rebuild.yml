@@ -87,6 +87,9 @@ jobs:
       - name: Commerce Unit Tests
         run: node --test shop-worker/commerce-core.test.mjs shop-worker/admin-api.test.mjs shop-worker/admin-insights.test.mjs
 
+      - name: D1-Migrationskette ausfuehren
+        run: python scripts/test_d1_migrations.py
+
       - name: Seite bauen
         run: python build_site.py
 
@@ -126,4 +129,3 @@ jobs:
           else
             git commit -m "Automatischer Rebuild nach Shop- und SEO-Validierung"
             git push
-          fi
