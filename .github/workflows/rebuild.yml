@@ -23,6 +23,7 @@ on:
       - "assets/rental-v2.js"
       - "assets/rental-v2-ui.js"
       - "assets/rental-v2-picker.js"
+      - "assets/rental-v2-bundle.js"
       - "shop-worker/**"
       - "scripts/**"
       - ".github/workflows/rebuild.yml"
@@ -75,10 +76,12 @@ jobs:
           node --check assets/rental-v2.js
           node --check assets/rental-v2-ui.js
           node --check assets/rental-v2-picker.js
+          node --check assets/rental-v2-bundle.js
           node --check shop-worker/commerce-core.js
           node --check shop-worker/worker.js
           node --check shop-worker/admin-api.js
           node --check shop-worker/admin-insights.js
+          node --check shop-worker/rental-bundle.js
           node --check shop-worker/worker-entry.js
 
       - name: Commerce Unit Tests
@@ -107,6 +110,9 @@ jobs:
 
       - name: Admin-Operations-D1 pruefen
         run: python scripts/validate_admin_operations.py
+
+      - name: Atomic Rental Bundle pruefen
+        run: python scripts/validate_rental_bundle.py
 
       - name: Ergebnis committen
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
