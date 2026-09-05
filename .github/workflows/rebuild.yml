@@ -21,6 +21,7 @@ on:
       - "assets/article.css"
       - "assets/rental-commerce.js"
       - "assets/rental-v2.js"
+      - "assets/rental-v2-ui.js"
       - "shop-worker/**"
       - "scripts/**"
       - ".github/workflows/rebuild.yml"
@@ -71,6 +72,7 @@ jobs:
           node --check assets/article.js
           node --check assets/rental-commerce.js
           node --check assets/rental-v2.js
+          node --check assets/rental-v2-ui.js
           node --check shop-worker/commerce-core.js
           node --check shop-worker/worker.js
 
