@@ -44,9 +44,9 @@ def main() -> None:
     require(bridge, "ITEM_UNAVAILABLE", "Artikel-nicht-verfuegbar-Fehler")
 
     expected = {
-        "de": ["Mietbedingungen", "50&nbsp;%", "Verspätete Rückgabe", "Keine Weitervermietung", "Nicht passend oder nicht gefallen"],
-        "en": ["Rental terms", "50%", "Late return", "No sub-rental", "Does not fit or is not suitable"],
-        "fr": ["Conditions de location", "50&nbsp;%", "Retour tardif", "Pas de sous-location", "La pièce ne convient pas"],
+        "de": ["Mietbedingungen", "10&nbsp;%", "50&nbsp;%", "Verspätete Rückgabe", "Keine Weitervermietung", "Nicht passend oder nicht gefallen"],
+        "en": ["Rental terms", "exactly 10%", "50%", "Late return", "No sub-rental", "Does not fit or is not suitable"],
+        "fr": ["Conditions de location", "10&nbsp;%", "50&nbsp;%", "Retour tardif", "Pas de sous-location", "La pièce ne convient pas"],
     }
     obsolete = ["ca. 15&nbsp;%", "typically around 15%", "environ 15&nbsp;%"]
     for lang, page in RENTAL_PAGES.items():
@@ -54,7 +54,6 @@ def main() -> None:
             fail(f"Rental-Seite fehlt: {page.relative_to(BASE)}")
         html = page.read_text(encoding="utf-8")
         require(html, 'id="rentalTermsCanonical"', f"kanonischer Rental-Terms-Sync ({lang})")
-        require(html, "10&nbsp;%", f"10-Prozent-Mietpreis ({lang})")
         for phrase in expected[lang]:
             require(html, phrase, f"Mietbedingung {phrase} ({lang})")
         for phrase in obsolete:
