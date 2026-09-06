@@ -9,7 +9,11 @@ raw missing metadata "complete" merely because it is disclosed.
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
+
+from apply_focus_three_followup import MARKER as FOLLOWUP_MARKER
+from apply_focus_three_followup import main as apply_focus_three_followup
 
 BASE = Path(__file__).resolve().parents[1]
 ITEMS = BASE / "data" / "items.json"
@@ -27,6 +31,13 @@ def present(value) -> bool:
 
 
 def main() -> None:
+    # The measured second pass intentionally runs here because both production
+    # and Chromium workflows invoke this validator after the generated pages
+    # exist. That lets the follow-up patch source assets and the already-built
+    # German homepage in the same deterministic gate, without touching the
+    # protected Match/Chaos/Baukasten blocks.
+    apply_focus_three_followup()
+
     items = json.loads(ITEMS.read_text(encoding="utf-8"))
     available = [it for it in items if it.get("public_status") == "AVAILABLE"]
     require(bool(available), "keine AVAILABLE-Artikel")
@@ -61,8 +72,6 @@ def main() -> None:
             price = float(it.get("price") or 0)
         except (TypeError, ValueError):
             price = -1
-        # Price-on-request is an intentional, truthful commerce state and is
-        # therefore valid; a malformed/negative price is not.
         total_points += 1.0 if price >= 0 else 0.0
         desc = str(it.get("desc_de") or it.get("desc") or "").strip()
         desc_ready = len(desc) >= 80
@@ -137,16 +146,25 @@ def main() -> None:
     template = (BASE / "index_template.html").read_text(encoding="utf-8")
     build = (BASE / "build_site.py").read_text(encoding="utf-8")
     app = (BASE / "assets" / "app.js").read_text(encoding="utf-8")
+    css = (BASE / "assets" / "app.css").read_text(encoding="utf-8")
+    article_css = (BASE / "assets" / "article.css").read_text(encoding="utf-8")
     home = (BASE / "index.html").read_text(encoding="utf-8")
     catalog = json.loads((BASE / "data" / "catalog.json").read_text(encoding="utf-8"))
     require("__CRITICAL_IMAGE_PRELOADS__" in template, "Critical-image preload token fehlt")
     require("FOCUS3_MOBILE_SSR_LCP" in build, "serverseitiger Mobile-LCP-Pfad fehlt")
     require("FOCUS3_SSR_HYDRATION" in app, "SSR-Karten werden nicht hydriert")
+    require(FOLLOWUP_MARKER in build and FOLLOWUP_MARKER in app, "gemessener Mobile-LCP-Followup fehlt")
+    require(FOLLOWUP_MARKER in css and FOLLOWUP_MARKER in article_css, "gemessene WCAG-Followup-Regeln fehlen")
     require('data-ssr-initial="1"' in home, "deutsche Startseite enthaelt kein initiales SSR-Grid")
     require(home.count('rel="preload" as="image"') >= 2, "Startseite preloaded nicht zwei erste Produktbilder")
     require(home.count('data-ssr-item-id=') >= 2, "Startseite enthaelt nicht zwei initiale Produktkarten")
+    require(home.count('fetchpriority="high" decoding="sync"') >= 2, "kritische SSR-Bilder decodieren nicht synchron")
     require(any(it.get("grid_image") for it in catalog if it.get("public_status") == "AVAILABLE"), "catalog.json enthaelt keine mobile Grid-Bildquelle")
-    print("Mobile-LCP-Struktur: OK — HTML-first cards + image preload + mobile thumbnails + hydration.")
+
+    # Follow-up JavaScript is applied after the normal rebuild syntax step, so
+    # syntax-check it inside this gate as well before the browser tests run.
+    subprocess.run(["node", "--check", str(BASE / "assets" / "app.js")], check=True)
+    print("Mobile-LCP-Struktur: OK — HTML-first, pinned hydration, paint gate, mobile thumbnails und sync decode.")
 
 
 if __name__ == "__main__":
