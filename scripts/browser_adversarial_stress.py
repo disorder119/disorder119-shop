@@ -75,15 +75,16 @@ def install_listener_tracker(driver) -> None:
           if (!set) { set = new Set(); byType.set(type, set); }
           return set;
         }
+        function tracked(target) { return target === window || target === document; }
         EventTarget.prototype.addEventListener = function(type, listener, options) {
-          if (listener) {
+          if (listener && tracked(this)) {
             const set = bucket(this, type);
             if (!set.has(listener)) { set.add(listener); counts[type] = (counts[type] || 0) + 1; }
           }
           return originalAdd.call(this, type, listener, options);
         };
         EventTarget.prototype.removeEventListener = function(type, listener, options) {
-          if (listener) {
+          if (listener && tracked(this)) {
             const set = bucket(this, type);
             if (set.has(listener)) { set.delete(listener); counts[type] = Math.max(0, (counts[type] || 0) - 1); }
           }
@@ -104,21 +105,18 @@ def test_repeated_modes_history_and_listener_cleanup(driver) -> None:
     assert_single_mode_view(driver, "classic")
     baseline = driver.execute_script("return Object.assign({}, window.__d119ListenerCounts || {})")
 
-    # 20 protected-mode transitions plus returns to the archive. This catches
-    # stale rAF/listener/modal state without altering the creative modes.
     for _ in range(5):
         click_mode(driver, "swipe", "/match/")
         click_mode(driver, "chaos", "/chaos/")
         click_mode(driver, "outfit", "/baukasten/")
         click_mode(driver, "classic", "/")
 
-    time.sleep(0.25)  # allow Chaos' self-cleaning rAF loop to observe hidden state
+    time.sleep(0.25)
     after = driver.execute_script("return Object.assign({}, window.__d119ListenerCounts || {})")
     for event_type in ("mousemove", "deviceorientation"):
         if int(after.get(event_type, 0)) > int(baseline.get(event_type, 0)):
-            fail(f"Listener-Leak nach wiederholten Moduswechseln: {event_type} {baseline.get(event_type, 0)} -> {after.get(event_type, 0)}")
+            fail(f"Globaler Listener-Leak nach wiederholten Moduswechseln: {event_type} {baseline.get(event_type, 0)} -> {after.get(event_type, 0)}")
 
-    # Browser history must restore UI state, not only the URL.
     click_mode(driver, "swipe", "/match/")
     click_mode(driver, "chaos", "/chaos/")
     click_mode(driver, "outfit", "/baukasten/")
@@ -144,8 +142,6 @@ def test_baukasten_open_close_and_state_recovery(driver) -> None:
     dismiss_cookie_note(driver)
     picker = driver.find_element(By.ID, "outfitPicker")
 
-    # Ten keyboard and ten mouse open/close cycles. Keyboard cycles explicitly
-    # verify focus entry and focus return.
     for _ in range(10):
         first = driver.find_element(By.CSS_SELECTOR, "#outfitStack .outfit-slot")
         first.send_keys(Keys.ENTER)
@@ -163,7 +159,6 @@ def test_baukasten_open_close_and_state_recovery(driver) -> None:
         driver.find_element(By.ID, "outfitPickerClose").click()
         wait(driver, lambda d: "open" not in (picker.get_attribute("class") or ""), "Baukasten-Picker per Button geschlossen")
 
-    # Corrupt and stale state must degrade to an empty usable look, not throw.
     driver.execute_script("localStorage.setItem('disorder119_outfit', '{not-json')")
     driver.refresh()
     wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#outfitStack .outfit-slot")) == 5, "Baukasten nach kaputtem LocalStorage")
@@ -199,8 +194,6 @@ def test_chaos_resize_modal_cleanup_and_reduced_motion(driver) -> None:
         assert_control_in_viewport(driver, "chaosShuffle", f"Chaos {width}x{height}")
         assert_no_horizontal_overflow(driver, f"Chaos {width}x{height}")
 
-    # Repeated Quickview open/close must not strand scroll lock, focus overlays
-    # or navigate away from Chaos.
     driver.set_window_size(390, 844)
     for i in range(10):
         item = driver.find_element(By.CSS_SELECTOR, "#chaosItems .chaos-item")
@@ -216,12 +209,9 @@ def test_chaos_resize_modal_cleanup_and_reduced_motion(driver) -> None:
 
     assert_no_js_exceptions(driver, "Chaos Resize/Modal")
 
-    # On a fresh navigation under reduced-motion, the mobile auto-drift must not
-    # inject a transform. This is an accessibility invariant already present in
-    # production code; the test only proves it remains true.
     driver.execute_cdp_cmd("Emulation.setEmulatedMedia", {"features": [{"name": "prefers-reduced-motion", "value": "reduce"}]})
-    driver.get(urljoin(BASE_URL, "chaos/"))
     driver.set_window_size(390, 844)
+    driver.get(urljoin(BASE_URL, "chaos/"))
     wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#chaosItems .chaos-item")) >= 8, "Chaos reduced-motion geladen")
     time.sleep(0.2)
     transform = driver.execute_script("return document.getElementById('chaosItems').style.transform || ''")
@@ -235,16 +225,12 @@ def test_rapid_match_and_storage_fallbacks(driver) -> None:
     driver.get(urljoin(BASE_URL, "match/"))
     wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#swipeStage .swipe-card")) == 1, "Match geladen")
     dismiss_cookie_note(driver)
-    # Ten synchronous decisions simulate an impatient user. The final render may
-    # coalesce, but there must still be one valid state and no uncaught error.
     driver.execute_script("const b=document.getElementById('swipeNope'); for(let i=0;i<10;i++) b.click();")
     wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#swipeStage .swipe-card, #swipeStage .swipe-summary")) == 1, "Match nach Rapid Input stabil")
     if urlparse(driver.current_url).path != "/match/":
         fail("Match Rapid Input veraendert unerwartet die Route")
     assert_no_js_exceptions(driver, "Match Rapid Input")
 
-    # Corrupt cart and rental storage are common after older deployments or
-    # manual browser changes; both must recover without taking down the app.
     driver.get(BASE_URL)
     wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#grid .plate")) >= 3, "Archiv fuer Storage-Test")
     driver.execute_script("localStorage.setItem('disorder119_cart','{bad-json')")
@@ -259,9 +245,6 @@ def test_rapid_match_and_storage_fallbacks(driver) -> None:
 
 
 def test_coarse_performance_budget(driver) -> None:
-    # Gross-regression budget, not a Lighthouse substitute. It catches accidental
-    # full-catalog eager mounting/loading and pathological long tasks while
-    # staying tolerant of shared CI runner variance.
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": "window.__d119LongTasks=[];try{new PerformanceObserver(l=>l.getEntries().forEach(e=>window.__d119LongTasks.push(e.duration))).observe({type:'longtask',buffered:true})}catch(e){}"})
     driver.set_window_size(390, 844)
     driver.get(BASE_URL)
@@ -305,7 +288,7 @@ def main() -> None:
         test_coarse_performance_budget,
     ):
         run_case(test_fn)
-    print("Adversarial Browser-Stress: OK — 20x Mode-/Modal-Zyklen, History, Listener-Cleanup, Resize/Landscape, reduced-motion, corrupt State, Rapid Input und grobes Performance-Budget bestanden.")
+    print("Adversarial Browser-Stress: OK — 20x Mode-/Modal-Zyklen, History, globale Listener-Cleanup, Resize/Landscape, reduced-motion, corrupt State, Rapid Input und grobes Performance-Budget bestanden.")
 
 
 if __name__ == "__main__":
