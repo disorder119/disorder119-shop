@@ -61,7 +61,8 @@ def main() -> None:
     require('event.key !== "Tab"' in filters and "focusables(panel)" in filters, "Focus-Trap im Filter-Drawer fehlt")
     require("previousFocus" in filters and "target.focus" in filters, "Fokus-Rückgabe des Filter-Drawers fehlt")
     require("min-height:44px" in filters and "env(safe-area-inset-bottom)" in filters, "Touch-Ziele/Safe-Area im Filter-Drawer fehlen")
-    require("option.hidden = unavailable" in filters, "Null-Treffer-Optionen werden nicht ausgeblendet")
+    require("AUDIT_PERFECT_IOS_ZERO_OPTIONS" in filters and "select.remove(i);" in filters,
+            "Null-Treffer-Optionen werden nicht iOS-sicher aus nativen Selects entfernt")
     require('PRODUCT_TYPE_ID = "filterProductType"' in filters, "redundanter Produkttyp-Filter wird nicht kontrolliert")
 
     # Rental business invariants must remain untouched.
@@ -82,6 +83,7 @@ def main() -> None:
     require('lines.push("   Art.-Nr.: " + (item.article || item.id))' in message_fn, "Artikelnummer fehlt in Multi-Rental-Anfrage")
     require('lines.push("   URL: " + window.location.origin' in message_fn, "Produkt-URL fehlt in Multi-Rental-Anfrage")
     require('if (state.message) lines.push' in message_fn, "Kundennachricht fehlt in Rental-Anfrage")
+    require("AUDIT_PERFECT_RENTAL_AUTO_OPEN" in rental, "Produktseiten-Deep-Links öffnen Rental V2 nicht direkt")
 
     # Rental picker: localized, punctuation-tolerant, keyboard friendly, no public item number label.
     require("QUALITY95_PICKER_I18N" in picker and "categoryLabel(cat)" in picker, "Rental-Picker-Kategorien sind nicht lokalisiert")

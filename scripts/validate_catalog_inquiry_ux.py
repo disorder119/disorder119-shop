@@ -47,12 +47,17 @@ def main() -> None:
             "Direkte Kaufanfrage enthält keine Artikelnummer mehr.")
     require('rows.push("URL: " + window.location.href' in article and 'new Date().toLocaleString()' in article,
             "Direkte Kaufanfrage enthält URL/Zeitpunkt nicht.")
+    require('AUDIT_PERFECT_ARTICLE_PRICE_REQUEST' in article,
+            "Direkte Kaufanfrage behandelt Preis auf Anfrage nicht sauber.")
 
-    # Warenkorb/Kaufanfrage bleibt intern eindeutig.
+    # Warenkorb/Kaufanfrage bleibt intern eindeutig und darf einen offenen Preis
+    # niemals in 0,00 EUR umdeuten.
     require('t("orderArticleAbbrev") + (it.article || it.id)' in app,
             "Kaufanfrage aus dem Warenkorb enthält keine Artikelnummer.")
     require('rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + it.id + "/")' in app,
             "Kaufanfrage aus dem Warenkorb enthält keine Artikel-URL.")
+    require('rows.push(fmtPriceDisplay(it.price));' in app and 'AUDIT_PERFECT_CART_TOTAL' in app,
+            "Warenkorb behandelt Preis-auf-Anfrage nicht konsistent.")
 
     # Miet-UI: keine Artikelnummer im sichtbaren Drawer, aber jede Anfrage
     # enthält sie weiterhin – auch für Multi-Rental.
@@ -72,11 +77,12 @@ def main() -> None:
             "Automatische Kautionslogik wurde verändert.")
 
     # Filter: technische Detailtaxonomie bleibt vorhanden, wird aber versteckt;
-    # Null-Treffer bleiben ausgeblendet und Mobile erhält einen echten Drawer.
+    # Null-Treffer sind auf nativen iOS-Selects physisch entfernt und Mobile
+    # erhält einen echten Drawer.
     require('PRODUCT_TYPE_ID = "filterProductType"' in helper,
             "Technischer Produkttyp-Filter fehlt.")
-    require("option.hidden = unavailable" in helper,
-            "Filterwerte ohne Treffer werden nicht ausgeblendet.")
+    require("AUDIT_PERFECT_IOS_ZERO_OPTIONS" in helper and "select.remove(i);" in helper,
+            "Filterwerte ohne Treffer werden nicht iOS-sicher entfernt.")
     require("d119CompactFilterDrawer" in helper and "d119-filter-drawer__apply" in helper,
             "Mobiler Filter-Drawer mit Trefferaktion fehlt.")
 
