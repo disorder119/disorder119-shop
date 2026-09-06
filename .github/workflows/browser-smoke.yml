@@ -1,0 +1,114 @@
+name: Browser Smoke & Navigation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "data/items.json"
+      - "index_template.html"
+      - "build_site.py"
+      - "admin/index.html"
+      - "config/shop-config.json"
+      - "assets/**"
+      - "scripts/**"
+      - ".github/workflows/**"
+  push:
+    branches: [main]
+    paths:
+      - "data/items.json"
+      - "index_template.html"
+      - "build_site.py"
+      - "admin/index.html"
+      - "config/shop-config.json"
+      - "assets/**"
+      - "scripts/**"
+      - ".github/workflows/**"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Repo auschecken
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Testabhaengigkeiten installieren
+        run: pip install pillow selenium
+
+      - name: Quellen wie im Produktions-Rebuild vorbereiten
+        run: |
+          python scripts/repair_catalog_source_integrity.py
+          if grep -q 'id="filterDepartment"' index_template.html \
+             && grep -q 'id="filterProductType"' index_template.html \
+             && grep -q 'var DEPARTMENT_LABELS = {' assets/app.js \
+             && grep -q 'it.taxonomy_category || it.category' assets/app.js; then
+            echo "Archiv-Taxonomie-Filter bereits vorhanden."
+          else
+            python scripts/apply_archive_taxonomy_filters.py
+          fi
+          if grep -q 'AUDIT_PERFECT_NATIVE_FACETS' assets/app.js \
+             && grep -q 'function renderActiveFilters()' assets/app.js \
+             && grep -q 'id="activeFilters"' index_template.html; then
+            echo "Archiv-Filter-UX bereits vorhanden."
+          else
+            python scripts/apply_archive_filter_ux.py
+          fi
+          python scripts/apply_archive_filter_bugfixes.py
+          python scripts/apply_live_catalog_polish.py
+          if grep -q 'it.size_normalized, it.article, String(it.id || "")' assets/app.js \
+             && grep -q 'class="plate__size"' assets/app.js \
+             && grep -q 'item.article, item.id, itemCategory(item), item.size' assets/rental-v2-picker.js; then
+            echo "Katalog-/Inquiry-UX bereits vorhanden."
+          else
+            python scripts/apply_catalog_inquiry_ux.py
+          fi
+          python scripts/apply_catalog_filter_mobile_ux.py
+          python scripts/apply_quality_95_polish.py
+          python scripts/apply_audit_perfection.py
+          python scripts/apply_taxonomy_subtype_fix.py
+          python scripts/apply_runtime_rental_integrity.py
+          python scripts/apply_rental_terms_runtime_anchor.py
+          python scripts/apply_admin_quality_center.py
+          python scripts/apply_admin_quality_hardening.py
+          python scripts/apply_browser_runtime_fixes.py
+
+      - name: Browser-Build erzeugen
+        run: |
+          python scripts/apply_catalog_taxonomy.py
+          python build_site.py
+          python scripts/apply_rental_terms.py
+          python scripts/inject_rental_v2.py
+          python scripts/inject_catalog_filter_simplify.py
+          python scripts/apply_catalog_taxonomy.py --generated-only
+          python scripts/repair_public_article_integrity.py
+
+      - name: Lokale Navigation und Assets pruefen
+        run: python scripts/validate_local_navigation.py
+
+      - name: Chrome verfuegbar
+        run: google-chrome --version
+
+      - name: Echte Browser-Kundenwege pruefen
+        run: |
+          python -m http.server 4173 --bind 127.0.0.1 > /tmp/d119-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          for i in {1..20}; do
+            curl -fsS http://127.0.0.1:4173/ >/dev/null && break
+            sleep 0.25
+          done
+          D119_SMOKE_URL=http://127.0.0.1:4173 python scripts/browser_smoke.py

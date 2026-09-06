@@ -137,6 +137,9 @@ jobs:
       - name: Admin-Datenqualitaetszentrale haerten
         run: python scripts/apply_admin_quality_hardening.py
 
+      - name: Browser-entdeckte Runtime-Fehler reparieren
+        run: python scripts/apply_browser_runtime_fixes.py
+
       - name: JavaScript Syntax pruefen
         run: |
           node --check assets/app.js
