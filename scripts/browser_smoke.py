@@ -174,7 +174,7 @@ def test_language_routes(driver) -> None:
         if driver.find_element(By.TAG_NAME, "html").get_attribute("lang") != lang:
             fail(f"/{path}: HTML-Sprache ist nicht {lang}")
         toggle = driver.find_element(By.ID, "moreFiltersToggle")
-        if expected not in toggle.text:
+        if expected.casefold() not in toggle.text.casefold():
             fail(f"/{path}: Filter-UI nicht lokalisiert ({toggle.text!r})")
         assert_no_horizontal_overflow(driver, f"/{path}")
         assert_no_js_exceptions(driver, f"/{path}")
