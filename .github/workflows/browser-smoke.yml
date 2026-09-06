@@ -7,9 +7,6 @@ on:
       - "data/items.json"
       - "index_template.html"
       - "build_site.py"
-      - "manifest.webmanifest"
-      - "sw.js"
-      - "offline.html"
       - "admin/index.html"
       - "config/shop-config.json"
       - "assets/**"
@@ -21,9 +18,6 @@ on:
       - "data/items.json"
       - "index_template.html"
       - "build_site.py"
-      - "manifest.webmanifest"
-      - "sw.js"
-      - "offline.html"
       - "admin/index.html"
       - "config/shop-config.json"
       - "assets/**"
@@ -97,7 +91,6 @@ jobs:
           python scripts/apply_adversarial_runtime_fixes.py
           python scripts/apply_perf_a11y_quality.py
           python scripts/apply_focus_three_hardening.py
-          python scripts/apply_pwa.py
 
       - name: Browser-Build erzeugen
         run: |
@@ -114,9 +107,6 @@ jobs:
 
       - name: Focus-3 Mobile und Produktdaten >9 pruefen
         run: python scripts/validate_focus_three.py
-
-      - name: Smartphone-App/PWA pruefen
-        run: python scripts/validate_pwa.py
 
       - name: Lokale Navigation und Assets pruefen
         run: python scripts/validate_local_navigation.py
@@ -136,7 +126,6 @@ jobs:
           D119_SMOKE_URL=http://127.0.0.1:4173 python scripts/browser_smoke.py
           D119_SMOKE_URL=http://127.0.0.1:4173 python scripts/browser_protected_modes_smoke.py
           D119_SMOKE_URL=http://127.0.0.1:4173 python scripts/browser_adversarial_stress.py
-          D119_SMOKE_URL=http://127.0.0.1:4173 D119_SERVER_PID=$SERVER_PID python scripts/browser_pwa_smoke.py
 
       - name: Lighthouse- und WCAG-Budgets pruefen
         id: quality_budget
