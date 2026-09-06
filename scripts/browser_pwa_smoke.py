@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import signal
+import time
 
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException
@@ -33,6 +35,18 @@ def wait(driver, fn, label: str):
         return WebDriverWait(driver, WAIT).until(fn)
     except TimeoutException as exc:
         raise AssertionError("Timeout: " + label) from exc
+
+
+def stop_test_server() -> None:
+    raw = os.environ.get("D119_SERVER_PID", "").strip()
+    if not raw:
+        fail("D119_SERVER_PID fehlt; Offline-Test verweigert eine nur emulierte Netztrennung")
+    try:
+        pid = int(raw)
+        os.kill(pid, signal.SIGTERM)
+    except (ValueError, ProcessLookupError) as exc:
+        fail("Testserver konnte fuer echten Offline-Test nicht beendet werden: " + str(exc))
+    time.sleep(0.35)
 
 
 def main() -> None:
@@ -78,21 +92,23 @@ def main() -> None:
         driver.refresh()
         wait(driver, lambda d: d.execute_script("return !!navigator.serviceWorker.controller;"), "Service Worker kontrolliert die App")
 
-        # Prove that the installed shell and the actual product catalogue survive
-        # complete loss of network, not merely a cached HTML title.
+        # Do not merely ask Chrome to emulate offline while localhost may still
+        # be reachable. Stop the actual HTTP server, then additionally mark the
+        # browser offline. Every successful request below must therefore come
+        # through the installed app's Service Worker/cache.
+        stop_test_server()
         driver.execute_cdp_cmd("Network.enable", {})
-        offline = {
+        driver.execute_cdp_cmd("Network.emulateNetworkConditions", {
             "offline": True,
             "latency": 0,
             "downloadThroughput": 0,
             "uploadThroughput": 0,
             "connectionType": "none",
-        }
-        driver.execute_cdp_cmd("Network.emulateNetworkConditions", offline)
+        })
         try:
             driver.get(BASE_URL + "?pwa-offline-smoke=1")
         except WebDriverException as exc:
-            fail("Precached App-Shell startet offline nicht: " + str(exc))
+            fail("Precached App-Shell startet bei echtem Serverausfall nicht: " + str(exc))
         if "Disorder119" not in driver.title:
             fail("Offline-Start liefert nicht die Disorder119-App")
 
@@ -118,7 +134,7 @@ def main() -> None:
         if "Du bist gerade offline" not in body:
             fail("Offline-Fallback-Seite wurde nicht ausgeliefert")
 
-        print("Browser-PWA: OK — Manifest, Root-Service-Worker, Offline-App-Shell, Produktkatalog und Offline-Fallback funktionieren.")
+        print("Browser-PWA: OK — Manifest, Root-Service-Worker, echter Offline-App-Start, Produktkatalog und Offline-Fallback funktionieren.")
     finally:
         try:
             driver.execute_cdp_cmd("Network.emulateNetworkConditions", {
