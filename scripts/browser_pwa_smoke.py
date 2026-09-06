@@ -38,6 +38,7 @@ def wait(driver, fn, label: str):
 def main() -> None:
     driver = webdriver.Chrome(options=options())
     driver.set_page_load_timeout(20)
+    driver.set_script_timeout(20)
     try:
         driver.get(BASE_URL)
         manifest_href = driver.execute_script("return document.querySelector('link[rel=manifest]') && document.querySelector('link[rel=manifest]').getAttribute('href');")
@@ -77,7 +78,8 @@ def main() -> None:
         driver.refresh()
         wait(driver, lambda d: d.execute_script("return !!navigator.serviceWorker.controller;"), "Service Worker kontrolliert die App")
 
-        # Prove that the installed shell actually survives loss of network.
+        # Prove that the installed shell and the actual product catalogue survive
+        # complete loss of network, not merely a cached HTML title.
         driver.execute_cdp_cmd("Network.enable", {})
         offline = {
             "offline": True,
@@ -94,6 +96,20 @@ def main() -> None:
         if "Disorder119" not in driver.title:
             fail("Offline-Start liefert nicht die Disorder119-App")
 
+        offline_catalog = driver.execute_async_script(
+            """
+            var done = arguments[arguments.length - 1];
+            fetch('/data/catalog.json')
+              .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+              .then(function(items){ done({count:Array.isArray(items) ? items.length : -1}); })
+              .catch(function(e){ done({error:String(e)}); });
+            """
+        )
+        if offline_catalog.get("error"):
+            fail("Produktkatalog ist offline nicht verfügbar: " + offline_catalog["error"])
+        if offline_catalog.get("count", -1) < 100:
+            fail("Offline-Katalog ist unerwartet leer/unvollständig: " + str(offline_catalog))
+
         try:
             driver.get(BASE_URL + "nicht-im-cache-pwa-test/")
         except WebDriverException as exc:
@@ -102,7 +118,7 @@ def main() -> None:
         if "Du bist gerade offline" not in body:
             fail("Offline-Fallback-Seite wurde nicht ausgeliefert")
 
-        print("Browser-PWA: OK — Manifest, Root-Service-Worker, Offline-App-Shell und Offline-Fallback funktionieren.")
+        print("Browser-PWA: OK — Manifest, Root-Service-Worker, Offline-App-Shell, Produktkatalog und Offline-Fallback funktionieren.")
     finally:
         try:
             driver.execute_cdp_cmd("Network.emulateNetworkConditions", {
