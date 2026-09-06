@@ -71,28 +71,39 @@ def validate_semantic_taxonomy() -> None:
     catalog = json.loads(text("data/catalog.json"))
     by_id = {int(item["id"]): item for item in catalog}
 
-    # These were verified false classifications in the audit. They must never
-    # silently regress even if descriptions are edited later.
-    expected = {
-        9519: ("Top", "Tops"),
-        9527: ("Top", "Tops"),
-        9512: ("Jacket", "Jackets"),
-        9511: ("Jacket", "Jackets"),
-        9508: ("Top", "Tops"),
-        9500: ("Jacket", "Jackets"),
-        9496: ("Polo Shirt", "Shirts"),
-        9499: ("Jacket", "Jackets"),
-        9462: ("Skirt", "Skirts"),
-        9442: ("Jacket", "Jackets"),
-        9454: ("Jacket", "Jackets"),
-        9443: ("Jacket", "Jackets"),
-        9401: ("Top", "Tops"),
+    # The audit found these products assigned to an impossible broad category
+    # (e.g. a jacket as Dress/Shorts). Broad-category correctness is the hard
+    # invariant. Exact subtype is only asserted where the source wording is
+    # explicit enough to justify it without guessing.
+    expected_categories = {
+        9519: "Tops",
+        9527: "Tops",
+        9512: "Jackets",
+        9511: "Jackets",
+        9508: "Tops",
+        9500: "Jackets",
+        9496: "Shirts",
+        9499: "Jackets",
+        9462: "Skirts",
+        9442: "Jackets",
+        9454: "Jackets",
+        9443: "Jackets",
+        9401: "Tops",
     }
-    for item_id, (ptype, category) in expected.items():
+    exact_types = {
+        9512: "Jacket",       # description explicitly says Jacke
+        9500: "Jacket",       # description explicitly says Prada Jacke
+        9496: "Polo Shirt",   # title explicitly says Herrenpolo
+        9401: "Top",          # title explicitly says Spidertop
+    }
+    for item_id, category in expected_categories.items():
         item = by_id.get(item_id)
         require(item is not None, f"Katalogartikel {item_id} fehlt")
-        require(item.get("product_type") == ptype, f"Artikel {item_id}: Produkttyp {item.get('product_type')!r} statt {ptype!r}")
-        require(item.get("taxonomy_category") == category, f"Artikel {item_id}: Kategorie {item.get('taxonomy_category')!r} statt {category!r}")
+        require(item.get("taxonomy_category") == category,
+                f"Artikel {item_id}: Kategorie {item.get('taxonomy_category')!r} statt {category!r}")
+        if item_id in exact_types:
+            require(item.get("product_type") == exact_types[item_id],
+                    f"Artikel {item_id}: Produkttyp {item.get('product_type')!r} statt {exact_types[item_id]!r}")
 
     report = json.loads(text("data/catalog-taxonomy-report.json"))
     mismatch_ids = {int(row["id"]) for row in report.get("legacyCategoryMismatches", [])}
@@ -106,10 +117,13 @@ def validate_semantic_taxonomy() -> None:
     # Generated public pages must agree with the repaired taxonomy, not merely
     # catalog.json. Two former failures are checked end-to-end here.
     p9500 = text("artikel/9500/index.html")
-    require('<div class="fact__value" id="factCategoryValue">Jacken</div>' in p9500, "Prada Knitterjacke ist oeffentlich nicht als Jacke klassifiziert")
-    require('"category": "Jacken"' in p9500 and '"value": "Jacke"' in p9500, "Prada Knitterjacke JSON-LD ist noch falsch")
+    require('<div class="fact__value" id="factCategoryValue">Jacken</div>' in p9500,
+            "Prada Knitterjacke ist oeffentlich nicht als Jacke klassifiziert")
+    require('"category": "Jacken"' in p9500 and '"value": "Jacke"' in p9500,
+            "Prada Knitterjacke JSON-LD ist noch falsch")
     p9512 = text("artikel/9512/index.html")
-    require('<div class="fact__value" id="factCategoryValue">Jacken</div>' in p9512, "Dsquared2 Suf Camp ist oeffentlich nicht als Jacke klassifiziert")
+    require('<div class="fact__value" id="factCategoryValue">Jacken</div>' in p9512,
+            "Dsquared2 Suf Camp ist oeffentlich nicht als Jacke klassifiziert")
 
 
 def validate_existing_quality_debt_does_not_grow() -> None:
