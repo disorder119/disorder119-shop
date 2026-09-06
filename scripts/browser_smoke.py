@@ -126,12 +126,21 @@ def test_search_and_mobile_filter(driver) -> None:
     search.send_keys("Comme des Garcons")
     wait(driver, lambda d: any("Comme des Gar" in el.text for el in d.find_elements(By.CSS_SELECTOR, "#grid .plate")), "akzenttolerante Comme-des-Garcons-Suche")
 
-    search.clear()
+    search.send_keys(Keys.CONTROL, "a")
     search.send_keys("Y3")
     wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#grid .plate")) > 0, "Y3/Y-3-Suche")
-    search.clear()
-    search.send_keys(Keys.ENTER)
+
+    # Clear like a real keyboard user. This must also rebuild facet options that
+    # were physically removed while the narrow search had zero hits.
+    search.send_keys(Keys.CONTROL, "a")
+    search.send_keys(Keys.BACKSPACE)
     wait_cards(driver, 3)
+    wait(
+        driver,
+        lambda d: any(opt.get_attribute("value") == "Men" for opt in d.find_element(By.ID, "filterDepartment").find_elements(By.TAG_NAME, "option")),
+        "Bereichs-Facets nach Suchreset wiederhergestellt",
+    )
+    assert_no_zero_options(driver)
 
     toggle = driver.find_element(By.ID, "moreFiltersToggle")
     toggle.click()
