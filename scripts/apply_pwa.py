@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Make Disorder119 installable as a standalone smartphone PWA.
+"""Make Disorder119 installable as standalone smartphone PWAs.
 
-This changes only global document metadata/runtime registration and product-page
-head generation. Match, Chaos, Baukasten, rental pricing and mode-guard data are
-not modified.
+The public shop receives the root app shell; the internal admin receives a
+separate /admin/ app shell with its own narrow service-worker scope. Match,
+Chaos, Baukasten, rental pricing and mode-guard data are not modified.
 """
 from pathlib import Path
+
+from apply_admin_pwa import main as apply_admin_pwa
 
 BASE = Path(__file__).resolve().parents[1]
 TEMPLATE = BASE / "index_template.html"
@@ -100,7 +102,8 @@ def main() -> None:
         TEMPLATE.write_text(new_template, encoding="utf-8")
     if new_build != build:
         BUILD.write_text(new_build, encoding="utf-8")
-    print("PWA-Integration angewendet: Manifest + standalone iOS/Android + Service Worker.")
+    apply_admin_pwa()
+    print("PWA-Integration angewendet: öffentliche App + separate Admin-App, standalone iOS/Android + Service Worker.")
 
 
 if __name__ == "__main__":
