@@ -155,6 +155,9 @@ jobs:
       - name: Focus-3 Mobile/Data Hardening anwenden
         run: python scripts/apply_focus_three_hardening.py
 
+      - name: Smartphone-App/PWA anwenden
+        run: python scripts/apply_pwa.py
+
       - name: JavaScript Syntax pruefen
         run: |
           node --check assets/app.js
@@ -163,6 +166,8 @@ jobs:
           node --check assets/rental-v2.js
           node --check assets/rental-v2-ui.js
           node --check assets/rental-v2-picker.js
+          node --check assets/pwa.js
+          node --check sw.js
           node --check shop-worker/commerce-core.js
           node --check shop-worker/worker.js
           node --check shop-worker/admin-api.js
@@ -208,6 +213,9 @@ jobs:
 
       - name: Oeffentliche Produktseiten reparieren und DRAFT isolieren
         run: python scripts/repair_public_article_integrity.py
+
+      - name: Smartphone-App/PWA pruefen
+        run: python scripts/validate_pwa.py
 
       - name: Katalog-Taxonomie fuer jeden Artikel pruefen
         run: python scripts/validate_catalog_taxonomy.py
