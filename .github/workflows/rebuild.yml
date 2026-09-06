@@ -140,6 +140,9 @@ jobs:
       - name: Browser-entdeckte Runtime-Fehler reparieren
         run: python scripts/apply_browser_runtime_fixes.py
 
+      - name: Adversarial entdeckte Runtime-Fehler reparieren
+        run: python scripts/apply_adversarial_runtime_fixes.py
+
       - name: JavaScript Syntax pruefen
         run: |
           node --check assets/app.js
