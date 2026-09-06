@@ -120,6 +120,9 @@ jobs:
       - name: Runtime-Rental-Integritaet anwenden
         run: python scripts/apply_runtime_rental_integrity.py
 
+      - name: Rental-Terms von Legacy-Runtime entkoppeln
+        run: python scripts/apply_rental_terms_runtime_anchor.py
+
       - name: JavaScript Syntax pruefen
         run: |
           node --check assets/app.js
@@ -241,7 +244,7 @@ jobs:
           git add data/items.json data/catalog-taxonomy-report.json data/shop-quality.json
           git add index_template.html build_site.py assets/app.js assets/app.css assets/article.js assets/article.css assets/catalog-filter-simplify.js assets/rental-v2.js assets/rental-v2-ui.js assets/rental-v2-picker.js
           git add shop-worker/commerce-core.js shop-worker/commerce-core.test.mjs shop-worker/worker.js shop-worker/rental-bundle.js
-          git add scripts/catalog_taxonomy.py
+          git add scripts/catalog_taxonomy.py scripts/apply_rental_terms.py
           git add index.html artikel sitemap.xml cart impressum agb datenschutz ueber-uns faq match chaos baukasten mieten en fr data/catalog.json
           if git diff --cached --quiet; then
             echo "Keine Aenderungen am generierten Output - nichts zu committen."
