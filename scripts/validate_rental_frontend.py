@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Regression checks for the public rental UI / commerce bridge."""
+"""Regression checks for the single public Rental V2 frontend."""
 from pathlib import Path
 import sys
 
 BASE = Path(__file__).resolve().parents[1]
 TEMPLATE = BASE / "index_template.html"
-BRIDGE = BASE / "assets" / "rental-commerce.js"
 V2 = BASE / "assets" / "rental-v2.js"
 V2_UI = BASE / "assets" / "rental-v2-ui.js"
 V2_PICKER = BASE / "assets" / "rental-v2-picker.js"
@@ -16,6 +15,7 @@ RENTAL_PAGES = {
     "en": BASE / "en" / "mieten" / "index.html",
     "fr": BASE / "fr" / "mieten" / "index.html",
 }
+LEGACY_RUNTIME = ("/assets/rental-commerce.js", "/assets/rental-v2-bundle.js")
 
 
 def fail(message: str) -> None:
@@ -29,37 +29,22 @@ def require(text: str, needle: str, label: str) -> None:
 
 
 def main() -> None:
-    if not BRIDGE.is_file():
-        fail("assets/rental-commerce.js fehlt.")
-    if not V2.is_file():
-        fail("assets/rental-v2.js fehlt.")
-    if not V2_UI.is_file():
-        fail("assets/rental-v2-ui.js fehlt.")
-    if not V2_PICKER.is_file():
-        fail("assets/rental-v2-picker.js fehlt.")
-    if not PATCHER.is_file():
-        fail("scripts/apply_rental_terms.py fehlt.")
-    if not INJECTOR.is_file():
-        fail("scripts/inject_rental_v2.py fehlt.")
+    for path, label in ((V2, "assets/rental-v2.js"), (V2_UI, "assets/rental-v2-ui.js"), (V2_PICKER, "assets/rental-v2-picker.js"), (PATCHER, "scripts/apply_rental_terms.py"), (INJECTOR, "scripts/inject_rental_v2.py")):
+        if not path.is_file():
+            fail(label + " fehlt.")
 
     template = TEMPLATE.read_text(encoding="utf-8")
-    bridge = BRIDGE.read_text(encoding="utf-8")
     v2 = V2.read_text(encoding="utf-8")
     v2_ui = V2_UI.read_text(encoding="utf-8")
     v2_picker = V2_PICKER.read_text(encoding="utf-8")
+    patcher = PATCHER.read_text(encoding="utf-8")
+    injector = INJECTOR.read_text(encoding="utf-8")
 
-    require(template, '/assets/rental-commerce.js', "Script-Einbindung")
-    require(bridge, "RENTAL_RATE_BPS = 1000", "10-Prozent-Regel")
-    require(bridge, '"/rental-quote"', "serverseitiger Mietpreis-Abgleich")
-    require(bridge, '"/rental-request"', "Rental-Request-Anbindung")
-    require(bridge, '"Idempotency-Key"', "Idempotency-Header")
-    require(bridge, "totalPriceCents", "Gesamtpreis-Anzeige")
-    require(bridge, "priceOnRequest", "Preis-auf-Anfrage-Fallback")
-    require(bridge, "10&nbsp;%", "sichtbare 10-Prozent-Kondition")
-    require(bridge, "RENTAL_DATES_UNAVAILABLE", "Verfuegbarkeitsfehler")
-    require(bridge, "ITEM_UNAVAILABLE", "Artikel-nicht-verfuegbar-Fehler")
+    for legacy in LEGACY_RUNTIME:
+        if legacy in template:
+            fail(f"Template lädt Legacy-Rental-Runtime: {legacy}")
 
-    # Rental V2: combined requests, automatic deposit and transparent summary.
+    # Rental V2: one combined request, automatic deposit and transparent summary.
     require(v2, "DEPOSIT_RATE_BPS = 5000", "50-Prozent-Kaution")
     require(v2, "DEPOSIT_MIN_CENTS = 5000", "Mindestkaution 50 Euro")
     require(v2, "STANDARD_MAX_DAYS = 7", "Standard-Mietdauer")
@@ -70,8 +55,12 @@ def main() -> None:
     require(v2, "refundableDeposit", "Kautions-Zusammenfassung")
     require(v2, "moveRentalNavigation", "Verleih als eigener Service-Bereich")
     require(v2, '"/rental-quote"', "V2-Verfuegbarkeitspruefung")
-    require(v2, '"/rental-request"', "V2-Backend-Anbindung")
-    require(v2, "MULTI_ITEM", "Backend-Kennzeichnung der Mehrfachanfrage")
+    require(v2, ' + "/rental-bundle"', "atomare Bundle-Anbindung")
+    require(v2, '"Idempotency-Key"', "Idempotency-Header")
+    require(v2, "RUNTIME_AUDIT_ATOMIC_BUNDLE_POST", "Single-Bundle-Runtime")
+    require(v2, "RUNTIME_AUDIT_NO_PAST_RENTAL", "Vergangenheits-Sperre")
+    if ' + "/rental-request"' in v2:
+        fail("Rental V2 sendet weiterhin einzelne /rental-request Requests.")
 
     # UI enhancement: explicit plus picker, selection rail and rental-card affordance.
     require(v2_ui, "d119-rental-set-add", "Plus-Kachel fuer weitere Mietartikel")
@@ -81,7 +70,7 @@ def main() -> None:
     require(v2_ui, "d119-rental-card-add", "Plus-Kennzeichnung im Mietkatalog")
     require(v2_ui, "d119_rental_cart_v2", "gemeinsamer Rental-V2-Mietkorb")
 
-    # Integrated picker: stays in the drawer, provides search/category filters and toggles via the canonical rental UI.
+    # Integrated picker: reviewed taxonomy and direct Rental-V2 API, independent of rendered archive cards.
     require(v2_picker, "d119RentalIntegratedPicker", "integrierter Piece-Picker")
     require(v2_picker, "d119-rental-picker__search", "Piece-Suche")
     require(v2_picker, "data-picker-category", "Kategorie-Filter")
@@ -89,6 +78,11 @@ def main() -> None:
     require(v2_picker, "RENTAL_RATE_BPS = 1000", "10-Prozent-Tagespreis im Picker")
     require(v2_picker, "d119_rental_cart_v2", "gemeinsamer Rental-V2-State im Picker")
     require(v2_picker, "#d119RentalAddSide,#d119RentalStripAdd,#d119RentalAddInline", "Uebernahme aller Plus-Einstiege")
+    require(v2_picker, "item.taxonomy_category || item.category", "geprüfte Taxonomie mit Legacy-Fallback")
+    require(v2_picker, "api.toggleItem(id)", "direkte Rental-V2-API fuer Off-DOM-Artikel")
+
+    require(patcher, "RUNTIME_TERMS_V2_ANCHOR", "Rental-Terms V2-Anker")
+    require(injector, "Single Rental V2 + UI + Picker", "Single-Runtime Injector")
 
     expected = {
         "de": ["Mietbedingungen", "10&nbsp;%", "50&nbsp;%", "Verspätete Rückgabe", "Keine Weitervermietung", "Nicht passend oder nicht gefallen"],
@@ -104,6 +98,9 @@ def main() -> None:
         require(html, '/assets/rental-v2.js', f"Rental-V2-Einbindung ({lang})")
         require(html, '/assets/rental-v2-ui.js', f"Rental-V2-UI-Einbindung ({lang})")
         require(html, '/assets/rental-v2-picker.js', f"Rental-Picker-Einbindung ({lang})")
+        for legacy in LEGACY_RUNTIME:
+            if legacy in html:
+                fail(f"Rental-Seite {page.relative_to(BASE)} lädt Legacy-Runtime: {legacy}")
         for phrase in expected[lang]:
             require(html, phrase, f"Mietbedingung {phrase} ({lang})")
         for phrase in obsolete:
@@ -112,8 +109,6 @@ def main() -> None:
 
     # Rental layers must not directly manipulate protected creative-mode roots.
     for protected in ("swipeView", "chaosView", "outfitView"):
-        if protected in bridge:
-            fail(f"Rental-Frontend greift in geschuetzten Modus ein: {protected}")
         if protected in v2:
             fail(f"Rental V2 greift in geschuetzten Modus ein: {protected}")
         if protected in v2_ui:
@@ -121,7 +116,7 @@ def main() -> None:
         if protected in v2_picker:
             fail(f"Rental Picker greift in geschuetzten Modus ein: {protected}")
 
-    print("Rental-Frontend: integrierter Piece-Picker, Multi-Piece-Plus-UI, Mietkorb, automatische Kaution, Quote und Bedingungen konsistent (DE/EN/FR).")
+    print("Rental-Frontend: Single Rental V2, integrierter Picker, Multi-Piece-UI, Kaution, atomarer Bundle-Request und Bedingungen konsistent (DE/EN/FR).")
 
 
 if __name__ == "__main__":
