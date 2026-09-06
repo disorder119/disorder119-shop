@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hard regression checks for the installable Disorder119 smartphone PWA."""
+"""Hard regression checks for the installable Disorder119 smartphone PWAs."""
 from __future__ import annotations
 
 import json
@@ -26,6 +26,44 @@ def require_pwa_head(html: str, label: str) -> None:
     ]
     for needle in required:
         require(needle in html, f"{label}: {needle} fehlt")
+
+
+def validate_admin_pwa() -> None:
+    manifest_path = BASE / "admin" / "manifest.webmanifest"
+    sw_path = BASE / "admin" / "sw.js"
+    runtime_path = BASE / "assets" / "admin-pwa.js"
+    offline_path = BASE / "admin" / "offline.html"
+    admin_html_path = BASE / "admin" / "index.html"
+    apply_path = BASE / "scripts" / "apply_admin_pwa.py"
+    for path in (manifest_path, sw_path, runtime_path, offline_path, admin_html_path, apply_path):
+        require(path.is_file(), f"Admin-PWA-Datei fehlt: {path.relative_to(BASE)}")
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    require(manifest.get("id") == "/admin/", "Admin-Manifest id muss /admin/ sein")
+    require(manifest.get("start_url") == "/admin/" and manifest.get("scope") == "/admin/", "Admin-App darf nicht aus /admin/ herausgreifen")
+    require(manifest.get("display") == "standalone", "Admin-App display muss standalone sein")
+    require(manifest.get("theme_color") == "#000000" and manifest.get("background_color") == "#000000", "Admin-App-Farben sind inkonsistent")
+
+    runtime = runtime_path.read_text(encoding="utf-8")
+    require('navigator.serviceWorker.register("/admin/sw.js", { scope: "/admin/", updateViaCache: "none" })' in runtime, "Admin-Service-Worker wird nicht eng auf /admin/ registriert")
+    require('(display-mode: standalone)' in runtime and 'navigator.standalone === true' in runtime, "Admin-Standalone-Erkennung fehlt")
+
+    sw = sw_path.read_text(encoding="utf-8")
+    require('url.origin !== self.location.origin' in sw, "Admin-Service-Worker muss fremde Origins ignorieren")
+    require('request.method !== "GET"' in sw, "Admin-Service-Worker darf Schreibrequests nicht cachen")
+    require('"/admin/offline.html"' in sw, "Admin-Offline-Fallback fehlt")
+    require("api.github.com" not in sw and "data/items.json" not in sw, "Admin-Service-Worker darf GitHub-/Inventardaten nicht precachen")
+
+    admin_html = admin_html_path.read_text(encoding="utf-8")
+    for needle in [
+        "D119_ADMIN_PWA_V1",
+        '<link rel="manifest" href="/admin/manifest.webmanifest">',
+        '<meta name="apple-mobile-web-app-capable" content="yes">',
+        '<meta name="apple-mobile-web-app-title" content="Disorder119 Admin">',
+        '<link rel="apple-touch-icon" href="/assets/favicon.png">',
+        '/assets/admin-pwa.js?v=',
+    ]:
+        require(needle in admin_html, f"Admin-App-Integration fehlt: {needle}")
 
 
 def main() -> None:
@@ -96,7 +134,8 @@ def main() -> None:
         require_pwa_head(article_html, "Produktseite")
         require('/assets/pwa.js?v=' in article_html, "gebaute Produktseite laedt PWA-Runtime nicht")
 
-    print("PWA: OK — standalone installierbar, iOS/Android-Metadaten, Root-Service-Worker, Offline-Katalog und Offline-Fallback aktiv.")
+    validate_admin_pwa()
+    print("PWA: OK — öffentliche App + getrennte Admin-App standalone installierbar; iOS/Android, Offline-Katalog und sichere Worker-Scopes geprüft.")
 
 
 if __name__ == "__main__":
