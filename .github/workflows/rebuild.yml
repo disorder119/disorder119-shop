@@ -22,11 +22,9 @@ on:
       - "assets/article.js"
       - "assets/article.css"
       - "assets/catalog-filter-simplify.js"
-      - "assets/rental-commerce.js"
       - "assets/rental-v2.js"
       - "assets/rental-v2-ui.js"
       - "assets/rental-v2-picker.js"
-      - "assets/rental-v2-bundle.js"
       - "shop-worker/**"
       - "scripts/**"
       - ".github/workflows/rebuild.yml"
@@ -128,11 +126,9 @@ jobs:
           node --check assets/app.js
           node --check assets/article.js
           node --check assets/catalog-filter-simplify.js
-          node --check assets/rental-commerce.js
           node --check assets/rental-v2.js
           node --check assets/rental-v2-ui.js
           node --check assets/rental-v2-picker.js
-          node --check assets/rental-v2-bundle.js
           node --check shop-worker/commerce-core.js
           node --check shop-worker/worker.js
           node --check shop-worker/admin-api.js
