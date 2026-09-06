@@ -299,6 +299,7 @@
   var toastTimer = null;
   var availabilitySerial = 0;
   var availabilityBlocked = false;
+  var queryItemRequested = 0; // AUDIT_PERFECT_RENTAL_QUERY_ITEM
 
   function saveState() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
@@ -808,6 +809,7 @@
       var params = new URLSearchParams(window.location.search);
       var id = Number(params.get("item"));
       if (!id) return;
+      queryItemRequested = id;
       if (state.ids.indexOf(id) < 0) state.ids.push(id);
       saveState();
       params.delete("item");
@@ -853,7 +855,8 @@
         saveState();
         refreshCardButtons();
         refreshToolbar();
-        if (state.ids.length && /[?&]openRental=1(?:&|$)/.test(window.location.search)) openOverlay();
+        if (queryItemRequested && state.ids.indexOf(queryItemRequested) >= 0) openOverlay();
+        else if (state.ids.length && /[?&]openRental=1(?:&|$)/.test(window.location.search)) openOverlay(); // AUDIT_PERFECT_RENTAL_AUTO_OPEN
       })
       .catch(function () {});
   }

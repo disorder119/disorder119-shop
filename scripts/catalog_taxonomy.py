@@ -49,6 +49,7 @@ PRODUCT_TYPE_OVERRIDES = {
     9386: "Hat",
     9434: "Sweatshirt",
     9432: "Underwear Shorts",
+    9496: "Polo Shirt",  # title: Dior Herrenpolo Schwarz
     9490: "Sleepwear",
     9489: "Set",
     9424: "Suit",
@@ -244,9 +245,16 @@ def classify_product_type(item: dict[str, Any]) -> str:
     for pattern, product_type in rules:
         if re.search(pattern, title):
             return product_type
-    # Vague legacy titles are resolved from their full description next.
+    # Vague titles may use the description only inside the existing broad
+    # category. This prevents incidental words in prose from turning a jacket
+    # into Shorts/Dress, while explicit title rules and reviewed overrides can
+    # still intentionally correct a genuinely wrong legacy category.
+    legacy_category = _clean(item.get("category"))
     for pattern, product_type in rules:
-        if re.search(pattern, text):
+        if not re.search(pattern, text):
+            continue
+        inferred_category = PRODUCT_TYPE_CATEGORY.get(product_type)
+        if not legacy_category or inferred_category == legacy_category:
             return product_type
 
     fallback = {

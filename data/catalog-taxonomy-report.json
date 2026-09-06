@@ -3,10 +3,10 @@
   "totalItems": 237,
   "reviewedItems": 237,
   "departmentCounts": {
-    "Men": 39,
+    "Men": 41,
     "Objects": 2,
-    "Unisex": 87,
-    "Women": 109
+    "Unisex": 91,
+    "Women": 103
   },
   "productTypeCounts": {
     "Accessory": 2,
@@ -14,8 +14,8 @@
     "Bag": 2,
     "Beanie": 2,
     "Belt": 4,
-    "Biker Jacket": 2,
-    "Blazer": 4,
+    "Biker Jacket": 3,
+    "Blazer": 5,
     "Blouse": 2,
     "Bomber Jacket": 1,
     "Boots": 7,
@@ -23,7 +23,7 @@
     "Cardigan": 3,
     "Coat": 2,
     "Design Object": 1,
-    "Dress": 30,
+    "Dress": 19,
     "Hat": 1,
     "Heels": 1,
     "Jacket": 41,
@@ -31,14 +31,14 @@
     "Knit Top": 1,
     "Loafers": 2,
     "Long Sleeve": 4,
-    "Polo Shirt": 3,
+    "Polo Shirt": 4,
     "Sandals": 2,
     "Scarf": 2,
     "Set": 1,
     "Shirt": 6,
     "Shoes": 9,
-    "Shorts": 3,
-    "Skirt": 14,
+    "Shorts": 1,
+    "Skirt": 15,
     "Sleepwear": 1,
     "Sneakers": 10,
     "Suit": 2,
@@ -49,12 +49,12 @@
     "T-Shirt": 2,
     "Tank Top": 1,
     "Toaster": 1,
-    "Top": 29,
+    "Top": 33,
     "Trench Coat": 1,
     "Trousers": 15,
     "Tunic": 1,
     "Underwear Shorts": 1,
-    "Vest": 7,
+    "Vest": 12,
     "Wallet": 1
   },
   "missingSizeCount": 49,
@@ -644,7 +644,7 @@
       "descriptionLabelSize": "M"
     }
   ],
-  "legacyCategoryMismatchCount": 26,
+  "legacyCategoryMismatchCount": 14,
   "legacyCategoryMismatches": [
     {
       "id": 6240,
@@ -679,68 +679,12 @@
       "productType": "Cardigan"
     },
     {
-      "id": 9519,
-      "article": "179",
-      "title": "Jil Sander Sweet Angel 2003 Wendetop",
-      "legacyCategory": "Tops",
-      "taxonomyCategory": "Dresses",
-      "productType": "Dress"
-    },
-    {
-      "id": 9527,
-      "article": "176",
-      "title": "Rick Owens Drkshdw",
-      "legacyCategory": "Tops",
-      "taxonomyCategory": "Dresses",
-      "productType": "Dress"
-    },
-    {
-      "id": 9512,
-      "article": "160",
-      "title": "Dsquared2 Suf Camp Gelb",
-      "legacyCategory": "Jackets",
-      "taxonomyCategory": "Dresses",
-      "productType": "Dress"
-    },
-    {
-      "id": 9511,
-      "article": "159",
-      "title": "Dsquared2 Asymetric",
-      "legacyCategory": "Jackets",
-      "taxonomyCategory": "Dresses",
-      "productType": "Dress"
-    },
-    {
-      "id": 9508,
-      "article": "154",
-      "title": "Ann Demeulemeester Holy",
-      "legacyCategory": "Tops",
-      "taxonomyCategory": "Dresses",
-      "productType": "Dress"
-    },
-    {
-      "id": 9500,
-      "article": "151",
-      "title": "Prada Knitterjacke",
-      "legacyCategory": "Jackets",
-      "taxonomyCategory": "Pants",
-      "productType": "Shorts"
-    },
-    {
       "id": 9496,
       "article": "148",
       "title": "Dior Herrenpolo Schwarz",
       "legacyCategory": "Tops",
-      "taxonomyCategory": "Dresses",
-      "productType": "Dress"
-    },
-    {
-      "id": 9499,
-      "article": "143",
-      "title": "Isaac Sellam",
-      "legacyCategory": "Jackets",
-      "taxonomyCategory": "Dresses",
-      "productType": "Dress"
+      "taxonomyCategory": "Shirts",
+      "productType": "Polo Shirt"
     },
     {
       "id": 9477,
@@ -759,36 +703,12 @@
       "productType": "Heels"
     },
     {
-      "id": 9462,
-      "article": "105",
-      "title": "Maison Margiela X H und M",
-      "legacyCategory": "Skirts",
-      "taxonomyCategory": "Dresses",
-      "productType": "Dress"
-    },
-    {
       "id": 9456,
       "article": "97",
       "title": "Prada Ls",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
       "productType": "Long Sleeve"
-    },
-    {
-      "id": 9442,
-      "article": "95",
-      "title": "Balmain Furry",
-      "legacyCategory": "Jackets",
-      "taxonomyCategory": "Pants",
-      "productType": "Shorts"
-    },
-    {
-      "id": 9454,
-      "article": "93",
-      "title": "Prada Goretex Weiss",
-      "legacyCategory": "Jackets",
-      "taxonomyCategory": "Dresses",
-      "productType": "Dress"
     },
     {
       "id": 9449,
@@ -823,28 +743,12 @@
       "productType": "Sweatshirt"
     },
     {
-      "id": 9443,
-      "article": "69",
-      "title": "Balmain Braun",
-      "legacyCategory": "Jackets",
-      "taxonomyCategory": "Dresses",
-      "productType": "Dress"
-    },
-    {
       "id": 9383,
       "article": "60",
       "title": "Balenciaga Speedhunters Ls",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
       "productType": "Long Sleeve"
-    },
-    {
-      "id": 9401,
-      "article": "54",
-      "title": "Jean Paul Gaultier Spidertop",
-      "legacyCategory": "Tops",
-      "taxonomyCategory": "Dresses",
-      "productType": "Dress"
     },
     {
       "id": 9386,

@@ -41,8 +41,16 @@
       // Nicht nur deaktivieren: nicht passende Marken/Groessen/Farben werden
       // komplett ausgeblendet. Beispiel: Herren zeigt keine Marke, fuer die
       // aktuell kein Herren-Artikel existiert.
-      option.hidden = unavailable && option.value !== select.value;
-      if (unavailable && option.value !== select.value) option.disabled = true;
+      // iOS Safari can still display <option hidden>. Remove zero-hit
+      // choices physically; app.js restores them from its stable master list
+      // when they become valid in another context. AUDIT_PERFECT_IOS_ZERO_OPTIONS
+      if (unavailable && option.value !== select.value) {
+        select.remove(i);
+        i--;
+      } else {
+        option.hidden = false;
+        option.disabled = unavailable;
+      }
     }
   }
 

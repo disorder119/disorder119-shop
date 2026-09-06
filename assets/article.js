@@ -411,7 +411,7 @@
     var name = displayName();
     var rows = [name, t("orderArticleAbbrev") + (IT.article || IT.id)];
     if (IT.size) rows.push(t("factSize") + ": " + trSize(IT.size));
-    rows.push(fmtPrice(IT.price));
+    rows.push(IT.price > 0 ? fmtPrice(IT.price) : t("priceOnRequest")); // AUDIT_PERFECT_ARTICLE_PRICE_REQUEST
     rows.push("URL: " + window.location.href.split("?")[0].split("#")[0]);
     if (articleOrderMessage.trim()) rows.push(articleMessageLabel() + ": " + articleOrderMessage.trim());
     rows.push((LANG === "de" ? "Zeitpunkt" : LANG === "fr" ? "Horodatage" : "Timestamp") + ": " + new Date().toLocaleString());

@@ -916,6 +916,11 @@
     if (currentItem && currentItem.id === id) updateModalCartBtn();
   }
 
+  function cartTotalDisplay(total, hasUnknownPrice) { // AUDIT_PERFECT_CART_TOTAL
+    if (!hasUnknownPrice) return fmtPrice(total);
+    return LANG === "fr" ? "partiellement sur demande" : LANG === "en" ? "partly on request" : "teilweise auf Anfrage";
+  }
+
   function buildOrderText() {
     // Mehrzeilig pro Artikel (Marke+Titel / Art.-Nr. / Groesse / Preis) statt
     // einer kompakten Zeile - so bleibt jede Angabe fuer den Empfaenger auf
@@ -926,17 +931,21 @@
       var name = productAltText(it);
       var rows = [name, t("orderArticleAbbrev") + (it.article || it.id)];
       if (it.size) rows.push(t("factSize") + ": " + trSize(it.size));
-      rows.push(fmtPrice(it.price));
+      rows.push(fmtPriceDisplay(it.price));
       rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + it.id + "/");
       return rows.join("\n");
     }).filter(Boolean);
+    var hasUnknownPrice = cart.some(function (id) {
+      var it = findItem(id);
+      return !!it && !(it.price > 0);
+    });
     var total = cart.reduce(function (sum, id) {
       var it = findItem(id);
-      return sum + (it ? it.price : 0);
+      return sum + (it && it.price > 0 ? it.price : 0);
     }, 0);
     return t("orderGreeting") + "\n\n" +
       lines.join("\n\n") +
-      "\n\n" + t("cartTotal") + ": " + fmtPrice(total) +
+      "\n\n" + t("cartTotal") + ": " + cartTotalDisplay(total, hasUnknownPrice) +
       (cartOrderMessage.trim() ? "\n" + purchaseMessageLabel() + ": " + cartOrderMessage.trim() : "") +
       "\n" + (LANG === "de" ? "Zeitpunkt" : LANG === "fr" ? "Horodatage" : "Timestamp") + ": " + new Date().toLocaleString() +
       "\n\n" + t("orderAvailQuestion");
@@ -963,10 +972,11 @@
     }
 
     var total = 0;
+    var hasUnknownPrice = false; // AUDIT_PERFECT_CART_PRICE_REQUEST
     body.innerHTML = noticeHtml + cart.map(function (id) {
       var it = findItem(id);
       if (!it) return "";
-      total += it.price;
+      if (it.price > 0) total += it.price; else hasUnknownPrice = true;
       var hero = assetUrl(it.gallery && it.gallery[0] ? it.gallery[0] : "");
       return '<div class="cart-line">' +
         '<div class="cart-line__frame">' + (hero ? '<img src="' + hero + '" alt="" loading="lazy" />' : "") + "</div>" +
@@ -974,7 +984,7 @@
           '<span class="cart-line__title">' + escapeHtml(it.title) + "</span>" +
           '<span class="cart-line__meta">' + escapeHtml(trSize(it.size) || "") + "</span>" +
           '<div class="cart-line__row">' +
-            '<span class="cart-line__price">' + fmtPrice(it.price) + "</span>" +
+            '<span class="cart-line__price">' + fmtPriceDisplay(it.price) + "</span>" +
             '<button type="button" class="cart-line__remove" data-remove="' + it.id + '">' + t("cartRemove") + '</button>' +
           "</div>" +
         "</div>" +
@@ -989,7 +999,7 @@
 
     var hasWhatsapp = !!SHOP_CONFIG.whatsappNumber;
     var hasEmail = !!SHOP_CONFIG.email;
-    var footHtml = '<div class="cart-total"><span>' + t("cartTotal") + '</span><span>' + fmtPrice(total) + "</span></div>" +
+    var footHtml = '<div class="cart-total"><span>' + t("cartTotal") + '</span><span>' + cartTotalDisplay(total, hasUnknownPrice) + "</span></div>" +
       '<label class="cart-order-message"><span>' + purchaseMessageLabel() + ' <small>(' + (LANG === "de" ? "optional" : LANG === "fr" ? "facultatif" : "optional") + ')</small></span>' +
       '<textarea id="cartOrderMessage" maxlength="500" placeholder="' + escapeHtml(purchaseMessagePlaceholder()) + '">' + escapeHtml(cartOrderMessage) + '</textarea></label>';
     if (hasWhatsapp) {
@@ -1019,243 +1029,7 @@
     refreshCartInquiryLinks(); // QUALITY95_CART_LINK_REFRESH
   }
 
-  // ---- Verleih-Anfrage (Rental) ----
-  // Jedes verfuegbare Stueck laesst sich ausleihen statt kaufen - fuer
-  // Shootings, Musikvideos, Film-/Theaterproduktionen, redaktionelle
-  // Strecken, Events oder private Anlaesse (siehe eigene Mieten-Kategorie,
-  // showMieten()). Kein echtes Buchungssystem/Verfuegbarkeitskalender im
-  // Backend (es gibt noch keine Datenbank), sondern wie der Warenkorb eine
-  // unverbindliche Anfrage per WhatsApp/E-Mail, hier zusaetzlich mit
-  // Zeitraum (natives <input type="date">, also ein echter, barrierefreier
-  // Systemkalender) und Verwendungszweck.
-  var RENTAL_PURPOSE_KEYS = {
-    photo: "rentalPurposePhoto", video: "rentalPurposeVideo",
-    filmTheater: "rentalPurposeFilmTheater", editorial: "rentalPurposeEditorial",
-    event: "rentalPurposeEvent", private: "rentalPurposePrivate", other: "rentalPurposeOther"
-  };
-  var rentalBackdrop = document.getElementById("rentalModalBackdrop");
-  var rentalModalEl = document.querySelector(".rental-modal");
-  var rentalItemEl = document.getElementById("rentalModalItem");
-  var rentalStartEl = document.getElementById("rentalStart");
-  var rentalEndEl = document.getElementById("rentalEnd");
-  var rentalDaysEl = document.getElementById("rentalDaysText");
-  var rentalErrorEl = document.getElementById("rentalDateError");
-  var rentalPurposeEl = document.getElementById("rentalPurpose");
-  var rentalMessageEl = document.getElementById("rentalMessage");
-  var rentalActionsEl = document.getElementById("rentalModalActions");
-  var rentalCloseBtn = document.getElementById("rentalModalClose");
-  var rentalCurrentItem = null;
-  var rentalLastFocusEl = null;
-
-  function todayIso() {
-    var d = new Date();
-    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-  }
-
-  function rentalDayCount() {
-    if (!rentalStartEl.value || !rentalEndEl.value) return null;
-    var start = new Date(rentalStartEl.value + "T00:00:00");
-    var end = new Date(rentalEndEl.value + "T00:00:00");
-    var diff = Math.round((end - start) / 86400000) + 1;
-    return diff;
-  }
-
-  function rentalValid() {
-    var days = rentalDayCount();
-    return days !== null && days >= 1;
-  }
-
-  function updateRentalSummary() {
-    var days = rentalDayCount();
-    if (days === null) {
-      rentalDaysEl.textContent = "";
-      rentalErrorEl.classList.add("hidden");
-    } else if (days < 1) {
-      rentalDaysEl.textContent = "";
-      rentalErrorEl.classList.remove("hidden");
-    } else {
-      rentalDaysEl.textContent = tFormat("rentalDaysTemplate", { days: days });
-      rentalErrorEl.classList.add("hidden");
-    }
-    renderRentalActions();
-  }
-
-  // "2026-09-10" -> "10.09.2026" (DE/FR) bzw. sprachgerechtes Datum (EN) -
-  // liesst sich in der fertig formulierten Mail natuerlicher als das rohe
-  // ISO-Format aus dem <input type="date">.
-  function fmtRentalDate(iso) {
-    if (!iso) return "";
-    var parts = iso.split("-");
-    if (parts.length !== 3) return iso;
-    var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-    if (isNaN(d.getTime())) return iso;
-    var localeMap = { de: "de-DE", en: "en-GB", fr: "fr-FR" };
-    try {
-      return d.toLocaleDateString(localeMap[LANG] || "de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
-    } catch (e) {
-      return iso;
-    }
-  }
-
-  // Fertig formulierte, komplette E-Mail statt einer reinen Stichpunktliste -
-  // liest sich wie eine echte Nachricht der Kundschaft an den Shop (Anrede,
-  // konkreter Artikel, Zeitraum, Zweck, Schlussformel), nicht wie ein reiner
-  // Datenauszug. Gilt fuer WhatsApp genauso wie fuer die E-Mail, damit beide
-  // Kanaele denselben, vollstaendigen Text verwenden.
-  function buildRentalText() {
-    var it = rentalCurrentItem;
-    if (!it) return "";
-    var purposeKey = RENTAL_PURPOSE_KEYS[rentalPurposeEl.value] || "rentalPurposeOther";
-    var itemLine = productAltText(it) + " (" + t("orderArticleAbbrev") + (it.article || it.id) + ")";
-    var periodLine = fmtRentalDate(rentalStartEl.value) + " – " + fmtRentalDate(rentalEndEl.value) +
-      " (" + tFormat("rentalDaysTemplate", { days: rentalDayCount() }) + ")";
-    var lines = [
-      tFormat("rentalEmailIntro", { item: itemLine }),
-      "",
-      t("rentalPeriodLabel") + ": " + periodLine,
-      t("rentalPurposeMsgLabel") + ": " + t(purposeKey)
-    ];
-    if (rentalMessageEl.value.trim()) {
-      lines.push(t("rentalMessageMsgLabel") + ": " + rentalMessageEl.value.trim());
-    }
-    lines.push("");
-    lines.push(t("rentalEmailClosing"));
-    return lines.join("\n");
-  }
-
-  // Meldet die Anfrage zusaetzlich zur WhatsApp-/E-Mail-Nachricht best-effort
-  // an den Shop-Worker (POST /rental-request, siehe shop-worker/worker.js),
-  // damit sie im (kuenftigen) Admin-Dashboard auftaucht. Nur aktiv, wenn
-  // shopWorkerUrl in config/shop-config.json gesetzt ist - ohne Worker-URL
-  // funktioniert die Anfrage weiterhin unveraendert rein per WhatsApp/E-Mail.
-  // Fehler werden bewusst verschluckt: das Absenden der eigentlichen
-  // Anfrage (WhatsApp/E-Mail) darf niemals von der Erreichbarkeit des
-  // Workers abhaengen.
-  var rentalReportedForKey = null;
-  function reportRentalToBackend() {
-    if (!SHOP_CONFIG.shopWorkerUrl || !rentalCurrentItem) return;
-    var key = rentalCurrentItem.id + "|" + rentalStartEl.value + "|" + rentalEndEl.value;
-    if (rentalReportedForKey === key) return;
-    rentalReportedForKey = key;
-    fetch(SHOP_CONFIG.shopWorkerUrl.replace(/\/+$/, "") + "/rental-request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        itemId: rentalCurrentItem.id,
-        start: rentalStartEl.value,
-        end: rentalEndEl.value,
-        purpose: rentalPurposeEl.value,
-        message: rentalMessageEl.value.trim()
-      })
-    }).catch(function () {});
-  }
-
-  function renderRentalActions() {
-    var hasWhatsapp = !!SHOP_CONFIG.whatsappNumber;
-    var hasEmail = !!SHOP_CONFIG.email;
-    var valid = rentalValid();
-    var html = "";
-    if (!valid) {
-      rentalActionsEl.innerHTML = "";
-      return;
-    }
-    var encoded = encodeURIComponent(buildRentalText());
-    if (hasWhatsapp) {
-      html += '<a href="https://wa.me/' + SHOP_CONFIG.whatsappNumber + '?text=' + encoded +
-        '" target="_blank" rel="noopener" data-rental-submit="whatsapp">' + t("rentalWhatsapp") + '</a>';
-    }
-    if (hasEmail) {
-      html += '<a href="mailto:' + SHOP_CONFIG.email + '?subject=' + encodeURIComponent(t("rentalSubject")) +
-        '&body=' + encoded + '" data-rental-submit="email">' + t("rentalEmail") + '</a>';
-    }
-    if (!hasWhatsapp && !hasEmail) {
-      html += '<p class="rental-modal__config-warning">' + t("rentalConfigWarning") + '</p>';
-    }
-    rentalActionsEl.innerHTML = html;
-    Array.prototype.forEach.call(rentalActionsEl.querySelectorAll("[data-rental-submit]"), function (a) {
-      a.addEventListener("click", reportRentalToBackend);
-    });
-  }
-
-  // Fester Mietpreis pro Stueck (optional, siehe rental_price in
-  // data/items.json) statt einer dem Kunden vorgerechneten Formel -
-  // branchenueblich (Rent the Runway, By Rotation: jedes Stueck hat einen
-  // vom Anbieter festgelegten Preis, keine live berechnete Kundenanzeige).
-  // Ohne gepflegten Wert bleibt es bei "Mietpreis auf Anfrage".
-  function fmtRentalPrice(it) {
-    if (it.rental_price > 0) return t("rentalPriceLabel") + ": " + fmtPrice(it.rental_price);
-    return t("rentalPriceOnRequest");
-  }
-
-  function openRentalModal(itemId) {
-    var it = findItem(itemId);
-    if (!it) return;
-    rentalCurrentItem = it;
-    rentalLastFocusEl = document.activeElement;
-    var hero = assetUrl(it.gallery && it.gallery[0] ? it.gallery[0] : "");
-    // Verkaufte Stuecke sind nicht mehr mietbar - Katalog/Artikelseite
-    // verstecken den Anfragen-Button dafuer bereits, aber der Deep-Link
-    // /mieten/?item=<id> (z.B. ein alter geteilter Link) rief bisher
-    // ungeprueft direkt dieses Formular auf. Statt es zu oeffnen, zeigt
-    // der Dialog jetzt nur Foto + Hinweis, keine Datums-/Anfragefelder
-    // (siehe .rental-modal--sold in app.css).
-    var isSold = it.status === "Verkauft";
-    rentalModalEl.classList.toggle("rental-modal--sold", isSold);
-    rentalItemEl.innerHTML =
-      (hero ? '<img src="' + hero + '" alt="" />' : "") +
-      '<div class="rental-modal__item-body">' +
-        '<div>' + escapeHtml(productAltText(it)) + "</div>" +
-        '<div class="rental-modal__item-price' + (isSold ? " rental-modal__item-price--sold" : "") + '">' +
-          (isSold ? t("rentalSoldNote") : fmtRentalPrice(it)) +
-        "</div>" +
-      "</div>";
-    rentalBackdrop.classList.remove("hidden");
-    document.body.classList.add("no-scroll");
-    if (isSold) {
-      rentalActionsEl.innerHTML = "";
-      rentalCloseBtn.focus();
-      return;
-    }
-    var min = todayIso();
-    rentalStartEl.min = min;
-    rentalEndEl.min = min;
-    rentalStartEl.value = "";
-    rentalEndEl.value = "";
-    rentalPurposeEl.value = "photo";
-    rentalMessageEl.value = "";
-    updateRentalSummary();
-    rentalStartEl.focus();
-  }
-
-  function closeRentalModal() {
-    rentalBackdrop.classList.add("hidden");
-    document.body.classList.remove("no-scroll");
-    rentalCurrentItem = null;
-    if (rentalLastFocusEl && typeof rentalLastFocusEl.focus === "function") rentalLastFocusEl.focus();
-  }
-
-  rentalStartEl.addEventListener("change", function () {
-    rentalEndEl.min = rentalStartEl.value || todayIso();
-    updateRentalSummary();
-  });
-  rentalEndEl.addEventListener("change", updateRentalSummary);
-  rentalPurposeEl.addEventListener("change", renderRentalActions);
-  rentalMessageEl.addEventListener("input", renderRentalActions);
-  rentalCloseBtn.addEventListener("click", closeRentalModal);
-  rentalBackdrop.addEventListener("click", function (e) {
-    if (e.target === rentalBackdrop) closeRentalModal();
-  });
-  // Einfache Fokus-Falle: Tab/Shift+Tab bleiben innerhalb des Dialogs,
-  // Escape schliesst - wie bei den anderen Overlays der Seite.
-  rentalBackdrop.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") { closeRentalModal(); return; }
-    if (e.key !== "Tab") return;
-    var focusables = rentalBackdrop.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-    if (!focusables.length) return;
-    var first = focusables[0], last = focusables[focusables.length - 1];
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-  });
+  // Rental V2 ist die einzige Mietarchitektur. // AUDIT_PERFECT_RENTAL_V2_ONLY
 
   // Warenkorb hat eine echte, eigene URL (/cart/, /en/cart/, /fr/cart/) statt
   // nur eine Overlay-Klasse umzuschalten oder eines Hash-Fragments - jede
@@ -1554,19 +1328,31 @@
     return [];
   }
 
-  function updateFacetSelect(selectEl, facet, labelFn, allLabelKey) {
+  function updateFacetSelect(selectEl, facet, labelFn, allLabelKey) { // AUDIT_PERFECT_NATIVE_FACETS
     var eligible = PUBLIC_ITEMS.filter(function (it) { return matches(it, facet); });
     var counts = {};
     eligible.forEach(function (it) {
       facetValues(it, facet).forEach(function (value) { counts[value] = (counts[value] || 0) + 1; });
     });
-    if (selectEl.options.length) selectEl.options[0].textContent = t(allLabelKey) + " (" + eligible.length + ")";
-    for (var i = 1; i < selectEl.options.length; i++) {
-      var opt = selectEl.options[i];
-      var count = counts[opt.value] || 0;
-      opt.textContent = labelFn(opt.value) + " (" + count + ")";
-      opt.disabled = count === 0 && opt.value !== selectEl.value;
+
+    if (!selectEl._d119FacetValues) {
+      selectEl._d119FacetValues = Array.prototype.slice.call(selectEl.options, 1).map(function (opt) { return opt.value; });
     }
+    var selectedValue = selectEl.value;
+    var masterValues = selectEl._d119FacetValues.slice();
+    if (selectEl.options.length) selectEl.options[0].textContent = t(allLabelKey) + " (" + eligible.length + ")";
+    while (selectEl.options.length > 1) selectEl.remove(1);
+
+    masterValues.forEach(function (value) {
+      var count = counts[value] || 0;
+      if (count === 0 && value !== selectedValue) return;
+      var opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = labelFn(value) + " (" + count + ")";
+      opt.disabled = count === 0;
+      selectEl.appendChild(opt);
+    });
+    if (selectedValue) selectEl.value = selectedValue;
   }
 
   function refreshFacetOptions() {
@@ -1959,15 +1745,6 @@
           e.preventDefault();
           e.stopPropagation();
           filterByBrand(it.brand);
-        });
-      }
-
-      var rentalBtn = plate.querySelector("[data-rental]");
-      if (rentalBtn) {
-        rentalBtn.addEventListener("click", function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          openRentalModal(it.id);
         });
       }
 
@@ -3515,21 +3292,7 @@
     else if (initialMode === "mieten") showMieten();
     else showClassic();
     suppressModePush = false;
-    // Deep-Link von einer Produktseite ("...mieten/?item=123", siehe
-    // rentalTeaser-Link in build_site.py/cta_html()) - oeffnet die Anfrage
-    // direkt fuer genau dieses Stueck, statt nur auf die allgemeine
-    // Mieten-Kategorie zu verweisen. Parameter danach aus der URL entfernen,
-    // damit ein Reload/Teilen des Links nicht dauerhaft dasselbe Modal
-    // erneut aufreisst.
-    if (initialMode === "mieten") {
-      try {
-        var rentalItemId = Number(new URLSearchParams(window.location.search).get("item"));
-        if (rentalItemId && findItem(rentalItemId)) {
-          openRentalModal(rentalItemId);
-          window.history.replaceState(history.state, "", window.location.pathname);
-        }
-      } catch (e) {}
-    }
+    // ?item= Deep-Links werden ausschliesslich von Rental V2 verarbeitet. // AUDIT_PERFECT_RENTAL_DEEPLINK
   } else {
     modeRail.classList.remove("hidden");
   }
