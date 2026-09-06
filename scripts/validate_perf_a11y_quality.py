@@ -22,8 +22,16 @@ def main() -> None:
     need('id="sortSelect" aria-label="Artikel sortieren"' in template, "Sortierauswahl ohne statischen Accessible Name")
     need("PERF_A11Y_95_ARCHIVE" in app_js, "Archiv-JS-Patch fehlt")
     need('idx >= 2 && idx < animateCount' in app_js, "erste Karten werden weiterhin fuer LCP ausgeblendet")
-    need('var heroLoading = idx < 4 ? "eager" : "lazy";' in app_js, "Above-the-fold-Heros werden nicht eager geladen")
-    need("fetchpriority=\"high\"" in app_js, "LCP-Heros ohne hohe Fetch-Prioritaet")
+    # The measured Focus-3 follow-up deliberately narrowed eager/high-priority
+    # loading from four cards to the two SSR/LCP cards. Keeping the old idx<4
+    # assertion would reject the exact final state that Lighthouse measured at
+    # 99/100 on mobile.
+    need('var heroLoading = idx < 2 ? "eager" : "lazy";' in app_js,
+         "gemessene Zwei-Karten-LCP-Strategie fehlt")
+    need("idx < 2 ? ' fetchpriority=\"high\"' : ' fetchpriority=\"low\"'" in app_js,
+         "kritische und nachgelagerte Bildprioritaet ist nicht explizit getrennt")
+    need('var heroDecoding = idx < 2 ? "sync" : "async";' in app_js,
+         "kritische SSR/LCP-Bilder verwenden nicht den gemessenen Decode-Pfad")
     need('plate.setAttribute("aria-label", it.title)' not in app_js, "redundantes Karten-aria-label wieder vorhanden")
     need('setAttribute("aria-label", LANG === "fr"' in app_js, "Sortiername nicht lokalisiert")
 
@@ -42,7 +50,7 @@ def main() -> None:
     need('"accessibility": 0.95' in quality, "Accessibility-Gate fehlt")
     need('"cumulative-layout-shift": 0.10' in quality, "CLS-Gate fehlt")
 
-    print("Performance/A11y-Qualitaet: OK — LCP-Prioritaet, Accessible Names, Kontrast, Targets und Browser-Budgets statisch abgesichert.")
+    print("Performance/A11y-Qualitaet: OK — gemessene 2-Card-LCP-Prioritaet, Accessible Names, Kontrast, Targets und Browser-Budgets statisch abgesichert.")
 
 
 if __name__ == "__main__":
