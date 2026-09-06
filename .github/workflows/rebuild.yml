@@ -101,7 +101,15 @@ jobs:
         run: python scripts/apply_live_catalog_polish.py
 
       - name: Katalog-, Anfrage- und Size-UX anwenden
-        run: python scripts/apply_catalog_inquiry_ux.py
+        run: |
+          if grep -q 'it.size_normalized, it.article, String(it.id || "")' assets/app.js \
+             && grep -q 'class="plate__size"' assets/app.js \
+             && grep -q 'item.article, item.id, itemCategory(item), item.size' assets/rental-v2-picker.js \
+             && grep -q 'lines.push("   URL: " + window.location.origin + HOME + "artikel/" + item.id + "/")' assets/rental-v2.js; then
+            echo "Katalog-, Anfrage- und Size-UX bereits im auditierten Quellstand vorhanden."
+          else
+            python scripts/apply_catalog_inquiry_ux.py
+          fi
 
       - name: Kompakten Mobile-Filter anwenden
         run: python scripts/apply_catalog_filter_mobile_ux.py
