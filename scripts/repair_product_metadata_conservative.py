@@ -34,6 +34,7 @@ COLOR_PATTERNS = [
     (r"\b(?:burgundy|bordeaux|weinrot)\b", "Bordeaux"),
     (r"\b(?:rotbraun(?:e|er|es)?|reddish\s*brown)\b", "Rotbraun"),
     (r"\b(?:cream|creme|crème)\b", "Creme"),
+    (r"\b(?:ivory|elfenbein)\b", "Elfenbein"),
     (r"\b(?:olive|oliv)\b", "Oliv"),
     (r"\b(?:black|schwarz(?:e|er|es)?)\b", "Schwarz"),
     (r"\b(?:white|wei(?:ß|ss)(?:e|er|es)?)\b", "Weiß"),
@@ -248,6 +249,7 @@ def validate_color_inference_regressions() -> None:
     cases = {
         "Burberrys Sweater Cream Embroidered Cursive Logo": "Creme",
         "Prada Lack Heel Creme": "Creme",
+        "Rundholz Ivory Asymmetric Cardigan": "Elfenbein",
         "Issey Miyake Olive": "Oliv",
         "Louis Vuitton Takashi Murakami Multicolor Monogram Sandals": "Mehrfarbig",
         "Maison Margiela Linnea Rosa Knit Sweater": "",
