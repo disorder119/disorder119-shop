@@ -64,6 +64,7 @@ def main() -> None:
         'url.pathname.startsWith("/admin/")',
         'request.mode === "navigate"',
         '"/offline.html"',
+        '"/data/catalog.json"',
         'self.clients.claim()',
         'self.skipWaiting()',
     ]:
@@ -95,7 +96,7 @@ def main() -> None:
         require_pwa_head(article_html, "Produktseite")
         require('/assets/pwa.js?v=' in article_html, "gebaute Produktseite laedt PWA-Runtime nicht")
 
-    print("PWA: OK — standalone installierbar, iOS/Android-Metadaten, Root-Service-Worker und Offline-Fallback aktiv.")
+    print("PWA: OK — standalone installierbar, iOS/Android-Metadaten, Root-Service-Worker, Offline-Katalog und Offline-Fallback aktiv.")
 
 
 if __name__ == "__main__":
