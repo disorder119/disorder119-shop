@@ -256,6 +256,8 @@
       var t2 = document.createElement("button");
       t2.type = "button";
       t2.className = "gallery-thumb" + (i === 0 ? " active" : "");
+      // PERF_A11Y_95_ARTICLE — thumbnail buttons need an accessible name.
+      t2.setAttribute("aria-label", (LANG === "fr" ? "Photo " : LANG === "en" ? "Photo " : "Foto ") + (i + 1) + " / " + thumbs.length);
       t2.innerHTML = '<img src="' + src + '" alt="" loading="lazy" />';
       t2.addEventListener("click", function () { showPhoto(i); });
       thumbsEl.appendChild(t2);

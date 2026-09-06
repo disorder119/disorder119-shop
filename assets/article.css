@@ -432,3 +432,10 @@ a { color: inherit; }
 .article-order-message{display:block;margin:4px 0 2px;font-size:.68rem;line-height:1.35;color:var(--text-muted)}
 .article-order-message>span{display:block;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase}
 .article-order-message textarea{display:block;width:100%;min-height:72px;max-height:150px;resize:vertical;border:1px solid var(--rule-strong);border-radius:0;background:transparent;color:var(--paper);font:inherit;font-size:.78rem;line-height:1.45;padding:10px}
+
+/* PERF_A11Y_95_ARTICLE_STYLE — measured product-page contrast fixes. */
+.fact__label,
+.info__note {
+  color: rgba(242, 239, 231, 0.68);
+}
+

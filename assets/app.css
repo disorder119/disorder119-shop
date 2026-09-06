@@ -3421,3 +3421,41 @@
      open backdrop is raised above the rail. */
   .modal-backdrop.open { z-index: 320; }
 
+  /* PERF_A11Y_95_ARCHIVE_STYLE
+     Quantitative axe/Lighthouse findings in the normal archive only.
+     Selectors are scoped to #appShell so Match/Chaos/Baukasten retain their
+     protected visual design. The hierarchy stays muted, but no essential
+     small text is rendered at failing contrast. Brand filters gain the WCAG
+     minimum pointer target without increasing their visible typography. */
+  #appShell .eyebrow,
+  #appShell .wordmark-kicker,
+  #appShell .meta-figure__label,
+  #appShell .catalog-heading .rail__count,
+  #appShell .filter-field label,
+  #appShell .footer__stamp,
+  #appShell .footer__legal a,
+  #appShell .plate__title {
+    color: rgba(242, 239, 231, 0.72);
+  }
+
+  /* Opacity animations temporarily pushed otherwise compliant text below the
+     contrast threshold during the first audit frame. Keep the original
+     transform/letter-spacing motion, but text itself is readable immediately. */
+  #appShell .reveal,
+  #appShell .wordmark__line {
+    opacity: 1 !important;
+  }
+
+  #appShell .plate__brand {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 24px;
+    min-height: 24px;
+    padding: 4px 0;
+  }
+
+  #appShell .plate__rental-btn {
+    color: var(--accent-text);
+  }
+

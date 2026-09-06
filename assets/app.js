@@ -72,6 +72,11 @@
   var LANG_KEY = "disorder119_lang";
   var PATH_LANG_MATCH = /^\/(en|fr)\/(.*)$/.exec(location.pathname);
   var LANG = PATH_LANG_MATCH ? PATH_LANG_MATCH[1] : "de";
+  // PERF_A11Y_95_ARCHIVE — measured axe/Lighthouse fixes for the classic archive.
+  var sortSelectA11yEl = document.getElementById("sortSelect");
+  if (sortSelectA11yEl) {
+    sortSelectA11yEl.setAttribute("aria-label", LANG === "fr" ? "Trier les articles" : LANG === "en" ? "Sort items" : "Artikel sortieren");
+  }
   var PATH_REST = PATH_LANG_MATCH ? PATH_LANG_MATCH[2] : location.pathname.replace(/^\//, "");
   function langHome(lang) { return lang === "de" ? "/" : "/" + lang + "/"; }
 
@@ -1718,8 +1723,7 @@
       // echten eigenen Pfaden wie /chaos/ - ein relativer Link haette sich
       // dort falsch aufgeloest (".../chaos/artikel/123/" statt "/artikel/123/").
       plate.href = langHome(LANG) + "artikel/" + it.id + "/";
-      plate.setAttribute("aria-label", it.title);
-      if (animateEntry && idx < animateCount) {
+      if (animateEntry && idx >= 2 && idx < animateCount) {
         plate.classList.add("plate--enter");
         plate.style.transitionDelay = (idx * 20) + "ms";
       }
@@ -1735,9 +1739,11 @@
           ? '<span class="plate__price">' + fmtRentalPrice(it) + "</span>"
           : '<span class="plate__price">' + (it.price_estimated ? t("priceEstimatedPrefix") : "") + fmtPriceDisplay(it.price) + "</span>";
 
+      var heroLoading = idx < 4 ? "eager" : "lazy";
+      var heroPriority = idx < 2 ? ' fetchpriority="high"' : "";
       plate.innerHTML =
         '<div class="plate__frame">' +
-          (imgSrc ? '<img src="' + imgSrc + '" alt="' + altText + '" loading="lazy" />' : "") +
+          (imgSrc ? '<img src="' + imgSrc + '" alt="' + altText + '" loading="' + heroLoading + '"' + heroPriority + ' />' : "") +
         "</div>" +
         '<div class="plate__body">' +
           '<button type="button" class="plate__brand" data-brand-filter>' + escapeHtml(it.brand || t("noBrand")) + "</button>" +
