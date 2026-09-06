@@ -11,7 +11,7 @@ on:
       - "config/shop-config.json"
       - "assets/**"
       - "scripts/**"
-      - ".github/workflows/**"
+      - ".github/**"
   push:
     branches: [main]
     paths:
@@ -22,7 +22,7 @@ on:
       - "config/shop-config.json"
       - "assets/**"
       - "scripts/**"
-      - ".github/workflows/**"
+      - ".github/**"
   workflow_dispatch: {}
 
 permissions:
@@ -54,6 +54,7 @@ jobs:
       - name: Quellen wie im Produktions-Rebuild vorbereiten
         run: |
           python scripts/repair_catalog_source_integrity.py
+          python scripts/repair_product_metadata_conservative.py
           if grep -q 'id="filterDepartment"' index_template.html \
              && grep -q 'id="filterProductType"' index_template.html \
              && grep -q 'var DEPARTMENT_LABELS = {' assets/app.js \
@@ -89,6 +90,7 @@ jobs:
           python scripts/apply_browser_runtime_fixes.py
           python scripts/apply_adversarial_runtime_fixes.py
           python scripts/apply_perf_a11y_quality.py
+          python scripts/apply_focus_three_hardening.py
 
       - name: Browser-Build erzeugen
         run: |
@@ -102,6 +104,9 @@ jobs:
 
       - name: Performance-/A11y-Invarianten pruefen
         run: python scripts/validate_perf_a11y_quality.py
+
+      - name: Focus-3 Mobile und Produktdaten >9 pruefen
+        run: python scripts/validate_focus_three.py
 
       - name: Lokale Navigation und Assets pruefen
         run: python scripts/validate_local_navigation.py
