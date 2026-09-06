@@ -152,9 +152,13 @@ def test_baukasten_open_close_and_state_recovery(driver) -> None:
         if driver.switch_to.active_element.get_attribute("class") is None or "outfit-slot" not in (driver.switch_to.active_element.get_attribute("class") or ""):
             fail("Baukasten: Fokus wird nach Escape nicht an den Slot zurueckgegeben")
 
+    # The visual mouse/touch listener is intentionally attached to the existing
+    # frame/body child carrying data-slot; the row itself is the keyboard
+    # alternative. Exercise the real pointer target instead of synthesising a
+    # click on the keyboard-only row container.
     for _ in range(10):
-        first = driver.find_element(By.CSS_SELECTOR, "#outfitStack .outfit-slot")
-        driver.execute_script("arguments[0].click()", first)
+        target = driver.find_element(By.CSS_SELECTOR, "#outfitStack .outfit-slot [data-slot]")
+        driver.execute_script("arguments[0].click()", target)
         wait(driver, lambda d: "open" in (picker.get_attribute("class") or ""), "Baukasten-Picker per Maus offen")
         driver.find_element(By.ID, "outfitPickerClose").click()
         wait(driver, lambda d: "open" not in (picker.get_attribute("class") or ""), "Baukasten-Picker per Button geschlossen")
