@@ -9,16 +9,19 @@ raw missing metadata "complete" merely because it is disclosed.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from pathlib import Path
 
 from apply_focus_three_followup import MARKER as FOLLOWUP_MARKER
+from apply_focus_three_followup import RUNTIME_MARKER
 from apply_focus_three_followup import main as apply_focus_three_followup
 
 BASE = Path(__file__).resolve().parents[1]
 ITEMS = BASE / "data" / "items.json"
 REPORT = BASE / "data" / "product-data-quality.json"
 WEARABLE = {"Jackets", "Coats", "Tops", "Shirts", "Knitwear", "Pants", "Skirts", "Dresses", "Shoes"}
+WORKFLOWS = BASE / ".github" / "workflows"
 
 
 def require(ok: bool, message: str) -> None:
@@ -28,6 +31,41 @@ def require(ok: bool, message: str) -> None:
 
 def present(value) -> bool:
     return bool(str(value or "").strip())
+
+
+def validate_repository_hardening() -> None:
+    rebuild = (WORKFLOWS / "rebuild.yml").read_text(encoding="utf-8")
+    browser = (WORKFLOWS / "browser-smoke.yml").read_text(encoding="utf-8")
+    guard = (WORKFLOWS / "main-integrity.yml").read_text(encoding="utf-8")
+    codeowners = (BASE / ".github" / "CODEOWNERS").read_text(encoding="utf-8")
+
+    require("* @disorder119" in codeowners, "CODEOWNERS besitzt keinen globalen Produktions-Owner")
+    require("contents: read" in rebuild, "Rebuild-Validierung besitzt nicht standardmaessig nur Leserechte")
+    require("Validierten Main-Rebuild publizieren" in rebuild, "separater Main-Publish-Job fehlt")
+    require("if: github.event_name == 'push' && github.ref == 'refs/heads/main'" in rebuild,
+            "Write-Publish-Job ist nicht strikt auf main-Push begrenzt")
+    require("contents: write" in rebuild, "isolierter Publish-Job besitzt keine explizite Schreibberechtigung")
+    require("disorder119-rebuild-patch-${{ github.run_id }}" in rebuild,
+            "validierter Patch wird nicht zwischen Read-Only- und Write-Job uebergeben")
+    require("Unautorisierten Main-Push automatisch neutralisieren" in guard,
+            "Self-Heal fuer unautorisierte main-Pushes fehlt")
+    require("git read-tree --reset -u \"$BEFORE\"" in guard,
+            "Self-Heal stellt nicht exakt den vorherigen main-Baum wieder her")
+    require("git push origin HEAD:main" in guard and "--force" not in guard,
+            "Self-Heal muss ohne Force-Push arbeiten")
+
+    all_workflows = "\n".join(path.read_text(encoding="utf-8") for path in sorted(WORKFLOWS.glob("*.yml")))
+    unpinned = re.findall(r"uses:\s+[^\s]+@v\d+", all_workflows)
+    require(not unpinned, "nicht immutable gepinnte Actions: " + ", ".join(unpinned[:8]))
+    require("actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in all_workflows,
+            "Checkout-Action ist nicht auf den auditierten Commit gepinnt")
+    require("actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065" in rebuild,
+            "setup-python ist nicht immutable gepinnt")
+    require("actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020" in rebuild,
+            "setup-node ist nicht immutable gepinnt")
+    require("permissions:\n  contents: read" in browser,
+            "Browser-Audit besitzt mehr Repository-Rechte als erforderlich")
+    print("Repository-Hardening: OK — CODEOWNERS, Read-Only PR-CI, isolierter Write-Publish, immutable Actions, Provenance und Self-Heal.")
 
 
 def main() -> None:
@@ -63,7 +101,6 @@ def main() -> None:
         if open_fields != actual_open:
             bad_flags.append(item_id)
 
-        # 1-6: factual identity / commerce basics. These must be real data.
         total_points += 1.0 if present(it.get("title")) else 0.0
         total_points += 1.0 if present(it.get("brand")) else 0.0
         total_points += 1.0 if present(category) and present(it.get("product_type")) else 0.0
@@ -79,10 +116,6 @@ def main() -> None:
         if desc_ready:
             raw["description_ready"] += 1
 
-        # 7-9: critical decision metadata. Verified data gets full credit.
-        # An explicitly tracked unresolved value receives HALF credit because
-        # the system is truthful and safe, but the source data is still not
-        # complete. This is intentionally stricter than simply hiding blanks.
         if category in WEARABLE:
             raw["size_required"] += 1
             if present(it.get("size")):
@@ -108,9 +141,6 @@ def main() -> None:
             unresolved["condition"] += 1
             total_points += 0.5
 
-        # 10: provenance/transparency. Every unresolved AVAILABLE product must
-        # disclose its gaps on the real generated product page. Inferred facts
-        # must carry provenance; original facts need no synthetic provenance.
         page = BASE / "artikel" / str(item_id) / "index.html"
         page_html = page.read_text(encoding="utf-8") if page.is_file() else ""
         transparency_ok = True
@@ -159,12 +189,12 @@ def main() -> None:
     require(home.count('rel="preload" as="image"') >= 2, "Startseite preloaded nicht zwei erste Produktbilder")
     require(home.count('data-ssr-item-id=') >= 2, "Startseite enthaelt nicht zwei initiale Produktkarten")
     require(home.count('fetchpriority="high" decoding="sync"') >= 2, "kritische SSR-Bilder decodieren nicht synchron")
+    require(RUNTIME_MARKER in home, "Mobile-Startseite verschiebt den vollen Runtime-Boot nicht aus dem LCP-Fenster")
     require(any(it.get("grid_image") for it in catalog if it.get("public_status") == "AVAILABLE"), "catalog.json enthaelt keine mobile Grid-Bildquelle")
 
-    # Follow-up JavaScript is applied after the normal rebuild syntax step, so
-    # syntax-check it inside this gate as well before the browser tests run.
     subprocess.run(["node", "--check", str(BASE / "assets" / "app.js")], check=True)
-    print("Mobile-LCP-Struktur: OK — HTML-first, pinned hydration, paint gate, mobile thumbnails und sync decode.")
+    print("Mobile-LCP-Struktur: OK — HTML-first, pinned hydration, paint gate, mobile thumbnails und Runtime nach LCP.")
+    validate_repository_hardening()
 
 
 if __name__ == "__main__":
