@@ -19,52 +19,115 @@ jobs:
         if: github.event_name == 'pull_request'
         run: echo "PR path detected — provenance OK."
 
-      - name: Main push must come from a merged PR or rebuild bot
+      - name: Main push must come from a merged PR or trusted automation
         if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
-          COMMIT_AUTHOR: ${{ github.event.head_commit.author.name }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           set -euo pipefail
-          if [ "$COMMIT_AUTHOR" = "disorder119-bot" ] && [[ "$COMMIT_MESSAGE" == "Automatischer Rebuild nach Shop- und SEO-Validierung"* ]]; then
-            echo "Validated rebuild-bot commit — provenance OK."
-            exit 0
-          fi
-
-          response="$(curl -fsSL \
+          commit_json="$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPO/commits/$SHA")"
+          prs_json="$(curl -fsSL \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/$REPO/commits/$SHA/pulls")"
 
-          python - "$response" <<'PY'
+          python - "$commit_json" "$prs_json" <<'PY'
           import json, sys
-          prs = json.loads(sys.argv[1])
-          approved = [
+          commit = json.loads(sys.argv[1])
+          prs = json.loads(sys.argv[2])
+          approved_prs = [
               pr for pr in prs
               if pr.get("merged_at") and (pr.get("base") or {}).get("ref") == "main"
           ]
-          if not approved:
-              raise SystemExit(
-                  "DIRECT PUSH BLOCKED BY POLICY: this main commit is not associated "
-                  "with a merged pull request and is not the validated rebuild bot."
-              )
-          print("Merged PR provenance OK:", ", ".join("#" + str(pr["number"]) for pr in approved))
+          if approved_prs:
+              print("Merged PR provenance OK:", ", ".join("#" + str(pr["number"]) for pr in approved_prs))
+              raise SystemExit(0)
+
+          raw = commit.get("commit") or {}
+          author = raw.get("author") or {}
+          github_author = (commit.get("author") or {}).get("login")
+          name = author.get("name") or ""
+          message = raw.get("message") or ""
+          trusted_actions_identity = github_author == "actions"
+
+          if (trusted_actions_identity and name == "disorder119-bot" and
+                  message.startswith("Automatischer Rebuild nach Shop- und SEO-Validierung")):
+              print("Validated rebuild automation provenance OK.")
+              raise SystemExit(0)
+          if (trusted_actions_identity and name == "disorder119-guard" and
+                  message.startswith("Automatischer Schutz-Revert eines unautorisierten main-Push")):
+              print("Main guard self-heal provenance OK.")
+              raise SystemExit(0)
+
+          raise SystemExit(
+              "UNAUTHORIZED MAIN PUSH: commit is neither a merged PR nor a trusted GitHub Actions rebuild/guard commit."
+          )
           PY
 
   production-policy:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - name: Critical ownership and guard files must exist
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Critical ownership, least privilege and immutable actions must hold
         run: |
+          set -euo pipefail
           test -s .github/CODEOWNERS
           test -s config/mode-guard.json
           test -s .github/workflows/rebuild.yml
           test -s .github/workflows/browser-smoke.yml
+          test -s .github/workflows/main-integrity.yml
           grep -q '@disorder119' .github/CODEOWNERS
           grep -q 'Main Integrity Guard' .github/workflows/main-integrity.yml
+          grep -q 'Validierten Main-Rebuild publizieren' .github/workflows/rebuild.yml
+          grep -q 'contents: read' .github/workflows/rebuild.yml
+          grep -q 'contents: write' .github/workflows/rebuild.yml
+          grep -q 'Automatischer Schutz-Revert' .github/workflows/main-integrity.yml
+          if grep -REn 'uses:[[:space:]]+[^[:space:]]+@v[0-9]' .github/workflows; then
+            echo "Unverankerte Action-Version gefunden. Produktions-Actions muessen auf Commit-SHAs gepinnt sein."
+            exit 1
+          fi
+
+  self-heal:
+    name: Unautorisierten Main-Push automatisch neutralisieren
+    needs: provenance
+    if: always() && github.event_name == 'push' && needs.provenance.result == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Unautorisierten Stand auschecken
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Vorherigen Main-Baum als Schutz-Revert wiederherstellen
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "Kein sicherer vorheriger main-Commit vorhanden; automatischer Revert verweigert."
+            exit 1
+          fi
+          git fetch origin "$BEFORE" --depth=1
+          git read-tree --reset -u "$BEFORE"
+          if git diff --cached --quiet; then
+            echo "Der unautorisierte Push hat keinen Baum-Unterschied hinterlassen."
+            exit 0
+          fi
+          git config user.name "disorder119-guard"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "Automatischer Schutz-Revert eines unautorisierten main-Push"
+          # Kein Force-Push: falls main inzwischen legitim weitergelaufen ist,
+          # wird der Push sicher abgelehnt statt neuere Arbeit zu ueberschreiben.
+          git push origin HEAD:main
