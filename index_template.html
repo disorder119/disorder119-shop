@@ -27,6 +27,7 @@ __OG_LOCALE_ALTERNATES__
 <meta name="twitter:image:alt" content="__META_TITLE__">
 __ITEMLIST_JSONLD_BLOCK__
 <title>__META_TITLE__</title>
+__CRITICAL_IMAGE_PRELOADS__
 <link rel="stylesheet" href="/assets/app.css?v=__APP_CSS_VERSION__">
 </head>
 <body>
@@ -194,7 +195,7 @@ __ITEMLIST_JSONLD_BLOCK__
 </div>
 
 __STATIC_PAGE_CONTENT__
-<div class="app-shell hidden" id="appShell">
+<div class="app-shell__APP_SHELL_HIDDEN_CLASS__" id="appShell">
 <div class="masthead">
   <div class="masthead__top reveal" style="animation-delay:0.05s">
     <p class="eyebrow" data-i18n="eyebrow">Designer-, Vintage- und Contemporary-Pieces mit Fokus auf Qualität, Authentizität und Zeitlosigkeit</p>
@@ -293,7 +294,7 @@ __STATIC_PAGE_CONTENT__
 </div>
 
 <div class="grid-wrap">
-  <div class="grid" id="grid"></div>
+  <div class="grid" id="grid"__SSR_GRID_ATTR__>__SSR_INITIAL_GRID__</div>
   <div class="empty-state" id="emptyState">
     <p class="empty-state__title" data-i18n="emptyTitle">Keine Treffer im Archiv</p>
     <p data-i18n="emptyBody">Versuche einen anderen Suchbegriff oder setze die Filter zurück.</p>

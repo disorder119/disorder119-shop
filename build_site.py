@@ -547,6 +547,7 @@ def cta_html(it, shop_config, home, lang):
         "fr": "Pièce unique · photographiée individuellement · droit légal de rétractation de 14 jours pour les consommateurs · droits de garantie légaux. Les détails de paiement et d’expédition sont confirmés avant la conclusion du contrat.",
     }
     parts.append('<p class="info__note">' + esc(trust_notes.get(lang, trust_notes["de"])) + '</p>')
+    parts.append(product_data_gap_html(it, lang))
     if not shop_config["whatsappNumber"] and not shop_config["email"]:
         parts.append('<p class="info__config-warning" data-i18n="configWarning">Shop-Kontakt noch nicht eingerichtet: WhatsApp-Nummer oder E-Mail-Adresse fehlen in SHOP_CONFIG (index.html).</p>')
     return "".join(parts)
@@ -938,6 +939,112 @@ def static_page_content_html(slug, lang, shop_config):
     return '<div class="static-page"><div class="legal-panel">' + html + "</div></div>"
 
 
+# FOCUS3_MOBILE_SSR_LCP
+# The classic German homepage is the primary mobile landing page. Its first
+# two default cards are emitted in the initial HTML and their images are
+# preloaded. This removes the previous request chain HTML -> app.js ->
+# catalog.json -> image that Lighthouse measured as ~4.8 s load delay.
+# The exact same cards are then hydrated by app.js instead of being replaced.
+def initial_archive_items(limit=2):
+    available = [it for it in ITEMS if it.get("public_status") == "AVAILABLE"]
+    return sorted(
+        available,
+        key=lambda it: it.get("brightness") if isinstance(it.get("brightness"), (int, float)) else 0.5,
+        reverse=True,
+    )[:limit]
+
+
+def grid_thumb_path(it):
+    gallery = it.get("gallery") or []
+    if not gallery:
+        return ""
+    hero = gallery[0]
+    candidate = thumb_path(hero)
+    return candidate if (BASE / candidate).is_file() else hero
+
+
+def initial_archive_alt(it):
+    title = str(it.get("title") or "").strip()
+    brand = str(it.get("brand") or "").strip()
+    if not brand or title.lower().startswith(brand.lower()):
+        return title
+    return (brand + " " + title).strip()
+
+
+def initial_archive_card_html(it, lang):
+    ph = META_PHRASES[lang]
+    home = lang_home(lang)
+    gallery = it.get("gallery") or []
+    original = gallery[0] if gallery else ""
+    mobile = grid_thumb_path(it)
+    size_raw = it.get("size_normalized")
+    if not size_raw or size_raw == "Unknown":
+        size_raw = it.get("size") or ""
+    size_label = size_tr(size_raw, lang) if size_raw else ""
+    price = float(it.get("price") or 0)
+    if price > 0:
+        price_text = ("ca. " if it.get("price_estimated") else "") + fmt_price_de(price)
+    else:
+        price_text = ph["price_on_request"]
+    picture = ""
+    if original:
+        source = ""
+        if mobile and mobile != original:
+            source = '<source media="(max-width: 600px)" srcset="/' + esc(mobile) + '">'
+        picture = (
+            '<picture>' + source
+            + '<img src="/' + esc(original) + '" alt="' + esc(initial_archive_alt(it))
+            + '" loading="eager" fetchpriority="high" decoding="sync">'  # FOCUS3_MEASURED_LCP_FOLLOWUP
+            + '</picture>'
+        )
+    return (
+        '<a class="plate" data-ssr-item-id="' + str(it["id"]) + '" href="'
+        + home + 'artikel/' + str(it["id"]) + '/">'
+        + '<div class="plate__frame">' + picture + '</div>'
+        + '<div class="plate__body">'
+        + '<button type="button" class="plate__brand" data-brand-filter>'
+        + esc(it.get("brand") or ph["no_brand"]) + '</button>'
+        + '<span class="plate__title">' + esc(it.get("title") or "") + '</span>'
+        + (('<span class="plate__size">' + esc(size_label) + '</span>') if size_label else "")
+        + '<div class="plate__row"><span class="plate__price">' + esc(price_text) + '</span></div>'
+        + '</div></a>'
+    )
+
+
+def initial_archive_grid_html(lang):
+    return "".join(initial_archive_card_html(it, lang) for it in initial_archive_items(2))
+
+
+def initial_archive_preloads():
+    links = []
+    for it in initial_archive_items(2):
+        path = grid_thumb_path(it)
+        if path:
+            links.append('<link rel="preload" as="image" href="/' + esc(path) + '" fetchpriority="high">')
+    return "\\n".join(links)
+
+
+def product_data_gap_html(it, lang):
+    """Truthful disclosure for unresolved source metadata; never invent facts."""
+    category = it.get("taxonomy_category") or it.get("category") or ""
+    size_expected = category in {"Jackets", "Coats", "Tops", "Shirts", "Knitwear", "Pants", "Skirts", "Dresses", "Shoes"}
+    missing = []
+    if size_expected and not str(it.get("size") or "").strip():
+        missing.append({"de": "Größe", "en": "size", "fr": "taille"}[lang])
+    if not str(it.get("color") or "").strip():
+        missing.append({"de": "Farbe", "en": "color", "fr": "couleur"}[lang])
+    if not str(it.get("condition") or "").strip():
+        missing.append({"de": "Zustand", "en": "condition", "fr": "état"}[lang])
+    if not missing:
+        return ""
+    copy = {
+        "de": "Noch nicht abschließend dokumentiert: {fields}. Diese Angaben werden vor Vertragsschluss bestätigt; es werden keine fehlenden Produktdaten geschätzt.",
+        "en": "Not yet fully documented: {fields}. These details are confirmed before the contract is concluded; missing product data is never guessed.",
+        "fr": "Pas encore entièrement documenté : {fields}. Ces informations sont confirmées avant la conclusion du contrat ; aucune donnée produit manquante n’est inventée.",
+    }[lang]
+    return '<p class="info__note info__note--data-gap" data-product-data-gap>' + esc(copy.format(fields=", ".join(missing))) + '</p>'
+
+
 def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
                         include_item_list=False, robots=None, static_content="",
                         canonical_path_segment=None, slug=""):
@@ -974,6 +1081,11 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__OG_LOCALE__", OG_LOCALES[lang])
     out = out.replace("__OG_LOCALE_ALTERNATES__", locale_alternates)
     out = out.replace("__STATIC_PAGE_CONTENT__", static_content)
+    initial_ssr_home = (lang == "de" and path_segment == "" and slug == "")
+    out = out.replace("__CRITICAL_IMAGE_PRELOADS__", initial_archive_preloads() if initial_ssr_home else "")
+    out = out.replace("__APP_SHELL_HIDDEN_CLASS__", "" if initial_ssr_home else " hidden")
+    out = out.replace("__SSR_GRID_ATTR__", ' data-ssr-initial="1"' if initial_ssr_home else "")
+    out = out.replace("__SSR_INITIAL_GRID__", initial_archive_grid_html(lang) if initial_ssr_home else "")
     out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
     out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
     out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)
@@ -1112,10 +1224,11 @@ def build_catalog_json():
     # items.json selbst - das Grid haette also unnormalisierte Markennamen
     # gesehen. catalog.json ist die einzige Quelle, die beides korrekt macht.
     public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
-    catalog = [
-        {k: it.get(k) for k in CATALOG_FIELDS if k in it}
-        for it in public_items
-    ]
+    catalog = []
+    for it in public_items:
+        row = {k: it.get(k) for k in CATALOG_FIELDS if k in it}
+        row["grid_image"] = grid_thumb_path(it)
+        catalog.append(row)
     CATALOG_PATH.write_text(
         json.dumps(catalog, ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",

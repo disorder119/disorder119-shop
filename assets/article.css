@@ -439,3 +439,6 @@ a { color: inherit; }
   color: rgba(242, 239, 231, 0.68);
 }
 
+/* FOCUS3_MEASURED_LCP_FOLLOWUP — measured product-footer contrast. */
+p[data-i18n="footerNote"] { color: rgba(242, 239, 231, 0.82) !important; }
+

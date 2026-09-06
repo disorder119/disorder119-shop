@@ -7,7 +7,28 @@
   // statt items.json: von build_catalog_json() erzeugt, enthaelt keine
   // DRAFT-Artikel (die duerfen nie im Netzwerk-Payload landen) und hat
   // bereits normalisierte Markennamen (siehe BRAND_ALIASES in build_site.py).
-  fetch("/data/catalog.json").then(function (r) { return r.json(); }).then(function (ITEMS) {
+  var focus3CatalogGate = Promise.resolve(); // FOCUS3_MEASURED_LCP_FOLLOWUP
+  var focus3SsrGrid = document.getElementById("grid");
+  if (focus3SsrGrid && focus3SsrGrid.getAttribute("data-ssr-initial") === "1" &&
+      window.matchMedia("(max-width: 600px)").matches) {
+    focus3CatalogGate = new Promise(function (resolve) {
+      var criticalImages = focus3SsrGrid.querySelectorAll(".plate__frame img");
+      var critical = criticalImages[1] || criticalImages[0];
+      var finished = false;
+      function release() {
+        if (finished) return;
+        finished = true;
+        requestAnimationFrame(function () { requestAnimationFrame(resolve); });
+      }
+      if (!critical || critical.complete) { release(); return; }
+      critical.addEventListener("load", release, { once: true });
+      critical.addEventListener("error", release, { once: true });
+      setTimeout(release, 1800);
+    });
+  }
+  focus3CatalogGate.then(function () {
+    return fetch("/data/catalog.json");
+  }).then(function (r) { return r.json(); }).then(function (ITEMS) {
 
   var canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
@@ -1696,8 +1717,29 @@
       lastFilterSignature = filterSignature;
     }
     var visibleItems = filtered.slice(0, visibleLimit);
+    if (!firstGridRenderDone && gridEl.getAttribute("data-ssr-initial") === "1") {
+      var focus3InitialIds = Array.prototype.slice.call(gridEl.querySelectorAll("[data-ssr-item-id]")).map(function (plate) {
+        return Number(plate.getAttribute("data-ssr-item-id"));
+      }).filter(Boolean);
+      if (focus3InitialIds.length) {
+        var focus3ById = {};
+        filtered.forEach(function (item) { focus3ById[Number(item.id)] = item; });
+        var focus3Pinned = focus3InitialIds.map(function (id) { return focus3ById[id]; }).filter(Boolean);
+        if (focus3Pinned.length === focus3InitialIds.length) {
+          var focus3PinnedSet = {};
+          focus3InitialIds.forEach(function (id) { focus3PinnedSet[id] = true; });
+          visibleItems = focus3Pinned.concat(filtered.filter(function (item) { return !focus3PinnedSet[Number(item.id)]; })).slice(0, visibleLimit);
+        }
+      }
+    }
     countEl.textContent = tFormat("railCountTemplate", { filtered: filtered.length, total: PUBLIC_ITEMS.length });
-    gridEl.innerHTML = "";
+    var ssrPlates = (!firstGridRenderDone && gridEl.getAttribute("data-ssr-initial") === "1")
+      ? Array.prototype.slice.call(gridEl.querySelectorAll("[data-ssr-item-id]"))
+      : []; // FOCUS3_SSR_HYDRATION
+    var reuseSsr = ssrPlates.length > 0 && ssrPlates.every(function (plate, i) {
+      return visibleItems[i] && Number(plate.getAttribute("data-ssr-item-id")) === Number(visibleItems[i].id);
+    });
+    if (!reuseSsr) gridEl.innerHTML = "";
     emptyEl.classList.toggle("visible", filtered.length === 0);
 
     // Nur beim allerersten Aufbau der Seite bekommen die ersten Karten ein
@@ -1715,8 +1757,9 @@
       // Stueck. Rechtsklick "In neuem Tab oeffnen", Hover zeigt die Ziel-URL,
       // der Zurueck-Button des Browsers funktioniert normal - all das gibt es
       // bei einem reinen JS-Modal ohne eigene URL nicht.
-      var plate = document.createElement("a");
-      plate.className = "plate";
+      var reusedSsrPlate = reuseSsr && idx < ssrPlates.length;
+      var plate = reusedSsrPlate ? ssrPlates[idx] : document.createElement("a");
+      if (!reusedSsrPlate) plate.className = "plate";
       // Absolut statt relativ ("artikel/" + id + "/"): das Klassik-Grid wird
       // immer aufgebaut (auch waehrend Match/Chaos/Baukasten aktiv sind, nur
       // eben unsichtbar), diese Katalog-Ansichten liegen aber jetzt auf
@@ -1729,7 +1772,9 @@
       }
 
       var hero = it.gallery && it.gallery[0];
+      var mobileGridImage = it.grid_image || hero;
       var imgSrc = assetUrl(hero || "");
+      var mobileImgSrc = assetUrl(mobileGridImage || hero || "");
 
       var altText = escapeHtml(productAltText(it));
       var isSold = it.status === "Verkauft";
@@ -1739,11 +1784,18 @@
           ? '<span class="plate__price">' + fmtRentalPrice(it) + "</span>"
           : '<span class="plate__price">' + (it.price_estimated ? t("priceEstimatedPrefix") : "") + fmtPriceDisplay(it.price) + "</span>";
 
-      var heroLoading = idx < 4 ? "eager" : "lazy";
-      var heroPriority = idx < 2 ? ' fetchpriority="high"' : "";
-      plate.innerHTML =
-        '<div class="plate__frame">' +
-          (imgSrc ? '<img src="' + imgSrc + '" alt="' + altText + '" loading="' + heroLoading + '"' + heroPriority + ' />' : "") +
+      var heroLoading = idx < 2 ? "eager" : "lazy";
+      var heroPriority = idx < 2 ? ' fetchpriority="high"' : ' fetchpriority="low"';
+      var heroDecoding = idx < 2 ? "sync" : "async";
+      var pictureHtml = "";
+      if (imgSrc) {
+        var mobileSource = mobileImgSrc && mobileImgSrc !== imgSrc
+          ? '<source media="(max-width: 600px)" srcset="' + mobileImgSrc + '">'
+          : "";
+        pictureHtml = '<picture>' + mobileSource + '<img src="' + imgSrc + '" alt="' + altText + '" loading="' + heroLoading + '"' + heroPriority + ' decoding="' + heroDecoding + '"></picture>';
+      }
+      if (!reusedSsrPlate) plate.innerHTML =
+        '<div class="plate__frame">' + pictureHtml +
         "</div>" +
         '<div class="plate__body">' +
           '<button type="button" class="plate__brand" data-brand-filter>' + escapeHtml(it.brand || t("noBrand")) + "</button>" +
@@ -1771,9 +1823,10 @@
         plate.addEventListener("mouseleave", function () { frameImg.src = imgSrc; });
       }
 
-      frag.appendChild(plate);
+      if (!reusedSsrPlate) frag.appendChild(plate);
     });
     gridEl.appendChild(frag);
+    if (reuseSsr) gridEl.removeAttribute("data-ssr-initial");
     loadMoreBtn.classList.toggle("hidden", filtered.length === 0 || visibleItems.length >= filtered.length);
     if (animateEntry) {
       requestAnimationFrame(function () {

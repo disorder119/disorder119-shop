@@ -3459,3 +3459,36 @@
     color: var(--accent-text);
   }
 
+  /* FOCUS3_MEASURED_LCP_FOLLOWUP
+     Keep readable card text fully opaque during the entrance transform and
+     keep the brand filter safely above the WCAG pointer-target floor. */
+  #appShell .plate.plate--enter { opacity: 1 !important; }
+  #appShell .plate__brand { min-height: 32px; min-width: 32px; padding: 4px 2px; }
+
+  /* Measured Rental V2 contrast findings. Text-only contrast hardening;
+     pricing, rental lifecycle and protected creative modes remain untouched. */
+  #d119RentalV2Title,
+  .d119-rental-set-copy strong,
+  .d119-rental-set-copy span,
+  .d119-rental-set-add__label,
+  .d119-rental-process-details > summary,
+  .d119-rental-v2__section h3,
+  .d119-rental-item__meta strong,
+  .d119-rental-item__meta span,
+  .d119-rental-item__remove,
+  .d119-rental-add-inline__copy > strong,
+  .d119-rental-add-inline__copy > span,
+  .d119-rental-note,
+  label[for="d119RentalStart"],
+  label[for="d119RentalEnd"],
+  #d119RentalStart,
+  #d119RentalEnd {
+    color: #f2efe7 !important;
+  }
+  #d119RentalStart,
+  #d119RentalEnd {
+    color-scheme: dark;
+    background-color: #121212 !important;
+    border-color: rgba(242,239,231,.45) !important;
+  }
+
