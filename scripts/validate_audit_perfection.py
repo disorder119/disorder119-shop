@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Regression checks for the final Disorder119 audit-perfection pass.
-
-These checks target bugs that can stay invisible while generic syntax/SEO tests
-remain green: iOS native select options with zero hits, duplicate rental flows,
-zero-priced purchase inquiries and semantically impossible taxonomy results.
-"""
+"""Regression checks for the final Disorder119 audit-perfection pass."""
 from __future__ import annotations
 
 import argparse
@@ -41,13 +36,7 @@ def validate_single_rental_architecture() -> None:
     app = text("assets/app.js")
     template = text("index_template.html")
     rental = text("assets/rental-v2.js")
-
-    for needle in (
-        "function openRentalModal(",
-        "rentalModalBackdrop",
-        "RENTAL_PURPOSE_KEYS",
-        "openRentalModal(rentalItemId)",
-    ):
+    for needle in ("function openRentalModal(", "rentalModalBackdrop", "RENTAL_PURPOSE_KEYS", "openRentalModal(rentalItemId)"):
         require(needle not in app, f"Legacy-Rental-Code ist noch aktiv: {needle}")
     require('id="rentalModalBackdrop"' not in template, "altes Single-Rental-Modal ist noch im Template")
     require("AUDIT_PERFECT_RENTAL_V2_ONLY" in app, "Rental-V2-only Marker fehlt")
@@ -67,44 +56,34 @@ def validate_purchase_price_on_request() -> None:
     require("AUDIT_PERFECT_ARTICLE_PRICE_REQUEST" in article, "Direktanfrage kann 0,00 EUR ausgeben")
 
 
-def validate_semantic_taxonomy() -> None:
-    catalog = json.loads(text("data/catalog.json"))
-    by_id = {int(item["id"]): item for item in catalog}
+def _catalog_by_id() -> dict[int, dict]:
+    return {int(item["id"]): item for item in json.loads(text("data/catalog.json"))}
 
-    # The audit found these products assigned to an impossible broad category
-    # (e.g. a jacket as Dress/Shorts). Broad-category correctness is the hard
-    # invariant. Exact subtype is only asserted where the source wording is
-    # explicit enough to justify it without guessing.
+
+def validate_taxonomy_categories() -> None:
+    by_id = _catalog_by_id()
     expected_categories = {
-        9519: "Tops",
-        9527: "Tops",
-        9512: "Jackets",
-        9511: "Jackets",
-        9508: "Tops",
-        9500: "Jackets",
-        9496: "Shirts",
-        9499: "Jackets",
-        9462: "Skirts",
-        9442: "Jackets",
-        9454: "Jackets",
-        9443: "Jackets",
+        9519: "Tops", 9527: "Tops", 9512: "Jackets", 9511: "Jackets",
+        9508: "Tops", 9500: "Jackets", 9496: "Shirts", 9499: "Jackets",
+        9462: "Skirts", 9442: "Jackets", 9454: "Jackets", 9443: "Jackets",
         9401: "Tops",
-    }
-    exact_types = {
-        9512: "Jacket",       # description explicitly says Jacke
-        9500: "Jacket",       # description explicitly says Prada Jacke
-        9496: "Polo Shirt",   # title explicitly says Herrenpolo
-        9401: "Top",          # title explicitly says Spidertop
     }
     for item_id, category in expected_categories.items():
         item = by_id.get(item_id)
         require(item is not None, f"Katalogartikel {item_id} fehlt")
         require(item.get("taxonomy_category") == category,
                 f"Artikel {item_id}: Kategorie {item.get('taxonomy_category')!r} statt {category!r}")
-        if item_id in exact_types:
-            require(item.get("product_type") == exact_types[item_id],
-                    f"Artikel {item_id}: Produkttyp {item.get('product_type')!r} statt {exact_types[item_id]!r}")
 
+    exact_types = {
+        9512: "Jacket", 9500: "Jacket", 9496: "Polo Shirt", 9401: "Top",
+    }
+    for item_id, ptype in exact_types.items():
+        item = by_id[item_id]
+        require(item.get("product_type") == ptype,
+                f"Artikel {item_id}: Produkttyp {item.get('product_type')!r} statt {ptype!r}")
+
+
+def validate_taxonomy_mismatches() -> None:
     report = json.loads(text("data/catalog-taxonomy-report.json"))
     mismatch_ids = {int(row["id"]) for row in report.get("legacyCategoryMismatches", [])}
     intentional = {
@@ -114,8 +93,8 @@ def validate_semantic_taxonomy() -> None:
     unexpected = sorted(mismatch_ids - intentional)
     require(not unexpected, "unerwartete Broad-Category-Abweichungen: " + ", ".join(map(str, unexpected)))
 
-    # Generated public pages must agree with the repaired taxonomy, not merely
-    # catalog.json. Two former failures are checked end-to-end here.
+
+def validate_taxonomy_pages() -> None:
     p9500 = text("artikel/9500/index.html")
     require('<div class="fact__value" id="factCategoryValue">Jacken</div>' in p9500,
             "Prada Knitterjacke ist oeffentlich nicht als Jacke klassifiziert")
@@ -129,8 +108,6 @@ def validate_semantic_taxonomy() -> None:
 def validate_existing_quality_debt_does_not_grow() -> None:
     quality = json.loads(text("data/shop-quality.json"))
     q = quality.get("quality", {})
-    # Known legacy data debt may require physical label/photo verification and
-    # is not guessed by code. The audit nevertheless prevents silent growth.
     require(int(q.get("duplicate_article_number", {}).get("count", 0)) <= 3, "doppelte Artikelnummern haben zugenommen")
     require(int(q.get("price_on_request", {}).get("count", 0)) <= 7, "verfuegbare Artikel ohne Preis haben zugenommen")
     require(int(q.get("missing_gallery", {}).get("count", 0)) == 0, "mindestens ein Artikel hat keine Galerie")
@@ -140,7 +117,9 @@ CHECKS = {
     "facets": validate_zero_hit_facets,
     "rental": validate_single_rental_architecture,
     "purchase": validate_purchase_price_on_request,
-    "taxonomy": validate_semantic_taxonomy,
+    "taxonomy-categories": validate_taxonomy_categories,
+    "taxonomy-mismatches": validate_taxonomy_mismatches,
+    "taxonomy-pages": validate_taxonomy_pages,
     "quality": validate_existing_quality_debt_does_not_grow,
 }
 
