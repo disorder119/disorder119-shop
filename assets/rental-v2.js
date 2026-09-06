@@ -444,8 +444,10 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-rental]"), function (btn) {
       var id = Number(btn.getAttribute("data-rental"));
       var active = state.ids.indexOf(id) >= 0;
-      btn.textContent = active ? t("added") : t("add");
-      btn.setAttribute("aria-pressed", active ? "true" : "false");
+      var label = active ? t("added") : t("add"); // BROWSER_RUNTIME_RENTAL_OBSERVER_V1
+      if (btn.textContent !== label) btn.textContent = label;
+      var pressed = active ? "true" : "false";
+      if (btn.getAttribute("aria-pressed") !== pressed) btn.setAttribute("aria-pressed", pressed);
     });
   }
 

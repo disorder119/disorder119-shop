@@ -21,6 +21,16 @@
     return v > 0 ? fmtPrice(v) : t("priceOnRequest");
   }
 
+  // Rental catalogue cards use the same protected 10%-per-calendar-day rule
+  // as Rental V2. Keep this formatter local to the catalogue renderer so the
+  // rental archive never depends on a removed legacy runtime.
+  function fmtRentalPrice(it) { // BROWSER_RUNTIME_RENTAL_PRICE_V1
+    var salePrice = Number(it && it.price);
+    if (!Number.isFinite(salePrice) || salePrice <= 0) return t("rentalPriceOnRequest");
+    var daily = Math.round(salePrice * 10) / 100;
+    return fmtPrice(daily) + (LANG === "fr" ? " / jour" : LANG === "en" ? " / day" : " / Tag");
+  }
+
   function escapeHtml(s) {
     var div = document.createElement("div");
     div.textContent = s || "";
@@ -158,8 +168,8 @@
       mietenCatalogHeading: "Mieten & Ausleihen",
       mietenIntroTitle: "Mieten & Ausleihen",
       mietenIntroLead: "Jedes verfügbare Stück im Archiv kann auch geliehen statt gekauft werden — für Shootings, Musikvideos, Film- und Theaterproduktionen, redaktionelle Strecken, Events oder private Anlässe. Wähle unten ein Stück und sende eine unverbindliche Anfrage mit deinem Wunschzeitraum.",
-      mietenTermsHeading: "Wie die Miete funktiert",
-      mietenTermsHtml: "<ul><li><strong>Mietpreis:</strong> in der Regel ca. 15&nbsp;% des im Archiv angegebenen Preises pro Zeitraum von bis zu 4 Tagen (Richtwert — der genaue Preis wird bei jeder Anfrage persönlich bestätigt, abhängig von Stück und Zeitraum).</li><li><strong>Kaution:</strong> wird bei Abholung/Versand hinterlegt und nach unbeschädigter, vollständiger Rückgabe innerhalb von 7 Tagen zurückerstattet.</li><li><strong>Reinigung:</strong> normale Gebrauchsspuren und einfache Verschmutzungen sind im Mietpreis enthalten. Für die professionelle Reinigung nach der Nutzung wird ggf. eine Reinigungspauschale einbehalten.</li><li><strong>Schäden:</strong> Reparable Schäden werden von der Kaution beglichen; bei nicht behebbaren Schäden oder Verlust wird der aktuelle Archivwert des Stücks fällig.</li><li><strong>Zeitraum:</strong> Standard bis zu 4 Tage, längere Zeiträume auf Anfrage möglich.</li><li>Alle Angaben sind unverbindlich und werden bei jeder Anfrage individuell bestätigt — dies ist kein automatisiertes Buchungssystem.</li></ul>",
+      mietenTermsHeading: "Wie die Miete funktioniert",
+      mietenTermsHtml: "<ul><li><strong>Mietpreis:</strong> exakt 10&nbsp;% des aktuell angegebenen Verkaufspreises pro ausgewähltem Kalendertag.</li><li><strong>Kaution:</strong> grundsätzlich 50&nbsp;% des aktuellen Verkaufspreises, mindestens 50&nbsp;€.</li><li><strong>Zeitraum:</strong> standardmäßig maximal 7 Kalendertage; längere Zeiträume nur nach individueller Bestätigung.</li><li>Das Absenden einer Anfrage ist noch keine bestätigte Buchung.</li></ul>",
       toArchive: "Zum Archiv →",
       swipeHint: "Ziehen oder klicken — ✕ überspringen, ♥ merken",
       swipeRoundDone: "Runde beendet", swipeSavedInCart: "Teile gemerkt &amp; im Warenkorb",
@@ -333,7 +343,7 @@
       mietenIntroTitle: "Rent & Borrow",
       mietenIntroLead: "Every available piece in the archive can also be rented instead of bought — for shoots, music videos, film and theatre productions, editorial stories, events or personal occasions. Pick a piece below and send a non-binding request with your preferred dates.",
       mietenTermsHeading: "How renting works",
-      mietenTermsHtml: "<ul><li><strong>Rental price:</strong> typically around 15% of the archive price per period of up to 4 days (a guideline — the exact price is confirmed personally for every request, depending on the piece and duration).</li><li><strong>Deposit:</strong> collected at pickup/shipping and refunded after undamaged, complete return within 7 days.</li><li><strong>Cleaning:</strong> normal wear and light soiling are included in the rental price. A cleaning fee may be withheld for professional cleaning after use.</li><li><strong>Damage:</strong> repairable damage is settled from the deposit; for damage beyond repair or loss, the piece's current archive value becomes due.</li><li><strong>Duration:</strong> up to 4 days by default, longer periods on request.</li><li>All details are non-binding and confirmed individually for every request — this is not an automated booking system.</li></ul>",
+      mietenTermsHtml: "<ul><li><strong>Rental price:</strong> exactly 10% of the current listed sale price per selected calendar day.</li><li><strong>Deposit:</strong> generally 50% of the current sale price, with a minimum of €50.</li><li><strong>Duration:</strong> normally a maximum of 7 calendar days; longer periods require individual confirmation.</li><li>Sending a request does not itself create a confirmed booking.</li></ul>",
       toArchive: "To the archive →",
       swipeHint: "Drag or click — ✕ skip, ♥ save",
       swipeRoundDone: "Round finished", swipeSavedInCart: "Pieces saved &amp; in cart",
@@ -508,7 +518,7 @@
       mietenIntroTitle: "Location",
       mietenIntroLead: "Chaque pièce disponible de l'archive peut aussi être louée plutôt qu'achetée — pour des shootings, clips musicaux, productions de film ou de théâtre, sujets éditoriaux, événements ou occasions privées. Choisis une pièce ci-dessous et envoie une demande sans engagement avec tes dates souhaitées.",
       mietenTermsHeading: "Comment fonctionne la location",
-      mietenTermsHtml: "<ul><li><strong>Prix de location :</strong> environ 15&nbsp;% du prix indiqué dans l'archive par période de 4 jours maximum (indicatif — le prix exact est confirmé personnellement pour chaque demande, selon la pièce et la durée).</li><li><strong>Caution :</strong> déposée au retrait/à l'envoi et remboursée après un retour complet et non endommagé sous 7 jours.</li><li><strong>Nettoyage :</strong> l'usure normale et les salissures légères sont incluses dans le prix de location. Des frais de nettoyage professionnel peuvent être retenus après usage.</li><li><strong>Dommages :</strong> les dommages réparables sont réglés via la caution ; en cas de dommage irréparable ou de perte, la valeur actuelle de la pièce dans l'archive est due.</li><li><strong>Durée :</strong> 4 jours maximum par défaut, périodes plus longues sur demande.</li><li>Toutes les informations sont sans engagement et confirmées individuellement pour chaque demande — il ne s'agit pas d'un système de réservation automatisé.</li></ul>",
+      mietenTermsHtml: "<ul><li><strong>Prix de location :</strong> exactement 10&nbsp;% du prix de vente actuel indiqué par jour calendaire sélectionné.</li><li><strong>Caution :</strong> en principe 50&nbsp;% du prix de vente actuel, avec un minimum de 50&nbsp;€.</li><li><strong>Durée :</strong> normalement 7 jours calendaires maximum ; les périodes plus longues nécessitent une confirmation individuelle.</li><li>L'envoi d'une demande ne constitue pas encore une réservation confirmée.</li></ul>",
       toArchive: "Vers l'archive →",
       swipeHint: "Glisse ou clique — ✕ passer, ♥ garder",
       swipeRoundDone: "Manche terminée", swipeSavedInCart: "Pièces enregistrées &amp; dans le panier",
