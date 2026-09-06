@@ -45,16 +45,10 @@ def patch_app_js() -> bool:
     if MARKER_JS in text:
         return False
 
-    # Give the sort control a localized accessible name after LANG has been
-    # resolved. The static German aria-label in the HTML remains a no-JS
-    # fallback, while EN/FR get their correct runtime language.
     lang_anchor = '  var LANG = PATH_LANG_MATCH ? PATH_LANG_MATCH[1] : "de";\n'
     lang_block = lang_anchor + '''  // PERF_A11Y_95_ARCHIVE — measured axe/Lighthouse fixes for the classic archive.\n  var sortSelectA11yEl = document.getElementById("sortSelect");\n  if (sortSelectA11yEl) {\n    sortSelectA11yEl.setAttribute("aria-label", LANG === "fr" ? "Trier les articles" : LANG === "en" ? "Sort items" : "Artikel sortieren");\n  }\n'''
     text = replace_once(text, lang_anchor, lang_block, "lokalisierter Sortiername")
 
-    # The card is already a semantic link whose visible descendants form the
-    # correct accessible name. A shorter aria-label containing only the title
-    # caused Lighthouse label-content-name-mismatch, so remove it.
     text = replace_once(
         text,
         '      plate.setAttribute("aria-label", it.title);\n',
@@ -62,9 +56,6 @@ def patch_app_js() -> bool:
         "redundantes Karten-aria-label",
     )
 
-    # Keep the distinctive stagger on cards further down, but never hide the
-    # first row behind an opacity transition: one of those images is the mobile
-    # LCP element and must be paintable immediately.
     text = replace_once(
         text,
         '      if (animateEntry && idx < animateCount) {\n',
@@ -72,10 +63,6 @@ def patch_app_js() -> bool:
         "LCP-sicherer Karten-Einstieg",
     )
 
-    # The first row is above the fold on phones. Lighthouse proved that making
-    # every hero lazy delayed the LCP request by several seconds. The first four
-    # cards are eager (desktop first row included); only the first two receive
-    # high fetch priority, so later images remain bandwidth-friendly.
     image_old = '''      plate.innerHTML =\n        '<div class="plate__frame">' +\n          (imgSrc ? '<img src="' + imgSrc + '" alt="' + altText + '" loading="lazy" />' : "") +\n'''
     image_new = '''      var heroLoading = idx < 4 ? "eager" : "lazy";\n      var heroPriority = idx < 2 ? ' fetchpriority="high"' : "";\n      plate.innerHTML =\n        '<div class="plate__frame">' +\n          (imgSrc ? '<img src="' + imgSrc + '" alt="' + altText + '" loading="' + heroLoading + '"' + heroPriority + ' />' : "") +\n'''
     text = replace_once(text, image_old, image_new, "LCP-Bildprioritaet")
@@ -105,6 +92,14 @@ def patch_app_css() -> bool:
   #appShell .footer__legal a,
   #appShell .plate__title {
     color: rgba(242, 239, 231, 0.72);
+  }
+
+  /* Opacity animations temporarily pushed otherwise compliant text below the
+     contrast threshold during the first audit frame. Keep the original
+     transform/letter-spacing motion, but text itself is readable immediately. */
+  #appShell .reveal,
+  #appShell .wordmark__line {
+    opacity: 1 !important;
   }
 
   #appShell .plate__brand {
