@@ -88,6 +88,7 @@ jobs:
           python scripts/apply_admin_quality_hardening.py
           python scripts/apply_browser_runtime_fixes.py
           python scripts/apply_adversarial_runtime_fixes.py
+          python scripts/apply_perf_a11y_quality.py
 
       - name: Browser-Build erzeugen
         run: |
@@ -98,6 +99,9 @@ jobs:
           python scripts/inject_catalog_filter_simplify.py
           python scripts/apply_catalog_taxonomy.py --generated-only
           python scripts/repair_public_article_integrity.py
+
+      - name: Performance-/A11y-Invarianten pruefen
+        run: python scripts/validate_perf_a11y_quality.py
 
       - name: Lokale Navigation und Assets pruefen
         run: python scripts/validate_local_navigation.py
