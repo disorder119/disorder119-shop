@@ -45,12 +45,30 @@ def main() -> None:
     need(".fact__label" in article_css and ".info__note" in article_css, "Produkt-Fakten/Note nicht abgesichert")
 
     quality = (BASE / "scripts" / "browser_quality_budget.py").read_text(encoding="utf-8")
+    floors_path = BASE / "scripts" / "validate_quality_regression_floors.py"
+    browser_workflow = (BASE / ".github" / "workflows" / "browser-smoke.yml").read_text(encoding="utf-8")
     need("AXE_BLOCKING_IMPACTS" in quality and '"critical", "serious"' in quality, "axe Serious/Critical Gate fehlt")
-    need('"performance": 0.85' in quality, "mobiles Performance-Gate fehlt")
+    need('"performance": 0.85' in quality, "diagnostisches mobiles Performance-Gate fehlt")
     need('"accessibility": 0.95' in quality, "Accessibility-Gate fehlt")
     need('"cumulative-layout-shift": 0.10' in quality, "CLS-Gate fehlt")
 
-    print("Performance/A11y-Qualitaet: OK — gemessene 2-Card-LCP-Prioritaet, Accessible Names, Kontrast, Targets und Browser-Budgets statisch abgesichert.")
+    need(floors_path.is_file(), "strenger Quality-Regression-Floor fehlt")
+    floors = floors_path.read_text(encoding="utf-8")
+    need("PERFORMANCE_FLOOR = 0.95" in floors, "Performance darf wieder unter 95 fallen")
+    need("ACCESSIBILITY_FLOOR = 0.95" in floors, "Accessibility-Floor <95 oder fehlt")
+    need("MOBILE_LCP_CEILING_MS = 2500.0" in floors, "mobiler LCP-Floor >2.5s oder fehlt")
+    need("TBT_CEILING_MS = 200.0" in floors, "TBT-Floor >200ms oder fehlt")
+    need("PRODUCT_DATA_SCORE_FLOOR = 9.50" in floors, "Produktdaten-Floor <9.50 oder fehlt")
+    need('"color_percent": 80.0' in floors and '"condition_percent": 60.0' in floors,
+         "Rohdaten-Nonregression fuer Farbe/Zustand fehlt")
+    need("violation_count" in floors and "violations != 0" in floors,
+         "Zero-WCAG-Regression-Floor fehlt")
+    need("python scripts/validate_quality_regression_floors.py" in browser_workflow,
+         "Browser-CI fuehrt strengen Quality-Regression-Floor nicht aus")
+    need("steps.regression_floors.outcome == 'failure'" in browser_workflow,
+         "strenger Regression-Floor ist kein blockierendes CI-Gate")
+
+    print("Performance/A11y-Qualitaet: OK — gemessene 2-Card-LCP-Prioritaet, Accessible Names, Kontrast, Targets sowie >=95/Zero-WCAG/9.50-Regression-Floors statisch abgesichert.")
 
 
 if __name__ == "__main__":

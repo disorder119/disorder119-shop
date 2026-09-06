@@ -141,6 +141,12 @@ jobs:
           done
           D119_SMOKE_URL=http://127.0.0.1:4174 python scripts/browser_quality_budget.py
 
+      - name: Strenge Quality-Regression-Floors pruefen
+        id: regression_floors
+        if: always()
+        continue-on-error: true
+        run: python scripts/validate_quality_regression_floors.py
+
       - name: Quality-Audit-Zusammenfassung anzeigen
         if: always()
         run: |
@@ -162,7 +168,7 @@ jobs:
           retention-days: 14
 
       - name: Quality-Budget als Gate abschliessen
-        if: always() && steps.quality_budget.outcome == 'failure'
+        if: always() && (steps.quality_budget.outcome == 'failure' || steps.regression_floors.outcome == 'failure')
         run: |
-          echo "Lighthouse-/WCAG-Budget wurde verletzt. Details stehen im Audit-Summary und Artefakt."
+          echo "Lighthouse-/WCAG- oder strenger Quality-Regression-Floor wurde verletzt. Details stehen im Audit-Summary und Artefakt."
           exit 1
