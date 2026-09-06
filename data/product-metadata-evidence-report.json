@@ -2,7 +2,7 @@
   "policy": "Only explicit source evidence; no guessed physical product facts.",
   "available_items": 165,
   "filled_this_run": {
-    "color": 2,
+    "color": 0,
     "color_corrected": 0,
     "size": 0,
     "condition": 0,

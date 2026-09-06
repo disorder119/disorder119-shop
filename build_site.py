@@ -49,6 +49,7 @@ APP_CSS_VERSION = _asset_version("assets/app.css")
 APP_JS_VERSION = _asset_version("assets/app.js")
 ARTICLE_CSS_VERSION = _asset_version("assets/article.css")
 ARTICLE_JS_VERSION = _asset_version("assets/article.js")
+PWA_JS_VERSION = _asset_version("assets/pwa.js")
 
 # Jede dieser Seiten ist inhaltlich die Startseite (gleiches HTML/JS/CSS-Bundle),
 # oeffnet beim Laden aber automatisch das passende Panel anhand von
@@ -676,6 +677,14 @@ def build_page(it, shop_config, lang):
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<meta name="application-name" content="Disorder119">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Disorder119">
+<link rel="manifest" href="/manifest.webmanifest"> <!-- D119_PWA_V1_ARTICLE -->
+<link rel="apple-touch-icon" href="/assets/favicon.png">
 <title>{esc(title_tag)}</title>
 <meta name="description" content="{esc(desc)}">
 {'<meta name="robots" content="noindex,nofollow">' if it.get("public_status") == "DRAFT" else '<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">'}
@@ -749,6 +758,7 @@ def build_page(it, shop_config, lang):
   window.ARTICLE_SHOP_CONFIG = {json.dumps(shop_config, ensure_ascii=False)};
   window.ARTICLE_LANG = "{lang}";
 </script>
+<script src="/assets/pwa.js?v={PWA_JS_VERSION}"></script>
 <script src="/assets/article.js?v={ARTICLE_JS_VERSION}"></script>
 </body>
 </html>
@@ -1089,6 +1099,7 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
     out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
     out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)
+    out = out.replace("__PWA_JS_VERSION__", PWA_JS_VERSION)
     return out
 
 
