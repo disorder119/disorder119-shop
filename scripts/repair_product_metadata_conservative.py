@@ -2,7 +2,8 @@
 """Improve product metadata only where the source record itself proves the fact.
 
 Rules:
-- color: inferred only from explicit color words in the title
+- color: inferred only from explicit color words in the title, excluding known
+  brand/collection-name contexts that merely look like color words
 - size: inferred only from an explicit Size/Größe/Taille/EU/UK/US label
 - condition: inferred only from an explicit Zustand/Condition/État label or an
   equally explicit phrase such as "in sehr gutem Zustand" / "in very good
@@ -30,11 +31,14 @@ WEARABLE_CATEGORIES = {"Jackets", "Coats", "Tops", "Shirts", "Knitwear", "Pants"
 # Longest/specific phrases first. Canonical values intentionally stay compact
 # because the public color filter uses these exact values.
 COLOR_PATTERNS = [
+    (r"\b(?:multi[\s-]?colou?r|mehrfarbig)\b", "Mehrfarbig"),
     (r"\b(?:neon\s*green|neongr(?:ü|u)n)\b", "Neongrün"),
     (r"\b(?:dark\s*blue|navy|dunkelblau)\b", "Dunkelblau"),
     (r"\b(?:light\s*blue|hellblau)\b", "Hellblau"),
     (r"\b(?:burgundy|bordeaux|weinrot)\b", "Bordeaux"),
     (r"\b(?:rotbraun(?:e|er|es)?|reddish\s*brown)\b", "Rotbraun"),
+    (r"\b(?:cream|creme|crème)\b", "Creme"),
+    (r"\b(?:olive|oliv)\b", "Oliv"),
     (r"\b(?:black|schwarz(?:e|er|es)?)\b", "Schwarz"),
     (r"\b(?:white|wei(?:ß|ss)(?:e|er|es)?)\b", "Weiß"),
     (r"\b(?:grey|gray|grau(?:e|er|es)?)\b", "Grau"),
@@ -49,6 +53,15 @@ COLOR_PATTERNS = [
     (r"\b(?:yellow|gelb(?:e|er|es)?)\b", "Gelb"),
     (r"\b(?:silver|silber(?:n|ne|ner|nes)?)\b", "Silber"),
     (r"\b(?:gold|golden)\b", "Gold"),
+]
+
+# These are product-line/brand phrases, not physical color evidence. A match
+# inside one of these spans must never auto-fill color. This prevents e.g.
+# "Red Valentino" -> Rot, "OFF White" -> Weiß or "Linea Rossa" -> Rosa.
+COLOR_CONTEXT_EXCLUSIONS = [
+    re.compile(r"\b(?:linea\s+rossa|linnea\s+rosa)\b", re.I),
+    re.compile(r"\bred\s+valentino\b", re.I),
+    re.compile(r"\boff[\s-]+white\b", re.I),
 ]
 
 CONDITION_MAP = {
@@ -112,14 +125,21 @@ def normalized(text: str) -> str:
     return unicodedata.normalize("NFKC", text or "")
 
 
+def overlaps(span: tuple[int, int], other: tuple[int, int]) -> bool:
+    return not (span[1] <= other[0] or span[0] >= other[1])
+
+
 def infer_color(title: str) -> str:
     text = normalized(title)
+    excluded = [match.span() for pattern in COLOR_CONTEXT_EXCLUSIONS for match in pattern.finditer(text)]
     found = []
     occupied = []
     for pattern, value in COLOR_PATTERNS:
         for match in re.finditer(pattern, text, flags=re.I):
             span = match.span()
-            if any(not (span[1] <= other[0] or span[0] >= other[1]) for other in occupied):
+            if any(overlaps(span, blocked) for blocked in excluded):
+                continue
+            if any(overlaps(span, other) for other in occupied):
                 continue
             occupied.append(span)
             if value not in found:
@@ -249,6 +269,50 @@ def write_report(items: list[dict], filled: dict[str, int]) -> None:
     REPORT_PATH.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def validate_color_inference_regressions(items: list[dict]) -> None:
+    cases = {
+        "Burberrys Sweater Cream Embroidered Cursive Logo": "Creme",
+        "Prada Lack Heel Creme": "Creme",
+        "Issey Miyake Olive": "Oliv",
+        "Louis Vuitton Takashi Murakami Multicolor Monogram Sandals": "Mehrfarbig",
+        "Maison Margiela Linnea Rosa Knit Sweater": "",
+        "Prada Linea Rossa Knit Sweater": "",
+        "Red Valentino Black and Blue": "Schwarz, Blau",
+        "OFF White Undercover Red": "Rot",
+    }
+    for title, expected in cases.items():
+        actual = infer_color(title)
+        if actual != expected:
+            raise SystemExit(f"FEHLER: Color-Evidence-Regression für {title!r}: {actual!r} != {expected!r}")
+
+    # Current catalogue rows where the title itself proves the color. These are
+    # deliberately explicit and serve as a hard guard against losing evidence.
+    expected_by_id = {
+        6217: "Creme",
+        6147: "Creme",
+        6146: "Creme",
+        9440: "Creme",
+        9409: "Oliv",
+        6119: "Mehrfarbig",
+    }
+    by_id = {int(item.get("id") or 0): item for item in items}
+    for item_id, expected in expected_by_id.items():
+        item = by_id.get(item_id)
+        if not item:
+            raise SystemExit(f"FEHLER: Color-Evidence-Regressionsartikel {item_id} fehlt")
+        if str(item.get("color") or "") != expected:
+            raise SystemExit(f"FEHLER: Artikel {item_id} Farbe {item.get('color')!r} != {expected!r}")
+        sources = item.get("data_quality_sources") or {}
+        if sources.get("color") != "explicit-title-color":
+            raise SystemExit(f"FEHLER: Artikel {item_id} hat keine explizite Title-Color-Provenance")
+
+    # A collection/name token must remain non-evidence. We test inference rather
+    # than forcing the field blank so a future manually verified color remains legal.
+    margiela = by_id.get(9539)
+    if margiela and infer_color(str(margiela.get("title") or "")):
+        raise SystemExit("FEHLER: 'Linnea Rosa' wird fälschlich als physische Farbe interpretiert")
+
+
 def main() -> None:
     items = json.loads(ITEMS_PATH.read_text(encoding="utf-8"))
     changed = False
@@ -301,6 +365,7 @@ def main() -> None:
                 item["data_quality_sources"] = provenance
                 changed = True
 
+    validate_color_inference_regressions(items)
     if changed:
         ITEMS_PATH.write_text(json.dumps(items, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     write_report(items, filled)
