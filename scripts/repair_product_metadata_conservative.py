@@ -4,9 +4,12 @@
 Rules:
 - color: inferred only from explicit color words in the title
 - size: inferred only from an explicit Size/Größe/Taille/EU/UK/US label
-- condition: inferred only from an explicit Zustand/Condition/État label
+- condition: inferred only from an explicit Zustand/Condition/État label or an
+  equally explicit phrase such as "in sehr gutem Zustand" / "in very good
+  condition" / "en très bon état"
 - thin descriptions: expanded using already-known facts plus an honest gap note
 - unresolved fields remain unresolved and are tracked in data_quality_open
+- every automated fill keeps a machine-readable provenance marker
 
 No condition, size, color or article number is guessed from photos or assumptions.
 """
@@ -15,10 +18,12 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
+from collections import Counter
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
 ITEMS_PATH = BASE / "data" / "items.json"
+REPORT_PATH = BASE / "data" / "product-metadata-evidence-report.json"
 
 WEARABLE_CATEGORIES = {"Jackets", "Coats", "Tops", "Shirts", "Knitwear", "Pants", "Skirts", "Dresses", "Shoes"}
 
@@ -48,9 +53,13 @@ COLOR_PATTERNS = [
 
 CONDITION_MAP = {
     "sehr gut": "Sehr gut", "very good": "Sehr gut", "très bon": "Sehr gut", "tres bon": "Sehr gut",
+    "sehr guten": "Sehr gut", "sehr gutem": "Sehr gut", "sehr guter": "Sehr gut",
     "gut": "Gut", "good": "Gut", "bon": "Gut",
+    "guten": "Gut", "gutem": "Gut", "guter": "Gut",
     "zufriedenstellend": "Zufriedenstellend", "satisfactory": "Zufriedenstellend", "satisfaisant": "Zufriedenstellend",
+    "zufriedenstellenden": "Zufriedenstellend", "zufriedenstellendem": "Zufriedenstellend",
     "repariert": "Repariert", "repaired": "Repariert", "réparé": "Repariert", "repare": "Repariert",
+    "reparierten": "Repariert", "repariertem": "Repariert",
     "mit defekt": "Mit Defekt", "with defect": "Mit Defekt", "avec défaut": "Mit Defekt", "avec defaut": "Mit Defekt",
 }
 
@@ -66,6 +75,37 @@ CONDITION_RE = re.compile(
     r"mit defekt|with defect|avec défaut|avec defaut)\b",
     re.I,
 )
+
+# These patterns still require an explicit condition noun. They intentionally do
+# not treat vague sales language ("schön", "top", "kaum getragen") as a factual
+# condition grade.
+CONDITION_PROSE_RES = [
+    re.compile(
+        r"\b(?:in|mit)\s+(?:einem\s+)?(?P<condition>sehr\s+guten|sehr\s+gutem|guten|gutem|"
+        r"zufriedenstellenden|zufriedenstellendem|reparierten|repariertem)\s+zustand\b",
+        re.I,
+    ),
+    re.compile(
+        r"\bzustand\s+(?:ist|bleibt)\s+(?P<condition>sehr\s+gut|gut|zufriedenstellend|repariert)\b",
+        re.I,
+    ),
+    re.compile(
+        r"\b(?:in|with)\s+(?P<condition>very\s+good|good|satisfactory|repaired)\s+condition\b",
+        re.I,
+    ),
+    re.compile(
+        r"\bcondition\s+(?:is|remains)\s+(?P<condition>very\s+good|good|satisfactory|repaired)\b",
+        re.I,
+    ),
+    re.compile(
+        r"\b(?:en|dans\s+un)\s+(?P<condition>très\s+bon|tres\s+bon|bon|satisfaisant|réparé|repare)\s+état\b",
+        re.I,
+    ),
+    re.compile(
+        r"\b(?:état|etat)\s+(?:est\s+)?(?P<condition>très\s+bon|tres\s+bon|bon|satisfaisant|réparé|repare)\b",
+        re.I,
+    ),
+]
 
 
 def normalized(text: str) -> str:
@@ -103,13 +143,25 @@ def infer_size(item: dict) -> str:
     return raw
 
 
+def condition_evidence(item: dict) -> tuple[str, str]:
+    text = normalized("\n".join(str(item.get(k) or "") for k in ("desc_de", "desc", "desc_en", "desc_fr")))
+    match = CONDITION_RE.search(text)
+    if match:
+        key = re.sub(r"\s+", " ", match.group("condition").strip().lower())
+        return CONDITION_MAP.get(key, ""), "explicit-labeled-source-text"
+    for pattern in CONDITION_PROSE_RES:
+        match = pattern.search(text)
+        if not match:
+            continue
+        key = re.sub(r"\s+", " ", match.group("condition").strip().lower())
+        value = CONDITION_MAP.get(key, "")
+        if value:
+            return value, "explicit-condition-prose"
+    return "", ""
+
+
 def infer_condition(item: dict) -> str:
-    text = "\n".join(str(item.get(k) or "") for k in ("desc_de", "desc", "desc_en", "desc_fr"))
-    match = CONDITION_RE.search(normalized(text))
-    if not match:
-        return ""
-    key = match.group("condition").strip().lower()
-    return CONDITION_MAP.get(key, "")
+    return condition_evidence(item)[0]
 
 
 def missing_fields(item: dict) -> list[str]:
@@ -167,6 +219,36 @@ def expand_description(item: dict, lang: str) -> str:
     return (start.rstrip(". ") + "." + extra + gap).strip()
 
 
+def write_report(items: list[dict], filled: dict[str, int]) -> None:
+    available_items = [item for item in items if item.get("public_status") == "AVAILABLE"]
+    unresolved = Counter()
+    unresolved_rows = []
+    provenance = Counter()
+    for item in items:
+        sources = item.get("data_quality_sources")
+        if isinstance(sources, dict):
+            provenance.update(str(value) for value in sources.values() if value)
+    for item in available_items:
+        gaps = missing_fields(item)
+        unresolved.update(gaps)
+        if gaps:
+            unresolved_rows.append({
+                "id": item.get("id"),
+                "title": item.get("title") or "",
+                "brand": item.get("brand") or "",
+                "missing": gaps,
+            })
+    report = {
+        "policy": "Only explicit source evidence; no guessed physical product facts.",
+        "available_items": len(available_items),
+        "filled_this_run": filled,
+        "unresolved_available": {key: unresolved.get(key, 0) for key in ("size", "color", "condition")},
+        "provenance_counts": dict(sorted(provenance.items())),
+        "manual_evidence_queue": unresolved_rows,
+    }
+    REPORT_PATH.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     items = json.loads(ITEMS_PATH.read_text(encoding="utf-8"))
     changed = False
@@ -193,10 +275,10 @@ def main() -> None:
                 changed = True
 
         if not str(item.get("condition") or "").strip():
-            value = infer_condition(item)
+            value, source = condition_evidence(item)
             if value:
                 item["condition"] = value
-                provenance["condition"] = "explicit-labeled-source-text"
+                provenance["condition"] = source
                 filled["condition"] += 1
                 changed = True
 
@@ -221,6 +303,7 @@ def main() -> None:
 
     if changed:
         ITEMS_PATH.write_text(json.dumps(items, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    write_report(items, filled)
     print("Produktdaten konservativ gehaertet: " + ", ".join(f"{k}={v}" for k, v in filled.items()))
     unresolved = {"size": 0, "color": 0, "condition": 0}
     available = 0
