@@ -10,12 +10,11 @@ from __future__ import annotations
 
 import os
 import re
-import time
 from datetime import date
 from urllib.parse import urljoin, urlparse
 
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver import ChromeOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -50,6 +49,18 @@ def wait(driver, condition, label: str):
 
 def wait_cards(driver, minimum: int = 1):
     return wait(driver, lambda d: d.find_elements(By.CSS_SELECTOR, "#grid .plate") if len(d.find_elements(By.CSS_SELECTOR, "#grid .plate")) >= minimum else False, f"mindestens {minimum} Produktkarten")
+
+
+def dismiss_cookie_note(driver) -> None:
+    """A real first-time customer must acknowledge the notice before underlying UI is clickable."""
+    try:
+        button = driver.find_element(By.ID, "cookieNoteOk")
+    except NoSuchElementException:
+        return
+    if not button.is_displayed():
+        return
+    button.click()
+    wait(driver, lambda d: not d.find_element(By.ID, "cookieNote").is_displayed(), "Cookie-Hinweis geschlossen")
 
 
 def assert_no_horizontal_overflow(driver, label: str) -> None:
@@ -94,6 +105,7 @@ def test_responsive_catalog(driver) -> None:
         driver.set_window_size(width, height)
         driver.get(BASE_URL)
         wait_cards(driver, 3)
+        dismiss_cookie_note(driver)
         assert_no_horizontal_overflow(driver, f"Archiv {width}x{height}")
         assert_no_zero_options(driver)
         first = driver.find_element(By.CSS_SELECTOR, "#grid .plate")
@@ -108,6 +120,7 @@ def test_search_and_mobile_filter(driver) -> None:
     driver.set_window_size(390, 844)
     driver.get(BASE_URL)
     wait_cards(driver, 3)
+    dismiss_cookie_note(driver)
     search = driver.find_element(By.ID, "searchInput")
     search.clear()
     search.send_keys("Comme des Garcons")
@@ -148,6 +161,7 @@ def test_language_routes(driver) -> None:
         driver.set_window_size(1280, 900)
         driver.get(urljoin(BASE_URL, path))
         wait_cards(driver, 3)
+        dismiss_cookie_note(driver)
         if driver.find_element(By.TAG_NAME, "html").get_attribute("lang") != lang:
             fail(f"/{path}: HTML-Sprache ist nicht {lang}")
         toggle = driver.find_element(By.ID, "moreFiltersToggle")
@@ -161,6 +175,7 @@ def test_product_cart_and_rental(driver) -> None:
     driver.set_window_size(390, 844)
     driver.get(BASE_URL)
     cards = wait_cards(driver, 3)
+    dismiss_cookie_note(driver)
     first = cards[0]
     href = first.get_attribute("href")
     title = first.find_element(By.CSS_SELECTOR, ".plate__title").text.strip()
