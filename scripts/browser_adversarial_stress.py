@@ -47,7 +47,14 @@ def assert_single_mode_view(driver, expected: str) -> None:
 
 
 def click_mode(driver, mode: str, path: str) -> None:
-    driver.find_element(By.CSS_SELECTOR, f'#modeRail [data-mode-view="{mode}"]').click()
+    if mode == "classic":
+        candidates = driver.find_elements(By.CSS_SELECTOR, "[data-enter-classic]")
+        trigger = next((el for el in candidates if el.is_displayed()), None)
+        if trigger is None:
+            fail("Kein sichtbarer Archiv-Zurueck-Link im aktiven Modus")
+        trigger.click()
+    else:
+        driver.find_element(By.CSS_SELECTOR, f'#modeRail [data-mode-view="{mode}"]').click()
     wait(driver, lambda d: urlparse(d.current_url).path == path, f"Mode-Route {path}")
     expected = {"swipe": "swipe", "chaos": "chaos", "outfit": "outfit", "classic": "classic"}[mode]
     wait(driver, lambda d: visible(d, {"classic": "appShell", "swipe": "swipeView", "chaos": "chaosView", "outfit": "outfitView"}[expected]), f"Mode {expected} sichtbar")
