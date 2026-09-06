@@ -84,6 +84,7 @@ jobs:
           python scripts/apply_rental_terms_runtime_anchor.py
           python scripts/apply_admin_quality_center.py
           python scripts/apply_admin_quality_hardening.py
+          python scripts/apply_browser_runtime_fixes.py
 
       - name: Browser-Build erzeugen
         run: |
