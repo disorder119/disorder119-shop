@@ -87,7 +87,14 @@ jobs:
           fi
 
       - name: Archiv-Filter-UX anwenden
-        run: python scripts/apply_archive_filter_ux.py
+        run: |
+          if grep -q 'AUDIT_PERFECT_NATIVE_FACETS' assets/app.js \
+             && grep -q 'function renderActiveFilters()' assets/app.js \
+             && grep -q 'id="activeFilters"' index_template.html; then
+            echo "Archiv-Filter-UX inklusive Audit-Facets bereits vorhanden."
+          else
+            python scripts/apply_archive_filter_ux.py
+          fi
 
       - name: Archiv-Filter-Bugfixes anwenden
         run: python scripts/apply_archive_filter_bugfixes.py
