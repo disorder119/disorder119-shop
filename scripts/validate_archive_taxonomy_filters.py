@@ -56,7 +56,9 @@ def main() -> None:
         'function renderActiveFilters()',
         'function clearOneArchiveFilter(key)',
         'function clearAllActiveArchiveFilters()',
-        'opt.disabled = count === 0 && opt.value !== selectEl.value',
+        'AUDIT_PERFECT_NATIVE_FACETS',
+        'while (selectEl.options.length > 1) selectEl.remove(1);',
+        'if (count === 0 && value !== selectedValue) return;',
         'moreFiltersToggle.textContent = t("moreFilters")',
         'if (size === "One Size") return t("sizeEinheitsgroesse")',
         'if (size === "Adjustable") return t("sizeVerstellbar")',
@@ -123,7 +125,7 @@ def main() -> None:
 
     print(
         "Archiv-Taxonomie-Filter: OK – sichtbare Steuerung, synchroner Titel, "
-        "reset-sichere Kategorie, komplette Archiv-Marken, Facets und kein Kinder-Bereich."
+        "reset-sichere Kategorie, komplette Archiv-Marken, native Zero-Hit-Facets und kein Kinder-Bereich."
     )
 
 
