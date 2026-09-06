@@ -25,8 +25,8 @@ def main() -> None:
     # Suche: interne Kennung bleibt auffindbar, ohne sie auf Karten anzuzeigen.
     require('it.size_normalized, it.article, String(it.id || "")' in app,
             "Katalogsuche indexiert Artikelnummer/ID nicht intern.")
-    require('item.article, item.id, item.category' in picker,
-            "Rental-Picker indexiert Artikelnummer/ID nicht intern.")
+    require('item.article, item.id, itemCategory(item), item.size' in picker,
+            "Rental-Picker indexiert Artikelnummer/ID bzw. geprüfte Kategorie nicht intern.")
     require('article number' not in picker.lower() and 'artikelnummer suchen' not in picker.lower(),
             "Rental-Picker bewirbt die interne Artikelnummer weiterhin öffentlich.")
 
