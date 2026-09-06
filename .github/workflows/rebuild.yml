@@ -134,6 +134,9 @@ jobs:
       - name: Admin-Datenqualitaetszentrale anwenden
         run: python scripts/apply_admin_quality_center.py
 
+      - name: Admin-Datenqualitaetszentrale haerten
+        run: python scripts/apply_admin_quality_hardening.py
+
       - name: JavaScript Syntax pruefen
         run: |
           node --check assets/app.js
