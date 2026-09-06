@@ -11,14 +11,16 @@ from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
 APP = BASE / "assets" / "app.js"
-MARKER = "BROWSER_RUNTIME_RENTAL_PRICE_V1"
+RENTAL = BASE / "assets" / "rental-v2.js"
+PRICE_MARKER = "BROWSER_RUNTIME_RENTAL_PRICE_V1"
+OBSERVER_MARKER = "BROWSER_RUNTIME_RENTAL_OBSERVER_V1"
 
 
-def main() -> None:
+def patch_app() -> bool:
     text = APP.read_text(encoding="utf-8")
     changed = False
 
-    if MARKER not in text:
+    if PRICE_MARKER not in text:
         pattern = re.compile(
             r'(  function fmtPriceDisplay\(v\) \{\n'
             r'    return v > 0 \? fmtPrice\(v\) : t\("priceOnRequest"\);\n'
@@ -50,7 +52,40 @@ def main() -> None:
 
     if changed:
         APP.write_text(text, encoding="utf-8")
-        print("Browser-Runtime-Fixes angewendet: Rental-Kartenformat + konsistente Rental-Regeln.")
+    return changed
+
+
+def patch_rental_observer() -> bool:
+    """Make grid refresh idempotent so its own MutationObserver cannot loop.
+
+    The rental grid observer watches childList mutations. Assigning textContent
+    unconditionally inside that observer creates another childList mutation,
+    which schedules the observer again forever and can freeze Chromium on
+    /mieten/?item=... . Only write when the visible label actually changed.
+    """
+    text = RENTAL.read_text(encoding="utf-8")
+    if OBSERVER_MARKER in text:
+        return False
+
+    old = '''      var id = Number(btn.getAttribute("data-rental"));\n      var active = state.ids.indexOf(id) >= 0;\n      btn.textContent = active ? t("added") : t("add");\n      btn.setAttribute("aria-pressed", active ? "true" : "false");'''
+    new = '''      var id = Number(btn.getAttribute("data-rental"));\n      var active = state.ids.indexOf(id) >= 0;\n      var label = active ? t("added") : t("add"); // BROWSER_RUNTIME_RENTAL_OBSERVER_V1\n      if (btn.textContent !== label) btn.textContent = label;\n      var pressed = active ? "true" : "false";\n      if (btn.getAttribute("aria-pressed") !== pressed) btn.setAttribute("aria-pressed", pressed);'''
+    if old not in text:
+        raise SystemExit("FEHLER: Rental-Card-Refreshblock fuer Observer-Fix nicht gefunden")
+    text = text.replace(old, new, 1)
+
+    # Guard against reintroducing the exact self-triggering write pattern.
+    if 'btn.textContent = active ? t("added") : t("add");' in text:
+        raise SystemExit("FEHLER: nicht-idempotenter Rental-Observer-Write verblieben")
+
+    RENTAL.write_text(text, encoding="utf-8")
+    return True
+
+
+def main() -> None:
+    app_changed = patch_app()
+    rental_changed = patch_rental_observer()
+    if app_changed or rental_changed:
+        print("Browser-Runtime-Fixes angewendet: Rental-Kartenformat, konsistente Regeln und loop-sicherer Grid-Observer.")
     else:
         print("Browser-Runtime-Fixes bereits aktuell.")
 
