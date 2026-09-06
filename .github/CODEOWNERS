@@ -1,0 +1,12 @@
+# Disorder119 production ownership
+* @disorder119
+
+# Production/runtime and deployment-critical areas
+/.github/ @disorder119
+/config/ @disorder119
+/data/ @disorder119
+/assets/ @disorder119
+/shop-worker/ @disorder119
+/scripts/ @disorder119
+/build_site.py @disorder119
+/index_template.html @disorder119
