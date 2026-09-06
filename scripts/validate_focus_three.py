@@ -16,10 +16,18 @@ from pathlib import Path
 from apply_focus_three_followup import MARKER as FOLLOWUP_MARKER
 from apply_focus_three_followup import RUNTIME_MARKER
 from apply_focus_three_followup import main as apply_focus_three_followup
+from repair_product_metadata_conservative import (
+    CONDITION_MAP,
+    CONDITION_PROSE_RES,
+    infer_color,
+    infer_size,
+    missing_fields,
+)
 
 BASE = Path(__file__).resolve().parents[1]
 ITEMS = BASE / "data" / "items.json"
 REPORT = BASE / "data" / "product-data-quality.json"
+EVIDENCE_REPORT = BASE / "data" / "product-metadata-evidence-report.json"
 WEARABLE = {"Jackets", "Coats", "Tops", "Shirts", "Knitwear", "Pants", "Skirts", "Dresses", "Shoes"}
 WORKFLOWS = BASE / ".github" / "workflows"
 
@@ -31,6 +39,64 @@ def require(ok: bool, message: str) -> None:
 
 def present(value) -> bool:
     return bool(str(value or "").strip())
+
+
+def canonical_prose_condition(item: dict) -> str:
+    text = "\n".join(str(item.get(k) or "") for k in ("desc_de", "desc", "desc_en", "desc_fr"))
+    for pattern in CONDITION_PROSE_RES:
+        match = pattern.search(text)
+        if not match:
+            continue
+        key = re.sub(r"\s+", " ", match.group("condition").strip().lower())
+        value = CONDITION_MAP.get(key, "")
+        if value:
+            return value
+    return ""
+
+
+def validate_metadata_evidence(items: list[dict], available: list[dict], unresolved: dict[str, int]) -> None:
+    require(EVIDENCE_REPORT.is_file(), "maschinenlesbarer Metadata-Evidence-Report fehlt")
+    evidence = json.loads(EVIDENCE_REPORT.read_text(encoding="utf-8"))
+    require(evidence.get("policy") == "Only explicit source evidence; no guessed physical product facts.",
+            "Evidence-Report besitzt keine strikte No-Guess-Policy")
+    require(int(evidence.get("available_items") or 0) == len(available),
+            "Evidence-Report hat falsche AVAILABLE-Anzahl")
+    reported_unresolved = evidence.get("unresolved_available") or {}
+    for field in ("size", "color", "condition"):
+        require(int(reported_unresolved.get(field) or 0) == int(unresolved[field]),
+                f"Evidence-Report stimmt bei {field} nicht mit dem Katalog ueberein")
+
+    queue = evidence.get("manual_evidence_queue")
+    require(isinstance(queue, list), "manuelle Evidence-Queue fehlt")
+    queue_ids = {int(row["id"]) for row in queue if isinstance(row, dict) and row.get("id") is not None}
+    expected_queue_ids = {int(item["id"]) for item in available if missing_fields(item)}
+    require(queue_ids == expected_queue_ids,
+            "manuelle Evidence-Queue deckt offene AVAILABLE-Artikel nicht exakt ab")
+
+    bad_provenance = []
+    for item in items:
+        item_id = int(item.get("id") or 0)
+        sources = item.get("data_quality_sources") or {}
+        if not isinstance(sources, dict):
+            bad_provenance.append(f"{item_id}:sources-not-object")
+            continue
+        color_source = sources.get("color")
+        if color_source:
+            if color_source != "explicit-title-color" or infer_color(str(item.get("title") or "")) != str(item.get("color") or ""):
+                bad_provenance.append(f"{item_id}:color")
+        size_source = sources.get("size")
+        if size_source:
+            if size_source != "explicit-labeled-source-text" or infer_size(item) != str(item.get("size") or ""):
+                bad_provenance.append(f"{item_id}:size")
+        condition_source = sources.get("condition")
+        if condition_source == "explicit-condition-prose":
+            if canonical_prose_condition(item) != str(item.get("condition") or ""):
+                bad_provenance.append(f"{item_id}:condition-prose")
+        elif condition_source and condition_source != "explicit-labeled-source-text":
+            bad_provenance.append(f"{item_id}:condition-source")
+    require(not bad_provenance,
+            "automatisch ergaenzte Metadaten sind nicht mehr durch ihre deklarierte Quelle belegbar: " + ", ".join(bad_provenance[:12]))
+    print(f"Metadata-Evidence: OK — {len(expected_queue_ids)} offene AVAILABLE-Artikel explizit gequeued; automatisierte Felder provenance-geprueft.")
 
 
 def validate_repository_hardening() -> None:
@@ -172,6 +238,9 @@ def main() -> None:
     REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print("Produktdaten-Qualitaet:", json.dumps(report, ensure_ascii=False))
     require(score >= 9.0, f"Produktdaten-Qualitaet {score}/10 < 9.0")
+    require(raw_completeness["size_required_percent"] >= 90.0,
+            f"erforderliche Groessen-Rohabdeckung {raw_completeness['size_required_percent']}% < 90%")
+    validate_metadata_evidence(items, available, unresolved)
 
     template = (BASE / "index_template.html").read_text(encoding="utf-8")
     build = (BASE / "build_site.py").read_text(encoding="utf-8")
