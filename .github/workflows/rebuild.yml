@@ -175,8 +175,20 @@ jobs:
       - name: Quality-95-Regressionen pruefen
         run: python scripts/validate_quality_95_polish.py
 
-      - name: Audit-Perfection pruefen
-        run: python scripts/validate_audit_perfection.py
+      - name: Audit Zero-Hit-Facets pruefen
+        run: python scripts/validate_audit_perfection.py --section facets
+
+      - name: Audit Single-Rental-V2 pruefen
+        run: python scripts/validate_audit_perfection.py --section rental
+
+      - name: Audit Kaufanfragen pruefen
+        run: python scripts/validate_audit_perfection.py --section purchase
+
+      - name: Audit Taxonomie pruefen
+        run: python scripts/validate_audit_perfection.py --section taxonomy
+
+      - name: Audit Datenqualitaet pruefen
+        run: python scripts/validate_audit_perfection.py --section quality
 
       - name: Shop, SEO, Katalog und geschuetzte Modi pruefen
         run: python scripts/validate_shop.py
