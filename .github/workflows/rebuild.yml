@@ -107,6 +107,9 @@ jobs:
       - name: Audit-Perfection anwenden
         run: python scripts/apply_audit_perfection.py
 
+      - name: Taxonomie-Subtype-Audit anwenden
+        run: python scripts/apply_taxonomy_subtype_fix.py
+
       - name: JavaScript Syntax pruefen
         run: |
           node --check assets/app.js
@@ -165,6 +168,9 @@ jobs:
 
       - name: Katalog-Taxonomie fuer jeden Artikel pruefen
         run: python scripts/validate_catalog_taxonomy.py
+
+      - name: Taxonomie-Subtype-Audit pruefen
+        run: python scripts/validate_taxonomy_subtypes.py
 
       - name: Vereinfachte Archivfilter pruefen
         run: python scripts/validate_catalog_filter_simplify.py
