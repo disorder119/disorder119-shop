@@ -28,7 +28,7 @@ on:
       - "assets/rental-v2-picker.js"
       - "shop-worker/**"
       - "scripts/**"
-      - ".github/workflows/rebuild.yml"
+      - ".github/**"
   pull_request:
     branches: [main]
     paths:
@@ -43,7 +43,7 @@ on:
       - "assets/**"
       - "shop-worker/**"
       - "scripts/**"
-      - ".github/workflows/rebuild.yml"
+      - ".github/**"
   workflow_dispatch: {}
 
 permissions:
@@ -74,6 +74,9 @@ jobs:
 
       - name: Verifizierte Katalog-Quellfehler reparieren
         run: python scripts/repair_catalog_source_integrity.py
+
+      - name: Produktdaten nur aus expliziten Quellen vervollstaendigen
+        run: python scripts/repair_product_metadata_conservative.py
 
       - name: Archiv-Taxonomie-Filter anwenden
         run: |
@@ -145,6 +148,9 @@ jobs:
 
       - name: Gemessene Performance-/A11y-Qualitaet anwenden
         run: python scripts/apply_perf_a11y_quality.py
+
+      - name: Focus-3 Mobile/Data Hardening anwenden
+        run: python scripts/apply_focus_three_hardening.py
 
       - name: JavaScript Syntax pruefen
         run: |
@@ -218,6 +224,9 @@ jobs:
       - name: Performance-/A11y-Invarianten pruefen
         run: python scripts/validate_perf_a11y_quality.py
 
+      - name: Focus-3 Mobile und Produktdaten >9 pruefen
+        run: python scripts/validate_focus_three.py
+
       - name: Audit Zero-Hit-Facets pruefen
         run: python scripts/validate_audit_perfection.py --section facets
 
@@ -268,7 +277,7 @@ jobs:
         run: |
           git config user.name "disorder119-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/items.json data/catalog-taxonomy-report.json data/shop-quality.json
+          git add data/items.json data/catalog-taxonomy-report.json data/shop-quality.json data/product-data-quality.json
           git add index_template.html build_site.py admin/index.html assets/app.js assets/app.css assets/article.js assets/article.css assets/catalog-filter-simplify.js assets/rental-v2.js assets/rental-v2-ui.js assets/rental-v2-picker.js
           git add shop-worker/commerce-core.js shop-worker/commerce-core.test.mjs shop-worker/worker.js shop-worker/rental-bundle.js
           git add scripts/catalog_taxonomy.py scripts/apply_rental_terms.py
