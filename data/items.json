@@ -468,7 +468,7 @@
     "status": "Verfügbar",
     "category": "Shoes",
     "size": "36",
-    "color": "",
+    "color": "Creme",
     "condition": "",
     "desc": "Aus dem kuratierten Archiv von Disorder119.\n\nPrada Sport Cream Mesh Sneakers von Prada.",
     "desc_de": "Aus dem kuratierten Archiv von Disorder119.\n\nPrada Sport Cream Mesh Sneakers von Prada.",
@@ -488,9 +488,11 @@
     "brightness": 0.37,
     "public_status": "AVAILABLE",
     "data_quality_open": [
-      "color",
       "condition"
     ],
+    "data_quality_sources": {
+      "color": "explicit-title-color"
+    },
     "department": "Women",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
@@ -1689,7 +1691,7 @@
     "status": "Verfügbar",
     "category": "Jackets",
     "size": "",
-    "color": "",
+    "color": "Elfenbein",
     "condition": "",
     "desc": "Aus dem kuratierten Archiv von Disorder119.\n\nRundholz Ivory Asymmetric Cardigan von Rundholz.",
     "desc_de": "Aus dem kuratierten Archiv von Disorder119.\n\nRundholz Ivory Asymmetric Cardigan von Rundholz.",
@@ -1707,9 +1709,11 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [
       "size",
-      "color",
       "condition"
     ],
+    "data_quality_sources": {
+      "color": "explicit-title-color"
+    },
     "department": "Women",
     "product_type": "Cardigan",
     "taxonomy_category": "Knitwear",

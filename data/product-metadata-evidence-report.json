@@ -2,18 +2,19 @@
   "policy": "Only explicit source evidence; no guessed physical product facts.",
   "available_items": 165,
   "filled_this_run": {
-    "color": 0,
+    "color": 2,
+    "color_corrected": 0,
     "size": 0,
     "condition": 0,
     "description": 0
   },
   "unresolved_available": {
     "size": 12,
-    "color": 32,
+    "color": 30,
     "condition": 63
   },
   "provenance_counts": {
-    "explicit-title-color": 42
+    "explicit-title-color": 44
   },
   "manual_evidence_queue": [
     {
@@ -112,7 +113,6 @@
       "title": "Prada Sport Cream Mesh Sneakers",
       "brand": "Prada",
       "missing": [
-        "color",
         "condition"
       ]
     },
@@ -353,7 +353,6 @@
       "brand": "Rundholz",
       "missing": [
         "size",
-        "color",
         "condition"
       ]
     },

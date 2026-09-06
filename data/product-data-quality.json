@@ -4,13 +4,13 @@
   "score_10": 9.68,
   "raw_completeness": {
     "size_required_percent": 92.1,
-    "color_percent": 80.6,
+    "color_percent": 81.8,
     "condition_percent": 61.8,
     "description_percent": 100.0
   },
   "unresolved_available": {
     "size": 12,
-    "color": 32,
+    "color": 30,
     "condition": 63
   }
 }
