@@ -31,7 +31,7 @@ permissions:
 jobs:
   chromium-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 18
     steps:
       - name: Repo auschecken
         uses: actions/checkout@v4
@@ -85,6 +85,7 @@ jobs:
           python scripts/apply_admin_quality_center.py
           python scripts/apply_admin_quality_hardening.py
           python scripts/apply_browser_runtime_fixes.py
+          python scripts/apply_adversarial_runtime_fixes.py
 
       - name: Browser-Build erzeugen
         run: |
@@ -113,3 +114,4 @@ jobs:
           done
           D119_SMOKE_URL=http://127.0.0.1:4173 python scripts/browser_smoke.py
           D119_SMOKE_URL=http://127.0.0.1:4173 python scripts/browser_protected_modes_smoke.py
+          D119_SMOKE_URL=http://127.0.0.1:4173 python scripts/browser_adversarial_stress.py
