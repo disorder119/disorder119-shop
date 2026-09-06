@@ -46,23 +46,26 @@ on:
       - ".github/**"
   workflow_dispatch: {}
 
+# Validation, including same-repository PRs, receives READ ONLY repository
+# access. The only write token exists in the separate publish job, which is
+# impossible to run for pull_request events.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   rebuild:
     runs-on: ubuntu-latest
     steps:
       - name: Repo auschecken
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Python einrichten
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.11"
 
       - name: Node einrichten
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
 
@@ -272,19 +275,53 @@ jobs:
       - name: Atomic Rental Bundle pruefen
         run: python scripts/validate_rental_bundle.py
 
-      - name: Ergebnis committen
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Validierten Rebuild-Patch vorbereiten
         run: |
+          git add -A
+          git diff --cached --binary > rebuild.patch
+          git reset
+
+      - name: Validierten Rebuild-Patch sichern
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: disorder119-rebuild-patch-${{ github.run_id }}
+          path: rebuild.patch
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Validierten Main-Rebuild publizieren
+    needs: rebuild
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Exakt validierten Main-Stand auschecken
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Validierten Rebuild-Patch laden
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: disorder119-rebuild-patch-${{ github.run_id }}
+          path: .
+
+      - name: Nur validierten Output nach main schreiben
+        run: |
+          set -euo pipefail
+          if [ ! -s rebuild.patch ]; then
+            echo "Keine Aenderungen am generierten Output - nichts zu committen."
+            exit 0
+          fi
+          git apply --index --binary rebuild.patch
+          if git diff --cached --quiet; then
+            echo "Patch enthaelt keine effektiven Aenderungen."
+            exit 0
+          fi
           git config user.name "disorder119-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/items.json data/catalog-taxonomy-report.json data/shop-quality.json data/product-data-quality.json
-          git add index_template.html build_site.py admin/index.html assets/app.js assets/app.css assets/article.js assets/article.css assets/catalog-filter-simplify.js assets/rental-v2.js assets/rental-v2-ui.js assets/rental-v2-picker.js
-          git add shop-worker/commerce-core.js shop-worker/commerce-core.test.mjs shop-worker/worker.js shop-worker/rental-bundle.js
-          git add scripts/catalog_taxonomy.py scripts/apply_rental_terms.py
-          git add index.html artikel sitemap.xml cart impressum agb datenschutz ueber-uns faq match chaos baukasten mieten en fr data/catalog.json
-          if git diff --cached --quiet; then
-            echo "Keine Aenderungen am generierten Output - nichts zu committen."
-          else
-            git commit -m "Automatischer Rebuild nach Shop- und SEO-Validierung"
-            git push
-          fi
+          git commit -m "Automatischer Rebuild nach Shop- und SEO-Validierung"
+          git push origin HEAD:main
