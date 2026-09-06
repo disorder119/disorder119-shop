@@ -7,6 +7,7 @@ zero-priced purchase inquiries and semantically impossible taxonomy results.
 """
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -121,13 +122,25 @@ def validate_existing_quality_debt_does_not_grow() -> None:
     require(int(q.get("missing_gallery", {}).get("count", 0)) == 0, "mindestens ein Artikel hat keine Galerie")
 
 
+CHECKS = {
+    "facets": validate_zero_hit_facets,
+    "rental": validate_single_rental_architecture,
+    "purchase": validate_purchase_price_on_request,
+    "taxonomy": validate_semantic_taxonomy,
+    "quality": validate_existing_quality_debt_does_not_grow,
+}
+
+
 def main() -> None:
-    validate_zero_hit_facets()
-    validate_single_rental_architecture()
-    validate_purchase_price_on_request()
-    validate_semantic_taxonomy()
-    validate_existing_quality_debt_does_not_grow()
-    print("Audit-Perfection: OK — Zero-Facets, Single Rental V2, Kaufanfragen und Taxonomie regressionsgesichert.")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--section", choices=["all", *CHECKS], default="all")
+    args = parser.parse_args()
+    selected = CHECKS.items() if args.section == "all" else [(args.section, CHECKS[args.section])]
+    for name, check in selected:
+        check()
+        print(f"Audit-Perfection [{name}]: OK")
+    if args.section == "all":
+        print("Audit-Perfection: OK — Zero-Facets, Single Rental V2, Kaufanfragen und Taxonomie regressionsgesichert.")
 
 
 if __name__ == "__main__":
