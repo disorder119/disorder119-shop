@@ -32,19 +32,48 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/$REPO/commits/$SHA")"
-          prs_json="$(curl -fsSL \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$REPO/commits/$SHA/pulls")"
 
-          python - "$commit_json" "$prs_json" <<'PY'
+          # GitHub can expose a freshly squash-merged commit before the
+          # commit->pulls association has finished indexing. Retry that one
+          # eventual-consistency edge instead of self-healing a legitimate PR.
+          prs_json="[]"
+          for attempt in $(seq 1 12); do
+            prs_json="$(curl -fsSL \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPO/commits/$SHA/pulls")"
+            if python - "$prs_json" "$SHA" <<'PY'
+          import json, sys
+          prs = json.loads(sys.argv[1])
+          sha = sys.argv[2]
+          approved = [
+              pr for pr in prs
+              if pr.get("merged_at")
+              and (pr.get("base") or {}).get("ref") == "main"
+              and pr.get("merge_commit_sha") == sha
+          ]
+          raise SystemExit(0 if approved else 1)
+          PY
+            then
+              break
+            fi
+            if [ "$attempt" -lt 12 ]; then
+              echo "PR provenance noch nicht indexiert (Versuch $attempt/12); erneuter Check in 5s."
+              sleep 5
+            fi
+          done
+
+          python - "$commit_json" "$prs_json" "$SHA" <<'PY'
           import json, sys
           commit = json.loads(sys.argv[1])
           prs = json.loads(sys.argv[2])
+          sha = sys.argv[3]
           approved_prs = [
               pr for pr in prs
-              if pr.get("merged_at") and (pr.get("base") or {}).get("ref") == "main"
+              if pr.get("merged_at")
+              and (pr.get("base") or {}).get("ref") == "main"
+              and pr.get("merge_commit_sha") == sha
           ]
           if approved_prs:
               print("Merged PR provenance OK:", ", ".join("#" + str(pr["number"]) for pr in approved_prs))
@@ -90,6 +119,7 @@ jobs:
           grep -q 'contents: read' .github/workflows/rebuild.yml
           grep -q 'contents: write' .github/workflows/rebuild.yml
           grep -q 'Automatischer Schutz-Revert' .github/workflows/main-integrity.yml
+          grep -q 'PR provenance noch nicht indexiert' .github/workflows/main-integrity.yml
           if grep -REn 'uses:[[:space:]]+[^[:space:]]+@v[0-9]' .github/workflows; then
             echo "Unverankerte Action-Version gefunden. Produktions-Actions muessen auf Commit-SHAs gepinnt sein."
             exit 1
