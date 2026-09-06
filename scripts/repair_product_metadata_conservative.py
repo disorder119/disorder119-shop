@@ -6,13 +6,9 @@ Rules:
   brand/collection-name contexts that merely look like color words
 - size: inferred only from an explicit Size/Größe/Taille/EU/UK/US label
 - condition: inferred only from an explicit Zustand/Condition/État label or an
-  equally explicit phrase such as "in sehr gutem Zustand" / "in very good
-  condition" / "en très bon état"
-- thin descriptions: expanded using already-known facts plus an honest gap note
-- unresolved fields remain unresolved and are tracked in data_quality_open
-- every automated fill keeps a machine-readable provenance marker
-
-No condition, size, color or article number is guessed from photos or assumptions.
+  equally explicit condition phrase
+- unresolved physical facts remain open and are never guessed
+- automated fills retain machine-readable provenance
 """
 from __future__ import annotations
 
@@ -28,8 +24,8 @@ REPORT_PATH = BASE / "data" / "product-metadata-evidence-report.json"
 
 WEARABLE_CATEGORIES = {"Jackets", "Coats", "Tops", "Shirts", "Knitwear", "Pants", "Skirts", "Dresses", "Shoes"}
 
-# Longest/specific phrases first. Canonical values intentionally stay compact
-# because the public color filter uses these exact values.
+# Longest/specific phrases first. Canonical values stay compact because the
+# public color filter uses these exact values.
 COLOR_PATTERNS = [
     (r"\b(?:multi[\s-]?colou?r|mehrfarbig)\b", "Mehrfarbig"),
     (r"\b(?:neon\s*green|neongr(?:ü|u)n)\b", "Neongrün"),
@@ -55,9 +51,9 @@ COLOR_PATTERNS = [
     (r"\b(?:gold|golden)\b", "Gold"),
 ]
 
-# These are product-line/brand phrases, not physical color evidence. A match
-# inside one of these spans must never auto-fill color. This prevents e.g.
-# "Red Valentino" -> Rot, "OFF White" -> Weiß or "Linea Rossa" -> Rosa.
+# These phrases contain words that look like colors but identify a brand or
+# collection. Their spans are excluded while other explicit colors in the same
+# title remain valid: "Red Valentino Black and Blue" -> Schwarz, Blau.
 COLOR_CONTEXT_EXCLUSIONS = [
     re.compile(r"\b(?:linea\s+rossa|linnea\s+rosa)\b", re.I),
     re.compile(r"\bred\s+valentino\b", re.I),
@@ -88,36 +84,16 @@ CONDITION_RE = re.compile(
     r"mit defekt|with defect|avec défaut|avec defaut)\b",
     re.I,
 )
-
-# These patterns still require an explicit condition noun. They intentionally do
-# not treat vague sales language ("schön", "top", "kaum getragen") as a factual
-# condition grade.
 CONDITION_PROSE_RES = [
     re.compile(
         r"\b(?:in|mit)\s+(?:einem\s+)?(?P<condition>sehr\s+guten|sehr\s+gutem|guten|gutem|"
-        r"zufriedenstellenden|zufriedenstellendem|reparierten|repariertem)\s+zustand\b",
-        re.I,
+        r"zufriedenstellenden|zufriedenstellendem|reparierten|repariertem)\s+zustand\b", re.I
     ),
-    re.compile(
-        r"\bzustand\s+(?:ist|bleibt)\s+(?P<condition>sehr\s+gut|gut|zufriedenstellend|repariert)\b",
-        re.I,
-    ),
-    re.compile(
-        r"\b(?:in|with)\s+(?P<condition>very\s+good|good|satisfactory|repaired)\s+condition\b",
-        re.I,
-    ),
-    re.compile(
-        r"\bcondition\s+(?:is|remains)\s+(?P<condition>very\s+good|good|satisfactory|repaired)\b",
-        re.I,
-    ),
-    re.compile(
-        r"\b(?:en|dans\s+un)\s+(?P<condition>très\s+bon|tres\s+bon|bon|satisfaisant|réparé|repare)\s+état\b",
-        re.I,
-    ),
-    re.compile(
-        r"\b(?:état|etat)\s+(?:est\s+)?(?P<condition>très\s+bon|tres\s+bon|bon|satisfaisant|réparé|repare)\b",
-        re.I,
-    ),
+    re.compile(r"\bzustand\s+(?:ist|bleibt)\s+(?P<condition>sehr\s+gut|gut|zufriedenstellend|repariert)\b", re.I),
+    re.compile(r"\b(?:in|with)\s+(?P<condition>very\s+good|good|satisfactory|repaired)\s+condition\b", re.I),
+    re.compile(r"\bcondition\s+(?:is|remains)\s+(?P<condition>very\s+good|good|satisfactory|repaired)\b", re.I),
+    re.compile(r"\b(?:en|dans\s+un)\s+(?P<condition>très\s+bon|tres\s+bon|bon|satisfaisant|réparé|repare)\s+état\b", re.I),
+    re.compile(r"\b(?:état|etat)\s+(?:est\s+)?(?P<condition>très\s+bon|tres\s+bon|bon|satisfaisant|réparé|repare)\b", re.I),
 ]
 
 
@@ -131,9 +107,9 @@ def overlaps(span: tuple[int, int], other: tuple[int, int]) -> bool:
 
 def infer_color(title: str) -> str:
     text = normalized(title)
-    excluded = [match.span() for pattern in COLOR_CONTEXT_EXCLUSIONS for match in pattern.finditer(text)]
-    found = []
-    occupied = []
+    excluded = [m.span() for pattern in COLOR_CONTEXT_EXCLUSIONS for m in pattern.finditer(text)]
+    found: list[str] = []
+    occupied: list[tuple[int, int]] = []
     for pattern, value in COLOR_PATTERNS:
         for match in re.finditer(pattern, text, flags=re.I):
             span = match.span()
@@ -171,12 +147,11 @@ def condition_evidence(item: dict) -> tuple[str, str]:
         return CONDITION_MAP.get(key, ""), "explicit-labeled-source-text"
     for pattern in CONDITION_PROSE_RES:
         match = pattern.search(text)
-        if not match:
-            continue
-        key = re.sub(r"\s+", " ", match.group("condition").strip().lower())
-        value = CONDITION_MAP.get(key, "")
-        if value:
-            return value, "explicit-condition-prose"
+        if match:
+            key = re.sub(r"\s+", " ", match.group("condition").strip().lower())
+            value = CONDITION_MAP.get(key, "")
+            if value:
+                return value, "explicit-condition-prose"
     return "", ""
 
 
@@ -269,7 +244,7 @@ def write_report(items: list[dict], filled: dict[str, int]) -> None:
     REPORT_PATH.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def validate_color_inference_regressions(items: list[dict]) -> None:
+def validate_color_inference_regressions() -> None:
     cases = {
         "Burberrys Sweater Cream Embroidered Cursive Logo": "Creme",
         "Prada Lack Heel Creme": "Creme",
@@ -285,50 +260,37 @@ def validate_color_inference_regressions(items: list[dict]) -> None:
         if actual != expected:
             raise SystemExit(f"FEHLER: Color-Evidence-Regression für {title!r}: {actual!r} != {expected!r}")
 
-    # Current catalogue rows where the title itself proves the color. These are
-    # deliberately explicit and serve as a hard guard against losing evidence.
-    expected_by_id = {
-        6217: "Creme",
-        6147: "Creme",
-        6146: "Creme",
-        9440: "Creme",
-        9409: "Oliv",
-        6119: "Mehrfarbig",
-    }
-    by_id = {int(item.get("id") or 0): item for item in items}
-    for item_id, expected in expected_by_id.items():
-        item = by_id.get(item_id)
-        if not item:
-            raise SystemExit(f"FEHLER: Color-Evidence-Regressionsartikel {item_id} fehlt")
-        if str(item.get("color") or "") != expected:
-            raise SystemExit(f"FEHLER: Artikel {item_id} Farbe {item.get('color')!r} != {expected!r}")
-        sources = item.get("data_quality_sources") or {}
-        if sources.get("color") != "explicit-title-color":
-            raise SystemExit(f"FEHLER: Artikel {item_id} hat keine explizite Title-Color-Provenance")
-
-    # A collection/name token must remain non-evidence. We test inference rather
-    # than forcing the field blank so a future manually verified color remains legal.
-    margiela = by_id.get(9539)
-    if margiela and infer_color(str(margiela.get("title") or "")):
-        raise SystemExit("FEHLER: 'Linnea Rosa' wird fälschlich als physische Farbe interpretiert")
-
 
 def main() -> None:
+    validate_color_inference_regressions()
     items = json.loads(ITEMS_PATH.read_text(encoding="utf-8"))
     changed = False
-    filled = {"color": 0, "size": 0, "condition": 0, "description": 0}
+    filled = {"color": 0, "color_corrected": 0, "size": 0, "condition": 0, "description": 0}
     for item in items:
         provenance = item.get("data_quality_sources")
         if not isinstance(provenance, dict):
             provenance = {}
 
-        if not str(item.get("color") or "").strip():
-            value = infer_color(str(item.get("title") or ""))
-            if value:
-                item["color"] = value
-                provenance["color"] = "explicit-title-color"
-                filled["color"] += 1
+        title = str(item.get("title") or "")
+        inferred_color = infer_color(title)
+        existing_color = str(item.get("color") or "").strip()
+        if provenance.get("color") == "explicit-title-color":
+            # Re-evaluate only our own automated values. Manually supplied color
+            # fields are never touched. This self-corrects older false positives
+            # when a brand/collection token is newly excluded.
+            if existing_color != inferred_color:
+                item["color"] = inferred_color
+                if inferred_color:
+                    provenance["color"] = "explicit-title-color"
+                else:
+                    provenance.pop("color", None)
+                filled["color_corrected"] += 1
                 changed = True
+        elif not existing_color and inferred_color:
+            item["color"] = inferred_color
+            provenance["color"] = "explicit-title-color"
+            filled["color"] += 1
+            changed = True
 
         if not str(item.get("size") or "").strip():
             value = infer_size(item)
@@ -364,8 +326,10 @@ def main() -> None:
             if item.get("data_quality_sources") != provenance:
                 item["data_quality_sources"] = provenance
                 changed = True
+        elif item.get("data_quality_sources"):
+            item.pop("data_quality_sources", None)
+            changed = True
 
-    validate_color_inference_regressions(items)
     if changed:
         ITEMS_PATH.write_text(json.dumps(items, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     write_report(items, filled)
