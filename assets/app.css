@@ -3405,3 +3405,19 @@
 .cart-order-message small{font-size:inherit;text-transform:none;letter-spacing:0;color:var(--text-faint)}
 .cart-order-message textarea{display:block;width:100%;min-height:72px;max-height:150px;resize:vertical;border:1px solid var(--rule-strong);border-radius:0;background:transparent;color:var(--text);font:inherit;font-size:.78rem;line-height:1.45;padding:10px}
 .cart-order-message textarea:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px;border-color:var(--accent-text)}
+
+  /* ADVERSARIAL_MODAL_LAYERING
+     The one-time global mode hint is z-index 281 while the Baukasten picker
+     used 260. On a first visit the hint's close button could therefore sit on
+     top of the open picker and intercept its close control. Keep the fixed
+     mode rail (300) above the picker, but place an *open* picker above the
+     hint. No layout, styling or protected-mode behaviour changes. */
+  .outfit-picker.open { z-index: 290; }
+
+  /* ADVERSARIAL_QUICKVIEW_LAYERING
+     The shared product quickview used z-index 50 while the global mode rail is
+     300. In Chaos this allowed a rail tab to physically cover the modal close
+     button. A modal must own pointer/focus interaction while open, so only the
+     open backdrop is raised above the rail. */
+  .modal-backdrop.open { z-index: 320; }
+
