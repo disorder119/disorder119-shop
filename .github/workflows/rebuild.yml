@@ -143,6 +143,9 @@ jobs:
       - name: Adversarial entdeckte Runtime-Fehler reparieren
         run: python scripts/apply_adversarial_runtime_fixes.py
 
+      - name: Gemessene Performance-/A11y-Qualitaet anwenden
+        run: python scripts/apply_perf_a11y_quality.py
+
       - name: JavaScript Syntax pruefen
         run: |
           node --check assets/app.js
@@ -211,6 +214,9 @@ jobs:
 
       - name: Quality-95-Regressionen pruefen
         run: python scripts/validate_quality_95_polish.py
+
+      - name: Performance-/A11y-Invarianten pruefen
+        run: python scripts/validate_perf_a11y_quality.py
 
       - name: Audit Zero-Hit-Facets pruefen
         run: python scripts/validate_audit_perfection.py --section facets
