@@ -36,8 +36,18 @@ def options() -> ChromeOptions:
     opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument("--disable-gpu")
     opts.add_argument("--window-size=1280,900")
+    # The shop is an async-rendered static app. Waiting for every lazy image on
+    # every navigation adds minutes without improving the assertions below;
+    # DOMContentLoaded + explicit waits is both faster and more deterministic.
+    opts.page_load_strategy = "eager"
     opts.set_capability("goog:loggingPrefs", {"browser": "ALL"})
     return opts
+
+
+def new_driver():
+    driver = webdriver.Chrome(options=options())
+    driver.set_page_load_timeout(20)
+    return driver
 
 
 def wait(driver, condition, label: str):
@@ -100,12 +110,18 @@ def visible_text(driver) -> str:
 
 
 def test_responsive_catalog(driver) -> None:
+    # Load once at a true small-phone width, then exercise every required
+    # breakpoint by resizing the same live page. Responsive CSS/matchMedia
+    # updates are thereby tested without downloading the catalogue and images
+    # eight times in one CI run.
     viewports = [(320, 760), (360, 800), (375, 812), (390, 844), (430, 900), (768, 1024), (1024, 768), (1440, 900)]
+    driver.set_window_size(*viewports[0])
+    driver.get(BASE_URL)
+    wait_cards(driver, 3)
+    dismiss_cookie_note(driver)
     for width, height in viewports:
         driver.set_window_size(width, height)
-        driver.get(BASE_URL)
         wait_cards(driver, 3)
-        dismiss_cookie_note(driver)
         assert_no_horizontal_overflow(driver, f"Archiv {width}x{height}")
         assert_no_zero_options(driver)
         first = driver.find_element(By.CSS_SELECTOR, "#grid .plate")
@@ -113,7 +129,7 @@ def test_responsive_catalog(driver) -> None:
             fail(f"Archiv {width}x{height}: Produktkarten-Hierarchie unvollstaendig")
         if "Art.-Nr." in first.text or "Article no." in first.text:
             fail(f"Archiv {width}x{height}: interne Artikelnummer auf Produktkarte sichtbar")
-        assert_no_js_exceptions(driver, f"Archiv {width}x{height}")
+    assert_no_js_exceptions(driver, "Responsive Archiv")
 
 
 def test_search_and_mobile_filter(driver) -> None:
@@ -217,6 +233,9 @@ def test_product_cart_and_rental(driver) -> None:
     # Product-detail deep link must land in the one canonical Rental V2 flow.
     driver.get(href)
     rental_link = driver.find_element(By.CSS_SELECTOR, ".btn--rental")
+    rental_href = rental_link.get_attribute("href")
+    if not rental_href or f"/mieten/?item={item_id}" not in rental_href:
+        fail(f"Produkt -> Mieten Deep-Link falsch: {rental_href!r}")
     rental_link.click()
     wait(driver, lambda d: "/mieten/" in d.current_url, "Produkt -> Mieten Navigation")
     backdrop = wait(driver, EC.presence_of_element_located((By.ID, "d119RentalV2Backdrop")), "Rental V2 Backdrop")
@@ -235,17 +254,27 @@ def test_product_cart_and_rental(driver) -> None:
     assert_no_js_exceptions(driver, "Produkt/Warenkorb/Rental")
 
 
-def main() -> None:
-    driver = webdriver.Chrome(options=options())
-    driver.set_page_load_timeout(20)
+def run_case(test_fn) -> None:
+    # Each major customer journey gets a fresh browser process. The archive has
+    # hundreds of high-resolution product images; isolating cases prevents
+    # accumulated renderer memory from turning a valid late navigation into a
+    # ChromeDriver timeout after several earlier viewport/language passes.
+    driver = new_driver()
     try:
-        test_responsive_catalog(driver)
-        test_search_and_mobile_filter(driver)
-        test_language_routes(driver)
-        test_product_cart_and_rental(driver)
-        print("Browser-Smoke: OK — responsive Archiv, Suche, iOS-sicherer Filter, DE/EN/FR, Produkt, Warenkorb und Rental V2 in echtem Chromium getestet.")
+        test_fn(driver)
     finally:
         driver.quit()
+
+
+def main() -> None:
+    for test_fn in (
+        test_responsive_catalog,
+        test_search_and_mobile_filter,
+        test_language_routes,
+        test_product_cart_and_rental,
+    ):
+        run_case(test_fn)
+    print("Browser-Smoke: OK — responsive Archiv, Suche, iOS-sicherer Filter, DE/EN/FR, Produkt, Warenkorb und Rental V2 in echtem Chromium getestet.")
 
 
 if __name__ == "__main__":
