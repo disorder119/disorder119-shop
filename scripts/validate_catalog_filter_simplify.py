@@ -13,13 +13,19 @@ def main() -> None:
     js = JS.read_text(encoding="utf-8") if JS.exists() else ""
     for needle in [
         'PRODUCT_TYPE_ID = "filterProductType"',
-        'option.hidden = unavailable',
+        'AUDIT_PERFECT_IOS_ZERO_OPTIONS',
+        'select.remove(i);',
         'DEPENDENT_IDS',
         'resetInvalidDependents',
         'closest(".filter-field")',
     ]:
         if needle not in js:
             errors.append(f"catalog-filter-simplify.js: Logik fehlt: {needle}")
+
+    # Native iOS pickers may still render <option hidden>. Zero-hit values must
+    # therefore be physically absent instead of only visually hidden.
+    if 'option.hidden = unavailable' in js:
+        errors.append("catalog-filter-simplify.js: Null-Treffer werden nur versteckt statt aus dem nativen Select entfernt")
 
     checked = 0
     for rel in ["index.html", "en/index.html", "fr/index.html", "mieten/index.html"]:
@@ -44,7 +50,7 @@ def main() -> None:
         for error in errors:
             print("FEHLER:", error, file=sys.stderr)
         raise SystemExit(1)
-    print("Vereinfachte Archivfilter: OK (Produkttyp UI entfernt, Null-Treffer-Facetten ausgeblendet, Modi unberuehrt)")
+    print("Vereinfachte Archivfilter: OK (Produkttyp UI entfernt, Null-Treffer physisch aus nativen Selects entfernt, Modi unberuehrt)")
 
 
 if __name__ == "__main__":
