@@ -43,6 +43,13 @@ DEPARTMENT_OVERRIDES = {
 # Product-type overrides for titles that are too vague or currently have a
 # demonstrably wrong legacy category. These were checked against descriptions.
 PRODUCT_TYPE_OVERRIDES = {
+    # TAXONOMY_SUBTYPE_AUDIT_20260906: reviewed jacket/vest semantics.
+    9512: "Jacket",  # Dsquared2 Suf Camp Gelb – description: Leichte Jacke
+    9500: "Jacket",  # Prada Knitterjacke – description: Diese Prada Jacke
+    9454: "Jacket",  # Prada Goretex Weiss – description: Diese Prada Jacke
+    9443: "Jacket",  # Balmain Braun – description: Diese Balmain Jacke
+    9442: "Jacket",  # Balmain Furry – description: Kurze Balmain Jacke
+    9417: "Vest",    # Y-3 Veste – description: Ärmellose Zip-Weste
     6240: "Toaster",
     9524: "Bomber Jacket",
     9463: "Heels",
@@ -224,7 +231,7 @@ def classify_product_type(item: dict[str, Any]) -> str:
         (r"bomber", "Bomber Jacket"),
         (r"\bbiker\b|\bmoto\b", "Biker Jacket"),
         (r"\bblazer\b", "Blazer"),
-        (r"\bvest\b|\bweste\b|\bveste\b", "Vest"),
+        (r"\bvest\b|\bweste\b", "Vest"),
         (r"\bjacket\b|\bjacke\b", "Jacket"),
         (r"\bcardigan\b", "Cardigan"),
         (r"\bsweatshirt\b|sweatjacke", "Sweatshirt"),

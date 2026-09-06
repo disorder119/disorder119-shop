@@ -26,7 +26,7 @@
     "Dress": 19,
     "Hat": 1,
     "Heels": 1,
-    "Jacket": 41,
+    "Jacket": 46,
     "Joggers": 1,
     "Knit Top": 1,
     "Loafers": 2,
@@ -54,7 +54,7 @@
     "Trousers": 15,
     "Tunic": 1,
     "Underwear Shorts": 1,
-    "Vest": 12,
+    "Vest": 7,
     "Wallet": 1
   },
   "missingSizeCount": 49,
