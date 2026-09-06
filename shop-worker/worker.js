@@ -560,7 +560,7 @@ export default {
         try { quote = rentalQuoteFromItem(item, String(body.start || ""), String(body.end || "")); }
         catch (err) {
           if (err.message === "ITEM_SOLD") throw new PublicError("ITEM_UNAVAILABLE", 409);
-          if (err.message === "INVALID_RENTAL_DATES") throw new PublicError("INVALID_RENTAL_DATES", 400);
+          if (err.message === "INVALID_RENTAL_DATES" || err.message === "RENTAL_DATE_IN_PAST") throw new PublicError("INVALID_RENTAL_DATES", 400); // RUNTIME_AUDIT_SERVER_DATE_MAP
           throw err;
         }
         return json({ itemId: item.id, currency: CURRENCY, days: quote.days, dailyPrice: quote.dailyPriceCents === null ? null : money(quote.dailyPriceCents), totalPrice: quote.totalPriceCents === null ? null : money(quote.totalPriceCents), priceOnRequest: quote.priceOnRequest }, 200, origin);
@@ -581,7 +581,7 @@ export default {
         try { quote = rentalQuoteFromItem(item, String(body.start || ""), String(body.end || "")); }
         catch (err) {
           if (err.message === "ITEM_SOLD") throw new PublicError("ITEM_UNAVAILABLE", 409);
-          if (err.message === "INVALID_RENTAL_DATES") throw new PublicError("INVALID_RENTAL_DATES", 400);
+          if (err.message === "INVALID_RENTAL_DATES" || err.message === "RENTAL_DATE_IN_PAST") throw new PublicError("INVALID_RENTAL_DATES", 400); // RUNTIME_AUDIT_SERVER_DATE_MAP
           throw err;
         }
         const rental = await createRentalReservation(env, item, quote, body, key, reqId);

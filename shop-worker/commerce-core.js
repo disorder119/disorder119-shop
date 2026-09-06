@@ -109,11 +109,12 @@ export function rentalDayCount(startDate, endDate) {
   return days > 0 && days <= 366 ? days : null;
 }
 
-export function rentalQuoteFromItem(item, startDate, endDate) {
+export function rentalQuoteFromItem(item, startDate, endDate, todayDate = new Date().toISOString().slice(0, 10)) {
   if (!item || typeof item !== "object") throw new Error("UNKNOWN_ITEM");
   if (String(item.public_status || "").toUpperCase() === "SOLD") throw new Error("ITEM_SOLD");
   const days = rentalDayCount(startDate, endDate);
   if (!days) throw new Error("INVALID_RENTAL_DATES");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(todayDate || "")) || String(startDate) < String(todayDate)) throw new Error("RENTAL_DATE_IN_PAST"); // RUNTIME_AUDIT_SERVER_NO_PAST
   const salePriceCents = parsePriceToCents(item.price);
   if (salePriceCents === null) {
     return { currency: CURRENCY, days, dailyPriceCents: null, totalPriceCents: null, priceOnRequest: true };

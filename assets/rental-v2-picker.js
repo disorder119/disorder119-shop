@@ -105,7 +105,7 @@
     try {
       var state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       return state && Array.isArray(state.ids)
-        ? state.ids.map(Number).filter(function (id) { return Number.isFinite(id) && id > 0; }).slice(0, 20)
+        ? state.ids.map(Number).filter(function (id) { return Number.isFinite(id) && id > 0; }).filter(function (id, index, all) { return all.indexOf(id) === index; }).slice(0, 20) // RUNTIME_AUDIT_PICKER_DEDUPE
         : [];
     } catch (e) { return []; }
   }
@@ -123,7 +123,13 @@
     return "/" + raw.replace(/^\//, "");
   }
   function title(item) {
-    return ((item && item.brand ? item.brand + " " : "") + (item && item.title ? item.title : "")).trim();
+    var rawTitle = String(item && item.title || "").trim();
+    var brand = String(item && item.brand || "").trim();
+    if (!brand || rawTitle.toLowerCase().indexOf(brand.toLowerCase()) === 0) return rawTitle;
+    return (brand + " " + rawTitle).trim(); // RUNTIME_AUDIT_PICKER_ALT
+  }
+  function itemCategory(item) {
+    return String(item && (item.taxonomy_category || item.category) || "").trim(); // RUNTIME_AUDIT_PICKER_TAXONOMY
   }
   function normalize(value) {
     return String(value == null ? "" : value).toLocaleLowerCase(LOCALE).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -178,7 +184,7 @@
   function categories() {
     var seen = {};
     catalog.forEach(function (item) {
-      var cat = String(item.category || "").trim();
+      var cat = itemCategory(item);
       if (cat) seen[cat] = true;
     });
     return Object.keys(seen).sort(function (a, b) { return categoryLabel(a).localeCompare(categoryLabel(b), LOCALE); });
@@ -192,9 +198,9 @@
       if (String(item.public_status || "").toUpperCase() === "SOLD") return false;
       var id = Number(item.id);
       if (selectedOnly && ids.indexOf(id) < 0) return false;
-      if (!selectedOnly && activeCategory !== "all" && String(item.category || "") !== activeCategory) return false;
+      if (!selectedOnly && activeCategory !== "all" && itemCategory(item) !== activeCategory) return false;
       if (!q) return true;
-      var hay = normalize([item.brand, item.title, item.article, item.id, item.category, item.size].join(" "));
+      var hay = normalize([item.brand, item.title, item.article, item.id, itemCategory(item), item.size].join(" "));
       if (hay.indexOf(q) >= 0) return true;
       var compactHay = hay.replace(/[^a-z0-9]+/g, "");
       var compactQ = q.replace(/[^a-z0-9]+/g, "");
@@ -260,6 +266,12 @@
     var ids = loadIds();
     if (ids.indexOf(id) < 0 && ids.length >= 20) {
       showAlert(t("limit"));
+      return;
+    }
+    var api = window.D119RentalV2;
+    if (api && typeof api.toggleItem === "function") { // RUNTIME_AUDIT_PICKER_OFFDOM
+      if (api.toggleItem(id)) window.requestAnimationFrame(renderPicker);
+      else showAlert(t("unavailable"));
       return;
     }
     var source = document.querySelector('[data-rental="' + id + '"]');

@@ -169,7 +169,7 @@ STATIC_BLOCK_RE = re.compile(
     re.S,
 )
 SYNC_RE = re.compile(r'\n?<script id="rentalTermsCanonical">.*?</script>', re.S)
-BRIDGE_MARKER = '<script src="/assets/rental-commerce.js"></script>'
+RUNTIME_MARKER = '<script src="/assets/rental-v2.js"></script>'  # RUNTIME_TERMS_V2_ANCHOR
 
 
 def apply_page(lang: str, path: Path) -> None:
@@ -185,19 +185,18 @@ def apply_page(lang: str, path: Path) -> None:
     if count != 1:
         raise SystemExit(f"FEHLER: Rental-Bedingungsblock nicht eindeutig in {path.relative_to(BASE)} gefunden.")
 
-    # rental-commerce.js still contains a short compatibility summary for old builds.
-    # Re-apply the canonical full terms immediately after that bridge executes so the
-    # visible DOM and the no-JS static HTML are identical.
+    # Re-apply the canonical full terms immediately after Rental V2 loads so the
+    # visible DOM and the no-JS static HTML stay identical without a legacy bridge.
     html = SYNC_RE.sub("", html)
-    if BRIDGE_MARKER not in html:
-        raise SystemExit(f"FEHLER: Rental-Bridge fehlt in {path.relative_to(BASE)}")
+    if RUNTIME_MARKER not in html:
+        raise SystemExit(f"FEHLER: Rental-V2-Runtime fehlt in {path.relative_to(BASE)}")
     sync = (
         '<script id="rentalTermsCanonical">(function(){var p=document.querySelector('
         '".static-page .legal-panel");if(p)p.innerHTML='
         + json.dumps(TERMS[lang], ensure_ascii=False)
         + ';})();</script>'
     )
-    html = html.replace(BRIDGE_MARKER, BRIDGE_MARKER + "\n" + sync, 1)
+    html = html.replace(RUNTIME_MARKER, RUNTIME_MARKER + "\n" + sync, 1)
     path.write_text(html, encoding="utf-8")
     print(f"Mietbedingungen aktualisiert: {path.relative_to(BASE)}")
 

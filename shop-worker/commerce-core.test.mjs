@@ -27,7 +27,7 @@ test("daily rent is exactly 10% of authoritative sale price rounded to cents", (
 });
 
 test("rental total uses inclusive rental days and integer cents", () => {
-  const quote = rentalQuoteFromItem({ id: 1, price: 125, public_status: "AVAILABLE" }, "2026-09-05", "2026-09-07");
+  const quote = rentalQuoteFromItem({ id: 1, price: 125, public_status: "AVAILABLE" }, "2026-09-05", "2026-09-07", "2026-09-01");
   assert.equal(quote.currency, CURRENCY);
   assert.equal(quote.days, 3);
   assert.equal(quote.dailyPriceCents, 1250);
@@ -35,7 +35,7 @@ test("rental total uses inclusive rental days and integer cents", () => {
 });
 
 test("price-on-request remains price-on-request", () => {
-  const quote = rentalQuoteFromItem({ id: 1, price: null, public_status: "AVAILABLE" }, "2026-09-05", "2026-09-05");
+  const quote = rentalQuoteFromItem({ id: 1, price: null, public_status: "AVAILABLE" }, "2026-09-05", "2026-09-05", "2026-09-01");
   assert.equal(quote.priceOnRequest, true);
   assert.equal(quote.dailyPriceCents, null);
   assert.equal(quote.totalPriceCents, null);
@@ -53,6 +53,13 @@ test("date parser rejects impossible and reversed dates", () => {
   assert.equal(rentalDayCount("2026-09-07", "2026-09-05"), null);
   assert.equal(rentalDayCount("2026-09-05", "2026-09-05"), 1);
 });
+
+test("rental quote rejects dates before the booking day", () => {
+  assert.throws(
+    () => rentalQuoteFromItem({ id: 1, price: 125, public_status: "AVAILABLE" }, "2026-09-05", "2026-09-06", "2026-09-06"),
+    /RENTAL_DATE_IN_PAST/
+  );
+}); // RUNTIME_AUDIT_SERVER_NO_PAST_TEST
 
 test("idempotency keys are bounded and explicit", () => {
   assert.equal(isValidIdempotencyKey("order:550e8400-e29b-41d4-a716-446655440000"), true);

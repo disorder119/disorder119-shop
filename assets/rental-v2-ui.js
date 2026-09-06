@@ -63,7 +63,7 @@
     try {
       var state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (!state || !Array.isArray(state.ids)) return [];
-      return state.ids.map(Number).filter(function (id) { return Number.isFinite(id) && id > 0; }).slice(0, 20);
+      return state.ids.map(Number).filter(function (id) { return Number.isFinite(id) && id > 0; }).filter(function (id, index, all) { return all.indexOf(id) === index; }).slice(0, 20); // RUNTIME_AUDIT_UI_DEDUPE
     } catch (e) { return []; }
   }
   function firstImage(item) {

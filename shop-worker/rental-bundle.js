@@ -392,7 +392,7 @@ export async function handleRentalBundle(request, env, url, reqId, origin = null
       try { return rentalQuoteFromItem(item, String(body.start || ""), String(body.end || "")); }
       catch (err) {
         if (err.message === "ITEM_SOLD") throw new BundleError("ITEM_UNAVAILABLE", 409);
-        if (err.message === "INVALID_RENTAL_DATES") throw new BundleError("INVALID_RENTAL_DATES", 400);
+        if (err.message === "INVALID_RENTAL_DATES" || err.message === "RENTAL_DATE_IN_PAST") throw new BundleError("INVALID_RENTAL_DATES", 400); // RUNTIME_AUDIT_BUNDLE_DATE_MAP
         throw err;
       }
     });

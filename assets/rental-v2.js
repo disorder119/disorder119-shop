@@ -12,6 +12,7 @@
   var RENTAL_PATH = HOME + "mieten/";
   var STORAGE_KEY = "d119_rental_cart_v2";
   var RECEIPT_KEY = "d119_rental_terms_receipts";
+  var BUNDLE_RECEIPT_KEY = "d119_rental_bundle_receipts"; // RUNTIME_AUDIT_ATOMIC_BUNDLE
   var TERMS_VERSION = "rental-2026-09-05-v2";
   var RENTAL_RATE_BPS = 1000;     // 10% of sale price per selected calendar day.
   var DEPOSIT_RATE_BPS = 5000;    // 50% of sale price.
@@ -86,6 +87,8 @@
       totalLabel: "Gesamt",
       termsVersion: "Mietbedingungen",
       requestSent: "Anfrage vorbereitet. Die Artikel bleiben bis zur Bestätigung unverbindlich.",
+      serverSaved: "Mietanfrage als gemeinsamer Vorgang gespeichert.",
+      serverSaveFailed: "Die Server-Speicherung ist fehlgeschlagen; deine Kontaktanfrage kann trotzdem gesendet werden.",
       longPeriod: "Mehr als 7 Tage? Schreib den gewünschten Zeitraum einfach in die Nachricht; Disorder119 bestätigt Preis und Verfügbarkeit individuell."
     },
     en: {
@@ -155,6 +158,8 @@
       totalLabel: "Total",
       termsVersion: "Rental terms",
       requestSent: "Request prepared. The items remain non-binding until confirmed.",
+      serverSaved: "Rental request saved as one combined booking.",
+      serverSaveFailed: "Server saving failed; your contact request can still be sent.",
       longPeriod: "Need more than 7 days? Add the requested period to the message and Disorder119 will confirm price and availability individually."
     },
     fr: {
@@ -224,6 +229,8 @@
       totalLabel: "Total",
       termsVersion: "Conditions de location",
       requestSent: "Demande préparée. Les articles restent sans engagement jusqu’à confirmation.",
+      serverSaved: "Demande enregistrée comme une location groupée.",
+      serverSaveFailed: "L’enregistrement serveur a échoué ; votre demande de contact peut tout de même être envoyée.",
       longPeriod: "Besoin de plus de 7 jours ? Indique la période souhaitée dans le message ; Disorder119 confirmera individuellement le prix et la disponibilité."
     }
   };
@@ -287,7 +294,10 @@
     try {
       var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (!saved || !Array.isArray(saved.ids)) return fallback;
-      saved.ids = saved.ids.map(Number).filter(function (x) { return Number.isFinite(x) && x > 0; }).slice(0, 20);
+      saved.ids = saved.ids.map(Number).filter(function (x) { return Number.isFinite(x) && x > 0; }).filter(function (x, i, all) { return all.indexOf(x) === i; }).slice(0, 20); // RUNTIME_AUDIT_RENTAL_DEDUPE
+      var now = new Date();
+      var today = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+      if (saved.start && saved.start < today) { saved.start = ""; saved.end = ""; saved.termsAccepted = false; }
       return Object.assign(fallback, saved);
     } catch (e) { return fallback; }
   }
@@ -391,13 +401,13 @@
   }
   function toggleItem(id) {
     id = Number(id);
-    if (!catalogMap[id]) return;
+    if (!catalogMap[id]) return false;
     var idx = state.ids.indexOf(id);
     if (idx >= 0) {
       state.ids.splice(idx, 1);
       showToast(t("removedToast"));
     } else {
-      if (state.ids.length >= 20) return;
+      if (state.ids.length >= 20) return false;
       state.ids.push(id);
       showToast(t("addedToast"));
     }
@@ -406,7 +416,15 @@
     refreshCardButtons();
     refreshToolbar();
     renderOverlay();
+    return true;
   }
+
+  // Stable internal API for the integrated picker. It must not depend on a
+  // product card currently being rendered in the 12-card archive window.
+  window.D119RentalV2 = { // RUNTIME_AUDIT_PICKER_API
+    toggleItem: function (id) { return toggleItem(id); },
+    getSelectedIds: function () { return state.ids.slice(); }
+  };
 
   function showToast(message) {
     var old = document.getElementById("d119RentalToast");
@@ -646,7 +664,13 @@
     end.value = state.end || "";
   }
 
+  function localTodayIso() {
+    var now = new Date();
+    return now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  }
+
   function validPeriod() {
+    if (!state.start || state.start < localTodayIso()) return null; // RUNTIME_AUDIT_NO_PAST_RENTAL
     var days = dayCount(state.start, state.end);
     return days && days <= STANDARD_MAX_DAYS ? days : null;
   }
@@ -698,7 +722,7 @@
     return {
       itemIds: state.ids.slice(), start: state.start, end: state.end, purpose: state.purpose,
       delivery: state.delivery, postal: state.postal, risk: state.risk, message: state.message,
-      termsVersion: TERMS_VERSION, language: LANG
+      termsVersion: TERMS_VERSION, termsLanguage: LANG
     };
   }
 
@@ -754,8 +778,8 @@
     Array.prototype.forEach.call(actions.querySelectorAll("[data-d119-rental-send]"), function (a) {
       a.addEventListener("click", function (e) {
         if (!enabled) { e.preventDefault(); return; }
-        saveTermsReceipt();
-        reportBundleToWorker();
+        var receipt = saveTermsReceipt();
+        reportBundleToWorker(receipt && receipt.acceptedAt);
         showToast(t("requestSent"));
       });
     });
@@ -775,6 +799,7 @@
       list.push(receipt);
       localStorage.setItem(RECEIPT_KEY, JSON.stringify(list.slice(-20)));
     } catch (e) {}
+    return receipt;
   }
 
   function stableHash(value) {
@@ -783,23 +808,54 @@
     return (hash >>> 0).toString(16).padStart(8, "0");
   }
 
-  function reportBundleToWorker() {
+  function bundleAcceptanceTimestamp(hash, fallback) {
+    var key = "d119_rental_bundle_acceptance:" + hash;
+    try {
+      var existing = localStorage.getItem(key);
+      if (existing) return existing;
+      var created = fallback || new Date().toISOString();
+      localStorage.setItem(key, created);
+      return created;
+    } catch (e) { return fallback || new Date().toISOString(); }
+  }
+
+  function saveBundleReceipt(data, payload) {
+    try {
+      var list = JSON.parse(localStorage.getItem(BUNDLE_RECEIPT_KEY) || "[]");
+      if (!Array.isArray(list)) list = [];
+      list.push({
+        rentalGroupId: data.rentalGroupId || null, savedAt: new Date().toISOString(), expiresAt: data.expiresAt || null,
+        itemIds: payload.itemIds.slice(), start: payload.start, end: payload.end,
+        rentalTotalCents: data.rentalTotalCents == null ? null : data.rentalTotalCents,
+        depositTotalCents: data.depositTotalCents == null ? null : data.depositTotalCents,
+        termsVersion: payload.termsVersion, termsAcceptedAt: payload.termsAcceptedAt
+      });
+      localStorage.setItem(BUNDLE_RECEIPT_KEY, JSON.stringify(list.slice(-30)));
+    } catch (e) {}
+  }
+
+  function reportBundleToWorker(acceptedAt) {
     if (!SHOP_CONFIG.shopWorkerUrl || !validPeriod()) return;
     var payload = requestPayload();
     var bundleHash = stableHash(payload);
-    selectedItems().forEach(function (item) {
-      var body = {
-        itemId: item.id,
-        start: state.start,
-        end: state.end,
-        purpose: state.purpose,
-        message: "[MULTI_ITEM " + state.ids.length + " | " + TERMS_VERSION + " | bundle " + bundleHash + "] " + [state.delivery, state.postal, state.risk, state.message].filter(Boolean).join(" | ").slice(0, 1750)
-      };
-      fetch(String(SHOP_CONFIG.shopWorkerUrl).replace(/\/+$/, "") + "/rental-request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Idempotency-Key": "rental-v2:" + bundleHash + ":" + item.id },
-        body: JSON.stringify(body)
-      }).catch(function () {});
+    payload.termsAcceptedAt = bundleAcceptanceTimestamp(bundleHash, acceptedAt);
+    fetch(String(SHOP_CONFIG.shopWorkerUrl).replace(/\/+$/, "") + "/rental-bundle", { // RUNTIME_AUDIT_ATOMIC_BUNDLE_POST
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": "rental-bundle-v2:" + bundleHash },
+      body: JSON.stringify(payload),
+      keepalive: true
+    }).then(function (response) {
+      return response.text().then(function (raw) {
+        var data = {};
+        try { data = raw ? JSON.parse(raw) : {}; } catch (e) {}
+        if (!response.ok) throw new Error(data.error || ("HTTP " + response.status));
+        return data;
+      });
+    }).then(function (data) {
+      saveBundleReceipt(data, payload);
+      showToast(t("serverSaved"));
+    }).catch(function () {
+      showToast(t("serverSaveFailed"));
     });
   }
 
@@ -851,7 +907,7 @@
       .then(function (items) {
         catalog = Array.isArray(items) ? items : [];
         catalog.forEach(function (item) { catalogMap[Number(item.id)] = item; });
-        state.ids = state.ids.filter(function (id) { return !!catalogMap[id] && String(catalogMap[id].public_status || "").toUpperCase() !== "SOLD"; });
+        state.ids = state.ids.filter(function (id, index, all) { return all.indexOf(id) === index && !!catalogMap[id] && String(catalogMap[id].public_status || "").toUpperCase() !== "SOLD"; });
         saveState();
         refreshCardButtons();
         refreshToolbar();
