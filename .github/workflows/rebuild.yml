@@ -184,8 +184,14 @@ jobs:
       - name: Audit Kaufanfragen pruefen
         run: python scripts/validate_audit_perfection.py --section purchase
 
-      - name: Audit Taxonomie pruefen
-        run: python scripts/validate_audit_perfection.py --section taxonomy
+      - name: Audit Taxonomie-Kategorien pruefen
+        run: python scripts/validate_audit_perfection.py --section taxonomy-categories
+
+      - name: Audit Taxonomie-Abweichungen pruefen
+        run: python scripts/validate_audit_perfection.py --section taxonomy-mismatches
+
+      - name: Audit Taxonomie-Produktseiten pruefen
+        run: python scripts/validate_audit_perfection.py --section taxonomy-pages
 
       - name: Audit Datenqualitaet pruefen
         run: python scripts/validate_audit_perfection.py --section quality
