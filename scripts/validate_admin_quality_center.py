@@ -35,7 +35,19 @@ def main() -> None:
     require("Preis muss 0 oder größer sein" in ADMIN, "Client-Schutz fuer ungueltigen Preis fehlt")
     require("data/items.json" in ADMIN, "Admin darf seine Inventarquelle nicht verlieren")
     require("config/mode-guard.json" not in ADMIN, "Admin darf Mode Guard nicht editieren")
-    print("Admin-Qualitaetszentrale: OK — Luecken priorisiert, Taxonomie geprueft, Mietpreis abgeleitet, Concurrent-Save sicher.")
+
+    # GitHub's Contents API can omit inline content for larger files. The
+    # admin must use the Git-blob URL rather than JSON.parse on an empty value.
+    require("ADMIN_LARGE_ITEMS_LOADER_V1" in ADMIN, "Large-Items-Loader Marker fehlt")
+    require("function readGithubContentsPayload(data, pat)" in ADMIN, "Git-Blob-Fallback fehlt")
+    require('data.encoding === "base64"' in ADMIN, "Inline-Base64-Pfad fehlt")
+    require("if (!data || !data.git_url)" in ADMIN, "Git-URL-Pruefung fehlt")
+    require("return fetch(data.git_url" in ADMIN, "Git-Blob-Abruf fehlt")
+    require('blob.encoding !== "base64"' in ADMIN, "Blob-Encoding-Pruefung fehlt")
+    require("if (!Array.isArray(parsed))" in ADMIN, "JSON-Format-Pruefung fehlt")
+    require("var text = b64DecodeUtf8(data.content);" not in ADMIN, "alter direkter data.content-Parser ist wieder aktiv")
+
+    print("Admin-Qualitaetszentrale: OK — Luecken priorisiert, Taxonomie geprueft, Mietpreis abgeleitet, Concurrent-Save und grosser GitHub-Katalog sicher.")
 
 
 if __name__ == "__main__":
