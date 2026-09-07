@@ -32,6 +32,26 @@
     }
   }
 
+  function syncFieldVisibility(select) {
+    if (!select || select.id === PRODUCT_TYPE_ID || !select.closest) return;
+    var field = select.closest(".filter-field");
+    if (!field) return;
+    var hasChoice = false;
+    for (var i = 1; i < select.options.length; i++) {
+      var option = select.options[i];
+      if (!option.disabled && !option.hidden) {
+        hasChoice = true;
+        break;
+      }
+    }
+    // Ein aktiver Filter bleibt immer sichtbar, damit er direkt geändert oder
+    // über die vorhandenen Filter-Chips entfernt werden kann. Leere, inaktive
+    // Facetten verschwinden dagegen vollständig und erzeugen keine UI-Leerstellen.
+    var shouldHide = !select.value && !hasChoice;
+    field.classList.toggle("hidden", shouldHide);
+    field.setAttribute("aria-hidden", shouldHide ? "true" : "false");
+  }
+
   function compactSelect(select) {
     if (!select || !select.options) return;
     for (var i = 1; i < select.options.length; i++) {
@@ -52,36 +72,49 @@
         option.disabled = unavailable;
       }
     }
+    syncFieldVisibility(select);
   }
 
   function compactAll() {
-    scheduled = false;
     hideRedundantProductType();
     FACET_IDS.forEach(function (id) { compactSelect(document.getElementById(id)); });
   }
 
-  function scheduleCompact() {
-    if (scheduled) return;
-    scheduled = true;
-    window.setTimeout(compactAll, 0);
-  }
-
   function resetInvalidDependents() {
-    if (resetting) return;
+    if (resetting) return false;
     resetting = true;
     var changed = false;
     DEPENDENT_IDS.forEach(function (id) {
       var select = document.getElementById(id);
       if (!select || !select.value) return;
       var option = select.options[select.selectedIndex];
-      if (parsedCount(option) === 0) {
+      // Wenn ein anderer Filter die aktuell gewählte Option auf 0 Treffer
+      // reduziert, darf dieser tote Zustand nicht aktiv bleiben. Das war zuvor
+      // nur beim Wechsel Herren/Damen abgesichert, nicht z.B. Marke -> Größe.
+      if (!option || parsedCount(option) === 0) {
         select.value = "";
         select.dispatchEvent(new Event("change", { bubbles: true }));
         changed = true;
       }
     });
     resetting = false;
-    if (changed) scheduleCompact();
+    return changed;
+  }
+
+  function reconcileAll() {
+    scheduled = false;
+    var changed = resetInvalidDependents();
+    compactAll();
+    // app.js verarbeitet die ausgelösten change-Events synchron. Ein zweiter
+    // kurzer Durchlauf stellt sicher, dass danach auch die neu berechneten
+    // Facettenzahlen und ggf. wiederhergestellten Master-Optionen bereinigt sind.
+    if (changed) scheduleReconcile();
+  }
+
+  function scheduleReconcile() {
+    if (scheduled) return;
+    scheduled = true;
+    window.setTimeout(reconcileAll, 0);
   }
 
   function init() {
@@ -89,35 +122,28 @@
     if (!panel) return;
 
     hideRedundantProductType();
-    compactAll();
-
-    var department = document.getElementById("filterDepartment");
-    if (department) {
-      department.addEventListener("change", function () {
-        // app.js rendert synchron zuerst die neuen Facettenzahlen. Danach
-        // entfernen wir ungueltig gewordene Altwahlen und zeigen nur echte
-        // Trefferoptionen fuer den neu gewaehlten Bereich.
-        window.setTimeout(function () {
-          resetInvalidDependents();
-          compactAll();
-        }, 0);
-      });
-    }
+    reconcileAll();
 
     FACET_IDS.forEach(function (id) {
       var select = document.getElementById(id);
-      if (select) select.addEventListener("change", scheduleCompact);
+      if (!select) return;
+      select.addEventListener("change", function () {
+        // app.js ist vor diesem Zusatzskript geladen und rendert synchron zuerst
+        // die neuen Facettenzahlen. Der Timeout reconciled danach alle abhängigen
+        // Filter — unabhängig davon, welche Facette den Wechsel ausgelöst hat.
+        scheduleReconcile();
+      });
     });
 
-    // Suche, Kategorie- und Statuswechsel aktualisieren Facetten ebenfalls.
+    // Suche, Kategorie-, Status- und Preiswechsel aktualisieren Facetten ebenfalls.
     // Beobachten statt bestehende Shop-Logik anzufassen.
     if (typeof MutationObserver !== "undefined") {
-      new MutationObserver(scheduleCompact).observe(panel, {
+      new MutationObserver(scheduleReconcile).observe(panel, {
         subtree: true,
         childList: true,
         characterData: true,
         attributes: true,
-        attributeFilter: ["disabled"]
+        attributeFilter: ["disabled", "hidden"]
       });
     }
   }
