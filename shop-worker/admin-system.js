@@ -1,7 +1,7 @@
 import { safeText } from "./commerce-core.js";
 import { OPERATIONS_AUTOMATION_SCHEMA_COLUMNS, OPERATIONS_AUTOMATION_VERSION } from "./operations-monitor.js";
 
-export const SYSTEM_SCHEMA_TARGET = "0007_operations_automation";
+export const SYSTEM_SCHEMA_TARGET = "0008_visitor_intelligence";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -34,6 +34,8 @@ const REQUIRED_TABLES = Object.freeze([
   "rental_groups",
   "damage_cases",
   "operations_tasks",
+  "visitor_sessions",
+  "visitor_events",
 ]);
 
 class AdminSystemError extends Error {
@@ -105,6 +107,8 @@ export function detectSchemaVersion(tableNames, operationsTaskColumns = []) {
   const taskColumns = new Set(Array.from(operationsTaskColumns || [], String));
   const hasOperationsCases = names.has("damage_cases") && names.has("operations_tasks") && names.has("rental_groups");
   const hasAutomation = OPERATIONS_AUTOMATION_SCHEMA_COLUMNS.every(name => taskColumns.has(name));
+  const hasVisitorIntelligence = names.has("visitor_sessions") && names.has("visitor_events");
+  if (hasOperationsCases && hasAutomation && hasVisitorIntelligence) return "0008_visitor_intelligence";
   if (hasOperationsCases && hasAutomation) return "0007_operations_automation";
   if (hasOperationsCases) return "0006_operations_cases";
   if (names.has("rental_groups")) return "0005_rental_groups";
@@ -164,6 +168,8 @@ async function getSystem(env) {
     ["auditEvents", "audit_events", "SELECT COUNT(*) AS value FROM audit_events"],
     ["unprocessedPaymentEvents", "payment_events", "SELECT COUNT(*) AS value FROM payment_events WHERE processed_at IS NULL"],
     ["expiredIdempotencyKeys", "idempotency_keys", "SELECT COUNT(*) AS value FROM idempotency_keys WHERE expires_at IS NOT NULL AND julianday(expires_at)<=julianday('now')"],
+    ["visitorSessions", "visitor_sessions", "SELECT COUNT(*) AS value FROM visitor_sessions"],
+    ["visitorEvents", "visitor_events", "SELECT COUNT(*) AS value FROM visitor_events"],
   ];
 
   const runnable = specs.filter(([, table, , requiredColumn]) => present.has(table) && (!requiredColumn || taskColumnSet.has(requiredColumn)));
@@ -187,6 +193,10 @@ async function getSystem(env) {
     missingRequiredTables,
     missingRequiredColumns,
     configured: configured(env),
+    visitorIntelligence: {
+      schemaReady: present.has("visitor_sessions") && present.has("visitor_events"),
+      privacyModel: "session-only-pseudonymous",
+    },
     operationsAutomation: {
       version: OPERATIONS_AUTOMATION_VERSION,
       schemaReady: missingRequiredColumns.length === 0 && present.has("operations_tasks"),

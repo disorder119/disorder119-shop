@@ -12,6 +12,7 @@ import { handleAdminSystem } from "./admin-system.js";
 import { handleAdminAlerts } from "./admin-alerts.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
+import { handleVisitorIntelligence } from "./visitor-intelligence.js";
 
 function requestId(request) {
   const existing = request.headers.get("cf-ray");
@@ -41,6 +42,14 @@ export default {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin");
     const reqId = requestId(request);
+
+    if (url.pathname === "/analytics/event") {
+      return handleVisitorIntelligence(request, env, url, reqId, origin);
+    }
+
+    if (url.pathname === "/admin/visitors" || url.pathname.startsWith("/admin/visitors/")) {
+      return handleVisitorIntelligence(request, env, url, reqId, origin);
+    }
 
     if (url.pathname === "/rental-bundle") {
       return handleRentalBundle(request, env, url, reqId, origin);
