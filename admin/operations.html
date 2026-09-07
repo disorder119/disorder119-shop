@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0b0b0b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Disorder119 Admin">
+  <link rel="manifest" href="/admin/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/assets/favicon.png">
+  <link rel="stylesheet" href="/assets/admin-operations.css">
+  <title>Disorder119 — Operations</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <a class="brand" href="/admin/">DISORDER119</a>
+        <span class="product-name">Operations</span>
+      </div>
+      <div class="top-actions">
+        <span id="connectionStatus" class="status-dot" data-state="idle">Nicht verbunden</span>
+        <button id="refreshAll" class="button button--quiet" type="button">Aktualisieren</button>
+        <button id="openSetup" class="button" type="button">Verbindung</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">OWNER CONTROL CENTER</p>
+          <h1>Besucher &amp; Bestellungen</h1>
+          <p class="hero-copy">First-Party Shop-Überblick mit Sessions, Seitenaufrufen, Bestellungen und vollständigen Vorgangsdetails.</p>
+        </div>
+        <div class="privacy-note">Anonyme Besucher bleiben anonym. Es werden keine Fingerprints oder Roh-IP-Adressen gespeichert.</div>
+      </section>
+
+      <section id="metrics" class="metrics" aria-label="Kennzahlen">
+        <article class="metric"><span>Jetzt aktiv</span><strong id="mActive">—</strong><small>letzte 15 Min.</small></article>
+        <article class="metric"><span>Besucher heute</span><strong id="mVisitorsToday">—</strong><small>Sessions</small></article>
+        <article class="metric"><span>Seitenaufrufe heute</span><strong id="mPageviewsToday">—</strong><small>Pageviews</small></article>
+        <article class="metric"><span>Bestellungen</span><strong id="mOrders">—</strong><small id="mOrdersSub">gesamt</small></article>
+        <article class="metric"><span>Bestellwert</span><strong id="mOrderValue">—</strong><small>gesamt im System</small></article>
+      </section>
+
+      <nav class="tabs" aria-label="Operations Bereiche">
+        <button type="button" class="tab is-active" data-tab="visitors">Besucher</button>
+        <button type="button" class="tab" data-tab="orders">Bestellungen</button>
+      </nav>
+
+      <section id="visitorsPanel" class="panel-section">
+        <div class="section-head">
+          <div><h2>Besucher</h2><p id="visitorCount">Alle erfassten anonymen Sessions</p></div>
+          <div class="filters">
+            <label class="search"><span>Suche</span><input id="visitorSearch" type="search" placeholder="Session, Stadt, Land, Seite, Kampagne"></label>
+            <label class="toggle"><input id="activeOnly" type="checkbox"> nur aktiv</label>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Zuletzt</th><th>Session</th><th>Ort</th><th>Gerät</th><th>Seiten</th><th>Letzte Seite</th><th>Quelle</th></tr></thead>
+            <tbody id="visitorRows"><tr><td colspan="7" class="empty">Noch keine Daten geladen.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="ordersPanel" class="panel-section" hidden>
+        <div class="section-head">
+          <div><h2>Bestellungen</h2><p id="orderCount">Alle Commerce-Bestellungen</p></div>
+          <div class="filters">
+            <label class="search"><span>Suche</span><input id="orderSearch" type="search" placeholder="Bestellnr., Kunde, Artikel"></label>
+            <label><span>Status</span><select id="orderStatus"><option value="">Alle Status</option><option>CREATED</option><option>PAYMENT_PENDING</option><option>PAID</option><option>PREPARING</option><option>SHIPPED</option><option>DELIVERED</option><option>RETURN_REQUESTED</option><option>RETURNED</option><option>REFUNDED</option><option>CANCELLED</option></select></label>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Datum</th><th>Bestellung</th><th>Status</th><th>Zahlung</th><th>Versand</th><th>Artikel</th><th>Gesamt</th></tr></thead>
+            <tbody id="orderRows"><tr><td colspan="7" class="empty">Noch keine Daten geladen.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="drawerBackdrop" class="drawer-backdrop" hidden></div>
+  <aside id="detailDrawer" class="drawer" aria-label="Detailansicht" aria-hidden="true">
+    <div class="drawer-head"><div><p class="eyebrow" id="drawerEyebrow">DETAIL</p><h2 id="drawerTitle">Details</h2></div><button id="closeDrawer" type="button" class="icon-button" aria-label="Schließen">×</button></div>
+    <div id="drawerBody" class="drawer-body"></div>
+  </aside>
+
+  <dialog id="setupDialog" class="setup-dialog">
+    <form method="dialog" id="setupForm">
+      <div class="dialog-head"><div><p class="eyebrow">ADMIN API</p><h2>Verbindung</h2></div><button type="submit" value="cancel" class="icon-button" aria-label="Schließen">×</button></div>
+      <p>Die Operations-Ansicht liest ausschließlich die geschützte Shop-Worker-API. Der Admin-Token wird nur für diese Browser-Sitzung gespeichert.</p>
+      <label><span>Shop-Worker URL</span><input id="apiBaseInput" type="url" placeholder="https://…workers.dev" autocomplete="url" required></label>
+      <label><span>Admin Token</span><input id="adminTokenInput" type="password" autocomplete="off" required></label>
+      <div class="dialog-actions"><button type="submit" value="cancel" class="button button--quiet">Abbrechen</button><button id="saveConnection" type="button" class="button">Verbinden</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script src="/assets/admin-pwa.js"></script>
+  <script src="/assets/admin-operations.js"></script>
+</body>
+</html>
