@@ -208,10 +208,10 @@ export async function handleVisitRequest(request, env, url, reqId, origin = null
 
 async function visitorSummary(db) {
   const results = await db.batch([
-    db.prepare("SELECT COUNT(*) AS value FROM visitor_sessions WHERE last_seen_at>=datetime('now','-15 minutes')"),
-    db.prepare("SELECT COUNT(*) AS value FROM visitor_sessions WHERE first_seen_at>=datetime('now','start of day')"),
-    db.prepare("SELECT COUNT(*) AS value FROM visitor_pageviews WHERE occurred_at>=datetime('now','start of day')"),
-    db.prepare("SELECT COUNT(*) AS value FROM visitor_sessions WHERE first_seen_at>=datetime('now','-7 days')"),
+    db.prepare("SELECT COUNT(*) AS value FROM visitor_sessions WHERE julianday(last_seen_at)>=julianday('now','-15 minutes')"),
+    db.prepare("SELECT COUNT(*) AS value FROM visitor_sessions WHERE julianday(first_seen_at)>=julianday('now','start of day')"),
+    db.prepare("SELECT COUNT(*) AS value FROM visitor_pageviews WHERE julianday(occurred_at)>=julianday('now','start of day')"),
+    db.prepare("SELECT COUNT(*) AS value FROM visitor_sessions WHERE julianday(first_seen_at)>=julianday('now','-7 days')"),
     db.prepare("SELECT COUNT(*) AS value FROM visitor_sessions"),
   ]);
   const value = index => Number(results[index]?.results?.[0]?.value || 0);
@@ -232,7 +232,7 @@ async function listVisitors(env, url) {
   const activeOnly = url.searchParams.get("active") === "1";
   const where = [];
   const binds = [];
-  if (activeOnly) where.push("last_seen_at>=datetime('now','-15 minutes')");
+  if (activeOnly) where.push("julianday(last_seen_at)>=julianday('now','-15 minutes')");
   if (q) {
     const like = `%${q}%`;
     where.push("(id LIKE ? OR last_path LIKE ? OR landing_path LIKE ? OR city LIKE ? OR country LIKE ? OR utm_source LIKE ? OR utm_campaign LIKE ?)");
