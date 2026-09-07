@@ -1,7 +1,7 @@
 import { safeText } from "./commerce-core.js";
 import { OPERATIONS_AUTOMATION_SCHEMA_COLUMNS, OPERATIONS_AUTOMATION_VERSION } from "./operations-monitor.js";
 
-export const SYSTEM_SCHEMA_TARGET = "0007_operations_automation";
+export const SYSTEM_SCHEMA_TARGET = "0008_visitor_observability";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -34,6 +34,8 @@ const REQUIRED_TABLES = Object.freeze([
   "rental_groups",
   "damage_cases",
   "operations_tasks",
+  "visitor_sessions",
+  "visitor_pageviews",
 ]);
 
 class AdminSystemError extends Error {
@@ -105,6 +107,8 @@ export function detectSchemaVersion(tableNames, operationsTaskColumns = []) {
   const taskColumns = new Set(Array.from(operationsTaskColumns || [], String));
   const hasOperationsCases = names.has("damage_cases") && names.has("operations_tasks") && names.has("rental_groups");
   const hasAutomation = OPERATIONS_AUTOMATION_SCHEMA_COLUMNS.every(name => taskColumns.has(name));
+  const hasVisitors = names.has("visitor_sessions") && names.has("visitor_pageviews");
+  if (hasOperationsCases && hasAutomation && hasVisitors) return "0008_visitor_observability";
   if (hasOperationsCases && hasAutomation) return "0007_operations_automation";
   if (hasOperationsCases) return "0006_operations_cases";
   if (names.has("rental_groups")) return "0005_rental_groups";
@@ -161,6 +165,9 @@ async function getSystem(env) {
     ["autoOperationsTasks", "operations_tasks", "SELECT COUNT(*) AS value FROM operations_tasks WHERE auto_managed=1", "auto_managed"],
     ["openAutoOperationsTasks", "operations_tasks", "SELECT COUNT(*) AS value FROM operations_tasks WHERE auto_managed=1 AND status='OPEN'", "auto_managed"],
     ["dismissedAutoOperationsTasks", "operations_tasks", "SELECT COUNT(*) AS value FROM operations_tasks WHERE auto_managed=1 AND status='DISMISSED'", "auto_managed"],
+    ["visitorSessions", "visitor_sessions", "SELECT COUNT(*) AS value FROM visitor_sessions"],
+    ["visitorPageviews", "visitor_pageviews", "SELECT COUNT(*) AS value FROM visitor_pageviews"],
+    ["activeVisitors15m", "visitor_sessions", "SELECT COUNT(*) AS value FROM visitor_sessions WHERE julianday(last_seen_at)>=julianday('now','-15 minutes')"],
     ["auditEvents", "audit_events", "SELECT COUNT(*) AS value FROM audit_events"],
     ["unprocessedPaymentEvents", "payment_events", "SELECT COUNT(*) AS value FROM payment_events WHERE processed_at IS NULL"],
     ["expiredIdempotencyKeys", "idempotency_keys", "SELECT COUNT(*) AS value FROM idempotency_keys WHERE expires_at IS NOT NULL AND julianday(expires_at)<=julianday('now')"],
@@ -192,6 +199,12 @@ async function getSystem(env) {
       schemaReady: missingRequiredColumns.length === 0 && present.has("operations_tasks"),
       schedulerConfigured: null,
       schedulerNote: "Scheduled handler is implemented, but cron configuration cannot be inferred from Worker runtime bindings.",
+    },
+    visitorObservability: {
+      schemaReady: present.has("visitor_sessions") && present.has("visitor_pageviews"),
+      anonymousFirstPartyOnly: true,
+      rawIpStored: false,
+      fingerprintStored: false,
     },
     tables,
     counts,
