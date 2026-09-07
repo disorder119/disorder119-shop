@@ -251,11 +251,15 @@ def main() -> None:
     catalog = json.loads((BASE / "data" / "catalog.json").read_text(encoding="utf-8"))
     require("__CRITICAL_IMAGE_PRELOADS__" in template, "Critical-image preload token fehlt")
     require("FOCUS3_MOBILE_SSR_LCP" in build, "serverseitiger Mobile-LCP-Pfad fehlt")
+    require('return "\\\\n".join(links)' not in build,
+            "Build-Pipeline schreibt literales \\n statt eines echten Zeilenumbruchs zwischen Preload-Tags")
     require("FOCUS3_SSR_HYDRATION" in app, "SSR-Karten werden nicht hydriert")
     require(FOLLOWUP_MARKER in build and FOLLOWUP_MARKER in app, "gemessener Mobile-LCP-Followup fehlt")
     require(FOLLOWUP_MARKER in css and FOLLOWUP_MARKER in article_css, "gemessene WCAG-Followup-Regeln fehlen")
     require('data-ssr-initial="1"' in home, "deutsche Startseite enthaelt kein initiales SSR-Grid")
     require(home.count('rel="preload" as="image"') >= 2, "Startseite preloaded nicht zwei erste Produktbilder")
+    require('fetchpriority="high">\\n<link rel="preload"' not in home,
+            "Startseite enthaelt sichtbaren literalen \\n-Text zwischen Preload-Tags")
     require(home.count('data-ssr-item-id=') >= 2, "Startseite enthaelt nicht zwei initiale Produktkarten")
     require(home.count('fetchpriority="high" decoding="sync"') >= 2, "kritische SSR-Bilder decodieren nicht synchron")
     require(RUNTIME_MARKER in home, "Mobile-Startseite verschiebt den vollen Runtime-Boot nicht aus dem LCP-Fenster")

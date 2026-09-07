@@ -48,6 +48,16 @@ def patch_template(text: str) -> str:
 
 
 def patch_build(text: str) -> str:
+    # FOCUS3_PRELOAD_NEWLINE_FIX
+    # A previous raw-string migration wrote the source as "\\n" instead of
+    # "\n". build_site.py therefore emitted the literal characters backslash+n
+    # between the two preload tags. HTML parsing moved that stray text into the
+    # page body, where it appeared as the tiny "n" in the top-left corner.
+    malformed_join = '    return "\\\\n".join(links)\n'
+    corrected_join = '    return "\\n".join(links)\n'
+    if malformed_join in text:
+        text = text.replace(malformed_join, corrected_join, 1)
+
     marker = "FOCUS3_MOBILE_SSR_LCP"
     if marker not in text:
         anchor = '''def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,\n                        include_item_list=False, robots=None, static_content="",\n                        canonical_path_segment=None, slug=""):\n'''
@@ -133,7 +143,7 @@ def initial_archive_preloads():
         path = grid_thumb_path(it)
         if path:
             links.append('<link rel="preload" as="image" href="/' + esc(path) + '" fetchpriority="high">')
-    return "\\n".join(links)
+    return "\n".join(links)
 
 
 def product_data_gap_html(it, lang):
