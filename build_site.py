@@ -1031,7 +1031,7 @@ def initial_archive_preloads():
         path = grid_thumb_path(it)
         if path:
             links.append('<link rel="preload" as="image" href="/' + esc(path) + '" fetchpriority="high">')
-    return "\\n".join(links)
+    return "\n".join(links)
 
 
 def product_data_gap_html(it, lang):
