@@ -1,15 +1,18 @@
 "use strict";
 
 const CACHE_PREFIX = "disorder119-admin-pwa-";
-const CACHE_NAME = CACHE_PREFIX + "v1";
+const CACHE_NAME = CACHE_PREFIX + "v2";
 const PRECACHE = [
   "/admin/",
+  "/admin/operations.html",
   "/admin/offline.html",
   "/admin/manifest.webmanifest",
   "/assets/favicon.png",
   "/assets/app-icon.svg",
   "/assets/app-icon-maskable.svg",
-  "/assets/admin-pwa.js"
+  "/assets/admin-pwa.js",
+  "/assets/admin-operations.css",
+  "/assets/admin-operations.js"
 ];
 
 self.addEventListener("install", (event) => {
@@ -55,7 +58,7 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   // The admin worker is intentionally narrow: it never intercepts the public
-  // shop and never sees the cross-origin GitHub API calls used by the editor.
+  // shop and never sees the cross-origin GitHub/Shop-Worker API calls.
   if (!url.pathname.startsWith("/admin/") && !url.pathname.startsWith("/assets/")) return;
 
   if (request.mode === "navigate") {
