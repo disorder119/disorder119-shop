@@ -424,13 +424,57 @@
   function saveEncBlob(blob) { localStorage.setItem(ENC_KEY, JSON.stringify(blob)); }
   function clearEncBlob() { localStorage.removeItem(ENC_KEY); }
 
-  // ADMIN_LARGE_ITEMS_LOADER_V1
+  // ADMIN_LARGE_ITEMS_LOADER_V1 / ADMIN_GITHUB_JSON_RETRY_V2
+  function githubDelay(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
   function githubErrorFromResponse(res) {
     if (res.status === 401) return Promise.reject(new Error("AUTH"));
     if (res.status === 403) return Promise.reject(new Error("PERMISSION"));
-    return res.json().catch(function () { return {}; }).then(function (body) {
+    return res.text().catch(function () { return ""; }).then(function (text) {
+      var body = {};
+      if (text && text.trim()) {
+        try { body = JSON.parse(text); } catch (ignore) {}
+      }
       var detail = body && body.message ? ": " + body.message : "";
       throw new Error("GitHub-Fehler " + res.status + detail);
+    });
+  }
+
+  function githubJsonFetch(url, options, label, attempt) {
+    attempt = attempt || 1;
+    return fetch(url, options).then(function (res) {
+      if (!res.ok) return githubErrorFromResponse(res);
+      return res.text().then(function (text) {
+        var parsed;
+        if (text && text.trim()) {
+          try { parsed = JSON.parse(text); } catch (err) {
+            if (attempt < 3) {
+              return githubDelay(250 * attempt).then(function () {
+                return githubJsonFetch(url, options, label, attempt + 1);
+              });
+            }
+            throw new Error(label + " konnte nicht vollständig gelesen werden (" + err.message + "). Bitte Verbindung prüfen und erneut versuchen.");
+          }
+          return parsed;
+        }
+        if (attempt < 3) {
+          return githubDelay(250 * attempt).then(function () {
+            return githubJsonFetch(url, options, label, attempt + 1);
+          });
+        }
+        throw new Error(label + " lieferte nach 3 Versuchen eine leere Antwort. Bitte Verbindung prüfen und erneut versuchen.");
+      });
+    }).catch(function (err) {
+      // Browser/network fetch failures are usually TypeError. Retry those,
+      // but never retry explicit auth/permission/HTTP errors.
+      if (attempt < 3 && err && err.name === "TypeError") {
+        return githubDelay(250 * attempt).then(function () {
+          return githubJsonFetch(url, options, label, attempt + 1);
+        });
+      }
+      throw err;
     });
   }
 
@@ -444,10 +488,7 @@
     if (!data || !data.git_url) {
       return Promise.reject(new Error("GitHub liefert keine lesbaren Artikeldaten."));
     }
-    return fetch(data.git_url, { headers: ghHeaders(pat) }).then(function (res) {
-      if (!res.ok) return githubErrorFromResponse(res);
-      return res.json();
-    }).then(function (blob) {
+    return githubJsonFetch(data.git_url, { headers: ghHeaders(pat), cache: "no-store" }, "GitHub-Datei", 1).then(function (blob) {
       if (!blob || blob.encoding !== "base64" || typeof blob.content !== "string" || !blob.content.trim()) {
         throw new Error("GitHub liefert den Artikelbestand nicht als lesbare Datei.");
       }
@@ -457,10 +498,9 @@
 
   function fetchItems() {
     var pat = currentPat;
-    return fetch(API_BASE + "?ref=" + encodeURIComponent(BRANCH), { headers: ghHeaders(pat) }).then(function (res) {
-      if (!res.ok) return githubErrorFromResponse(res);
-      return res.json();
-    }).then(function (data) {
+    var url = API_BASE + "?ref=" + encodeURIComponent(BRANCH) + "&_=" + Date.now();
+    return githubJsonFetch(url, { headers: ghHeaders(pat), cache: "no-store" }, "GitHub-Verbindung", 1).then(function (data) {
+      if (!data || !data.sha) throw new Error("GitHub liefert keinen gültigen Dateistand.");
       state.sha = data.sha;
       return readGithubContentsPayload(data, pat);
     }).then(function (content) {
@@ -855,7 +895,9 @@
     return fetchItems().then(boot).catch(function (err) {
       currentPat = "";
       if (err.message === "AUTH") {
-        showError(errElId, "Token abgelehnt (401/403) — Berechtigung prüfen (Contents: Read and write) oder neu erstellen.");
+        showError(errElId, "Token abgelehnt (401) — Token neu erstellen oder auf Tippfehler prüfen.");
+      } else if (err.message === "PERMISSION") {
+        showError(errElId, "Token hat keine Berechtigung (403) — Repository disorder119/disorder119-shop und Contents: Read and write prüfen.");
       } else {
         showError(errElId, "Verbindung zu GitHub fehlgeschlagen: " + err.message);
       }
