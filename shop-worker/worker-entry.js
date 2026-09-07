@@ -12,6 +12,7 @@ import { handleAdminSystem } from "./admin-system.js";
 import { handleAdminAlerts } from "./admin-alerts.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
+import { handleVisitRequest, handleAdminVisitors } from "./visitor-observability.js";
 
 function requestId(request) {
   const existing = request.headers.get("cf-ray");
@@ -42,6 +43,10 @@ export default {
     const origin = request.headers.get("Origin");
     const reqId = requestId(request);
 
+    if (url.pathname === "/visit") {
+      return handleVisitRequest(request, env, url, reqId, origin);
+    }
+
     if (url.pathname === "/rental-bundle") {
       return handleRentalBundle(request, env, url, reqId, origin);
     }
@@ -60,6 +65,10 @@ export default {
 
     if (url.pathname === "/admin/alerts/sync") {
       return handleAdminAlerts(request, env, url, reqId, origin);
+    }
+
+    if (url.pathname === "/admin/visitors" || url.pathname.startsWith("/admin/visitors/")) {
+      return handleAdminVisitors(request, env, url, reqId, origin);
     }
 
     if (url.pathname === "/admin/rental-groups" || url.pathname.startsWith("/admin/rental-groups/")) {
