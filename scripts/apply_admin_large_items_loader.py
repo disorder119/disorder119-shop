@@ -1,58 +1,277 @@
 #!/usr/bin/env python3
-"""Make the browser admin robust to GitHub Contents API responses.
+"""Harden the browser admin's GitHub Contents API transport.
 
-The admin reads a comparatively large ``data/items.json`` file directly from
-GitHub. The Contents API can omit inline content for large files and mobile or
-browser connections can occasionally deliver an empty/truncated JSON response.
-This migration follows ``git_url`` when necessary and retries only transport /
-JSON-body failures. Authentication and permission failures remain hard errors.
+The admin reads and writes ``data/items.json`` directly through GitHub's REST
+API. This migration keeps the large-file Git-blob fallback, removes blind
+``Response.json()`` calls, classifies HTTP/auth/rate-limit/network failures,
+uses the documented Bearer form for fine-grained PATs, and invalidates the
+admin PWA shell cache so iOS/Safari cannot keep serving the pre-fix admin.
 
-The migration is deliberately limited to the catalog editor under ``admin/``
-and does not touch Match, Chaos or Baukasten.
+The migration is deliberately limited to ``admin/`` and does not touch Match,
+Chaos, Baukasten, rental constants or ``config/mode-guard.json``.
 """
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
-PATH = BASE / "admin" / "index.html"
+ADMIN = BASE / "admin" / "index.html"
+ADMIN_SW = BASE / "admin" / "sw.js"
 MARKER_V1 = "ADMIN_LARGE_ITEMS_LOADER_V1"
 MARKER_V2 = "ADMIN_GITHUB_JSON_RETRY_V2"
+MARKER_V3 = "ADMIN_GITHUB_RESPONSE_V3"
 
-OLD = '''  function fetchItems() {\n    var pat = currentPat;\n    return fetch(API_BASE + "?ref=" + BRANCH, { headers: ghHeaders(pat) }).then(function (res) {\n      if (res.status === 401 || res.status === 403) {\n        throw new Error("AUTH");\n      }\n      if (!res.ok) throw new Error("GitHub-Fehler " + res.status);\n      return res.json();\n    }).then(function (data) {\n      var text = b64DecodeUtf8(data.content);\n      state.items = JSON.parse(text);\n      state.sha = data.sha;\n    });\n  }'''
 
-V1 = '''  // ADMIN_LARGE_ITEMS_LOADER_V1\n  function githubErrorFromResponse(res) {\n    if (res.status === 401) return Promise.reject(new Error("AUTH"));\n    if (res.status === 403) return Promise.reject(new Error("PERMISSION"));\n    return res.json().catch(function () { return {}; }).then(function (body) {\n      var detail = body && body.message ? ": " + body.message : "";\n      throw new Error("GitHub-Fehler " + res.status + detail);\n    });\n  }\n\n  function readGithubContentsPayload(data, pat) {\n    if (data && data.encoding === "base64" && typeof data.content === "string" && data.content.trim()) {\n      return Promise.resolve(data.content);\n    }\n    // GitHub Contents API returns encoding=none/no inline content for larger\n    // files. Follow the immutable Git-blob URL instead of parsing an empty\n    // string as JSON. This keeps the same repository/token scope.\n    if (!data || !data.git_url) {\n      return Promise.reject(new Error("GitHub liefert keine lesbaren Artikeldaten."));\n    }\n    return fetch(data.git_url, { headers: ghHeaders(pat) }).then(function (res) {\n      if (!res.ok) return githubErrorFromResponse(res);\n      return res.json();\n    }).then(function (blob) {\n      if (!blob || blob.encoding !== "base64" || typeof blob.content !== "string" || !blob.content.trim()) {\n        throw new Error("GitHub liefert den Artikelbestand nicht als lesbare Datei.");\n      }\n      return blob.content;\n    });\n  }\n\n  function fetchItems() {\n    var pat = currentPat;\n    return fetch(API_BASE + "?ref=" + encodeURIComponent(BRANCH), { headers: ghHeaders(pat) }).then(function (res) {\n      if (!res.ok) return githubErrorFromResponse(res);\n      return res.json();\n    }).then(function (data) {\n      state.sha = data.sha;\n      return readGithubContentsPayload(data, pat);\n    }).then(function (content) {\n      var text = b64DecodeUtf8(content);\n      if (!text.trim()) throw new Error("Artikeldaten sind leer.");\n      var parsed;\n      try {\n        parsed = JSON.parse(text);\n      } catch (err) {\n        throw new Error("Artikeldaten konnten nicht vollständig gelesen werden: " + err.message);\n      }\n      if (!Array.isArray(parsed)) throw new Error("Artikeldaten haben ein unerwartetes Format.");\n      state.items = parsed;\n    });\n  }'''
+def replace_once(text: str, old: str, new: str, label: str) -> str:
+    if new in text:
+        return text
+    count = text.count(old)
+    if count != 1:
+        raise SystemExit(f"FEHLER: Admin GitHub V3 {label}: erwartete 1 Fundstelle, gefunden {count}")
+    return text.replace(old, new, 1)
 
-V2 = '''  // ADMIN_LARGE_ITEMS_LOADER_V1 / ADMIN_GITHUB_JSON_RETRY_V2\n  function githubDelay(ms) {\n    return new Promise(function (resolve) { setTimeout(resolve, ms); });\n  }\n\n  function githubErrorFromResponse(res) {\n    if (res.status === 401) return Promise.reject(new Error("AUTH"));\n    if (res.status === 403) return Promise.reject(new Error("PERMISSION"));\n    return res.text().catch(function () { return ""; }).then(function (text) {\n      var body = {};\n      if (text && text.trim()) {\n        try { body = JSON.parse(text); } catch (ignore) {}\n      }\n      var detail = body && body.message ? ": " + body.message : "";\n      throw new Error("GitHub-Fehler " + res.status + detail);\n    });\n  }\n\n  function githubJsonFetch(url, options, label, attempt) {\n    attempt = attempt || 1;\n    return fetch(url, options).then(function (res) {\n      if (!res.ok) return githubErrorFromResponse(res);\n      return res.text().then(function (text) {\n        var parsed;\n        if (text && text.trim()) {\n          try { parsed = JSON.parse(text); } catch (err) {\n            if (attempt < 3) {\n              return githubDelay(250 * attempt).then(function () {\n                return githubJsonFetch(url, options, label, attempt + 1);\n              });\n            }\n            throw new Error(label + " konnte nicht vollständig gelesen werden (" + err.message + "). Bitte Verbindung prüfen und erneut versuchen.");\n          }\n          return parsed;\n        }\n        if (attempt < 3) {\n          return githubDelay(250 * attempt).then(function () {\n            return githubJsonFetch(url, options, label, attempt + 1);\n          });\n        }\n        throw new Error(label + " lieferte nach 3 Versuchen eine leere Antwort. Bitte Verbindung prüfen und erneut versuchen.");\n      });\n    }).catch(function (err) {\n      // Browser/network fetch failures are usually TypeError. Retry those,\n      // but never retry explicit auth/permission/HTTP errors.\n      if (attempt < 3 && err && err.name === "TypeError") {\n        return githubDelay(250 * attempt).then(function () {\n          return githubJsonFetch(url, options, label, attempt + 1);\n        });\n      }\n      throw err;\n    });\n  }\n\n  function readGithubContentsPayload(data, pat) {\n    if (data && data.encoding === "base64" && typeof data.content === "string" && data.content.trim()) {\n      return Promise.resolve(data.content);\n    }\n    // GitHub Contents API returns encoding=none/no inline content for larger\n    // files. Follow the immutable Git-blob URL instead of parsing an empty\n    // string as JSON. This keeps the same repository/token scope.\n    if (!data || !data.git_url) {\n      return Promise.reject(new Error("GitHub liefert keine lesbaren Artikeldaten."));\n    }\n    return githubJsonFetch(data.git_url, { headers: ghHeaders(pat), cache: "no-store" }, "GitHub-Datei", 1).then(function (blob) {\n      if (!blob || blob.encoding !== "base64" || typeof blob.content !== "string" || !blob.content.trim()) {\n        throw new Error("GitHub liefert den Artikelbestand nicht als lesbare Datei.");\n      }\n      return blob.content;\n    });\n  }\n\n  function fetchItems() {\n    var pat = currentPat;\n    var url = API_BASE + "?ref=" + encodeURIComponent(BRANCH) + "&_=" + Date.now();\n    return githubJsonFetch(url, { headers: ghHeaders(pat), cache: "no-store" }, "GitHub-Verbindung", 1).then(function (data) {\n      if (!data || !data.sha) throw new Error("GitHub liefert keinen gültigen Dateistand.");\n      state.sha = data.sha;\n      return readGithubContentsPayload(data, pat);\n    }).then(function (content) {\n      var text = b64DecodeUtf8(content);\n      if (!text.trim()) throw new Error("Artikeldaten sind leer.");\n      var parsed;\n      try {\n        parsed = JSON.parse(text);\n      } catch (err) {\n        throw new Error("Artikeldaten konnten nicht vollständig gelesen werden: " + err.message);\n      }\n      if (!Array.isArray(parsed)) throw new Error("Artikeldaten haben ein unerwartetes Format.");\n      state.items = parsed;\n    });\n  }'''
 
-VERIFY_V1 = '''      if (err.message === "AUTH") {\n        showError(errElId, "Token abgelehnt (401/403) — Berechtigung prüfen (Contents: Read and write) oder neu erstellen.");\n      } else {\n        showError(errElId, "Verbindung zu GitHub fehlgeschlagen: " + err.message);\n      }'''
+V3_TRANSPORT = r'''  // ADMIN_LARGE_ITEMS_LOADER_V1 / ADMIN_GITHUB_JSON_RETRY_V2 / ADMIN_GITHUB_RESPONSE_V3
+  function githubFailure(code, message) {
+    var err = new Error(message || code);
+    err.code = code;
+    return err;
+  }
 
-VERIFY_V2 = '''      if (err.message === "AUTH") {\n        showError(errElId, "Token abgelehnt (401) — Token neu erstellen oder auf Tippfehler prüfen.");\n      } else if (err.message === "PERMISSION") {\n        showError(errElId, "Token hat keine Berechtigung (403) — Repository disorder119/disorder119-shop und Contents: Read and write prüfen.");\n      } else {\n        showError(errElId, "Verbindung zu GitHub fehlgeschlagen: " + err.message);\n      }'''
+  function githubDelay(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  function githubContentType(res) {
+    return String((res.headers && res.headers.get("content-type")) || "").toLowerCase();
+  }
+
+  function githubIsJsonContentType(res) {
+    var type = githubContentType(res);
+    return type.indexOf("application/json") !== -1 || type.indexOf("+json") !== -1;
+  }
+
+  function githubReadText(res) {
+    return res.text().catch(function () { return ""; });
+  }
+
+  function githubRateLimitDetail(res) {
+    var retryAfter = Number((res.headers && res.headers.get("retry-after")) || 0);
+    if (Number.isFinite(retryAfter) && retryAfter > 0) {
+      return " Bitte nach etwa " + Math.ceil(retryAfter) + " Sekunden erneut versuchen.";
+    }
+    var reset = Number((res.headers && res.headers.get("x-ratelimit-reset")) || 0);
+    if (Number.isFinite(reset) && reset > 0) {
+      var seconds = Math.max(1, Math.ceil(reset - Date.now() / 1000));
+      return " Bitte nach etwa " + seconds + " Sekunden erneut versuchen.";
+    }
+    return " Bitte später erneut versuchen.";
+  }
+
+  function githubErrorFromResponse(res, label) {
+    return githubReadText(res).then(function (text) {
+      var apiMessage = "";
+      if (text && text.trim() && githubIsJsonContentType(res)) {
+        try {
+          var body = JSON.parse(text);
+          if (body && typeof body.message === "string") apiMessage = body.message;
+        } catch (ignore) {
+          // Fehlerantworten sind optionales Diagnosematerial. Ein kaputtes
+          // Error-JSON darf niemals selbst den sichtbaren Fehler auslösen.
+        }
+      }
+
+      if (res.status === 401) {
+        throw githubFailure("AUTH", "GitHub hat den Token mit HTTP 401 abgelehnt.");
+      }
+
+      var remaining = String((res.headers && res.headers.get("x-ratelimit-remaining")) || "");
+      var retryAfter = String((res.headers && res.headers.get("retry-after")) || "");
+      if (res.status === 429 || (res.status === 403 && (remaining === "0" || retryAfter))) {
+        throw githubFailure("RATE_LIMIT", "GitHub-Rate-Limit erreicht." + githubRateLimitDetail(res));
+      }
+
+      if (res.status === 403) {
+        throw githubFailure("PERMISSION", "GitHub verweigert den Repository-Zugriff mit HTTP 403.");
+      }
+
+      var detail = apiMessage ? ": " + apiMessage : "";
+      if (res.status >= 500 && res.status <= 599) {
+        throw githubFailure("SERVER", (label || "GitHub") + " meldet HTTP " + res.status + detail + ".");
+      }
+      throw githubFailure("HTTP", (label || "GitHub") + " meldet HTTP " + res.status + detail + ".");
+    });
+  }
+
+  function githubJsonFromResponse(res, label) {
+    if (!res.ok) return githubErrorFromResponse(res, label);
+
+    // 204/205 sind erfolgreiche HTTP-Antworten ohne Body. Dieser Admin
+    // erwartet an seinen GitHub-Endpunkten aber JSON und darf deshalb nie
+    // response.json()/JSON.parse("") aufrufen.
+    if (res.status === 204 || res.status === 205) {
+      return Promise.reject(githubFailure(
+        "EMPTY",
+        (label || "GitHub") + " lieferte HTTP " + res.status + " ohne Inhalt."
+      ));
+    }
+
+    return githubReadText(res).then(function (text) {
+      if (!text || !text.trim()) {
+        throw githubFailure("EMPTY", (label || "GitHub") + " lieferte eine leere Antwort.");
+      }
+
+      var contentType = githubContentType(res);
+      if (!githubIsJsonContentType(res)) {
+        throw githubFailure(
+          "CONTENT_TYPE",
+          (label || "GitHub") + " lieferte statt JSON den Content-Type " + (contentType || "unbekannt") + "."
+        );
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch (ignore) {
+        throw githubFailure(
+          "MALFORMED_JSON",
+          (label || "GitHub") + " lieferte unvollständiges JSON. Bitte Verbindung prüfen und erneut versuchen."
+        );
+      }
+    });
+  }
+
+  function githubRetryable(err) {
+    return err && (
+      err.code === "NETWORK" ||
+      err.code === "EMPTY" ||
+      err.code === "MALFORMED_JSON" ||
+      err.code === "SERVER"
+    );
+  }
+
+  function githubJsonFetch(url, options, label, attempt) {
+    attempt = attempt || 1;
+    return fetch(url, options).catch(function (err) {
+      if (err && err.name === "TypeError") {
+        throw githubFailure(
+          "NETWORK",
+          "Netzwerkzugriff auf api.github.com fehlgeschlagen. Internetverbindung, Content-Blocker oder CORS prüfen."
+        );
+      }
+      throw err;
+    }).then(function (res) {
+      return githubJsonFromResponse(res, label);
+    }).catch(function (err) {
+      if (attempt < 3 && githubRetryable(err)) {
+        return githubDelay(250 * attempt).then(function () {
+          return githubJsonFetch(url, options, label, attempt + 1);
+        });
+      }
+      throw err;
+    });
+  }
+'''
+
+
+def patch_admin(text: str) -> str:
+    if MARKER_V1 not in text or MARKER_V2 not in text:
+        raise SystemExit("FEHLER: erwarteter Admin GitHub Loader V2 fehlt")
+
+    text = replace_once(
+        text,
+        '''  function ghHeaders(pat) {
+    return { Authorization: "token " + pat, Accept: "application/vnd.github+json" };
+  }''',
+        '''  function ghHeaders(pat) {
+    return {
+      Authorization: "Bearer " + pat,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    };
+  }''',
+        "Fine-grained-PAT Header",
+    )
+
+    start = text.find("  // ADMIN_LARGE_ITEMS_LOADER_V1 / ADMIN_GITHUB_JSON_RETRY_V2")
+    end = text.find("  function readGithubContentsPayload(data, pat)", start)
+    if start < 0 or end < 0:
+        raise SystemExit("FEHLER: Transportblock V2 nicht gefunden")
+    current_block = text[start:end]
+    if MARKER_V3 not in current_block:
+        text = text[:start] + V3_TRANSPORT + "\n" + text[end:]
+
+    old_save = '''      if (!res.ok) {
+        return res.json().catch(function () { return {}; }).then(function (err) {
+          throw new Error("GitHub-Fehler " + res.status + (err.message ? ": " + err.message : ""));
+        });
+      }
+      return res.json();
+    }).then(function (data) {
+      if (data && data.__retried) return;
+      state.items = nextItems;
+      state.sha = data.content.sha;
+    });'''
+    new_save = '''      return githubJsonFromResponse(res, "GitHub-Speichern");
+    }).then(function (data) {
+      if (data && data.__retried) return;
+      if (!data || !data.content || !data.content.sha) {
+        throw githubFailure("FORMAT", "GitHub-Speichern lieferte keinen neuen Dateistand.");
+      }
+      state.items = nextItems;
+      state.sha = data.content.sha;
+    });'''
+    text = replace_once(text, old_save, new_save, "Save-Response")
+
+    old_verify = '''      if (err.message === "AUTH") {
+        showError(errElId, "Token abgelehnt (401) — Token neu erstellen oder auf Tippfehler prüfen.");
+      } else if (err.message === "PERMISSION") {
+        showError(errElId, "Token hat keine Berechtigung (403) — Repository disorder119/disorder119-shop und Contents: Read and write prüfen.");
+      } else {
+        showError(errElId, "Verbindung zu GitHub fehlgeschlagen: " + err.message);
+      }'''
+    new_verify = '''      if (err && err.code === "AUTH") {
+        showError(errElId, "Token abgelehnt (401) — Token neu erstellen oder auf Tippfehler prüfen.");
+      } else if (err && err.code === "PERMISSION") {
+        showError(errElId, "Token hat keine Berechtigung (403) — Repository disorder119/disorder119-shop und Contents: Read and write prüfen.");
+      } else if (err && err.code === "RATE_LIMIT") {
+        showError(errElId, err.message);
+      } else if (err && err.code === "NETWORK") {
+        showError(errElId, err.message);
+      } else if (err && err.code === "CONTENT_TYPE") {
+        showError(errElId, "GitHub antwortet nicht mit JSON — Content-Blocker, Proxy oder Netzwerk prüfen.");
+      } else {
+        showError(errElId, "Verbindung zu GitHub fehlgeschlagen: " + (err && err.message ? err.message : "Unbekannter Fehler."));
+      }'''
+    text = replace_once(text, old_verify, new_verify, "verifyAndBoot")
+    return text
+
+
+def patch_admin_sw(text: str) -> str:
+    if 'const CACHE_PREFIX = "disorder119-admin-pwa-";' not in text:
+        raise SystemExit("FEHLER: Admin-PWA Cache-Prefix fehlt")
+    if 'const CACHE_NAME = CACHE_PREFIX + "v2";' in text:
+        return text
+    return replace_once(
+        text,
+        'const CACHE_NAME = CACHE_PREFIX + "v1";',
+        'const CACHE_NAME = CACHE_PREFIX + "v2"; // ADMIN_GITHUB_RESPONSE_V3 cache invalidation',
+        "PWA Cache-Version",
+    )
 
 
 def main() -> None:
-    text = PATH.read_text(encoding="utf-8")
-    changed = False
+    admin = ADMIN.read_text(encoding="utf-8")
+    patched_admin = patch_admin(admin)
+    if patched_admin != admin:
+        ADMIN.write_text(patched_admin, encoding="utf-8")
 
-    if MARKER_V2 not in text:
-        if V1 in text:
-            text = text.replace(V1, V2, 1)
-            changed = True
-        elif OLD in text:
-            text = text.replace(OLD, V2, 1)
-            changed = True
-        else:
-            raise SystemExit("FEHLER: fetchItems-Anker fuer Admin GitHub-Loader fehlt")
+    sw = ADMIN_SW.read_text(encoding="utf-8")
+    patched_sw = patch_admin_sw(sw)
+    if patched_sw != sw:
+        ADMIN_SW.write_text(patched_sw, encoding="utf-8")
 
-    if VERIFY_V2 not in text:
-        if VERIFY_V1 not in text:
-            raise SystemExit("FEHLER: verifyAndBoot-Anker fuer Admin GitHub-Loader fehlt")
-        text = text.replace(VERIFY_V1, VERIFY_V2, 1)
-        changed = True
-
-    if changed:
-        PATH.write_text(text, encoding="utf-8")
-        print("Admin GitHub-Loader V2 angewendet: Blob-Fallback, no-store und Retry bei leeren/abgeschnittenen JSON-Antworten.")
-    else:
-        print("Admin GitHub-Loader V2 bereits aktuell.")
+    print(
+        "Admin GitHub Loader V3 angewendet: Bearer-PAT, Status/Content-Type/Text-Handling, "
+        "leer/204 ohne JSON-Parse, Rate-Limit/Netzwerkfehler und PWA-Cache-Invalidierung."
+    )
 
 
 if __name__ == "__main__":
