@@ -2,6 +2,7 @@ export const CURRENCY = "EUR";
 export const RENTAL_RATE_BPS = 1000; // 10.00% of authoritative sale price
 export const RESERVATION_TTL_SECONDS = 15 * 60;
 export const MAX_REQUEST_BYTES = 32 * 1024;
+export const MAX_RENTAL_DAYS = 7;
 
 export const INVENTORY_STATUSES = Object.freeze([
   "AVAILABLE",
@@ -106,7 +107,7 @@ export function rentalDayCount(startDate, endDate) {
   if (sCheck.getUTCFullYear() !== sy || sCheck.getUTCMonth() !== sm - 1 || sCheck.getUTCDate() !== sd) return null;
   if (eCheck.getUTCFullYear() !== ey || eCheck.getUTCMonth() !== em - 1 || eCheck.getUTCDate() !== ed) return null;
   const days = Math.floor((e - s) / 86400000) + 1;
-  return days > 0 && days <= 366 ? days : null;
+  return days > 0 && days <= MAX_RENTAL_DAYS ? days : null;
 }
 
 export function rentalQuoteFromItem(item, startDate, endDate, todayDate = new Date().toISOString().slice(0, 10)) {
