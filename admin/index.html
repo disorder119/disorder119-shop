@@ -362,7 +362,11 @@
 
   // ---------- GitHub API ----------
   function ghHeaders(pat) {
-    return { Authorization: "token " + pat, Accept: "application/vnd.github+json" };
+    return {
+      Authorization: "Bearer " + pat,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    };
   }
 
   // ---------- Verschluesselung (AES-256-GCM, Schluessel per PBKDF2 aus
@@ -424,52 +428,138 @@
   function saveEncBlob(blob) { localStorage.setItem(ENC_KEY, JSON.stringify(blob)); }
   function clearEncBlob() { localStorage.removeItem(ENC_KEY); }
 
-  // ADMIN_LARGE_ITEMS_LOADER_V1 / ADMIN_GITHUB_JSON_RETRY_V2
+  // ADMIN_LARGE_ITEMS_LOADER_V1 / ADMIN_GITHUB_JSON_RETRY_V2 / ADMIN_GITHUB_RESPONSE_V3
+  function githubFailure(code, message) {
+    var err = new Error(message || code);
+    err.code = code;
+    return err;
+  }
+
   function githubDelay(ms) {
     return new Promise(function (resolve) { setTimeout(resolve, ms); });
   }
 
-  function githubErrorFromResponse(res) {
-    if (res.status === 401) return Promise.reject(new Error("AUTH"));
-    if (res.status === 403) return Promise.reject(new Error("PERMISSION"));
-    return res.text().catch(function () { return ""; }).then(function (text) {
-      var body = {};
-      if (text && text.trim()) {
-        try { body = JSON.parse(text); } catch (ignore) {}
+  function githubContentType(res) {
+    return String((res.headers && res.headers.get("content-type")) || "").toLowerCase();
+  }
+
+  function githubIsJsonContentType(res) {
+    var type = githubContentType(res);
+    return type.indexOf("application/json") !== -1 || type.indexOf("+json") !== -1;
+  }
+
+  function githubReadText(res) {
+    return res.text().catch(function () { return ""; });
+  }
+
+  function githubRateLimitDetail(res) {
+    var retryAfter = Number((res.headers && res.headers.get("retry-after")) || 0);
+    if (Number.isFinite(retryAfter) && retryAfter > 0) {
+      return " Bitte nach etwa " + Math.ceil(retryAfter) + " Sekunden erneut versuchen.";
+    }
+    var reset = Number((res.headers && res.headers.get("x-ratelimit-reset")) || 0);
+    if (Number.isFinite(reset) && reset > 0) {
+      var seconds = Math.max(1, Math.ceil(reset - Date.now() / 1000));
+      return " Bitte nach etwa " + seconds + " Sekunden erneut versuchen.";
+    }
+    return " Bitte später erneut versuchen.";
+  }
+
+  function githubErrorFromResponse(res, label) {
+    return githubReadText(res).then(function (text) {
+      var apiMessage = "";
+      if (text && text.trim() && githubIsJsonContentType(res)) {
+        try {
+          var body = JSON.parse(text);
+          if (body && typeof body.message === "string") apiMessage = body.message;
+        } catch (ignore) {
+          // Fehlerantworten sind optionales Diagnosematerial. Ein kaputtes
+          // Error-JSON darf niemals selbst den sichtbaren Fehler auslösen.
+        }
       }
-      var detail = body && body.message ? ": " + body.message : "";
-      throw new Error("GitHub-Fehler " + res.status + detail);
+
+      if (res.status === 401) {
+        throw githubFailure("AUTH", "GitHub hat den Token mit HTTP 401 abgelehnt.");
+      }
+
+      var remaining = String((res.headers && res.headers.get("x-ratelimit-remaining")) || "");
+      var retryAfter = String((res.headers && res.headers.get("retry-after")) || "");
+      if (res.status === 429 || (res.status === 403 && (remaining === "0" || retryAfter))) {
+        throw githubFailure("RATE_LIMIT", "GitHub-Rate-Limit erreicht." + githubRateLimitDetail(res));
+      }
+
+      if (res.status === 403) {
+        throw githubFailure("PERMISSION", "GitHub verweigert den Repository-Zugriff mit HTTP 403.");
+      }
+
+      var detail = apiMessage ? ": " + apiMessage : "";
+      if (res.status >= 500 && res.status <= 599) {
+        throw githubFailure("SERVER", (label || "GitHub") + " meldet HTTP " + res.status + detail + ".");
+      }
+      throw githubFailure("HTTP", (label || "GitHub") + " meldet HTTP " + res.status + detail + ".");
     });
+  }
+
+  function githubJsonFromResponse(res, label) {
+    if (!res.ok) return githubErrorFromResponse(res, label);
+
+    // 204/205 sind erfolgreiche HTTP-Antworten ohne Body. Dieser Admin
+    // erwartet an seinen GitHub-Endpunkten aber JSON und darf deshalb nie
+    // response.json()/JSON.parse("") aufrufen.
+    if (res.status === 204 || res.status === 205) {
+      return Promise.reject(githubFailure(
+        "EMPTY",
+        (label || "GitHub") + " lieferte HTTP " + res.status + " ohne Inhalt."
+      ));
+    }
+
+    return githubReadText(res).then(function (text) {
+      if (!text || !text.trim()) {
+        throw githubFailure("EMPTY", (label || "GitHub") + " lieferte eine leere Antwort.");
+      }
+
+      var contentType = githubContentType(res);
+      if (!githubIsJsonContentType(res)) {
+        throw githubFailure(
+          "CONTENT_TYPE",
+          (label || "GitHub") + " lieferte statt JSON den Content-Type " + (contentType || "unbekannt") + "."
+        );
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch (ignore) {
+        throw githubFailure(
+          "MALFORMED_JSON",
+          (label || "GitHub") + " lieferte unvollständiges JSON. Bitte Verbindung prüfen und erneut versuchen."
+        );
+      }
+    });
+  }
+
+  function githubRetryable(err) {
+    return err && (
+      err.code === "NETWORK" ||
+      err.code === "EMPTY" ||
+      err.code === "MALFORMED_JSON" ||
+      err.code === "SERVER"
+    );
   }
 
   function githubJsonFetch(url, options, label, attempt) {
     attempt = attempt || 1;
-    return fetch(url, options).then(function (res) {
-      if (!res.ok) return githubErrorFromResponse(res);
-      return res.text().then(function (text) {
-        var parsed;
-        if (text && text.trim()) {
-          try { parsed = JSON.parse(text); } catch (err) {
-            if (attempt < 3) {
-              return githubDelay(250 * attempt).then(function () {
-                return githubJsonFetch(url, options, label, attempt + 1);
-              });
-            }
-            throw new Error(label + " konnte nicht vollständig gelesen werden (" + err.message + "). Bitte Verbindung prüfen und erneut versuchen.");
-          }
-          return parsed;
-        }
-        if (attempt < 3) {
-          return githubDelay(250 * attempt).then(function () {
-            return githubJsonFetch(url, options, label, attempt + 1);
-          });
-        }
-        throw new Error(label + " lieferte nach 3 Versuchen eine leere Antwort. Bitte Verbindung prüfen und erneut versuchen.");
-      });
+    return fetch(url, options).catch(function (err) {
+      if (err && err.name === "TypeError") {
+        throw githubFailure(
+          "NETWORK",
+          "Netzwerkzugriff auf api.github.com fehlgeschlagen. Internetverbindung, Content-Blocker oder CORS prüfen."
+        );
+      }
+      throw err;
+    }).then(function (res) {
+      return githubJsonFromResponse(res, label);
     }).catch(function (err) {
-      // Browser/network fetch failures are usually TypeError. Retry those,
-      // but never retry explicit auth/permission/HTTP errors.
-      if (attempt < 3 && err && err.name === "TypeError") {
+      if (attempt < 3 && githubRetryable(err)) {
         return githubDelay(250 * attempt).then(function () {
           return githubJsonFetch(url, options, label, attempt + 1);
         });
@@ -544,14 +634,12 @@
           return { __retried: true };
         }); // ADMIN_CONCURRENCY_RETRY_SAFE
       }
-      if (!res.ok) {
-        return res.json().catch(function () { return {}; }).then(function (err) {
-          throw new Error("GitHub-Fehler " + res.status + (err.message ? ": " + err.message : ""));
-        });
-      }
-      return res.json();
+      return githubJsonFromResponse(res, "GitHub-Speichern");
     }).then(function (data) {
       if (data && data.__retried) return;
+      if (!data || !data.content || !data.content.sha) {
+        throw githubFailure("FORMAT", "GitHub-Speichern lieferte keinen neuen Dateistand.");
+      }
       state.items = nextItems;
       state.sha = data.content.sha;
     });
@@ -894,12 +982,18 @@
     currentPat = pat;
     return fetchItems().then(boot).catch(function (err) {
       currentPat = "";
-      if (err.message === "AUTH") {
+      if (err && err.code === "AUTH") {
         showError(errElId, "Token abgelehnt (401) — Token neu erstellen oder auf Tippfehler prüfen.");
-      } else if (err.message === "PERMISSION") {
+      } else if (err && err.code === "PERMISSION") {
         showError(errElId, "Token hat keine Berechtigung (403) — Repository disorder119/disorder119-shop und Contents: Read and write prüfen.");
+      } else if (err && err.code === "RATE_LIMIT") {
+        showError(errElId, err.message);
+      } else if (err && err.code === "NETWORK") {
+        showError(errElId, err.message);
+      } else if (err && err.code === "CONTENT_TYPE") {
+        showError(errElId, "GitHub antwortet nicht mit JSON — Content-Blocker, Proxy oder Netzwerk prüfen.");
       } else {
-        showError(errElId, "Verbindung zu GitHub fehlgeschlagen: " + err.message);
+        showError(errElId, "Verbindung zu GitHub fehlgeschlagen: " + (err && err.message ? err.message : "Unbekannter Fehler."));
       }
       throw err;
     });

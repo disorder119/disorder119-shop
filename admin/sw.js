@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "disorder119-admin-pwa-";
-const CACHE_NAME = CACHE_PREFIX + "v1";
+const CACHE_NAME = CACHE_PREFIX + "v2"; // ADMIN_GITHUB_RESPONSE_V3 cache invalidation
 const PRECACHE = [
   "/admin/",
   "/admin/offline.html",
