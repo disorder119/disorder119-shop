@@ -20,13 +20,19 @@ import {
   rentalQuoteFromItem,
 } from "./commerce-core.js";
 import {
+  ADMIN_ROLE_OWNER,
+  ADMIN_ROLE_READER,
   BACKEND_HARDENING_VERSION,
   RuntimeGuardError,
+  adminAuthReadiness,
+  adminRequiredRoleForMethod,
+  authorizeAdminRequest,
   finalizeRuntimeResponse,
   guardRuntimeRequest,
   productionReadiness,
   requireLegacyAdmin,
   runtimeErrorResponse,
+  scopeAdminEnv,
   timingSafeEqualText,
 } from "./backend-runtime.js";
 
@@ -167,6 +173,125 @@ test("legacy admin token comparison is timing-safe and bearer-only", async () =>
   await assert.rejects(() => requireLegacyAdmin(wrong, { ADMIN_TOKEN: "owner-secret" }), err => err instanceof RuntimeGuardError && err.code === "UNAUTHORIZED" && err.status === 401);
 });
 
+test("admin RBAC maps safe methods to reader and mutations to owner", () => {
+  assert.equal(adminRequiredRoleForMethod("GET"), ADMIN_ROLE_READER);
+  assert.equal(adminRequiredRoleForMethod("HEAD"), ADMIN_ROLE_READER);
+  assert.equal(adminRequiredRoleForMethod("POST"), ADMIN_ROLE_OWNER);
+  assert.equal(adminRequiredRoleForMethod("PATCH"), ADMIN_ROLE_OWNER);
+  assert.equal(adminRequiredRoleForMethod("DELETE"), ADMIN_ROLE_OWNER);
+  assert.equal(adminRequiredRoleForMethod("OPTIONS"), null);
+  assert.throws(
+    () => adminRequiredRoleForMethod("TRACE"),
+    err => err instanceof RuntimeGuardError && err.code === "METHOD_NOT_ALLOWED" && err.status === 405
+  );
+});
+
+test("split admin tokens enforce read/write least privilege", async () => {
+  const env = {
+    PAYPAL_ENVIRONMENT: "live",
+    ADMIN_READ_TOKEN: "reader-secret",
+    ADMIN_WRITE_TOKEN: "writer-secret",
+    DB: { marker: true },
+  };
+  const readiness = adminAuthReadiness(env);
+  assert.equal(readiness.productionRbacReady, true);
+  assert.equal(readiness.readReady, true);
+  assert.equal(readiness.writeReady, true);
+
+  const readerGet = new Request("https://worker.example/admin/system", {
+    headers: { Authorization: "Bearer reader-secret" },
+  });
+  const readerAuth = await authorizeAdminRequest(readerGet, env, ADMIN_ROLE_READER);
+  assert.equal(readerAuth.role, ADMIN_ROLE_READER);
+  assert.equal(readerAuth.mode, "SPLIT_READ");
+
+  const writerGet = new Request("https://worker.example/admin/system", {
+    headers: { Authorization: "Bearer writer-secret" },
+  });
+  const writerAuth = await authorizeAdminRequest(writerGet, env, ADMIN_ROLE_READER);
+  assert.equal(writerAuth.role, ADMIN_ROLE_OWNER);
+  assert.equal(writerAuth.mode, "SPLIT_WRITE");
+
+  const readerWrite = new Request("https://worker.example/admin/tasks/1", {
+    method: "PATCH",
+    headers: { Authorization: "Bearer reader-secret" },
+  });
+  await assert.rejects(
+    () => authorizeAdminRequest(readerWrite, env, ADMIN_ROLE_OWNER),
+    err => err instanceof RuntimeGuardError && err.code === "FORBIDDEN" && err.status === 403
+  );
+
+  const writerWrite = new Request("https://worker.example/admin/tasks/1", {
+    method: "PATCH",
+    headers: { Authorization: "Bearer writer-secret" },
+  });
+  const writeAuth = await authorizeAdminRequest(writerWrite, env, ADMIN_ROLE_OWNER);
+  assert.equal(writeAuth.role, ADMIN_ROLE_OWNER);
+
+  const scoped = scopeAdminEnv(env, readerAuth);
+  assert.equal(scoped.ADMIN_TOKEN, "reader-secret");
+  assert.equal(scoped.ADMIN_AUTH_CONTEXT.role, ADMIN_ROLE_READER);
+  assert.equal(scoped.ADMIN_AUTH_CONTEXT.readConfigured, true);
+  assert.equal(scoped.ADMIN_AUTH_CONTEXT.writeConfigured, true);
+  assert.equal(scoped.DB, env.DB);
+});
+
+test("live admin mutations fail closed on legacy or partial RBAC configuration", async () => {
+  const legacyWrite = new Request("https://worker.example/admin/tasks/1", {
+    method: "PATCH",
+    headers: { Authorization: "Bearer legacy-secret" },
+  });
+  await assert.rejects(
+    () => authorizeAdminRequest(legacyWrite, { PAYPAL_ENVIRONMENT: "live", ADMIN_TOKEN: "legacy-secret" }, ADMIN_ROLE_OWNER),
+    err => err instanceof RuntimeGuardError && err.code === "ADMIN_RBAC_NOT_READY" && err.status === 503
+  );
+
+  const legacyRead = new Request("https://worker.example/admin/system", {
+    headers: { Authorization: "Bearer legacy-secret" },
+  });
+  await assert.doesNotReject(
+    () => authorizeAdminRequest(legacyRead, { PAYPAL_ENVIRONMENT: "live", ADMIN_TOKEN: "legacy-secret" }, ADMIN_ROLE_READER)
+  );
+
+  const partialWrite = new Request("https://worker.example/admin/tasks/1", {
+    method: "PATCH",
+    headers: { Authorization: "Bearer reader-secret" },
+  });
+  await assert.rejects(
+    () => authorizeAdminRequest(partialWrite, { PAYPAL_ENVIRONMENT: "live", ADMIN_READ_TOKEN: "reader-secret" }, ADMIN_ROLE_OWNER),
+    err => err instanceof RuntimeGuardError && err.code === "ADMIN_RBAC_NOT_READY" && err.status === 503
+  );
+});
+
+test("legacy rental admin endpoints inherit the split RBAC boundary", async () => {
+  const env = {
+    PAYPAL_ENVIRONMENT: "live",
+    ADMIN_READ_TOKEN: "reader-secret",
+    ADMIN_WRITE_TOKEN: "writer-secret",
+  };
+  const read = new Request("https://worker.example/rental-requests", {
+    headers: { Authorization: "Bearer reader-secret" },
+  });
+  await assert.doesNotReject(() => guardRuntimeRequest(read, env));
+
+  const deniedPatch = new Request("https://worker.example/rental-request/123", {
+    method: "PATCH",
+    headers: { Authorization: "Bearer reader-secret", "Content-Type": "application/json" },
+    body: "{}",
+  });
+  await assert.rejects(
+    () => guardRuntimeRequest(deniedPatch, env),
+    err => err instanceof RuntimeGuardError && err.code === "FORBIDDEN" && err.status === 403
+  );
+
+  const allowedPatch = new Request("https://worker.example/rental-request/123", {
+    method: "PATCH",
+    headers: { Authorization: "Bearer writer-secret", "Content-Type": "application/json" },
+    body: "{}",
+  });
+  await assert.doesNotReject(() => guardRuntimeRequest(allowedPatch, env));
+});
+
 test("live human writes fail closed without abuse controls", async () => {
   const request = new Request("https://worker.example/rental-request", {
     method: "POST",
@@ -264,9 +389,12 @@ test("runtime errors never expose configuration values", async () => {
   assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://disorder119.com");
 });
 
-test("worker entrypoint cannot bypass the backend runtime guard", () => {
+test("worker entrypoint cannot bypass runtime or admin RBAC guards", () => {
   const entry = fs.readFileSync(path.join(here, "worker-entry.js"), "utf8");
-  assert.match(entry, /guardRuntimeRequest\(request, env, url\)/);
+  assert.match(entry, /authorizeRouteEnv\(request, env, url, reqId\)/);
+  assert.match(entry, /authorizeAdminRequest\(request, env, requiredRole\)/);
+  assert.match(entry, /scopeAdminEnv\(env, auth\)/);
+  assert.match(entry, /guardRuntimeRequest\(request, runtimeEnv, url\)/);
   assert.match(entry, /finalizeRuntimeResponse/);
   assert.match(entry, /runtimeErrorResponse/);
 });
