@@ -4,3 +4,10 @@ compatibility_date = "2025-01-01"
 
 # Alle echten Zugangsdaten sind Secrets (nie hier eintragen, nie committen) -
 # siehe README.md fuer die genauen `wrangler secret put ...`-Befehle.
+
+# Produktionsfehler muessen nachtraeglich ueber Request-ID und strukturierte Logs
+# untersuchbar bleiben. Bei wachsendem Traffic kann die Sampling-Rate bewusst
+# reduziert werden, ohne die Observability komplett abzuschalten.
+[observability]
+enabled = true
+head_sampling_rate = 1
