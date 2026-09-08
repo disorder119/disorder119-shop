@@ -113,6 +113,9 @@ export async function authorizeAdminRequest(request, env, requiredRole = adminRe
 
   const readiness = adminAuthReadiness(env);
   if (!readiness.readReady) throw new RuntimeGuardError("ADMIN_NOT_CONFIGURED", 503);
+  if (isLive(env) && !readiness.productionRbacReady) {
+    throw new RuntimeGuardError("ADMIN_RBAC_NOT_READY", 503);
+  }
 
   if (readiness.splitConfigured) {
     if (readiness.writeConfigured && await timingSafeEqualText(supplied, env.ADMIN_WRITE_TOKEN)) {
@@ -129,9 +132,6 @@ export async function authorizeAdminRequest(request, env, requiredRole = adminRe
 
   if (!readiness.legacyConfigured) throw new RuntimeGuardError("ADMIN_NOT_CONFIGURED", 503);
   if (!(await timingSafeEqualText(supplied, env.ADMIN_TOKEN))) throw new RuntimeGuardError("UNAUTHORIZED", 401);
-  if (requiredRole === ADMIN_ROLE_OWNER && isLive(env)) {
-    throw new RuntimeGuardError("ADMIN_RBAC_NOT_READY", 503);
-  }
   return { role: ADMIN_ROLE_OWNER, mode: "LEGACY", token: supplied, readiness };
 }
 
@@ -170,6 +170,7 @@ export function productionReadiness(env = {}) {
   const paypal = hasPaypalCore(env);
   const webhook = paypal && Boolean(env.PAYPAL_WEBHOOK_ID);
   const catalogWrite = Boolean(env.GITHUB_TOKEN);
+  const adminRbac = adminAuthReadiness(env);
   return {
     environment: live ? "live" : "sandbox",
     live,
@@ -177,6 +178,7 @@ export function productionReadiness(env = {}) {
     rentalWritesReady: !live || (database && rateLimiter && turnstile),
     checkoutReady: database && paypal && catalogWrite && (!live || (rateLimiter && turnstile)),
     webhookReady: database && webhook && catalogWrite,
+    adminRbacReady: adminRbac.productionRbacReady,
   };
 }
 
