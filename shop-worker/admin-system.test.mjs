@@ -1,7 +1,24 @@
 import assert from "node:assert/strict";
 import { SYSTEM_SCHEMA_TARGET, detectSchemaVersion } from "./admin-system.js";
 
-assert.equal(SYSTEM_SCHEMA_TARGET, "0007_operations_automation");
+const automationColumns = [
+  "automation_key",
+  "automation_kind",
+  "auto_managed",
+  "automation_active",
+  "first_seen_at",
+  "last_seen_at",
+  "occurrence_count",
+];
+
+const backendHardeningTriggers = [
+  "trg_rental_duration_insert",
+  "trg_rental_duration_update",
+  "trg_rental_group_duration_insert",
+  "trg_rental_group_duration_update",
+];
+
+assert.equal(SYSTEM_SCHEMA_TARGET, "0008_backend_hardening");
 assert.equal(detectSchemaVersion([]), "schema_base_or_unknown");
 assert.equal(
   detectSchemaVersion(["commerce_orders", "rental_reservations"]),
@@ -26,7 +43,23 @@ assert.equal(
 assert.equal(
   detectSchemaVersion(
     ["rental_groups", "damage_cases", "operations_tasks"],
-    ["automation_key", "automation_kind", "auto_managed", "automation_active", "first_seen_at", "last_seen_at", "occurrence_count"],
+    automationColumns,
+  ),
+  "0007_operations_automation"
+);
+assert.equal(
+  detectSchemaVersion(
+    ["rental_groups", "damage_cases", "operations_tasks"],
+    automationColumns,
+    backendHardeningTriggers,
+  ),
+  "0008_backend_hardening"
+);
+assert.equal(
+  detectSchemaVersion(
+    ["rental_groups", "damage_cases", "operations_tasks"],
+    automationColumns,
+    backendHardeningTriggers.slice(0, 3),
   ),
   "0007_operations_automation"
 );

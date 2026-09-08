@@ -1,6 +1,8 @@
 import { MAX_RENTAL_DAYS, MAX_REQUEST_BYTES } from "./commerce-core.js";
 
-export const BACKEND_HARDENING_VERSION = "backend-runtime-v1";
+export const BACKEND_HARDENING_VERSION = "backend-runtime-v2";
+export const ADMIN_ROLE_READER = "READER";
+export const ADMIN_ROLE_OWNER = "OWNER";
 
 const PUBLIC_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -41,6 +43,9 @@ const LIVE_DB_WRITES = new Set([
   "/paypal-webhook",
 ]);
 
+const ADMIN_READ_METHODS = new Set(["GET", "HEAD"]);
+const ADMIN_WRITE_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
+
 export class RuntimeGuardError extends Error {
   constructor(code, status = 400) {
     super(code);
@@ -77,11 +82,80 @@ export async function timingSafeEqualText(left, right) {
   return diff === 0;
 }
 
-export async function requireLegacyAdmin(request, env) {
-  if (!env?.ADMIN_TOKEN) throw new RuntimeGuardError("ADMIN_NOT_CONFIGURED", 503);
-  if (!(await timingSafeEqualText(bearerToken(request), env.ADMIN_TOKEN))) {
-    throw new RuntimeGuardError("UNAUTHORIZED", 401);
+export function adminRequiredRoleForMethod(method) {
+  const normalized = String(method || "").toUpperCase();
+  if (normalized === "OPTIONS") return null;
+  if (ADMIN_READ_METHODS.has(normalized)) return ADMIN_ROLE_READER;
+  if (ADMIN_WRITE_METHODS.has(normalized)) return ADMIN_ROLE_OWNER;
+  throw new RuntimeGuardError("METHOD_NOT_ALLOWED", 405);
+}
+
+export function adminAuthReadiness(env = {}) {
+  const readToken = Boolean(env.ADMIN_READ_TOKEN);
+  const writeToken = Boolean(env.ADMIN_WRITE_TOKEN);
+  const legacyToken = Boolean(env.ADMIN_TOKEN);
+  const splitConfigured = readToken || writeToken;
+  return {
+    readConfigured: readToken,
+    writeConfigured: writeToken,
+    legacyConfigured: legacyToken,
+    splitConfigured,
+    readReady: readToken || writeToken || (!splitConfigured && legacyToken),
+    writeReady: writeToken || (!isLive(env) && !splitConfigured && legacyToken),
+    productionRbacReady: !isLive(env) || (readToken && writeToken),
+  };
+}
+
+export async function authorizeAdminRequest(request, env, requiredRole = adminRequiredRoleForMethod(request.method)) {
+  if (!requiredRole) return { role: null, mode: "PREFLIGHT", token: "" };
+  const supplied = bearerToken(request);
+  if (!supplied) throw new RuntimeGuardError("UNAUTHORIZED", 401);
+
+  const readiness = adminAuthReadiness(env);
+  if (!readiness.readReady) throw new RuntimeGuardError("ADMIN_NOT_CONFIGURED", 503);
+  if (isLive(env) && !readiness.productionRbacReady) {
+    throw new RuntimeGuardError("ADMIN_RBAC_NOT_READY", 503);
   }
+
+  if (readiness.splitConfigured) {
+    if (readiness.writeConfigured && await timingSafeEqualText(supplied, env.ADMIN_WRITE_TOKEN)) {
+      return { role: ADMIN_ROLE_OWNER, mode: "SPLIT_WRITE", token: supplied, readiness };
+    }
+    if (requiredRole === ADMIN_ROLE_READER && readiness.readConfigured && await timingSafeEqualText(supplied, env.ADMIN_READ_TOKEN)) {
+      return { role: ADMIN_ROLE_READER, mode: "SPLIT_READ", token: supplied, readiness };
+    }
+    if (requiredRole === ADMIN_ROLE_OWNER && !readiness.writeConfigured) {
+      throw new RuntimeGuardError("ADMIN_RBAC_NOT_READY", 503);
+    }
+    throw new RuntimeGuardError(requiredRole === ADMIN_ROLE_OWNER ? "FORBIDDEN" : "UNAUTHORIZED", requiredRole === ADMIN_ROLE_OWNER ? 403 : 401);
+  }
+
+  if (!readiness.legacyConfigured) throw new RuntimeGuardError("ADMIN_NOT_CONFIGURED", 503);
+  if (!(await timingSafeEqualText(supplied, env.ADMIN_TOKEN))) throw new RuntimeGuardError("UNAUTHORIZED", 401);
+  return { role: ADMIN_ROLE_OWNER, mode: "LEGACY", token: supplied, readiness };
+}
+
+export function scopeAdminEnv(env, auth) {
+  const scoped = Object.create(env || null);
+  Object.defineProperties(scoped, {
+    ADMIN_TOKEN: { value: auth?.token || "", enumerable: true },
+    ADMIN_AUTH_CONTEXT: {
+      value: Object.freeze({
+        role: auth?.role || null,
+        mode: auth?.mode || null,
+        readConfigured: Boolean(auth?.readiness?.readConfigured ?? env?.ADMIN_READ_TOKEN),
+        writeConfigured: Boolean(auth?.readiness?.writeConfigured ?? env?.ADMIN_WRITE_TOKEN),
+        legacyConfigured: Boolean(auth?.readiness?.legacyConfigured ?? env?.ADMIN_TOKEN),
+        productionRbacReady: Boolean(auth?.readiness?.productionRbacReady ?? (!isLive(env) || (env?.ADMIN_READ_TOKEN && env?.ADMIN_WRITE_TOKEN))),
+      }),
+      enumerable: true,
+    },
+  });
+  return scoped;
+}
+
+export async function requireLegacyAdmin(request, env) {
+  return authorizeAdminRequest(request, env, ADMIN_ROLE_READER);
 }
 
 function hasPaypalCore(env) {
@@ -96,6 +170,7 @@ export function productionReadiness(env = {}) {
   const paypal = hasPaypalCore(env);
   const webhook = paypal && Boolean(env.PAYPAL_WEBHOOK_ID);
   const catalogWrite = Boolean(env.GITHUB_TOKEN);
+  const adminRbac = adminAuthReadiness(env);
   return {
     environment: live ? "live" : "sandbox",
     live,
@@ -103,6 +178,7 @@ export function productionReadiness(env = {}) {
     rentalWritesReady: !live || (database && rateLimiter && turnstile),
     checkoutReady: database && paypal && catalogWrite && (!live || (rateLimiter && turnstile)),
     webhookReady: database && webhook && catalogWrite,
+    adminRbacReady: adminRbac.productionRbacReady,
   };
 }
 
@@ -156,10 +232,10 @@ export async function guardRuntimeRequest(request, env, url = new URL(request.ur
   assertDeclaredBodySize(request);
 
   if (pathname === "/rental-requests" && request.method === "GET") {
-    await requireLegacyAdmin(request, env);
+    await authorizeAdminRequest(request, env, ADMIN_ROLE_READER);
   }
   if (pathname.startsWith("/rental-request/") && request.method === "PATCH") {
-    await requireLegacyAdmin(request, env);
+    await authorizeAdminRequest(request, env, ADMIN_ROLE_OWNER);
   }
 
   assertLiveControls(env, pathname);

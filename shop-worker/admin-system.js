@@ -1,7 +1,7 @@
 import { safeText } from "./commerce-core.js";
 import { OPERATIONS_AUTOMATION_SCHEMA_COLUMNS, OPERATIONS_AUTOMATION_VERSION } from "./operations-monitor.js";
 
-export const SYSTEM_SCHEMA_TARGET = "0007_operations_automation";
+export const SYSTEM_SCHEMA_TARGET = "0008_backend_hardening";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -34,6 +34,13 @@ const REQUIRED_TABLES = Object.freeze([
   "rental_groups",
   "damage_cases",
   "operations_tasks",
+]);
+
+const REQUIRED_BACKEND_TRIGGERS = Object.freeze([
+  "trg_rental_duration_insert",
+  "trg_rental_duration_update",
+  "trg_rental_group_duration_insert",
+  "trg_rental_group_duration_update",
 ]);
 
 class AdminSystemError extends Error {
@@ -100,11 +107,14 @@ async function requireAdmin(request, env) {
   if (!env.DB) throw new AdminSystemError("COMMERCE_DATABASE_NOT_CONFIGURED", 503);
 }
 
-export function detectSchemaVersion(tableNames, operationsTaskColumns = []) {
+export function detectSchemaVersion(tableNames, operationsTaskColumns = [], triggerNames = []) {
   const names = new Set(Array.from(tableNames || [], String));
   const taskColumns = new Set(Array.from(operationsTaskColumns || [], String));
+  const triggers = new Set(Array.from(triggerNames || [], String));
   const hasOperationsCases = names.has("damage_cases") && names.has("operations_tasks") && names.has("rental_groups");
   const hasAutomation = OPERATIONS_AUTOMATION_SCHEMA_COLUMNS.every(name => taskColumns.has(name));
+  const hasBackendHardening = REQUIRED_BACKEND_TRIGGERS.every(name => triggers.has(name));
+  if (hasOperationsCases && hasAutomation && hasBackendHardening) return "0008_backend_hardening";
   if (hasOperationsCases && hasAutomation) return "0007_operations_automation";
   if (hasOperationsCases) return "0006_operations_cases";
   if (names.has("rental_groups")) return "0005_rental_groups";
@@ -115,9 +125,19 @@ export function detectSchemaVersion(tableNames, operationsTaskColumns = []) {
 }
 
 function configured(env) {
+  const auth = env.ADMIN_AUTH_CONTEXT || {};
+  const readConfigured = Boolean(auth.readConfigured ?? env.ADMIN_READ_TOKEN);
+  const writeConfigured = Boolean(auth.writeConfigured ?? env.ADMIN_WRITE_TOKEN);
+  const legacyConfigured = Boolean(auth.legacyConfigured ?? env.ADMIN_TOKEN);
   return {
     database: Boolean(env.DB),
-    adminToken: Boolean(env.ADMIN_TOKEN),
+    adminToken: readConfigured || writeConfigured || legacyConfigured,
+    adminReadToken: readConfigured,
+    adminWriteToken: writeConfigured,
+    adminLegacyToken: legacyConfigured,
+    adminSplitRbacConfigured: readConfigured && writeConfigured,
+    adminRole: auth.role || null,
+    adminAuthMode: auth.mode || null,
     githubCatalogWrite: Boolean(env.GITHUB_TOKEN),
     paypal: Boolean(env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET),
     paypalWebhook: Boolean(env.PAYPAL_WEBHOOK_ID),
@@ -127,11 +147,14 @@ function configured(env) {
 }
 
 async function getSystem(env) {
-  const tablesResult = await env.DB.prepare(
-    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
-  ).all();
+  const [tablesResult, triggersResult] = await Promise.all([
+    env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all(),
+    env.DB.prepare("SELECT name FROM sqlite_master WHERE type='trigger' ORDER BY name").all(),
+  ]);
   const tables = (tablesResult.results || []).map(row => String(row.name));
+  const triggerNames = (triggersResult.results || []).map(row => String(row.name));
   const present = new Set(tables);
+  const triggerSet = new Set(triggerNames);
   const taskInfo = present.has("operations_tasks")
     ? await env.DB.prepare("PRAGMA table_info(operations_tasks)").all()
     : { results: [] };
@@ -179,13 +202,15 @@ async function getSystem(env) {
   const missingRequiredColumns = present.has("operations_tasks")
     ? OPERATIONS_AUTOMATION_SCHEMA_COLUMNS.filter(name => !taskColumnSet.has(name)).map(name => `operations_tasks.${name}`)
     : [];
+  const missingRequiredTriggers = REQUIRED_BACKEND_TRIGGERS.filter(name => !triggerSet.has(name));
   return {
     generatedAt: new Date().toISOString(),
     schemaTarget: SYSTEM_SCHEMA_TARGET,
-    schemaDetected: detectSchemaVersion(tables, operationsTaskColumns),
-    schemaReady: missingRequiredTables.length === 0 && missingRequiredColumns.length === 0,
+    schemaDetected: detectSchemaVersion(tables, operationsTaskColumns, triggerNames),
+    schemaReady: missingRequiredTables.length === 0 && missingRequiredColumns.length === 0 && missingRequiredTriggers.length === 0,
     missingRequiredTables,
     missingRequiredColumns,
+    missingRequiredTriggers,
     configured: configured(env),
     operationsAutomation: {
       version: OPERATIONS_AUTOMATION_VERSION,
@@ -194,6 +219,7 @@ async function getSystem(env) {
       schedulerNote: "Scheduled handler is implemented, but cron configuration cannot be inferred from Worker runtime bindings.",
     },
     tables,
+    triggers: triggerNames,
     counts,
   };
 }

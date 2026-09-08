@@ -13,10 +13,15 @@ import { handleAdminAlerts } from "./admin-alerts.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
 import {
+  ADMIN_ROLE_OWNER,
+  ADMIN_ROLE_READER,
   RuntimeGuardError,
+  adminRequiredRoleForMethod,
+  authorizeAdminRequest,
   finalizeRuntimeResponse,
   guardRuntimeRequest,
   runtimeErrorResponse,
+  scopeAdminEnv,
 } from "./backend-runtime.js";
 
 function requestId(request) {
@@ -31,6 +36,59 @@ function logBackgroundFailure(event, reqId, err) {
     requestId: reqId,
     message: String(err?.message || err || "unknown").slice(0, 180),
   }));
+}
+
+function logAdminSecurity(level, event, reqId, request, url, details = {}) {
+  const payload = {
+    level,
+    event,
+    requestId: reqId,
+    method: request.method,
+    path: url.pathname,
+    ...details,
+  };
+  if (level === "error") console.error(JSON.stringify(payload));
+  else if (level === "warn") console.warn(JSON.stringify(payload));
+  else console.log(JSON.stringify(payload));
+}
+
+function isAdminRoute(url) {
+  return url.pathname === "/admin" || url.pathname.startsWith("/admin/");
+}
+
+function isLegacyAdminRoute(pathname) {
+  return pathname === "/rental-requests" || pathname.startsWith("/rental-request/");
+}
+
+async function authorizeRouteEnv(request, env, url, reqId) {
+  const adminRoute = isAdminRoute(url);
+  const legacyAdminRoute = isLegacyAdminRoute(url.pathname);
+  if (!adminRoute && !legacyAdminRoute) return env;
+  if (request.method === "OPTIONS" && adminRoute) return env;
+
+  let requiredRole;
+  if (legacyAdminRoute) {
+    requiredRole = request.method === "GET" ? ADMIN_ROLE_READER : ADMIN_ROLE_OWNER;
+  } else {
+    requiredRole = adminRequiredRoleForMethod(request.method);
+  }
+
+  try {
+    const auth = await authorizeAdminRequest(request, env, requiredRole);
+    if (requiredRole === ADMIN_ROLE_OWNER) {
+      logAdminSecurity("info", "admin_write_authorized", reqId, request, url, {
+        role: auth.role,
+        authMode: auth.mode,
+      });
+    }
+    return scopeAdminEnv(env, auth);
+  } catch (err) {
+    logAdminSecurity("warn", "admin_access_denied", reqId, request, url, {
+      requiredRole,
+      code: err instanceof RuntimeGuardError ? err.code : "AUTH_ERROR",
+    });
+    throw err;
+  }
 }
 
 async function runBackground(ctx, task, event, reqId) {
@@ -50,30 +108,31 @@ export default {
     const finish = response => finalizeRuntimeResponse(response, request, env, reqId, url.pathname);
 
     try {
-      await guardRuntimeRequest(request, env, url);
+      const runtimeEnv = await authorizeRouteEnv(request, env, url, reqId);
+      await guardRuntimeRequest(request, runtimeEnv, url);
 
       if (url.pathname === "/rental-bundle") {
-        return finish(await handleRentalBundle(request, env, url, reqId, origin));
+        return finish(await handleRentalBundle(request, runtimeEnv, url, reqId, origin));
       }
 
       if (url.pathname === "/admin/insights") {
-        return finish(await handleAdminInsights(request, env, url, reqId, origin));
+        return finish(await handleAdminInsights(request, runtimeEnv, url, reqId, origin));
       }
 
       if (url.pathname === "/admin/commerce-metrics") {
-        return finish(await handleAdminCommerceMetrics(request, env, url, reqId, origin));
+        return finish(await handleAdminCommerceMetrics(request, runtimeEnv, url, reqId, origin));
       }
 
       if (url.pathname === "/admin/system") {
-        return finish(await handleAdminSystem(request, env, url, reqId, origin));
+        return finish(await handleAdminSystem(request, runtimeEnv, url, reqId, origin));
       }
 
       if (url.pathname === "/admin/alerts/sync") {
-        return finish(await handleAdminAlerts(request, env, url, reqId, origin));
+        return finish(await handleAdminAlerts(request, runtimeEnv, url, reqId, origin));
       }
 
       if (url.pathname === "/admin/rental-groups" || url.pathname.startsWith("/admin/rental-groups/")) {
-        return finish(await handleAdminRentalGroups(request, env, url, reqId, origin));
+        return finish(await handleAdminRentalGroups(request, runtimeEnv, url, reqId, origin));
       }
 
       if (
@@ -82,11 +141,11 @@ export default {
         url.pathname === "/admin/damages" || url.pathname.startsWith("/admin/damages/") ||
         url.pathname === "/admin/tasks" || url.pathname.startsWith("/admin/tasks/")
       ) {
-        return finish(await handleAdminCases(request, env, url, reqId, origin));
+        return finish(await handleAdminCases(request, runtimeEnv, url, reqId, origin));
       }
 
-      if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
-        return finish(await handleAdminRequest(request, env, url, reqId, origin));
+      if (isAdminRoute(url)) {
+        return finish(await handleAdminRequest(request, runtimeEnv, url, reqId, origin));
       }
 
       const shouldInspectRental = url.pathname === "/rental-request" && request.method === "POST";
@@ -94,8 +153,8 @@ export default {
       const shouldInspectWebhook = url.pathname === "/paypal-webhook" && request.method === "POST";
       const requestCopy = (shouldInspectRental || shouldInspectCapture || shouldInspectWebhook) ? request.clone() : null;
 
-      const response = await shopWorker.fetch(request, env, ctx);
-      if (!response.ok || !requestCopy || !env.DB) return finish(response);
+      const response = await shopWorker.fetch(request, runtimeEnv, ctx);
+      if (!response.ok || !requestCopy || !runtimeEnv.DB) return finish(response);
 
       if (shouldInspectRental) {
         try {
@@ -104,7 +163,7 @@ export default {
             response.clone().json(),
           ]);
           if (result?.rentalReservationId) {
-            await enrichRentalReservation(env, result.rentalReservationId, payload, reqId);
+            await enrichRentalReservation(runtimeEnv, result.rentalReservationId, payload, reqId);
           }
         } catch (err) {
           // Metadata enrichment must never turn a valid rental reservation into a
@@ -118,7 +177,7 @@ export default {
         try {
           const payload = await requestCopy.json();
           if (payload?.orderId) {
-            await runBackground(ctx, snapshotPaypalOrder(env, String(payload.orderId), reqId), "checkout_snapshot_failed", reqId);
+            await runBackground(ctx, snapshotPaypalOrder(runtimeEnv, String(payload.orderId), reqId), "checkout_snapshot_failed", reqId);
           }
         } catch (err) {
           logBackgroundFailure("capture_observer_failed", reqId, err);
@@ -131,7 +190,7 @@ export default {
           if (event?.event_type === "PAYMENT.CAPTURE.COMPLETED") {
             const providerOrderId = event?.resource?.supplementary_data?.related_ids?.order_id;
             if (providerOrderId) {
-              await runBackground(ctx, snapshotPaypalOrder(env, String(providerOrderId), reqId), "webhook_checkout_snapshot_failed", reqId);
+              await runBackground(ctx, snapshotPaypalOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_checkout_snapshot_failed", reqId);
             }
           }
         } catch (err) {
