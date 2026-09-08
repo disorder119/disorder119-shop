@@ -236,7 +236,7 @@ test("split admin tokens enforce read/write least privilege", async () => {
   assert.equal(scoped.DB, env.DB);
 });
 
-test("live admin mutations fail closed on legacy or partial RBAC configuration", async () => {
+test("live admin access fails closed on legacy or partial RBAC configuration", async () => {
   const legacyWrite = new Request("https://worker.example/admin/tasks/1", {
     method: "PATCH",
     headers: { Authorization: "Bearer legacy-secret" },
@@ -249,8 +249,17 @@ test("live admin mutations fail closed on legacy or partial RBAC configuration",
   const legacyRead = new Request("https://worker.example/admin/system", {
     headers: { Authorization: "Bearer legacy-secret" },
   });
-  await assert.doesNotReject(
-    () => authorizeAdminRequest(legacyRead, { PAYPAL_ENVIRONMENT: "live", ADMIN_TOKEN: "legacy-secret" }, ADMIN_ROLE_READER)
+  await assert.rejects(
+    () => authorizeAdminRequest(legacyRead, { PAYPAL_ENVIRONMENT: "live", ADMIN_TOKEN: "legacy-secret" }, ADMIN_ROLE_READER),
+    err => err instanceof RuntimeGuardError && err.code === "ADMIN_RBAC_NOT_READY" && err.status === 503
+  );
+
+  const partialRead = new Request("https://worker.example/admin/system", {
+    headers: { Authorization: "Bearer reader-secret" },
+  });
+  await assert.rejects(
+    () => authorizeAdminRequest(partialRead, { PAYPAL_ENVIRONMENT: "live", ADMIN_READ_TOKEN: "reader-secret" }, ADMIN_ROLE_READER),
+    err => err instanceof RuntimeGuardError && err.code === "ADMIN_RBAC_NOT_READY" && err.status === 503
   );
 
   const partialWrite = new Request("https://worker.example/admin/tasks/1", {
@@ -352,6 +361,7 @@ test("public readiness exposes booleans, not secrets", () => {
   const notReady = productionReadiness({ PAYPAL_ENVIRONMENT: "live" });
   assert.equal(notReady.productionGuardsReady, false);
   assert.equal(notReady.checkoutReady, false);
+  assert.equal(notReady.adminRbacReady, false);
   const ready = productionReadiness({
     PAYPAL_ENVIRONMENT: "live",
     DB: {},
@@ -361,12 +371,17 @@ test("public readiness exposes booleans, not secrets", () => {
     PAYPAL_CLIENT_SECRET: "paypal-secret",
     PAYPAL_WEBHOOK_ID: "webhook-id",
     GITHUB_TOKEN: "github-secret",
+    ADMIN_READ_TOKEN: "reader-secret",
+    ADMIN_WRITE_TOKEN: "writer-secret",
   });
   assert.equal(ready.productionGuardsReady, true);
   assert.equal(ready.checkoutReady, true);
   assert.equal(ready.webhookReady, true);
+  assert.equal(ready.adminRbacReady, true);
   assert.equal(JSON.stringify(ready).includes("paypal-secret"), false);
   assert.equal(JSON.stringify(ready).includes("github-secret"), false);
+  assert.equal(JSON.stringify(ready).includes("reader-secret"), false);
+  assert.equal(JSON.stringify(ready).includes("writer-secret"), false);
 });
 
 test("runtime responses carry request correlation and hardened health metadata", async () => {
