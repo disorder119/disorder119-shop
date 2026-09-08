@@ -7,6 +7,8 @@ retry edge case and aligns admin category/quality signals with reviewed taxonomy
 from pathlib import Path
 
 from apply_admin_large_items_loader import main as apply_large_items_loader
+from apply_admin_rental_readonly import main as apply_rental_readonly
+from validate_admin_rental_readonly import main as validate_rental_readonly
 
 BASE = Path(__file__).resolve().parents[1]
 PATH = BASE / "admin" / "index.html"
@@ -26,6 +28,8 @@ def main() -> None:
     if MARKER in text:
         print("Admin-Quality-Hardening bereits aktuell.")
         apply_large_items_loader()
+        apply_rental_readonly()
+        validate_rental_readonly()
         return
     if "ADMIN_QUALITY_CENTER_V1" not in text:
         raise SystemExit("FEHLER: Admin-Quality-Center muss zuerst angewendet werden")
@@ -94,6 +98,8 @@ def main() -> None:
     PATH.write_text(text, encoding="utf-8")
     print("Admin-Quality-Hardening angewendet.")
     apply_large_items_loader()
+    apply_rental_readonly()
+    validate_rental_readonly()
 
 
 if __name__ == "__main__":
