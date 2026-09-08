@@ -40,6 +40,7 @@ Die aktuelle Standard-Kaution wird bei der Mietanfrage serverseitig als Snapshot
 - `0003_state_integrity.sql` validiert Mietpreis und Gesamtpreis zusaetzlich direkt in D1.
 - `0005_rental_groups.sql` schuetzt gebuendelte Mehrfachmieten auf Datenbankebene.
 - `0004_admin_operations.sql` materialisiert beim Bestaetigen einer Mietreservierung automatisch genau einen dauerhaften `rentals`-Datensatz fuer Kaution, Rueckgabe und Refund-Verknuepfung.
+- `0008_backend_hardening.sql` erzwingt die maximale Mietdauer von 7 Tagen nochmals direkt an der D1-Grenze fuer Einzel- und Gruppenmieten.
 
 ## Mehrfachmieten
 
@@ -84,7 +85,14 @@ Der Worker stellt unter `/admin/*` private Operations-Routen bereit fuer:
 - Systemzustand,
 - interne Admin-Notizen.
 
-`ADMIN_TOKEN` ist nur eine temporaere Betriebsbruecke. Vor echtem breitem Produktivbetrieb sollte `admin.disorder119.com` zusaetzlich mit Cloudflare Access/MFA abgesichert werden.
+Die Admin-Autorisierung ist zentral in zwei Rollen getrennt:
+
+- `ADMIN_READ_TOKEN`: nur lesende Admin-Zugriffe (`GET`/`HEAD`).
+- `ADMIN_WRITE_TOKEN`: Owner-Zugriff inklusive Mutationen (`POST`/`PATCH`/`PUT`/`DELETE`) und Lesen.
+
+Im Live-Modus muessen **beide** Secrets vorhanden sein. Eine nur teilweise konfigurierte Rollen-Trennung oder der alte gemeinsame `ADMIN_TOKEN` fuehrt dort fuer Admin-Zugriffe fail-closed zu `ADMIN_RBAC_NOT_READY`. `ADMIN_TOKEN` bleibt ausschliesslich als lokale/Sandbox-Kompatibilitaetsbruecke erhalten und darf nicht als produktives Rollenmodell betrachtet werden.
+
+Die einzelnen Admin-Handler behalten zusaetzliche Token-Pruefungen als zweite Schutzschicht. Der zentrale Worker-Gateway autorisiert jedoch zuerst die Rolle und reicht intern nur den bereits autorisierten Token an den jeweiligen Handler weiter. Vor echtem breitem Produktivbetrieb sollte `admin.disorder119.com` ausserdem mit Cloudflare Access/MFA abgesichert werden.
 
 ## Automatische Operations-Warnungen
 
@@ -141,11 +149,12 @@ Migrationen in dieser Reihenfolge anwenden:
 5. `shop-worker/migrations/0005_rental_groups.sql`.
 6. `shop-worker/migrations/0006_operations_cases.sql`.
 7. `shop-worker/migrations/0007_operations_automation.sql`.
-8. Datenbank als Worker-Binding `DB` konfigurieren.
+8. `shop-worker/migrations/0008_backend_hardening.sql`.
+9. Datenbank als Worker-Binding `DB` konfigurieren.
 
-Die CI fuehrt die komplette Kette zusaetzlich in einer frischen SQLite-Datenbank aus. Vor Produktion muss die Migration dennoch in einer Cloudflare-D1-Testumgebung durchgespielt und ein Backup/Restore-Verfahren getestet werden.
+Die CI fuehrt die komplette Kette inklusive `0008` zusaetzlich in einer frischen SQLite-Datenbank aus. Vor Produktion muss die Migration dennoch in einer Cloudflare-D1-Testumgebung durchgespielt und ein Backup/Restore-Verfahren getestet werden.
 
-Die Migrationen sind fuer eine einmalige, geordnete Anwendung gedacht. Bereits angewendete `ALTER TABLE`-Migrationen duerfen nicht blind erneut ausgefuehrt werden.
+Die Migrationen sind fuer eine einmalige, geordnete Anwendung gedacht. Bereits angewendete `ALTER TABLE`-Migrationen duerfen nicht blind erneut ausgefuehrt werden. Vor einem produktiven Schemawechsel muss der erkannte Stand ueber `/admin/system` mit dem erwarteten Target abgeglichen werden.
 
 ## Kundenkonten
 
@@ -160,14 +169,14 @@ Vorbereitet sind Datenmodelle fuer:
 
 Die `/account/*`-Routen bleiben absichtlich deaktiviert und antworten mit `AUTH_PROVIDER_NOT_CONFIGURED`, bis echte JWT-/Session-Verifikation konfiguriert ist. Gastbestellung bleibt vorgesehen.
 
-## Optionaler Abuse-Schutz
+## Abuse-Schutz
 
-Der Worker unterstuetzt optional:
+Der Worker unterstuetzt:
 
 - `RATE_LIMITER`
 - `TURNSTILE_SECRET`
 
-Sind diese Bindings nicht gesetzt, wird kein nicht konfiguriertes Feature vorgetaeuscht. Vor Live-Start sollten sie je nach Traffic- und Missbrauchsprofil bewusst aktiviert und getestet werden.
+In Sandbox/Entwicklung koennen diese Bindings fehlen. Im Live-Modus arbeiten menschlich ausgeloeste schreibende Commerce-Routen jedoch fail-closed, wenn die erforderlichen Abuse-Kontrollen nicht vorhanden sind. Eine fehlende Produktionskonfiguration wird nicht als funktionsfaehig vorgetaeuscht.
 
 ## Versand, E-Mail und DHL
 
@@ -184,11 +193,13 @@ Spaeter koennen auf Basis der gespeicherten Statuswechsel insbesondere folgende 
 - Rueckgabe-Erinnerung
 - Kautionsfreigabe
 
-## Health und Fehler
+## Health, Logs und Fehler
 
-`GET /health` liefert nur nicht-sensible Readiness-Informationen. Die privaten `/admin/system`- und `/admin/insights`-Routen liefern nur nach Admin-Autorisierung zusaetzliche Betriebsinformationen.
+`GET /health` liefert nur nicht-sensible Readiness-Informationen, darunter auch den booleschen Live-RBAC-Status. Die privaten `/admin/system`- und `/admin/insights`-Routen liefern nur nach Admin-Autorisierung zusaetzliche Betriebsinformationen.
 
-`/admin/system` meldet den erkannten D1-Schemastand, fehlende Pflicht-Tabellen/-Spalten und die Konfigurationsflags. Fuer den Cron-Scheduler wird kein positiver Deploymentstatus erfunden: Ohne externe Cloudflare-Konfiguration bleibt dessen Status unbekannt.
+`/admin/system` meldet den erkannten D1-Schemastand, fehlende Pflicht-Tabellen/-Spalten, die vier Pflicht-Trigger aus `0008_backend_hardening.sql` und die nicht-sensitiven Konfigurationsflags. Fuer den Cron-Scheduler wird kein positiver Deploymentstatus erfunden: Ohne externe Cloudflare-Konfiguration bleibt dessen Status unbekannt.
+
+`wrangler.toml` aktiviert persistente Worker-Logs. Runtime- und Security-Ereignisse verwenden eine `requestId`, damit Produktionsfehler korreliert werden koennen. Tokens, Provider-Secrets und rohe sensible Payloads duerfen dabei nicht geloggt werden.
 
 Fehlerantworten verwenden stabile Fehlercodes und eine `requestId`, ohne Provider-Secrets oder rohe interne Fehlerdetails offenzulegen.
 
@@ -196,14 +207,17 @@ Fehlerantworten verwenden stabile Fehlercodes und eine `requestId`, ohne Provide
 
 Mindestens erforderlich:
 
-- D1-Migrationen bis einschliesslich `0007` in einer Test-/Staging-D1 anwenden und Restore/Backup-Verfahren testen.
+- D1-Migrationen bis einschliesslich `0008` in einer Test-/Staging-D1 anwenden und Restore/Backup-Verfahren testen.
+- `/admin/system` muss `schemaDetected: 0008_backend_hardening` und `schemaReady: true` melden.
 - Worker deployen und `DB` binden.
+- `ADMIN_READ_TOKEN` und `ADMIN_WRITE_TOKEN` als zwei getrennte Worker-Secrets setzen; `ADMIN_TOKEN` nicht als Live-Ersatz verwenden.
+- Admin-Zugriff zusaetzlich mit Cloudflare Access/MFA haerten.
+- Persistente Worker-Logs pruefen und sicherstellen, dass keine Secrets oder sensiblen Payloads erscheinen.
 - Falls automatische Warnungen periodisch laufen sollen: Cloudflare Cron Trigger bewusst konfigurieren und danach den Scheduler real pruefen.
-- `ADMIN_TOKEN` als Secret setzen und Admin-Zugriff mit Cloudflare Access/MFA haerten.
 - PayPal Sandbox komplett durchtesten.
 - Mehrfachmiete mit Konkurrenz-/Ueberschneidungsfaellen testen.
 - Origin-Allowlist fuer reale Domains pruefen.
-- Rate Limiting/Turnstile nach Bedarf aktivieren.
+- Rate Limiting und Turnstile fuer den Live-Betrieb konfigurieren und testen.
 - Datenschutz-/Retention-Regeln fuer Kunden-, Payment-, Audit- und Accounting-Daten festlegen.
 - Optional E-Mail-/Versandprovider integrieren.
 - Erst danach `shopWorkerUrl`, Client-ID und Feature-Flags bewusst aktivieren.
