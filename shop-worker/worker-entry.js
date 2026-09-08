@@ -12,6 +12,12 @@ import { handleAdminSystem } from "./admin-system.js";
 import { handleAdminAlerts } from "./admin-alerts.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
+import {
+  RuntimeGuardError,
+  finalizeRuntimeResponse,
+  guardRuntimeRequest,
+  runtimeErrorResponse,
+} from "./backend-runtime.js";
 
 function requestId(request) {
   const existing = request.headers.get("cf-ray");
@@ -41,95 +47,105 @@ export default {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin");
     const reqId = requestId(request);
+    const finish = response => finalizeRuntimeResponse(response, request, env, reqId, url.pathname);
 
-    if (url.pathname === "/rental-bundle") {
-      return handleRentalBundle(request, env, url, reqId, origin);
-    }
+    try {
+      await guardRuntimeRequest(request, env, url);
 
-    if (url.pathname === "/admin/insights") {
-      return handleAdminInsights(request, env, url, reqId, origin);
-    }
-
-    if (url.pathname === "/admin/commerce-metrics") {
-      return handleAdminCommerceMetrics(request, env, url, reqId, origin);
-    }
-
-    if (url.pathname === "/admin/system") {
-      return handleAdminSystem(request, env, url, reqId, origin);
-    }
-
-    if (url.pathname === "/admin/alerts/sync") {
-      return handleAdminAlerts(request, env, url, reqId, origin);
-    }
-
-    if (url.pathname === "/admin/rental-groups" || url.pathname.startsWith("/admin/rental-groups/")) {
-      return handleAdminRentalGroups(request, env, url, reqId, origin);
-    }
-
-    if (
-      url.pathname === "/admin/cases" ||
-      url.pathname === "/admin/returns" || url.pathname.startsWith("/admin/returns/") ||
-      url.pathname === "/admin/damages" || url.pathname.startsWith("/admin/damages/") ||
-      url.pathname === "/admin/tasks" || url.pathname.startsWith("/admin/tasks/")
-    ) {
-      return handleAdminCases(request, env, url, reqId, origin);
-    }
-
-    if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
-      return handleAdminRequest(request, env, url, reqId, origin);
-    }
-
-    const shouldInspectRental = url.pathname === "/rental-request" && request.method === "POST";
-    const shouldInspectCapture = url.pathname === "/capture-order" && request.method === "POST";
-    const shouldInspectWebhook = url.pathname === "/paypal-webhook" && request.method === "POST";
-    const requestCopy = (shouldInspectRental || shouldInspectCapture || shouldInspectWebhook) ? request.clone() : null;
-
-    const response = await shopWorker.fetch(request, env, ctx);
-    if (!response.ok || !requestCopy || !env.DB) return response;
-
-    if (shouldInspectRental) {
-      try {
-        const [payload, result] = await Promise.all([
-          requestCopy.json(),
-          response.clone().json(),
-        ]);
-        if (result?.rentalReservationId) {
-          await enrichRentalReservation(env, result.rentalReservationId, payload, reqId);
-        }
-      } catch (err) {
-        // Metadata enrichment must never turn a valid rental reservation into a
-        // failed customer request. Missing migration/config is surfaced in the
-        // admin system view and logs instead.
-        logBackgroundFailure("rental_metadata_snapshot_failed", reqId, err);
+      if (url.pathname === "/rental-bundle") {
+        return finish(await handleRentalBundle(request, env, url, reqId, origin));
       }
-    }
 
-    if (shouldInspectCapture) {
-      try {
-        const payload = await requestCopy.json();
-        if (payload?.orderId) {
-          await runBackground(ctx, snapshotPaypalOrder(env, String(payload.orderId), reqId), "checkout_snapshot_failed", reqId);
-        }
-      } catch (err) {
-        logBackgroundFailure("capture_observer_failed", reqId, err);
+      if (url.pathname === "/admin/insights") {
+        return finish(await handleAdminInsights(request, env, url, reqId, origin));
       }
-    }
 
-    if (shouldInspectWebhook) {
-      try {
-        const event = await requestCopy.json();
-        if (event?.event_type === "PAYMENT.CAPTURE.COMPLETED") {
-          const providerOrderId = event?.resource?.supplementary_data?.related_ids?.order_id;
-          if (providerOrderId) {
-            await runBackground(ctx, snapshotPaypalOrder(env, String(providerOrderId), reqId), "webhook_checkout_snapshot_failed", reqId);
+      if (url.pathname === "/admin/commerce-metrics") {
+        return finish(await handleAdminCommerceMetrics(request, env, url, reqId, origin));
+      }
+
+      if (url.pathname === "/admin/system") {
+        return finish(await handleAdminSystem(request, env, url, reqId, origin));
+      }
+
+      if (url.pathname === "/admin/alerts/sync") {
+        return finish(await handleAdminAlerts(request, env, url, reqId, origin));
+      }
+
+      if (url.pathname === "/admin/rental-groups" || url.pathname.startsWith("/admin/rental-groups/")) {
+        return finish(await handleAdminRentalGroups(request, env, url, reqId, origin));
+      }
+
+      if (
+        url.pathname === "/admin/cases" ||
+        url.pathname === "/admin/returns" || url.pathname.startsWith("/admin/returns/") ||
+        url.pathname === "/admin/damages" || url.pathname.startsWith("/admin/damages/") ||
+        url.pathname === "/admin/tasks" || url.pathname.startsWith("/admin/tasks/")
+      ) {
+        return finish(await handleAdminCases(request, env, url, reqId, origin));
+      }
+
+      if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
+        return finish(await handleAdminRequest(request, env, url, reqId, origin));
+      }
+
+      const shouldInspectRental = url.pathname === "/rental-request" && request.method === "POST";
+      const shouldInspectCapture = url.pathname === "/capture-order" && request.method === "POST";
+      const shouldInspectWebhook = url.pathname === "/paypal-webhook" && request.method === "POST";
+      const requestCopy = (shouldInspectRental || shouldInspectCapture || shouldInspectWebhook) ? request.clone() : null;
+
+      const response = await shopWorker.fetch(request, env, ctx);
+      if (!response.ok || !requestCopy || !env.DB) return finish(response);
+
+      if (shouldInspectRental) {
+        try {
+          const [payload, result] = await Promise.all([
+            requestCopy.json(),
+            response.clone().json(),
+          ]);
+          if (result?.rentalReservationId) {
+            await enrichRentalReservation(env, result.rentalReservationId, payload, reqId);
           }
+        } catch (err) {
+          // Metadata enrichment must never turn a valid rental reservation into a
+          // failed customer request. Missing migration/config is surfaced in the
+          // admin system view and logs instead.
+          logBackgroundFailure("rental_metadata_snapshot_failed", reqId, err);
         }
-      } catch (err) {
-        logBackgroundFailure("webhook_observer_failed", reqId, err);
       }
-    }
 
-    return response;
+      if (shouldInspectCapture) {
+        try {
+          const payload = await requestCopy.json();
+          if (payload?.orderId) {
+            await runBackground(ctx, snapshotPaypalOrder(env, String(payload.orderId), reqId), "checkout_snapshot_failed", reqId);
+          }
+        } catch (err) {
+          logBackgroundFailure("capture_observer_failed", reqId, err);
+        }
+      }
+
+      if (shouldInspectWebhook) {
+        try {
+          const event = await requestCopy.json();
+          if (event?.event_type === "PAYMENT.CAPTURE.COMPLETED") {
+            const providerOrderId = event?.resource?.supplementary_data?.related_ids?.order_id;
+            if (providerOrderId) {
+              await runBackground(ctx, snapshotPaypalOrder(env, String(providerOrderId), reqId), "webhook_checkout_snapshot_failed", reqId);
+            }
+          }
+        } catch (err) {
+          logBackgroundFailure("webhook_observer_failed", reqId, err);
+        }
+      }
+
+      return finish(response);
+    } catch (err) {
+      if (!(err instanceof RuntimeGuardError)) {
+        logBackgroundFailure("worker_entry_unhandled", reqId, err);
+      }
+      return finish(runtimeErrorResponse(err, reqId, origin));
+    }
   },
 
   async scheduled(event, env, ctx) {

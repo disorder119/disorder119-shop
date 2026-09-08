@@ -2,10 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   CURRENCY,
   INVENTORY_STATUSES,
+  MAX_RENTAL_DAYS,
+  MAX_REQUEST_BYTES,
   canTransitionInventory,
   canTransitionOrder,
   canTransitionRental,
@@ -16,6 +19,16 @@ import {
   rentalDayCount,
   rentalQuoteFromItem,
 } from "./commerce-core.js";
+import {
+  BACKEND_HARDENING_VERSION,
+  RuntimeGuardError,
+  finalizeRuntimeResponse,
+  guardRuntimeRequest,
+  productionReadiness,
+  requireLegacyAdmin,
+  runtimeErrorResponse,
+  timingSafeEqualText,
+} from "./backend-runtime.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -60,6 +73,16 @@ test("rental quote rejects dates before the booking day", () => {
     /RENTAL_DATE_IN_PAST/
   );
 }); // RUNTIME_AUDIT_SERVER_NO_PAST_TEST
+
+test("all rental paths enforce the immutable seven-day maximum centrally", () => {
+  assert.equal(MAX_RENTAL_DAYS, 7);
+  assert.equal(rentalDayCount("2026-09-05", "2026-09-11"), 7);
+  assert.equal(rentalDayCount("2026-09-05", "2026-09-12"), null);
+  assert.throws(
+    () => rentalQuoteFromItem({ id: 1, price: 125, public_status: "AVAILABLE" }, "2026-09-05", "2026-09-12", "2026-09-01"),
+    /INVALID_RENTAL_DATES/
+  );
+});
 
 test("idempotency keys are bounded and explicit", () => {
   assert.equal(isValidIdempotencyKey("order:550e8400-e29b-41d4-a716-446655440000"), true);
@@ -127,4 +150,123 @@ test("commerce migrations have required tables, overlap lock and state guards", 
   assert.match(integrity, /trg_rental_status_transition/);
   assert.match(integrity, /trg_rental_price_integrity_insert/);
   assert.match(integrity, /invalid_rental_price/);
+});
+
+test("backend hardening migration executes on the complete D1 chain", () => {
+  const script = path.join(here, "..", "scripts", "test_backend_hardening_migration.py");
+  const output = execFileSync("python3", [script], { encoding: "utf8" });
+  assert.match(output, /D1 erzwingt maximal 7 Miettage/);
+});
+
+test("legacy admin token comparison is timing-safe and bearer-only", async () => {
+  assert.equal(await timingSafeEqualText("same-secret", "same-secret"), true);
+  assert.equal(await timingSafeEqualText("same-secret", "wrong-secret"), false);
+  const ok = new Request("https://worker.example/rental-requests", { headers: { Authorization: "Bearer owner-secret" } });
+  await assert.doesNotReject(() => requireLegacyAdmin(ok, { ADMIN_TOKEN: "owner-secret" }));
+  const wrong = new Request("https://worker.example/rental-requests", { headers: { Authorization: "Basic owner-secret" } });
+  await assert.rejects(() => requireLegacyAdmin(wrong, { ADMIN_TOKEN: "owner-secret" }), err => err instanceof RuntimeGuardError && err.code === "UNAUTHORIZED" && err.status === 401);
+});
+
+test("live human writes fail closed without abuse controls", async () => {
+  const request = new Request("https://worker.example/rental-request", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  await assert.rejects(
+    () => guardRuntimeRequest(request, { PAYPAL_ENVIRONMENT: "live", DB: {} }),
+    err => err instanceof RuntimeGuardError && err.code === "LIVE_BACKEND_NOT_READY" && err.status === 503
+  );
+  await assert.doesNotReject(() => guardRuntimeRequest(request, {
+    PAYPAL_ENVIRONMENT: "live",
+    DB: {},
+    RATE_LIMITER: { limit() {} },
+    TURNSTILE_SECRET: "configured",
+  }));
+});
+
+test("live checkout refuses partial provider or catalog configuration", async () => {
+  const request = new Request("https://worker.example/create-order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  const base = {
+    PAYPAL_ENVIRONMENT: "live",
+    DB: {},
+    RATE_LIMITER: { limit() {} },
+    TURNSTILE_SECRET: "configured",
+  };
+  await assert.rejects(() => guardRuntimeRequest(request, base), /LIVE_BACKEND_NOT_READY/);
+  await assert.doesNotReject(() => guardRuntimeRequest(request, {
+    ...base,
+    PAYPAL_CLIENT_ID: "configured",
+    PAYPAL_CLIENT_SECRET: "configured",
+    GITHUB_TOKEN: "configured",
+  }));
+});
+
+test("runtime guard enforces route methods and declared request size", async () => {
+  const wrongMethod = new Request("https://worker.example/create-order", { method: "GET" });
+  await assert.rejects(
+    () => guardRuntimeRequest(wrongMethod, {}),
+    err => err instanceof RuntimeGuardError && err.code === "METHOD_NOT_ALLOWED" && err.status === 405
+  );
+  const oversized = new Request("https://worker.example/rental-request", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Content-Length": String(MAX_REQUEST_BYTES + 1) },
+    body: "{}",
+  });
+  await assert.rejects(
+    () => guardRuntimeRequest(oversized, {}),
+    err => err instanceof RuntimeGuardError && err.code === "REQUEST_TOO_LARGE" && err.status === 413
+  );
+});
+
+test("public readiness exposes booleans, not secrets", () => {
+  const notReady = productionReadiness({ PAYPAL_ENVIRONMENT: "live" });
+  assert.equal(notReady.productionGuardsReady, false);
+  assert.equal(notReady.checkoutReady, false);
+  const ready = productionReadiness({
+    PAYPAL_ENVIRONMENT: "live",
+    DB: {},
+    RATE_LIMITER: { limit() {} },
+    TURNSTILE_SECRET: "turnstile-secret",
+    PAYPAL_CLIENT_ID: "paypal-id",
+    PAYPAL_CLIENT_SECRET: "paypal-secret",
+    PAYPAL_WEBHOOK_ID: "webhook-id",
+    GITHUB_TOKEN: "github-secret",
+  });
+  assert.equal(ready.productionGuardsReady, true);
+  assert.equal(ready.checkoutReady, true);
+  assert.equal(ready.webhookReady, true);
+  assert.equal(JSON.stringify(ready).includes("paypal-secret"), false);
+  assert.equal(JSON.stringify(ready).includes("github-secret"), false);
+});
+
+test("runtime responses carry request correlation and hardened health metadata", async () => {
+  const req = new Request("https://worker.example/health");
+  const source = new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+  const out = await finalizeRuntimeResponse(source, req, {}, "req-test-1", "/health");
+  assert.equal(out.headers.get("X-Request-Id"), "req-test-1");
+  assert.match(out.headers.get("Strict-Transport-Security") || "", /max-age=31536000/);
+  const data = await out.json();
+  assert.equal(data.backendHardening.version, BACKEND_HARDENING_VERSION);
+  assert.equal(data.backendHardening.maxRentalDays, 7);
+  assert.equal(data.backendHardening.maxRequestBytes, MAX_REQUEST_BYTES);
+});
+
+test("runtime errors never expose configuration values", async () => {
+  const response = runtimeErrorResponse(new RuntimeGuardError("LIVE_BACKEND_NOT_READY", 503), "req-safe", "https://disorder119.com");
+  const body = await response.json();
+  assert.deepEqual(body, { error: "LIVE_BACKEND_NOT_READY", requestId: "req-safe" });
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://disorder119.com");
+});
+
+test("worker entrypoint cannot bypass the backend runtime guard", () => {
+  const entry = fs.readFileSync(path.join(here, "worker-entry.js"), "utf8");
+  assert.match(entry, /guardRuntimeRequest\(request, env, url\)/);
+  assert.match(entry, /finalizeRuntimeResponse/);
+  assert.match(entry, /runtimeErrorResponse/);
 });
