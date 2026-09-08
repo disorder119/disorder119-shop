@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   CURRENCY,
@@ -149,6 +150,12 @@ test("commerce migrations have required tables, overlap lock and state guards", 
   assert.match(integrity, /trg_rental_status_transition/);
   assert.match(integrity, /trg_rental_price_integrity_insert/);
   assert.match(integrity, /invalid_rental_price/);
+});
+
+test("backend hardening migration executes on the complete D1 chain", () => {
+  const script = path.join(here, "..", "scripts", "test_backend_hardening_migration.py");
+  const output = execFileSync("python3", [script], { encoding: "utf8" });
+  assert.match(output, /D1 erzwingt maximal 7 Miettage/);
 });
 
 test("legacy admin token comparison is timing-safe and bearer-only", async () => {
