@@ -66,6 +66,13 @@ test("date parser rejects impossible and reversed dates", () => {
   assert.equal(rentalDayCount("2026-09-05", "2026-09-05"), 1);
 });
 
+test("rental quote rejects dates before the booking day", () => {
+  assert.throws(
+    () => rentalQuoteFromItem({ id: 1, price: 125, public_status: "AVAILABLE" }, "2026-09-05", "2026-09-06", "2026-09-06"),
+    /RENTAL_DATE_IN_PAST/
+  );
+}); // RUNTIME_AUDIT_SERVER_NO_PAST_TEST
+
 test("all rental paths enforce the immutable seven-day maximum centrally", () => {
   assert.equal(MAX_RENTAL_DAYS, 7);
   assert.equal(rentalDayCount("2026-09-05", "2026-09-11"), 7);
@@ -75,13 +82,6 @@ test("all rental paths enforce the immutable seven-day maximum centrally", () =>
     /INVALID_RENTAL_DATES/
   );
 });
-
-test("rental quote rejects dates before the booking day", () => {
-  assert.throws(
-    () => rentalQuoteFromItem({ id: 1, price: 125, public_status: "AVAILABLE" }, "2026-09-05", "2026-09-06", "2026-09-06"),
-    /RENTAL_DATE_IN_PAST/
-  );
-}); // RUNTIME_AUDIT_SERVER_NO_PAST_TEST
 
 test("idempotency keys are bounded and explicit", () => {
   assert.equal(isValidIdempotencyKey("order:550e8400-e29b-41d4-a716-446655440000"), true);
