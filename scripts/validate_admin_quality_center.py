@@ -1,14 +1,27 @@
 #!/usr/bin/env python3
 """Hard regression checks for the Disorder119 admin data-quality center."""
 from pathlib import Path
+import subprocess
 
 BASE = Path(__file__).resolve().parents[1]
 ADMIN = (BASE / "admin" / "index.html").read_text(encoding="utf-8")
+ADMIN_SW = (BASE / "admin" / "sw.js").read_text(encoding="utf-8")
 
 
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise SystemExit("FEHLER: Admin-Qualitaetszentrale: " + message)
+
+
+def run_github_api_mock_tests() -> None:
+    test_path = BASE / "scripts" / "admin_github_api_mock.test.mjs"
+    require(test_path.is_file(), "GitHub-API Mock-Test fehlt")
+    result = subprocess.run(
+        ["node", "--test", str(test_path)],
+        cwd=BASE,
+        check=False,
+    )
+    require(result.returncode == 0, "GitHub-API Mock-Test fehlgeschlagen")
 
 
 def main() -> None:
@@ -36,12 +49,22 @@ def main() -> None:
     require("data/items.json" in ADMIN, "Admin darf seine Inventarquelle nicht verlieren")
     require("config/mode-guard.json" not in ADMIN, "Admin darf Mode Guard nicht editieren")
 
-    # GitHub's Contents API can omit inline content for larger files, while
-    # mobile/browser transports can occasionally yield an empty/truncated JSON
-    # body. The admin must follow git_url and parse through the retrying loader.
+    # GitHub API transport: no direct Response.json() is allowed. The admin
+    # checks HTTP status, content type and body text first, then parses only a
+    # non-empty JSON response. Large items.json still uses the Git blob path.
     require("ADMIN_LARGE_ITEMS_LOADER_V1" in ADMIN, "Large-Items-Loader Marker fehlt")
     require("ADMIN_GITHUB_JSON_RETRY_V2" in ADMIN, "GitHub-JSON-Retry V2 Marker fehlt")
-    require("function githubJsonFetch(url, options, label, attempt)" in ADMIN, "retryender GitHub-JSON-Loader fehlt")
+    require("ADMIN_GITHUB_RESPONSE_V3" in ADMIN, "GitHub-Response V3 Marker fehlt")
+    require('Authorization: "Bearer " + pat' in ADMIN, "Fine-grained PAT nutzt nicht Bearer")
+    require('"X-GitHub-Api-Version": "2022-11-28"' in ADMIN, "GitHub API-Version Header fehlt")
+    require('Authorization: "token " + pat' not in ADMIN, "Legacy token Authorization ist weiterhin aktiv")
+    require("function githubJsonFromResponse(res, label)" in ADMIN, "zentraler Response-Parser fehlt")
+    require("function githubContentType(res)" in ADMIN and "function githubIsJsonContentType(res)" in ADMIN, "Content-Type-Pruefung fehlt")
+    require("res.status === 204 || res.status === 205" in ADMIN, "204/205 Leerantwort wird nicht explizit behandelt")
+    require('err.code === "RATE_LIMIT"' in ADMIN, "Rate-Limit Fehlerklasse fehlt")
+    require('err.code === "NETWORK"' in ADMIN and "CORS" in ADMIN, "Netzwerk/CORS Fehlerklasse fehlt")
+    require('err.code === "CONTENT_TYPE"' in ADMIN, "Nicht-JSON Content-Type wird nicht erkannt")
+    require('err.code === "MALFORMED_JSON"' in ADMIN, "abgeschnittenes JSON wird nicht klassifiziert")
     require("attempt < 3" in ADMIN and "githubDelay(250 * attempt)" in ADMIN, "GitHub-JSON-Retry ist nicht begrenzt/gebremst")
     require('cache: "no-store"' in ADMIN, "GitHub-Dateizugriff kann veraltete Cache-Antworten verwenden")
     require("function readGithubContentsPayload(data, pat)" in ADMIN, "Git-Blob-Fallback fehlt")
@@ -51,8 +74,24 @@ def main() -> None:
     require('blob.encoding !== "base64"' in ADMIN, "Blob-Encoding-Pruefung fehlt")
     require("if (!Array.isArray(parsed))" in ADMIN, "JSON-Format-Pruefung fehlt")
     require("var text = b64DecodeUtf8(data.content);" not in ADMIN, "alter direkter data.content-Parser ist wieder aktiv")
+    require("res.json(" not in ADMIN, "blinder Response.json()-Aufruf ist im Admin aktiv")
+    require('githubJsonFromResponse(res, "GitHub-Speichern")' in ADMIN, "Speicherantwort umgeht den sicheren Parser")
+    require("!data || !data.content || !data.content.sha" in ADMIN, "Speicherantwort validiert neuen SHA nicht")
 
-    print("Admin-Qualitaetszentrale: OK — Luecken priorisiert, Taxonomie geprueft, Mietpreis abgeleitet, Concurrent-Save und resilienter grosser GitHub-Katalog sicher.")
+    # Installed Safari/iOS PWAs may have cached the pre-fix /admin/. Bumping
+    # the admin-only cache namespace causes activation to delete v1, while the
+    # worker still ignores api.github.com and every non-GET request.
+    require('CACHE_NAME = CACHE_PREFIX + "v2"' in ADMIN_SW, "Admin-PWA Cache wurde fuer den Fix nicht invalidiert")
+    require("ADMIN_GITHUB_RESPONSE_V3 cache invalidation" in ADMIN_SW, "PWA Cache-Fix Marker fehlt")
+    require('url.origin !== self.location.origin' in ADMIN_SW, "Admin-PWA darf Cross-Origin GitHub API nicht intercepten")
+    require('request.method !== "GET"' in ADMIN_SW, "Admin-PWA darf Schreibrequests nicht cachen")
+    require("api.github.com" not in ADMIN_SW and "data/items.json" not in ADMIN_SW, "Admin-PWA darf GitHub/Inventar nicht precachen")
+
+    run_github_api_mock_tests()
+    print(
+        "Admin-Qualitaetszentrale: OK — Datenqualitaet, Taxonomie, Mietpreis, Concurrent-Save, "
+        "Fine-grained-PAT GitHub-Transport und PWA-Cache sind regressionsgeschuetzt."
+    )
 
 
 if __name__ == "__main__":
