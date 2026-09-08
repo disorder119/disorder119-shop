@@ -52,8 +52,8 @@ function logAdminSecurity(level, event, reqId, request, url, details = {}) {
   else console.log(JSON.stringify(payload));
 }
 
-function isAdminRoute(pathname) {
-  return pathname === "/admin" || pathname.startsWith("/admin/");
+function isAdminRoute(url) {
+  return url.pathname === "/admin" || url.pathname.startsWith("/admin/");
 }
 
 function isLegacyAdminRoute(pathname) {
@@ -61,7 +61,7 @@ function isLegacyAdminRoute(pathname) {
 }
 
 async function authorizeRouteEnv(request, env, url, reqId) {
-  const adminRoute = isAdminRoute(url.pathname);
+  const adminRoute = isAdminRoute(url);
   const legacyAdminRoute = isLegacyAdminRoute(url.pathname);
   if (!adminRoute && !legacyAdminRoute) return env;
   if (request.method === "OPTIONS" && adminRoute) return env;
@@ -144,7 +144,7 @@ export default {
         return finish(await handleAdminCases(request, runtimeEnv, url, reqId, origin));
       }
 
-      if (isAdminRoute(url.pathname)) {
+      if (isAdminRoute(url)) {
         return finish(await handleAdminRequest(request, runtimeEnv, url, reqId, origin));
       }
 
