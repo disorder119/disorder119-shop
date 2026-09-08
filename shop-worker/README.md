@@ -90,7 +90,7 @@ Die Admin-Autorisierung ist zentral in zwei Rollen getrennt:
 - `ADMIN_READ_TOKEN`: nur lesende Admin-Zugriffe (`GET`/`HEAD`).
 - `ADMIN_WRITE_TOKEN`: Owner-Zugriff inklusive Mutationen (`POST`/`PATCH`/`PUT`/`DELETE`) und Lesen.
 
-Im Live-Modus muessen **beide** Secrets vorhanden sein. Eine nur teilweise konfigurierte Rollen-Trennung oder der alte gemeinsame `ADMIN_TOKEN` fuehrt dort fuer Admin-Zugriffe fail-closed zu `ADMIN_RBAC_NOT_READY`. `ADMIN_TOKEN` bleibt ausschliesslich als lokale/Sandbox-Kompatibilitaetsbruecke erhalten und darf nicht als produktives Rollenmodell betrachtet werden.
+Im Live-Modus muessen **beide** Secrets vorhanden sein. Eine nur teilweise konfigurierte Rollen-Trennung oder der alte gemeinsame `ADMIN_TOKEN` fuehrt dort fuer Admin-Zugriffe fail-closed zu `ADMIN_RBAC_NOT_READY`. `ADMIN_TOKEN` bleibt ausschliesslich als lokale/Sandbox-Kompatibilitaetsbruecke erhalten und darf nicht als produktives Rollenmodell betrachtet werden. Ein bestehender Admin-Client, der nur einen Bearer-Token verwaltet, kann fuer volle Owner-Funktionen weiterhin den `ADMIN_WRITE_TOKEN` verwenden; der separate Read-Token ist fuer bewusst eingeschraenkte Clients vorgesehen.
 
 Die einzelnen Admin-Handler behalten zusaetzliche Token-Pruefungen als zweite Schutzschicht. Der zentrale Worker-Gateway autorisiert jedoch zuerst die Rolle und reicht intern nur den bereits autorisierten Token an den jeweiligen Handler weiter. Vor echtem breitem Produktivbetrieb sollte `admin.disorder119.com` ausserdem mit Cloudflare Access/MFA abgesichert werden.
 
