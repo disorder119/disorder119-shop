@@ -740,7 +740,7 @@
         return '<button type="button" class="quality-chip' + (row[1] ? ' quality-chip--warn' : '') + '" data-quality-jump="' + row[0] + '">' +
           '<strong>' + row[1] + '</strong><span>' + esc(row[2]) + '</span></button>';
       }).join("") + '</div>' +
-      '<p class="quality-note">Mietpreis ist nicht mehr manuell: Rental V2 berechnet unverändert exakt 10 % des Verkaufspreises pro Kalendertag.</p>';
+      '<p class="quality-note">Mietpreis ist nicht mehr manuell: Rental V2 berechnet unverändert exakt 10 % des Verkaufspreises pro Kalendertag.</p><!-- ADMIN_RENTAL_READONLY_V1 -->';
     Array.prototype.forEach.call(host.querySelectorAll("[data-quality-jump]"), function (button) {
       button.addEventListener("click", function () {
         $("gapFilter").value = button.getAttribute("data-quality-jump");
@@ -866,7 +866,6 @@
         field("Titel", "title", "text", it.title) +
         field("Marke", "brand", "text", it.brand) +
         field("Preis (€)", "price", "number", it.price) +
-        field("Mietpreis (€, leer = auf Anfrage)", "rental_price", "number", it.rental_price || "") +
         selectField("Kategorie", "category", CATEGORIES, it.category) +
         field("Größe", "size", "text", it.size) +
         field("Farbe", "color", "text", it.color) +
