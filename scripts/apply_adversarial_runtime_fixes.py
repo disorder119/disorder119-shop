@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Apply only runtime fixes proven by adversarial browser tests.
+"""Apply runtime fixes proven by adversarial and backend reliability checks.
 
-The protected Match/Chaos/Baukasten JS and markup are not modified. The fixes
-only correct shared overlay layering where a globally fixed helper/navigation
-layer was proven to intercept an open modal control in real Chromium.
+Protected Match/Chaos/Baukasten behaviour is not modified. Browser layering
+fixes remain scoped to shared overlays. Commerce hardening only replaces the
+fragile GitHub Contents inline-content assumption with the dedicated catalog
+loader, preserving all checkout/rental business rules.
 """
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
 CSS = BASE / "assets" / "app.css"
+WORKER = BASE / "shop-worker" / "worker.js"
 PICKER_MARKER = "ADVERSARIAL_MODAL_LAYERING"
 QUICKVIEW_MARKER = "ADVERSARIAL_QUICKVIEW_LAYERING"
+CATALOG_LOADER_IMPORT = 'import { loadGithubCatalog } from "./catalog-loader.js";'
 
 PICKER_OVERRIDE = r'''
 
@@ -33,8 +36,29 @@ QUICKVIEW_OVERRIDE = r'''
   .modal-backdrop.open { z-index: 320; }
 '''
 
+OLD_CATALOG_LOADER = '''async function loadItems(env) {
+  const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.itemsPath}?ref=${CONFIG.githubBranch}`;
+  const res = await fetch(url, { headers: ghHeaders(env) });
+  if (!res.ok) throw new Error(`catalog_load_${res.status}`);
+  const file = await res.json();
+  const text = new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\\n/g, "")), c => c.charCodeAt(0)));
+  return { items: JSON.parse(text), sha: file.sha };
+}
+'''
 
-def main() -> None:
+NEW_CATALOG_LOADER = '''async function loadItems(env) {
+  return loadGithubCatalog({
+    owner: CONFIG.githubOwner,
+    repo: CONFIG.githubRepo,
+    branch: CONFIG.githubBranch,
+    path: CONFIG.itemsPath,
+    headers: ghHeaders(env),
+  });
+}
+'''
+
+
+def apply_overlay_fixes() -> list[str]:
     text = CSS.read_text(encoding="utf-8")
     changed = []
     if PICKER_MARKER not in text:
@@ -43,10 +67,41 @@ def main() -> None:
     if QUICKVIEW_MARKER not in text:
         text = text.rstrip() + QUICKVIEW_OVERRIDE + "\n"
         changed.append("Quickview vs. Modusleiste")
+    if changed:
+        CSS.write_text(text, encoding="utf-8")
+    return changed
+
+
+def apply_catalog_loader() -> bool:
+    text = WORKER.read_text(encoding="utf-8")
+    changed = False
+
+    if CATALOG_LOADER_IMPORT not in text:
+        anchor = '} from "./commerce-core.js";\n'
+        if anchor not in text:
+            raise SystemExit("Commerce-Core-Importanker fuer Catalog Loader fehlt.")
+        text = text.replace(anchor, anchor + CATALOG_LOADER_IMPORT + "\n", 1)
+        changed = True
+
+    if NEW_CATALOG_LOADER not in text:
+        if OLD_CATALOG_LOADER not in text:
+            raise SystemExit("Catalog-Loader-Anker in shop-worker/worker.js fehlt.")
+        text = text.replace(OLD_CATALOG_LOADER, NEW_CATALOG_LOADER, 1)
+        changed = True
+
+    if changed:
+        WORKER.write_text(text, encoding="utf-8")
+    return changed
+
+
+def main() -> None:
+    changed = apply_overlay_fixes()
+    if apply_catalog_loader():
+        changed.append("GitHub-Katalog-Loader mit Blob-Fallback")
+
     if not changed:
         print("Adversarial Runtime-Fixes bereits aktuell.")
         return
-    CSS.write_text(text, encoding="utf-8")
     print("Adversarial Runtime-Fixes angewendet: " + ", ".join(changed) + ".")
 
 
