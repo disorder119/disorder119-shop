@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { SYSTEM_SCHEMA_TARGET, detectSchemaVersion } from "./admin-system.js";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const workerEntry = fs.readFileSync(path.join(here, "worker-entry.js"), "utf8");
 
 const automationColumns = [
   "automation_key",
@@ -71,4 +77,10 @@ assert.equal(
   "0006_operations_cases"
 );
 
-console.log("Admin system schema detection: OK");
+assert.match(workerEntry, /const ADMIN_REQUEST_ORIGINS = new Set/);
+assert.match(workerEntry, /https:\/\/admin\.disorder119\.com/);
+assert.match(workerEntry, /function assertAdminOrigin\(request\)/);
+assert.match(workerEntry, /ADMIN_ORIGIN_FORBIDDEN/);
+assert.match(workerEntry, /assertAdminOrigin\(request\);/);
+
+console.log("Admin system schema/origin boundary: OK");

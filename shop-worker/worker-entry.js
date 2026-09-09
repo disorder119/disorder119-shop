@@ -24,6 +24,12 @@ import {
   scopeAdminEnv,
 } from "./backend-runtime.js";
 
+const ADMIN_REQUEST_ORIGINS = new Set([
+  "https://admin.disorder119.com",
+  "http://localhost:8765",
+  "http://127.0.0.1:8765",
+]);
+
 function requestId(request) {
   const existing = request.headers.get("cf-ray");
   return existing ? `cf-${existing}` : crypto.randomUUID();
@@ -60,10 +66,20 @@ function isLegacyAdminRoute(pathname) {
   return pathname === "/rental-requests" || pathname.startsWith("/rental-request/");
 }
 
+function assertAdminOrigin(request) {
+  const origin = request.headers.get("Origin");
+  if (!origin) return;
+  if (!ADMIN_REQUEST_ORIGINS.has(origin)) {
+    throw new RuntimeGuardError("ADMIN_ORIGIN_FORBIDDEN", 403);
+  }
+}
+
 async function authorizeRouteEnv(request, env, url, reqId) {
   const adminRoute = isAdminRoute(url);
   const legacyAdminRoute = isLegacyAdminRoute(url.pathname);
   if (!adminRoute && !legacyAdminRoute) return env;
+
+  assertAdminOrigin(request);
   if (request.method === "OPTIONS" && adminRoute) return env;
 
   let requiredRole;
@@ -166,9 +182,6 @@ export default {
             await enrichRentalReservation(runtimeEnv, result.rentalReservationId, payload, reqId);
           }
         } catch (err) {
-          // Metadata enrichment must never turn a valid rental reservation into a
-          // failed customer request. Missing migration/config is surfaced in the
-          // admin system view and logs instead.
           logBackgroundFailure("rental_metadata_snapshot_failed", reqId, err);
         }
       }
