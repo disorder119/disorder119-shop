@@ -164,13 +164,38 @@ test("backend hardening migration executes on the complete D1 chain", () => {
   assert.match(output, /D1 erzwingt maximal 7 Miettage/);
 });
 
-test("legacy admin token comparison is timing-safe and bearer-only", async () => {
+test("legacy admin token is timing-safe, bearer-only and local opt-in only", async () => {
   assert.equal(await timingSafeEqualText("same-secret", "same-secret"), true);
   assert.equal(await timingSafeEqualText("same-secret", "wrong-secret"), false);
-  const ok = new Request("https://worker.example/rental-requests", { headers: { Authorization: "Bearer owner-secret" } });
-  await assert.doesNotReject(() => requireLegacyAdmin(ok, { ADMIN_TOKEN: "owner-secret" }));
-  const wrong = new Request("https://worker.example/rental-requests", { headers: { Authorization: "Basic owner-secret" } });
-  await assert.rejects(() => requireLegacyAdmin(wrong, { ADMIN_TOKEN: "owner-secret" }), err => err instanceof RuntimeGuardError && err.code === "UNAUTHORIZED" && err.status === 401);
+
+  const local = new Request("http://127.0.0.1:8765/rental-requests", {
+    headers: { Authorization: "Bearer owner-secret" },
+  });
+  await assert.doesNotReject(() => requireLegacyAdmin(local, {
+    ADMIN_TOKEN: "owner-secret",
+    ALLOW_LEGACY_ADMIN_TOKEN: "true",
+  }));
+
+  await assert.rejects(
+    () => requireLegacyAdmin(local, { ADMIN_TOKEN: "owner-secret" }),
+    err => err instanceof RuntimeGuardError && err.code === "ADMIN_RBAC_NOT_READY" && err.status === 503
+  );
+
+  const remote = new Request("https://worker.example/rental-requests", {
+    headers: { Authorization: "Bearer owner-secret" },
+  });
+  await assert.rejects(
+    () => requireLegacyAdmin(remote, { ADMIN_TOKEN: "owner-secret", ALLOW_LEGACY_ADMIN_TOKEN: "true" }),
+    err => err instanceof RuntimeGuardError && err.code === "ADMIN_RBAC_NOT_READY" && err.status === 503
+  );
+
+  const wrong = new Request("http://localhost:8765/rental-requests", {
+    headers: { Authorization: "Basic owner-secret" },
+  });
+  await assert.rejects(
+    () => requireLegacyAdmin(wrong, { ADMIN_TOKEN: "owner-secret", ALLOW_LEGACY_ADMIN_TOKEN: "true" }),
+    err => err instanceof RuntimeGuardError && err.code === "UNAUTHORIZED" && err.status === 401
+  );
 });
 
 test("admin RBAC maps safe methods to reader and mutations to owner", () => {
@@ -186,9 +211,9 @@ test("admin RBAC maps safe methods to reader and mutations to owner", () => {
   );
 });
 
-test("split admin tokens enforce read/write least privilege", async () => {
+test("split admin tokens enforce read/write least privilege independent of PayPal mode", async () => {
   const env = {
-    PAYPAL_ENVIRONMENT: "live",
+    PAYPAL_ENVIRONMENT: "sandbox",
     ADMIN_READ_TOKEN: "reader-secret",
     ADMIN_WRITE_TOKEN: "writer-secret",
     DB: { marker: true },
@@ -233,48 +258,52 @@ test("split admin tokens enforce read/write least privilege", async () => {
   assert.equal(scoped.ADMIN_AUTH_CONTEXT.role, ADMIN_ROLE_READER);
   assert.equal(scoped.ADMIN_AUTH_CONTEXT.readConfigured, true);
   assert.equal(scoped.ADMIN_AUTH_CONTEXT.writeConfigured, true);
+  assert.equal(scoped.ADMIN_AUTH_CONTEXT.productionRbacReady, true);
   assert.equal(scoped.DB, env.DB);
 });
 
-test("live admin access fails closed on legacy or partial RBAC configuration", async () => {
-  const legacyWrite = new Request("https://worker.example/admin/tasks/1", {
-    method: "PATCH",
-    headers: { Authorization: "Bearer legacy-secret" },
-  });
-  await assert.rejects(
-    () => authorizeAdminRequest(legacyWrite, { PAYPAL_ENVIRONMENT: "live", ADMIN_TOKEN: "legacy-secret" }, ADMIN_ROLE_OWNER),
-    err => err instanceof RuntimeGuardError && err.code === "ADMIN_RBAC_NOT_READY" && err.status === 503
-  );
-
+test("remote admin access fails closed on legacy or partial RBAC regardless of PayPal mode", async () => {
   const legacyRead = new Request("https://worker.example/admin/system", {
     headers: { Authorization: "Bearer legacy-secret" },
   });
-  await assert.rejects(
-    () => authorizeAdminRequest(legacyRead, { PAYPAL_ENVIRONMENT: "live", ADMIN_TOKEN: "legacy-secret" }, ADMIN_ROLE_READER),
-    err => err instanceof RuntimeGuardError && err.code === "ADMIN_RBAC_NOT_READY" && err.status === 503
-  );
+  for (const paypalMode of ["sandbox", "live"]) {
+    await assert.rejects(
+      () => authorizeAdminRequest(legacyRead, {
+        PAYPAL_ENVIRONMENT: paypalMode,
+        ADMIN_TOKEN: "legacy-secret",
+        ALLOW_LEGACY_ADMIN_TOKEN: "true",
+      }, ADMIN_ROLE_READER),
+      err => err instanceof RuntimeGuardError && err.code === "ADMIN_RBAC_NOT_READY" && err.status === 503
+    );
+  }
 
   const partialRead = new Request("https://worker.example/admin/system", {
     headers: { Authorization: "Bearer reader-secret" },
   });
   await assert.rejects(
-    () => authorizeAdminRequest(partialRead, { PAYPAL_ENVIRONMENT: "live", ADMIN_READ_TOKEN: "reader-secret" }, ADMIN_ROLE_READER),
+    () => authorizeAdminRequest(partialRead, {
+      PAYPAL_ENVIRONMENT: "sandbox",
+      ADMIN_READ_TOKEN: "reader-secret",
+    }, ADMIN_ROLE_READER),
     err => err instanceof RuntimeGuardError && err.code === "ADMIN_RBAC_NOT_READY" && err.status === 503
   );
 
   const partialWrite = new Request("https://worker.example/admin/tasks/1", {
     method: "PATCH",
-    headers: { Authorization: "Bearer reader-secret" },
+    headers: { Authorization: "Bearer writer-secret" },
   });
   await assert.rejects(
-    () => authorizeAdminRequest(partialWrite, { PAYPAL_ENVIRONMENT: "live", ADMIN_READ_TOKEN: "reader-secret" }, ADMIN_ROLE_OWNER),
+    () => authorizeAdminRequest(partialWrite, {
+      PAYPAL_ENVIRONMENT: "sandbox",
+      ADMIN_WRITE_TOKEN: "writer-secret",
+    }, ADMIN_ROLE_OWNER),
     err => err instanceof RuntimeGuardError && err.code === "ADMIN_RBAC_NOT_READY" && err.status === 503
   );
 });
 
 test("legacy rental admin endpoints inherit the split RBAC boundary", async () => {
   const env = {
-    PAYPAL_ENVIRONMENT: "live",
+    PAYPAL_ENVIRONMENT: "sandbox",
     ADMIN_READ_TOKEN: "reader-secret",
     ADMIN_WRITE_TOKEN: "writer-secret",
   };
@@ -340,21 +369,40 @@ test("live checkout refuses partial provider or catalog configuration", async ()
   }));
 });
 
-test("runtime guard enforces route methods and declared request size", async () => {
+test("runtime guard enforces route methods and actual request size", async () => {
   const wrongMethod = new Request("https://worker.example/create-order", { method: "GET" });
   await assert.rejects(
     () => guardRuntimeRequest(wrongMethod, {}),
     err => err instanceof RuntimeGuardError && err.code === "METHOD_NOT_ALLOWED" && err.status === 405
   );
-  const oversized = new Request("https://worker.example/rental-request", {
+
+  const oversizedDeclared = new Request("https://worker.example/rental-request", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Content-Length": String(MAX_REQUEST_BYTES + 1) },
     body: "{}",
   });
   await assert.rejects(
-    () => guardRuntimeRequest(oversized, {}),
+    () => guardRuntimeRequest(oversizedDeclared, {}),
     err => err instanceof RuntimeGuardError && err.code === "REQUEST_TOO_LARGE" && err.status === 413
   );
+
+  const oversizedStream = new Request("https://worker.example/rental-request", {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: "x".repeat(MAX_REQUEST_BYTES + 1),
+  });
+  assert.equal(oversizedStream.headers.has("Content-Length"), false);
+  await assert.rejects(
+    () => guardRuntimeRequest(oversizedStream, {}),
+    err => err instanceof RuntimeGuardError && err.code === "REQUEST_TOO_LARGE" && err.status === 413
+  );
+
+  const boundedStream = new Request("https://worker.example/rental-request", {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: "x".repeat(MAX_REQUEST_BYTES),
+  });
+  await assert.doesNotReject(() => guardRuntimeRequest(boundedStream, {}));
 });
 
 test("public readiness exposes booleans, not secrets", () => {
@@ -362,6 +410,14 @@ test("public readiness exposes booleans, not secrets", () => {
   assert.equal(notReady.productionGuardsReady, false);
   assert.equal(notReady.checkoutReady, false);
   assert.equal(notReady.adminRbacReady, false);
+
+  const sandboxWithoutSplit = productionReadiness({
+    PAYPAL_ENVIRONMENT: "sandbox",
+    ADMIN_TOKEN: "legacy-secret",
+    ALLOW_LEGACY_ADMIN_TOKEN: "true",
+  });
+  assert.equal(sandboxWithoutSplit.adminRbacReady, false);
+
   const ready = productionReadiness({
     PAYPAL_ENVIRONMENT: "live",
     DB: {},
