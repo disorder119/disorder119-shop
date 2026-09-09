@@ -232,7 +232,7 @@ async function assertRequestBodySize(request) {
       if (done) break;
       total += value?.byteLength || 0;
       if (total > MAX_REQUEST_BYTES) {
-        try { await reader.cancel(); } catch {}
+        reader.cancel().catch(() => {});
         throw new RuntimeGuardError("REQUEST_TOO_LARGE", 413);
       }
     }
