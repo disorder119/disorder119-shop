@@ -1,6 +1,6 @@
 import { MAX_RENTAL_DAYS, MAX_REQUEST_BYTES } from "./commerce-core.js";
 
-export const BACKEND_HARDENING_VERSION = "backend-runtime-v2";
+export const BACKEND_HARDENING_VERSION = "backend-runtime-v3";
 export const ADMIN_ROLE_READER = "READER";
 export const ADMIN_ROLE_OWNER = "OWNER";
 
@@ -45,6 +45,7 @@ const LIVE_DB_WRITES = new Set([
 
 const ADMIN_READ_METHODS = new Set(["GET", "HEAD"]);
 const ADMIN_WRITE_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
+const NON_PRODUCTION_RUNTIME_ENVIRONMENTS = new Set(["development", "dev", "test", "local"]);
 
 export class RuntimeGuardError extends Error {
   constructor(code, status = 400) {
@@ -54,8 +55,18 @@ export class RuntimeGuardError extends Error {
   }
 }
 
-function isLive(env) {
+function isLivePayment(env) {
   return String(env?.PAYPAL_ENVIRONMENT || "sandbox").toLowerCase() === "live";
+}
+
+export function runtimeEnvironment(env = {}) {
+  const explicit = String(env.RUNTIME_ENVIRONMENT || "").trim().toLowerCase();
+  if (explicit) return NON_PRODUCTION_RUNTIME_ENVIRONMENTS.has(explicit) ? "development" : "production";
+  return isLivePayment(env) ? "production" : "development";
+}
+
+export function isProductionRuntime(env = {}) {
+  return runtimeEnvironment(env) === "production";
 }
 
 function allowedOrigin(origin) {
@@ -95,14 +106,15 @@ export function adminAuthReadiness(env = {}) {
   const writeToken = Boolean(env.ADMIN_WRITE_TOKEN);
   const legacyToken = Boolean(env.ADMIN_TOKEN);
   const splitConfigured = readToken || writeToken;
+  const productionRuntime = isProductionRuntime(env);
   return {
     readConfigured: readToken,
     writeConfigured: writeToken,
     legacyConfigured: legacyToken,
     splitConfigured,
     readReady: readToken || writeToken || (!splitConfigured && legacyToken),
-    writeReady: writeToken || (!isLive(env) && !splitConfigured && legacyToken),
-    productionRbacReady: !isLive(env) || (readToken && writeToken),
+    writeReady: writeToken || (!productionRuntime && !splitConfigured && legacyToken),
+    productionRbacReady: !productionRuntime || (readToken && writeToken),
   };
 }
 
@@ -113,7 +125,7 @@ export async function authorizeAdminRequest(request, env, requiredRole = adminRe
 
   const readiness = adminAuthReadiness(env);
   if (!readiness.readReady) throw new RuntimeGuardError("ADMIN_NOT_CONFIGURED", 503);
-  if (isLive(env) && !readiness.productionRbacReady) {
+  if (isProductionRuntime(env) && !readiness.productionRbacReady) {
     throw new RuntimeGuardError("ADMIN_RBAC_NOT_READY", 503);
   }
 
@@ -146,7 +158,7 @@ export function scopeAdminEnv(env, auth) {
         readConfigured: Boolean(auth?.readiness?.readConfigured ?? env?.ADMIN_READ_TOKEN),
         writeConfigured: Boolean(auth?.readiness?.writeConfigured ?? env?.ADMIN_WRITE_TOKEN),
         legacyConfigured: Boolean(auth?.readiness?.legacyConfigured ?? env?.ADMIN_TOKEN),
-        productionRbacReady: Boolean(auth?.readiness?.productionRbacReady ?? (!isLive(env) || (env?.ADMIN_READ_TOKEN && env?.ADMIN_WRITE_TOKEN))),
+        productionRbacReady: Boolean(auth?.readiness?.productionRbacReady ?? (!isProductionRuntime(env) || (env?.ADMIN_READ_TOKEN && env?.ADMIN_WRITE_TOKEN))),
       }),
       enumerable: true,
     },
@@ -163,7 +175,8 @@ function hasPaypalCore(env) {
 }
 
 export function productionReadiness(env = {}) {
-  const live = isLive(env);
+  const paymentLive = isLivePayment(env);
+  const productionRuntime = isProductionRuntime(env);
   const database = Boolean(env.DB);
   const rateLimiter = Boolean(env.RATE_LIMITER && typeof env.RATE_LIMITER.limit === "function");
   const turnstile = Boolean(env.TURNSTILE_SECRET);
@@ -172,11 +185,13 @@ export function productionReadiness(env = {}) {
   const catalogWrite = Boolean(env.GITHUB_TOKEN);
   const adminRbac = adminAuthReadiness(env);
   return {
-    environment: live ? "live" : "sandbox",
-    live,
-    productionGuardsReady: !live || (database && rateLimiter && turnstile),
-    rentalWritesReady: !live || (database && rateLimiter && turnstile),
-    checkoutReady: database && paypal && catalogWrite && (!live || (rateLimiter && turnstile)),
+    environment: paymentLive ? "live" : "sandbox",
+    runtimeEnvironment: runtimeEnvironment(env),
+    live: paymentLive,
+    productionRuntime,
+    productionGuardsReady: !paymentLive || (database && rateLimiter && turnstile),
+    rentalWritesReady: !paymentLive || (database && rateLimiter && turnstile),
+    checkoutReady: database && paypal && catalogWrite && (!paymentLive || (rateLimiter && turnstile)),
     webhookReady: database && webhook && catalogWrite,
     adminRbacReady: adminRbac.productionRbacReady,
   };
@@ -203,7 +218,7 @@ function assertDeclaredBodySize(request) {
 }
 
 function assertLiveControls(env, pathname) {
-  if (!isLive(env) || !LIVE_DB_WRITES.has(pathname)) return;
+  if (!isLivePayment(env) || !LIVE_DB_WRITES.has(pathname)) return;
   if (!env.DB) throw new RuntimeGuardError("LIVE_BACKEND_NOT_READY", 503);
 
   if (pathname !== "/paypal-webhook") {
