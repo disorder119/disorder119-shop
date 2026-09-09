@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { SYSTEM_SCHEMA_TARGET, detectSchemaVersion } from "./admin-system.js";
+import { adminAuthReadiness, isProductionRuntime, productionReadiness, runtimeEnvironment } from "./backend-runtime.js";
 
 const automationColumns = [
   "automation_key",
@@ -71,4 +72,21 @@ assert.equal(
   "0006_operations_cases"
 );
 
-console.log("Admin system schema detection: OK");
+assert.equal(runtimeEnvironment({ RUNTIME_ENVIRONMENT: "production", PAYPAL_ENVIRONMENT: "sandbox" }), "production");
+assert.equal(isProductionRuntime({ RUNTIME_ENVIRONMENT: "production", PAYPAL_ENVIRONMENT: "sandbox" }), true);
+assert.equal(runtimeEnvironment({ RUNTIME_ENVIRONMENT: "development", PAYPAL_ENVIRONMENT: "live" }), "development");
+assert.equal(isProductionRuntime({ RUNTIME_ENVIRONMENT: "development", PAYPAL_ENVIRONMENT: "live" }), false);
+assert.equal(
+  adminAuthReadiness({ RUNTIME_ENVIRONMENT: "production", PAYPAL_ENVIRONMENT: "sandbox", ADMIN_TOKEN: "legacy" }).productionRbacReady,
+  false,
+);
+assert.equal(
+  adminAuthReadiness({ RUNTIME_ENVIRONMENT: "production", PAYPAL_ENVIRONMENT: "sandbox", ADMIN_READ_TOKEN: "read", ADMIN_WRITE_TOKEN: "write" }).productionRbacReady,
+  true,
+);
+const independentReadiness = productionReadiness({ RUNTIME_ENVIRONMENT: "production", PAYPAL_ENVIRONMENT: "sandbox" });
+assert.equal(independentReadiness.runtimeEnvironment, "production");
+assert.equal(independentReadiness.environment, "sandbox");
+assert.equal(independentReadiness.adminRbacReady, false);
+
+console.log("Admin system schema/runtime environment detection: OK");
