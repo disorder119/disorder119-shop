@@ -2,6 +2,11 @@ name = "disorder119-shop-worker"
 main = "worker-entry.js"
 compatibility_date = "2025-01-01"
 
+# Runtime security is intentionally independent from the PayPal environment.
+# The default deployment is production even while PayPal remains in sandbox.
+[vars]
+RUNTIME_ENVIRONMENT = "production"
+
 # Alle echten Zugangsdaten sind Secrets (nie hier eintragen, nie committen) -
 # siehe README.md fuer die genauen `wrangler secret put ...`-Befehle.
 
