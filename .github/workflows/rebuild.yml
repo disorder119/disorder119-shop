@@ -5,6 +5,15 @@ name: Seite automatisch neu bauen
 # Der Archivfilter hat zusaetzliche Regressionen fuer Sichtbarkeit, Reset und Facetten.
 # Match, Chaos und Baukasten sind ueber config/mode-guard.json gegen unbeabsichtigte
 # Aenderungen geschuetzt; der Guard wird niemals automatisch neu gesetzt.
+#
+# Mehrere sehr schnell aufeinanderfolgende Pushes auf main (z. B. viele
+# Admin-Speicherungen innerhalb von Sekunden) koennen dazu fuehren, dass der
+# publish-Push hier mit "non-fast-forward" fehlschlaegt, weil main zwischen
+# Checkout und Push schon wieder weitergewandert ist - items.json bleibt dabei
+# stets korrekt, nur der abgeleitete Rebuild (catalog.json/HTML) bleibt dann
+# hinter dem letzten Stand zurueck. Abhilfe: ein einzelner, unabhaengiger Push
+# (z. B. ein kleiner gemergter PR) nach Abschluss der Bearbeitung stoesst die
+# Pipeline einmal unbehelligt neu an.
 
 on:
   push:
