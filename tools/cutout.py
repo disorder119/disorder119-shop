@@ -34,6 +34,13 @@ for batch use. Returns a dict with `method` telling you which stage the
 final result actually came from ("grabcut", "rough_fallback", or
 "no_backdrop_skip") - log this when running in bulk so borderline cases can
 be spot-checked instead of trusted blindly.
+
+Default max_side is deliberately modest (1200px, quality 82, ~20-30KB/image).
+The site's CI runs a Lighthouse mobile-performance floor against whichever
+product is first in data/items.json - a batch of oversized detail photos
+landing on that one page dropped the score 1 point below the floor and
+failed the build even though nothing was functionally wrong. Don't raise
+this without checking page weight on that specific product afterward.
 """
 import os
 import numpy as np
@@ -145,7 +152,7 @@ def _cleanup(fg, min_component_frac=0.002):
     return fg
 
 
-def cutout(main_photo_path, target_path, out_path, max_side=1800, quality=92):
+def cutout(main_photo_path, target_path, out_path, max_side=1200, quality=82):
     fg_pixels, bg_pixels = build_color_model(main_photo_path)
 
     im = _resize_max(_load(target_path), max_side)
@@ -194,7 +201,7 @@ if __name__ == '__main__':
     p.add_argument('main_photo')
     p.add_argument('target_photo')
     p.add_argument('output')
-    p.add_argument('--max-side', type=int, default=1800)
+    p.add_argument('--max-side', type=int, default=1200)
     args = p.parse_args()
     info = cutout(args.main_photo, args.target_photo, args.output, max_side=args.max_side)
     print(info)
