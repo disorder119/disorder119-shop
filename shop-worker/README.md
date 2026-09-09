@@ -90,7 +90,9 @@ Die Admin-Autorisierung ist zentral in zwei Rollen getrennt:
 - `ADMIN_READ_TOKEN`: nur lesende Admin-Zugriffe (`GET`/`HEAD`).
 - `ADMIN_WRITE_TOKEN`: Owner-Zugriff inklusive Mutationen (`POST`/`PATCH`/`PUT`/`DELETE`) und Lesen.
 
-Im Live-Modus muessen **beide** Secrets vorhanden sein. Eine nur teilweise konfigurierte Rollen-Trennung oder der alte gemeinsame `ADMIN_TOKEN` fuehrt dort fuer Admin-Zugriffe fail-closed zu `ADMIN_RBAC_NOT_READY`. `ADMIN_TOKEN` bleibt ausschliesslich als lokale/Sandbox-Kompatibilitaetsbruecke erhalten und darf nicht als produktives Rollenmodell betrachtet werden. Ein bestehender Admin-Client, der nur einen Bearer-Token verwaltet, kann fuer volle Owner-Funktionen weiterhin den `ADMIN_WRITE_TOKEN` verwenden; der separate Read-Token ist fuer bewusst eingeschraenkte Clients vorgesehen.
+Fuer jeden entfernten Admin-Zugriff muessen **beide** Split-RBAC-Secrets vorhanden sein. Diese Regel ist bewusst vom PayPal-Modus entkoppelt: Auch ein produktiv erreichbarer Worker mit `PAYPAL_ENVIRONMENT=sandbox` akzeptiert weder eine nur teilweise Split-Konfiguration noch den alten gemeinsamen `ADMIN_TOKEN`.
+
+`ADMIN_TOKEN` existiert nur noch als lokale Entwicklungsbruecke. Er wird ausschliesslich akzeptiert, wenn `ALLOW_LEGACY_ADMIN_TOKEN=true` gesetzt ist **und** der Request an `localhost`, `127.0.0.1` oder `::1` geht. Auf entfernten Hosts arbeitet die Authentifizierung mit `ADMIN_RBAC_NOT_READY` fail-closed. Ein bestehender Owner-Admin-Client, der nur einen Bearer-Token verwaltet, kann fuer Lesen und Schreiben den `ADMIN_WRITE_TOKEN` verwenden; der separate Read-Token ist fuer bewusst eingeschraenkte Clients vorgesehen.
 
 Die einzelnen Admin-Handler behalten zusaetzliche Token-Pruefungen als zweite Schutzschicht. Der zentrale Worker-Gateway autorisiert jedoch zuerst die Rolle und reicht intern nur den bereits autorisierten Token an den jeweiligen Handler weiter. Vor echtem breitem Produktivbetrieb sollte `admin.disorder119.com` ausserdem mit Cloudflare Access/MFA abgesichert werden.
 
@@ -178,6 +180,8 @@ Der Worker unterstuetzt:
 
 In Sandbox/Entwicklung koennen diese Bindings fehlen. Im Live-Modus arbeiten menschlich ausgeloeste schreibende Commerce-Routen jedoch fail-closed, wenn die erforderlichen Abuse-Kontrollen nicht vorhanden sind. Eine fehlende Produktionskonfiguration wird nicht als funktionsfaehig vorgetaeuscht.
 
+Schreibende Requests werden zentral auf maximal `MAX_REQUEST_BYTES` (aktuell 32 KiB) begrenzt. Der Worker prueft dabei nicht nur einen vom Client gelieferten `Content-Length`-Header, sondern liest auf einer Request-Kopie den tatsaechlichen Stream nur bis zum Grenzwert weiter und bricht bei Ueberschreitung mit `413 REQUEST_TOO_LARGE` ab.
+
 ## Versand, E-Mail und DHL
 
 Die Datenstruktur fuer Versandstatus und Tracking existiert, aber eine produktive DHL-Label-Integration und ein E-Mail-Provider sind derzeit **nicht** implementiert/konfiguriert. Es wird daher nichts automatisch als versendet bestaetigt und kein DHL-Label vorgetaeuscht.
@@ -195,7 +199,7 @@ Spaeter koennen auf Basis der gespeicherten Statuswechsel insbesondere folgende 
 
 ## Health, Logs und Fehler
 
-`GET /health` liefert nur nicht-sensible Readiness-Informationen, darunter auch den booleschen Live-RBAC-Status. Die privaten `/admin/system`- und `/admin/insights`-Routen liefern nur nach Admin-Autorisierung zusaetzliche Betriebsinformationen.
+`GET /health` liefert nur nicht-sensible Readiness-Informationen. `adminRbacReady` bewertet ausschliesslich, ob `ADMIN_READ_TOKEN` und `ADMIN_WRITE_TOKEN` gemeinsam gesetzt sind; dieser Status haengt nicht vom PayPal-Modus ab. Die privaten `/admin/system`- und `/admin/insights`-Routen liefern nur nach Admin-Autorisierung zusaetzliche Betriebsinformationen.
 
 `/admin/system` meldet den erkannten D1-Schemastand, fehlende Pflicht-Tabellen/-Spalten, die vier Pflicht-Trigger aus `0008_backend_hardening.sql` und die nicht-sensitiven Konfigurationsflags. Fuer den Cron-Scheduler wird kein positiver Deploymentstatus erfunden: Ohne externe Cloudflare-Konfiguration bleibt dessen Status unbekannt.
 
@@ -210,7 +214,8 @@ Mindestens erforderlich:
 - D1-Migrationen bis einschliesslich `0008` in einer Test-/Staging-D1 anwenden und Restore/Backup-Verfahren testen.
 - `/admin/system` muss `schemaDetected: 0008_backend_hardening` und `schemaReady: true` melden.
 - Worker deployen und `DB` binden.
-- `ADMIN_READ_TOKEN` und `ADMIN_WRITE_TOKEN` als zwei getrennte Worker-Secrets setzen; `ADMIN_TOKEN` nicht als Live-Ersatz verwenden.
+- `ADMIN_READ_TOKEN` und `ADMIN_WRITE_TOKEN` als zwei getrennte Worker-Secrets setzen; `ADMIN_TOKEN` nicht auf einem entfernten Worker verwenden.
+- `ALLOW_LEGACY_ADMIN_TOKEN` auf produktiven/entfernten Deployments nicht setzen.
 - Admin-Zugriff zusaetzlich mit Cloudflare Access/MFA haerten.
 - Persistente Worker-Logs pruefen und sicherstellen, dass keine Secrets oder sensiblen Payloads erscheinen.
 - Falls automatische Warnungen periodisch laufen sollen: Cloudflare Cron Trigger bewusst konfigurieren und danach den Scheduler real pruefen.
