@@ -1,6 +1,6 @@
 import { MAX_RENTAL_DAYS, MAX_REQUEST_BYTES } from "./commerce-core.js";
 
-export const BACKEND_HARDENING_VERSION = "backend-runtime-v2";
+export const BACKEND_HARDENING_VERSION = "backend-runtime-v3";
 export const ADMIN_ROLE_READER = "READER";
 export const ADMIN_ROLE_OWNER = "OWNER";
 
@@ -45,6 +45,7 @@ const LIVE_DB_WRITES = new Set([
 
 const ADMIN_READ_METHODS = new Set(["GET", "HEAD"]);
 const ADMIN_WRITE_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
+const REQUEST_BODY_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
 
 export class RuntimeGuardError extends Error {
   constructor(code, status = 400) {
@@ -66,6 +67,19 @@ function bearerToken(request) {
   const auth = String(request.headers.get("Authorization") || "");
   const match = auth.match(/^Bearer\s+(.+)$/i);
   return match ? match[1].trim() : "";
+}
+
+function legacyAdminOptIn(env) {
+  return String(env?.ALLOW_LEGACY_ADMIN_TOKEN || "").trim().toLowerCase() === "true";
+}
+
+function isLoopbackRequest(request) {
+  try {
+    const hostname = new URL(request.url).hostname.toLowerCase();
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+  } catch {
+    return false;
+  }
 }
 
 async function digest(value) {
@@ -95,14 +109,16 @@ export function adminAuthReadiness(env = {}) {
   const writeToken = Boolean(env.ADMIN_WRITE_TOKEN);
   const legacyToken = Boolean(env.ADMIN_TOKEN);
   const splitConfigured = readToken || writeToken;
+  const legacyOptIn = legacyToken && !splitConfigured && legacyAdminOptIn(env);
   return {
     readConfigured: readToken,
     writeConfigured: writeToken,
     legacyConfigured: legacyToken,
     splitConfigured,
-    readReady: readToken || writeToken || (!splitConfigured && legacyToken),
-    writeReady: writeToken || (!isLive(env) && !splitConfigured && legacyToken),
-    productionRbacReady: !isLive(env) || (readToken && writeToken),
+    legacyOptIn,
+    readReady: readToken || writeToken || legacyOptIn,
+    writeReady: writeToken || legacyOptIn,
+    productionRbacReady: readToken && writeToken,
   };
 }
 
@@ -112,8 +128,7 @@ export async function authorizeAdminRequest(request, env, requiredRole = adminRe
   if (!supplied) throw new RuntimeGuardError("UNAUTHORIZED", 401);
 
   const readiness = adminAuthReadiness(env);
-  if (!readiness.readReady) throw new RuntimeGuardError("ADMIN_NOT_CONFIGURED", 503);
-  if (isLive(env) && !readiness.productionRbacReady) {
+  if (readiness.splitConfigured && !readiness.productionRbacReady) {
     throw new RuntimeGuardError("ADMIN_RBAC_NOT_READY", 503);
   }
 
@@ -124,15 +139,15 @@ export async function authorizeAdminRequest(request, env, requiredRole = adminRe
     if (requiredRole === ADMIN_ROLE_READER && readiness.readConfigured && await timingSafeEqualText(supplied, env.ADMIN_READ_TOKEN)) {
       return { role: ADMIN_ROLE_READER, mode: "SPLIT_READ", token: supplied, readiness };
     }
-    if (requiredRole === ADMIN_ROLE_OWNER && !readiness.writeConfigured) {
-      throw new RuntimeGuardError("ADMIN_RBAC_NOT_READY", 503);
-    }
     throw new RuntimeGuardError(requiredRole === ADMIN_ROLE_OWNER ? "FORBIDDEN" : "UNAUTHORIZED", requiredRole === ADMIN_ROLE_OWNER ? 403 : 401);
   }
 
   if (!readiness.legacyConfigured) throw new RuntimeGuardError("ADMIN_NOT_CONFIGURED", 503);
+  if (!readiness.legacyOptIn || !isLoopbackRequest(request)) {
+    throw new RuntimeGuardError("ADMIN_RBAC_NOT_READY", 503);
+  }
   if (!(await timingSafeEqualText(supplied, env.ADMIN_TOKEN))) throw new RuntimeGuardError("UNAUTHORIZED", 401);
-  return { role: ADMIN_ROLE_OWNER, mode: "LEGACY", token: supplied, readiness };
+  return { role: ADMIN_ROLE_OWNER, mode: "LEGACY_LOCAL", token: supplied, readiness };
 }
 
 export function scopeAdminEnv(env, auth) {
@@ -146,7 +161,8 @@ export function scopeAdminEnv(env, auth) {
         readConfigured: Boolean(auth?.readiness?.readConfigured ?? env?.ADMIN_READ_TOKEN),
         writeConfigured: Boolean(auth?.readiness?.writeConfigured ?? env?.ADMIN_WRITE_TOKEN),
         legacyConfigured: Boolean(auth?.readiness?.legacyConfigured ?? env?.ADMIN_TOKEN),
-        productionRbacReady: Boolean(auth?.readiness?.productionRbacReady ?? (!isLive(env) || (env?.ADMIN_READ_TOKEN && env?.ADMIN_WRITE_TOKEN))),
+        legacyOptIn: Boolean(auth?.readiness?.legacyOptIn ?? (env?.ADMIN_TOKEN && legacyAdminOptIn(env))),
+        productionRbacReady: Boolean(auth?.readiness?.productionRbacReady ?? (env?.ADMIN_READ_TOKEN && env?.ADMIN_WRITE_TOKEN)),
       }),
       enumerable: true,
     },
@@ -192,13 +208,36 @@ function assertMethod(request, pathname) {
   }
 }
 
-function assertDeclaredBodySize(request) {
-  if (!["POST", "PATCH", "PUT"].includes(request.method)) return;
+async function assertRequestBodySize(request) {
+  if (!REQUEST_BODY_METHODS.has(request.method) || !request.body) return;
+
   const header = request.headers.get("Content-Length");
-  if (!header) return;
-  const declared = Number(header);
-  if (Number.isFinite(declared) && declared > MAX_REQUEST_BYTES) {
-    throw new RuntimeGuardError("REQUEST_TOO_LARGE", 413);
+  if (header !== null) {
+    const declared = Number(header);
+    if (!Number.isFinite(declared) || declared < 0) {
+      throw new RuntimeGuardError("INVALID_CONTENT_LENGTH", 400);
+    }
+    if (declared > MAX_REQUEST_BYTES) {
+      throw new RuntimeGuardError("REQUEST_TOO_LARGE", 413);
+    }
+  }
+
+  const probe = request.clone();
+  if (!probe.body) return;
+  const reader = probe.body.getReader();
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value?.byteLength || 0;
+      if (total > MAX_REQUEST_BYTES) {
+        try { await reader.cancel(); } catch {}
+        throw new RuntimeGuardError("REQUEST_TOO_LARGE", 413);
+      }
+    }
+  } finally {
+    try { reader.releaseLock(); } catch {}
   }
 }
 
@@ -229,7 +268,7 @@ function assertLiveControls(env, pathname) {
 export async function guardRuntimeRequest(request, env, url = new URL(request.url)) {
   const pathname = url.pathname;
   assertMethod(request, pathname);
-  assertDeclaredBodySize(request);
+  await assertRequestBodySize(request);
 
   if (pathname === "/rental-requests" && request.method === "GET") {
     await authorizeAdminRequest(request, env, ADMIN_ROLE_READER);
