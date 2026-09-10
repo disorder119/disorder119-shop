@@ -1,6 +1,6 @@
 {
   "policy": "Only explicit source evidence; no guessed physical product facts.",
-  "available_items": 165,
+  "available_items": 164,
   "filled_this_run": {
     "color": 0,
     "color_corrected": 0,
@@ -9,9 +9,9 @@
     "description": 0
   },
   "unresolved_available": {
-    "size": 12,
-    "color": 30,
-    "condition": 63
+    "size": 10,
+    "color": 28,
+    "condition": 61
   },
   "provenance_counts": {
     "explicit-title-color": 44
@@ -490,16 +490,6 @@
       ]
     },
     {
-      "id": 6042,
-      "title": "Walter Van Beirendonck Rock Nr. 2",
-      "brand": "Walter Van Beirendonck",
-      "missing": [
-        "size",
-        "color",
-        "condition"
-      ]
-    },
-    {
       "id": 9535,
       "title": "Prada Silber Schuhe",
       "brand": "Prada",
@@ -540,16 +530,6 @@
       "title": "Prada Jacke",
       "brand": "Prada",
       "missing": [
-        "color",
-        "condition"
-      ]
-    },
-    {
-      "id": 9415,
-      "title": "Walter Van Beirendonck Rock",
-      "brand": "Walter Van Beirendonck",
-      "missing": [
-        "size",
         "color",
         "condition"
       ]

@@ -2,9 +2,9 @@
   "summary": {
     "items_total": 237,
     "catalog_public": 235,
-    "available": 165,
+    "available": 164,
     "reserved": 0,
-    "sold": 70,
+    "sold": 71,
     "draft": 2
   },
   "quality": {
@@ -303,7 +303,7 @@
       "count": 7,
       "item_ids": [
         9365,
-        9415,
+        9413,
         9426,
         9437,
         9457,
