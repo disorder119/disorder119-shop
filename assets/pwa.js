@@ -13,7 +13,7 @@
   // iPhone/iPad guard on every shop page while leaving other platforms alone.
   if (!document.querySelector('script[data-d119-ios-zoom-lock]')) {
     var zoomLockScript = document.createElement("script");
-    zoomLockScript.src = "/assets/ios-zoom-lock.js?v=20260911-1";
+    zoomLockScript.src = "/assets/ios-zoom-lock.js?v=20260912-1";
     zoomLockScript.async = false;
     zoomLockScript.setAttribute("data-d119-ios-zoom-lock", "");
     document.head.appendChild(zoomLockScript);
