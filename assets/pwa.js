@@ -9,6 +9,17 @@
   }
   document.documentElement.setAttribute("data-display-mode", standalone ? "standalone" : "browser");
 
+  // iOS Safari ignores user-scalable=no in some cases. Load the dedicated
+  // guard early on every shop page so pinch/gesture zoom stays locked on
+  // iPhone/iPad while desktop and Android remain untouched.
+  if (!document.querySelector('script[data-d119-ios-zoom-lock]')) {
+    var zoomLockScript = document.createElement("script");
+    zoomLockScript.src = "/assets/ios-zoom-lock.js?v=20260911-1";
+    zoomLockScript.async = false;
+    zoomLockScript.setAttribute("data-d119-ios-zoom-lock", "");
+    document.head.appendChild(zoomLockScript);
+  }
+
   var ARTICLE_NAV_KEY = "disorder119_article_nav_v2";
   var ARTICLE_NAV_TTL_MS = 2 * 60 * 60 * 1000;
   var PRODUCT_CSS_ID = "d119-product-page-v4";
@@ -121,7 +132,7 @@
         archive: "Vers l’archive",
         next: "Suivant →",
         prevAria: "Voir l’article précédent",
-        archiveAria: "Voir l’archive",
+        archiveAria: "Vers l’archive",
         nextAria: "Voir l’article suivant",
         navAria: "Navigation des articles",
         menuAria: "Ouvrir l’archive",
