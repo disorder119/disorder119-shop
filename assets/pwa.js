@@ -37,11 +37,8 @@
     } catch (e) {}
   }
 
-  // D119_ARTICLE_NAV_CONTEXT_V2
   // Capture the exact rendered catalogue order before entering a product.
-  // This preserves active filters AND sort order. The "load more" button is
-  // expanded synchronously first, so the sequence is the full filtered result,
-  // not only the first 12 cards currently painted on screen.
+  // This preserves active filters and sorting across previous/next navigation.
   function captureCatalogSequenceBeforeOpen(event) {
     var target = event.target;
     if (!target || !target.closest) return;
@@ -51,8 +48,6 @@
 
     var grid = document.getElementById("grid");
     if (!grid || !grid.contains(plate)) return;
-
-    // Nested controls such as the brand filter must keep their own behaviour.
     if (target.closest("button, input, select, textarea, [data-brand-filter]")) return;
 
     var clickedId = articleIdFromHref(plate.getAttribute("href") || plate.href);
@@ -61,7 +56,6 @@
     var simpleLeftClick = event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
     if (simpleLeftClick) event.preventDefault();
 
-    // app.js updates render synchronously when this button is clicked.
     var loadMore = document.getElementById("loadMoreBtn");
     var guard = 0;
     while (loadMore && !loadMore.classList.contains("hidden") && guard < 100) {
@@ -76,7 +70,6 @@
     });
 
     if (ids.indexOf(clickedId) !== -1) saveCatalogSequence(ids);
-
     if (simpleLeftClick) location.href = plate.href;
   }
 
@@ -98,6 +91,40 @@
     }
   }
 
+  function installProductLayoutStyles() {
+    if (document.querySelector("style[data-d119-product-layout-v3]")) return;
+    var style = document.createElement("style");
+    style.setAttribute("data-d119-product-layout-v3", "");
+    style.textContent =
+      ".page-head__back{display:none!important}" +
+      ".article-sequence-nav{max-width:1240px;margin:18px auto 0;padding:0 clamp(20px,5vw,48px);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}" +
+      ".article-sequence-nav__link{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 13px;border:1px solid rgba(242,239,231,.24);background:transparent;color:#f2efe7;text-decoration:none;font:600 10px/1.1 Helvetica Neue,Helvetica,Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;transition:background .16s ease,color .16s ease,border-color .16s ease}" +
+      ".article-sequence-nav__link:hover,.article-sequence-nav__link:focus-visible{background:#f2efe7;color:#000;border-color:#f2efe7;outline:none}" +
+      ".article-sequence-nav__link--prev{justify-self:start}.article-sequence-nav__link--archive{justify-self:center;color:rgba(242,239,231,.65)}.article-sequence-nav__link--next{justify-self:end}" +
+      ".product{padding-top:18px}" +
+      "@media(max-width:860px){" +
+        ".page-head{display:block;padding:22px 16px 14px;text-align:center}" +
+        ".page-head__brand{display:block;width:max-content;margin:0 auto 14px;font-size:1.55rem;letter-spacing:-.02em}" +
+        ".page-head__right{position:relative;display:grid!important;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;width:100%;gap:8px}" +
+        ".lang-switch{grid-column:2;justify-self:center;border:0;gap:4px}" +
+        ".lang-switch__btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:34px;padding:0;border:1px solid rgba(242,239,231,.22);font-size:.63rem}" +
+        ".lang-switch__btn[aria-current=true]{background:#f2efe7;color:#000;border-color:#f2efe7}" +
+        ".page-head__cart{grid-column:3;justify-self:end;position:relative;display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;border:1px solid rgba(242,239,231,.28);background:transparent;color:#f2efe7;font-size:0}" +
+        ".page-head__cart:hover{background:transparent;color:#f2efe7;border-color:#f2efe7}" +
+        ".page-head__cart>span:first-child{display:none}" +
+        ".page-head__cart:before{content:'';width:17px;height:15px;border:1.5px solid currentColor;border-radius:1px;transform:translateY(2px)}" +
+        ".page-head__cart:after{content:'';position:absolute;left:50%;top:8px;width:8px;height:6px;border:1.5px solid currentColor;border-bottom:0;border-radius:6px 6px 0 0;transform:translateX(-50%)}" +
+        ".page-head__cart-count{position:absolute;right:2px;top:2px;display:inline-flex;align-items:center;justify-content:center;min-width:13px;height:13px;padding:0 2px;border-radius:8px;background:#f2efe7;color:#000;font-size:8px!important;line-height:1;font-weight:700}" +
+        ".page-head__cart-count:empty{display:none}" +
+        ".article-sequence-nav{margin:12px 16px 0;padding:0;max-width:none;grid-template-columns:1fr auto 1fr;gap:0;border:1px solid rgba(242,239,231,.24)}" +
+        ".article-sequence-nav__link{min-width:0;min-height:42px;padding:0 6px;border:0;font-size:9px;letter-spacing:.035em}" +
+        ".article-sequence-nav__link--archive{border-left:1px solid rgba(242,239,231,.18);border-right:1px solid rgba(242,239,231,.18);padding-left:10px;padding-right:10px}" +
+        ".product{padding-top:12px}" +
+      "}" +
+      "@media(max-width:380px){.article-sequence-nav__link{font-size:8px;padding:0 4px}.article-sequence-nav__link--archive{padding-left:7px;padding-right:7px}.page-head__brand{font-size:1.45rem}}";
+    document.head.appendChild(style);
+  }
+
   function renderArticleSequence(ids, currentId, lang) {
     var currentIndex = ids.indexOf(String(currentId));
     if (currentIndex < 0 || ids.length < 2) return;
@@ -107,58 +134,46 @@
     if (!previousId || !nextId) return;
 
     var labels = {
-      de: { prev: "← Vorheriger Artikel", next: "Nächster Artikel →", prevAria: "Zum vorherigen Artikel", nextAria: "Zum nächsten Artikel" },
-      en: { prev: "← Previous item", next: "Next item →", prevAria: "Go to previous item", nextAria: "Go to next item" },
-      fr: { prev: "← Article précédent", next: "Article suivant →", prevAria: "Voir l’article précédent", nextAria: "Voir l’article suivant" }
+      de: { prev: "← Vorheriger", archive: "Zum Archiv", next: "Nächster →", prevAria: "Zum vorherigen Artikel", archiveAria: "Zum Archiv", nextAria: "Zum nächsten Artikel" },
+      en: { prev: "← Previous", archive: "To archive", next: "Next →", prevAria: "Go to previous item", archiveAria: "Go to archive", nextAria: "Go to next item" },
+      fr: { prev: "← Précédent", archive: "Vers l’archive", next: "Suivant →", prevAria: "Voir l’article précédent", archiveAria: "Voir l’archive", nextAria: "Voir l’article suivant" }
     };
     var copy = labels[lang] || labels.de;
     var prefix = lang === "de" ? "/" : "/" + lang + "/";
 
-    var style = document.createElement("style");
-    style.setAttribute("data-d119-article-sequence-style", "");
-    style.textContent =
-      ".article-sequence-nav{position:fixed;right:18px;top:50%;transform:translateY(-50%);z-index:90;" +
-      "display:flex;flex-direction:column;gap:8px;align-items:stretch}" +
-      ".article-sequence-nav__link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 13px;" +
-      "border:1px solid rgba(255,255,255,.28);background:rgba(0,0,0,.88);color:#f2efe7;" +
-      "text-decoration:none;font:600 10px/1.1 Helvetica Neue,Helvetica,Arial,sans-serif;" +
-      "letter-spacing:.07em;text-transform:uppercase;white-space:nowrap;backdrop-filter:blur(8px);" +
-      "transition:background .16s ease,color .16s ease,border-color .16s ease,transform .16s ease}" +
-      ".article-sequence-nav__link:hover,.article-sequence-nav__link:focus-visible{background:#f2efe7;color:#000;border-color:#f2efe7;outline:none}" +
-      "@media(max-width:900px){.article-sequence-nav{position:static;right:auto;top:auto;bottom:auto;transform:none;z-index:auto;" +
-      "flex-direction:row;gap:6px;width:100%;margin:12px 0 0}.article-sequence-nav__link{flex:1;min-height:38px;padding:0 10px;" +
-      "font-size:9px;background:transparent}}" +
-      "@media(max-width:480px){.article-sequence-nav__link{letter-spacing:.04em;padding:0 8px}}";
-    document.head.appendChild(style);
+    installProductLayoutStyles();
 
     var nav = document.createElement("nav");
     nav.className = "article-sequence-nav";
     nav.setAttribute("aria-label", lang === "fr" ? "Navigation des articles" : lang === "en" ? "Item navigation" : "Artikelnavigation");
 
     var previous = document.createElement("a");
-    previous.className = "article-sequence-nav__link";
+    previous.className = "article-sequence-nav__link article-sequence-nav__link--prev";
     previous.href = prefix + "artikel/" + encodeURIComponent(previousId) + "/";
     previous.textContent = copy.prev;
     previous.setAttribute("aria-label", copy.prevAria);
     previous.setAttribute("rel", "prev");
 
+    var archive = document.createElement("a");
+    archive.className = "article-sequence-nav__link article-sequence-nav__link--archive";
+    archive.href = prefix;
+    archive.textContent = copy.archive;
+    archive.setAttribute("aria-label", copy.archiveAria);
+
     var next = document.createElement("a");
-    next.className = "article-sequence-nav__link";
+    next.className = "article-sequence-nav__link article-sequence-nav__link--next";
     next.href = prefix + "artikel/" + encodeURIComponent(nextId) + "/";
     next.textContent = copy.next;
     next.setAttribute("aria-label", copy.nextAria);
     next.setAttribute("rel", "next");
 
     nav.appendChild(previous);
+    nav.appendChild(archive);
     nav.appendChild(next);
 
-    var mobile = window.matchMedia("(max-width: 900px)").matches;
-    var rental = document.querySelector(".info .btn--rental");
-    if (mobile && rental && rental.parentNode) {
-      rental.parentNode.insertBefore(nav, rental.nextSibling);
-    } else {
-      document.body.appendChild(nav);
-    }
+    var product = document.querySelector(".product");
+    if (product && product.parentNode) product.parentNode.insertBefore(nav, product);
+    else document.body.appendChild(nav);
 
     var headPrev = document.createElement("link");
     headPrev.rel = "prev";
@@ -175,6 +190,8 @@
     var current = window.ARTICLE_ITEM;
     if (!current || !current.id || !/\/(?:en\/|fr\/)?artikel\/\d+\/?$/i.test(location.pathname)) return;
 
+    installProductLayoutStyles();
+
     var lang = window.ARTICLE_LANG || "de";
     var currentId = String(current.id);
     var stored = loadStoredSequence(currentId);
@@ -184,9 +201,8 @@
       return;
     }
 
-    // Directly opened/bookmarked product pages have no catalogue context.
-    // Fallback mirrors the normal archive default: AVAILABLE only, brightness
-    // descending. SOLD pieces are deliberately excluded here.
+    // Directly opened product pages have no catalogue context. The fallback
+    // mirrors the normal public archive: AVAILABLE items only, never SOLD.
     fetch("/data/catalog.json", { cache: "no-store" })
       .then(function (response) {
         if (!response.ok) throw new Error("catalog HTTP " + response.status);
@@ -224,9 +240,6 @@
   }
 
   window.addEventListener("load", function () {
-    // Installed/standalone launches should attach immediately. In a normal
-    // browser tab, keep Service-Worker startup and precache work out of the
-    // product page's critical render/TTI window, then register shortly after.
     if (standalone) {
       registerWorker();
       return;
