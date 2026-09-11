@@ -9,6 +9,16 @@
   }
   document.documentElement.setAttribute("data-display-mode", standalone ? "standalone" : "browser");
 
+  // iOS Safari can ignore viewport zoom restrictions. Load the dedicated
+  // iPhone/iPad guard on every shop page while leaving other platforms alone.
+  if (!document.querySelector('script[data-d119-ios-zoom-lock]')) {
+    var zoomLockScript = document.createElement("script");
+    zoomLockScript.src = "/assets/ios-zoom-lock.js?v=20260911-1";
+    zoomLockScript.async = false;
+    zoomLockScript.setAttribute("data-d119-ios-zoom-lock", "");
+    document.head.appendChild(zoomLockScript);
+  }
+
   var ARTICLE_NAV_KEY = "disorder119_article_nav_v2";
   var ARTICLE_NAV_TTL_MS = 2 * 60 * 60 * 1000;
   var PRODUCT_CSS_ID = "d119-product-page-v4";
