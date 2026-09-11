@@ -11,6 +11,7 @@
 
   var ARTICLE_NAV_KEY = "disorder119_article_nav_v2";
   var ARTICLE_NAV_TTL_MS = 2 * 60 * 60 * 1000;
+  var PRODUCT_CSS_ID = "d119-product-page-v4";
 
   function articleIdFromHref(href) {
     var match = /\/artikel\/(\d+)\/?/i.exec(href || "");
@@ -91,38 +92,108 @@
     }
   }
 
-  function installProductLayoutStyles() {
-    if (document.querySelector("style[data-d119-product-layout-v3]")) return;
-    var style = document.createElement("style");
-    style.setAttribute("data-d119-product-layout-v3", "");
-    style.textContent =
-      ".page-head__back{display:none!important}" +
-      ".article-sequence-nav{max-width:1240px;margin:18px auto 0;padding:0 clamp(20px,5vw,48px);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}" +
-      ".article-sequence-nav__link{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 13px;border:1px solid rgba(242,239,231,.24);background:transparent;color:#f2efe7;text-decoration:none;font:600 10px/1.1 Helvetica Neue,Helvetica,Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;transition:background .16s ease,color .16s ease,border-color .16s ease}" +
-      ".article-sequence-nav__link:hover,.article-sequence-nav__link:focus-visible{background:#f2efe7;color:#000;border-color:#f2efe7;outline:none}" +
-      ".article-sequence-nav__link--prev{justify-self:start}.article-sequence-nav__link--archive{justify-self:center;color:rgba(242,239,231,.65)}.article-sequence-nav__link--next{justify-self:end}" +
-      ".product{padding-top:18px}" +
-      "@media(max-width:860px){" +
-        ".page-head{display:block;padding:22px 16px 14px;text-align:center}" +
-        ".page-head__brand{display:block;width:max-content;margin:0 auto 14px;font-size:1.55rem;letter-spacing:-.02em}" +
-        ".page-head__right{position:relative;display:grid!important;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;width:100%;gap:8px}" +
-        ".lang-switch{grid-column:2;justify-self:center;border:0;gap:4px}" +
-        ".lang-switch__btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:34px;padding:0;border:1px solid rgba(242,239,231,.22);font-size:.63rem}" +
-        ".lang-switch__btn[aria-current=true]{background:#f2efe7;color:#000;border-color:#f2efe7}" +
-        ".page-head__cart{grid-column:3;justify-self:end;position:relative;display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;border:1px solid rgba(242,239,231,.28);background:transparent;color:#f2efe7;font-size:0}" +
-        ".page-head__cart:hover{background:transparent;color:#f2efe7;border-color:#f2efe7}" +
-        ".page-head__cart>span:first-child{display:none}" +
-        ".page-head__cart:before{content:'';width:17px;height:15px;border:1.5px solid currentColor;border-radius:1px;transform:translateY(2px)}" +
-        ".page-head__cart:after{content:'';position:absolute;left:50%;top:8px;width:8px;height:6px;border:1.5px solid currentColor;border-bottom:0;border-radius:6px 6px 0 0;transform:translateX(-50%)}" +
-        ".page-head__cart-count{position:absolute;right:2px;top:2px;display:inline-flex;align-items:center;justify-content:center;min-width:13px;height:13px;padding:0 2px;border-radius:8px;background:#f2efe7;color:#000;font-size:8px!important;line-height:1;font-weight:700}" +
-        ".page-head__cart-count:empty{display:none}" +
-        ".article-sequence-nav{margin:12px 16px 0;padding:0;max-width:none;grid-template-columns:1fr auto 1fr;gap:0;border:1px solid rgba(242,239,231,.24)}" +
-        ".article-sequence-nav__link{min-width:0;min-height:42px;padding:0 6px;border:0;font-size:9px;letter-spacing:.035em}" +
-        ".article-sequence-nav__link--archive{border-left:1px solid rgba(242,239,231,.18);border-right:1px solid rgba(242,239,231,.18);padding-left:10px;padding-right:10px}" +
-        ".product{padding-top:12px}" +
-      "}" +
-      "@media(max-width:380px){.article-sequence-nav__link{font-size:8px;padding:0 4px}.article-sequence-nav__link--archive{padding-left:7px;padding-right:7px}.page-head__brand{font-size:1.45rem}}";
-    document.head.appendChild(style);
+  function copyFor(lang) {
+    var labels = {
+      de: {
+        prev: "← Vorheriger",
+        archive: "Zum Archiv",
+        next: "Nächster →",
+        prevAria: "Zum vorherigen Artikel",
+        archiveAria: "Zum Archiv",
+        nextAria: "Zum nächsten Artikel",
+        navAria: "Artikelnavigation",
+        menuAria: "Archiv öffnen",
+        cartAria: "Warenkorb öffnen"
+      },
+      en: {
+        prev: "← Previous",
+        archive: "To archive",
+        next: "Next →",
+        prevAria: "Go to previous item",
+        archiveAria: "Go to archive",
+        nextAria: "Go to next item",
+        navAria: "Item navigation",
+        menuAria: "Open archive",
+        cartAria: "Open cart"
+      },
+      fr: {
+        prev: "← Précédent",
+        archive: "Vers l’archive",
+        next: "Suivant →",
+        prevAria: "Voir l’article précédent",
+        archiveAria: "Voir l’archive",
+        nextAria: "Voir l’article suivant",
+        navAria: "Navigation des articles",
+        menuAria: "Ouvrir l’archive",
+        cartAria: "Ouvrir le panier"
+      }
+    };
+    return labels[lang] || labels.de;
+  }
+
+  function prefixFor(lang) {
+    return lang === "de" ? "/" : "/" + lang + "/";
+  }
+
+  function installProductLayout(lang) {
+    if (!document.getElementById(PRODUCT_CSS_ID)) {
+      var css = document.createElement("link");
+      css.id = PRODUCT_CSS_ID;
+      css.rel = "stylesheet";
+      css.href = "/assets/product-page-v4.css?v=20260911-1";
+      document.head.appendChild(css);
+    }
+
+    var head = document.querySelector(".page-head");
+    var brand = document.querySelector(".page-head__brand");
+    if (head && brand && !head.querySelector(".page-head__menu")) {
+      var menu = document.createElement("a");
+      menu.className = "page-head__menu";
+      menu.href = prefixFor(lang);
+      menu.setAttribute("aria-label", copyFor(lang).menuAria);
+      menu.innerHTML = "<span></span><span></span><span></span>";
+      head.insertBefore(menu, brand);
+    }
+
+    var cart = document.getElementById("pageHeadCart");
+    if (cart) cart.setAttribute("aria-label", copyFor(lang).cartAria);
+  }
+
+  function ensureArticleNavShell(lang) {
+    var existing = document.querySelector(".article-sequence-nav");
+    if (existing) return existing;
+
+    var copy = copyFor(lang);
+    var nav = document.createElement("nav");
+    nav.className = "article-sequence-nav";
+    nav.setAttribute("aria-label", copy.navAria);
+
+    var previous = document.createElement("a");
+    previous.className = "article-sequence-nav__link article-sequence-nav__link--prev";
+    previous.textContent = copy.prev;
+    previous.setAttribute("aria-label", copy.prevAria);
+    previous.style.visibility = "hidden";
+
+    var archive = document.createElement("a");
+    archive.className = "article-sequence-nav__link article-sequence-nav__link--archive";
+    archive.href = prefixFor(lang);
+    archive.textContent = copy.archive;
+    archive.setAttribute("aria-label", copy.archiveAria);
+
+    var next = document.createElement("a");
+    next.className = "article-sequence-nav__link article-sequence-nav__link--next";
+    next.textContent = copy.next;
+    next.setAttribute("aria-label", copy.nextAria);
+    next.style.visibility = "hidden";
+
+    nav.appendChild(previous);
+    nav.appendChild(archive);
+    nav.appendChild(next);
+
+    var product = document.querySelector(".product");
+    if (product && product.parentNode) product.parentNode.insertBefore(nav, product);
+    else document.body.appendChild(nav);
+    return nav;
   }
 
   function renderArticleSequence(ids, currentId, lang) {
@@ -133,76 +204,54 @@
     var nextId = ids[(currentIndex + 1) % ids.length];
     if (!previousId || !nextId) return;
 
-    var labels = {
-      de: { prev: "← Vorheriger", archive: "Zum Archiv", next: "Nächster →", prevAria: "Zum vorherigen Artikel", archiveAria: "Zum Archiv", nextAria: "Zum nächsten Artikel" },
-      en: { prev: "← Previous", archive: "To archive", next: "Next →", prevAria: "Go to previous item", archiveAria: "Go to archive", nextAria: "Go to next item" },
-      fr: { prev: "← Précédent", archive: "Vers l’archive", next: "Suivant →", prevAria: "Voir l’article précédent", archiveAria: "Voir l’archive", nextAria: "Voir l’article suivant" }
-    };
-    var copy = labels[lang] || labels.de;
-    var prefix = lang === "de" ? "/" : "/" + lang + "/";
+    var prefix = prefixFor(lang);
+    var nav = ensureArticleNavShell(lang);
+    var previous = nav.querySelector(".article-sequence-nav__link--prev");
+    var next = nav.querySelector(".article-sequence-nav__link--next");
 
-    installProductLayoutStyles();
-
-    var nav = document.createElement("nav");
-    nav.className = "article-sequence-nav";
-    nav.setAttribute("aria-label", lang === "fr" ? "Navigation des articles" : lang === "en" ? "Item navigation" : "Artikelnavigation");
-
-    var previous = document.createElement("a");
-    previous.className = "article-sequence-nav__link article-sequence-nav__link--prev";
     previous.href = prefix + "artikel/" + encodeURIComponent(previousId) + "/";
-    previous.textContent = copy.prev;
-    previous.setAttribute("aria-label", copy.prevAria);
-    previous.setAttribute("rel", "prev");
+    previous.rel = "prev";
+    previous.style.visibility = "visible";
 
-    var archive = document.createElement("a");
-    archive.className = "article-sequence-nav__link article-sequence-nav__link--archive";
-    archive.href = prefix;
-    archive.textContent = copy.archive;
-    archive.setAttribute("aria-label", copy.archiveAria);
-
-    var next = document.createElement("a");
-    next.className = "article-sequence-nav__link article-sequence-nav__link--next";
     next.href = prefix + "artikel/" + encodeURIComponent(nextId) + "/";
-    next.textContent = copy.next;
-    next.setAttribute("aria-label", copy.nextAria);
-    next.setAttribute("rel", "next");
+    next.rel = "next";
+    next.style.visibility = "visible";
 
-    nav.appendChild(previous);
-    nav.appendChild(archive);
-    nav.appendChild(next);
-
-    var product = document.querySelector(".product");
-    if (product && product.parentNode) product.parentNode.insertBefore(nav, product);
-    else document.body.appendChild(nav);
-
-    var headPrev = document.createElement("link");
-    headPrev.rel = "prev";
-    headPrev.href = previous.href;
-    document.head.appendChild(headPrev);
-
-    var headNext = document.createElement("link");
-    headNext.rel = "next";
-    headNext.href = next.href;
-    document.head.appendChild(headNext);
+    if (!document.querySelector('link[rel="prev"][data-d119-sequence]')) {
+      var headPrev = document.createElement("link");
+      headPrev.rel = "prev";
+      headPrev.href = previous.href;
+      headPrev.setAttribute("data-d119-sequence", "");
+      document.head.appendChild(headPrev);
+    }
+    if (!document.querySelector('link[rel="next"][data-d119-sequence]')) {
+      var headNext = document.createElement("link");
+      headNext.rel = "next";
+      headNext.href = next.href;
+      headNext.setAttribute("data-d119-sequence", "");
+      document.head.appendChild(headNext);
+    }
   }
 
   function initArticleSequence() {
     var current = window.ARTICLE_ITEM;
     if (!current || !current.id || !/\/(?:en\/|fr\/)?artikel\/\d+\/?$/i.test(location.pathname)) return;
 
-    installProductLayoutStyles();
-
     var lang = window.ARTICLE_LANG || "de";
     var currentId = String(current.id);
-    var stored = loadStoredSequence(currentId);
 
+    installProductLayout(lang);
+    ensureArticleNavShell(lang);
+
+    var stored = loadStoredSequence(currentId);
     if (stored) {
       renderArticleSequence(stored, currentId, lang);
       return;
     }
 
-    // Directly opened product pages have no catalogue context. The fallback
-    // mirrors the normal public archive: AVAILABLE items only, never SOLD.
+    // Directly opened product pages use the normal public archive fallback:
+    // AVAILABLE items only, never SOLD. The navigation shell is reserved from
+    // first paint so asynchronous catalogue loading does not shift the page.
     fetch("/data/catalog.json", { cache: "no-store" })
       .then(function (response) {
         if (!response.ok) throw new Error("catalog HTTP " + response.status);
