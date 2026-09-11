@@ -1,0 +1,1 @@
+Triggers a validated full rebuild so generated pages receive the current PWA asset hash after the iOS zoom-lock change.
