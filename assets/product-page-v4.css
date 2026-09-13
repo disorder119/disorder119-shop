@@ -90,7 +90,7 @@
     top: 50%;
     transform: translate(-50%, -50%);
     margin: 0;
-    font-size: 1.08rem;
+    font-size: .7rem;
     line-height: 1;
     letter-spacing: .01em;
     white-space: nowrap;
@@ -277,7 +277,7 @@
   .page-head { padding-left: 12px; padding-right: 12px; }
   .page-head__menu { width: 34px; flex-basis: 34px; }
   .page-head__menu span { width: 20px; }
-  .page-head__brand { font-size: 1rem; }
+  .page-head__brand { font-size: .68rem; }
   .page-head__right { gap: 5px; }
   .lang-switch__btn { width: 30px; height: 30px; flex-basis: 30px; font-size: .55rem; }
   .page-head__cart { width: 31px; height: 31px; flex-basis: 31px; }
