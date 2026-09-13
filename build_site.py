@@ -726,9 +726,9 @@ def build_page(it, shop_config, lang):
 <link rel="canonical" href="{canonical}">
 {hreflang_links}
 <link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="preload" as="image" href="/{esc(hero)}" fetchpriority="high">
 <link rel="stylesheet" href="/assets/article.css?v={ARTICLE_CSS_VERSION}">
 <link id="d119-product-page-v4" rel="stylesheet" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}">
-<link rel="preload" as="image" href="/{esc(hero)}" fetchpriority="high">
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="Disorder119">
 <meta property="og:locale" content="{OG_LOCALES[lang]}">
@@ -770,7 +770,7 @@ def build_page(it, shop_config, lang):
   <div class="gallery">
     <div class="gallery__stage">
       {'<span class="gallery__badge">SOLD</span>' if sold else ""}
-      <img id="galleryMain" src="/{esc(hero)}" alt="{esc(name)}" fetchpriority="high" decoding="async">
+      <img id="galleryMain" src="/{esc(hero)}" alt="{esc(name)}" fetchpriority="high" decoding="sync">
       <button type="button" class="gallery__nav gallery__nav--prev" id="galleryPrev" data-i18n-aria="prevPhotoAria" aria-label="Vorheriges Foto">‹</button>
       <button type="button" class="gallery__nav gallery__nav--next" id="galleryNext" data-i18n-aria="nextPhotoAria" aria-label="Nächstes Foto">›</button>
       <span class="gallery__counter" id="galleryCounter">1 / {max(len(gallery), 1)}</span>
