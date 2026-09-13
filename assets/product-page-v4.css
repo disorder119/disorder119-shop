@@ -111,9 +111,9 @@
     border: 1px solid rgba(242,239,231,.28);
   }
   .lang-switch__btn {
-    width: 32px;
+    width: 26px;
     height: 32px;
-    flex: 0 0 32px;
+    flex: 0 0 26px;
     padding: 0;
     display: inline-flex;
     align-items: center;
@@ -279,7 +279,7 @@
   .page-head__menu span { width: 20px; }
   .page-head__brand { font-size: .68rem; }
   .page-head__right { gap: 5px; }
-  .lang-switch__btn { width: 30px; height: 30px; flex-basis: 30px; font-size: .55rem; }
+  .lang-switch__btn { width: 26px; height: 30px; flex-basis: 26px; font-size: .55rem; }
   .page-head__cart { width: 31px; height: 31px; flex-basis: 31px; }
   .article-sequence-nav { padding: 0 12px; }
   .article-sequence-nav__link { padding: 0 6px; font-size: .62rem; }
