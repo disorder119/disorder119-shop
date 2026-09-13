@@ -49,6 +49,7 @@ APP_CSS_VERSION = _asset_version("assets/app.css")
 APP_JS_VERSION = _asset_version("assets/app.js")
 ARTICLE_CSS_VERSION = _asset_version("assets/article.css")
 ARTICLE_JS_VERSION = _asset_version("assets/article.js")
+PRODUCT_PAGE_CSS_VERSION = _asset_version("assets/product-page-v4.css")
 PWA_JS_VERSION = _asset_version("assets/pwa.js")
 
 # Jede dieser Seiten ist inhaltlich die Startseite (gleiches HTML/JS/CSS-Bundle),
@@ -655,6 +656,26 @@ def build_page(it, shop_config, lang):
         for l in LANGS if l != lang
     )
     sold = it.get("public_status") == "SOLD"
+    product_nav_copy = {
+        "de": {
+            "prev": "← Vorheriger", "archive": "Zum Archiv", "next": "Nächster →",
+            "prev_aria": "Zum vorherigen Artikel", "archive_aria": "Zum Archiv",
+            "next_aria": "Zum nächsten Artikel", "nav_aria": "Artikelnavigation",
+            "menu_aria": "Archiv öffnen",
+        },
+        "en": {
+            "prev": "← Previous", "archive": "To archive", "next": "Next →",
+            "prev_aria": "Go to previous item", "archive_aria": "Go to archive",
+            "next_aria": "Go to next item", "nav_aria": "Item navigation",
+            "menu_aria": "Open archive",
+        },
+        "fr": {
+            "prev": "← Précédent", "archive": "Vers l’archive", "next": "Suivant →",
+            "prev_aria": "Voir l’article précédent", "archive_aria": "Voir l’archive",
+            "next_aria": "Voir l’article suivant", "nav_aria": "Navigation des articles",
+            "menu_aria": "Ouvrir l’archive",
+        },
+    }[lang]
     paypal_sdk_tag = ""
     paypal_enabled = bool((shop_config.get("features") or {}).get("paypalCheckout"))
     if paypal_enabled and shop_config.get("paypalClientId") and shop_config.get("shopWorkerUrl") and not sold and it.get("price", 0) > 0:
@@ -706,6 +727,7 @@ def build_page(it, shop_config, lang):
 {hreflang_links}
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <link rel="stylesheet" href="/assets/article.css?v={ARTICLE_CSS_VERSION}">
+<link id="d119-product-page-v4" rel="stylesheet" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}">
 <link rel="preload" as="image" href="/{esc(hero)}" fetchpriority="high">
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="Disorder119">
@@ -727,6 +749,7 @@ def build_page(it, shop_config, lang):
 </head>
 <body>
 <div class="page-head">
+  <a class="page-head__menu" href="{home}" aria-label="{esc(product_nav_copy['menu_aria'])}"><span></span><span></span><span></span></a>
   <a class="page-head__brand" href="{home}">DISORDER119</a>
   <div class="page-head__right">
     <div class="lang-switch" id="langSwitch" role="group" aria-label="Sprache wählen">
@@ -738,6 +761,11 @@ def build_page(it, shop_config, lang):
     <a class="page-head__cart" id="pageHeadCart" href="{home}cart/"><span data-i18n="cartLink">Warenkorb</span><span class="page-head__cart-count" id="pageHeadCartCount"></span></a>
   </div>
 </div>
+<nav class="article-sequence-nav" aria-label="{esc(product_nav_copy['nav_aria'])}">
+  <a class="article-sequence-nav__link article-sequence-nav__link--prev" aria-label="{esc(product_nav_copy['prev_aria'])}" style="visibility:hidden">{esc(product_nav_copy['prev'])}</a>
+  <a class="article-sequence-nav__link article-sequence-nav__link--archive" href="{home}" aria-label="{esc(product_nav_copy['archive_aria'])}">{esc(product_nav_copy['archive'])}</a>
+  <a class="article-sequence-nav__link article-sequence-nav__link--next" aria-label="{esc(product_nav_copy['next_aria'])}" style="visibility:hidden">{esc(product_nav_copy['next'])}</a>
+</nav>
 <div class="product">
   <div class="gallery">
     <div class="gallery__stage">
