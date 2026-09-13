@@ -442,3 +442,14 @@ a { color: inherit; }
 /* FOCUS3_MEASURED_LCP_FOLLOWUP — measured product-footer contrast. */
 p[data-i18n="footerNote"] { color: rgba(242, 239, 231, 0.82) !important; }
 
+/* IMAGE_COPY_GUARD_V1 — product photos only; controls and icons stay untouched. */
+img[src^="assets/img/"],
+img[src^="/assets/img/"],
+img[src*="/assets/img/"],
+img[data-d119-image-protected] {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+

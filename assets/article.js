@@ -474,3 +474,75 @@
   showPhoto(0);
   applyLang();
 })();
+
+/* IMAGE_COPY_GUARD_V1
+   Convenience protection for product photography. This intentionally does not
+   interfere with click, swipe, zoom or keyboard interaction. It discourages
+   the browser's normal save/drag gestures; it is not presented as DRM. */
+(function installD119ProductImageProtection() {
+  "use strict";
+
+  if (window.__D119_PRODUCT_IMAGE_PROTECTION__) return;
+  window.__D119_PRODUCT_IMAGE_PROTECTION__ = true;
+
+  var PROTECTED_ATTRIBUTE = "data-d119-image-protected";
+
+  function isProductImage(node) {
+    if (!node || node.nodeType !== 1 || node.tagName !== "IMG") return false;
+    if (node.hasAttribute(PROTECTED_ATTRIBUTE)) return true;
+    var source = node.currentSrc || node.getAttribute("src") || "";
+    if (!source) return false;
+    try {
+      return new URL(source, document.baseURI).pathname.indexOf("/assets/img/") !== -1;
+    } catch (error) {
+      return source.indexOf("assets/img/") !== -1;
+    }
+  }
+
+  function protectImage(image) {
+    if (!isProductImage(image)) return;
+    image.setAttribute(PROTECTED_ATTRIBUTE, "");
+    image.setAttribute("draggable", "false");
+  }
+
+  function protectTree(root) {
+    if (!root) return;
+    if (root.nodeType === 1 && root.tagName === "IMG") protectImage(root);
+    if (!root.querySelectorAll) return;
+    Array.prototype.forEach.call(root.querySelectorAll("img"), protectImage);
+  }
+
+  function blockNativeImageAction(event) {
+    if (!isProductImage(event.target)) return;
+    protectImage(event.target);
+    event.preventDefault();
+  }
+
+  document.addEventListener("contextmenu", blockNativeImageAction, true);
+  document.addEventListener("dragstart", blockNativeImageAction, true);
+
+  function startProtection() {
+    protectTree(document);
+    var observer = new MutationObserver(function (records) {
+      records.forEach(function (record) {
+        if (record.type === "attributes") {
+          protectImage(record.target);
+          return;
+        }
+        Array.prototype.forEach.call(record.addedNodes, protectTree);
+      });
+    });
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["src", "srcset"]
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startProtection, { once: true });
+  } else {
+    startProtection();
+  }
+})();
