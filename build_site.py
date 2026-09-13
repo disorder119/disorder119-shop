@@ -789,7 +789,7 @@ def build_page(it, shop_config, lang):
   <div class="gallery">
     <div class="gallery__stage">
 {'      <span class="gallery__badge">SOLD</span>' if sold else ""}
-      <img id="galleryMain" src="/{esc(hero_display)}" alt="{esc(name)}" fetchpriority="high" decoding="async">
+      <img id="galleryMain" src="/{esc(hero_display)}" alt="{esc(name)}" fetchpriority="high" decoding="sync">
       <button type="button" class="gallery__nav gallery__nav--prev" id="galleryPrev" data-i18n-aria="prevPhotoAria" aria-label="Vorheriges Foto">‹</button>
       <button type="button" class="gallery__nav gallery__nav--next" id="galleryNext" data-i18n-aria="nextPhotoAria" aria-label="Nächstes Foto">›</button>
       <span class="gallery__counter" id="galleryCounter">1 / {max(len(gallery), 1)}</span>
