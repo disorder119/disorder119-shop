@@ -402,6 +402,7 @@ a { color: inherit; }
 .lightbox img { max-width: 92vw; max-height: 88vh; object-fit: contain; }
 .lightbox__close {
   position: absolute;
+  z-index: 4;
   top: 16px;
   right: 16px;
   width: 40px;
