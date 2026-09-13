@@ -435,13 +435,17 @@
       field.className = "article-order-message";
       field.innerHTML = '<span></span><textarea id="articleOrderMessage" maxlength="500"></textarea>';
       anchor.parentNode.insertBefore(field, anchor);
-      field.querySelector("textarea").addEventListener("input", function (e) {
+    }
+    var messageInput = field.querySelector("textarea");
+    if (messageInput && messageInput.getAttribute("data-d119-message-bound") !== "1") {
+      messageInput.setAttribute("data-d119-message-bound", "1");
+      messageInput.addEventListener("input", function (e) {
         articleOrderMessage = e.target.value.slice(0, 500);
         updateOrderLinks();
       });
     }
     field.querySelector("span").textContent = articleMessageLabel() + " (" + (LANG === "fr" ? "facultatif" : "optional") + ")";
-    field.querySelector("textarea").placeholder = articleMessagePlaceholder();
+    messageInput.placeholder = articleMessagePlaceholder();
   }
 
   function updateOrderLinks() {

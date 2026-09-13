@@ -528,8 +528,22 @@ def cta_html(it, shop_config, home, lang):
         # Bleibt leer/unsichtbar, bis paypal_buy_button() in article.js den
         # echten PayPal-Button hineinrendert (siehe shop-worker/README.md).
         parts.append('<div id="paypalButtons" data-item-id="' + str(it["id"]) + '" data-price="' + f'{it["price"]:.2f}' + '"></div>')
-    parts.append('<a class="btn btn--outline" id="inquireWhatsapp" target="_blank" rel="noopener" data-i18n="inquireWhatsapp">Anfrage per WhatsApp</a>')
-    parts.append('<a class="btn btn--outline" id="inquireEmail" data-i18n="inquireEmail">Anfrage per E-Mail</a>')
+    if shop_config.get("whatsappNumber") or shop_config.get("email"):
+        message_copy = {
+            "de": ("Kundennachricht", "optional", "Frage, Maße, Versandwunsch …"),
+            "en": ("Customer message", "optional", "Question, measurements, shipping request …"),
+            "fr": ("Message client", "facultatif", "Question, mesures, souhait de livraison …"),
+        }.get(lang, ("Kundennachricht", "optional", "Frage, Maße, Versandwunsch …"))
+        parts.append(
+            '<label id="articleOrderMessageField" class="article-order-message"><span>'
+            + esc(message_copy[0]) + " (" + esc(message_copy[1]) + ")</span>"
+            + '<textarea id="articleOrderMessage" maxlength="500" placeholder="'
+            + esc(message_copy[2]) + '"></textarea></label>'
+        )
+    whatsapp_hidden = "" if shop_config.get("whatsappNumber") else ' style="display:none"'
+    email_hidden = "" if shop_config.get("email") else ' style="display:none"'
+    parts.append('<a class="btn btn--outline" id="inquireWhatsapp" target="_blank" rel="noopener" data-i18n="inquireWhatsapp"' + whatsapp_hidden + '>Anfrage per WhatsApp</a>')
+    parts.append('<a class="btn btn--outline" id="inquireEmail" data-i18n="inquireEmail"' + email_hidden + '>Anfrage per E-Mail</a>')
     parts.append("</div>")
     # Verlinkt auf die eigene Mieten-Kategorie mit ?item=<id> - app.js
     # erkennt den Parameter beim Laden von /mieten/ und oeffnet die
@@ -733,7 +747,7 @@ def build_page(it, shop_config, lang):
       <button type="button" class="gallery__nav gallery__nav--next" id="galleryNext" data-i18n-aria="nextPhotoAria" aria-label="Nächstes Foto">›</button>
       <span class="gallery__counter" id="galleryCounter">1 / {max(len(gallery), 1)}</span>
     </div>
-    <div class="gallery__thumbs" id="galleryThumbs"></div>
+    <div class="gallery__thumbs{' gallery__thumbs--reserved' if len(gallery) > 1 else ''}" id="galleryThumbs"></div>
   </div>
   <div class="info">
     <a class="info__brand" href="{home}?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or "Ohne Marke")}</a>
