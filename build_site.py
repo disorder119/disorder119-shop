@@ -1266,6 +1266,7 @@ CATALOG_FIELDS = [
     "id", "article", "title", "brand", "price", "price_estimated",
     "public_status", "status", "category", "size", "color", "condition",
     "brightness", "gallery", "look",
+    "department", "product_type", "taxonomy_category", "size_normalized",
     # Optionaler, fester Mietpreis (siehe /mieten/) - branchenueblich zeigt
     # kein Vermieter dem Kunden eine Berechnung/Formel, sondern legt pro
     # Stueck einen festen Preis fest (Vorbild: Rent the Runway, By Rotation).
