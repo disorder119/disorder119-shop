@@ -919,9 +919,60 @@ def make_thumbnail(webp_payload: bytes, owner: str) -> bytes:
         return buffer.getvalue()
 
 
+def make_display_preview(webp_payload: bytes, owner: str) -> bytes:
+    Image, _ = require_pillow()
+    with Image.open(io.BytesIO(webp_payload)) as opened:
+        preview = opened.convert("RGBA")
+        preview.thumbnail((960, 960), Image.Resampling.LANCZOS, reducing_gap=3.0)
+        exif, xmp, _ = copyright_metadata(Image, owner)
+        buffer = io.BytesIO()
+        preview.save(
+            buffer,
+            format="WEBP",
+            quality=90,
+            method=6,
+            exact=True,
+            exif=exif,
+            xmp=xmp,
+        )
+        return buffer.getvalue()
+
+
 def thumb_path(target: str) -> str:
     path = PurePosixPath(target)
     return (path.parent / "thumbs" / path.name).as_posix()
+
+
+def display_path(target: str) -> str:
+    path = PurePosixPath(target)
+    return (path.parent / "display" / path.name).as_posix()
+
+
+def build_display_previews(
+    rows: list[PlanRow], staging_root: Path, owner: str, workers: int
+) -> None:
+    jobs = []
+    for row in rows:
+        if not row.target_gallery:
+            continue
+        source = staging_root / Path(*PurePosixPath(row.target_gallery[0]).parts)
+        target = staging_root / Path(*PurePosixPath(display_path(row.target_gallery[0])).parts)
+        jobs.append((source, target))
+
+    def work(job: tuple[Path, Path]) -> Path:
+        source, target = job
+        if not source.is_file():
+            raise ImportFailure(f"Galeriebild fuer Anzeigevorschau fehlt: {source}")
+        atomic_write(target, make_display_preview(source.read_bytes(), owner))
+        return target
+
+    print(f"Erzeuge {len(jobs)} schnelle Produkt-Anzeigevorschauen ...", flush=True)
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
+        futures = [executor.submit(work, job) for job in jobs]
+        for position, future in enumerate(as_completed(futures), 1):
+            future.result()
+            if position % 25 == 0 or position == len(jobs):
+                print(f"Anzeigevorschauen: {position}/{len(jobs)}", flush=True)
 
 
 def select_ready_rows(
@@ -1643,6 +1694,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             progress_path,
             log_path,
         )
+        build_display_previews(selected, staging_root, owner, args.workers)
         write_staged_items(repo_root, staging_root, selected)
         manifest = write_conversion_manifest(
             run_root,

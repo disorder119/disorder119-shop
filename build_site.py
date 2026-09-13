@@ -640,6 +640,13 @@ def thumb_path(p):
     return parts[0] + "/thumbs/" + parts[1]
 
 
+def display_path(p):
+    parts = p.rsplit("/", 1)
+    if len(parts) != 2:
+        return p
+    return parts[0] + "/display/" + parts[1]
+
+
 def build_page(it, shop_config, lang):
     name = display_name(it)
     title_tag = name + " | Disorder119"
@@ -652,6 +659,8 @@ def build_page(it, shop_config, lang):
     body_desc = raw_body_desc.strip() or auto_description(it, lang)
     gallery = it.get("gallery") or []
     hero = gallery[0] if gallery else "assets/favicon.png"
+    hero_display_candidate = display_path(hero)
+    hero_display = hero_display_candidate if (BASE / hero_display_candidate).is_file() else hero
     home = lang_home(lang)
     canonical = SITE_URL.rstrip("/") + home + "artikel/" + str(it["id"]) + "/"
     hreflang_links = "\n".join(
@@ -734,7 +743,7 @@ def build_page(it, shop_config, lang):
 <link rel="canonical" href="{canonical}">
 {hreflang_links}
 <link rel="icon" type="image/png" href="/assets/favicon.png">
-<link rel="preload" as="image" href="/{esc(hero)}" fetchpriority="high">
+<link rel="preload" as="image" href="/{esc(hero_display)}" fetchpriority="high">
 <style>{PRODUCT_CRITICAL_CSS}</style>
 <link rel="preload" as="style" href="/assets/article.css?v={ARTICLE_CSS_VERSION}" onload="this.onload=null;this.rel='stylesheet'">
 <link id="d119-product-page-v4" rel="preload" as="style" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}" onload="this.onload=null;this.rel='stylesheet'">
@@ -780,7 +789,7 @@ def build_page(it, shop_config, lang):
   <div class="gallery">
     <div class="gallery__stage">
 {'      <span class="gallery__badge">SOLD</span>' if sold else ""}
-      <img id="galleryMain" src="/{esc(hero)}" alt="{esc(name)}" fetchpriority="high" decoding="sync">
+      <img id="galleryMain" src="/{esc(hero_display)}" alt="{esc(name)}" fetchpriority="high" decoding="async">
       <button type="button" class="gallery__nav gallery__nav--prev" id="galleryPrev" data-i18n-aria="prevPhotoAria" aria-label="Vorheriges Foto">‹</button>
       <button type="button" class="gallery__nav gallery__nav--next" id="galleryNext" data-i18n-aria="nextPhotoAria" aria-label="Nächstes Foto">›</button>
       <span class="gallery__counter" id="galleryCounter">1 / {max(len(gallery), 1)}</span>

@@ -33,6 +33,9 @@ automatisch angewendet.
   sein; es werden keine nutzlosen Fuellbytes erzeugt.
 - Transparenz bleibt erhalten.
 - Kleine 220 x 293 WebP-Thumbnails werden fuer das Produktgrid mit erzeugt.
+- Pro Artikel entsteht zusaetzlich eine 960-Pixel-Anzeigevorschau fuer den
+  schnellen Produktseiten-Start. Galerie-Interaktion und Zoom verwenden
+  weiterhin die volle hochaufloesende Datei.
 - Das erste Galeriebild wird standardmaessig auch fuer den Outfit-Baukasten
   verwendet. Dadurch ist kein zweites grosses Bild noetig. Mit `--keep-look`
   kann das bisherige Baukastenbild erhalten bleiben.
