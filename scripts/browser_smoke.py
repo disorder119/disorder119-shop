@@ -109,6 +109,44 @@ def visible_text(driver) -> str:
     return driver.find_element(By.TAG_NAME, "body").text
 
 
+def assert_product_image_protected(driver, image, label: str) -> None:
+    wait(
+        driver,
+        lambda d: d.execute_script('return arguments[0].hasAttribute("data-d119-image-protected");', image),
+        f"{label}: Bildschutz initialisiert",
+    )
+    result = driver.execute_script(
+        """
+        const image = arguments[0];
+        const style = getComputedStyle(image);
+        const contextMenu = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+        const dragStart = new DragEvent("dragstart", { bubbles: true, cancelable: true });
+        image.dispatchEvent(contextMenu);
+        image.dispatchEvent(dragStart);
+        return {
+          marked: image.hasAttribute("data-d119-image-protected"),
+          draggable: image.getAttribute("draggable"),
+          userSelect: style.userSelect,
+          webkitUserDrag: style.webkitUserDrag,
+          contextBlocked: contextMenu.defaultPrevented,
+          dragBlocked: dragStart.defaultPrevented
+        };
+        """,
+        image,
+    )
+    expected = {
+        "marked": True,
+        "draggable": "false",
+        "userSelect": "none",
+        "webkitUserDrag": "none",
+        "contextBlocked": True,
+        "dragBlocked": True,
+    }
+    mismatches = {key: (result.get(key), value) for key, value in expected.items() if result.get(key) != value}
+    if mismatches:
+        fail(f"{label}: Bildschutz unvollstaendig: {mismatches}")
+
+
 def test_responsive_catalog(driver) -> None:
     # Load once at a true small-phone width, then exercise every required
     # breakpoint by resizing the same live page. Responsive CSS/matchMedia
@@ -204,6 +242,7 @@ def test_product_cart_and_rental(driver) -> None:
     first = cards[0]
     href = first.get_attribute("href")
     title = first.find_element(By.CSS_SELECTOR, ".plate__title").text.strip()
+    assert_product_image_protected(driver, first.find_element(By.CSS_SELECTOR, "img"), "Produktkarte")
     if not href or "/artikel/" not in href:
         fail("Produktkarte besitzt keine echte Produkt-URL")
     item_match = re.search(r"/artikel/(\d+)/", urlparse(href).path)
@@ -213,6 +252,15 @@ def test_product_cart_and_rental(driver) -> None:
 
     driver.get(href)
     wait(driver, EC.presence_of_element_located((By.CSS_SELECTOR, ".product .info h1")), "Produktdetail")
+    gallery_main = wait(driver, EC.presence_of_element_located((By.ID, "galleryMain")), "Produkt-Hauptbild")
+    assert_product_image_protected(driver, gallery_main, "Produkt-Hauptbild")
+    # Trigger the same registered click handler without depending on decoded
+    # image pixels in sparse/local CI checkouts where product binaries are absent.
+    driver.execute_script("arguments[0].click();", gallery_main)
+    wait(driver, lambda d: "open" in (d.find_element(By.ID, "lightbox").get_attribute("class") or ""), "Produkt-Lightbox offen")
+    lightbox_image = driver.find_element(By.ID, "lightboxImg")
+    assert_product_image_protected(driver, lightbox_image, "Produkt-Lightbox")
+    driver.find_element(By.ID, "lightboxClose").click()
     if driver.find_element(By.CSS_SELECTOR, ".product .info h1").text.strip() != title:
         fail("Produktkarten-Titel und Produktdetail-Titel widersprechen sich")
     if "Art.-Nr." in visible_text(driver):
@@ -274,7 +322,7 @@ def main() -> None:
         test_product_cart_and_rental,
     ):
         run_case(test_fn)
-    print("Browser-Smoke: OK — responsive Archiv, Suche, iOS-sicherer Filter, DE/EN/FR, Produkt, Warenkorb und Rental V2 in echtem Chromium getestet.")
+    print("Browser-Smoke: OK — responsive Archiv, Suche, iOS-sicherer Filter, DE/EN/FR, Produkt, Bildschutz, Warenkorb und Rental V2 in echtem Chromium getestet.")
 
 
 if __name__ == "__main__":

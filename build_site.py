@@ -49,7 +49,15 @@ APP_CSS_VERSION = _asset_version("assets/app.css")
 APP_JS_VERSION = _asset_version("assets/app.js")
 ARTICLE_CSS_VERSION = _asset_version("assets/article.css")
 ARTICLE_JS_VERSION = _asset_version("assets/article.js")
+PRODUCT_PAGE_CSS_VERSION = _asset_version("assets/product-page-v4.css")
 PWA_JS_VERSION = _asset_version("assets/pwa.js")
+
+# The first mobile product viewport must not wait for two external stylesheets
+# before it can paint the already-preloaded hero image. Keep only the stable
+# shell geometry inline; the complete shared stylesheets are still cached and
+# applied immediately afterwards.
+PRODUCT_CRITICAL_CSS = """:root{--ink:#000;--paper:#f2efe7;--rule:rgba(242,239,231,.14);--rule-strong:rgba(242,239,231,.28);--text-muted:rgba(242,239,231,.58);--surface:#121212;color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;padding:0;overflow-x:hidden}body{background:#000;color:#f2efe7;font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}a{color:inherit}.page-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--rule)}.page-head__brand{font-family:"Helvetica Neue Condensed","Arial Narrow",Helvetica,Arial,sans-serif;font-weight:800;text-transform:uppercase;font-size:1.3rem;letter-spacing:-.01em;text-decoration:none}.page-head__right,.lang-switch{display:flex;align-items:center}.page-head__right{gap:12px}.lang-switch{gap:2px;border:1px solid var(--rule-strong)}.lang-switch__btn{display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;text-decoration:none}.page-head__back{display:none!important}.page-head__menu{display:none}.article-sequence-nav{max-width:1240px;margin:16px auto 0;padding:0 clamp(20px,5vw,48px);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px}.article-sequence-nav__link{min-height:38px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap}.article-sequence-nav__link--prev{justify-self:start}.article-sequence-nav__link--archive{justify-self:center}.article-sequence-nav__link--next{justify-self:end}.product{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:clamp(24px,4vw,56px);max-width:1240px;margin:0 auto;padding:clamp(20px,3vw,40px) clamp(20px,5vw,48px) 60px}.gallery,.info{min-width:0}.gallery{position:sticky;top:16px;align-self:start}.gallery__stage{position:relative;background:#121212;aspect-ratio:3/4;overflow:hidden}.gallery__stage img{width:100%;height:100%;object-fit:contain;display:block;background:#121212}.gallery__nav{position:absolute;top:50%;transform:translateY(-50%)}.gallery__nav--prev{left:10px}.gallery__nav--next{right:10px}.gallery__counter{position:absolute;right:10px;bottom:10px}.gallery__badge{position:absolute;left:10px;top:10px}.gallery__thumbs{display:flex;gap:8px;margin-top:10px;overflow-x:auto}.gallery__thumbs--reserved{min-height:84px}@media(max-width:860px){.page-head{position:relative;min-height:74px;padding:14px 16px;gap:8px}.page-head__menu{width:38px;height:38px;flex:0 0 38px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-decoration:none}.page-head__menu span{display:block;width:22px;height:1px;background:currentColor}.page-head__brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;font-size:.7rem;line-height:1;letter-spacing:.01em;white-space:nowrap}.page-head__right{margin-left:auto;justify-content:flex-end;flex-wrap:nowrap!important;gap:7px}.lang-switch{gap:2px}.lang-switch__btn{width:32px;height:32px;flex:0 0 32px;padding:0;font-size:.59rem}.page-head__cart{position:relative;width:34px;height:34px;flex:0 0 34px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:0}.page-head__cart>span:first-child{display:none}.article-sequence-nav{max-width:none;width:auto;margin:0;padding:0 16px;min-height:58px;grid-template-columns:1fr auto 1fr;gap:0;border-bottom:1px solid rgba(242,239,231,.18)}.article-sequence-nav__link{min-width:0;min-height:58px;padding:0 10px}.article-sequence-nav__link--archive{padding-left:22px;padding-right:22px;border-left:1px solid rgba(242,239,231,.16);border-right:1px solid rgba(242,239,231,.16)}.product{grid-template-columns:1fr;gap:22px;padding:12px 16px 48px}.gallery{position:static}.gallery__stage{border:0}.gallery__thumbs--reserved{min-height:100px}}@media(max-width:380px){.page-head{padding-left:12px;padding-right:12px}.page-head__menu{width:34px;flex-basis:34px}.page-head__brand{font-size:.68rem}.page-head__right{gap:5px}.lang-switch__btn{width:30px;height:30px;flex-basis:30px}.page-head__cart{width:31px;height:31px;flex-basis:31px}.article-sequence-nav{padding:0 12px}.article-sequence-nav__link{padding:0 6px}.article-sequence-nav__link--archive{padding-left:12px;padding-right:12px}.product{padding-left:12px;padding-right:12px}}"""
+PRODUCT_CRITICAL_CSS += "@media(max-width:860px){.lang-switch__btn{width:26px;flex-basis:26px}}"
 
 # Jede dieser Seiten ist inhaltlich die Startseite (gleiches HTML/JS/CSS-Bundle),
 # oeffnet beim Laden aber automatisch das passende Panel anhand von
@@ -528,8 +536,22 @@ def cta_html(it, shop_config, home, lang):
         # Bleibt leer/unsichtbar, bis paypal_buy_button() in article.js den
         # echten PayPal-Button hineinrendert (siehe shop-worker/README.md).
         parts.append('<div id="paypalButtons" data-item-id="' + str(it["id"]) + '" data-price="' + f'{it["price"]:.2f}' + '"></div>')
-    parts.append('<a class="btn btn--outline" id="inquireWhatsapp" target="_blank" rel="noopener" data-i18n="inquireWhatsapp">Anfrage per WhatsApp</a>')
-    parts.append('<a class="btn btn--outline" id="inquireEmail" data-i18n="inquireEmail">Anfrage per E-Mail</a>')
+    if shop_config.get("whatsappNumber") or shop_config.get("email"):
+        message_copy = {
+            "de": ("Kundennachricht", "optional", "Frage, Maße, Versandwunsch …"),
+            "en": ("Customer message", "optional", "Question, measurements, shipping request …"),
+            "fr": ("Message client", "facultatif", "Question, mesures, souhait de livraison …"),
+        }.get(lang, ("Kundennachricht", "optional", "Frage, Maße, Versandwunsch …"))
+        parts.append(
+            '<label id="articleOrderMessageField" class="article-order-message"><span>'
+            + esc(message_copy[0]) + " (" + esc(message_copy[1]) + ")</span>"
+            + '<textarea id="articleOrderMessage" maxlength="500" placeholder="'
+            + esc(message_copy[2]) + '"></textarea></label>'
+        )
+    whatsapp_hidden = "" if shop_config.get("whatsappNumber") else ' style="display:none"'
+    email_hidden = "" if shop_config.get("email") else ' style="display:none"'
+    parts.append('<a class="btn btn--outline" id="inquireWhatsapp" target="_blank" rel="noopener" data-i18n="inquireWhatsapp"' + whatsapp_hidden + '>Anfrage per WhatsApp</a>')
+    parts.append('<a class="btn btn--outline" id="inquireEmail" data-i18n="inquireEmail"' + email_hidden + '>Anfrage per E-Mail</a>')
     parts.append("</div>")
     # Verlinkt auf die eigene Mieten-Kategorie mit ?item=<id> - app.js
     # erkennt den Parameter beim Laden von /mieten/ und oeffnet die
@@ -641,6 +663,26 @@ def build_page(it, shop_config, lang):
         for l in LANGS if l != lang
     )
     sold = it.get("public_status") == "SOLD"
+    product_nav_copy = {
+        "de": {
+            "prev": "← Vorheriger", "archive": "Zum Archiv", "next": "Nächster →",
+            "prev_aria": "Zum vorherigen Artikel", "archive_aria": "Zum Archiv",
+            "next_aria": "Zum nächsten Artikel", "nav_aria": "Artikelnavigation",
+            "menu_aria": "Archiv öffnen",
+        },
+        "en": {
+            "prev": "← Previous", "archive": "To archive", "next": "Next →",
+            "prev_aria": "Go to previous item", "archive_aria": "Go to archive",
+            "next_aria": "Go to next item", "nav_aria": "Item navigation",
+            "menu_aria": "Open archive",
+        },
+        "fr": {
+            "prev": "← Précédent", "archive": "Vers l’archive", "next": "Suivant →",
+            "prev_aria": "Voir l’article précédent", "archive_aria": "Voir l’archive",
+            "next_aria": "Voir l’article suivant", "nav_aria": "Navigation des articles",
+            "menu_aria": "Ouvrir l’archive",
+        },
+    }[lang]
     paypal_sdk_tag = ""
     paypal_enabled = bool((shop_config.get("features") or {}).get("paypalCheckout"))
     if paypal_enabled and shop_config.get("paypalClientId") and shop_config.get("shopWorkerUrl") and not sold and it.get("price", 0) > 0:
@@ -691,8 +733,11 @@ def build_page(it, shop_config, lang):
 <link rel="canonical" href="{canonical}">
 {hreflang_links}
 <link rel="icon" type="image/png" href="/assets/favicon.png">
-<link rel="stylesheet" href="/assets/article.css?v={ARTICLE_CSS_VERSION}">
 <link rel="preload" as="image" href="/{esc(hero)}" fetchpriority="high">
+<style>{PRODUCT_CRITICAL_CSS}</style>
+<link rel="preload" as="style" href="/assets/article.css?v={ARTICLE_CSS_VERSION}" onload="this.onload=null;this.rel='stylesheet'">
+<link id="d119-product-page-v4" rel="preload" as="style" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/assets/article.css?v={ARTICLE_CSS_VERSION}"><link rel="stylesheet" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}"></noscript>
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="Disorder119">
 <meta property="og:locale" content="{OG_LOCALES[lang]}">
@@ -713,6 +758,7 @@ def build_page(it, shop_config, lang):
 </head>
 <body>
 <div class="page-head">
+  <a class="page-head__menu" href="{home}" aria-label="{esc(product_nav_copy['menu_aria'])}"><span></span><span></span><span></span></a>
   <a class="page-head__brand" href="{home}">DISORDER119</a>
   <div class="page-head__right">
     <div class="lang-switch" id="langSwitch" role="group" aria-label="Sprache wählen">
@@ -724,16 +770,21 @@ def build_page(it, shop_config, lang):
     <a class="page-head__cart" id="pageHeadCart" href="{home}cart/"><span data-i18n="cartLink">Warenkorb</span><span class="page-head__cart-count" id="pageHeadCartCount"></span></a>
   </div>
 </div>
+<nav class="article-sequence-nav" aria-label="{esc(product_nav_copy['nav_aria'])}">
+  <a class="article-sequence-nav__link article-sequence-nav__link--prev" aria-label="{esc(product_nav_copy['prev_aria'])}" style="visibility:hidden">{esc(product_nav_copy['prev'])}</a>
+  <a class="article-sequence-nav__link article-sequence-nav__link--archive" href="{home}" aria-label="{esc(product_nav_copy['archive_aria'])}">{esc(product_nav_copy['archive'])}</a>
+  <a class="article-sequence-nav__link article-sequence-nav__link--next" aria-label="{esc(product_nav_copy['next_aria'])}" style="visibility:hidden">{esc(product_nav_copy['next'])}</a>
+</nav>
 <div class="product">
   <div class="gallery">
     <div class="gallery__stage">
       {'<span class="gallery__badge">SOLD</span>' if sold else ""}
-      <img id="galleryMain" src="/{esc(hero)}" alt="{esc(name)}" fetchpriority="high" decoding="async">
+      <img id="galleryMain" src="/{esc(hero)}" alt="{esc(name)}" fetchpriority="high" decoding="sync">
       <button type="button" class="gallery__nav gallery__nav--prev" id="galleryPrev" data-i18n-aria="prevPhotoAria" aria-label="Vorheriges Foto">‹</button>
       <button type="button" class="gallery__nav gallery__nav--next" id="galleryNext" data-i18n-aria="nextPhotoAria" aria-label="Nächstes Foto">›</button>
       <span class="gallery__counter" id="galleryCounter">1 / {max(len(gallery), 1)}</span>
     </div>
-    <div class="gallery__thumbs" id="galleryThumbs"></div>
+    <div class="gallery__thumbs{' gallery__thumbs--reserved' if len(gallery) > 1 else ''}" id="galleryThumbs"></div>
   </div>
   <div class="info">
     <a class="info__brand" href="{home}?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or "Ohne Marke")}</a>

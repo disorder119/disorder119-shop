@@ -262,7 +262,8 @@
     // Directly opened product pages use the normal public archive fallback:
     // AVAILABLE items only, never SOLD. The navigation shell is reserved from
     // first paint so asynchronous catalogue loading does not shift the page.
-    fetch("/data/catalog.json", { cache: "no-store" })
+    function loadFallbackSequence() {
+      fetch("/data/catalog.json", { cache: "no-store" })
       .then(function (response) {
         if (!response.ok) throw new Error("catalog HTTP " + response.status);
         return response.json();
@@ -284,6 +285,16 @@
       .catch(function () {
         // Navigation is optional. Never block the product page on failure.
       });
+    }
+
+    // The 170 KB catalogue only powers optional previous/next links. Let the
+    // already-preloaded product hero paint first so this request and JSON
+    // parsing cannot compete with the mobile LCP.
+    function scheduleFallbackSequence() {
+      window.setTimeout(loadFallbackSequence, 2500);
+    }
+    if (document.readyState === "complete") scheduleFallbackSequence();
+    else window.addEventListener("load", scheduleFallbackSequence, { once: true });
   }
 
   initArticleSequence();
