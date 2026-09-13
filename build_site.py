@@ -49,6 +49,7 @@ APP_CSS_VERSION = _asset_version("assets/app.css")
 APP_JS_VERSION = _asset_version("assets/app.js")
 ARTICLE_CSS_VERSION = _asset_version("assets/article.css")
 ARTICLE_JS_VERSION = _asset_version("assets/article.js")
+PWA_JS_VERSION = _asset_version("assets/pwa.js")
 PRODUCT_PAGE_CSS_VERSION = _asset_version("assets/product-page-v4.css")
 PWA_JS_VERSION = _asset_version("assets/pwa.js")
 
