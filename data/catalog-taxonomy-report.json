@@ -1,12 +1,12 @@
 {
   "schema": "catalog-taxonomy-v1",
-  "totalItems": 237,
-  "reviewedItems": 237,
+  "totalItems": 238,
+  "reviewedItems": 238,
   "departmentCounts": {
     "Men": 41,
     "Objects": 2,
     "Unisex": 91,
-    "Women": 103
+    "Women": 104
   },
   "productTypeCounts": {
     "Accessory": 2,
@@ -51,7 +51,7 @@
     "Toaster": 1,
     "Top": 33,
     "Trench Coat": 1,
-    "Trousers": 15,
+    "Trousers": 16,
     "Tunic": 1,
     "Underwear Shorts": 1,
     "Vest": 7,

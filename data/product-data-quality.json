@@ -1,11 +1,11 @@
 {
   "definition": "10-point truthful decision-readiness score; unresolved critical metadata receives only half credit and must be explicitly disclosed",
-  "available_items": 164,
+  "available_items": 165,
   "score_10": 9.7,
   "raw_completeness": {
-    "size_required_percent": 93.3,
-    "color_percent": 82.9,
-    "condition_percent": 62.8,
+    "size_required_percent": 93.4,
+    "color_percent": 83.0,
+    "condition_percent": 63.0,
     "description_percent": 100.0
   },
   "unresolved_available": {
