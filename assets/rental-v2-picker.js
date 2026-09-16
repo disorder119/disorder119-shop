@@ -165,7 +165,7 @@
       ".d119-rental-picker__body{padding:8px 20px 30px;overflow:auto;flex:1}",
       ".d119-rental-picker__grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}",
       ".d119-rental-picker-card{border:1px solid var(--line,#bbb);background:transparent;min-width:0;display:flex;flex-direction:column}",
-      ".d119-rental-picker-card__image{aspect-ratio:4/5;background:#eee;overflow:hidden;position:relative}",
+      ".d119-rental-picker-card__image{aspect-ratio:4/5;background:var(--mount,#000);overflow:hidden;position:relative}",
       ".d119-rental-picker-card__image img{width:100%;height:100%;display:block;object-fit:cover}",
       ".d119-rental-picker-card__badge{position:absolute;left:7px;top:7px;background:#111;color:#fff;padding:4px 6px;font-size:9px;line-height:1}",
       ".d119-rental-picker-card__body{padding:10px;display:flex;flex-direction:column;gap:4px;flex:1}",
@@ -183,6 +183,7 @@
       ".d119-rental-picker__done{appearance:none;width:100%;min-height:46px;border:1px solid currentColor;background:var(--ink,#111);color:var(--surface,#fff);padding:12px 14px;font:inherit;font-size:12px;cursor:pointer}",
       ".d119-rental-picker :focus-visible{outline:2px solid currentColor;outline-offset:2px}",
       ".d119-rental-picker__alert{font-size:10px;line-height:1.35;margin:8px 0 0}",
+      "@media(min-width:900px){.d119-rental-picker__head,.d119-rental-picker__tools{padding-left:28px;padding-right:28px}.d119-rental-picker__body{padding:8px 28px 30px}.d119-rental-picker__grid{grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:14px}.d119-rental-picker__foot{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:24px;padding:12px 28px 16px}.d119-rental-picker__hint{margin:0}.d119-rental-picker__done{width:auto;min-width:260px}.d119-rental-picker__alert{grid-column:1/-1}}",
       "@media(max-width:640px){.d119-rental-picker__head{padding:15px 16px 12px}.d119-rental-picker__tools{padding:12px 16px 8px}.d119-rental-picker__body{padding:6px 16px 24px}.d119-rental-picker__foot{padding:11px 16px 14px}.d119-rental-picker__grid{gap:9px}.d119-rental-picker-card__body{padding:8px}.d119-rental-picker-card__title{font-size:11px}.d119-rental-picker-card__action{padding:8px 5px}.d119-rental-picker__count{max-width:105px}}"
     ].join("");
     document.head.appendChild(style);

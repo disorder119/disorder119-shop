@@ -79,7 +79,11 @@
   }
   function itemTitle(item) {
     if (!item) return "";
-    return ((item.brand ? item.brand + " " : "") + (item.title || "")).trim();
+    var rawTitle = String(item.title || "").trim();
+    var brand = String(item.brand || "").trim();
+    // Viele Titel beginnen schon mit der Marke.
+    if (!brand || rawTitle.toLowerCase().indexOf(brand.toLowerCase()) === 0) return rawTitle;
+    return (brand + " " + rawTitle).trim();
   }
 
   function injectStyles() {
@@ -87,20 +91,16 @@
     var style = document.createElement("style");
     style.id = "d119RentalV2UiStyles";
     style.textContent = [
-      ".d119-rental-v2-backdrop{--d119-rental-drawer:620px}",
-      ".d119-rental-set-strip{display:flex;gap:10px;align-items:stretch;overflow-x:auto;padding:14px 0 16px;border-bottom:1px solid var(--line,#bbb);scrollbar-width:thin}",
+      ".d119-rental-set-strip{flex:0 0 auto;display:flex;gap:10px;align-items:stretch;overflow-x:auto;padding:14px 28px 16px;border-bottom:1px solid var(--d119r-rule,#bbb);scrollbar-width:thin}",
       ".d119-rental-set-copy{min-width:138px;max-width:160px;display:flex;flex-direction:column;justify-content:center;padding-right:6px}",
       ".d119-rental-set-copy strong{font-size:12px;line-height:1.25}",
       ".d119-rental-set-copy span{font-size:10px;line-height:1.35;opacity:.62;margin-top:4px}",
-      ".d119-rental-set-add{appearance:none;flex:0 0 64px;height:82px;border:1px dashed currentColor;background:transparent;color:inherit;display:grid;place-items:center;align-content:center;gap:5px;cursor:pointer;font:inherit;padding:4px}",
+      ".d119-rental-set-add{appearance:none;flex:0 0 66px;height:88px;border:1px dashed currentColor;background:transparent;color:inherit;display:grid;place-items:center;align-content:center;gap:5px;cursor:pointer;font:inherit;padding:4px}",
       ".d119-rental-set-add__plus{display:grid;place-items:center;width:34px;height:34px;border:1px solid currentColor;border-radius:50%;font-size:25px;line-height:1;font-weight:300}",
       ".d119-rental-set-add__label{font-size:9px;line-height:1.1;text-transform:uppercase;letter-spacing:.06em}",
-      ".d119-rental-set-thumb{appearance:none;flex:0 0 58px;height:82px;border:1px solid var(--line,#bbb);background:transparent;color:inherit;padding:0;cursor:pointer;position:relative;overflow:hidden}",
+      ".d119-rental-set-thumb{appearance:none;flex:0 0 66px;height:88px;border:1px solid var(--d119r-rule,#bbb);background:var(--mount,#000);color:inherit;padding:0;cursor:pointer;position:relative;overflow:hidden}",
       ".d119-rental-set-thumb img{display:block;width:100%;height:100%;object-fit:cover}",
       ".d119-rental-set-thumb span{position:absolute;left:3px;right:3px;bottom:3px;background:rgba(0,0,0,.72);color:#fff;font-size:8px;line-height:1.1;padding:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
-      ".d119-rental-add-side{position:fixed;right:638px;top:118px;z-index:123;width:64px;min-height:78px;border:1px solid #fff;background:#111;color:#fff;display:grid;place-items:center;align-content:center;gap:6px;cursor:pointer;font:inherit;padding:8px 5px}",
-      ".d119-rental-add-side__plus{display:grid;place-items:center;width:38px;height:38px;border:1px solid #fff;border-radius:50%;font-size:28px;line-height:1;font-weight:300}",
-      ".d119-rental-add-side__label{font-size:9px;line-height:1.15;text-align:center;text-transform:uppercase;letter-spacing:.05em}",
       ".d119-rental-add-inline{appearance:none;width:100%;border:1px dashed currentColor;background:transparent;color:inherit;padding:13px 14px;margin-top:12px;display:flex;align-items:center;gap:11px;cursor:pointer;font:inherit;text-align:left}",
       ".d119-rental-add-inline__plus{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border:1px solid currentColor;border-radius:50%;font-size:26px;line-height:1}",
       ".d119-rental-add-inline__copy strong{display:block;font-size:12px}",
@@ -109,9 +109,10 @@
       ".d119-rental-card-add:before{content:'+';display:grid;place-items:center;width:20px;height:20px;border:1px solid currentColor;border-radius:50%;font-size:17px;line-height:1;flex:0 0 20px}",
       ".d119-rental-card-add[aria-pressed='true']:before{content:'✓';font-size:11px}",
       ".d119-rental-picking .plate__rental-btn{outline:1px solid currentColor;outline-offset:3px}",
-      ".d119-rental-item{border:1px solid var(--line,#bbb);padding:9px}",
+      ".d119-rental-item{border:1px solid var(--d119r-rule,#bbb);background:var(--d119r-raised,transparent);padding:10px}",
       ".d119-rental-summary__row--total{padding:13px 0 2px}",
-      "@media(max-width:760px){.d119-rental-add-side{display:none}.d119-rental-set-copy{min-width:112px}.d119-rental-set-strip{margin-left:-2px;margin-right:-2px}.d119-rental-set-add{flex-basis:58px}.d119-rental-set-thumb{flex-basis:54px}.d119-rental-item{grid-template-columns:62px 1fr auto}.d119-rental-item img{width:62px;height:82px}}"
+      "@media(max-width:760px){.d119-rental-set-copy{min-width:112px}.d119-rental-set-add,.d119-rental-set-thumb{flex-basis:58px;height:78px}.d119-rental-item{grid-template-columns:62px 1fr auto}.d119-rental-item img{width:62px;height:83px}}",
+      "@media(max-width:640px){.d119-rental-set-strip{padding:10px 16px 12px}}"
     ].join("");
     document.head.appendChild(style);
   }
@@ -136,24 +137,6 @@
       var active = btn.getAttribute("aria-pressed") === "true";
       btn.setAttribute("aria-label", active ? t("cardAdded") : t("cardAdd"));
     });
-  }
-
-  function ensureSideAdd(backdrop) {
-    var ids = loadIds();
-    var existing = document.getElementById("d119RentalAddSide");
-    if (!ids.length) {
-      if (existing) existing.remove();
-      return;
-    }
-    if (existing) return;
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.id = "d119RentalAddSide";
-    btn.className = "d119-rental-add-side";
-    btn.setAttribute("aria-label", t("addMore"));
-    btn.innerHTML = '<span class="d119-rental-add-side__plus" aria-hidden="true">+</span><span class="d119-rental-add-side__label">' + esc(t("addMoreShort")) + '</span>';
-    btn.addEventListener("click", closeOverlayAndBrowse);
-    backdrop.appendChild(btn);
   }
 
   function ensureSelectionStrip(backdrop) {
@@ -207,12 +190,25 @@
     items.insertAdjacentElement("afterend", btn);
   }
 
+  // Solange der Piece-Picker offen ist, bekommt das Fenster volle Hoehe;
+  // am Handy, wo das ganze Fenster scrollt, geht es dafuer nach oben.
+  function syncPickerState(backdrop) {
+    var dialog = backdrop.querySelector(".d119-rental-v2");
+    if (!dialog) return;
+    var picking = !!dialog.querySelector(".d119-rental-picker");
+    if (picking && !dialog.classList.contains("d119-rental-v2--picking")) dialog.scrollTop = 0;
+    dialog.classList.toggle("d119-rental-v2--picking", picking);
+  }
+
   function enhanceOverlay() {
     var backdrop = document.getElementById("d119RentalV2Backdrop");
     if (!backdrop) return;
-    ensureSideAdd(backdrop);
+    // Der fruehere schwebende Plus-Knopf neben der rechten Leiste entfaellt:
+    // im mittigen Fenster sitzt dieselbe Funktion in der Auswahlleiste oben
+    // und unter der Artikelliste.
     ensureSelectionStrip(backdrop);
     ensureInlineAdd(backdrop);
+    syncPickerState(backdrop);
   }
 
   function scheduleEnhance() {

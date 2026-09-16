@@ -336,23 +336,47 @@
       ".d119-rental-toolbar__button[disabled]{opacity:.4;cursor:not-allowed}",
       ".d119-rental-fab{position:fixed;right:18px;bottom:18px;z-index:75;border:1px solid #fff;background:#111;color:#fff;padding:12px 16px;font:inherit;cursor:pointer;box-shadow:0 8px 30px rgba(0,0,0,.22)}",
       ".d119-rental-fab[hidden]{display:none}",
-      ".d119-rental-v2-backdrop{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.62);display:none;align-items:stretch;justify-content:flex-end}",
-      ".d119-rental-v2-backdrop.open{display:flex}",
-      ".d119-rental-v2{width:min(620px,100%);height:100%;overflow:auto;background:var(--surface,#fff);color:var(--ink,#111);padding:20px;box-sizing:border-box}",
-      ".d119-rental-v2__head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line,#bbb)}",
-      ".d119-rental-v2__head h2{font-size:20px;margin:0}",
+      // RENTAL_DIALOG_CENTERED: Das Mietfenster erscheint mittig und gross -
+      // frueher klebte es als 620 px breite Leiste am rechten Rand. Am
+      // Rechner zwei Spalten (links die Pieces, rechts Zeitraum und
+      // Anfrage), am Handy ein Vollbild-Blatt.
+      // RENTAL_DIALOG_TOKENS: Die Bausteine stammen aus einem hellen
+      // Entwurf, in dem --ink die Schrift und --surface der Grund war. Auf
+      // dieser Seite ist --ink aber der schwarze Seitengrund: Summen,
+      // Feldbeschriftungen, das Schliessen-Kreuz und der Knopf "Mietanfrage
+      // per E-Mail" standen schwarz auf #121212. Im Fenster - auch im
+      // Piece-Picker - werden die Rollen deshalb auf die Seitenfarben gelegt.
+      ".d119-rental-v2-backdrop{--d119r-bg:var(--ink-lift,#121212);--d119r-raised:var(--ink-lift-2,#1b1b1b);--d119r-fg:var(--paper,#f2efe7);--d119r-rule:var(--rule,rgba(242,239,231,.14));--d119r-field:rgba(242,239,231,.45);--ink:var(--d119r-fg);--surface:var(--d119r-bg);--line:var(--rule-strong,rgba(242,239,231,.28));position:fixed;inset:0;z-index:360;background:rgba(0,0,0,.74);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:clamp(16px,4vh,44px) clamp(16px,3vw,44px);box-sizing:border-box}",
+      ".d119-rental-v2-backdrop.open{display:flex;animation:d119RentalDim .2s ease-out}",
+      ".d119-rental-v2{position:relative;display:flex;flex-direction:column;width:min(720px,100%);max-height:100%;overflow:hidden;background:var(--d119r-bg);color:var(--d119r-fg);border:1px solid var(--line);box-shadow:0 40px 120px rgba(0,0,0,.7);box-sizing:border-box;color-scheme:dark;animation:d119RentalRise .26s cubic-bezier(.2,.7,.2,1)}",
+      ".d119-rental-v2.d119-rental-v2--empty{width:min(560px,100%)}",
+      ".d119-rental-v2.d119-rental-v2--picking{height:100%}",
+      // Nur Bewegung, keine Deckkraft: die Kontrastpruefung der CI misst
+      // direkt nach dem Oeffnen.
+      "@keyframes d119RentalDim{from{background-color:rgba(0,0,0,0)}to{background-color:rgba(0,0,0,.74)}}",
+      "@keyframes d119RentalRise{from{transform:translateY(18px) scale(.985)}to{transform:none}}",
+      "@media(prefers-reduced-motion:reduce){.d119-rental-v2-backdrop.open,.d119-rental-v2{animation:none}}",
+      ".d119-rental-v2__head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 14px 14px 28px;border-bottom:1px solid var(--line,#bbb)}",
+      ".d119-rental-v2__head h2{font-size:clamp(17px,1.5vw,21px);line-height:1.2;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin:0}",
+      "#d119RentalV2Body{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 28px 6px}",
+      ".d119-rental-v2__layout{display:grid;grid-template-columns:minmax(0,1fr)}",
+      ".d119-rental-v2__col>.d119-rental-v2__section:last-child{border-bottom:0}",
+      ".d119-rental-v2__col--request{border-top:1px solid var(--d119r-rule)}",
+      "@media(min-width:900px){.d119-rental-v2{width:min(1120px,100%)}.d119-rental-v2__layout{grid-template-columns:minmax(0,1.08fr) minmax(0,1fr)}.d119-rental-v2__col--pieces{padding-right:36px}.d119-rental-v2__col--request{padding-left:36px;border-top:0;border-left:1px solid var(--d119r-rule)}}",
       ".d119-rental-v2__close{min-width:44px;min-height:44px;border:0;background:transparent;color:inherit;font-size:22px;cursor:pointer}",
-      ".d119-rental-v2__section{padding:18px 0;border-bottom:1px solid var(--line,#bbb)}",
+      ".d119-rental-v2__section{padding:20px 0;border-bottom:1px solid var(--d119r-rule,#bbb)}",
       ".d119-rental-v2__section h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin:0 0 12px}",
       ".d119-rental-v2__items{display:grid;gap:12px}",
       ".d119-rental-item{display:grid;grid-template-columns:72px 1fr auto;gap:12px;align-items:start}",
-      ".d119-rental-item img{width:72px;height:92px;object-fit:cover;background:#eee}",
+      ".d119-rental-item img{width:72px;height:96px;object-fit:cover;background:var(--mount,#000)}",
+      "@media(min-width:900px){.d119-rental-item{grid-template-columns:88px 1fr auto}.d119-rental-item img{width:88px;height:117px}}",
       ".d119-rental-item strong,.d119-rental-item span{display:block}",
       ".d119-rental-item__meta{font-size:12px;line-height:1.5}",
       ".d119-rental-item__remove{min-width:44px;min-height:44px;border:0;background:transparent;color:inherit;text-decoration:underline;cursor:pointer;font:inherit;font-size:11px}",
       ".d119-rental-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}",
       ".d119-rental-field label{display:block;font-size:11px;margin-bottom:6px;opacity:.75}",
-      ".d119-rental-field input,.d119-rental-field select,.d119-rental-field textarea{width:100%;min-height:44px;box-sizing:border-box;border:1px solid var(--line,#aaa);background:transparent;color:inherit;padding:10px;font:inherit}",
+      ".d119-rental-field input,.d119-rental-field select,.d119-rental-field textarea{width:100%;min-height:44px;box-sizing:border-box;border:1px solid var(--d119r-field,#aaa);background:transparent;color:inherit;padding:10px;font:inherit}",
+      ".d119-rental-field select option{background:var(--d119r-bg,#fff);color:var(--d119r-fg,#111)}",
       ".d119-rental-field textarea{resize:vertical;min-height:76px}",
       ".d119-rental-note{font-size:11px;line-height:1.45;opacity:.72;margin:8px 0 0}",
       ".d119-rental-error{font-size:12px;line-height:1.4;margin:10px 0 0}",
@@ -361,18 +385,21 @@
       ".d119-rental-process span:before{counter-increment:step;content:counter(step);display:block;width:24px;height:24px;border:1px solid currentColor;border-radius:50%;line-height:22px;margin:0 auto 6px}",
       ".d119-rental-trust{display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:11px;line-height:1.35}",
       ".d119-rental-trust span:before{content:'✓ ';}",
-      ".d119-rental-summary{display:grid;gap:8px;font-size:13px}",
+      ".d119-rental-summary{display:grid;gap:8px;font-size:13px;background:var(--d119r-raised,transparent);border:1px solid var(--d119r-rule,#bbb);padding:16px 18px}",
       ".d119-rental-summary__row{display:flex;justify-content:space-between;gap:20px}",
       ".d119-rental-summary__row--total{font-weight:700;padding-top:9px;border-top:1px solid var(--line,#bbb);font-size:15px}",
       ".d119-rental-terms{display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:1.4}",
       ".d119-rental-actions{display:grid;gap:8px;margin-top:14px}",
       ".d119-rental-actions a{display:flex;min-height:46px;align-items:center;justify-content:center;text-align:center;text-decoration:none;border:1px solid currentColor;color:inherit;padding:12px}",
       ".d119-rental-process-details{margin:0}.d119-rental-process-details summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:.08em}.d119-rental-process-details[open] summary{margin-bottom:14px}.d119-rental-v2 :focus-visible{outline:2px solid currentColor;outline-offset:2px}",
+      ".d119-rental-actions a:first-child{background:var(--d119r-fg,#111);color:var(--d119r-bg,#fff);border-color:var(--d119r-fg,#111);font-weight:700;letter-spacing:.06em;text-transform:uppercase}",
+      ".d119-rental-actions a:hover{background:var(--d119r-raised,transparent)}",
+      ".d119-rental-actions a:first-child:hover{background:var(--accent-text,#d6d0c2);border-color:var(--accent-text,#d6d0c2)}",
       ".d119-rental-actions a[aria-disabled='true']{opacity:.4;pointer-events:none}",
-      ".d119-rental-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:160;background:#111;color:#fff;padding:10px 14px;font-size:12px}",
+      ".d119-rental-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:370;background:#111;color:#fff;border:1px solid rgba(242,239,231,.28);padding:10px 14px;font-size:12px}",
       ".d119-rental-terms-collapsed details{margin-top:12px}",
       ".d119-rental-terms-collapsed summary{cursor:pointer;font-size:12px;text-decoration:underline}",
-      "@media(max-width:640px){.d119-rental-toolbar{align-items:flex-start;flex-direction:column}.d119-rental-toolbar__button{width:100%}.d119-rental-v2{padding:16px}.d119-rental-grid2{grid-template-columns:1fr}.d119-rental-process{grid-template-columns:repeat(3,1fr);row-gap:14px}.d119-rental-trust{grid-template-columns:1fr}.d119-rental-fab{left:12px;right:12px;bottom:12px;width:calc(100% - 24px)}}"
+      "@media(max-width:640px){.d119-rental-toolbar{align-items:flex-start;flex-direction:column}.d119-rental-toolbar__button{width:100%}.d119-rental-v2-backdrop{padding:0;-webkit-backdrop-filter:none;backdrop-filter:none}.d119-rental-v2,.d119-rental-v2.d119-rental-v2--empty{display:block;width:100%;height:100%;max-height:none;overflow:auto;border:0;box-shadow:none}.d119-rental-v2.d119-rental-v2--picking{overflow:hidden}.d119-rental-v2__head{position:sticky;top:0;z-index:4;background:var(--d119r-bg);padding:6px 4px 6px 16px}.d119-rental-v2__head h2{font-size:15px}#d119RentalV2Body{overflow:visible;padding:0 16px 20px}.d119-rental-grid2{grid-template-columns:1fr}.d119-rental-process{grid-template-columns:repeat(3,1fr);row-gap:14px}.d119-rental-trust{grid-template-columns:1fr}.d119-rental-fab{left:12px;right:12px;bottom:12px;width:calc(100% - 24px)}}"
     ].join("");
     document.head.appendChild(style);
   }
@@ -560,10 +587,28 @@
     return { days: days, rentTotal: rentTotal, depositTotal: depositTotal, unknown: unknown, buyWarning: buyWarning };
   }
 
+  // Marke nur voranstellen, wenn der Titel nicht schon damit beginnt -
+  // sonst hiess es "Alexander McQueen Alexander McQueen Jacke".
+  function itemName(item) {
+    var rawTitle = String(item && item.title || "").trim();
+    var brand = String(item && item.brand || "").trim();
+    if (!brand || rawTitle.toLowerCase().indexOf(brand.toLowerCase()) === 0) return rawTitle;
+    return (brand + " " + rawTitle).trim();
+  }
+
+  // Vorschaubild (220x293) statt Galeriebild: die Kachel ist hoechstens
+  // 88x117 Pixel gross, das Galeriebild 1200x1600.
+  function thumbPath(p) {
+    var raw = String(p).replace(/^\//, "");
+    var i = raw.lastIndexOf("/");
+    if (i >= 0 && raw.indexOf("/thumbs/") < 0) raw = raw.slice(0, i) + "/thumbs/" + raw.slice(i + 1);
+    return "/" + raw;
+  }
+
   function itemHtml(item, days) {
     var daily = dailyCents(item), dep = depositCents(item);
-    var img = item.gallery && item.gallery[0] ? "/" + String(item.gallery[0]).replace(/^\//, "") : "/assets/favicon.png";
-    var title = ((item.brand ? item.brand + " " : "") + (item.title || "")).trim();
+    var img = item.gallery && item.gallery[0] ? thumbPath(item.gallery[0]) : "/assets/favicon.png";
+    var title = itemName(item);
     var total = daily !== null && days ? daily * days : null;
     return '<div class="d119-rental-item" data-rental-v2-item="' + Number(item.id) + '">' +
       '<img src="' + esc(img) + '" alt="' + esc(title) + '">' +
@@ -581,6 +626,8 @@
     var title = overlay.querySelector("#d119RentalV2Title");
     var items = selectedItems();
     var quote = quoteSummary(items);
+    var dialog = overlay.querySelector(".d119-rental-v2");
+    if (dialog) dialog.classList.toggle("d119-rental-v2--empty", !items.length);
     if (title) title.textContent = t("basket") + " · " + fmt(t("selected"), { count: items.length });
     if (!items.length) {
       body.innerHTML = '<div class="d119-rental-v2__section"><strong>' + esc(t("empty")) + '</strong><p class="d119-rental-note">' + esc(t("emptyHint")) + '</p></div>' +
@@ -598,8 +645,10 @@
     var provisional = quote.unknown ? t("partialRequest") : money(quote.rentTotal + quote.depositTotal);
 
     body.innerHTML =
-      '<div class="d119-rental-v2__section"><details class="d119-rental-process-details"><summary>' + esc(t("processTitle")) + '</summary><div class="d119-rental-process">' + process + '</div><div class="d119-rental-trust" style="margin-top:16px">' + trust + '</div></details></div>' +
+      '<div class="d119-rental-v2__layout"><div class="d119-rental-v2__col d119-rental-v2__col--pieces">' +
       '<div class="d119-rental-v2__section"><h3>' + esc(fmt(t("selected"), { count: items.length })) + '</h3><div class="d119-rental-v2__items">' + itemRows + '</div><p class="d119-rental-note">' + esc(t("deposit")) + ': ' + esc(t("depositRule")) + ' · ' + esc(t("depositAuto")) + '.</p></div>' +
+      '<div class="d119-rental-v2__section"><details class="d119-rental-process-details"><summary>' + esc(t("processTitle")) + '</summary><div class="d119-rental-process">' + process + '</div><div class="d119-rental-trust" style="margin-top:16px">' + trust + '</div></details></div>' +
+      '</div><div class="d119-rental-v2__col d119-rental-v2__col--request">' +
       '<div class="d119-rental-v2__section"><h3>' + esc(t("period")) + '</h3><div class="d119-rental-grid2">' +
       '<div class="d119-rental-field"><label for="d119RentalStart">' + esc(t("start")) + '</label><input type="date" id="d119RentalStart" value="' + esc(state.start) + '"></div>' +
       '<div class="d119-rental-field"><label for="d119RentalEnd">' + esc(t("end")) + '</label><input type="date" id="d119RentalEnd" value="' + esc(state.end) + '"></div></div>' +
@@ -619,7 +668,8 @@
       '<p class="d119-rental-error" id="d119RentalBuyWarning">' + (quote.buyWarning ? esc(t("buyWarning")) : '') + '</p>' +
       '<p class="d119-rental-error" id="d119RentalAvailability" aria-live="polite">' + esc(SHOP_CONFIG.shopWorkerUrl ? t("availabilityChecking") : t("availabilityManual")) + '</p></div>' +
       '<div class="d119-rental-v2__section"><label class="d119-rental-terms"><input type="checkbox" id="d119RentalTerms"' + (state.termsAccepted ? ' checked' : '') + '><span>' + esc(t("terms")) + ' <a href="' + esc(RENTAL_PATH + '#mietbedingungen') + '" target="_blank" rel="noopener">' + esc(t("termsOpen")) + '</a></span></label>' +
-      '<p class="d119-rental-note">' + esc(t("noPayment")) + '</p><div class="d119-rental-actions" id="d119RentalActions"></div></div>';
+      '<p class="d119-rental-note">' + esc(t("noPayment")) + '</p><div class="d119-rental-actions" id="d119RentalActions"></div></div>' +
+      '</div></div>';
 
     bindOverlayControls();
     syncDateConstraints();
@@ -733,7 +783,7 @@
     var lines = [t("intro"), ""];
     items.forEach(function (item, index) {
       var daily = dailyCents(item), dep = depositCents(item), rent = daily !== null && days ? daily * days : null;
-      lines.push((index + 1) + ". " + ((item.brand ? item.brand + " " : "") + (item.title || "")).trim());
+      lines.push((index + 1) + ". " + itemName(item));
       lines.push("   Art.-Nr.: " + (item.article || item.id));
       lines.push("   URL: " + window.location.origin + HOME + "artikel/" + item.id + "/");
       lines.push("   " + t("rent") + ": " + (rent === null ? t("onRequest") : money(rent)) + (daily === null ? "" : " (" + money(daily) + " / " + (LANG === "de" ? "Tag" : LANG === "fr" ? "jour" : "day") + ")"));
