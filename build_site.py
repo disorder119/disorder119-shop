@@ -16,6 +16,7 @@ Nutzung: python build_site.py [--thumbs]
   separater, laengerer Bildverarbeitungsschritt (PIL) und muss nur einmal
   bzw. nach neuen Fotos erneut laufen, nicht bei jeder Textaenderung.
 """
+import datetime
 import hashlib
 import html
 import json
@@ -24,6 +25,10 @@ import sys
 from pathlib import Path
 
 BASE = Path(__file__).parent
+# Titel- und Beschreibungslogik ist mit scripts/repair_public_article_integrity.py
+# geteilt, das die Meta-Beschreibung nach dem Bauen erneut setzt.
+sys.path.insert(0, str(BASE / "scripts"))
+from seo_text import compose_description, seo_title  # noqa: E402
 SITE_URL = "https://disorder119.com/"
 DATA_PATH = BASE / "data" / "items.json"
 
@@ -374,6 +379,17 @@ def display_name(it):
     return (brand + " " + title).strip()
 
 
+def title_size(it, lang):
+    """Groesse fuer den Seitentitel - nur Konfektionsgroessen, keine Masse
+    wie "ca. 28 x 18 x 15.5 cm" und nichts Unbekanntes."""
+    raw = str(it.get("size") or "").strip()
+    if not raw or it.get("size_normalized") in ("Dimensions", "Unknown", None):
+        return ""
+    if "cm" in raw.lower() or len(raw) > 14:
+        return ""
+    return size_tr(raw, lang)
+
+
 def meta_description(it, lang):
     ph = META_PHRASES[lang]
     cat = cat_tr(it.get("category") or "", lang)
@@ -389,9 +405,10 @@ def meta_description(it, lang):
     if cond:
         tail.append(ph["condition_label"] + " " + cond)
     tail_str = ", ".join(tail)
-    if tail_str:
-        return name + " – " + tail_str + ph["tail_suffix"]
-    return name + ph["tail_suffix"]
+    prefix = (name + " – " + tail_str) if tail_str else name
+    eigener_text = {"de": it.get("desc_de") or it.get("desc"),
+                    "en": it.get("desc_en"), "fr": it.get("desc_fr")}[lang]
+    return compose_description(prefix, eigener_text, ph["tail_suffix"], name)
 
 
 def auto_description(it, lang):
@@ -621,6 +638,19 @@ def json_ld(it, lang):
             "availability": availability,
             "itemCondition": "https://schema.org/UsedCondition",
             "seller": {"@id": SITE_URL + "#store"},
+            # Laut AGB Abschnitt 6: 14 Tage Widerrufsrecht, die unmittelbaren
+            # Kosten der Ruecksendung traegt die Kundin bzw. der Kunde.
+            # Versandkosten fehlen hier bewusst: sie werden laut AGB
+            # individuell vereinbart, ein fester Preis nur im Schema waere
+            # fuer Kunden und Suchmaschinen irrefuehrend.
+            "hasMerchantReturnPolicy": {
+                "@type": "MerchantReturnPolicy",
+                "applicableCountry": "DE",
+                "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+                "merchantReturnDays": 14,
+                "returnMethod": "https://schema.org/ReturnByMail",
+                "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility",
+            },
         }
     return json.dumps(data, ensure_ascii=False)
 
@@ -667,7 +697,7 @@ def card_image(it):
 
 def build_page(it, shop_config, lang):
     name = display_name(it)
-    title_tag = name + " | Disorder119"
+    title_tag = seo_title(name, it.get("product_type"), title_size(it, lang), lang)
     desc = meta_description(it, lang)
     raw_body_desc = {
         "de": it.get("desc_de") or it.get("desc") or "",
@@ -1259,8 +1289,47 @@ def build_articles():
     print(f"{count} Produktseiten geschrieben ({len(ITEMS)} Artikel x {len(LANGS)} Sprachen).")
 
 
+LASTMOD_PATH = BASE / "data" / "sitemap-lastmod.json"
+_VERSION_PARAM = re.compile(r"\?v=[0-9a-f]+")
+
+
+def page_fingerprint(segment, item, lang, public_items):
+    """Fingerabdruck dessen, was eine Seite inhaltlich ausmacht.
+
+    Aendert er sich, bekommt die URL in der Sitemap das heutige Datum als
+    <lastmod>; sonst bleibt das gespeicherte Datum stehen. Ohne <lastmod> hat
+    Google kein Signal, welche Seiten neu oder geaendert sind - gemessen am
+    2026-09-16 waren nur rund 20 der ueber 700 Seiten im Index.
+    """
+    h = hashlib.sha1()
+    if item is not None:
+        h.update(json.dumps(item, sort_keys=True, ensure_ascii=False).encode("utf-8"))
+        for rel in item.get("gallery") or []:
+            datei = BASE / rel
+            groesse = datei.stat().st_size if datei.is_file() else -1
+            h.update(f"{rel}:{groesse}".encode("utf-8"))
+    elif segment == "":
+        # Die Startseite zeigt den oeffentlichen Katalog.
+        for it in public_items:
+            erstes = (it.get("gallery") or [""])[0]
+            h.update(f"{it['id']}|{it.get('price')}|{it.get('public_status')}|{erstes}".encode("utf-8"))
+    else:
+        datei = BASE / lang_home(lang).strip("/") / segment / "index.html"
+        text = datei.read_text(encoding="utf-8", errors="replace") if datei.is_file() else ""
+        # Versionsparameter der Assets aendern sich bei jeder CSS-/JS-Aenderung,
+        # ohne dass sich der Seiteninhalt aendert.
+        h.update(_VERSION_PARAM.sub("", text).encode("utf-8"))
+    return h.hexdigest()
+
+
 def build_sitemap():
     public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
+    heute = datetime.date.today().isoformat()
+    try:
+        alt_stand = json.loads(LASTMOD_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        alt_stand = {}
+    neu_stand = {}
     indexable_specials = [
         slug for slug in SPECIAL_PAGES
         if slug not in {"cart", "match", "chaos", "baukasten"}
@@ -1285,7 +1354,13 @@ def build_sitemap():
                 image_nodes.append(f"    <image:image><image:loc>{loc}</image:loc></image:image>")
             if image_nodes:
                 images = "\n" + "\n".join(image_nodes)
-        return f"  <url>\n    <loc>{urls_by_lang[lang]}</loc>\n{alt}{images}\n  </url>"
+        loc = urls_by_lang[lang]
+        fp = page_fingerprint(segment, item, lang, public_items)
+        vorher = alt_stand.get(loc) or {}
+        lastmod = vorher["lastmod"] if vorher.get("fp") == fp and vorher.get("lastmod") else heute
+        neu_stand[loc] = {"fp": fp, "lastmod": lastmod}
+        return (f"  <url>\n    <loc>{loc}</loc>\n    <lastmod>{lastmod}</lastmod>\n"
+                f"{alt}{images}\n  </url>")
 
     entries = [url_entry(lang, seg, item) for seg, item in page_specs for lang in LANGS]
     body = "\n".join(entries)
@@ -1297,6 +1372,10 @@ def build_sitemap():
         f"{body}\n</urlset>\n"
     )
     (BASE / "sitemap.xml").write_text(xml, encoding="utf-8")
+    LASTMOD_PATH.write_text(
+        json.dumps(neu_stand, ensure_ascii=False, indent=1, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     print(f"sitemap.xml geschrieben ({len(entries)} indexierbare URLs, inklusive Produktbildern).")
 
 
