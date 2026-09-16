@@ -1789,7 +1789,13 @@
 
       var hero = it.gallery && it.gallery[0];
       var mobileGridImage = it.grid_image || hero;
-      var imgSrc = assetUrl(hero || "");
+      // Die Kachel wird mit rund 299x398 dargestellt (gemessen bei 1024 px
+      // Fensterbreite). Das <source> unten liefert nur bis 600 px Breite ein
+      // Vorschaubild; darueber lud das <img> bisher die volle Datei mit
+      // 1800x2400 - allein im ersten Bildschirm 5,3 MB. Die Anzeigefassung
+      // (display, lange Kante 960 px) deckt auch hohe Pixeldichten ab und
+      // liegt zu jedem ersten Galeriebild vor (geprueft: 238 von 238).
+      var imgSrc = displayUrl(hero || "");
       var mobileImgSrc = assetUrl(mobileGridImage || hero || "");
 
       var altText = escapeHtml(productAltText(it));
