@@ -27,25 +27,38 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          commit_json="$(curl -fsSL \
+          # Die Antwort enthaelt die vollstaendige Dateiliste des Commits samt
+          # Diffs. Als Kommandozeilenargument sprengt sie bei groesseren
+          # Commits das Kernel-Limit fuer ein einzelnes Argument: python
+          # startet dann gar nicht ("Argument list too long", exit 126), der
+          # Schritt gilt als fehlgeschlagen, und der Self-Heal-Job macht einen
+          # regulaer gemergten Pull Request rueckgaengig. Gemessen am
+          # 2026-09-16: 120114 Bytes bestanden, 123889 Bytes scheiterten -
+          # rund 150 geaenderte Dateien reichen also schon. Deshalb landen
+          # beide Antworten in Dateien und werden von dort gelesen. Die
+          # Pruefung selbst bleibt unveraendert.
+          commit_json_file="${RUNNER_TEMP:-/tmp}/provenance-commit.json"
+          prs_json_file="${RUNNER_TEMP:-/tmp}/provenance-pulls.json"
+          curl -fsSL \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$REPO/commits/$SHA")"
+            "https://api.github.com/repos/$REPO/commits/$SHA" -o "$commit_json_file"
 
           # GitHub can expose a freshly squash-merged commit before the
           # commit->pulls association has finished indexing. Retry that one
           # eventual-consistency edge instead of self-healing a legitimate PR.
-          prs_json="[]"
+          echo "[]" > "$prs_json_file"
           for attempt in $(seq 1 12); do
-            prs_json="$(curl -fsSL \
+            curl -fsSL \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/$REPO/commits/$SHA/pulls")"
-            if python - "$prs_json" "$SHA" <<'PY'
+              "https://api.github.com/repos/$REPO/commits/$SHA/pulls" -o "$prs_json_file"
+            if python - "$prs_json_file" "$SHA" <<'PY'
           import json, sys
-          prs = json.loads(sys.argv[1])
+          with open(sys.argv[1], encoding="utf-8") as fh:
+              prs = json.load(fh)
           sha = sys.argv[2]
           approved = [
               pr for pr in prs
@@ -64,10 +77,12 @@ jobs:
             fi
           done
 
-          python - "$commit_json" "$prs_json" "$SHA" <<'PY'
+          python - "$commit_json_file" "$prs_json_file" "$SHA" <<'PY'
           import json, sys
-          commit = json.loads(sys.argv[1])
-          prs = json.loads(sys.argv[2])
+          with open(sys.argv[1], encoding="utf-8") as fh:
+              commit = json.load(fh)
+          with open(sys.argv[2], encoding="utf-8") as fh:
+              prs = json.load(fh)
           sha = sys.argv[3]
           approved_prs = [
               pr for pr in prs
