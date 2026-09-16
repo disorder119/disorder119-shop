@@ -64,7 +64,14 @@ def main() -> None:
 
     # UI enhancement: explicit plus picker, selection rail and rental-card affordance.
     require(v2_ui, "d119-rental-set-add", "Plus-Kachel fuer weitere Mietartikel")
-    require(v2_ui, "d119-rental-add-side", "seitliches Plus im Mietfenster")
+    # Mittiges Fenster (2026-09-17): der schwebende Plus-Knopf neben der
+    # frueheren rechten Leiste entfaellt, die Plus-Kachel oben und der
+    # Inline-Button bleiben.
+    require(v2, "RENTAL_DIALOG_CENTERED", "mittiges Mietfenster")
+    require(v2, "d119-rental-v2__col--request", "Anfrage-Spalte im Mietfenster")
+    require(v2, "RENTAL_DIALOG_TOKENS", "Seitenfarben im Mietfenster")
+    if "justify-content:flex-end" in v2:
+        fail("Rental-Frontend: Mietfenster klebt wieder am rechten Rand.")
     require(v2_ui, "d119-rental-add-inline", "Inline-Button fuer weitere Artikel")
     require(v2_ui, "d119-rental-set-thumb", "sichtbare Multi-Item-Auswahlleiste")
     require(v2_ui, "d119-rental-card-add", "Plus-Kennzeichnung im Mietkatalog")
