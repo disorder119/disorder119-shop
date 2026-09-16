@@ -1066,6 +1066,12 @@ def initial_archive_card_html(it, lang):
     gallery = it.get("gallery") or []
     original = gallery[0] if gallery else ""
     mobile = grid_thumb_path(it)
+    # Die Kachel wird mit rund 299x398 dargestellt. Das <source> unten greift
+    # nur bis 600 px Fensterbreite; darueber lud das <img> bisher die volle
+    # Datei mit 1800x2400 und bis zu 2 MiB. Die Anzeigefassung (960 px lange
+    # Kante) reicht auch bei hoher Pixeldichte deutlich aus.
+    desktop_kandidat = display_path(original) if original else ""
+    desktop = desktop_kandidat if (desktop_kandidat and (BASE / desktop_kandidat).is_file()) else original
     size_raw = it.get("size_normalized")
     if not size_raw or size_raw == "Unknown":
         size_raw = it.get("size") or ""
@@ -1078,11 +1084,11 @@ def initial_archive_card_html(it, lang):
     picture = ""
     if original:
         source = ""
-        if mobile and mobile != original:
+        if mobile and mobile != desktop:
             source = '<source media="(max-width: 600px)" srcset="/' + esc(mobile) + '">'
         picture = (
             '<picture>' + source
-            + '<img src="/' + esc(original) + '" alt="' + esc(initial_archive_alt(it))
+            + '<img src="/' + esc(desktop) + '" alt="' + esc(initial_archive_alt(it))
             + '" loading="eager" fetchpriority="high" decoding="sync">'  # FOCUS3_MEASURED_LCP_FOLLOWUP
             + '</picture>'
         )
@@ -1105,11 +1111,24 @@ def initial_archive_grid_html(lang):
 
 
 def initial_archive_preloads():
+    # Je Kachel zwei Vorlade-Angaben mit media-Bedingung: schmale Bildschirme
+    # bekommen das Vorschaubild, breitere die Anzeigefassung - also genau die
+    # Datei, die das <picture> dort auch verwendet. Vorher wurde nur das
+    # Vorschaubild vorgeladen; am Desktop blieb dieser Download ungenutzt und
+    # das Vollbild kam zusaetzlich obendrauf.
     links = []
     for it in initial_archive_items(2):
-        path = grid_thumb_path(it)
-        if path:
-            links.append('<link rel="preload" as="image" href="/' + esc(path) + '" fetchpriority="high">')
+        mobil = grid_thumb_path(it)
+        gallery = it.get("gallery") or []
+        original = gallery[0] if gallery else ""
+        kandidat = display_path(original) if original else ""
+        breit = kandidat if (kandidat and (BASE / kandidat).is_file()) else original
+        if mobil:
+            links.append('<link rel="preload" as="image" href="/' + esc(mobil)
+                         + '" media="(max-width: 600px)" fetchpriority="high">')
+        if breit:
+            links.append('<link rel="preload" as="image" href="/' + esc(breit)
+                         + '" media="(min-width: 601px)" fetchpriority="high">')
     return "\n".join(links)
 
 
