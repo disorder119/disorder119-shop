@@ -444,7 +444,14 @@ def related_card_html(x, lang):
     return (
         '<a class="related-card" href="' + href + '">'
         '<div class="related-card__frame">'
-        '<img src="/' + esc(x["gallery"][0]) + '" alt="' + esc(display_name(x)) + '" loading="lazy" decoding="async" />' +
+        # Die Karte zeigt das Bild in einem 3:4-Rahmen von rund 140-200 px
+        # Breite. Dafuer das volle Galeriebild (bis 2400 px, bis 2 MiB) zu
+        # laden kostete auf der gemessenen Produktseite 915 KB fuer zwei
+        # briefmarkengrosse Kacheln - mehr als das Dreifache des eigentlichen
+        # Hauptbilds - und verzoegerte dessen Ladestart um 1892 ms. Das
+        # ohnehin vorhandene Vorschaubild (220x293) hat genau die richtige
+        # Groesse. width/height reservieren zusaetzlich den Platz.
+        '<img src="/' + esc(card_image(x)) + '" alt="' + esc(display_name(x)) + '" loading="lazy" decoding="async" width="220" height="293" />' +
         (price_html if sold else "") +
         "</div>"
         '<span class="related-card__brand">' + esc(x.get("brand") or ph["no_brand"]) + "</span>"
@@ -645,6 +652,17 @@ def display_path(p):
     if len(parts) != 2:
         return p
     return parts[0] + "/display/" + parts[1]
+
+def card_image(it):
+    """Kleinste vorhandene Fassung des Titelbilds fuer Karten und Kacheln."""
+    gallery = it.get("gallery") or []
+    if not gallery:
+        return "assets/favicon.png"
+    for kandidat in (thumb_path(gallery[0]), display_path(gallery[0])):
+        if (BASE / kandidat).is_file():
+            return kandidat
+    return gallery[0]
+
 
 
 def build_page(it, shop_config, lang):
