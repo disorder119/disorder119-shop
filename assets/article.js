@@ -239,10 +239,24 @@
   var thumbs = (IT.thumbs && IT.thumbs.length === gallery.length ? IT.thumbs : IT.gallery || [])
     .map(function (p) { return "/" + p; });
 
+  // Der Server liefert als Hauptbild bereits die kleine Anzeigefassung
+  // (assets/img/<ordner>/display/0.webp, rund 44 KB statt 267 KB) und laedt
+  // sie per <link rel="preload"> vor. Wuerde showPhoto(0) beim Start sofort
+  // das volle Galeriebild setzen, laedt der Browser beide Dateien und misst
+  // das LCP weiterhin am grossen Bild - die Vorschau brachte dann nichts,
+  // sondern kostete zusaetzliche Arbeit. Deshalb bleibt beim ersten Aufruf
+  // stehen, was im HTML steht; auf die volle Aufloesung wird erst nach dem
+  // Laden der Seite gewechselt (siehe unten).
+  var ersterAufruf = true;
+
   function showPhoto(i) {
     if (!gallery.length) return;
     idx = ((i % gallery.length) + gallery.length) % gallery.length;
-    mainImg.src = gallery[idx];
+    if (ersterAufruf) {
+      ersterAufruf = false;
+    } else {
+      mainImg.src = gallery[idx];
+    }
     if (counterEl) counterEl.textContent = (idx + 1) + " / " + gallery.length;
     if (thumbsEl) {
       Array.prototype.forEach.call(thumbsEl.children, function (t2, ti) {
@@ -476,6 +490,28 @@
   }
 
   showPhoto(0);
+
+  // Nach dem Seitenaufbau auf die volle Aufloesung wechseln, damit auf
+  // grossen Bildschirmen nichts an Schaerfe verloren geht. Das geschieht
+  // bewusst erst nach "load" und im Leerlauf - zu diesem Zeitpunkt ist das
+  // LCP laengst gemessen, der Nachladevorgang kostet die Kennzahl nichts.
+  function heroInVollaufloesung() {
+    if (!gallery.length || idx !== 0) return;
+    var voll = gallery[0];
+    if (mainImg.getAttribute("src") === voll) return;
+    var vorlader = new Image();
+    vorlader.onload = function () {
+      if (idx === 0) mainImg.src = voll;
+    };
+    vorlader.src = voll;
+  }
+  function nachLaden() {
+    if (window.requestIdleCallback) window.requestIdleCallback(heroInVollaufloesung, { timeout: 3000 });
+    else setTimeout(heroInVollaufloesung, 1200);
+  }
+  if (document.readyState === "complete") nachLaden();
+  else window.addEventListener("load", nachLaden, { once: true });
+
   applyLang();
 })();
 
