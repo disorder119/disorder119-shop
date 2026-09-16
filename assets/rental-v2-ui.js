@@ -68,6 +68,13 @@
   }
   function firstImage(item) {
     var raw = item && item.gallery && item.gallery[0] ? String(item.gallery[0]) : "assets/favicon.png";
+    // Kachelgroesse, nicht Galeriegroesse: zu jedem Galeriebild liegt ein
+    // Vorschaubild (220x293) neben der Datei. Ohne das wurden hier
+    // 1800x2400-Dateien fuer briefmarkengrosse Kacheln geladen.
+    var i = raw.lastIndexOf("/");
+    if (i >= 0 && raw.indexOf("/thumbs/") < 0) {
+      raw = raw.slice(0, i) + "/thumbs/" + raw.slice(i + 1);
+    }
     return "/" + raw.replace(/^\//, "");
   }
   function itemTitle(item) {

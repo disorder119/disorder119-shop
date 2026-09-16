@@ -847,6 +847,22 @@
   // das funktioniert unabhaengig davon, auf welcher Seite/Tiefe er verwendet wird.
   function assetUrl(p) { return p ? "/" + String(p).replace(/^\/+/, "") : ""; }
 
+  // Kleine Kacheln brauchen keine 1800x2400-Datei. Gemessen im Baukasten:
+  // der Auswahldialog lud 42 Galeriebilder in voller Aufloesung, zusammen
+  // 21,4 MB, und stellte sie mit 124x166 Pixeln dar - rund 200-mal mehr
+  // Pixel als noetig. Zu jedem Galeriebild erzeugt der Fotoimport ein
+  // Vorschaubild (thumbs, 220x293); zum jeweils ersten Bild eines Artikels
+  // zusaetzlich eine Anzeigefassung (display, lange Kante 960 px).
+  function variantUrl(p, ordner) {
+    if (!p) return "";
+    var roh = String(p).replace(/^\/+/, "");
+    var i = roh.lastIndexOf("/");
+    if (i < 0) return assetUrl(roh);
+    return assetUrl(roh.slice(0, i) + "/" + ordner + "/" + roh.slice(i + 1));
+  }
+  function thumbUrl(p) { return variantUrl(p, "thumbs"); }
+  function displayUrl(p) { return variantUrl(p, "display"); }
+
   // ---- Warenkorb ----
   var CART_KEY = "disorder119_cart";
   var cart = loadCart();
@@ -1013,7 +1029,7 @@
       var it = findItem(id);
       if (!it) return "";
       if (it.price > 0) total += it.price; else hasUnknownPrice = true;
-      var hero = assetUrl(it.gallery && it.gallery[0] ? it.gallery[0] : "");
+      var hero = thumbUrl(it.gallery && it.gallery[0] ? it.gallery[0] : "");
       return '<div class="cart-line">' +
         '<div class="cart-line__frame">' + (hero ? '<img src="' + hero + '" alt="" loading="lazy" />' : "") + "</div>" +
         '<div class="cart-line__body">' +
@@ -2684,7 +2700,7 @@
       btn.style.setProperty("--rot0", (Math.random() * 18 - 9).toFixed(1) + "deg");
       btn.style.setProperty("--rot1", (Math.random() * 18 - 9).toFixed(1) + "deg");
       btn.setAttribute("aria-label", it.title);
-      btn.innerHTML = '<img src="' + assetUrl(it.gallery[0]) + '" alt="" loading="lazy" />';
+      btn.innerHTML = '<img src="' + thumbUrl(it.gallery[0]) + '" alt="" loading="lazy" />';
       btn.addEventListener("click", function () {
         // Frueher stand hier zusaetzlich showClassic() vor openModal() - das
         // war harmlos, solange Moduswechsel nur lokale Zustaende umschalteten.
@@ -2980,7 +2996,7 @@
         var it = slot.item;
         slotAriaLabel = outfitSlotLabel(key) + ": " + it.title + ", " + fmtPrice(it.price);
         row.innerHTML =
-          '<div class="outfit-slot__frame" data-slot="' + key + '"><img src="' + assetUrl(it.gallery[0]) + '" alt="" /></div>' +
+          '<div class="outfit-slot__frame" data-slot="' + key + '"><img src="' + thumbUrl(it.gallery[0]) + '" alt="" /></div>' +
           '<div class="outfit-slot__body" data-slot="' + key + '">' +
             '<div class="outfit-slot__label">' + outfitSlotLabel(key) + "</div>" +
             '<div class="outfit-slot__value">' + escapeHtml(it.title) + "</div>" +
@@ -3057,7 +3073,7 @@
     // uebereinandergelegt werden, sondern als eigene Reihe in einer Spalte
     // stehen (siehe Kommentar bei .look-card in app.css).
     function setCard(cardEl, item) {
-      var src = assetUrl(item && (item.look || (item.gallery && item.gallery[0])) ? (item.look || item.gallery[0]) : "");
+      var src = displayUrl(item && (item.look || (item.gallery && item.gallery[0])) ? (item.look || item.gallery[0]) : "");
       var imgEl = cardEl.querySelector("img");
       if (src) {
         if (imgEl.getAttribute("src") !== src) imgEl.src = src;
@@ -3102,7 +3118,7 @@
       btn.type = "button";
       btn.className = "outfit-picker__item" + (slot.item && slot.item.id === it.id ? " outfit-picker__item--active" : "");
       btn.innerHTML =
-        '<div class="outfit-picker__item-frame"><img src="' + assetUrl(it.gallery[0]) + '" alt="" loading="lazy" /></div>' +
+        '<div class="outfit-picker__item-frame"><img src="' + thumbUrl(it.gallery[0]) + '" alt="" loading="lazy" /></div>' +
         '<div class="outfit-picker__item-title">' + escapeHtml(it.title) + "</div>" +
         '<div class="outfit-picker__item-price">' + fmtPrice(it.price) + "</div>";
       btn.addEventListener("click", function () {
