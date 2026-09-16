@@ -118,23 +118,6 @@ def fmt_price(value: float) -> str:
     return s + " €"
 
 
-def card_image(gallery: list) -> str:
-    """Kleinste vorhandene Fassung des Titelbilds fuer die Kacheln.
-
-    Muss mit build_site.card_image uebereinstimmen: dieses Skript erzeugt die
-    "Mehr von"-Karten nach dem Bauen noch einmal und wuerde sonst das volle
-    Galeriebild (bis 2400 px, bis 2 MiB) zuruecksetzen. Gemessen kostete das
-    auf einer Produktseite 915 KB fuer zwei briefmarkengrosse Kacheln.
-    """
-    if not gallery:
-        return "assets/favicon.png"
-    kopf, _, datei = gallery[0].rpartition("/")
-    for kandidat in (f"{kopf}/thumbs/{datei}", f"{kopf}/display/{datei}"):
-        if (BASE / kandidat).is_file():
-            return kandidat
-    return gallery[0]
-
-
 def related_card(item: dict, lang: str) -> str:
     sold = item.get("public_status") == "SOLD"
     if sold:
@@ -149,11 +132,11 @@ def related_card(item: dict, lang: str) -> str:
         )
     prefix = "/" if lang == "de" else f"/{lang}/"
     gallery = item.get("gallery") or []
-    hero = card_image(gallery)
+    hero = gallery[0]
     return (
         f'<a class="related-card" href="{prefix}artikel/{item["id"]}/">'
         '<div class="related-card__frame">'
-        f'<img src="/{html.escape(hero, quote=True)}" alt="{html.escape(display_name(item), quote=True)}" loading="lazy" decoding="async" width="220" height="293" />'
+        f'<img src="/{html.escape(hero, quote=True)}" alt="{html.escape(display_name(item), quote=True)}" loading="lazy" decoding="async" />'
         + price + "</div>"
         f'<span class="related-card__brand">{html.escape(item.get("brand") or "")}</span>'
         f'<span class="related-card__title">{html.escape(item.get("title") or "")}</span>'

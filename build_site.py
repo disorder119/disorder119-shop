@@ -444,14 +444,7 @@ def related_card_html(x, lang):
     return (
         '<a class="related-card" href="' + href + '">'
         '<div class="related-card__frame">'
-        # Die Karte zeigt das Bild in einem 3:4-Rahmen von rund 140-200 px
-        # Breite. Dafuer das volle Galeriebild (bis 2400 px, bis 2 MiB) zu
-        # laden kostete auf der gemessenen Produktseite 915 KB fuer zwei
-        # briefmarkengrosse Kacheln - mehr als das Dreifache des eigentlichen
-        # Hauptbilds - und verzoegerte dessen Ladestart um 1892 ms. Das
-        # ohnehin vorhandene Vorschaubild (220x293) hat genau die richtige
-        # Groesse. width/height reservieren zusaetzlich den Platz.
-        '<img src="/' + esc(card_image(x)) + '" alt="' + esc(display_name(x)) + '" loading="lazy" decoding="async" width="220" height="293" />' +
+        '<img src="/' + esc(x["gallery"][0]) + '" alt="' + esc(display_name(x)) + '" loading="lazy" decoding="async" />' +
         (price_html if sold else "") +
         "</div>"
         '<span class="related-card__brand">' + esc(x.get("brand") or ph["no_brand"]) + "</span>"
@@ -647,24 +640,6 @@ def thumb_path(p):
     return parts[0] + "/thumbs/" + parts[1]
 
 
-def display_path(p):
-    parts = p.rsplit("/", 1)
-    if len(parts) != 2:
-        return p
-    return parts[0] + "/display/" + parts[1]
-
-def card_image(it):
-    """Kleinste vorhandene Fassung des Titelbilds fuer Karten und Kacheln."""
-    gallery = it.get("gallery") or []
-    if not gallery:
-        return "assets/favicon.png"
-    for kandidat in (thumb_path(gallery[0]), display_path(gallery[0])):
-        if (BASE / kandidat).is_file():
-            return kandidat
-    return gallery[0]
-
-
-
 def build_page(it, shop_config, lang):
     name = display_name(it)
     title_tag = name + " | Disorder119"
@@ -677,8 +652,6 @@ def build_page(it, shop_config, lang):
     body_desc = raw_body_desc.strip() or auto_description(it, lang)
     gallery = it.get("gallery") or []
     hero = gallery[0] if gallery else "assets/favicon.png"
-    hero_display_candidate = display_path(hero)
-    hero_display = hero_display_candidate if (BASE / hero_display_candidate).is_file() else hero
     home = lang_home(lang)
     canonical = SITE_URL.rstrip("/") + home + "artikel/" + str(it["id"]) + "/"
     hreflang_links = "\n".join(
@@ -761,7 +734,7 @@ def build_page(it, shop_config, lang):
 <link rel="canonical" href="{canonical}">
 {hreflang_links}
 <link rel="icon" type="image/png" href="/assets/favicon.png">
-<link rel="preload" as="image" href="/{esc(hero_display)}" fetchpriority="high">
+<link rel="preload" as="image" href="/{esc(hero)}" fetchpriority="high">
 <style>{PRODUCT_CRITICAL_CSS}</style>
 <link rel="preload" as="style" href="/assets/article.css?v={ARTICLE_CSS_VERSION}" onload="this.onload=null;this.rel='stylesheet'">
 <link id="d119-product-page-v4" rel="preload" as="style" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}" onload="this.onload=null;this.rel='stylesheet'">
@@ -806,8 +779,8 @@ def build_page(it, shop_config, lang):
 <div class="product">
   <div class="gallery">
     <div class="gallery__stage">
-{'      <span class="gallery__badge">SOLD</span>' if sold else ""}
-      <img id="galleryMain" src="/{esc(hero_display)}" alt="{esc(name)}" fetchpriority="high" decoding="sync">
+      {'<span class="gallery__badge">SOLD</span>' if sold else ""}
+      <img id="galleryMain" src="/{esc(hero)}" alt="{esc(name)}" fetchpriority="high" decoding="sync">
       <button type="button" class="gallery__nav gallery__nav--prev" id="galleryPrev" data-i18n-aria="prevPhotoAria" aria-label="Vorheriges Foto">‹</button>
       <button type="button" class="gallery__nav gallery__nav--next" id="galleryNext" data-i18n-aria="nextPhotoAria" aria-label="Nächstes Foto">›</button>
       <span class="gallery__counter" id="galleryCounter">1 / {max(len(gallery), 1)}</span>
@@ -1293,7 +1266,6 @@ CATALOG_FIELDS = [
     "id", "article", "title", "brand", "price", "price_estimated",
     "public_status", "status", "category", "size", "color", "condition",
     "brightness", "gallery", "look",
-    "department", "product_type", "taxonomy_category", "size_normalized",
     # Optionaler, fester Mietpreis (siehe /mieten/) - branchenueblich zeigt
     # kein Vermieter dem Kunden eine Berechnung/Formel, sondern legt pro
     # Stueck einen festen Preis fest (Vorbild: Rent the Runway, By Rotation).
