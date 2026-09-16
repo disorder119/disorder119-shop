@@ -12,7 +12,15 @@ import html
 import json
 import re
 import shutil
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+# Gemeinsame Beschreibungslogik mit build_site.py. Frueher gab es hier eine
+# eigene Kopie; weil dieses Skript die Meta-Beschreibung nach dem Bauen
+# erneut setzt, hat es jede Aenderung am Generator stillschweigend
+# ueberschrieben.
+from seo_text import compose_description  # noqa: E402
 
 BASE = Path(__file__).resolve().parents[1]
 ITEMS_PATH = BASE / "data" / "items.json"
@@ -94,7 +102,10 @@ def meta_description(item: dict, lang: str) -> str:
         parts.append(ph["size"] + " " + tr(SIZE_TR, str(item["size"]), lang))
     if item.get("condition"):
         parts.append(ph["condition"] + " " + tr(CONDITION_TR, str(item["condition"]), lang))
-    return name + ((" – " + ", ".join(parts)) if parts else "") + ph["suffix"]
+    prefix = name + ((" – " + ", ".join(parts)) if parts else "")
+    eigener_text = {"de": item.get("desc_de") or item.get("desc"),
+                    "en": item.get("desc_en"), "fr": item.get("desc_fr")}[lang]
+    return compose_description(prefix, eigener_text, ph["suffix"], name)
 
 
 def article_dir(lang: str, item_id: int) -> Path:
