@@ -17,6 +17,11 @@ jobs:
           ls -lh assets/img/b2-241/{0,1,2,3,4,5,6}.webp
           file assets/img/b2-241/{0,1,2,3,4,5,6}.webp
 
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+
       - name: Generate original demo beat
         run: |
           python3 - <<'PY'
