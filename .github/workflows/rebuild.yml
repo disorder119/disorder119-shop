@@ -247,6 +247,9 @@ jobs:
       - name: Focus-3 Mobile und Produktdaten >9 pruefen
         run: python scripts/validate_focus_three.py
 
+      - name: Hover-Bild der Katalogkacheln pruefen
+        run: python scripts/validate_katalog_hover.py
+
       - name: Audit Zero-Hit-Facets pruefen
         run: python scripts/validate_audit_perfection.py --section facets
 
