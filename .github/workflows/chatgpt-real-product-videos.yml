@@ -1,0 +1,287 @@
+name: ChatGPT Real Product Videos
+
+on:
+  push:
+    branches:
+      - chatgpt-real-product-videos-20260917
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact repository assets
+        uses: actions/checkout@v4
+
+      - name: Install renderer dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+          python -m pip install --upgrade pip
+          python -m pip install pillow numpy
+
+      - name: Render three real product videos
+        shell: bash
+        run: |
+          cat > /tmp/render_real_products.py <<'PY'
+          import json, os, math, wave, subprocess, textwrap
+          from pathlib import Path
+          import numpy as np
+          from PIL import Image, ImageDraw, ImageFont, ImageOps
+
+          ROOT = Path.cwd()
+          OUT = ROOT / 'rendered-real-products'
+          FRAMES = OUT / 'frames'
+          OUT.mkdir(exist_ok=True)
+          FRAMES.mkdir(exist_ok=True)
+
+          W, H = 1080, 1920
+          FPS = 30
+          DURATION = 15.0
+          SAFE_BOTTOM = 1680
+
+          with open(ROOT / 'data/catalog.json', 'r', encoding='utf-8') as f:
+              catalog = json.load(f)
+
+          wanted = {
+              '2241': {'slug':'jean-paul-gaultier-marbled-denim', 'bpm':146, 'seed':1191, 'bass':46},
+              '2240': {'slug':'hysteric-glamour-pop-up-toaster', 'bpm':152, 'seed':1192, 'bass':50},
+              '2239': {'slug':'yohji-yamamoto-cat-eye-sunglasses', 'bpm':142, 'seed':1193, 'bass':43},
+          }
+
+          items = {}
+          for rec in catalog:
+              art = str(rec.get('article',''))
+              if art in wanted:
+                  items[art] = rec
+
+          missing = [k for k in wanted if k not in items]
+          if missing:
+              raise RuntimeError(f'Missing catalog articles: {missing}')
+
+          font_bold = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+          font_reg = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
+
+          def font(path, size):
+              return ImageFont.truetype(path, size)
+
+          F_LOGO = font(font_bold, 104)
+          F_ARCHIVE = font(font_reg, 28)
+          F_BRAND = font(font_bold, 55)
+          F_TITLE = font(font_bold, 38)
+          F_PRICE = font(font_bold, 108)
+          F_SIZE = font(font_bold, 28)
+          F_MICRO = font(font_reg, 24)
+          F_SMALL = font(font_reg, 20)
+
+          def fit_text(draw, text, x, y, max_width, start_size, min_size=24, bold=True):
+              path = font_bold if bold else font_reg
+              size = start_size
+              while size >= min_size:
+                  f = font(path, size)
+                  box = draw.textbbox((0,0), text, font=f)
+                  if box[2] - box[0] <= max_width:
+                      draw.text((x,y), text, font=f, fill='white')
+                      return f
+                  size -= 2
+              f = font(path, min_size)
+              draw.text((x,y), text, font=f, fill='white')
+              return f
+
+          def contain_product(src, max_w, max_h):
+              src = src.convert('RGBA')
+              sw, sh = src.size
+              scale = min(max_w/sw, max_h/sh)
+              nw, nh = max(1,int(sw*scale)), max(1,int(sh*scale))
+              return src.resize((nw,nh), Image.Resampling.LANCZOS)
+
+          def draw_pill(draw, x, y, text):
+              box = draw.textbbox((0,0), text, font=F_SIZE)
+              tw, th = box[2]-box[0], box[3]-box[1]
+              px, py = 22, 13
+              draw.rounded_rectangle((x,y,x+tw+2*px,y+th+2*py), radius=24, fill='white')
+              draw.text((x+px,y+py-2), text, font=F_SIZE, fill='black')
+
+          def render_still(rec, img_path, shot_i, shot_n, out_path):
+              canvas = Image.new('RGB', (W,H), 'black')
+              draw = ImageDraw.Draw(canvas)
+
+              # Oversized site-style branding
+              draw.text((42,20), 'DISORDER119', font=F_LOGO, fill='white')
+              draw.line((44,148,1035,148), fill=(190,190,190), width=2)
+              draw.text((45,172), 'CURATED ARCHIVE', font=F_ARCHIVE, fill=(210,210,210))
+              draw.text((831,172), 'AVAILABLE', font=F_ARCHIVE, fill=(210,210,210))
+
+              brand = str(rec.get('brand') or '').upper()
+              title = str(rec.get('title') or '').upper()
+              # remove brand prefix from title if repeated
+              if title.startswith(brand):
+                  title_short = title[len(brand):].strip(' -–—')
+              else:
+                  title_short = title
+
+              fit_text(draw, brand, 45, 230, 990, 58, 38, True)
+              fit_text(draw, title_short, 45, 302, 990, 39, 26, True)
+
+              price = rec.get('price')
+              price_text = f'{int(price) if float(price).is_integer() else price:g} €' if isinstance(price,(int,float)) else f'{price} €'
+              draw.text((45,365), price_text, font=F_PRICE, fill='white')
+
+              size = str(rec.get('size_normalized') or rec.get('size') or '').strip()
+              if size and size.lower() not in ('unknown','none','nan'):
+                  pill = f'SIZE {size}' if rec.get('category') != 'Accessories' or rec.get('product_type') not in ('Toaster',) else size
+                  draw_pill(draw, 660, 400, pill.upper())
+
+              # Product image: exact repository original, no generative modification, no zoom animation.
+              src = Image.open(img_path).convert('RGBA')
+              product = contain_product(src, 980, 1030)
+              px = (W-product.width)//2
+              py = 545 + max(0,(1000-product.height)//2)
+              # Ensure product stays above bottom TikTok UI safe zone
+              if py + product.height > 1570:
+                  py = 1570 - product.height
+              canvas_rgba = canvas.convert('RGBA')
+              canvas_rgba.alpha_composite(product, (px,py))
+              canvas = canvas_rgba.convert('RGB')
+              draw = ImageDraw.Draw(canvas)
+
+              # Minimal site-like microcopy and shot counter, all above safe zone.
+              draw.line((45,1580,1035,1580), fill=(70,70,70), width=1)
+              draw.text((45,1600), f'{shot_i:02d}/{shot_n:02d}', font=F_MICRO, fill=(210,210,210))
+              dept = str(rec.get('department') or '').upper()
+              typ = str(rec.get('product_type') or rec.get('category') or '').upper()
+              draw.text((160,1600), f'{dept}  /  {typ}', font=F_SMALL, fill=(145,145,145))
+              draw.text((820,1600), 'DISORDER119.COM', font=F_SMALL, fill=(145,145,145))
+
+              # Safe bottom stays pure black / text-free
+              draw.rectangle((0,SAFE_BOTTOM,W,H), fill='black')
+              canvas.save(out_path, quality=96)
+
+          def synth_audio(path, bpm, seed, bass_root):
+              sr = 44100
+              n = int(sr * DURATION)
+              audio = np.zeros(n, dtype=np.float32)
+              beat = 60.0 / bpm
+              rng = np.random.default_rng(seed)
+
+              def add(start_s, sig):
+                  s = int(start_s*sr)
+                  if s >= n: return
+                  e = min(n, s+len(sig))
+                  audio[s:e] += sig[:e-s]
+
+              def kick(amp=1.0, pitch=96):
+                  m = int(0.23*sr)
+                  t = np.arange(m)/sr
+                  freq = pitch*np.exp(-t*11)+39
+                  ph = 2*np.pi*np.cumsum(freq)/sr
+                  env = np.exp(-t*15)
+                  click = .20*np.sin(2*np.pi*1900*t)*np.exp(-t*95)
+                  return ((np.sin(ph)+click)*env*amp).astype(np.float32)
+
+              def snare(amp=.36):
+                  m=int(.14*sr); t=np.arange(m)/sr
+                  noise=rng.normal(0,1,m).astype(np.float32)
+                  tone=.2*np.sin(2*np.pi*185*t)*np.exp(-t*18)
+                  return ((noise*np.exp(-t*27)*.78+tone)*amp).astype(np.float32)
+
+              def hat(amp=.14):
+                  m=int(.045*sr); t=np.arange(m)/sr
+                  noise=rng.normal(0,1,m).astype(np.float32)
+                  hp=noise-np.convolve(noise,np.ones(6)/6,mode='same')
+                  return (hp*np.exp(-t*90)*amp).astype(np.float32)
+
+              K=kick(1.0, 94 + (seed%7))
+              K2=kick(.72, 86 + (seed%5))
+              S=snare(.36)
+              q=np.arange(0,DURATION,beat)
+              for i,qt in enumerate(q):
+                  if i%4 in (0,2): add(qt,K)
+                  if i%8 in (5,7): add(qt,K2)
+                  if i%4 in (1,3): add(qt,S)
+                  add(qt,hat(.15))
+                  add(qt+beat/2,hat(.11))
+                  if (i+seed)%3==0:
+                      add(qt+beat*.75,hat(.08))
+                  m=int(.34*sr); t=np.arange(m)/sr
+                  f=bass_root + (3 if i%8>=4 else 0)
+                  bass=(np.sin(2*np.pi*f*t)+.48*np.sin(2*np.pi*2*f*t))*.15*np.exp(-t*2.1)
+                  add(qt,bass.astype(np.float32))
+
+              # Unique glitches / metallic stabs per article seed
+              for j,ct in enumerate(np.arange(1.2,DURATION,2.1)):
+                  m=int(.10*sr); t=np.arange(m)/sr
+                  noise=rng.normal(0,1,m).astype(np.float32)
+                  stab=(noise*np.exp(-t*35)*(.07+.02*((seed+j)%3))).astype(np.float32)
+                  add(ct,stab)
+
+              audio=np.tanh(audio*(2.7 + (seed%3)*.15))
+              audio=np.clip(audio*1.14,-.96,.96)
+              fi=int(.06*sr); fo=int(.22*sr)
+              audio[:fi]*=np.linspace(0,1,fi)
+              audio[-fo:]*=np.linspace(1,0,fo)
+              with wave.open(str(path),'wb') as wf:
+                  wf.setnchannels(1); wf.setsampwidth(2); wf.setframerate(sr)
+                  wf.writeframes((audio*32767).astype(np.int16).tobytes())
+
+          for article, settings in wanted.items():
+              rec = items[article]
+              gallery = [ROOT / p for p in rec.get('gallery', [])]
+              gallery = [p for p in gallery if p.exists()]
+              if not gallery:
+                  raise RuntimeError(f'No original gallery files found for {article}')
+
+              print(article, rec.get('title'), 'images=', len(gallery))
+              for p in gallery:
+                  print('  ', p, p.stat().st_size)
+
+              item_dir = FRAMES / article
+              item_dir.mkdir(exist_ok=True)
+              stills=[]
+              for idx,p in enumerate(gallery, start=1):
+                  o=item_dir / f'{idx:02d}.png'
+                  render_still(rec,p,idx,len(gallery),o)
+                  stills.append(o)
+
+              # Every real gallery image appears once; no zoom, hard cuts only.
+              per = DURATION / len(stills)
+              concat = item_dir / 'concat.txt'
+              with open(concat,'w',encoding='utf-8') as f:
+                  for s in stills:
+                      f.write(f"file '{s.resolve()}'\n")
+                      f.write(f'duration {per:.8f}\n')
+                  f.write(f"file '{stills[-1].resolve()}'\n")
+
+              wav = OUT / f"{settings['slug']}.wav"
+              synth_audio(wav, settings['bpm'], settings['seed'], settings['bass'])
+              video_only = OUT / f"{settings['slug']}-video.mp4"
+              final = OUT / f"{settings['slug']}.mp4"
+
+              subprocess.run([
+                  'ffmpeg','-y','-loglevel','error','-f','concat','-safe','0','-i',str(concat),
+                  '-vf',f'fps={FPS},format=yuv420p',
+                  '-t',str(DURATION),'-c:v','libx264','-preset','veryfast','-crf','17',
+                  '-movflags','+faststart',str(video_only)
+              ],check=True)
+
+              subprocess.run([
+                  'ffmpeg','-y','-loglevel','error','-i',str(video_only),'-i',str(wav),
+                  '-c:v','copy','-c:a','aac','-b:a','192k','-shortest','-movflags','+faststart',str(final)
+              ],check=True)
+
+              subprocess.run([
+                  'ffprobe','-v','error','-show_entries','format=duration:stream=width,height',
+                  '-of','default=noprint_wrappers=1',str(final)
+              ],check=True)
+
+          PY
+          python /tmp/render_real_products.py
+
+      - name: Upload exact-real-image videos
+        uses: actions/upload-artifact@v4
+        with:
+          name: disorder119-real-product-videos
+          path: rendered-real-products/*.mp4
+          retention-days: 1
