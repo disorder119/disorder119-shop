@@ -1838,10 +1838,15 @@
         });
       }
 
-      if (canHover && it.gallery && it.gallery.length > 1) {
+      // Zweites Foto beim Ueberfahren. Frueher war das stur gallery[1] -
+      // und damit bei rund 40 Artikeln ein Marken- oder Pflegeetikett, eine
+      // Nahaufnahme oder ein nicht freigestelltes Foto. build_site.py legt
+      // jetzt pro Artikel hover_image fest (freigestellte Gesamtansicht);
+      // fehlt es, bleibt die Kachel beim Ueberfahren stehen.
+      var hoverSrc = assetUrl(it.hover_image || "");
+      if (canHover && hoverSrc) {
         var frameImg = plate.querySelector(".plate__frame img");
-        var secondSrc = assetUrl(it.gallery[1]);
-        plate.addEventListener("mouseenter", function () { frameImg.src = secondSrc; });
+        plate.addEventListener("mouseenter", function () { frameImg.src = hoverSrc; });
         plate.addEventListener("mouseleave", function () { frameImg.src = imgSrc; });
       }
 
