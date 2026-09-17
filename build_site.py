@@ -1401,6 +1401,102 @@ CATALOG_FIELDS = [
 ]
 
 
+# Hover-Bild der Katalogkachel (Desktop). Bisher zeigte die Kachel beim
+# Ueberfahren stur gallery[1] - bei rund 40 Artikeln ein Marken- oder
+# Pflegeetikett, ein Detail oder ein nicht freigestelltes Foto. Jetzt kommt
+# nur ein freigestelltes Foto in Frage, das den ganzen Artikel ungefaehr so
+# zeigt wie das Titelbild. Grundlage ist die Freistellmaske (Alphakanal) der
+# Vorschaubilder, abgestimmt am Katalog vom 17.09.2026:
+#   - Detail- und Etikettfotos schneiden den Artikel links, rechts oder
+#     grossflaechig oben an und zeigen kaum freien Hintergrund. Oben darf
+#     der Kopf der Schaufensterpuppe stehen, mehr nicht.
+#   - Nicht freigestellte Fotos haben keinen Alphakanal.
+#   - Gesamtansichten decken sich in der Silhouette mit dem Titelbild
+#     (Rueckansicht meist ueber 0,8, Seitenansicht um 0,5), ein einzeln
+#     fotografiertes Etikett oder Detail kaum.
+# Es gilt die Reihenfolge der Galerie: Das erste passende Foto wird
+# gezeigt, meist wie bisher gallery[1]. Passt keines, wechselt die Kachel
+# nicht: lieber kein Wechsel als ein Etikett.
+HOVER_MASKE = (48, 72)
+HOVER_RAND_MAX = 0.03        # Anteil deckender Pixel am linken/rechten Rand
+HOVER_OBEN_MAX = 0.30        # dito am oberen Rand (dort steht der Puppenkopf)
+HOVER_FREI_MIN = 0.40        # Anteil voll transparenter Pixel
+HOVER_HALBTRANSPARENT_MAX = 0.12
+HOVER_AEHNLICHKEIT_MIN = 0.25
+HOVER_AEHNLICHKEIT_ANGESCHNITTEN = 0.60
+
+
+def _hover_maske(path):
+    """Kennwerte der Freistellmaske eines Galeriebilds, None ohne Alphakanal."""
+    from PIL import Image
+
+    quelle = BASE / thumb_path(path)
+    if not quelle.is_file():
+        quelle = BASE / path
+    if not quelle.is_file():
+        return None
+    with Image.open(quelle) as im:
+        if im.mode != "RGBA":
+            return None
+        alpha = im.getchannel("A").resize(HOVER_MASKE, Image.BILINEAR)
+    breite, hoehe = HOVER_MASKE
+    stufen = alpha.histogram()
+    gesamt = breite * hoehe
+    maske = alpha.point(lambda v: 255 if v > 128 else 0).convert("1")
+
+    def rand(kasten):
+        streifen = maske.crop(kasten)
+        return streifen.histogram()[255] / (streifen.width * streifen.height)
+
+    return {
+        "maske": maske,
+        "frei": sum(stufen[:9]) / gesamt,
+        "halb": sum(stufen[9:247]) / gesamt,
+        "rand": max(rand((0, 0, 2, hoehe)), rand((breite - 2, 0, breite, hoehe))),
+        "oben": rand((0, 0, breite, 2)),
+    }
+
+
+def _hover_aehnlichkeit(a, b):
+    from PIL import ImageChops
+
+    schnitt = ImageChops.logical_and(a, b).histogram()[255]
+    vereinigung = ImageChops.logical_or(a, b).histogram()[255]
+    return schnitt / vereinigung if vereinigung else 0.0
+
+
+def hover_image_path(it):
+    """Foto fuer den Kachelwechsel beim Ueberfahren oder "" (kein Wechsel)."""
+    gallery = it.get("gallery") or []
+    if len(gallery) < 2:
+        return ""
+    titel = _hover_maske(gallery[0])
+    if titel:
+        rand_max = max(HOVER_RAND_MAX, titel["rand"] + HOVER_RAND_MAX)
+        oben_max = max(HOVER_OBEN_MAX, titel["oben"] + 0.15)
+        frei_min = min(HOVER_FREI_MIN, titel["frei"] - 0.10)
+    else:
+        rand_max, oben_max, frei_min = HOVER_RAND_MAX, HOVER_OBEN_MAX, HOVER_FREI_MIN
+    for path in gallery[1:]:
+        werte = _hover_maske(path)
+        if (not werte or werte["rand"] > rand_max or werte["frei"] < frei_min
+                or werte["halb"] > HOVER_HALBTRANSPARENT_MAX):
+            continue
+        # Ohne freigestelltes Titelbild fehlt der Vergleich; dann genuegt
+        # der Zuschnitt.
+        if not titel:
+            return path
+        # Fotos, die oben deutlich mehr anschneiden als das Titelbild, sind
+        # entweder Nahaufnahmen (Aermel, Kragen) oder derselbe Gesamtblick,
+        # naeher herangeholt - zum Beispiel ein Rock ohne den Kopf der Puppe.
+        # Nur im zweiten Fall deckt sich die Silhouette klar.
+        noetig = (HOVER_AEHNLICHKEIT_ANGESCHNITTEN if werte["oben"] > oben_max
+                  else HOVER_AEHNLICHKEIT_MIN)
+        if _hover_aehnlichkeit(titel["maske"], werte["maske"]) >= noetig:
+            return path
+    return ""
+
+
 def build_catalog_json():
     # Oeffentlicher Katalog fuer den Browser (assets/app.js laedt jetzt
     # /data/catalog.json statt /data/items.json). Zwei Gruende, warum das
@@ -1418,6 +1514,10 @@ def build_catalog_json():
         row = {k: it.get(k) for k in CATALOG_FIELDS if k in it}
         row["grid_image"] = grid_thumb_path(it)
         catalog.append(row)
+    for row, it in zip(catalog, public_items):
+        hover = hover_image_path(it)
+        if hover:
+            row["hover_image"] = hover
     CATALOG_PATH.write_text(
         json.dumps(catalog, ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",
