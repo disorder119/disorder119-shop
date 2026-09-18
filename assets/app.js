@@ -1690,8 +1690,12 @@
   // Kleine, untergeordnete Groessenangabe fuer Archivkarten. Bei
   // Schuhgroessen wird eine rein numerische Angabe als EU-Groesse kenntlich
   // gemacht; freie/mehrteilige Groessen bleiben vollstaendig lesbar.
+  // "Unknown" ist nur der Platzhalter der Taxonomie fuer fehlende Groessen
+  // (die Filter blenden ihn schon aus) - auf der Karte stand er bisher
+  // woertlich, bei 16 verfuegbaren Teilen.
   function cardSizeLabel(it) {
-    var raw = trSize(it.size_normalized || it.size || "").trim();
+    var normalized = it.size_normalized !== "Unknown" ? it.size_normalized : "";
+    var raw = trSize(normalized || it.size || "").trim();
     if (!raw) return "";
     var browseCategory = it.taxonomy_category || it.category;
     if (browseCategory === "Shoes" && /^\d+(?:[.,]\d+)?$/.test(raw)) return "EU " + raw;
