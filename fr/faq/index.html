@@ -40,14 +40,14 @@
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Archive", "item": "https://disorder119.com/fr/"}, {"@type": "ListItem", "position": 2, "name": "Disorder119 — FAQ", "item": "https://disorder119.com/fr/faq/"}]}</script>
 <title>Disorder119 — FAQ</title>
 
-<link rel="stylesheet" href="/assets/app.css?v=57f8788522">
+<link rel="stylesheet" href="/assets/app.css?v=4c73679f0e">
 </head>
 <body>
 
 
 
 <div class="mode-rail-hint hidden" id="modeRailHint" role="status">
-  <span class="mode-rail-hint__text" data-i18n="modeHint">Entdecke auch Match, Chaos &amp; Baukasten</span>
+  <span class="mode-rail-hint__text" data-i18n="modeHint">Entdecke auch Match, Universum &amp; Baukasten</span>
   <button type="button" class="mode-rail-hint__close" id="modeRailHintClose" data-i18n-aria="hintCloseAria" aria-label="Hinweis schließen">✕</button>
 </div>
 
@@ -63,13 +63,42 @@
 </div>
 
 <div class="chaos-view hidden" id="chaosView">
-  <span class="chaos-view__label" data-i18n="chaosLabel">Chaos-Ansicht — anklicken für Details</span>
   <div class="chaos-screen" id="chaosScreen">
+    <canvas class="chaos-sky" id="chaosSky" tabindex="0" data-i18n-aria="chaosSkyLabel" aria-label="Universum: Artikel im Raum. Zoomen mit zwei Fingern oder Mausrad, ziehen zum Umsehen, tippen oder klicken für Details."></canvas>
     <div id="chaosItems"></div>
   </div>
   <span class="chaos-tooltip" id="chaosTooltip"></span>
+  <p class="chaos-hint is-gone" id="chaosHint" aria-hidden="true"></p>
+  <div class="chaos-game" id="chaosGame" hidden>
+    <div class="chaos-game__hud">
+      <span class="chaos-game__stat"><span class="chaos-game__label" data-i18n="gameTime">Zeit</span><strong id="chaosGameTime">45</strong></span>
+      <span class="chaos-game__stat"><span class="chaos-game__label" data-i18n="gameScore">Warenwert</span><strong id="chaosGameScore">0 €</strong></span>
+      <span class="chaos-game__stat"><span class="chaos-game__label" data-i18n="gameCombo">Serie</span><strong id="chaosGameCombo">×1</strong></span>
+    </div>
+    <p class="chaos-game__banner" id="chaosGameBanner" aria-live="assertive"></p>
+    <p class="chaos-game__keys" data-i18n="gameKeys">Fadenkreuz auf Teile steuern · Leertaste oder Maustaste: Turbo · Esc: beenden</p>
+    <section class="chaos-game__result" id="chaosGameResult" role="dialog" aria-modal="true" aria-labelledby="chaosGameResultTitle" hidden>
+      <p class="chaos-game__eyebrow" data-i18n="gameTitle">Warp-Jagd</p>
+      <h2 class="chaos-game__title" id="chaosGameResultTitle">Warp-Jagd vorbei</h2>
+      <p class="chaos-game__line" id="chaosGameResultLine"></p>
+      <p class="chaos-game__best" id="chaosGameBest"></p>
+      <button type="button" class="chaos-game__find" id="chaosGameFind" hidden>
+        <span class="chaos-game__find-label" data-i18n="gameTopFind">Bester Fund</span>
+        <span class="chaos-game__find-text" id="chaosGameFindText"></span>
+      </button>
+      <div class="chaos-game__actions">
+        <button type="button" class="view-enter-btn" id="chaosGameAgain" data-i18n="gameAgain">Nochmal</button>
+        <button type="button" class="view-enter-btn" id="chaosGameBack" data-i18n="gameBack">Zurück ins Universum</button>
+      </div>
+    </section>
+  </div>
   <div class="chaos-view__actions">
-    <button type="button" class="view-enter-btn" id="chaosShuffle" data-i18n="chaosShuffle">Neu mischen</button>
+    <button type="button" class="chaos-focus is-empty" id="chaosFocus" aria-live="polite">
+      <span class="chaos-focus__brand" id="chaosFocusBrand"></span>
+      <span class="chaos-focus__title" id="chaosFocusTitle">Näher heranzoomen</span>
+      <span class="chaos-focus__meta" id="chaosFocusMeta"></span>
+    </button>
+    <button type="button" class="view-enter-btn" id="chaosShuffle" data-i18n="chaosShuffle">Mischen</button>
     <a href="/" class="view-enter-btn" data-enter-classic data-i18n="toArchive">Zum Archiv →</a>
   </div>
 </div>
@@ -137,9 +166,9 @@
       <span class="mode-rail__icon" aria-hidden="true">♥</span>
       <span class="mode-rail__label" data-i18n="modeMatch">Match</span>
     </a>
-    <a href="/chaos/" class="mode-rail__btn" data-mode-view="chaos" aria-label="Chaos">
+    <a href="/chaos/" class="mode-rail__btn" data-mode-view="chaos" aria-label="Universum" data-i18n-aria="modeChaos">
       <span class="mode-rail__icon" aria-hidden="true">✦</span>
-      <span class="mode-rail__label" data-i18n="modeChaos">Chaos</span>
+      <span class="mode-rail__label" data-i18n="modeChaos">Universum</span>
     </a>
     <a href="/baukasten/" class="mode-rail__btn" data-mode-view="outfit" aria-label="Outfit-Baukasten">
       <span class="mode-rail__icon" aria-hidden="true">⛃</span>
@@ -411,7 +440,7 @@
 
 <script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "paypalClientId": "", "shopWorkerUrl": "", "environment": "sandbox", "features": {"paypalCheckout": false, "customerAccounts": false}};</script>
 <script src="/assets/pwa.js?v=e617173bdd"></script>
-<script src="/assets/app.js?v=93a71f9a89"></script>
+<script src="/assets/app.js?v=30fa74248e"></script>
 <script src="/assets/catalog-filter-simplify.js"></script>
 <script src="/assets/rental-v2.js"></script>
 <script src="/assets/rental-v2-ui.js"></script>
