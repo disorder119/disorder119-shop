@@ -38,6 +38,89 @@ DEPARTMENT_OVERRIDES = {
     9463: "Women",  # Prada Heels
     9432: "Women",  # JPG underwear shorts, S/36/8
     9434: "Men",    # size 48 sweatshirt
+
+    # Durchgang 17.09.2026: jedes Stueck einzeln angesehen (Fotos, Schnitt,
+    # Groessenetikett, Linie). Vorher standen 91 Teile auf Unisex, obwohl der
+    # Schnitt eindeutig war. Unisex bleibt jetzt dem vorbehalten, was wirklich
+    # keine Zuordnung hat: Muetzen, Caps, Taschen, Brillen, Schals,
+    # Einheitsgroessen.
+    # -- Damen --------------------------------------------------------------
+    9483: "Women",  # A.F. Vandevorst Guertel, schmaler Taillenguertel der Damenlinie
+    9392: "Women",  # Alexander McQueen Blazer, taillierter Damenschnitt
+    9479: "Women",  # Alexander McQueen Jacke, kurz und tailliert, Etikett 46 = IT 46/DE 40
+    9421: "Women",  # Ann Demeulemeester Hose, hoch sitzender Damenschnitt, Etikett S
+    9445: "Women",  # Ann Demeulemeester Jogginghose, Damenschnitt, Etikett S
+    9368: "Women",  # Balmain Fake-Fur-Jacke, kurz und tailliert
+    9442: "Women",  # Balmain Furry, Damenjacke Groesse S
+    9458: "Women",  # Balmain Trenchcoat, taillierter Damentrench
+    9426: "Women",  # Burberry Bermuda im Nova-Check, Damenschnitt
+    9497: "Women",  # Dior Guertel 80 cm, schmaler Damenguertel
+    9503: "Women",  # Dior Biene, Damentop
+    9529: "Women",  # Dolce & Gabbana Jacke Groesse XS
+    9358: "Women",  # Giorgio Brato Lederjacke, kurz und tailliert
+    9473: "Women",  # Giorgio Brato Lederjacke, kurz und tailliert
+    6191: "Women",  # Giorgio Brato lange Weste mit Fellkragen, Damenschnitt
+    9513: "Women",  # Isaac Sellam Hose, Damenschnitt Groesse S
+    6205: "Women",  # Jean Paul Gaultier Schwanenguertel, Damenlinie
+    6212: "Women",  # Jean Paul Gaultier "Classique" = Damenlinie
+    6213: "Women",  # Jean Paul Gaultier "Classique" = Damenlinie
+    9387: "Women",  # Jean Paul Gaultier gestreifte Damenhose
+    9388: "Women",  # Jean Paul Gaultier kurze Damenjacke
+    9401: "Women",  # Jean Paul Gaultier Spidertop, Damentop
+    9402: "Women",  # Jean Paul Gaultier Mesh-Bluse
+    9408: "Women",  # Jean Paul Gaultier Jeans, Etikett 30, Damenschnitt
+    9484: "Women",  # Jean Paul Gaultier figurbetontes Damenshirt
+    9519: "Women",  # Jil Sander "Sweet Angel" Wendetop, Damenschnitt
+    9532: "Women",  # Jil Sander Anzugshose Groesse XS
+    9391: "Women",  # Maison Margiela Hose, tiefe Taille, Damenschnitt
+    9385: "Women",  # Rundholz Jacke, stand faelschlich unter Objekte
+    9455: "Women",  # Prada Jacke schwarz, Etikett Tg. 42 = Damen 36, Taillenguertel
+    9465: "Women",  # Prada Wool Top, Damenschnitt
+    9492: "Women",  # Prada Jacke beige, Etikett 46 = IT 46/DE 40
+    9509: "Women",  # Prada Jacke babyblau, Etikett Tg. 42 = Damen 36
+    9365: "Women",  # Prada Jacke lila mit Fellbesatz, tailliert
+    9422: "Women",  # Prada karierte Hose, Etikett IT 46 = Damen 40
+    9436: "Women",  # Prada Jacke Groesse M, Damenschnitt
+    9437: "Women",  # Prada Jacke Groesse M, Damenschnitt
+    9440: "Women",  # Prada Shirt grau mit Fellkragen
+    9441: "Women",  # Prada Shirt schwarz mit Fellkragen
+    9457: "Women",  # Prada Fellstola
+    9494: "Women",  # Prada Weste rot, Etikett 44 = Damen 38
+    9500: "Women",  # Prada Knitterjacke, Etikett 44 = Damen 38
+    6042: "Women",  # Walter Van Beirendonck Rock (Zweiteintrag zu 9415)
+    9415: "Women",  # Walter Van Beirendonck Rock
+    9375: "Women",  # Y-3 drapiertes Damentop
+    6192: "Women",  # Y-3 Track Jacket, kurz und tailliert, Groesse S
+    6239: "Women",  # Yohji Yamamoto Cat-Eye-Sonnenbrille, Damenform
+    9481: "Women",  # Yves Saint Laurent, Etikett "CLASSIC JACKET DONNA"
+    # -- Herren -------------------------------------------------------------
+    9469: "Men",    # Armani Collezioni Jacke, Etikett 52
+    9383: "Men",    # Balenciaga Speedhunters Longsleeve, Herrenlinie, Groesse L
+    9530: "Men",    # Dior Shirt, gerader Herrenschnitt, Groesse L
+    9498: "Men",    # Helmut Lang klassisches Herrenhemd
+    9505: "Men",    # Jean Paul Gaultier Jacke Groesse XL
+    9522: "Men",    # Moose Knuckles Parka Groesse M
+    9460: "Men",    # Prada Herren-Schnuerschuhe
+    9464: "Men",    # Prada Herren-Loafer
+    9526: "Men",    # Prada Holzfaellerjacke Groesse XXL
+    9412: "Men",    # Supreme Hose, Herren-Streetwear
+    6189: "Men",    # Y-3 T-Shirt, Herrenlinie
+    6220: "Men",    # Y-3 Cargohose, Herrenlinie
+    9379: "Men",    # Y-3 Jacke, Herrenlinie
+    9380: "Men",    # Y-3 Nylonjacke, Herrenlinie
+    9381: "Men",    # Y-3 Polo, Herrenlinie
+    9423: "Men",    # Y-3 Longsleeve, Herrenlinie
+    9376: "Men",    # Yves Saint Laurent Herrenanzug
+    9424: "Men",    # Yves Saint Laurent Herrenanzug, Nadelstreifen
+    9425: "Men",    # Yves Saint Laurent jeanswear Sweatshirt XL
+    # -- Unisex (geprueft, bleibt bewusst offen) -----------------------------
+    9466: "Unisex", # Adidas Sample Jacke, Sportschnitt ohne Zuordnung
+    9393: "Unisex", # Oakley Longsleeve, Sportschnitt ohne Zuordnung
+    9527: "Unisex", # Rick Owens DRKSHDW Longsleeve, gerader Schnitt
+    9373: "Unisex", # Ravani T-Shirt, gerader Schnitt
+    9490: "Unisex", # Jean Paul Gaultier Schlafanzug, Universalgroesse
+    6207: "Unisex", # Yves Saint Laurent Ledermantel 80er, weiter Schnitt
+    9449: "Unisex", # Yves Saint Laurent Kaschmirpullover, gerader Schnitt
 }
 
 # Product-type overrides for titles that are too vague or currently have a
@@ -50,6 +133,9 @@ PRODUCT_TYPE_OVERRIDES = {
     9443: "Jacket",  # Balmain Braun – description: Diese Balmain Jacke
     9442: "Jacket",  # Balmain Furry – description: Kurze Balmain Jacke
     9417: "Vest",    # Y-3 Veste – description: Ärmellose Zip-Weste
+    # Die Altkategorie sagt "Objects", die Fotos zeigen eine Rundholz-Jacke
+    # mit Knopfleiste und gerafften Aermeln (geprueft 17.09.2026).
+    9385: "Jacket",
     6240: "Toaster",
     9524: "Bomber Jacket",
     9463: "Heels",
@@ -290,7 +376,21 @@ def _numeric_size(value: str) -> float | None:
     return None
 
 
-def classify_department(item: dict[str, Any], product_type: str, tax_category: str, size_value: str) -> tuple[str, str]:
+_WOMEN_SIZE_CONVERSION = re.compile(
+    r"\b(?:3[468]|4[024])\s*/\s*(?:[468]|1[0246])\b"   # M / 38 / 10
+    r"|\bF\s?3[0-9]\b"                                   # S (F36 / I40)
+    r"|\bEUR?\s?3[4-9]\b",                               # Etikett EUR 36
+    re.I,
+)
+
+
+def _women_size_conversion(value: str) -> bool:
+    """True, wenn die Groesse eine Damenumrechnung nennt (DE/UK bzw. F/I)."""
+    return bool(value) and bool(_WOMEN_SIZE_CONVERSION.search(value))
+
+
+def classify_department(item: dict[str, Any], product_type: str, tax_category: str, size_value: str,
+                        label_size: str = "") -> tuple[str, str]:
     item_id = int(item.get("id") or 0)
     if item_id in DEPARTMENT_OVERRIDES:
         return DEPARTMENT_OVERRIDES[item_id], "explicit"
@@ -308,6 +408,23 @@ def classify_department(item: dict[str, Any], product_type: str, tax_category: s
         return "Men", "explicit"
     if re.search(r"\bfrauen\b|\bdamen\b|\bwomenswear\b|\bwomen['’]?s\b|feminin", text):
         return "Women", "explicit"
+
+    # Die Groessenumrechnung auf dem Etikett ist das staerkste Signal und geht
+    # der Marke vor: "M / 38 / 10" oder "S (F36 / I40)" ist Damenkonfektion,
+    # egal von wem. Ohne diese Reihenfolge landeten die Roecke, das Kleid und
+    # die Shorts von Walter Van Beirendonck (Groesse M / 38 / 10) unter Herren,
+    # weil das Label als Herrenmarke gefuehrt wird.
+    # ``label_size`` kommt aus classify_item; im Artikel selbst steht das Feld
+    # beim Neuberechnen nicht mehr (apply_catalog_taxonomy leert es vorher).
+    if _women_size_conversion(size_value) or _women_size_conversion(label_size):
+        return "Women", "high"
+
+    # Prada fuehrt Sport, Linea Rossa, Luna Rossa und Challenge als
+    # Herrenlinien. Schuhe und Accessoires bleiben ausgenommen, dort
+    # entscheidet die Groesse (z. B. Sneaker in 36).
+    if tax_category not in {"Shoes", "Accessories"} and re.search(
+            r"prada\s+sport|linea\s+rossa|luna\s+rossa|challenge", text):
+        return "Men", "high"
 
     if brand in MEN_BRANDS or brand == "Dior Homme":
         return "Men", "high"
@@ -430,7 +547,7 @@ def classify_item(item: dict[str, Any]) -> dict[str, Any]:
         size_value = ""
         size_source = "unknown"
 
-    department, confidence = classify_department(item, product_type, tax_category, size_value)
+    department, confidence = classify_department(item, product_type, tax_category, size_value, label_size)
     normalized = normalize_size(size_value, department, product_type)
 
     result = {

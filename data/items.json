@@ -111,12 +111,12 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Sunglasses",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -899,12 +899,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -941,12 +941,12 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Swim Shorts",
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "high",
     "taxonomy_reviewed": true
   },
   {
@@ -1177,12 +1177,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1214,12 +1214,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1298,12 +1298,12 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "high",
     "taxonomy_reviewed": true
   },
   {
@@ -1339,12 +1339,12 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "XXL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "high",
     "taxonomy_reviewed": true
   },
   {
@@ -1382,12 +1382,12 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "high",
     "taxonomy_reviewed": true
   },
   {
@@ -1427,7 +1427,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1502,12 +1502,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Belt",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1826,12 +1826,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Polo Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "high",
     "taxonomy_reviewed": true
   },
   {
@@ -1995,7 +1995,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "high",
     "taxonomy_reviewed": true
   },
   {
@@ -2032,12 +2032,12 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -2071,12 +2071,12 @@
       "color",
       "condition"
     ],
-    "department": "Men",
+    "department": "Women",
     "product_type": "Vest",
     "taxonomy_category": "Jackets",
-    "size_normalized": "S",
+    "size_normalized": "46",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -2153,12 +2153,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "T-Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -2278,12 +2278,12 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "high",
     "taxonomy_reviewed": true
   },
   {
@@ -2399,12 +2399,12 @@
       "color",
       "condition"
     ],
-    "department": "Men",
+    "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -2476,12 +2476,12 @@
     "brightness": 0.387,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "XXL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "XXL"
   },
@@ -2559,12 +2559,12 @@
     "brightness": 0.382,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "XL"
   },
@@ -2683,7 +2683,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -2871,12 +2871,12 @@
     "brightness": 0.269,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -3027,12 +3027,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "XS",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -3210,12 +3210,12 @@
     "brightness": 0.475,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "Nicht eindeutig lesbar"
   },
@@ -3366,12 +3366,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -3405,12 +3405,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "XS",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -3480,12 +3480,12 @@
     "brightness": 0.479,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Men",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
-    "size_normalized": "M",
+    "size_normalized": "48",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "48"
   },
@@ -3516,12 +3516,12 @@
     "brightness": 0.179,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "high",
     "taxonomy_reviewed": true,
     "label_size": "S (F36 / I40)"
   },
@@ -3635,12 +3635,12 @@
     "brightness": 0.352,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
-    "size_normalized": "44",
+    "size_normalized": "XXL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "44"
   },
@@ -3678,12 +3678,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -3716,12 +3716,12 @@
     "brightness": 0.489,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M/L (geschätzt)"
   },
@@ -3833,12 +3833,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -3986,12 +3986,12 @@
     "brightness": 0.166,
     "public_status": "SOLD",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Belt",
     "taxonomy_category": "Accessories",
     "size_normalized": "80cm",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "80"
   },
@@ -4104,12 +4104,12 @@
     "brightness": 0.467,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Vest",
     "taxonomy_category": "Jackets",
-    "size_normalized": "44",
+    "size_normalized": "XXL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "44"
   },
@@ -4220,12 +4220,12 @@
     "brightness": 0.481,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Men",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
-    "size_normalized": "S",
+    "size_normalized": "46",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -4294,12 +4294,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -4335,7 +4335,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "One Size",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -4521,12 +4521,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Belt",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -4563,12 +4563,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -4675,7 +4675,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 36",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "high",
     "taxonomy_reviewed": true,
     "label_size": "EU 36"
   },
@@ -4708,12 +4708,12 @@
     "brightness": 0.519,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Men",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
-    "size_normalized": "S",
+    "size_normalized": "46",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "46"
   },
@@ -4745,12 +4745,12 @@
     "brightness": 0.492,
     "public_status": "SOLD",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Tank Top",
     "taxonomy_category": "Shirts",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "high",
     "taxonomy_reviewed": true,
     "label_size": "XL"
   },
@@ -4783,12 +4783,12 @@
     "brightness": 0.318,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Sweatshirt",
     "taxonomy_category": "Knitwear",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "high",
     "taxonomy_reviewed": true
   },
   {
@@ -4971,12 +4971,12 @@
     "brightness": 0.215,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -5008,12 +5008,12 @@
     "brightness": 0.339,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "52"
   },
@@ -5162,7 +5162,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -5195,12 +5195,12 @@
     "brightness": 0.465,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Men",
+    "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
-    "size_normalized": "M",
+    "size_normalized": "48",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -5276,12 +5276,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Loafers",
     "taxonomy_category": "Shoes",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -5461,12 +5461,12 @@
     "brightness": 0.234,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Trench Coat",
     "taxonomy_category": "Coats",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "L"
   },
@@ -5542,12 +5542,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Shoes",
     "taxonomy_category": "Shoes",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -5655,12 +5655,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Scarf",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -5733,12 +5733,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Joggers",
     "taxonomy_category": "Pants",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -5772,12 +5772,12 @@
     "brightness": 0.491,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "S"
   },
@@ -5816,7 +5816,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "high",
     "taxonomy_reviewed": true,
     "label_size": "EU 38"
   },
@@ -5973,12 +5973,12 @@
     "brightness": 0.21,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Men",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
-    "size_normalized": "XL",
+    "size_normalized": "52",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "IT 42"
   },
@@ -6018,7 +6018,7 @@
     "taxonomy_category": "Knitwear",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -6053,12 +6053,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Sweater",
     "taxonomy_category": "Knitwear",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -6092,12 +6092,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Long Sleeve",
     "taxonomy_category": "Shirts",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -6127,12 +6127,12 @@
     "brightness": 0.369,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -6163,12 +6163,12 @@
     "brightness": 0.403,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "L"
   },
@@ -6241,12 +6241,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Suit",
     "taxonomy_category": "Jackets",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -6313,12 +6313,12 @@
     "brightness": 0.182,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "IT 46"
   },
@@ -6353,12 +6353,12 @@
     "brightness": 0.34,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -6727,12 +6727,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -6877,12 +6877,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -7138,12 +7138,12 @@
     "brightness": 0.278,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Long Sleeve",
     "taxonomy_category": "Shirts",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "L"
   },
@@ -7255,9 +7255,9 @@
       "color",
       "condition"
     ],
-    "department": "Objects",
-    "product_type": "Design Object",
-    "taxonomy_category": "Objects",
+    "department": "Women",
+    "product_type": "Jacket",
+    "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
@@ -7364,12 +7364,12 @@
     "brightness": 0.319,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -7480,12 +7480,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -7520,12 +7520,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Blazer",
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -7561,12 +7561,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -7706,12 +7706,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -7787,7 +7787,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -7820,7 +7820,7 @@
     "brightness": 0.188,
     "public_status": "SOLD",
     "data_quality_open": [],
-    "department": "Men",
+    "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
     "size_normalized": "M",
@@ -7861,12 +7861,12 @@
       "color",
       "condition"
     ],
-    "department": "Men",
+    "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -7937,7 +7937,7 @@
     "brightness": 0.24,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Men",
+    "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
     "size_normalized": "M",
@@ -7972,7 +7972,7 @@
     "brightness": 0.213,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Men",
+    "department": "Women",
     "product_type": "Shorts",
     "taxonomy_category": "Pants",
     "size_normalized": "M",
@@ -8010,12 +8010,12 @@
     "brightness": 0.228,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "Other",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "30"
   },
@@ -8049,12 +8049,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8125,12 +8125,12 @@
     "brightness": 0.308,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -8167,12 +8167,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8260,7 +8260,7 @@
     "price": 0,
     "status": "Verkauft",
     "category": "Tops",
-    "size": "",
+    "size": "M",
     "color": "Grau",
     "condition": "",
     "desc": "A.F. Vandevorst Top Grau – Tops. Aus dem kuratierten Archiv von Disorder119. Kategorie: Tops. Farbe: Grau. Fehlende Angaben werden vor dem Kauf bestätigt und nicht geschätzt.",
@@ -8288,8 +8288,8 @@
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
-    "size_normalized": "Unknown",
-    "size_source": "unknown",
+    "size_normalized": "M",
+    "size_source": "structured",
     "taxonomy_confidence": "high",
     "taxonomy_reviewed": true
   },
@@ -8442,12 +8442,12 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8519,7 +8519,7 @@
     "brightness": 0.517,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Men",
+    "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "M",
@@ -8635,7 +8635,7 @@
     "brightness": 0.445,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Men",
+    "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
     "size_normalized": "M",
@@ -8718,7 +8718,7 @@
     "taxonomy_category": "Shirts",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8747,12 +8747,12 @@
     "brightness": 0.37,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Polo Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -8787,12 +8787,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Suit",
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8829,12 +8829,12 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8869,12 +8869,12 @@
       "color",
       "condition"
     ],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8940,12 +8940,12 @@
     "brightness": 0.274,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -8976,12 +8976,12 @@
     "brightness": 0.271,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -9086,12 +9086,12 @@
     "brightness": 0.313,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
-    "department": "Unisex",
+    "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "One Size"
   },
@@ -9226,7 +9226,7 @@
     "look": "assets/img/9366/0.webp",
     "price_estimated": false,
     "brightness": 0.5,
-    "public_status": "SOLD",
+    "public_status": "DRAFT",
     "data_quality_open": [
       "condition"
     ],

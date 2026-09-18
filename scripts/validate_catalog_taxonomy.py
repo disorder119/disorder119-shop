@@ -89,7 +89,12 @@ def main() -> None:
         9524: ("Women", "Bomber Jacket", "Jackets"),
         9534: ("Men", "Shoes", "Shoes"),
         9432: ("Women", "Underwear Shorts", "Pants"),
-        6042: ("Men", "Skirt", "Skirts"),
+        # Der Rock lief unter Herren, weil Walter Van Beirendonck als
+        # Herrenlabel gefuehrt wird. Die Groesse auf dem Etikett (M / 38 / 10)
+        # ist Damenkonfektion; seit dem Durchgang vom 17.09.2026 entscheidet
+        # die Groessenumrechnung vor der Marke.
+        6042: ("Women", "Skirt", "Skirts"),
+        9385: ("Women", "Jacket", "Jackets"),
     }
     for item_id, wanted in expected.items():
         row = by_id.get(item_id)
