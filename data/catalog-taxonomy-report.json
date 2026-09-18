@@ -3,10 +3,10 @@
   "totalItems": 238,
   "reviewedItems": 238,
   "departmentCounts": {
-    "Men": 41,
-    "Objects": 2,
-    "Unisex": 91,
-    "Women": 104
+    "Men": 55,
+    "Objects": 1,
+    "Unisex": 24,
+    "Women": 158
   },
   "productTypeCounts": {
     "Accessory": 2,
@@ -22,11 +22,10 @@
     "Cap": 3,
     "Cardigan": 3,
     "Coat": 2,
-    "Design Object": 1,
     "Dress": 19,
     "Hat": 1,
     "Heels": 1,
-    "Jacket": 46,
+    "Jacket": 47,
     "Joggers": 1,
     "Knit Top": 1,
     "Loafers": 2,
@@ -57,7 +56,7 @@
     "Vest": 7,
     "Wallet": 1
   },
-  "missingSizeCount": 49,
+  "missingSizeCount": 48,
   "missingSize": [
     {
       "id": 6239,
@@ -248,11 +247,6 @@
       "id": 9397,
       "article": "32",
       "title": "Walter Van Beirendonck Hose Patchwork"
-    },
-    {
-      "id": 9366,
-      "article": "28",
-      "title": "A.F. Vandevorst Top Grau"
     },
     {
       "id": 9502,
@@ -644,7 +638,7 @@
       "descriptionLabelSize": "M"
     }
   ],
-  "legacyCategoryMismatchCount": 14,
+  "legacyCategoryMismatchCount": 15,
   "legacyCategoryMismatches": [
     {
       "id": 6240,
@@ -749,6 +743,14 @@
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
       "productType": "Long Sleeve"
+    },
+    {
+      "id": 9385,
+      "article": "57",
+      "title": "Rundholz Angeblich",
+      "legacyCategory": "Objects",
+      "taxonomyCategory": "Jackets",
+      "productType": "Jacket"
     },
     {
       "id": 9386,

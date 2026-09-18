@@ -87,6 +87,7 @@ def validate_taxonomy_mismatches() -> None:
     intentional = {
         6240, 6201, 6199, 6194, 9496, 9477, 9463, 9456,
         9449, 9423, 9435, 9434, 9383, 9386,
+        9385,  # Rundholz Jacke, Altkategorie "Objects" (geprueft 17.09.2026)
     }
     unexpected = sorted(mismatch_ids - intentional)
     require(not unexpected, "unerwartete Broad-Category-Abweichungen: " + ", ".join(map(str, unexpected)))
