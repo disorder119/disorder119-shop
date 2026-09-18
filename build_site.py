@@ -90,7 +90,7 @@ SPECIAL_PAGES = {
     # showSwipe()/showChaos()/showOutfit() in assets/app.js) - ein
     # Direktaufruf/Reload rendert dieselbe Seite ganz normal serverseitig.
     "match": {"de": "Match", "en": "Match", "fr": "Match"},
-    "chaos": {"de": "Chaos", "en": "Chaos", "fr": "Chaos"},
+    "chaos": {"de": "Universum", "en": "Universe", "fr": "Univers"},
     "baukasten": {"de": "Outfit-Baukasten", "en": "Outfit Builder", "fr": "Configurateur de tenues"},
     # Eigene Kategorie statt nur ein Button auf jeder Archiv-Kachel (frueher):
     # /mieten/ zeigt den Katalog wie das normale Archiv, aber mit

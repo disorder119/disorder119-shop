@@ -1695,7 +1695,7 @@
 
   .view-enter-btn:hover { border-color: var(--accent); }
 
-  /* ---------- Chaos-Ansicht ---------- */
+  /* ---------- Universum (frueher Chaos-Ansicht) ---------- */
 
   .chaos-view {
     position: fixed;
@@ -1708,32 +1708,74 @@
     overflow: hidden;
   }
 
-  .chaos-view__label {
+  .chaos-screen {
     position: absolute;
-    top: 20px;
-    left: 20px;
-    font-size: 0.68rem;
-    letter-spacing: 0.14em;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  /* Eine Zeichenflaeche ueber die ganze Ansicht. Ohne touch-action:none
+     wuerde der Browser Wischen und Zwei-Finger-Zoom selbst verarbeiten
+     (Seite scrollen oder vergroessern), statt sie ans Universum zu geben. */
+  .chaos-sky {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: grab;
+    outline: none;
+  }
+  .chaos-sky.is-dragging { cursor: grabbing; }
+  .chaos-sky.is-over-item { cursor: pointer; }
+  .chaos-sky:focus-visible { box-shadow: inset 0 0 0 1px var(--accent-text); }
+  .chaos-view--game .chaos-sky { cursor: none; }
+
+  /* Unsichtbare Knoepfe ueber den groessten sichtbaren Teilen - fuer
+     Tastatur und Screenreader. Beruehrungen gehen durch sie hindurch ans
+     Universum (pointer-events:none), per Tastatur sind sie normal bedienbar. */
+  #chaosItems {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .chaos-item {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: transparent;
+    pointer-events: none;
+    will-change: transform;
+  }
+  .chaos-item:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 4px; }
+
+  .chaos-hint {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+    z-index: 3;
+    margin: 0;
+    text-align: center;
+    pointer-events: none;
+    font-size: 0.66rem;
+    letter-spacing: 0.13em;
+    line-height: 1.7;
     text-transform: uppercase;
-    color: rgba(242, 239, 231, 0.5);
-    z-index: 2;
+    text-wrap: balance;
+    color: var(--accent-text);
+    transition: opacity 0.6s ease;
   }
+  .chaos-hint.is-gone { opacity: 0; }
 
-  .chaos-view__actions {
-    position: absolute;
-    bottom: 22px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 10px;
-    z-index: 2;
-  }
-
-  .chaos-view__actions .view-enter-btn { background: var(--ink); }
-
-  /* Kurze Vorschau (Marke/Titel/Preis) beim Ueberfahren eines Chaos-Artikels,
-     bevor man klickt - vorher musste man jedes Teil erst anklicken/oeffnen,
-     um ueberhaupt zu wissen, was es ist. */
+  /* Kurze Vorschau (Marke/Titel/Preis) beim Ueberfahren mit der Maus */
   .chaos-tooltip {
     position: fixed;
     z-index: 3;
@@ -1758,130 +1800,214 @@
   }
   .chaos-tooltip__price { color: var(--accent-text); font-weight: 700; }
 
-  .chaos-item {
+  /* Leiste unten: das Teil in der Bildmitte und "Mischen". Am grossen
+     Bildschirm mittig auf hoechstens 640 px, am Handy ueber die ganze Breite. */
+  .chaos-view__actions {
     position: absolute;
-    width: clamp(92px, 13vw, 168px);
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    animation-name: chaos-float;
-    animation-timing-function: ease-in-out;
-    animation-iteration-count: infinite;
-    animation-direction: alternate;
-    transform-origin: 50% 50%;
-    will-change: transform;
-  }
-
-  /* drop-shadow(filter) ist pro Element teuer, vor allem kombiniert mit der
-     laufenden Float-Animation - auf dem Handy (viele Artikel gleichzeitig,
-     schwaechere GPU) fuehrte das zu sichtbarem Ruckeln. Ab Tablet-Breite
-     aufwaerts gibt es den Schatten weiterhin, am Handy bleibt es flach. */
-  @media (min-width: 641px) {
-    .chaos-item { filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.55)); }
-  }
-
-  .chaos-item img {
-    width: 100%;
-    display: block;
-    pointer-events: none;
-  }
-
-  .chaos-item:hover { filter: drop-shadow(0 14px 22px rgba(201, 138, 69, 0.45)); }
-
-  @keyframes chaos-float {
-    from { transform: translate(0, 0) rotate(var(--rot0, -4deg)); }
-    to   { transform: translate(var(--dx, 24px), var(--dy, -30px)) rotate(var(--rot1, 5deg)); }
-  }
-
-  /* ---------- Chaos: 360-Grad-Showroom (nur Desktop, s. JS chaosIsShowroom()) ---------- */
-
-  .chaos-screen {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-  }
-
-  /* Immer selbst positioniert und volle Groesse (nicht nur im Showroom) -
-     sonst hat der Container (nur absolut positionierte Kinder, kein eigener
-     Inhalt) eine Eigenhoehe von 0px. Sobald IRGENDEIN transform darauf
-     landet (z.B. die Neige-Parallaxe unten), wuerde er sonst selbst zum
-     Bezugsrahmen fuer die Prozent-Positionen seiner Kinder werden - bei 0px
-     Hoehe kollabieren dann alle Artikel auf Position 0. */
-  #chaosItems {
-    position: absolute;
-    inset: 0;
-  }
-
-  .chaos-view--showroom {
-    background: radial-gradient(120% 100% at 50% 108%, #171009 0%, var(--ink) 62%);
-  }
-
-  .chaos-view--showroom .chaos-screen {
-    inset: 4.5vh 6vw;
-    border-radius: 8vw / 4.5vh;
-    background: #000;
-    box-shadow:
-      0 0 0 1px rgba(242, 239, 231, 0.12),
-      0 60px 160px rgba(0, 0, 0, 0.7),
-      0 0 90px rgba(140, 150, 255, 0.05);
-  }
-
-  .chaos-view--showroom .chaos-screen::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 500;
-    pointer-events: none;
-    background: radial-gradient(130% 95% at 50% 42%, transparent 52%, rgba(0, 0, 0, 0.6) 100%);
-  }
-
-  .chaos-view--showroom .chaos-screen {
-    perspective: 2400px;
-  }
-
-  .chaos-view--showroom #chaosItems {
-    transform-style: preserve-3d;
-    will-change: transform;
-  }
-
-  .chaos-item-wrap {
-    /* Klein statt (wie zuvor) so gross wie die ganze Buehne, UND
-       pointer-events:none: die Wrap-Box selbst soll nie fuer Klicks
-       "gefunden" werden, nur der Artikel-Button darin (per pointer-events:
-       auto wieder aktiviert) - so landen Klicks immer beim tatsaechlich
-       sichtbaren Artikel an dieser Bildschirmstelle, egal wie stark sich
-       einzelne (perspektivisch vergroesserte) Wrap-Boxen ueberlappen.
-       Zentrierung per margin, nicht per transform, weil transform auf
-       .chaos-item selbst schon fuer das Schweben (chaos-float) gebraucht
-       wird. */
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 220px;
-    height: 300px;
-    margin: -150px 0 0 -110px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    transform-style: preserve-3d;
-    will-change: transform;
+    gap: 10px;
+    align-items: stretch;
+    padding: 28px max(16px, calc((100% - 640px) / 2)) calc(14px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(rgba(0, 0, 0, 0), var(--ink) 42%);
+  }
+  /* Zurueck ins Archiv geht ueber die Kopfzeile; in der Leiste zaehlt Platz. */
+  .chaos-view__actions [data-enter-classic] { display: none; }
+
+  .chaos-focus {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--paper);
+    background: var(--ink-lift, #121212);
+    border: 1px solid var(--rule-strong);
+    padding: 10px 12px;
+    transition: border-color 0.2s ease;
+  }
+  .chaos-focus:hover { border-color: var(--accent-text); }
+  .chaos-focus:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+  .chaos-focus.is-empty { cursor: default; }
+  .chaos-focus.is-empty:hover { border-color: var(--rule-strong); }
+  .chaos-focus__brand {
+    min-height: 1.1em;
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .chaos-focus__title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chaos-focus.is-empty .chaos-focus__title { color: var(--text-muted); font-weight: 400; }
+  .chaos-focus__meta {
+    min-height: 1.2em;
+    font-size: 0.8rem;
+    color: var(--accent-text);
+    font-variant-numeric: tabular-nums;
+  }
+  .chaos-focus.is-swap .chaos-focus__brand,
+  .chaos-focus.is-swap .chaos-focus__title,
+  .chaos-focus.is-swap .chaos-focus__meta { animation: chaos-focus-in 0.28s ease; }
+  @keyframes chaos-focus-in { from { opacity: 0.25; } to { opacity: 1; } }
+
+  #chaosShuffle {
+    flex: none;
+    width: 66px;
+    padding: 36px 4px 10px;
+    background: var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='square'%3E%3Cpath d='M3 7h4l10 10h4M17 17l3-3M17 17l3 3M3 17h4l3-3M14 10l3-3h4M17 7l3-3M17 7l3 3'/%3E%3C/svg%3E") no-repeat center 11px / 22px 22px;
+    color: var(--ink);
+    border: 0;
+    font-size: 0.56rem;
+    letter-spacing: 0.1em;
+    line-height: 1.2;
+    white-space: normal;
+    text-align: center;
+  }
+  #chaosShuffle:hover { filter: brightness(0.9); }
+  #chaosShuffle:active { transform: scale(0.96); }
+  #chaosShuffle:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+
+  /* ---------- Warp-Jagd (geheimes Minigame im Universum) ---------- */
+
+  .chaos-game {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
     pointer-events: none;
   }
+  .chaos-game[hidden] { display: none; }
+  .chaos-view--game .chaos-view__actions,
+  .chaos-view--game .chaos-hint { display: none; }
+  .chaos-view--game-over .chaos-game__keys { display: none; }
 
-  .chaos-item-wrap .chaos-item {
-    position: static;
-    width: clamp(97px, 15vw, 193px);
-    pointer-events: auto;
+  .chaos-game__hud {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
   }
+  .chaos-game__stat {
+    display: grid;
+    gap: 1px;
+    min-width: 88px;
+    padding: 8px 12px;
+    text-align: center;
+    background: rgba(10, 10, 9, 0.72);
+    border: 1px solid var(--rule-strong);
+  }
+  .chaos-game__label {
+    font-size: 0.56rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .chaos-game__stat strong {
+    font-size: 1.15rem;
+    color: var(--paper);
+    font-variant-numeric: tabular-nums;
+  }
+  .chaos-game__banner {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 36%;
+    margin: 0;
+    text-align: center;
+    font-size: clamp(3rem, 12vw, 7rem);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--paper);
+    text-shadow: 0 0 40px rgba(255, 196, 84, 0.35);
+  }
+  .chaos-game__keys {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    margin: 0;
+    text-align: center;
+    font-size: 0.62rem;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .chaos-game__result {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(440px, calc(100% - 32px));
+    display: grid;
+    gap: 8px;
+    padding: 22px 20px 20px;
+    text-align: center;
+    pointer-events: auto;
+    background: var(--ink-lift, #121212);
+    border: 1px solid var(--rule-strong);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  }
+  .chaos-game__result[hidden] { display: none; }
+  .chaos-game__eyebrow {
+    margin: 0;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #ffc454;
+  }
+  .chaos-game__title { margin: 0; font-size: 1.5rem; line-height: 1.15; text-wrap: balance; }
+  .chaos-game__line { margin: 0; font-size: 0.95rem; color: var(--paper); }
+  .chaos-game__best { margin: 0; font-size: 0.78rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .chaos-game__find {
+    display: grid;
+    gap: 2px;
+    margin-top: 4px;
+    padding: 10px 12px;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--paper);
+    background: var(--ink);
+    border: 1px solid var(--rule-strong);
+  }
+  .chaos-game__find[hidden] { display: none; }
+  .chaos-game__find:hover { border-color: #ffc454; }
+  .chaos-game__find:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+  .chaos-game__find-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #ffc454;
+  }
+  .chaos-game__find-text { font-size: 0.86rem; font-weight: 700; }
+  .chaos-game__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 6px;
+  }
+  .chaos-game__actions .view-enter-btn { background: var(--ink); }
+  .chaos-game__actions #chaosGameAgain { background: var(--paper); color: var(--ink); border-color: var(--paper); }
 
   @media (prefers-reduced-motion: reduce) {
-    /* Der grosse, kontinuierliche 3D-Raumschwenk bleibt aus Ruecksicht auf
-       Bewegungsempfindlichkeit deaktiviert - das leichte Schweben der
-       einzelnen Artikel (siehe unten, .chaos-item bleibt bewusst animiert)
-       ist dagegen so klein/langsam, dass es fuer den eigentlichen Sinn des
-       bewusst aufgerufenen Chaos-Modus erhalten bleibt. */
-    .chaos-view--showroom #chaosItems { transform: none !important; }
+    .chaos-hint,
+    .chaos-focus { transition: none; }
+    .chaos-focus.is-swap .chaos-focus__brand,
+    .chaos-focus.is-swap .chaos-focus__title,
+    .chaos-focus.is-swap .chaos-focus__meta { animation: none; }
   }
 
   /* ---------- Outfit-Baukasten ---------- */
@@ -2703,8 +2829,6 @@
 
     .footer { padding: 20px 16px 28px; font-size: 0.7rem; }
 
-    .chaos-item { width: clamp(72px, 24vw, 120px); }
-
     .outfit-view {
       padding: 10px 10px calc(8px + env(safe-area-inset-bottom));
       gap: 6px;
@@ -2850,8 +2974,6 @@
       width: 100%;
     }
 
-    /* Bottom-Mode-Bar wuerde sonst den "Zum Archiv"-Button in Chaos ueberlagern */
-    .chaos-view .view-enter-btn { bottom: 62px; }
     /* ...und bei hohem Swipe-Karten-Inhalt auch den zentrierten "Zum Archiv"-
        Button dort - Swipe-View bekommt daher unten reservierten Platz. */
     .swipe-view { padding-bottom: 64px; }

@@ -163,11 +163,11 @@
       orderGreeting: "Hallo! Ich interessiere mich für folgende Artikel aus dem Disorder119-Archiv:",
       orderAvailQuestion: "Sind diese Artikel noch verfügbar?", orderSubject: "Bestellanfrage Disorder119",
       orderSizeAbbrev: "Gr. ", orderArticleAbbrev: "Art.-Nr. ",
-      modeArchiv: "Archiv", modeMatch: "Match", modeChaos: "Chaos", modeBaukasten: "Baukasten",
+      modeArchiv: "Archiv", modeMatch: "Match", modeChaos: "Universum", modeBaukasten: "Baukasten",
       menuRental: "Verleih",
       pageTitleHome: "Disorder119 — Archiv-Katalog", pageTitleMatch: "Disorder119 — Match",
-      pageTitleChaos: "Disorder119 — Chaos", pageTitleOutfit: "Disorder119 — Outfit-Baukasten",
-      modeHint: "Entdecke auch Match, Chaos & Baukasten", hintCloseAria: "Hinweis schließen",
+      pageTitleChaos: "Disorder119 — Universum", pageTitleOutfit: "Disorder119 — Outfit-Baukasten",
+      modeHint: "Entdecke auch Match, Universum & Baukasten", hintCloseAria: "Hinweis schließen",
       modeRailAria: "Ansicht wechseln",
       rentalCta: "Für Miete anfragen", rentalCloseAria: "Schließen",
       rentalPriceLabel: "Mietpreis", rentalPriceOnRequest: "Mietpreis auf Anfrage",
@@ -201,8 +201,17 @@
       swipeRoundDone: "Runde beendet", swipeSavedInCart: "Teile gemerkt &amp; im Warenkorb",
       swipeViewCart: "Warenkorb ansehen", swipePlayAgain: "Nochmal spielen", swipeNopeTag: "Nope",
       swipeNopeAria: "Nicht mein Stil", swipeLikeAria: "Merken",
-      chaosLabel: "Chaos-Ansicht — anklicken für Details",
-      chaosShuffle: "Neu mischen",
+      chaosShuffle: "Mischen",
+      chaosSkyLabel: "Universum: Artikel im Raum. Zoomen mit zwei Fingern oder Mausrad, ziehen zum Umsehen, tippen oder klicken für Details. Tastatur: Pfeiltasten, Plus und Minus, Eingabe öffnet das Teil in der Mitte.",
+      chaosHintTouch: "Zwei Finger: zoomen · Wischen: umsehen · Tippen: hinfliegen",
+      chaosHintMouse: "Mausrad: zoomen · Ziehen: umsehen · Klicken: hinfliegen",
+      chaosFocusEmpty: "Näher heranzoomen",
+      chaosFocusSize: "Gr.",
+      gameTitle: "Warp-Jagd", gameTime: "Zeit", gameScore: "Warenwert", gameCombo: "Serie", gameGo: "Los!",
+      gameKeys: "Fadenkreuz auf Teile steuern · Leertaste oder Maustaste: Turbo · Esc: beenden",
+      gameOver: "Warp-Jagd vorbei", gameNewBest: "Neuer Bestwert!",
+      gameResult: "{n} Teile im Wert von {value} eingesammelt", gameBest: "Bestwert auf diesem Gerät: {value}",
+      gameTopFind: "Bester Fund", gameAgain: "Nochmal", gameBack: "Zurück ins Universum", gameStorm: "Chaos-Sturm",
       outfitEyebrow: "Outfit-Baukasten", outfitTitle: "Bau dir einen Look",
       outfitPickerCloseAria: "Schließen",
       outfitPickerChoose: "wählen", outfitPickerSearchPh: "Suche nach Marke, Titel …",
@@ -337,11 +346,11 @@
       orderGreeting: "Hello! I'm interested in the following pieces from the Disorder119 archive:",
       orderAvailQuestion: "Are these pieces still available?", orderSubject: "Order request Disorder119",
       orderSizeAbbrev: "Size ", orderArticleAbbrev: "Item no. ",
-      modeArchiv: "Archive", modeMatch: "Match", modeChaos: "Chaos", modeBaukasten: "Outfit builder",
+      modeArchiv: "Archive", modeMatch: "Match", modeChaos: "Universe", modeBaukasten: "Outfit builder",
       menuRental: "Rental",
       pageTitleHome: "Disorder119 — Curated Archive", pageTitleMatch: "Disorder119 — Match",
-      pageTitleChaos: "Disorder119 — Chaos", pageTitleOutfit: "Disorder119 — Outfit Builder",
-      modeHint: "Also discover Match, Chaos & the outfit builder", hintCloseAria: "Close hint",
+      pageTitleChaos: "Disorder119 — Universe", pageTitleOutfit: "Disorder119 — Outfit Builder",
+      modeHint: "Also discover Match, the Universe & the outfit builder", hintCloseAria: "Close hint",
       modeRailAria: "Switch view",
       rentalCta: "Request to rent", rentalCloseAria: "Close",
       rentalPriceLabel: "Rental price", rentalPriceOnRequest: "Rental price on request",
@@ -375,8 +384,17 @@
       swipeRoundDone: "Round finished", swipeSavedInCart: "Pieces saved &amp; in cart",
       swipeViewCart: "View cart", swipePlayAgain: "Play again", swipeNopeTag: "Nope",
       swipeNopeAria: "Not my style", swipeLikeAria: "Save",
-      chaosLabel: "Chaos view — click for details",
-      chaosShuffle: "Shuffle again",
+      chaosShuffle: "Shuffle",
+      chaosSkyLabel: "Universe: pieces floating in space. Zoom with two fingers or the mouse wheel, drag to look around, tap or click for details. Keyboard: arrow keys, plus and minus, Enter opens the piece in the centre.",
+      chaosHintTouch: "Two fingers: zoom · Swipe: look around · Tap: fly there",
+      chaosHintMouse: "Wheel: zoom · Drag: look around · Click: fly there",
+      chaosFocusEmpty: "Zoom in closer",
+      chaosFocusSize: "Size",
+      gameTitle: "Warp Hunt", gameTime: "Time", gameScore: "Value", gameCombo: "Streak", gameGo: "Go!",
+      gameKeys: "Steer the crosshair onto pieces · Space or mouse button: boost · Esc: quit",
+      gameOver: "Warp Hunt over", gameNewBest: "New best!",
+      gameResult: "{n} pieces worth {value} collected", gameBest: "Best on this device: {value}",
+      gameTopFind: "Best find", gameAgain: "Play again", gameBack: "Back to the universe", gameStorm: "Chaos storm",
       outfitEyebrow: "Outfit builder", outfitTitle: "Build a look",
       outfitPickerCloseAria: "Close",
       outfitPickerChoose: "choose", outfitPickerSearchPh: "Search by brand, title …",
@@ -512,11 +530,11 @@
       orderGreeting: "Bonjour ! Je suis intéressé(e) par les pièces suivantes de l'archive Disorder119 :",
       orderAvailQuestion: "Ces pièces sont-elles toujours disponibles ?", orderSubject: "Demande de commande Disorder119",
       orderSizeAbbrev: "Taille ", orderArticleAbbrev: "N° d'article ",
-      modeArchiv: "Archive", modeMatch: "Match", modeChaos: "Chaos", modeBaukasten: "Configurateur",
+      modeArchiv: "Archive", modeMatch: "Match", modeChaos: "Univers", modeBaukasten: "Configurateur",
       menuRental: "Location",
       pageTitleHome: "Disorder119 — Archive Sélectionnée", pageTitleMatch: "Disorder119 — Match",
-      pageTitleChaos: "Disorder119 — Chaos", pageTitleOutfit: "Disorder119 — Configurateur de tenues",
-      modeHint: "Découvre aussi Match, Chaos et le configurateur de tenues", hintCloseAria: "Fermer l'info",
+      pageTitleChaos: "Disorder119 — Univers", pageTitleOutfit: "Disorder119 — Configurateur de tenues",
+      modeHint: "Découvre aussi Match, l'Univers et le configurateur de tenues", hintCloseAria: "Fermer l'info",
       modeRailAria: "Changer de vue",
       rentalCta: "Demander la location", rentalCloseAria: "Fermer",
       rentalPriceLabel: "Prix de location", rentalPriceOnRequest: "Prix de location sur demande",
@@ -550,8 +568,17 @@
       swipeRoundDone: "Manche terminée", swipeSavedInCart: "Pièces enregistrées &amp; dans le panier",
       swipeViewCart: "Voir le panier", swipePlayAgain: "Rejouer", swipeNopeTag: "Non",
       swipeNopeAria: "Pas mon style", swipeLikeAria: "Garder",
-      chaosLabel: "Vue Chaos — clique pour les détails",
-      chaosShuffle: "Remélanger",
+      chaosShuffle: "Mélanger",
+      chaosSkyLabel: "Univers : les pièces flottent dans l'espace. Zoomer à deux doigts ou à la molette, glisser pour explorer, toucher ou cliquer pour les détails. Clavier : flèches, plus et moins, Entrée ouvre la pièce au centre.",
+      chaosHintTouch: "Deux doigts : zoomer · Glisser : explorer · Toucher : s'approcher",
+      chaosHintMouse: "Molette : zoomer · Glisser : explorer · Clic : s'approcher",
+      chaosFocusEmpty: "Zoomez plus près",
+      chaosFocusSize: "Taille",
+      gameTitle: "Chasse Warp", gameTime: "Temps", gameScore: "Valeur", gameCombo: "Série", gameGo: "Go !",
+      gameKeys: "Dirigez le viseur sur les pièces · Espace ou clic : turbo · Échap : quitter",
+      gameOver: "Chasse Warp terminée", gameNewBest: "Nouveau record !",
+      gameResult: "{n} pièces d'une valeur de {value} attrapées", gameBest: "Record sur cet appareil : {value}",
+      gameTopFind: "Meilleure trouvaille", gameAgain: "Rejouer", gameBack: "Retour à l'univers", gameStorm: "Tempête chaos",
       outfitEyebrow: "Configurateur de tenues", outfitTitle: "Compose un look",
       outfitPickerCloseAria: "Fermer",
       outfitPickerChoose: "choisir", outfitPickerSearchPh: "Recherche par marque, titre …",
@@ -2570,9 +2597,10 @@
 
   function chaosItemCount() {
     var w = window.innerWidth;
-    // Auf schmalen Handys weniger Artikel als vorher (14 -> 9) - sonst
-    // ueberlappten sich die kleinen, treibenden Karten zu stark und liessen
-    // sich kaum noch einzeln antippen.
+    // Obergrenze fuer die Teile, die im Universum einen eigenen (unsicht-
+    // baren) Knopf fuer Tastatur und Screenreader bekommen - die groessten
+    // sichtbaren zuerst, hoechstens 12 (siehe startChaosUniverse). Auf
+    // schmalen Handys weniger, damit die Tab-Reihenfolge ueberschaubar bleibt.
     if (w < 420) return 9;
     if (w < 640) return 12;
     if (w < 1100) return 26;
@@ -2580,302 +2608,842 @@
     return 48;
   }
 
-  // Ab dieser Breite gibt's den automatisch schwenkenden 360-Grad-Showroom
-  // statt dem einfachen Treiben-lassen - am Handy waer's per Touch eh nicht
-  // steuerbar, deshalb bewusst nur am Desktop.
-  function chaosIsShowroom() {
-    return window.innerWidth >= 900;
+  // ---- Universum (frueher "Chaos") ----
+  // Die Artikel stehen in einem gedachten 3D-Raum aus Wuerfelzellen
+  // (1 x 1 x 1). Jede Zelle entscheidet per fester Zufallsformel, ob dort
+  // ein Teil steht, welches und wo genau - der Raum ist dadurch in jede
+  // Richtung unendlich, ohne dass etwas gespeichert wird. Zoomen (zwei
+  // Finger, Mausrad) heisst: die Kamera fliegt nach vorn oder zurueck. Weit
+  // hinten sind die Teile nur Lichtpunkte, beim Naeherkommen werden sie zu
+  // Kleidung, ganz nah ziehen sie vorbei.
+  // Ersetzt Handy-Streubild (9 kleine, staendig treibende Teile, am iPhone
+  // schwer zu treffen, beim Mischen ein iOS-Dialog fuer die Neigungs-
+  // sensoren) und Desktop-Rundraum (nur per Maus steuerbar). Gezeichnet wird
+  // auf ein <canvas>: mehrere Dutzend Teile pro Bild waeren als DOM-Elemente
+  // am Handy zu langsam. Die groessten sichtbaren Teile bekommen zusaetzlich
+  // unsichtbare Knoepfe fuer Tastatur und Screenreader (#chaosItems .chaos-item).
+  var CHAOS_U = {
+    ITEM_W: 0.78,   // Breite eines Fotos in Raumeinheiten (inkl. transparentem Rand)
+    FILL: 0.14,     // Anteil belegter Zellen - Platz zwischen den Teilen
+    NEAR: 0.32,     // naeher als das wird nichts gezeichnet
+    FAR: 12,        // ab hier nur noch Sterne
+    REF: 2.2,       // Bezugstiefe: dort folgen Teile 1:1 dem Finger
+    BIG: 120,       // ab dieser Breite (px) oeffnet Tippen die Schnellansicht
+    STAR_N: 560, STAR_SX: 44, STAR_SY: 90, STAR_SZ: 38, STAR_Z0: 12,
+    DISPLAY_KEEP: 24 // so viele grosse Fotos (960 px) bleiben im Speicher
+  };
+  var chaosU = {
+    active: false, raf: 0, lastT: 0, slow: 0, dprCap: 2,
+    W: 0, H: 0, left: 0, top: 0, DPR: 1, FOC: 600,
+    cam: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 },
+    seed: 1, anim: null, trails: 0, storm: 0, stormSpin: 0,
+    pool: [], stars: [], drawn: [], buttons: [],
+    focusKey: null, focusItem: null, hoverKey: "",
+    lastInput: 0, pointers: new Map(), gesture: null, lastTap: { t: 0, x: 0, y: 0 },
+    thumbs: {}, displays: new Map(), shoot: null, nextShoot: 0
+  };
+  var chaosSky = document.getElementById("chaosSky");
+  var chaosSkyCtx = chaosSky ? chaosSky.getContext("2d", { alpha: false }) : null;
+  var chaosHint = document.getElementById("chaosHint");
+  var chaosHintTimer = null;
+  var chaosFocusBtn = document.getElementById("chaosFocus");
+  var chaosTooltip = document.getElementById("chaosTooltip");
+
+  function chaosReduceMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  function chaosFinePointer() {
+    return !!(window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches);
   }
 
-  function chaosShowroomItemCount() {
-    // Bewusst begrenzt: bei zu vielen Artikeln rings um den Raum ueberlappen
-    // sie sich (Perspektive vergroessert Artikel vorne im Blickfeld) so
-    // stark, dass viele nicht mehr anklickbar waeren.
-    var w = window.innerWidth;
-    if (w < 1300) return 18;
-    if (w < 1800) return 22;
-    return 26;
+  // Feste Zufallszahl je Zelle: dieselbe Zelle zeigt immer dasselbe Teil.
+  function chaosURnd(i, j, k, salt) {
+    var h = Math.imul(i, 0x27d4eb2d) ^ Math.imul(j, 0x165667b1) ^ Math.imul(k, 0x6c8e9cf5) ^ Math.imul(chaosU.seed + salt, 0x85ebca6b);
+    h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
+    h = Math.imul(h ^ (h >>> 12), 0x297a2d39);
+    h ^= h >>> 15;
+    return (h >>> 0) / 4294967296;
+  }
+  function chaosUMod(a, n) { return ((a % n) + n) % n; }
+
+  function chaosUMakeStars() {
+    chaosU.stars = [];
+    for (var n = 0; n < CHAOS_U.STAR_N; n++) {
+      chaosU.stars.push({ x: Math.random() * CHAOS_U.STAR_SX, y: Math.random() * CHAOS_U.STAR_SY, z: Math.random() * CHAOS_U.STAR_SZ, b: 0.35 + Math.random() * 0.65 });
+    }
   }
 
-  // ---- Chaos-Showroom: echter 3D-Panoramaraum. Die Artikel stehen rund um
-  // ein Zentrum verteilt (rotateY + translateZ je Artikel), und der ganze
-  // Raum dreht sich um die eigene Achse, je nachdem wo die Maus steht - wie
-  // wenn man in der Mitte eines Rundraums den Kopf dreht, statt dass sich
-  // die Artikel selbst bewegen. Naehert man sich beim Umschauen einem Rand
-  // des Blickbereichs (= man hat den Raum einmal "abgelaufen"), wird der
-  // Raum mit neuen Artikeln aufgefrischt, ohne die Blickrichtung zu
-  // resetten - so wird ueber laengeres Umschauen irgendwann der ganze
-  // Katalog gezeigt, nie dieselben Teile in Dauerschleife. ----
-  var chaosPan = { active: false, target: 0, current: 0, raf: null, maxYaw: 0, lapArmed: true };
-  var chaosShownIds = null;
-
-  function chaosPanPointerMove(e) {
-    var nx = (e.clientX / window.innerWidth) * 2 - 1; // -1 (links) .. 1 (rechts)
-    chaosPan.target = -nx * chaosPan.maxYaw;
+  function chaosUResize() {
+    var r = document.getElementById("chaosScreen").getBoundingClientRect();
+    chaosU.W = Math.max(1, r.width); chaosU.H = Math.max(1, r.height);
+    chaosU.left = r.left; chaosU.top = r.top;
+    // Grosse Bildschirme brauchen keine doppelte Pixeldichte, die kostet dort
+    // am meisten Rechenzeit.
+    var cap = chaosU.W > 1100 ? Math.min(chaosU.dprCap, 1.5) : chaosU.dprCap;
+    chaosU.DPR = Math.min(cap, window.devicePixelRatio || 1);
+    chaosSky.width = Math.round(chaosU.W * chaosU.DPR);
+    chaosSky.height = Math.round(chaosU.H * chaosU.DPR);
+    chaosU.FOC = Math.min(chaosU.W, chaosU.H) * 1.7;
   }
 
-  function chaosPanFrame() {
-    var chaosViewEl = document.getElementById("chaosView");
-    if (!chaosPan.active || !chaosViewEl || chaosViewEl.classList.contains("hidden")) {
-      chaosPan.active = false;
-      document.removeEventListener("mousemove", chaosPanPointerMove);
+  // Kleine Vorschau (220 px) fuer ferne Teile, Anzeigefassung (960 px) erst,
+  // wenn ein Teil gross im Bild steht. Von den grossen Fotos bleiben nur die
+  // zuletzt gebrauchten im Speicher - sonst wuerde langes Herumfliegen am
+  // Handy hunderte MB an entpackten Bildern ansammeln.
+  function chaosUThumb(it) {
+    var url = thumbUrl(it.gallery[0]);
+    var im = chaosU.thumbs[url];
+    if (!im) { im = new Image(); im.decoding = "async"; im.src = url; chaosU.thumbs[url] = im; }
+    return im;
+  }
+  function chaosUDisplay(it) {
+    var url = displayUrl(it.gallery[0]);
+    var im = chaosU.displays.get(url);
+    if (im) { chaosU.displays.delete(url); chaosU.displays.set(url, im); return im; }
+    im = new Image(); im.decoding = "async"; im.src = url;
+    chaosU.displays.set(url, im);
+    if (chaosU.displays.size > CHAOS_U.DISPLAY_KEEP) chaosU.displays.delete(chaosU.displays.keys().next().value);
+    return im;
+  }
+  function chaosUReady(im) { return im && im.complete && im.naturalWidth > 0; }
+
+  function chaosUFrame(now) {
+    var ctx = chaosSkyCtx, U = CHAOS_U, S = chaosU, G = chaosG;
+    var W = S.W, H = S.H, FOC = S.FOC, cam = S.cam, DPR = S.DPR;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = S.trails > 0 ? "rgba(0,0,0," + (0.22 + 0.5 * (1 - S.trails)).toFixed(3) + ")" : "#000";
+    ctx.fillRect(0, 0, W, H);
+    var cx = W / 2, cy = H / 2;
+    // Chaos-Sturm (Geheimnis): alles wirbelt um die Bildmitte und findet
+    // danach an seinen Platz zurueck.
+    var swirl = S.storm > 0 ? S.storm * S.stormSpin : 0;
+
+    // Sterne: ein sich wiederholender Kasten weit hinter den Teilen
+    ctx.fillStyle = "#f2efe7";
+    for (var s = 0; s < S.stars.length; s++) {
+      var st = S.stars[s];
+      var sdz = chaosUMod(st.z - cam.z, U.STAR_SZ) + U.STAR_Z0;
+      var ssc = FOC / sdz;
+      var sx = cx + (chaosUMod(st.x - cam.x + U.STAR_SX / 2, U.STAR_SX) - U.STAR_SX / 2) * ssc;
+      var sy = cy + (chaosUMod(st.y - cam.y + U.STAR_SY / 2, U.STAR_SY) - U.STAR_SY / 2) * ssc;
+      if (swirl) {
+        var sa = swirl * 0.35, scs = Math.cos(sa), ssn = Math.sin(sa);
+        var rx0 = sx - cx, ry0 = sy - cy;
+        sx = cx + rx0 * scs - ry0 * ssn; sy = cy + rx0 * ssn + ry0 * scs;
+      }
+      if (sx < -2 || sx > W + 2 || sy < -2 || sy > H + 2) continue;
+      var tt = (sdz - U.STAR_Z0) / U.STAR_SZ;
+      var size = 0.5 + 1.5 * (1 - tt);
+      ctx.globalAlpha = st.b * Math.min(1, (1 - tt) * 1.6) * Math.min(1, tt * 6);
+      ctx.fillRect(sx - size / 2, sy - size / 2, size, size);
+    }
+
+    // Teile im Sichtkegel einsammeln
+    var list = [], n = S.pool.length;
+    if (n) {
+      var k0 = Math.floor(cam.z + U.NEAR), k1 = Math.floor(cam.z + U.FAR);
+      for (var k = k0; k <= k1; k++) {
+        var slab = k + 1 - cam.z;
+        if (slab <= U.NEAR) continue;
+        var hw = (W / 2) / FOC * slab + 0.9, hh = (H / 2) / FOC * slab + 0.9;
+        if (swirl) { var hr = Math.max(hw, hh); hw = hr; hh = hr; }
+        var i1 = Math.floor(cam.x + hw), j1 = Math.floor(cam.y + hh);
+        for (var i = Math.floor(cam.x - hw); i <= i1; i++) {
+          for (var j = Math.floor(cam.y - hh); j <= j1; j++) {
+            if (chaosURnd(i, j, k, 1) > U.FILL) continue;
+            var key = i + ":" + j + ":" + k;
+            if (G.collected && G.collected.has(key)) continue;
+            var z = k + 0.1 + 0.8 * chaosURnd(i, j, k, 5);
+            var d = z - cam.z;
+            if (d <= U.NEAR || d > U.FAR) continue;
+            var it = S.pool[Math.floor(chaosURnd(i, j, k, 2) * n)];
+            var sc = FOC / d;
+            var w = U.ITEM_W * sc;
+            var thumb = chaosUThumb(it);
+            var ratio = chaosUReady(thumb) ? thumb.naturalHeight / thumb.naturalWidth : 4 / 3;
+            var h = w * ratio;
+            var x = i + 0.2 + 0.6 * chaosURnd(i, j, k, 3);
+            var y = j + 0.2 + 0.6 * chaosURnd(i, j, k, 4);
+            var px = cx + (x - cam.x) * sc, py = cy + (y - cam.y) * sc;
+            var rot = (chaosURnd(i, j, k, 6) - 0.5) * 0.3;
+            if (swirl) {
+              var ia = swirl * (0.5 + 0.1 * d), ics = Math.cos(ia), isn = Math.sin(ia);
+              var ix = px - cx, iy = py - cy;
+              px = cx + ix * ics - iy * isn; py = cy + ix * isn + iy * ics;
+              rot += ia * 1.6;
+            }
+            if (px + w < 0 || px - w > W || py + h < 0 || py - h > H) continue;
+            var a = 1;
+            if (d > U.FAR - 4) a *= (U.FAR - d) / 4;               // taucht hinten auf
+            if (d < U.NEAR + 0.45) a *= (d - U.NEAR) / 0.45;       // zieht vorn vorbei
+            if (w > W * 0.8) a *= Math.max(0, 1 - (w - W * 0.8) / (W * 0.5));
+            a *= Math.min(1, 0.18 + w / 210);                     // hinten dunkler
+            if (a < 0.02) continue;
+            list.push({ key: key, it: it, thumb: thumb, x: x, y: y, z: z, d: d, px: px, py: py, w: w, h: h, a: a, rot: rot,
+              gold: G.phase === "run" && chaosURnd(i, j, k, 9) < 0.06 });
+          }
+        }
+      }
+      list.sort(function (p, q) { return q.d - p.d; });
+    }
+
+    // Fokus: das groesste Teil nahe der Bildmitte
+    var best = null;
+    if (G.phase === "idle") {
+      var bestScore = Infinity, fx = cx, fy = H * 0.46;
+      for (var f = 0; f < list.length; f++) {
+        var e = list[f];
+        if (e.w < 70 || e.w > W * 0.9 || e.a < 0.5) continue;
+        var dist = Math.hypot(e.px - fx, e.py - fy);
+        if (dist > Math.min(W, H) * 0.42) continue;
+        var score = dist - e.w * 0.35;
+        if (score < bestScore) { bestScore = score; best = e; }
+      }
+    }
+
+    for (var r = 0; r < list.length; r++) {
+      var o = list[r];
+      var im = o.thumb;
+      if (o.w * DPR > 260) {
+        var big = chaosUDisplay(o.it);
+        if (chaosUReady(big)) im = big;
+      }
+      ctx.setTransform(DPR, 0, 0, DPR, o.px * DPR, o.py * DPR);
+      ctx.rotate(o.rot);
+      if (o === best || o.gold) {
+        var glow = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(o.w, o.h) * 0.75);
+        glow.addColorStop(0, o.gold ? "rgba(255,196,84,0.42)" : "rgba(214,208,194,0.15)");
+        glow.addColorStop(1, "rgba(214,208,194,0)");
+        ctx.globalAlpha = o.a; ctx.fillStyle = glow;
+        ctx.fillRect(-o.w, -o.h, o.w * 2, o.h * 2);
+      }
+      ctx.globalAlpha = o.a;
+      if (chaosUReady(im)) ctx.drawImage(im, -o.w / 2, -o.h / 2, o.w, o.h);
+      else {
+        ctx.fillStyle = "#f2efe7";
+        ctx.fillRect(-1, -1, 2, 2);
+      }
+    }
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    S.drawn = list;
+    chaosUDrawShootingStar(ctx, now);
+    if (G.phase !== "idle") chaosGameFrame(ctx, list, now);
+    chaosUSetFocus(best);
+    chaosUPlaceButtons(list);
+  }
+
+  // Sternschnuppe: zieht alle ein bis zwei Minuten einmal quer durchs Bild.
+  // Wer sie trifft, startet die geheime Warp-Jagd.
+  function chaosUDrawShootingStar(ctx, now) {
+    var S = chaosU;
+    if (chaosG.phase !== "idle" || chaosReduceMotion()) { S.shoot = null; return; }
+    if (!S.shoot) {
+      if (!S.nextShoot) S.nextShoot = now + 25000 + Math.random() * 35000;
+      if (now < S.nextShoot) return;
+      var fromLeft = Math.random() < 0.5;
+      var y0 = S.H * (0.12 + Math.random() * 0.35);
+      S.shoot = { x0: fromLeft ? -40 : S.W + 40, y0: y0, x1: fromLeft ? S.W + 40 : -40, y1: y0 + S.H * (0.18 + Math.random() * 0.2), t0: now, ms: 1600 };
+      S.nextShoot = 0;
+    }
+    var sh = S.shoot, p = (now - sh.t0) / sh.ms;
+    if (p >= 1) { S.shoot = null; S.nextShoot = now + 60000 + Math.random() * 60000; return; }
+    var hx = sh.x0 + (sh.x1 - sh.x0) * p, hy = sh.y0 + (sh.y1 - sh.y0) * p;
+    var tx = hx - (sh.x1 - sh.x0) * 0.09, ty = hy - (sh.y1 - sh.y0) * 0.09;
+    sh.hx = hx; sh.hy = hy;
+    var grad = ctx.createLinearGradient(tx, ty, hx, hy);
+    grad.addColorStop(0, "rgba(242,239,231,0)");
+    grad.addColorStop(1, "rgba(255,226,160,0.95)");
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = grad; ctx.lineWidth = 2.2; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.fillStyle = "#fff4d6";
+    ctx.beginPath(); ctx.arc(hx, hy, 2.6, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Unsichtbare Knoepfe ueber den groessten sichtbaren Teilen: fuer
+  // Tastatur, Screenreader und die Browser-Tests. Beschriftung nur bei
+  // Wechsel des Teils anfassen, damit Vorleser nicht staendig neu ansagen.
+  function chaosUPlaceButtons(list) {
+    var btns = chaosU.buttons;
+    if (!btns.length || !list.length) return;
+    var top = list.slice().sort(function (p, q) { return q.w - p.w; });
+    for (var b = 0; b < btns.length; b++) {
+      var btn = btns[b], o = top[b];
+      if (!o) { btn.style.transform = "translate(-9999px,0)"; continue; }
+      btn.style.width = o.w.toFixed(0) + "px";
+      btn.style.height = o.h.toFixed(0) + "px";
+      btn.style.transform = "translate(" + (o.px - o.w / 2).toFixed(1) + "px," + (o.py - o.h / 2).toFixed(1) + "px)";
+      if (btn._chaosKey !== o.key) {
+        btn._chaosKey = o.key;
+        btn._chaosItem = o.it;
+        btn.setAttribute("aria-label", productAltText(o.it) + ", " + fmtPriceDisplay(o.it.price));
+      }
+    }
+  }
+
+  function chaosUFocusMeta(it) {
+    var size = cardSizeLabel(it);
+    var dep = it.department && DEPARTMENT_LABELS[it.department] ? DEPARTMENT_LABELS[it.department][LANG] || "" : "";
+    return fmtPriceDisplay(it.price) + (size ? " · " + t("chaosFocusSize") + " " + size : "") + (dep ? " · " + dep : "");
+  }
+
+  function chaosUSetFocus(e) {
+    var key = e ? e.key : "";
+    if (key === chaosU.focusKey) return;
+    chaosU.focusKey = key;
+    chaosU.focusItem = e ? e.it : null;
+    var brand = document.getElementById("chaosFocusBrand");
+    var title = document.getElementById("chaosFocusTitle");
+    var meta = document.getElementById("chaosFocusMeta");
+    var it = chaosU.focusItem;
+    if (!it) {
+      chaosFocusBtn.classList.add("is-empty");
+      brand.textContent = ""; title.textContent = t("chaosFocusEmpty"); meta.textContent = "";
+      chaosFocusBtn.setAttribute("aria-label", t("chaosFocusEmpty"));
       return;
     }
-    chaosPan.current += (chaosPan.target - chaosPan.current) * 0.025;
-    var host = document.getElementById("chaosItems");
-    if (host) host.style.transform = "rotateY(" + chaosPan.current.toFixed(2) + "deg)";
+    chaosFocusBtn.classList.remove("is-empty");
+    brand.textContent = it.brand || t("noBrand");
+    title.textContent = it.title;
+    meta.textContent = chaosUFocusMeta(it);
+    chaosFocusBtn.setAttribute("aria-label", productAltText(it) + ", " + fmtPriceDisplay(it.price));
+    chaosFocusBtn.classList.remove("is-swap"); void chaosFocusBtn.offsetWidth; chaosFocusBtn.classList.add("is-swap");
+  }
 
-    var edgeFrac = Math.abs(chaosPan.current) / chaosPan.maxYaw;
-    if (edgeFrac > 0.9 && chaosPan.lapArmed) {
-      chaosPan.lapArmed = false;
-      populateChaosItems(true);
-    } else if (edgeFrac < 0.3) {
-      chaosPan.lapArmed = true;
+  // Maus: kurze Vorschau (Marke, Titel, Preis) beim Ueberfahren eines Teils
+  function chaosUHover(x, y) {
+    var hit = chaosG.phase === "idle" ? chaosUHitTest(x, y) : null;
+    var key = hit ? hit.key : "";
+    chaosSky.classList.toggle("is-over-item", !!hit);
+    if (!hit) { chaosTooltip.classList.remove("visible"); chaosU.hoverKey = ""; return; }
+    if (key !== chaosU.hoverKey) {
+      chaosU.hoverKey = key;
+      chaosTooltip.innerHTML =
+        '<span class="chaos-tooltip__brand">' + escapeHtml(hit.it.brand || "") + '</span>' +
+        escapeHtml(hit.it.title) + '<br><span class="chaos-tooltip__price">' + fmtPriceDisplay(hit.it.price) + '</span>';
     }
-
-    chaosPan.raf = requestAnimationFrame(chaosPanFrame);
+    chaosTooltip.style.left = (x + chaosU.left) + "px";
+    chaosTooltip.style.top = (y + chaosU.top - 14) + "px";
+    chaosTooltip.classList.add("visible");
   }
 
-  function stopChaosPan() {
-    chaosPan.active = false;
-    if (chaosPan.raf) cancelAnimationFrame(chaosPan.raf);
-    document.removeEventListener("mousemove", chaosPanPointerMove);
-    var host = document.getElementById("chaosItems");
-    if (host) host.style.transform = "";
+  function chaosUEase(p) { return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; }
+  function chaosUEaseOut(p) { return 1 - Math.pow(1 - p, 3); }
+  function chaosUFlyTo(tx, ty, tz, ms, fn) {
+    var S = chaosU;
+    S.vel.x = S.vel.y = S.vel.z = 0;
+    if (chaosReduceMotion()) { S.cam.x = tx; S.cam.y = ty; S.cam.z = tz; S.anim = null; chaosURequest(); return; }
+    S.anim = { from: { x: S.cam.x, y: S.cam.y, z: S.cam.z }, to: { x: tx, y: ty, z: tz }, t0: performance.now(), ms: ms, fn: fn || chaosUEase };
+    chaosURequest();
+  }
+  // Zoomen um einen Bildschirmpunkt: die Kamera fliegt so, dass der Punkt
+  // auf der Bezugstiefe unter dem Finger bzw. der Maus stehen bleibt.
+  function chaosUZoomStep(px, py, factor) {
+    var S = chaosU, dz = CHAOS_U.REF * (1 - 1 / factor);
+    S.cam.z += dz;
+    S.cam.x += (px - S.W / 2) * dz / S.FOC;
+    S.cam.y += (py - S.H / 2) * dz / S.FOC;
+  }
+  function chaosUZoomAt(px, py, factor, ms) {
+    var S = chaosU, dz = CHAOS_U.REF * (1 - 1 / factor);
+    chaosUFlyTo(S.cam.x + (px - S.W / 2) * dz / S.FOC, S.cam.y + (py - S.H / 2) * dz / S.FOC, S.cam.z + dz, ms || 520);
   }
 
-  function startChaosPan() {
-    stopChaosPan();
-    chaosPan.active = true;
-    chaosPan.maxYaw = 185; // Grad - deckt den vollen Rundumblick (360 Grad) ueber die Mausbreite ab
-    chaosPan.target = 0;
-    chaosPan.current = 0;
-    chaosPan.lapArmed = true;
-    document.addEventListener("mousemove", chaosPanPointerMove);
-    chaosPanFrame();
+  function chaosURequest() {
+    if (!chaosU.raf && chaosU.active && !document.hidden) chaosU.raf = requestAnimationFrame(chaosUTick);
+  }
+  function chaosUTick(now) {
+    var S = chaosU;
+    S.raf = 0;
+    if (!S.active || chaosView.classList.contains("hidden")) {
+      S.active = false;
+      if (chaosG.phase !== "idle") chaosGameEnd(true);
+      return;
+    }
+    var dt = S.lastT ? Math.min(50, now - S.lastT) : 16;
+    S.lastT = now;
+    // Schnellansicht offen: nichts zeichnen, aber bereit bleiben
+    if (backdrop.classList.contains("open")) { S.lastInput = now; chaosURequest(); return; }
+    // Schwaecheres Geraet: Aufloesung stufenweise senken statt zu ruckeln
+    if (dt > 26) {
+      if (++S.slow > 40 && S.dprCap > 1) { S.dprCap = Math.max(1, S.dprCap - 0.5); S.slow = 0; chaosUResize(); }
+    } else S.slow = Math.max(0, S.slow - 1);
+    if (chaosG.phase !== "idle") {
+      chaosGameStep(dt, now);
+    } else if (S.anim) {
+      var p = Math.min(1, (now - S.anim.t0) / S.anim.ms), e = S.anim.fn(p);
+      S.cam.x = S.anim.from.x + (S.anim.to.x - S.anim.from.x) * e;
+      S.cam.y = S.anim.from.y + (S.anim.to.y - S.anim.from.y) * e;
+      S.cam.z = S.anim.from.z + (S.anim.to.z - S.anim.from.z) * e;
+      if (p >= 1) { S.anim = null; S.lastInput = now; }
+    } else if (S.pointers.size === 0) {
+      var v = S.vel;
+      if (Math.abs(v.x) + Math.abs(v.y) + Math.abs(v.z) > 1e-6) {
+        S.cam.x += v.x * dt; S.cam.y += v.y * dt; S.cam.z += v.z * dt;
+        var damp = Math.pow(0.935, dt / 16.7);
+        v.x *= damp; v.y *= damp; v.z *= damp;
+        if (Math.abs(v.x) + Math.abs(v.y) + Math.abs(v.z) < 2e-6) v.x = v.y = v.z = 0;
+      } else if (!chaosReduceMotion() && now - S.lastInput > 2200) {
+        S.cam.z += 0.00011 * dt;   // ganz langsam weiter ins All
+      }
+    }
+    if (S.trails > 0 && chaosG.phase === "idle") S.trails = Math.max(0, S.trails - dt / 900);
+    if (S.storm > 0) {
+      S.stormSpin += dt * 0.0042;
+      S.storm = Math.max(0, S.storm - dt / 6500);
+      if (!S.storm) S.stormSpin = 0;
+    }
+    chaosUFrame(now);
+    chaosURequest();
   }
 
-  // Waehlt eine frische Auswahl Artikel - bevorzugt solche, die in dieser
-  // Chaos-Sitzung noch nicht gezeigt wurden. Erst wenn der ganze Katalog
-  // durch ist, faengt die "gezeigt"-Liste wieder von vorne an.
-  function chaosPickRoomItems(count) {
-    var pool = ITEMS.filter(function (it) {
-      return it.status !== "Verkauft" && it.gallery && it.gallery[0];
+  // Finger und Maus: ziehen = umsehen (mit Schwung), zwei Finger oder
+  // Mausrad = zoomen, Tippen/Klicken fliegt zu einem Teil oder oeffnet es,
+  // Doppeltippen ins Leere zoomt hinein.
+  function chaosULocal(e) { return { x: e.clientX - chaosU.left, y: e.clientY - chaosU.top }; }
+  function chaosUMid() {
+    var xs = 0, ys = 0, arr = [];
+    chaosU.pointers.forEach(function (p) { xs += p.x; ys += p.y; arr.push(p); });
+    var dist = arr.length > 1 ? Math.hypot(arr[0].x - arr[1].x, arr[0].y - arr[1].y) : 0;
+    return { x: xs / arr.length, y: ys / arr.length, dist: dist, n: arr.length };
+  }
+  function chaosUStartGesture(moved) {
+    var m = chaosUMid();
+    chaosU.gesture = { lastX: m.x, lastY: m.y, lastDist: m.dist, moved: moved, t0: performance.now(), samples: [] };
+  }
+  function chaosUHideHint() {
+    if (chaosHintTimer) { clearTimeout(chaosHintTimer); chaosHintTimer = null; }
+    chaosHint.classList.add("is-gone");
+  }
+  function chaosUShowHint(text, ms) {
+    chaosHint.textContent = text;
+    chaosHint.classList.remove("is-gone");
+    if (chaosHintTimer) clearTimeout(chaosHintTimer);
+    chaosHintTimer = setTimeout(chaosUHideHint, ms || 7000);
+  }
+  function chaosUHitTest(x, y) {
+    for (var n = chaosU.drawn.length - 1; n >= 0; n--) {   // vorderste zuerst
+      var o = chaosU.drawn[n];
+      if (o.a < 0.35) continue;
+      var dx = x - o.px, dy = y - o.py;
+      var c = Math.cos(-o.rot), s = Math.sin(-o.rot);
+      var rx = dx * c - dy * s, ry = dx * s + dy * c;
+      if (Math.abs(rx) <= o.w * 0.42 && Math.abs(ry) <= o.h * 0.46) return o;
+    }
+    return null;
+  }
+  function chaosUTap(x, y) {
+    var S = chaosU, now = performance.now();
+    var sh = S.shoot;
+    if (sh && sh.hx !== undefined && Math.hypot(x - sh.hx, y - sh.hy) < 42) { S.shoot = null; chaosGameStart(); return; }
+    var hit = chaosUHitTest(x, y);
+    if (hit) {
+      S.lastTap.t = 0;
+      if (hit.w >= CHAOS_U.BIG) { openModal(hit.it); return; }
+      // Kleines oder fernes Teil: hinfliegen, bis es gross in der Mitte steht
+      var targetD = CHAOS_U.ITEM_W * S.FOC / Math.min(S.W * 0.62, 260);
+      chaosUFlyTo(hit.x, hit.y, hit.z - targetD, 900);
+      return;
+    }
+    if (now - S.lastTap.t < 320 && Math.hypot(x - S.lastTap.x, y - S.lastTap.y) < 30) {
+      S.lastTap.t = 0;
+      chaosUZoomAt(x, y, 2.4);
+      return;
+    }
+    S.lastTap = { t: now, x: x, y: y };
+  }
+
+  // ---- Geheim: Warp-Jagd (Minigame) und Chaos-Sturm ----
+  // Start per Sternschnuppe (anklicken/antippen), per Tastatur "119" oder
+  // Konami-Code. 45 Sekunden fliegt man mit Tempo durchs Universum und
+  // faengt Teile ein, indem man sie ins Fadenkreuz steuert (Maus, Finger
+  // oder Pfeiltasten). Gezaehlt wird der Warenwert; goldene Teile zaehlen
+  // dreifach und geben 3 Sekunden. Wer "chaos" tippt, loest den Chaos-Sturm
+  // aus - eine Verbeugung vor dem alten Namen dieser Seite.
+  var CHAOS_GAME = { SECONDS: 45, COUNTDOWN: 2400, BEST_KEY: "disorder119_warp_best" };
+  var chaosG = { phase: "idle", time: 0, count: 0, score: 0, n: 0, combo: 1, lastCollect: 0,
+    mx: 0, my: 0, keys: {}, boost: false, collected: null, pops: [], finds: [], progress: 0 };
+  var chaosGameEl = document.getElementById("chaosGame");
+  var chaosGameBanner = document.getElementById("chaosGameBanner");
+  var chaosGameResult = document.getElementById("chaosGameResult");
+
+  function chaosGameMoney(v) { return Math.round(v).toLocaleString("de-DE") + " €"; }
+
+  function chaosGameStart() {
+    var S = chaosU, G = chaosG;
+    if (!S.active) return;
+    chaosUHideHint();
+    chaosTooltip.classList.remove("visible");
+    G.phase = "count"; G.count = CHAOS_GAME.COUNTDOWN; G.time = CHAOS_GAME.SECONDS * 1000;
+    G.score = 0; G.n = 0; G.combo = 1; G.lastCollect = 0; G.progress = 0;
+    G.collected = new Set(); G.pops = []; G.finds = []; G.boost = false; G.keys = {};
+    G.mx = S.W / 2; G.my = S.H * 0.46;
+    S.anim = null; S.vel.x = S.vel.y = S.vel.z = 0; S.storm = 0;
+    chaosView.classList.add("chaos-view--game");
+    chaosView.classList.remove("chaos-view--game-over");
+    chaosGameEl.hidden = false;
+    chaosGameResult.hidden = true;
+    chaosGameHud();
+    try { chaosSky.focus({ preventScroll: true }); } catch (err) {}
+    chaosURequest();
+  }
+
+  function chaosGameHud() {
+    var G = chaosG;
+    document.getElementById("chaosGameTime").textContent = Math.ceil(Math.max(0, G.time) / 1000);
+    document.getElementById("chaosGameScore").textContent = chaosGameMoney(G.score);
+    document.getElementById("chaosGameCombo").textContent = "×" + G.combo;
+  }
+
+  function chaosGameStep(dt, now) {
+    var S = chaosU, G = chaosG;
+    if (G.phase === "over") { S.trails = 0.5; return; }
+    if (G.phase === "count") {
+      G.count -= dt;
+      var c = Math.ceil(G.count / 800);
+      chaosGameBanner.textContent = G.count > 0 ? String(c) : t("gameGo");
+      if (G.count <= -500) { G.phase = "run"; chaosGameBanner.textContent = ""; }
+    } else {
+      G.time -= dt;
+      G.progress = 1 - Math.max(0, G.time) / (CHAOS_GAME.SECONDS * 1000);
+      if (G.time <= 0) { chaosGameOver(); return; }
+      if (G.combo > 1 && now - G.lastCollect > 2600) G.combo = 1;
+      chaosGameHud();
+    }
+    // Tastatur steuert das Fadenkreuz
+    var kx = (G.keys.ArrowRight || G.keys.d ? 1 : 0) - (G.keys.ArrowLeft || G.keys.a ? 1 : 0);
+    var ky = (G.keys.ArrowDown || G.keys.s ? 1 : 0) - (G.keys.ArrowUp || G.keys.w ? 1 : 0);
+    if (kx || ky) {
+      G.mx = Math.max(0, Math.min(S.W, G.mx + kx * dt * 0.7));
+      G.my = Math.max(0, Math.min(S.H, G.my + ky * dt * 0.7));
+    }
+    // Vorwaerts fliegen (schneller mit der Zeit, Turbo per Leertaste) und
+    // dorthin lenken, wo das Fadenkreuz steht.
+    var speed = (G.phase === "count" ? 0.0012 : 0.0021 + 0.0016 * G.progress) * (G.boost ? 1.7 : 1);
+    S.cam.z += speed * dt;
+    var steer = 0.0017 * (G.phase === "count" ? 0.4 : 1);
+    S.cam.x += ((G.mx - S.W / 2) / (S.W / 2)) * steer * dt;
+    S.cam.y += ((G.my - S.H / 2) / (S.H / 2)) * steer * dt;
+    S.trails = G.boost ? 0.55 : 0.32;
+  }
+
+  function chaosGameFrame(ctx, list, now) {
+    var S = chaosU, G = chaosG;
+    if (G.phase === "run") {
+      for (var n = list.length - 1; n >= 0; n--) {
+        var o = list[n];
+        if (o.d > 0.95 || o.d < 0.4 || o.a < 0.2) continue;
+        if (Math.hypot(G.mx - o.px, G.my - o.py) > Math.max(o.w, o.h) * 0.34) continue;
+        G.collected.add(o.key);
+        G.combo = now - G.lastCollect < 2600 ? Math.min(5, G.combo + 1) : 1;
+        G.lastCollect = now;
+        var value = (o.it.price > 0 ? o.it.price : 50) * G.combo * (o.gold ? 3 : 1);
+        G.score += value; G.n++;
+        if (o.gold) G.time += 3000;
+        G.finds.push(o.it);
+        G.pops.push({ x: o.px, y: o.py, t0: now, text: "+" + chaosGameMoney(value) + (o.gold ? " · +3 s" : ""), gold: o.gold });
+        chaosGameHud();
+      }
+    }
+    // Einsammel-Anzeigen
+    ctx.textAlign = "center";
+    ctx.font = "700 15px Helvetica Neue, Helvetica, Arial, sans-serif";
+    G.pops = G.pops.filter(function (p) { return now - p.t0 < 900; });
+    G.pops.forEach(function (p) {
+      var q = (now - p.t0) / 900;
+      ctx.globalAlpha = 1 - q;
+      ctx.fillStyle = p.gold ? "#ffc454" : "#f2efe7";
+      ctx.fillText(p.text, p.x, p.y - 30 - q * 40);
+      ctx.strokeStyle = p.gold ? "rgba(255,196,84,0.8)" : "rgba(242,239,231,0.7)";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 18 + q * 70, 0, Math.PI * 2); ctx.stroke();
     });
-    if (!chaosShownIds) chaosShownIds = new Set();
-    var unseen = pool.filter(function (it) { return !chaosShownIds.has(it.id); });
-    var source = unseen.length >= count ? unseen : pool;
-    if (source === pool) chaosShownIds = new Set();
-    for (var i = source.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var tmp = source[i]; source[i] = source[j]; source[j] = tmp;
+    // Fadenkreuz
+    if (G.phase !== "over") {
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = "#f2efe7"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(G.mx, G.my, 22, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(G.mx - 32, G.my); ctx.lineTo(G.mx - 14, G.my);
+      ctx.moveTo(G.mx + 14, G.my); ctx.lineTo(G.mx + 32, G.my);
+      ctx.moveTo(G.mx, G.my - 32); ctx.lineTo(G.mx, G.my - 14);
+      ctx.moveTo(G.mx, G.my + 14); ctx.lineTo(G.mx, G.my + 32);
+      ctx.stroke();
     }
-    var picks = source.slice(0, Math.min(count, source.length));
-    picks.forEach(function (it) { chaosShownIds.add(it.id); });
-    return picks;
+    ctx.globalAlpha = 1;
   }
 
-  function populateChaosItems(showroom) {
+  function chaosGameOver() {
+    var G = chaosG;
+    G.phase = "over";
+    G.time = 0;
+    chaosGameHud();
+    chaosView.classList.add("chaos-view--game-over");
+    chaosGameBanner.textContent = "";
+    var best = 0;
+    try { best = parseFloat(window.localStorage.getItem(CHAOS_GAME.BEST_KEY)) || 0; } catch (err) {}
+    var record = G.score > best;
+    if (record) { try { window.localStorage.setItem(CHAOS_GAME.BEST_KEY, String(Math.round(G.score))); } catch (err) {} }
+    document.getElementById("chaosGameResultTitle").textContent = record && G.score > 0 ? t("gameNewBest") : t("gameOver");
+    document.getElementById("chaosGameResultLine").textContent =
+      tFormat("gameResult", { n: G.n, value: chaosGameMoney(G.score) });
+    document.getElementById("chaosGameBest").textContent =
+      tFormat("gameBest", { value: chaosGameMoney(Math.max(best, G.score)) });
+    var top = G.finds.slice().sort(function (p, q) { return (q.price || 0) - (p.price || 0); })[0];
+    var findBtn = document.getElementById("chaosGameFind");
+    if (top) {
+      findBtn.hidden = false;
+      findBtn._chaosItem = top;
+      document.getElementById("chaosGameFindText").textContent = productAltText(top) + " · " + fmtPriceDisplay(top.price);
+    } else findBtn.hidden = true;
+    chaosGameResult.hidden = false;
+    document.getElementById("chaosGameAgain").focus();
+  }
+
+  function chaosGameEnd(silent) {
+    var G = chaosG;
+    G.phase = "idle"; G.collected = null; G.pops = []; G.keys = {}; G.boost = false;
+    chaosView.classList.remove("chaos-view--game", "chaos-view--game-over");
+    chaosGameEl.hidden = true;
+    chaosGameResult.hidden = true;
+    chaosGameBanner.textContent = "";
+    chaosU.trails = 0.6;
+    chaosU.lastInput = performance.now();
+    chaosU.focusKey = null;
+    if (!silent) { try { chaosSky.focus({ preventScroll: true }); } catch (err) {} }
+    chaosURequest();
+  }
+
+  document.getElementById("chaosGameAgain").addEventListener("click", chaosGameStart);
+  document.getElementById("chaosGameBack").addEventListener("click", function () { chaosGameEnd(false); });
+  document.getElementById("chaosGameFind").addEventListener("click", function () {
+    if (this._chaosItem) openModal(this._chaosItem);
+  });
+
+  var chaosSecret = "";
+  var CHAOS_KONAMI = "ArrowUp,ArrowUp,ArrowDown,ArrowDown,ArrowLeft,ArrowRight,ArrowLeft,ArrowRight,b,a";
+  var chaosKonami = [];
+  document.addEventListener("keydown", function (e) {
+    if (!chaosU.active || chaosView.classList.contains("hidden") || backdrop.classList.contains("open")) return;
+    var tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    var G = chaosG;
+    if (G.phase !== "idle") {
+      if (e.key === "Escape") { e.preventDefault(); chaosGameEnd(false); return; }
+      if (G.phase === "over" && (e.key === " " || e.key === "Enter") && e.target === chaosSky) { e.preventDefault(); chaosGameStart(); return; }
+      if (e.key === " ") { e.preventDefault(); G.boost = true; return; }
+      if (/^(Arrow(Up|Down|Left|Right)|[wasd])$/.test(e.key)) { e.preventDefault(); G.keys[e.key] = true; }
+      return;
+    }
+    chaosKonami.push(e.key.length === 1 ? e.key.toLowerCase() : e.key);
+    if (chaosKonami.length > 10) chaosKonami.shift();
+    if (chaosKonami.join(",") === CHAOS_KONAMI) { chaosKonami = []; chaosGameStart(); return; }
+    if (e.key.length !== 1) return;
+    chaosSecret = (chaosSecret + e.key.toLowerCase()).slice(-5);
+    if (/119$/.test(chaosSecret)) { chaosSecret = ""; chaosGameStart(); return; }
+    if (chaosSecret === "chaos" && !chaosReduceMotion()) {
+      chaosSecret = "";
+      chaosU.storm = 1; chaosU.stormSpin = 0;
+      chaosUShowHint("✦ " + t("gameStorm") + " ✦", 2600);
+      chaosURequest();
+    }
+  });
+  document.addEventListener("keyup", function (e) {
+    if (chaosG.phase === "idle") return;
+    if (e.key === " ") chaosG.boost = false;
+    delete chaosG.keys[e.key];
+  });
+
+  if (chaosSky) {
+    chaosSky.addEventListener("pointerdown", function (e) {
+      var S = chaosU;
+      if (!S.active) return;
+      try { chaosSky.setPointerCapture(e.pointerId); } catch (err) {}
+      var p = chaosULocal(e);
+      if (chaosG.phase !== "idle") {
+        // Im Spiel steuert der Finger bzw. die Maus nur das Fadenkreuz
+        chaosG.mx = p.x; chaosG.my = p.y;
+        if (e.pointerType === "mouse" && chaosG.phase === "run") chaosG.boost = true;
+        return;
+      }
+      S.pointers.set(e.pointerId, p);
+      S.anim = null; S.vel.x = S.vel.y = S.vel.z = 0; S.trails = 0;
+      S.lastInput = performance.now();
+      chaosUStartGesture(S.pointers.size === 1 ? 0 : 99);
+      chaosSky.classList.add("is-dragging");
+      chaosTooltip.classList.remove("visible");
+      chaosUHideHint();
+      chaosURequest();
+    });
+    chaosSky.addEventListener("pointermove", function (e) {
+      var S = chaosU;
+      if (!S.active) return;
+      var p = chaosULocal(e);
+      if (chaosG.phase !== "idle") { chaosG.mx = p.x; chaosG.my = p.y; return; }
+      if (!S.pointers.has(e.pointerId) || !S.gesture) {
+        if (e.pointerType === "mouse" && !e.buttons) chaosUHover(p.x, p.y);
+        return;
+      }
+      S.pointers.set(e.pointerId, p);
+      var m = chaosUMid(), g = S.gesture;
+      var bx = S.cam.x, by = S.cam.y, bz = S.cam.z;
+      if (m.n >= 2 && g.lastDist > 0) {
+        var factor = m.dist / g.lastDist;
+        if (factor > 0.2 && factor < 5) chaosUZoomStep(m.x, m.y, factor);
+        g.lastDist = m.dist;
+      }
+      var dx = m.x - g.lastX, dy = m.y - g.lastY;
+      S.cam.x -= dx * CHAOS_U.REF / S.FOC;
+      S.cam.y -= dy * CHAOS_U.REF / S.FOC;
+      g.lastX = m.x; g.lastY = m.y;
+      g.moved += Math.abs(dx) + Math.abs(dy) + (m.n >= 2 ? 10 : 0);
+      g.samples.push({ t: e.timeStamp, x: S.cam.x - bx, y: S.cam.y - by, z: S.cam.z - bz });
+      if (g.samples.length > 8) g.samples.shift();
+      S.lastInput = performance.now();
+      chaosURequest();
+    });
+    var chaosUEnd = function (e) {
+      var S = chaosU;
+      if (chaosG.phase !== "idle") { if (e.pointerType === "mouse") chaosG.boost = false; return; }
+      if (!S.pointers.has(e.pointerId)) return;
+      var wasSingle = S.pointers.size === 1;
+      var local = chaosULocal(e);
+      S.pointers.delete(e.pointerId);
+      S.lastInput = performance.now();
+      if (S.pointers.size > 0) { chaosUStartGesture(99); return; }  // zwei -> ein Finger: kein Tippen
+      chaosSky.classList.remove("is-dragging");
+      var g = S.gesture; S.gesture = null;
+      if (!g) return;
+      if (wasSingle && g.moved < 10 && performance.now() - g.t0 < 350 && e.type === "pointerup") {
+        chaosUTap(local.x, local.y);
+        return;
+      }
+      // Schwung aus den letzten ~110 ms mitnehmen
+      var recent = g.samples.filter(function (smp) { return e.timeStamp - smp.t < 110; });
+      if (recent.length > 1) {
+        var span = Math.max(16, e.timeStamp - recent[0].t), sx = 0, sy = 0, sz = 0;
+        recent.forEach(function (smp) { sx += smp.x; sy += smp.y; sz += smp.z; });
+        S.vel.x = sx / span; S.vel.y = sy / span; S.vel.z = sz / span;
+      }
+      chaosURequest();
+    };
+    chaosSky.addEventListener("pointerup", chaosUEnd);
+    chaosSky.addEventListener("pointercancel", chaosUEnd);
+    chaosSky.addEventListener("pointerleave", function (e) {
+      if (e.pointerType === "mouse") { chaosTooltip.classList.remove("visible"); chaosU.hoverKey = ""; }
+    });
+    // iOS: Safari soll die Seite beim Zwei-Finger-Zoom nicht selbst vergroessern
+    chaosSky.addEventListener("gesturestart", function (e) { e.preventDefault(); });
+    chaosSky.addEventListener("wheel", function (e) {
+      if (!chaosU.active) return;
+      e.preventDefault();
+      if (chaosG.phase !== "idle") return;
+      chaosU.anim = null; chaosU.vel.x = chaosU.vel.y = chaosU.vel.z = 0;
+      var p = chaosULocal(e);
+      // Trackpads melden viele kleine Schritte, Mausraeder wenige grosse
+      var delta = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+      chaosUZoomStep(p.x, p.y, Math.exp(-Math.max(-240, Math.min(240, delta)) * 0.0016));
+      chaosTooltip.classList.remove("visible");
+      chaosU.lastInput = performance.now(); chaosUHideHint(); chaosURequest();
+    }, { passive: false });
+    chaosSky.addEventListener("keydown", function (e) {
+      var S = chaosU, step = 60 * CHAOS_U.REF / S.FOC;
+      if (!S.active || chaosG.phase !== "idle") return;
+      if (e.key === "+" || e.key === "=") chaosUZoomAt(S.W / 2, S.H / 2, 1.8, 380);
+      else if (e.key === "-") chaosUZoomAt(S.W / 2, S.H / 2, 1 / 1.8, 380);
+      else if (e.key === "ArrowLeft") chaosUFlyTo(S.cam.x - step, S.cam.y, S.cam.z, 240);
+      else if (e.key === "ArrowRight") chaosUFlyTo(S.cam.x + step, S.cam.y, S.cam.z, 240);
+      else if (e.key === "ArrowUp") chaosUFlyTo(S.cam.x, S.cam.y - step, S.cam.z, 240);
+      else if (e.key === "ArrowDown") chaosUFlyTo(S.cam.x, S.cam.y + step, S.cam.z, 240);
+      else if (e.key === "Enter" && S.focusItem) openModal(S.focusItem);
+      else return;
+      e.preventDefault();
+      chaosUHideHint();
+    });
+    window.addEventListener("resize", function () {
+      if (chaosU.active) { chaosUResize(); chaosURequest(); }
+    });
+    document.addEventListener("visibilitychange", function () {
+      chaosU.lastT = 0;
+      chaosURequest();
+    });
+    chaosFocusBtn.addEventListener("click", function () {
+      if (chaosU.focusItem) openModal(chaosU.focusItem);
+    });
+  }
+
+  function chaosUButtonClick() {
+    if (this._chaosItem) openModal(this._chaosItem);
+  }
+
+  function startChaosUniverse() {
+    var S = chaosU;
     var host = document.getElementById("chaosItems");
-    var count = showroom ? chaosShowroomItemCount() : chaosItemCount();
-    var picks = chaosPickRoomItems(count);
-    var slotWidth = 360 / picks.length;
-    // Raster mit Streuung statt reinem Zufall fuer die flache (Nicht-Showroom)
-    // Anordnung - dasselbe Prinzip wie beim 3D-Showroom weiter unten (dort
-    // schon "Slot + Jitter" statt Vollzufall), nur in 2D. Vollzufall liess
-    // Artikel auf kleinen Bildschirmen zu oft stark ueberlappend haufen.
-    var cols = Math.max(1, Math.round(Math.sqrt(picks.length * 1.6)));
-    var rows = Math.ceil(picks.length / cols);
-    var cellW = 92 / cols;
-    var cellH = 88 / rows;
-    // Auf schmalen Handys ist ein Zell-Raster viel kleiner als am Desktop -
-    // der bisherige feste Drift von +-65px war dort ein grosser Teil der
-    // Zellbreite und liess Artikel waehrend des Schwebens ineinanderlaufen.
-    // Drift + Jitter deshalb an die tatsaechliche Bildschirmbreite koppeln.
-    var narrow = window.innerWidth < 640;
-    var driftPx = narrow ? 26 : 65;
-    var jitterFactor = narrow ? 0.42 : 0.65;
-    // Unterer Rand bleibt frei fuer "Neu mischen"/"Zum Archiv" - vorher
-    // konnten Artikel bis auf 92% Hoehe spawnen und damit fast auf die
-    // Buttons rutschen.
-    var maxTop = narrow ? 78 : 92;
-    var frag = document.createDocumentFragment();
-    picks.forEach(function (it, idx) {
+    S.pool = ITEMS.filter(function (it) { return it.public_status === "AVAILABLE" && it.gallery && it.gallery[0]; });
+    host.innerHTML = "";
+    S.buttons = [];
+    for (var b = 0, count = Math.min(12, chaosItemCount()); b < count; b++) {
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "chaos-item";
-      btn.style.animationDuration = (6 + Math.random() * 7) + "s";
-      btn.style.animationDelay = (Math.random() * -13) + "s";
-      btn.style.setProperty("--dx", (Math.random() * driftPx * 2 - driftPx).toFixed(0) + "px");
-      btn.style.setProperty("--dy", (Math.random() * driftPx * 2 - driftPx).toFixed(0) + "px");
-      btn.style.setProperty("--rot0", (Math.random() * 18 - 9).toFixed(1) + "deg");
-      btn.style.setProperty("--rot1", (Math.random() * 18 - 9).toFixed(1) + "deg");
-      btn.setAttribute("aria-label", it.title);
-      btn.innerHTML = '<img src="' + thumbUrl(it.gallery[0]) + '" alt="" loading="lazy" />';
-      btn.addEventListener("click", function () {
-        // Frueher stand hier zusaetzlich showClassic() vor openModal() - das
-        // war harmlos, solange Moduswechsel nur lokale Zustaende umschalteten.
-        // Jetzt navigiert showClassic() aber wirklich zu / (siehe pushModePath
-        // oben) - ein Klick auf ein Chaos-Objekt haette also unbemerkt die
-        // URL auf die Startseite umgeschrieben und man waere nach dem
-        // Schliessen des Quickviews ueberraschend im Archiv statt wieder in
-        // Chaos gelandet. Die Schnellansicht liegt als eigenes Overlay
-        // ausserhalb von #appShell (siehe index_template.html) und
-        // funktioniert daher unabhaengig davon, ob Chaos oder Archiv aktiv
-        // ist - keine Navigation noetig, um sie zu zeigen.
-        openModal(it);
-      });
-      btn.addEventListener("mouseenter", function () { showChaosTooltip(it); });
-      btn.addEventListener("mousemove", function (ev) { positionChaosTooltip(ev.clientX, ev.clientY); });
-      btn.addEventListener("mouseleave", hideChaosTooltip);
-
-      if (showroom) {
-        // Echter 3D-Rundraum: jeder Artikel steht an einem Winkel rings um
-        // die Mitte (volle 360 Grad), auf "Armlaenge" nach aussen versetzt
-        // und zur Mitte hin gedreht - wie Bilder an einer runden Wand, die
-        // man von innen betrachtet. rotateY(theta) translateZ(radius)
-        // platziert den Artikel am Kreis; das abschliessende rotateY(180deg)
-        // dreht ihn so, dass er zur Mitte (zur Kamera) zeigt statt nach
-        // aussen. translateY vorneweg (im Weltkoordinatensystem, vor der
-        // Drehung) gibt Hoehen-Streuung ohne die Kreisposition zu verzerren.
-        // Theta NICHT rein zufaellig ueber 360 Grad verteilen - das haeuft
-        // per Zufall zu viele Artikel im selben Sichtbereich (starke
-        // Ueberlappung, kaum noch anklickbar). Stattdessen ein eigener
-        // "Slot" pro Artikel mit Streuung nur innerhalb des Slots.
-        var theta = idx * slotWidth + (Math.random() - 0.5) * slotWidth * 0.8;
-        var radius = 780 + Math.random() * 220;
-        var yOffset = Math.random() * 480 - 240;
-        var itemScale = 0.85 + Math.random() * 0.3;
-        var wrap = document.createElement("div");
-        wrap.className = "chaos-item-wrap";
-        wrap.style.transform =
-          "translateY(" + yOffset.toFixed(0) + "px) rotateY(" + theta.toFixed(1) + "deg) " +
-          "translateZ(" + radius.toFixed(0) + "px) rotateY(180deg) scale(" + itemScale.toFixed(3) + ")";
-        wrap.appendChild(btn);
-        frag.appendChild(wrap);
-      } else {
-        var col = idx % cols;
-        var row = Math.floor(idx / cols);
-        var jitterX = (Math.random() - 0.5) * cellW * jitterFactor;
-        var jitterY = (Math.random() - 0.5) * cellH * jitterFactor;
-        var left = 2 + col * cellW + cellW / 2 + jitterX;
-        var top = 4 + row * cellH + cellH / 2 + jitterY;
-        btn.style.left = Math.min(94, Math.max(2, left)) + "%";
-        btn.style.top = Math.min(maxTop, Math.max(4, top)) + "%";
-        frag.appendChild(btn);
-      }
-    });
-    host.innerHTML = "";
-    host.appendChild(frag);
-  }
-
-  var chaosTooltip = document.getElementById("chaosTooltip");
-  function showChaosTooltip(it) {
-    chaosTooltip.innerHTML =
-      '<span class="chaos-tooltip__brand">' + escapeHtml(it.brand || "") + '</span>' +
-      escapeHtml(it.title) + '<br><span class="chaos-tooltip__price">' + fmtPriceDisplay(it.price) + '</span>';
-    chaosTooltip.classList.add("visible");
-  }
-  function positionChaosTooltip(x, y) {
-    chaosTooltip.style.left = x + "px";
-    chaosTooltip.style.top = (y - 14) + "px";
-  }
-  function hideChaosTooltip() {
-    chaosTooltip.classList.remove("visible");
-  }
-
-  // ---- Chaos: sanfte Neige-Parallaxe fuers Handy (Gyroskop) ----
-  // Laeuft nur in der flachen (Nicht-Showroom) Ansicht, als mobile Entsprechung
-  // zum Maus-Schwenk des Desktop-Showrooms - dasselbe manuelle Lerp-Muster wie
-  // chaosPanFrame(), damit sich beide Effekte technisch nicht in die Quere
-  // kommen (unabhaengige rAF-Schleifen auf demselben Element, aber nie
-  // gleichzeitig aktiv, da showroom/flach sich gegenseitig ausschliessen).
-  // Fruehere Version bewegte die Buehne NUR per Handy-Neigung - auf iOS haengt
-  // das an einer Permission, die beim Moduswechsel nicht zuverlaessig aus der
-  // Nutzer-Geste heraus ausgeloest wurde (blieb oft stumm haengen), und selbst
-  // mit erteilter Freigabe passiert nichts, wenn man das Handy einfach nur
-  // ruhig haelt (der Normalfall). Jetzt laeuft immer eine sanfte, automatische
-  // Kreisbewegung der ganzen Buehne (kein Sensor, keine Permission noetig) -
-  // Neigung (falls erlaubt) legt sich nur noch zusaetzlich obendrauf.
-  var chaosMotion = { active: false, angle: 0, tiltTargetX: 0, tiltTargetY: 0, tiltX: 0, tiltY: 0, raf: null };
-
-  function chaosTiltHandler(e) {
-    var gamma = Math.max(-30, Math.min(30, e.gamma || 0)); // links/rechts
-    var beta = Math.max(-30, Math.min(30, (e.beta || 45) - 45)); // vor/zurueck, 45deg = normale Haltung
-    chaosMotion.tiltTargetX = (gamma / 30) * 10;
-    chaosMotion.tiltTargetY = (beta / 30) * 7;
-  }
-
-  function chaosMotionFrame() {
-    var chaosViewEl = document.getElementById("chaosView");
-    var host = document.getElementById("chaosItems");
-    if (!chaosMotion.active || !host || !chaosViewEl || chaosViewEl.classList.contains("hidden")) {
-      chaosMotion.active = false;
-      window.removeEventListener("deviceorientation", chaosTiltHandler);
-      return;
+      btn.addEventListener("click", chaosUButtonClick);
+      host.appendChild(btn);
+      S.buttons.push(btn);
     }
-    // Langsame elliptische Bahn (~25s pro Umlauf) - dezent genug, um nicht vom
-    // Stoebern abzulenken, aber deutlich sichtbar ohne dass am Geraet gewackelt
-    // werden muss. Tippen auf ein Teil bleibt unveraendert moeglich (reine
-    // transform-Verschiebung der ganzen Buehne, keine Aenderung an den
-    // einzelnen Klick-/Touch-Zielen).
-    chaosMotion.angle += 0.0022;
-    var driftX = Math.cos(chaosMotion.angle) * 13;
-    var driftY = Math.sin(chaosMotion.angle) * 8;
-    chaosMotion.tiltX += (chaosMotion.tiltTargetX - chaosMotion.tiltX) * 0.06;
-    chaosMotion.tiltY += (chaosMotion.tiltTargetY - chaosMotion.tiltY) * 0.06;
-    var x = driftX + chaosMotion.tiltX;
-    var y = driftY + chaosMotion.tiltY;
-    host.style.transform = "translate(" + x.toFixed(1) + "px, " + y.toFixed(1) + "px)";
-    chaosMotion.raf = requestAnimationFrame(chaosMotionFrame);
-  }
-
-  function stopChaosTilt() {
-    chaosMotion.active = false;
-    if (chaosMotion.raf) cancelAnimationFrame(chaosMotion.raf);
-    window.removeEventListener("deviceorientation", chaosTiltHandler);
-    var host = document.getElementById("chaosItems");
-    if (host) host.style.transform = "";
-  }
-
-  function startChaosTilt() {
-    stopChaosTilt();
-    // Respektiert "Bewegung reduzieren" - wie ueberall sonst auf der Seite.
-    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    chaosMotion.active = true;
-    chaosMotion.angle = Math.random() * Math.PI * 2; // nicht jedes Mal am selben Punkt starten
-    chaosMotion.tiltTargetX = chaosMotion.tiltX = 0;
-    chaosMotion.tiltTargetY = chaosMotion.tiltY = 0;
-    chaosMotionFrame();
-    if (typeof window.DeviceOrientationEvent === "undefined") return;
-    function beginTilt() { window.addEventListener("deviceorientation", chaosTiltHandler); }
-    if (typeof DeviceOrientationEvent.requestPermission === "function") {
-      // iOS 13+: Freigabe muss aus einer Nutzer-Geste heraus angefragt werden.
-      // Wird sie verweigert oder schlaegt fehl, laeuft die automatische
-      // Kreisbewegung trotzdem normal weiter - kein Fehlerzustand.
-      try {
-        DeviceOrientationEvent.requestPermission().then(function (state) {
-          if (state === "granted") beginTilt();
-        }).catch(function () {});
-      } catch (e) {}
-    } else {
-      beginTilt();
+    chaosSky.hidden = false;
+    S.seed = (Math.random() * 2147483647) | 0;
+    chaosUMakeStars();
+    chaosUResize();
+    S.cam = { x: 0, y: 0, z: 0 };
+    S.vel = { x: 0, y: 0, z: 0 };
+    S.anim = null; S.trails = 0; S.storm = 0; S.focusKey = null; S.lastT = 0; S.shoot = null; S.nextShoot = 0;
+    S.pointers.clear(); S.gesture = null;
+    S.lastInput = performance.now();
+    S.active = true;
+    chaosUShowHint(t(chaosFinePointer() ? "chaosHintMouse" : "chaosHintTouch"), 7000);
+    if (!chaosReduceMotion()) {
+      // Ankunft: aus der Tiefe heranfliegen
+      S.cam.z = -6; S.trails = 0.6;
+      chaosUFlyTo(0, 0, 0, 1800, chaosUEaseOut);
     }
+    if (chaosFinePointer()) { try { chaosSky.focus({ preventScroll: true }); } catch (err) {} }
+    chaosUFrame(performance.now());
+    chaosURequest();
+  }
+
+  // Neu mischen: Sprung in ein anderes Universum
+  function chaosUWarp() {
+    var S = chaosU;
+    S.seed = (Math.random() * 2147483647) | 0;
+    chaosUMakeStars();
+    S.focusKey = null;
+    chaosUHideHint();
+    if (!chaosReduceMotion()) {
+      var z = S.cam.z;
+      S.cam.z = z - 9;
+      S.trails = 1;
+      chaosUFlyTo(S.cam.x, S.cam.y, z, 1300, chaosUEaseOut);
+    }
+    chaosUFrame(performance.now());
+    chaosURequest();
+  }
+
+  function stopChaosUniverse() {
+    var S = chaosU;
+    if (chaosG.phase !== "idle") chaosGameEnd(true);
+    S.active = false;
+    if (S.raf) cancelAnimationFrame(S.raf);
+    S.raf = 0; S.anim = null; S.gesture = null;
+    S.pointers.clear();
+    if (chaosTooltip) chaosTooltip.classList.remove("visible");
+    if (chaosHint) chaosHint.classList.add("is-gone");
   }
 
   function buildChaos() {
-    var chaosViewEl = document.getElementById("chaosView");
-    var host = document.getElementById("chaosItems");
-    stopChaosPan();
-    stopChaosTilt();
-    hideChaosTooltip();
-    host.style.transform = "";
-    var showroom = chaosIsShowroom();
-    chaosViewEl.classList.toggle("chaos-view--showroom", showroom);
-    chaosShownIds = new Set(); // frischer Start jedes Mal, wenn die Ansicht neu geoeffnet wird
-    populateChaosItems(showroom);
-    if (showroom) startChaosPan();
-    else startChaosTilt();
+    if (!chaosSkyCtx) return;
+    if (chaosU.active) chaosUWarp();
+    else startChaosUniverse();
   }
 
   document.getElementById("chaosShuffle").addEventListener("click", buildChaos);
@@ -2886,6 +3454,7 @@
     outfitView.classList.add("hidden");
     outfitPicker.classList.remove("open");
     chaosView.classList.remove("hidden");
+    stopChaosUniverse();  // beim (Wieder-)Oeffnen immer mit der Ankunft beginnen
     buildChaos();
     syncModeRail("chaos");
     pushModePath(CHAOS_PATH);
