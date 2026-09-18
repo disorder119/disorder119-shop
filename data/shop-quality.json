@@ -1,15 +1,15 @@
 {
   "summary": {
     "items_total": 238,
-    "catalog_public": 236,
+    "catalog_public": 235,
     "available": 165,
     "reserved": 0,
-    "sold": 71,
-    "draft": 2
+    "sold": 70,
+    "draft": 3
   },
   "quality": {
     "missing_size": {
-      "count": 49,
+      "count": 48,
       "item_ids": [
         6042,
         6184,
@@ -26,7 +26,6 @@
         6238,
         6239,
         9365,
-        9366,
         9367,
         9368,
         9369,

@@ -7252,6 +7252,7 @@
     "brightness": 0.396,
     "public_status": "SOLD",
     "data_quality_open": [
+      "size",
       "color",
       "condition"
     ],
@@ -8279,7 +8280,6 @@
     "brightness": 0.352,
     "public_status": "SOLD",
     "data_quality_open": [
-      "size",
       "condition"
     ],
     "data_quality_sources": {
