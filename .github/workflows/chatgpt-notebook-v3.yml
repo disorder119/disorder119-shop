@@ -6,6 +6,7 @@ on:
       - chatgpt-notebook-cover-v3-20260920
     paths:
       - "tools/build_notebook_v3.py"
+      - "tools/run_notebook_v3.py"
       - ".github/workflows/chatgpt-notebook-v3.yml"
   workflow_dispatch: {}
 
@@ -25,8 +26,8 @@ jobs:
           python-version: "3.11"
       - name: Install dependencies
         run: pip install pillow qrcode reportlab
-      - name: Build eight variants from real shop assets
-        run: python tools/build_notebook_v3.py
+      - name: Verify website copy and build eight variants from real shop assets
+        run: python tools/run_notebook_v3.py
       - name: Upload variants
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
