@@ -3,7 +3,7 @@ from __future__ import annotations
 import html as html_lib
 import re
 
-from tools import build_notebook_v3 as build
+import build_notebook_v3 as build
 
 
 def verify_visible_site_copy():
