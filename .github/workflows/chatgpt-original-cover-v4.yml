@@ -6,6 +6,7 @@ on:
       - chatgpt-original-assets-cover-v4-20260920
     paths:
       - "tools/build_original_asset_cover_v4.py"
+      - "tools/run_original_asset_cover_v4_fast.py"
       - ".github/workflows/chatgpt-original-cover-v4.yml"
   workflow_dispatch: {}
 
@@ -26,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: pip install pillow qrcode
       - name: Build covers from current original shop assets
-        run: python tools/build_original_asset_cover_v4.py
+        run: python tools/run_original_asset_cover_v4_fast.py
       - name: Upload PNG previews and print-size PNGs
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
