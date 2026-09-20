@@ -1,0 +1,40 @@
+name: ChatGPT Notebook Cover Variants
+
+on:
+  push:
+    branches:
+      - chatgpt-notebook-cover-variants-20260920
+    paths:
+      - "tools/chatgpt_notebook_variants.py"
+      - ".github/workflows/chatgpt-notebook-variants.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pillow qrcode reportlab
+
+      - name: Build four cover variants from the real catalogue
+        run: python tools/chatgpt_notebook_variants.py
+
+      - name: Upload variants
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: disorder119-notebook-cover-variants
+          path: out_notebook_variants/
+          if-no-files-found: error
+          retention-days: 7
