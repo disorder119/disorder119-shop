@@ -6,6 +6,7 @@ on:
       - chatgpt-perfect-gift-20260920
     paths:
       - "tools/build_perfect_customer_gift.py"
+      - "tools/build_perfect_customer_gift_v2.py"
       - ".github/workflows/chatgpt-perfect-gift.yml"
   workflow_dispatch: {}
 
@@ -26,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: pip install pillow qrcode reportlab
       - name: Build gift from real shop assets
-        run: python tools/build_perfect_customer_gift.py
+        run: python tools/build_perfect_customer_gift_v2.py
       - name: Upload gift files
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
