@@ -13,7 +13,7 @@
   // iPhone/iPad guard on every shop page while leaving other platforms alone.
   if (!document.querySelector('script[data-d119-ios-zoom-lock]')) {
     var zoomLockScript = document.createElement("script");
-    zoomLockScript.src = "/assets/ios-zoom-lock.js?v=20260922-1";
+    zoomLockScript.src = "/assets/ios-zoom-lock.js?v=20260923-1";
     zoomLockScript.async = false;
     zoomLockScript.setAttribute("data-d119-ios-zoom-lock", "");
     document.head.appendChild(zoomLockScript);
@@ -120,7 +120,7 @@
         archive: "To archive",
         next: "Next →",
         prevAria: "Go to previous item",
-        archiveAria: "Go to archive",
+        archiveAria: "To archive",
         nextAria: "Go to next item",
         navAria: "Item navigation",
         menuAria: "Open archive",
@@ -131,7 +131,7 @@
         archive: "Vers l’archive",
         next: "Suivant →",
         prevAria: "Voir l’article précédent",
-        archiveAria: "Voir l’archive",
+        archiveAria: "Vers l’archive",
         nextAria: "Voir l’article suivant",
         navAria: "Navigation des articles",
         menuAria: "Ouvrir l’archive",

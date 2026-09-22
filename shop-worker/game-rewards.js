@@ -6,10 +6,11 @@ const ALLOWED_ORIGINS = new Set([
   "http://127.0.0.1:8765",
 ]);
 
+export const GAME_VERSION = "archive-raid-v3";
 export const GAME_RULES = Object.freeze({
-  warp: Object.freeze({ target: 4500, minDurationMs: 18000, maxDurationMs: 90000, maxScore: 50000 }),
-  signal: Object.freeze({ target: 18000, minDurationMs: 10000, maxDurationMs: 75000, maxScore: 60000 }),
-  memory: Object.freeze({ target: 7600, minDurationMs: 4000, maxDurationMs: 100000, maxScore: 10000 }),
+  // Keep the stable "warp" database id because the deployed D1 schema allows
+  // warp/signal/memory. The public game itself is now only ARCHIVE RAID 119.
+  warp: Object.freeze({ target: 48000, minDurationMs: 35000, maxDurationMs: 70000, maxScore: 150000 }),
 });
 
 const RUN_TTL_MS = 12 * 60 * 1000;
@@ -27,7 +28,8 @@ export class GameRewardError extends Error {
 
 export function normalizeGame(value) {
   const game = String(value || "").trim().toLowerCase();
-  return Object.prototype.hasOwnProperty.call(GAME_RULES, game) ? game : "";
+  if (["warp", "raid", "archive", "archive-raid", "signal", "memory"].includes(game)) return "warp";
+  return "";
 }
 
 export function normalizeUsername(value) {
@@ -50,14 +52,27 @@ export function discountForSubtotal(subtotalCents, discountBps = DISCOUNT_BPS) {
   const subtotal = Math.max(0, Math.round(Number(subtotalCents) || 0));
   const bps = Math.max(0, Math.min(10000, Math.round(Number(discountBps) || 0)));
   const discountCents = Math.min(subtotal, Math.round(subtotal * bps / 10000));
-  return { subtotalCents: subtotal, discountBps: bps, discountCents, totalCents: Math.max(1, subtotal - discountCents) };
+  return {
+    subtotalCents: subtotal,
+    discountBps: bps,
+    discountCents,
+    totalCents: Math.max(1, subtotal - discountCents),
+  };
 }
 
 export function scoreIsPlausible(game, score, durationMs) {
   const rule = GAME_RULES[normalizeGame(game)];
   const value = Math.round(Number(score));
   const duration = Math.round(Number(durationMs));
-  return Boolean(rule && Number.isFinite(value) && Number.isFinite(duration) && value >= 0 && value <= rule.maxScore && duration >= rule.minDurationMs && duration <= rule.maxDurationMs);
+  return Boolean(
+    rule &&
+    Number.isFinite(value) &&
+    Number.isFinite(duration) &&
+    value >= 0 &&
+    value <= rule.maxScore &&
+    duration >= rule.minDurationMs &&
+    duration <= rule.maxDurationMs
+  );
 }
 
 export function qualifiedScore(game, score) {
@@ -98,8 +113,11 @@ async function readJson(request) {
   if (declared > MAX_BODY_BYTES) throw new GameRewardError("REQUEST_TOO_LARGE", 413);
   const raw = await request.text();
   if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) throw new GameRewardError("REQUEST_TOO_LARGE", 413);
-  try { return raw ? JSON.parse(raw) : {}; }
-  catch { throw new GameRewardError("INVALID_JSON", 400); }
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    throw new GameRewardError("INVALID_JSON", 400);
+  }
 }
 
 async function sha256Hex(value) {
@@ -142,9 +160,12 @@ async function rateLimit(request, env, scope) {
 async function leaderboard(env, game, limit = 10) {
   const db = requireDb(env);
   const safeLimit = Math.max(1, Math.min(20, Math.round(Number(limit) || 10)));
+  // v3 starts a clean leaderboard even though D1 keeps historical warp scores.
   const result = await db.prepare(`SELECT username, score, created_at AS createdAt
-    FROM game_scores WHERE game_id=? ORDER BY score DESC, duration_ms ASC, created_at ASC LIMIT ?`)
-    .bind(game, safeLimit).all();
+    FROM game_scores
+    WHERE game_id=? AND detail_json LIKE ?
+    ORDER BY score DESC, duration_ms ASC, created_at ASC LIMIT ?`)
+    .bind(game, `%"version":"${GAME_VERSION}"%`, safeLimit).all();
   return result.results || [];
 }
 
@@ -153,15 +174,19 @@ async function startRun(request, env, origin) {
   const body = await readJson(request);
   const game = normalizeGame(body.game);
   if (!game) throw new GameRewardError("INVALID_GAME", 400);
+
   const db = requireDb(env);
   const runId = crypto.randomUUID();
   const token = randomToken(24);
-  const now = Date.now();
-  const startedAt = new Date(now).toISOString();
-  const expiresAt = new Date(now + RUN_TTL_MS).toISOString();
+  const nowMs = Date.now();
+  const startedAt = new Date(nowMs).toISOString();
+  const expiresAt = new Date(nowMs + RUN_TTL_MS).toISOString();
+
   await db.prepare(`INSERT INTO game_runs (id,run_token_hash,game_id,started_at,expires_at)
-    VALUES (?,?,?,?,?)`).bind(runId, await sha256Hex(token), game, startedAt, expiresAt).run();
-  return json({ runId, runToken: token, game, startedAt: now, expiresAt }, 201, origin);
+    VALUES (?,?,?,?,?)`)
+    .bind(runId, await sha256Hex(token), game, startedAt, expiresAt).run();
+
+  return json({ runId, runToken: token, game, startedAt: nowMs, expiresAt }, 201, origin);
 }
 
 async function issueCoupon(db, game, scoreId, usernameKey) {
@@ -172,7 +197,16 @@ async function issueCoupon(db, game, scoreId, usernameKey) {
       await db.prepare(`INSERT INTO reward_coupons
         (id,code_hash,code_hint,discount_bps,source_game,source_score_id,username_key,status,created_at)
         VALUES (?,?,?,?,?,?,?,'ACTIVE',?)`)
-        .bind(crypto.randomUUID(), hash, code.slice(-4), DISCOUNT_BPS, game, scoreId, usernameKey, new Date().toISOString()).run();
+        .bind(
+          crypto.randomUUID(),
+          hash,
+          code.slice(-4),
+          DISCOUNT_BPS,
+          game,
+          scoreId,
+          usernameKey,
+          new Date().toISOString(),
+        ).run();
       return code;
     } catch (error) {
       if (!String(error?.message || error).toLowerCase().includes("unique")) throw error;
@@ -190,9 +224,12 @@ async function submitScore(request, env, origin) {
   const runToken = String(body.runToken || "").trim();
   const score = Math.round(Number(body.score));
   const durationMs = Math.round(Number(body.durationMs));
+  const detail = body.detail && typeof body.detail === "object" && !Array.isArray(body.detail) ? body.detail : {};
+
   if (!game) throw new GameRewardError("INVALID_GAME", 400);
   if (!username) throw new GameRewardError("INVALID_USERNAME", 400);
   if (!runId || !runToken) throw new GameRewardError("RUN_REQUIRED", 400);
+  if (String(detail.version || "") !== GAME_VERSION) throw new GameRewardError("GAME_VERSION_REQUIRED", 409);
   if (!scoreIsPlausible(game, score, durationMs)) throw new GameRewardError("IMPLAUSIBLE_SCORE", 400);
 
   const db = requireDb(env);
@@ -203,11 +240,14 @@ async function submitScore(request, env, origin) {
   if (!(await timingSafeHashMatch(runToken, run.run_token_hash))) throw new GameRewardError("RUN_TOKEN_INVALID", 403);
 
   const serverElapsed = Date.now() - Date.parse(run.started_at);
-  if (!Number.isFinite(serverElapsed) || serverElapsed < Math.max(GAME_RULES[game].minDurationMs, durationMs * 0.7) || serverElapsed > RUN_TTL_MS) {
+  if (
+    !Number.isFinite(serverElapsed) ||
+    serverElapsed < Math.max(GAME_RULES[game].minDurationMs, durationMs * 0.7) ||
+    serverElapsed > RUN_TTL_MS
+  ) {
     throw new GameRewardError("RUN_TIMING_INVALID", 409);
   }
 
-  const detail = body.detail && typeof body.detail === "object" && !Array.isArray(body.detail) ? body.detail : {};
   const detailJson = JSON.stringify(detail).slice(0, 1200);
   const scoreId = crypto.randomUUID();
   const usernameKey = username.toLocaleLowerCase("de-DE");
@@ -217,11 +257,15 @@ async function submitScore(request, env, origin) {
     await db.batch([
       db.prepare(`INSERT INTO game_scores
         (id,run_id,game_id,username,username_key,score,duration_ms,detail_json,created_at)
-        VALUES (?,?,?,?,?,?,?,?,?)`).bind(scoreId, runId, game, username, usernameKey, score, durationMs, detailJson, submittedAt),
-      db.prepare("UPDATE game_runs SET submitted_at=? WHERE id=? AND submitted_at IS NULL").bind(submittedAt, runId),
+        VALUES (?,?,?,?,?,?,?,?,?)`)
+        .bind(scoreId, runId, game, username, usernameKey, score, durationMs, detailJson, submittedAt),
+      db.prepare("UPDATE game_runs SET submitted_at=? WHERE id=? AND submitted_at IS NULL")
+        .bind(submittedAt, runId),
     ]);
   } catch (error) {
-    if (String(error?.message || error).toLowerCase().includes("unique")) throw new GameRewardError("RUN_ALREADY_SUBMITTED", 409);
+    if (String(error?.message || error).toLowerCase().includes("unique")) {
+      throw new GameRewardError("RUN_ALREADY_SUBMITTED", 409);
+    }
     throw error;
   }
 
@@ -229,6 +273,8 @@ async function submitScore(request, env, origin) {
   const couponCode = qualified ? await issueCoupon(db, game, scoreId, usernameKey) : "";
   return json({
     ok: true,
+    gameTitle: "ARCHIVE RAID 119",
+    version: GAME_VERSION,
     qualified,
     target: GAME_RULES[game].target,
     couponCode,
@@ -241,7 +287,13 @@ async function getLeaderboard(request, env, url, origin) {
   await rateLimit(request, env, "leaderboard");
   const game = normalizeGame(url.searchParams.get("game"));
   if (!game) throw new GameRewardError("INVALID_GAME", 400);
-  return json({ game, target: GAME_RULES[game].target, scores: await leaderboard(env, game, url.searchParams.get("limit")) }, 200, origin);
+  return json({
+    game,
+    gameTitle: "ARCHIVE RAID 119",
+    version: GAME_VERSION,
+    target: GAME_RULES[game].target,
+    scores: await leaderboard(env, game, url.searchParams.get("limit")),
+  }, 200, origin);
 }
 
 export async function findValidCoupon(env, value) {
@@ -249,10 +301,10 @@ export async function findValidCoupon(env, value) {
   if (!code) return null;
   const db = requireDb(env);
   const hash = await sha256Hex(code);
-  const row = await db.prepare(`SELECT * FROM reward_coupons WHERE code_hash=? LIMIT 1`).bind(hash).first();
+  const row = await db.prepare("SELECT * FROM reward_coupons WHERE code_hash=? LIMIT 1").bind(hash).first();
   if (!row || row.status === "REDEEMED" || row.status === "VOID") return null;
-  const now = new Date().toISOString();
-  if (row.status === "RESERVED" && row.reserved_until && row.reserved_until > now) return null;
+  const nowIso = new Date().toISOString();
+  if (row.status === "RESERVED" && row.reserved_until && row.reserved_until > nowIso) return null;
   return row;
 }
 
@@ -269,15 +321,21 @@ export async function claimCouponForOrder(env, value, orderId, subtotalCents) {
   if (!code) return null;
   const db = requireDb(env);
   const hash = await sha256Hex(code);
-  const now = new Date();
-  const nowIso = now.toISOString();
-  const reservedUntil = new Date(now.getTime() + COUPON_RESERVATION_MS).toISOString();
-  await db.prepare(`UPDATE reward_coupons SET status='ACTIVE',reserved_order_id=NULL,reserved_until=NULL
+  const nowDate = new Date();
+  const nowIso = nowDate.toISOString();
+  const reservedUntil = new Date(nowDate.getTime() + COUPON_RESERVATION_MS).toISOString();
+
+  await db.prepare(`UPDATE reward_coupons
+    SET status='ACTIVE',reserved_order_id=NULL,reserved_until=NULL
     WHERE status='RESERVED' AND reserved_until<=?`).bind(nowIso).run();
+
   const result = await db.prepare(`UPDATE reward_coupons
     SET status='RESERVED',reserved_order_id=?,reserved_until=?
-    WHERE code_hash=? AND status='ACTIVE'`).bind(String(orderId), reservedUntil, hash).run();
+    WHERE code_hash=? AND status='ACTIVE'`)
+    .bind(String(orderId), reservedUntil, hash).run();
+
   if (!result.meta?.changes) throw new GameRewardError("COUPON_INVALID_OR_USED", 409);
+
   const row = await db.prepare("SELECT * FROM reward_coupons WHERE code_hash=?").bind(hash).first();
   const money = discountForSubtotal(subtotalCents, row.discount_bps);
   return { couponId: row.id, orderId: String(orderId), ...money };
@@ -285,22 +343,35 @@ export async function claimCouponForOrder(env, value, orderId, subtotalCents) {
 
 export async function releaseCouponClaim(env, couponId, orderId) {
   if (!env?.DB || !couponId || !orderId) return;
-  await env.DB.prepare(`UPDATE reward_coupons SET status='ACTIVE',reserved_order_id=NULL,reserved_until=NULL
-    WHERE id=? AND status='RESERVED' AND reserved_order_id=?`).bind(String(couponId), String(orderId)).run();
+  await env.DB.prepare(`UPDATE reward_coupons
+    SET status='ACTIVE',reserved_order_id=NULL,reserved_until=NULL
+    WHERE id=? AND status='RESERVED' AND reserved_order_id=?`)
+    .bind(String(couponId), String(orderId)).run();
 }
 
 export async function redeemCouponForOrder(env, orderId) {
   if (!env?.DB || !orderId) return;
-  const now = new Date().toISOString();
-  await env.DB.prepare(`UPDATE reward_coupons SET status='REDEEMED',redeemed_order_id=?,redeemed_at=?,reserved_until=NULL
-    WHERE status='RESERVED' AND reserved_order_id=?`).bind(String(orderId), now, String(orderId)).run();
+  const nowIso = new Date().toISOString();
+  await env.DB.prepare(`UPDATE reward_coupons
+    SET status='REDEEMED',redeemed_order_id=?,redeemed_at=?,reserved_until=NULL
+    WHERE status='RESERVED' AND reserved_order_id=?`)
+    .bind(String(orderId), nowIso, String(orderId)).run();
 }
 
 export function isGameRewardsRoute(pathname) {
-  return pathname === "/games/start" || pathname === "/games/score" || pathname === "/games/leaderboard" || pathname === "/coupons/validate";
+  return pathname === "/games/start" ||
+    pathname === "/games/score" ||
+    pathname === "/games/leaderboard" ||
+    pathname === "/coupons/validate";
 }
 
-export async function handleGameRewards(request, env, url = new URL(request.url), requestId = "", origin = request.headers.get("Origin")) {
+export async function handleGameRewards(
+  request,
+  env,
+  url = new URL(request.url),
+  requestId = "",
+  origin = request.headers.get("Origin"),
+) {
   if (request.method === "OPTIONS") {
     if (origin && !allowedOrigin(origin)) return new Response(null, { status: 403 });
     const preflight = new Headers(headers(origin));
@@ -310,7 +381,11 @@ export async function handleGameRewards(request, env, url = new URL(request.url)
     preflight.delete("Content-Type");
     return new Response(null, { status: 204, headers: preflight });
   }
-  if (origin && !allowedOrigin(origin)) return json({ error: "ORIGIN_NOT_ALLOWED", requestId }, 403, origin);
+
+  if (origin && !allowedOrigin(origin)) {
+    return json({ error: "ORIGIN_NOT_ALLOWED", requestId }, 403, origin);
+  }
+
   try {
     if (url.pathname === "/games/start" && request.method === "POST") return startRun(request, env, origin);
     if (url.pathname === "/games/score" && request.method === "POST") return submitScore(request, env, origin);
@@ -318,8 +393,15 @@ export async function handleGameRewards(request, env, url = new URL(request.url)
     if (url.pathname === "/coupons/validate" && request.method === "POST") return validateCoupon(request, env, origin);
     return json({ error: "METHOD_NOT_ALLOWED", requestId }, 405, origin);
   } catch (error) {
-    if (error instanceof GameRewardError) return json({ error: error.code, requestId }, error.status, origin);
-    console.error(JSON.stringify({ level: "error", event: "game_reward_error", requestId, message: String(error?.message || error).slice(0, 160) }));
+    if (error instanceof GameRewardError) {
+      return json({ error: error.code, requestId }, error.status, origin);
+    }
+    console.error(JSON.stringify({
+      level: "error",
+      event: "game_reward_error",
+      requestId,
+      message: String(error?.message || error).slice(0, 160),
+    }));
     return json({ error: "GAME_REWARD_ERROR", requestId }, 500, origin);
   }
 }

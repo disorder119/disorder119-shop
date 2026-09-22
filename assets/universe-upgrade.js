@@ -4,7 +4,7 @@
   if (window.__D119_UNIVERSE_UPGRADE__) return;
   window.__D119_UNIVERSE_UPGRADE__ = true;
 
-  var ASSET_VERSION = "20260922-3";
+  var ASSET_VERSION = "20260923-1";
   var legacyObserver = null;
   var redirectingLegacyGame = false;
 
@@ -12,7 +12,6 @@
     var value = String(document.documentElement.lang || "de").toLowerCase();
     return value.indexOf("fr") === 0 ? "fr" : value.indexOf("en") === 0 ? "en" : "de";
   }
-
   function copy() {
     var all = {
       de: { mode: "Universum-Modus", modeAria: "Universum-Modus öffnen" },
@@ -21,7 +20,6 @@
     };
     return all[lang()];
   }
-
   function injectCss(href, marker) {
     if (document.querySelector('link[' + marker + ']')) return;
     var link = document.createElement("link");
@@ -30,7 +28,6 @@
     link.setAttribute(marker, "");
     document.head.appendChild(link);
   }
-
   function injectScript(src, marker, done) {
     var existing = document.querySelector('script[' + marker + ']');
     if (existing) {
@@ -50,7 +47,6 @@
     }, { once: true });
     document.head.appendChild(script);
   }
-
   function installModeBranding() {
     var button = document.querySelector('.mode-rail__btn[data-mode-view="chaos"]');
     if (!button) return;
@@ -69,18 +65,11 @@
       icon.innerHTML = '<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="6.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.2 18.5c4.8 5.2 15.2 6.3 22.8 1.4 2.2-1.4 2-2.7.4-3.4-2.2-.9-6.8-.1-11.4 2-4.8 2.2-9.8 2.5-11.8.7" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round"/><circle cx="21.4" cy="10.2" r="1.05" fill="currentColor"/></svg>';
     }
   }
-
   function removeLegacyVisibleControls() {
-    Array.prototype.forEach.call(document.querySelectorAll(".universe-shooting-star,.d119-warp-control,#universeTurbo"), function (node) {
+    Array.prototype.forEach.call(document.querySelectorAll(".universe-shooting-star,.d119-warp-control,#universeTurbo,.d119-secret-relic"), function (node) {
       node.remove();
     });
   }
-
-  function randomGame() {
-    var ids = ["warp", "signal", "memory"];
-    return ids[Math.floor(Math.random() * ids.length)];
-  }
-
   function installLegacyGameBridge() {
     var view = document.getElementById("chaosView");
     if (!view || legacyObserver) return;
@@ -91,26 +80,25 @@
       var back = document.getElementById("chaosGameBack");
       if (back) back.click();
       window.setTimeout(function () {
-        try { window.D119SecretGames.start(randomGame()); }
+        try { window.D119SecretGames.start("raid"); }
         finally { redirectingLegacyGame = false; }
       }, 0);
     });
     legacyObserver.observe(view, { attributes: true, attributeFilter: ["class"] });
   }
-
-  function loadSecretSystem() {
-    injectCss("/assets/secret-games.css?v=" + ASSET_VERSION, "data-d119-secret-games");
+  function loadSystems() {
+    // Coupon field remains shop-wide; the heavy game/canvas bundle loads only on Universe pages.
     injectCss("/assets/shop-promos.css?v=" + ASSET_VERSION, "data-d119-shop-promos");
     injectScript("/assets/shop-promos.js?v=" + ASSET_VERSION, "data-d119-shop-promos", null);
+    if (!document.getElementById("chaosView")) return;
+    injectCss("/assets/secret-games.css?v=" + ASSET_VERSION, "data-d119-secret-games");
     injectScript("/assets/secret-games.js?v=" + ASSET_VERSION, "data-d119-secret-games", installLegacyGameBridge);
   }
-
   function install() {
     installModeBranding();
     removeLegacyVisibleControls();
-    loadSecretSystem();
+    loadSystems();
   }
-
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
   else install();
 })();
