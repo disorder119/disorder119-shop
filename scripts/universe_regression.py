@@ -35,8 +35,10 @@ require('params.get("game")' in games and 'value === "1"' in games and 'value ==
 require('function spawnEncounter' in games and 'GAME_IDS[Math.floor(Math.random() * GAME_IDS.length)]' in games, "random encounter selection missing")
 require('6500 + Math.random() * 24000' in games, "first encounter timing is not randomized")
 require('28000 + Math.random() * 72000' in games, "repeat encounter timing is not randomized")
-for selector in ("d119-universe-encounter--ship", "d119-universe-encounter--rift", "d119-universe-encounter--bag"):
-    require(selector in games and f'.{selector}' in games_css, f"{selector} visual missing")
+for encounter in ("ship", "rift", "bag"):
+    require(f'encounter: "{encounter}"' in games, f"{encounter} encounter metadata missing")
+    require(f'.d119-universe-encounter--{encounter}' in games_css, f"{encounter} encounter visual missing")
+require('btn.className = "d119-universe-encounter d119-universe-encounter--" + type' in games, "dynamic encounter class wiring missing")
 require('discover: spawnEncounter' in games, "deterministic CI discovery hook missing")
 
 # Mobile controls are direct pointer controls, not tiny tap targets.
