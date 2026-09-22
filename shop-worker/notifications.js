@@ -75,8 +75,9 @@ export async function notifyPaidOrder(env, orderId, reqId = crypto.randomUUID())
   const claim = await claimDelivery(env, row.id, reqId);
   if (!claim.claimed) return { sent: false, duplicate: true };
 
+  let response;
   try {
-    const response = await fetch(`${TELEGRAM_API}/bot${encodeURIComponent(env.TELEGRAM_BOT_TOKEN)}/sendMessage`, {
+    response = await fetch(`${TELEGRAM_API}/bot${String(env.TELEGRAM_BOT_TOKEN)}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -88,11 +89,18 @@ export async function notifyPaidOrder(env, orderId, reqId = crypto.randomUUID())
     if (!response.ok) throw new Error(`telegram_http_${response.status}`);
     const payload = await response.json().catch(() => null);
     if (payload && payload.ok === false) throw new Error("telegram_api_rejected");
-    await markDelivered(env, claim.claimId);
-    return { sent: true };
   } catch (err) {
     await releaseFailedClaim(env, claim.claimId);
     throw new Error(`telegram_sale_notification_failed:${safeText(err?.message || "unknown", 80)}`);
+  }
+
+  // Once Telegram has accepted the message, keep the claim even if this bookkeeping
+  // write fails. That favors at-most-once customer-independent alerts over duplicates.
+  try {
+    await markDelivered(env, claim.claimId);
+    return { sent: true, recorded: true };
+  } catch {
+    return { sent: true, recorded: false };
   }
 }
 
