@@ -15,6 +15,12 @@ import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
 import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications.js";
 import {
+  applyCouponToCreatedOrder,
+  couponContextFromCreateRequest,
+  finalizeCouponForOrder,
+  handleGameRewards,
+} from "./game-rewards.js";
+import {
   ADMIN_ROLE_OWNER,
   ADMIN_ROLE_READER,
   RuntimeGuardError,
@@ -68,6 +74,10 @@ function isLegacyAdminRoute(pathname) {
   return pathname === "/rental-requests" || pathname.startsWith("/rental-request/");
 }
 
+function isGameRewardRoute(pathname) {
+  return pathname.startsWith("/game/") || pathname === "/coupon/validate";
+}
+
 function assertAdminOrigin(request) {
   const origin = request.headers.get("Origin");
   if (!origin) return;
@@ -118,6 +128,23 @@ async function runBackground(ctx, task, event, reqId) {
   await guarded;
 }
 
+function publicCouponError(err) {
+  if (err instanceof RuntimeGuardError) return err;
+  if (err?.publicCode) return new RuntimeGuardError(String(err.publicCode), Number(err.status) || 400);
+  return new RuntimeGuardError("COUPON_APPLY_FAILED", 502);
+}
+
+function replaceJsonResponse(response, payload) {
+  const headers = new Headers(response.headers);
+  headers.set("Content-Type", "application/json; charset=utf-8");
+  headers.delete("Content-Length");
+  return new Response(JSON.stringify(payload), {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -128,6 +155,10 @@ export default {
     try {
       const runtimeEnv = await authorizeRouteEnv(request, env, url, reqId);
       await guardRuntimeRequest(request, runtimeEnv, url);
+
+      if (isGameRewardRoute(url.pathname)) {
+        return finish(await handleGameRewards(request, runtimeEnv, url, reqId, origin));
+      }
 
       if (url.pathname === "/rental-bundle") {
         return finish(await handleRentalBundle(request, runtimeEnv, url, reqId, origin));
@@ -171,11 +202,33 @@ export default {
       }
 
       const shouldInspectRental = url.pathname === "/rental-request" && request.method === "POST";
+      const shouldInspectCreate = url.pathname === "/create-order" && request.method === "POST";
       const shouldInspectCapture = url.pathname === "/capture-order" && request.method === "POST";
       const shouldInspectWebhook = url.pathname === "/paypal-webhook" && request.method === "POST";
-      const requestCopy = (shouldInspectRental || shouldInspectCapture || shouldInspectWebhook) ? request.clone() : null;
+      const requestCopy = (shouldInspectRental || shouldInspectCreate || shouldInspectCapture || shouldInspectWebhook) ? request.clone() : null;
 
-      const response = await shopWorker.fetch(request, runtimeEnv, ctx);
+      let couponContext = null;
+      if (shouldInspectCreate && requestCopy && runtimeEnv.DB) {
+        try {
+          couponContext = await couponContextFromCreateRequest(requestCopy.clone(), runtimeEnv);
+        } catch (err) {
+          throw publicCouponError(err);
+        }
+      }
+
+      let response = await shopWorker.fetch(request, runtimeEnv, ctx);
+
+      if (response.ok && shouldInspectCreate && couponContext && runtimeEnv.DB) {
+        let result;
+        try {
+          result = await response.clone().json();
+          const coupon = await applyCouponToCreatedOrder(runtimeEnv, couponContext, result, reqId);
+          response = replaceJsonResponse(response, { ...result, coupon });
+        } catch (err) {
+          throw publicCouponError(err);
+        }
+      }
+
       if (!response.ok || !requestCopy || !runtimeEnv.DB) return finish(response);
 
       if (shouldInspectRental) {
@@ -202,6 +255,7 @@ export default {
             await runBackground(ctx, snapshotPaypalOrder(runtimeEnv, String(payload.orderId), reqId), "checkout_snapshot_failed", reqId);
           }
           if (result?.orderId) {
+            await runBackground(ctx, finalizeCouponForOrder(runtimeEnv, String(result.orderId), reqId), "coupon_finalize_failed", reqId);
             await runBackground(ctx, notifyPaidOrder(runtimeEnv, String(result.orderId), reqId), "sale_notification_failed", reqId);
           }
         } catch (err) {
