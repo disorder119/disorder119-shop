@@ -52,6 +52,8 @@ PLACEHOLDER_MARKERS = (
     "process.env", "env.", "secrets.", "***",
 )
 
+TEST_NAME_MARKERS = (".test.", ".spec.", "_test.", "_spec.")
+
 
 def tracked_files() -> list[Path]:
     proc = subprocess.run(
@@ -67,6 +69,11 @@ def looks_like_placeholder(value: str) -> bool:
     return any(marker in normalized for marker in PLACEHOLDER_MARKERS)
 
 
+def is_test_fixture(path: Path) -> bool:
+    name = path.name.lower()
+    return any(marker in name for marker in TEST_NAME_MARKERS) or "tests" in {part.lower() for part in path.parts}
+
+
 def scan_file(path: Path) -> list[tuple[int, str]]:
     rel = path.relative_to(ROOT)
     if rel.name in ALLOWED_SECRET_EXAMPLES or path.suffix.lower() in BINARY_SUFFIXES:
@@ -79,10 +86,16 @@ def scan_file(path: Path) -> list[tuple[int, str]]:
         return []
     text = raw.decode("utf-8", errors="ignore")
     findings: list[tuple[int, str]] = []
+    synthetic_env_allowed = is_test_fixture(rel)
     for line_no, line in enumerate(text.splitlines(), 1):
+        # Strong-format credentials and private keys are never allowed, even in tests.
         for label, pattern in PATTERNS:
             if pattern.search(line):
                 findings.append((line_no, label))
+        # Tests legitimately construct fake env objects. Avoid flagging those generic
+        # assignments while still catching any token that matches a real provider format.
+        if synthetic_env_allowed:
+            continue
         for match in SENSITIVE_ASSIGNMENT.finditer(line):
             if not looks_like_placeholder(match.group(2)):
                 findings.append((line_no, f"literal value assigned to {match.group(1)}"))
