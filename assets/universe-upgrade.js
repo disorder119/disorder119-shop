@@ -4,7 +4,7 @@
   if (window.__D119_UNIVERSE_UPGRADE__) return;
   window.__D119_UNIVERSE_UPGRADE__ = true;
 
-  var ASSET_VERSION = "20260922-2";
+  var ASSET_VERSION = "20260922-3";
   var legacyObserver = null;
   var redirectingLegacyGame = false;
 
