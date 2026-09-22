@@ -4,13 +4,9 @@
   if (window.__D119_UNIVERSE_UPGRADE__) return;
   window.__D119_UNIVERSE_UPGRADE__ = true;
 
-  var STAR_FIRST_MOBILE_MS = 3200;
-  var STAR_FIRST_DESKTOP_MS = 6500;
-  var STAR_REPEAT_MIN_MS = 15000;
-  var STAR_REPEAT_SPAN_MS = 10000;
-  var starTimer = 0;
-  var starEl = null;
-  var observer = null;
+  var ASSET_VERSION = "20260922-2";
+  var legacyObserver = null;
+  var redirectingLegacyGame = false;
 
   function lang() {
     var value = String(document.documentElement.lang || "de").toLowerCase();
@@ -19,45 +15,40 @@
 
   function copy() {
     var all = {
-      de: {
-        mode: "Universum-Modus",
-        modeAria: "Universum-Modus öffnen",
-        star: "Sternschnuppe antippen – Warp-Jagd starten",
-        turbo: "TURBO",
-        turboAria: "Turbo gedrückt halten",
-        gameHelp: "Finger bewegen: zielen · TURBO halten: beschleunigen · Teile ins Fadenkreuz bringen"
-      },
-      en: {
-        mode: "Universe Mode",
-        modeAria: "Open Universe Mode",
-        star: "Tap the shooting star – start Warp Hunt",
-        turbo: "TURBO",
-        turboAria: "Hold for turbo",
-        gameHelp: "Move your finger to aim · hold TURBO to boost · guide pieces into the crosshair"
-      },
-      fr: {
-        mode: "Mode Univers",
-        modeAria: "Ouvrir le mode Univers",
-        star: "Touchez l’étoile filante – lancer la Chasse Warp",
-        turbo: "TURBO",
-        turboAria: "Maintenir pour le turbo",
-        gameHelp: "Déplacez le doigt pour viser · maintenez TURBO · placez les pièces dans le viseur"
-      }
+      de: { mode: "Universum-Modus", modeAria: "Universum-Modus öffnen" },
+      en: { mode: "Universe Mode", modeAria: "Open Universe Mode" },
+      fr: { mode: "Mode Univers", modeAria: "Ouvrir le mode Univers" }
     };
     return all[lang()];
   }
 
-  function isCoarsePointer() {
-    try { return window.matchMedia("(pointer: coarse)").matches; } catch (e) { return false; }
+  function injectCss(href, marker) {
+    if (document.querySelector('link[' + marker + ']')) return;
+    var link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    link.setAttribute(marker, "");
+    document.head.appendChild(link);
   }
 
-  function reduceMotion() {
-    try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; }
-  }
-
-  function universeVisible() {
-    var view = document.getElementById("chaosView");
-    return !!(view && !view.classList.contains("hidden") && !view.classList.contains("chaos-view--game"));
+  function injectScript(src, marker, done) {
+    var existing = document.querySelector('script[' + marker + ']');
+    if (existing) {
+      if (done) {
+        if (existing.getAttribute("data-loaded") === "1") done();
+        else existing.addEventListener("load", done, { once: true });
+      }
+      return;
+    }
+    var script = document.createElement("script");
+    script.src = src;
+    script.async = false;
+    script.setAttribute(marker, "");
+    script.addEventListener("load", function () {
+      script.setAttribute("data-loaded", "1");
+      if (done) done();
+    }, { once: true });
+    document.head.appendChild(script);
   }
 
   function installModeBranding() {
@@ -79,154 +70,45 @@
     }
   }
 
-  function dispatchGameKey(type, key) {
-    try {
-      document.dispatchEvent(new KeyboardEvent(type, { key: key, bubbles: true, cancelable: true }));
-    } catch (e) {}
-  }
-
-  function startWarpGame() {
-    removeStar();
-    // Reuse the existing game's own start wiring instead of duplicating or
-    // reaching into its protected closure. The hidden replay control is
-    // permanently wired to chaosGameStart() by the main runtime, so click()
-    // invokes the exact same start path as a normal replay.
-    var nativeStart = document.getElementById("chaosGameAgain");
-    if (nativeStart) {
-      nativeStart.click();
-      return;
-    }
-  }
-
-  function removeStar() {
-    if (!starEl) return;
-    var old = starEl;
-    starEl = null;
-    if (old.parentNode) old.parentNode.removeChild(old);
-  }
-
-  function scheduleStar(delay) {
-    window.clearTimeout(starTimer);
-    starTimer = window.setTimeout(function () {
-      if (!universeVisible()) {
-        scheduleStar(900);
-        return;
-      }
-      showStar();
-    }, delay);
-  }
-
-  function showStar() {
-    removeStar();
-    var host = document.getElementById("chaosScreen");
-    if (!host || !universeVisible()) return;
-
-    var c = copy();
-    var button = document.createElement("button");
-    button.type = "button";
-    button.className = "universe-shooting-star" + (reduceMotion() ? " is-reduced" : "");
-    button.setAttribute("aria-label", c.star);
-    button.setAttribute("title", c.star);
-    button.innerHTML = '<span class="universe-shooting-star__tail" aria-hidden="true"></span><span class="universe-shooting-star__core" aria-hidden="true"></span>';
-    starEl = button;
-
-    function activate(event) {
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      startWarpGame();
-    }
-    button.addEventListener("pointerdown", function (event) { event.stopPropagation(); });
-    button.addEventListener("click", activate);
-    button.addEventListener("animationend", function () {
-      if (starEl === button) {
-        removeStar();
-        scheduleStar(STAR_REPEAT_MIN_MS + Math.random() * STAR_REPEAT_SPAN_MS);
-      }
+  function removeLegacyVisibleControls() {
+    Array.prototype.forEach.call(document.querySelectorAll(".universe-shooting-star,.d119-warp-control,#universeTurbo"), function (node) {
+      node.remove();
     });
-    host.appendChild(button);
-
-    // With Reduce Motion the comet deliberately stays still. Keep it visible
-    // long enough to be discovered, then offer it again later.
-    if (reduceMotion()) {
-      window.setTimeout(function () {
-        if (starEl === button) {
-          removeStar();
-          scheduleStar(STAR_REPEAT_MIN_MS);
-        }
-      }, 9000);
-    }
   }
 
-  function installTurboButton() {
-    var game = document.getElementById("chaosGame");
-    if (!game || document.getElementById("universeTurbo")) return;
-    var c = copy();
-    var button = document.createElement("button");
-    button.type = "button";
-    button.id = "universeTurbo";
-    button.className = "universe-game__turbo";
-    button.textContent = c.turbo;
-    button.setAttribute("aria-label", c.turboAria);
-
-    var pressed = false;
-    function on() {
-      if (pressed) return;
-      pressed = true;
-      button.classList.add("is-active");
-      dispatchGameKey("keydown", " ");
-    }
-    function off() {
-      if (!pressed) return;
-      pressed = false;
-      button.classList.remove("is-active");
-      dispatchGameKey("keyup", " ");
-    }
-
-    button.addEventListener("pointerdown", function (event) {
-      event.preventDefault();
-      event.stopPropagation();
-      try { button.setPointerCapture(event.pointerId); } catch (e) {}
-      on();
-    });
-    button.addEventListener("pointerup", function (event) { event.preventDefault(); off(); });
-    button.addEventListener("pointercancel", off);
-    button.addEventListener("lostpointercapture", off);
-    button.addEventListener("contextmenu", function (event) { event.preventDefault(); });
-    game.appendChild(button);
+  function randomGame() {
+    var ids = ["warp", "signal", "memory"];
+    return ids[Math.floor(Math.random() * ids.length)];
   }
 
-  function localizeMobileGameHelp() {
-    if (!isCoarsePointer()) return;
-    var help = document.querySelector(".chaos-game__keys");
-    if (!help) return;
-    help.textContent = copy().gameHelp;
-    help.removeAttribute("data-i18n");
-  }
-
-  function observeUniverse() {
+  function installLegacyGameBridge() {
     var view = document.getElementById("chaosView");
-    if (!view) return;
-    if (observer) observer.disconnect();
-    observer = new MutationObserver(function () {
-      if (universeVisible()) {
-        if (!starEl) scheduleStar(isCoarsePointer() ? STAR_FIRST_MOBILE_MS : STAR_FIRST_DESKTOP_MS);
-      } else {
-        window.clearTimeout(starTimer);
-        removeStar();
-      }
+    if (!view || legacyObserver) return;
+    legacyObserver = new MutationObserver(function () {
+      if (!view.classList.contains("chaos-view--game") || redirectingLegacyGame) return;
+      if (!window.D119SecretGames || typeof window.D119SecretGames.start !== "function") return;
+      redirectingLegacyGame = true;
+      var back = document.getElementById("chaosGameBack");
+      if (back) back.click();
+      window.setTimeout(function () {
+        try { window.D119SecretGames.start(randomGame()); }
+        finally { redirectingLegacyGame = false; }
+      }, 0);
     });
-    observer.observe(view, { attributes: true, attributeFilter: ["class"] });
+    legacyObserver.observe(view, { attributes: true, attributeFilter: ["class"] });
+  }
 
-    if (universeVisible()) scheduleStar(isCoarsePointer() ? STAR_FIRST_MOBILE_MS : STAR_FIRST_DESKTOP_MS);
+  function loadSecretSystem() {
+    injectCss("/assets/secret-games.css?v=" + ASSET_VERSION, "data-d119-secret-games");
+    injectCss("/assets/shop-promos.css?v=" + ASSET_VERSION, "data-d119-shop-promos");
+    injectScript("/assets/shop-promos.js?v=" + ASSET_VERSION, "data-d119-shop-promos", null);
+    injectScript("/assets/secret-games.js?v=" + ASSET_VERSION, "data-d119-secret-games", installLegacyGameBridge);
   }
 
   function install() {
     installModeBranding();
-    installTurboButton();
-    localizeMobileGameHelp();
-    observeUniverse();
+    removeLegacyVisibleControls();
+    loadSecretSystem();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
