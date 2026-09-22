@@ -10,6 +10,7 @@ import { handleAdminRentalGroups } from "./admin-rental-groups.js";
 import { handleAdminCases } from "./admin-cases.js";
 import { handleAdminSystem } from "./admin-system.js";
 import { handleAdminAlerts } from "./admin-alerts.js";
+import { handleAdminNotifications } from "./admin-notifications.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
 import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications.js";
@@ -146,6 +147,10 @@ export default {
 
       if (url.pathname === "/admin/alerts/sync") {
         return finish(await handleAdminAlerts(request, runtimeEnv, url, reqId, origin));
+      }
+
+      if (url.pathname === "/admin/notifications/telegram/test") {
+        return finish(await handleAdminNotifications(request, runtimeEnv, url, reqId, origin));
       }
 
       if (url.pathname === "/admin/rental-groups" || url.pathname.startsWith("/admin/rental-groups/")) {
