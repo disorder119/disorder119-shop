@@ -49,3 +49,23 @@ CREATE TABLE IF NOT EXISTS coupon_redemptions (
   UNIQUE(coupon_id, order_id)
 );
 CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_coupon ON coupon_redemptions(coupon_id, created_at);
+
+-- Payment completion can arrive through the browser capture route or solely via
+-- PayPal webhook. Redeem the reserved coupon at the database boundary in both
+-- cases so an already-paid reward can never become reusable after reservation expiry.
+CREATE TRIGGER IF NOT EXISTS trg_coupon_redeem_paid_order
+AFTER UPDATE OF status ON commerce_orders
+WHEN NEW.status = 'PAID' AND OLD.status <> 'PAID'
+BEGIN
+  UPDATE coupons
+     SET status = 'REDEEMED',
+         redeemed_order_id = NEW.id,
+         redeemed_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+         reservation_expires_at = NULL
+   WHERE reserved_order_id = NEW.id
+     AND status = 'RESERVED';
+
+  UPDATE coupon_redemptions
+     SET redeemed_at = COALESCE(redeemed_at, strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+   WHERE order_id = NEW.id;
+END;
