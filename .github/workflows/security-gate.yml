@@ -34,14 +34,20 @@ jobs:
         run: |
           python -m py_compile scripts/security_scan.py scripts/universe_regression.py
           node --check shop-worker/notifications.js
+          node --check shop-worker/game-rewards.js
           node --check shop-worker/worker-entry.js
           node --check shop-worker/backend-runtime.js
           node --check shop-worker/worker.js
+          node --check assets/game-rewards.js
           node --check assets/ios-zoom-lock.js
           node --check assets/universe-upgrade.js
 
-      - name: Benachrichtigungs-Regressionen pruefen
-        run: node --test shop-worker/notifications.test.mjs
+      - name: Backend-Regressionen pruefen
+        run: node --test shop-worker/notifications.test.mjs shop-worker/game-rewards.test.mjs
+
+      - name: Coupon-Schema pruefen
+        run: |
+          { echo "CREATE TABLE commerce_orders (id TEXT PRIMARY KEY, status TEXT NOT NULL);"; cat shop-worker/migrations/0009_game_rewards_coupons.sql; } | sqlite3 :memory:
 
       - name: Universum-Mobile-Regressionen pruefen
         run: python scripts/universe_regression.py
