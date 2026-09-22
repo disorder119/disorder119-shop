@@ -131,7 +131,7 @@
         archive: "Vers l’archive",
         next: "Suivant →",
         prevAria: "Voir l’article précédent",
-        archiveAria: "Voir l’archive",
+        archiveAria: "Vers l’archive",
         nextAria: "Voir l’article suivant",
         navAria: "Navigation des articles",
         menuAria: "Ouvrir l’archive",
@@ -298,6 +298,20 @@
   }
 
   initArticleSequence();
+
+  // Keep the game/leaderboard/coupon enhancement isolated from the mature main
+  // storefront bundle. It is loaded after the page is ready so app.js owns the
+  // original game implementation and this file only enhances it.
+  function loadGameRewards() {
+    if (document.querySelector('script[data-d119-game-rewards]')) return;
+    var script = document.createElement("script");
+    script.src = "/assets/game-rewards.js?v=20260922-1";
+    script.async = true;
+    script.setAttribute("data-d119-game-rewards", "");
+    document.body.appendChild(script);
+  }
+  if (document.readyState === "complete") window.setTimeout(loadGameRewards, 0);
+  else window.addEventListener("load", loadGameRewards, { once: true });
 
   if (!("serviceWorker" in navigator)) return;
   var secureEnough = location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1";
