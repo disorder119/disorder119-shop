@@ -47,7 +47,12 @@ jobs:
 
       - name: Coupon-Schema pruefen
         run: |
-          { echo "CREATE TABLE commerce_orders (id TEXT PRIMARY KEY, status TEXT NOT NULL);"; cat shop-worker/migrations/0009_game_rewards_coupons.sql; } | sqlite3 :memory:
+          {
+            echo "CREATE TABLE commerce_orders (id TEXT PRIMARY KEY, status TEXT NOT NULL);"
+            echo "CREATE TABLE inventory (id TEXT PRIMARY KEY, status TEXT NOT NULL, updated_at TEXT, version INTEGER NOT NULL DEFAULT 1);"
+            echo "CREATE TABLE reservations (id TEXT PRIMARY KEY, inventory_id TEXT NOT NULL, kind TEXT NOT NULL, status TEXT NOT NULL);"
+            cat shop-worker/migrations/0009_game_rewards_coupons.sql
+          } | sqlite3 :memory:
 
       - name: Universum-Mobile-Regressionen pruefen
         run: python scripts/universe_regression.py
