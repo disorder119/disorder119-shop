@@ -5,7 +5,8 @@ This suite is deliberately test-only. It does not patch Match, Universe or
 Baukasten and never touches config/mode-guard.json. The existing mode guard
 protects source-level identity; these checks add runtime proof that all three
 protected modes still render and respond in a real Chromium session. Universe
-also verifies the mobile shooting-star entry and Warp Hunt controls end to end.
+also verifies that the new games stay hidden during normal browsing, direct
+game links work, and mobile VOID RUN actually counts collected merchandise.
 """
 from __future__ import annotations
 
@@ -109,38 +110,60 @@ def test_chaos(driver) -> None:
     if urlparse(driver.current_url).path != "/chaos/":
         fail("Universum: Neu mischen veraendert unerwartet die Route")
 
-    # This is the regression the phone report needs: on a 390px viewport the
-    # new discoverable shooting star must appear quickly and tapping it must
-    # actually enter the existing Warp Hunt game.
+    # Games are now Easter eggs, not a permanent shop control. The normal
+    # Universe must not show the old Warp/Turbo affordances at all.
+    wait(driver, lambda d: d.execute_script("return !!window.D119SecretGames"), "Secret-Game-System geladen")
+    if driver.find_elements(By.CSS_SELECTOR, ".universe-shooting-star, .d119-warp-control, #universeTurbo"):
+        fail("Universum: alter sichtbarer Warp-/Turbo-Einstieg ist wieder vorhanden")
+    if not driver.find_element(By.ID, "d119SecretGames").get_attribute("hidden"):
+        fail("Universum: Secret-Game-Hub ist ohne Entdeckung sichtbar")
+
+    # Persist a legitimate nickname and exercise the explicit deep link. This
+    # makes the otherwise rare Easter egg deterministic in CI without making
+    # it common for real visitors.
+    driver.execute_script("localStorage.setItem('d119_secret_player','CI_PLAYER')")
+    driver.get(urljoin(BASE_URL, "chaos/?game=warp"))
+    wait(driver, lambda d: d.execute_script("return !!window.D119SecretGames"), "Secret-Game-System am Direktlink geladen")
     wait(
         driver,
-        lambda d: any(el.is_displayed() for el in d.find_elements(By.CSS_SELECTOR, ".universe-shooting-star")),
-        "mobile Sternschnuppe erscheint",
+        lambda d: d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-view='stage']").is_displayed(),
+        "VOID RUN startet ueber Direktlink",
     )
-    star = driver.find_element(By.CSS_SELECTOR, ".universe-shooting-star")
-    if "Warp" not in (star.get_attribute("aria-label") or ""):
-        fail("Universum: Sternschnuppe besitzt keinen verstaendlichen Warp-Jagd-Namen")
-    driver.execute_script("arguments[0].click();", star)
+    wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, ".d119-warp-item")) > 0, "VOID RUN Produkt erscheint")
+
+    # Regression for the reported phone bug: target the centre of a rendered
+    # merchandise sprite with a pointer move and require the Warenwert/SCORE to
+    # leave zero. Using the actual DOM rectangle makes this robust to random
+    # trajectories and proves the mobile collision path rather than a helper.
+    def aim_at_live_item(d):
+        items = [el for el in d.find_elements(By.CSS_SELECTOR, ".d119-warp-item") if el.is_displayed()]
+        if not items:
+            return False
+        rect = items[0].rect
+        x = rect["x"] + rect["width"] / 2
+        y = rect["y"] + rect["height"] / 2
+        d.execute_script(
+            "var f=document.querySelector('.d119-warp-field');"
+            "f.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,cancelable:true,clientX:arguments[0],clientY:arguments[1],pointerId:7,pointerType:'touch'}));",
+            x,
+            y,
+        )
+        return True
+
+    wait(driver, aim_at_live_item, "VOID RUN Ziel anvisierbar")
     wait(
         driver,
-        lambda d: d.find_element(By.ID, "chaosGame").is_displayed()
-        and "chaos-view--game" in (d.find_element(By.ID, "chaosView").get_attribute("class") or ""),
-        "Warp-Jagd startet nach Sternschnuppen-Tap",
+        lambda d: (d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-hud='score']").text.strip() not in ("", "0 €")),
+        "mobiler Warenwert steigt nach Treffer",
     )
 
-    turbo = driver.find_element(By.ID, "universeTurbo")
-    if not turbo.is_displayed():
-        fail("Universum: mobiler TURBO-Button ist auf 390px nicht sichtbar")
-    if turbo.value_of_css_property("touch-action") not in ("none", "manipulation"):
-        fail("Universum: TURBO-Button ist nicht fuer Touch-Eingabe abgesichert")
+    # The field itself owns touch interaction so Safari cannot steal the drag
+    # gesture for page scrolling/zooming while the game is active.
+    field = driver.find_element(By.CSS_SELECTOR, ".d119-warp-field")
+    if field.value_of_css_property("touch-action") != "none":
+        fail("Universum: VOID RUN Spielfeld ist nicht fuer Touch-Eingabe abgesichert")
 
-    # Verify the button can be pressed/released without leaving a stuck state.
-    driver.execute_script("arguments[0].dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:7}));", turbo)
-    wait(driver, lambda d: "is-active" in (d.find_element(By.ID, "universeTurbo").get_attribute("class") or ""), "Turbo gedrueckt")
-    driver.execute_script("arguments[0].dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:7}));", turbo)
-    wait(driver, lambda d: "is-active" not in (d.find_element(By.ID, "universeTurbo").get_attribute("class") or ""), "Turbo losgelassen")
-
-    assert_no_horizontal_overflow(driver, "Universum mobile Warp-Jagd")
+    assert_no_horizontal_overflow(driver, "Universum mobile Secret-Game")
     assert_no_js_exceptions(driver, "Universum")
 
 
@@ -211,7 +234,7 @@ def run_case(test_fn) -> None:
 def main() -> None:
     for test_fn in (test_match, test_chaos, test_baukasten, test_localized_direct_routes):
         run_case(test_fn)
-    print("Protected-Mode Browser-Smoke: OK — Match, Universum-Modus und Baukasten inklusive mobiler Warp-Jagd in echtem Chromium getestet.")
+    print("Protected-Mode Browser-Smoke: OK — Match, versteckte Universe-Games inkl. mobilem Warenwert und Baukasten in echtem Chromium getestet.")
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ import { handleAdminNotifications } from "./admin-notifications.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
 import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications.js";
+import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
 import {
   ADMIN_ROLE_OWNER,
   ADMIN_ROLE_READER,
@@ -128,6 +129,10 @@ export default {
     try {
       const runtimeEnv = await authorizeRouteEnv(request, env, url, reqId);
       await guardRuntimeRequest(request, runtimeEnv, url);
+
+      if (isGameRewardsRoute(url.pathname)) {
+        return finish(await handleGameRewards(request, runtimeEnv, url, reqId, origin));
+      }
 
       if (url.pathname === "/rental-bundle") {
         return finish(await handleRentalBundle(request, runtimeEnv, url, reqId, origin));
