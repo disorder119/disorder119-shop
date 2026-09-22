@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   GAME_RULES,
+  GAME_VERSION,
   discountForSubtotal,
   normalizeCouponCode,
   normalizeGame,
@@ -10,14 +11,16 @@ import {
   scoreIsPlausible,
 } from "./game-rewards.js";
 
-test("game ids and difficult reward thresholds stay explicit", () => {
+test("Archive Raid is the single public reward game with a hard target", () => {
+  assert.equal(GAME_VERSION, "archive-raid-v3");
   assert.equal(normalizeGame("WARP"), "warp");
-  assert.equal(normalizeGame("signal"), "signal");
+  assert.equal(normalizeGame("raid"), "warp");
+  assert.equal(normalizeGame("signal"), "warp");
+  assert.equal(normalizeGame("memory"), "warp");
   assert.equal(normalizeGame("unknown"), "");
-  assert.deepEqual(Object.keys(GAME_RULES), ["warp", "signal", "memory"]);
-  assert.equal(GAME_RULES.warp.target, 4500);
-  assert.equal(GAME_RULES.signal.target, 18000);
-  assert.equal(GAME_RULES.memory.target, 7600);
+  assert.deepEqual(Object.keys(GAME_RULES), ["warp"]);
+  assert.equal(GAME_RULES.warp.target, 48000);
+  assert.equal(GAME_RULES.warp.maxScore, 150000);
 });
 
 test("public usernames are bounded and reject markup", () => {
@@ -27,13 +30,13 @@ test("public usernames are bounded and reject markup", () => {
   assert.equal(normalizeUsername("Jean Paul"), "Jean Paul");
 });
 
-test("scores need plausible duration and bounded values", () => {
-  assert.equal(scoreIsPlausible("warp", 4600, 32000), true);
-  assert.equal(scoreIsPlausible("warp", 4600, 1000), false);
-  assert.equal(scoreIsPlausible("signal", 999999, 25000), false);
-  assert.equal(scoreIsPlausible("memory", 7600, 12000), true);
-  assert.equal(qualifiedScore("warp", 4499), false);
-  assert.equal(qualifiedScore("warp", 4500), true);
+test("Archive Raid scores need full-run timing and bounded values", () => {
+  assert.equal(scoreIsPlausible("warp", 52000, 42000), true);
+  assert.equal(scoreIsPlausible("raid", 48000, 35000), true);
+  assert.equal(scoreIsPlausible("warp", 52000, 1000), false);
+  assert.equal(scoreIsPlausible("warp", 999999, 42000), false);
+  assert.equal(qualifiedScore("warp", 47999), false);
+  assert.equal(qualifiedScore("warp", 48000), true);
 });
 
 test("10 percent coupon calculation never trusts floating browser prices", () => {
