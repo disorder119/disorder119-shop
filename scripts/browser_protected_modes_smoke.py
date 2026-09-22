@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Real-browser regression coverage for Disorder119's protected creative modes.
 
-This suite is deliberately test-only. It does not patch Match, Chaos or
+This suite is deliberately test-only. It does not patch Match, Universe or
 Baukasten and never touches config/mode-guard.json. The existing mode guard
-protects source-level identity; these checks add the missing runtime proof that
-all three protected modes still render and respond in a real Chromium session.
+protects source-level identity; these checks add runtime proof that all three
+protected modes still render and respond in a real Chromium session. Universe
+also verifies the mobile shooting-star entry and Warp Hunt controls end to end.
 """
 from __future__ import annotations
 
@@ -78,27 +79,69 @@ def test_match(driver) -> None:
 
 
 def test_chaos(driver) -> None:
+    # /chaos/ remains the stable technical route for backwards compatibility;
+    # the user-facing mode is Universe Mode / Universum-Modus.
     driver.set_window_size(390, 844)
     driver.get(urljoin(BASE_URL, "chaos/"))
-    wait(driver, lambda d: d.find_element(By.ID, "chaosView").is_displayed(), "Chaos sichtbar")
-    wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#chaosItems > *")) >= 8, "Chaos-Objekte")
+    wait(driver, lambda d: d.find_element(By.ID, "chaosView").is_displayed(), "Universum sichtbar")
+    wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#chaosItems > *")) >= 8, "Universum-Objekte")
     dismiss_cookie_note(driver)
 
     if driver.find_element(By.ID, "appShell").is_displayed():
-        fail("Chaos: Archiv-Shell ist gleichzeitig sichtbar")
+        fail("Universum: Archiv-Shell ist gleichzeitig sichtbar")
     assert_active_mode(driver, "chaos")
     assert_mode_links(driver)
 
+    universe_button = driver.find_element(By.CSS_SELECTOR, '#modeRail [data-mode-view="chaos"]')
+    universe_label_el = universe_button.find_element(By.CSS_SELECTOR, ".mode-rail__label")
+    universe_label = (universe_label_el.get_attribute("textContent") or "").strip()
+    if universe_label != "Universum-Modus":
+        fail(f"Universum: Moduslabel ist {universe_label!r} statt 'Universum-Modus'")
+    if not universe_button.find_elements(By.CSS_SELECTOR, ".mode-rail__icon svg"):
+        fail("Universum: neues Planet-/Orbit-Icon fehlt")
+
     before = len(driver.find_elements(By.CSS_SELECTOR, "#chaosItems > *"))
     driver.find_element(By.ID, "chaosShuffle").click()
-    wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#chaosItems > *")) >= 8, "Chaos nach Neu mischen")
+    wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#chaosItems > *")) >= 8, "Universum nach Neu mischen")
     after = len(driver.find_elements(By.CSS_SELECTOR, "#chaosItems > *"))
     if before < 8 or after < 8:
-        fail(f"Chaos: zu wenige Objekte vor/nach Shuffle ({before}/{after})")
+        fail(f"Universum: zu wenige Objekte vor/nach Shuffle ({before}/{after})")
     if urlparse(driver.current_url).path != "/chaos/":
-        fail("Chaos: Neu mischen veraendert unerwartet die Route")
-    assert_no_horizontal_overflow(driver, "Chaos mobile")
-    assert_no_js_exceptions(driver, "Chaos")
+        fail("Universum: Neu mischen veraendert unerwartet die Route")
+
+    # This is the regression the phone report needs: on a 390px viewport the
+    # new discoverable shooting star must appear quickly and tapping it must
+    # actually enter the existing Warp Hunt game.
+    wait(
+        driver,
+        lambda d: any(el.is_displayed() for el in d.find_elements(By.CSS_SELECTOR, ".universe-shooting-star")),
+        "mobile Sternschnuppe erscheint",
+    )
+    star = driver.find_element(By.CSS_SELECTOR, ".universe-shooting-star")
+    if "Warp" not in (star.get_attribute("aria-label") or ""):
+        fail("Universum: Sternschnuppe besitzt keinen verstaendlichen Warp-Jagd-Namen")
+    driver.execute_script("arguments[0].click();", star)
+    wait(
+        driver,
+        lambda d: d.find_element(By.ID, "chaosGame").is_displayed()
+        and "chaos-view--game" in (d.find_element(By.ID, "chaosView").get_attribute("class") or ""),
+        "Warp-Jagd startet nach Sternschnuppen-Tap",
+    )
+
+    turbo = driver.find_element(By.ID, "universeTurbo")
+    if not turbo.is_displayed():
+        fail("Universum: mobiler TURBO-Button ist auf 390px nicht sichtbar")
+    if turbo.value_of_css_property("touch-action") not in ("none", "manipulation"):
+        fail("Universum: TURBO-Button ist nicht fuer Touch-Eingabe abgesichert")
+
+    # Verify the button can be pressed/released without leaving a stuck state.
+    driver.execute_script("arguments[0].dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:7}));", turbo)
+    wait(driver, lambda d: "is-active" in (d.find_element(By.ID, "universeTurbo").get_attribute("class") or ""), "Turbo gedrueckt")
+    driver.execute_script("arguments[0].dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:7}));", turbo)
+    wait(driver, lambda d: "is-active" not in (d.find_element(By.ID, "universeTurbo").get_attribute("class") or ""), "Turbo losgelassen")
+
+    assert_no_horizontal_overflow(driver, "Universum mobile Warp-Jagd")
+    assert_no_js_exceptions(driver, "Universum")
 
 
 def test_baukasten(driver) -> None:
@@ -168,7 +211,7 @@ def run_case(test_fn) -> None:
 def main() -> None:
     for test_fn in (test_match, test_chaos, test_baukasten, test_localized_direct_routes):
         run_case(test_fn)
-    print("Protected-Mode Browser-Smoke: OK — Match, Chaos und Baukasten unveraendert in echtem Chromium auf direkten und lokalisierten Routen getestet.")
+    print("Protected-Mode Browser-Smoke: OK — Match, Universum-Modus und Baukasten inklusive mobiler Warp-Jagd in echtem Chromium getestet.")
 
 
 if __name__ == "__main__":

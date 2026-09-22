@@ -32,11 +32,16 @@ jobs:
 
       - name: Security-Code Syntax pruefen
         run: |
-          python -m py_compile scripts/security_scan.py
+          python -m py_compile scripts/security_scan.py scripts/universe_regression.py
           node --check shop-worker/notifications.js
           node --check shop-worker/worker-entry.js
           node --check shop-worker/backend-runtime.js
           node --check shop-worker/worker.js
+          node --check assets/ios-zoom-lock.js
+          node --check assets/universe-upgrade.js
 
       - name: Benachrichtigungs-Regressionen pruefen
         run: node --test shop-worker/notifications.test.mjs
+
+      - name: Universum-Mobile-Regressionen pruefen
+        run: python scripts/universe_regression.py
