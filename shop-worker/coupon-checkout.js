@@ -169,6 +169,10 @@ export async function applyCouponToCreatedOrder(env, code, createResult, request
     };
   }
 
+  if (row.order_status !== "PAYMENT_PENDING" || row.payment_status !== "CREATED") {
+    throw new CouponCheckoutError("COUPON_ORDER_NOT_PAYABLE", 409);
+  }
+
   let claim = null;
   const originalSubtotal = Number(row.subtotal_cents || row.unit_price_cents || 0);
   const originalTotal = Number(row.total_cents || row.amount_cents || originalSubtotal);
@@ -198,7 +202,7 @@ export async function applyCouponToCreatedOrder(env, code, createResult, request
     providerPatched = true;
 
     const now = new Date().toISOString();
-    await env.DB.batch([
+    const updates = await env.DB.batch([
       env.DB.prepare("UPDATE commerce_orders SET subtotal_cents=?,total_cents=?,updated_at=? WHERE id=? AND status='PAYMENT_PENDING'")
         .bind(discountedSubtotal, finalTotal, now, orderId),
       env.DB.prepare("UPDATE order_items SET unit_price_cents=? WHERE order_id=?")
@@ -206,6 +210,9 @@ export async function applyCouponToCreatedOrder(env, code, createResult, request
       env.DB.prepare("UPDATE payments SET amount_cents=?,updated_at=? WHERE id=? AND status='CREATED'")
         .bind(finalTotal, now, row.payment_id),
     ]);
+    if (updates.some(result => !result?.meta?.changes)) {
+      throw new CouponCheckoutError("COUPON_LOCAL_SYNC_FAILED", 502);
+    }
 
     await audit(env, orderId, requestId, "COUPON_RESERVED", {
       couponId: claim.couponId,
@@ -236,7 +243,10 @@ export async function applyCouponToCreatedOrder(env, code, createResult, request
 }
 
 export async function redeemCouponAfterPayment(env, orderId, requestId = "") {
-  if (!orderId) return;
+  if (!env?.DB || !orderId) return;
+  const reserved = await env.DB.prepare(`SELECT id FROM reward_coupons
+    WHERE status='RESERVED' AND reserved_order_id=? LIMIT 1`).bind(String(orderId)).first();
+  if (!reserved) return;
   await redeemCouponForOrder(env, String(orderId));
-  await audit(env, orderId, requestId, "COUPON_REDEEMED", {});
+  await audit(env, orderId, requestId, "COUPON_REDEEMED", { couponId: reserved.id });
 }
