@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 js = (ROOT / "assets" / "universe-upgrade.js").read_text(encoding="utf-8")
 css = (ROOT / "assets" / "universe-upgrade.css").read_text(encoding="utf-8")
 loader = (ROOT / "assets" / "ios-zoom-lock.js").read_text(encoding="utf-8")
+pwa = (ROOT / "assets" / "pwa.js").read_text(encoding="utf-8")
 
 
 def require(condition, message):
@@ -40,8 +41,10 @@ require('.universe-game__turbo { display: flex; }' in css, "Turbo is not exposed
 require('env(safe-area-inset-bottom' in css and 'env(safe-area-inset-top' in css, "iPhone safe-area support missing")
 
 # Bootstrap is intentionally attached to the already-global helper to avoid a
-# new render-blocking tag in every generated HTML page.
+# new render-blocking tag in every generated HTML page. PWA loader version must
+# move with it so iPhones cannot keep an older helper from HTTP cache.
 require('/assets/universe-upgrade.js?v=20260922-1' in loader, "Universe JS loader missing")
 require('/assets/universe-upgrade.css?v=20260922-1' in loader, "Universe CSS loader missing")
+require('/assets/ios-zoom-lock.js?v=20260922-1' in pwa, "iOS helper cache-bust missing")
 
 print("Universe Mode regression checks passed")
