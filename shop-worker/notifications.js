@@ -1,13 +1,18 @@
 import { safeText } from "./commerce-core.js";
 
 const TELEGRAM_API = "https://api.telegram.org";
+const DEFAULT_TARGET_USERNAME = "joelb119";
+
+function normalizedUsername(value) {
+  return safeText(value || DEFAULT_TARGET_USERNAME, 64).replace(/^@+/, "").trim().toLowerCase();
+}
 
 export function telegramTransportReady(env = {}) {
-  return Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID);
+  return Boolean(env.TELEGRAM_BOT_TOKEN && (env.TELEGRAM_CHAT_ID || env.DB));
 }
 
 export function telegramNotificationReady(env = {}) {
-  return Boolean(telegramTransportReady(env) && env.DB);
+  return Boolean(env.TELEGRAM_BOT_TOKEN && env.DB);
 }
 
 function euroAmount(cents, currency = "EUR") {
@@ -46,31 +51,102 @@ export function formatTelegramTestMessage(now = new Date()) {
   ].join("\n");
 }
 
-export async function sendTelegramMessage(env, text) {
-  if (!telegramTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
-  const cleanText = safeText(text, 4096);
-  if (!cleanText) return { sent: false, reason: "EMPTY_MESSAGE" };
+function telegramChatRecordId(username) {
+  return `notify:telegram:chat:${username}`;
+}
 
+async function loadSavedTelegramChatId(env, username) {
+  if (!env.DB) return null;
+  const row = await env.DB.prepare(`SELECT metadata_json FROM audit_events
+    WHERE id=? AND event_type='TELEGRAM_CHAT_CONNECTED' LIMIT 1`)
+    .bind(telegramChatRecordId(username)).first();
+  if (!row?.metadata_json) return null;
+  try {
+    const metadata = JSON.parse(row.metadata_json);
+    const chatId = String(metadata?.chatId || "").trim();
+    return chatId || null;
+  } catch {
+    return null;
+  }
+}
+
+async function saveTelegramChatId(env, username, chatId, reqId) {
+  if (!env.DB) return;
+  const now = new Date().toISOString();
+  await env.DB.prepare(`INSERT OR REPLACE INTO audit_events
+    (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'SYSTEM','telegram',?,'TELEGRAM_CHAT_CONNECTED',?,?,?)`)
+    .bind(
+      telegramChatRecordId(username),
+      username,
+      safeText(reqId || crypto.randomUUID(), 120),
+      JSON.stringify({ channel: "telegram", username, chatId: String(chatId), linkedAt: now }),
+      now,
+    ).run();
+}
+
+async function telegramApi(env, method, body = {}) {
   let response;
   try {
-    response = await fetch(`${TELEGRAM_API}/bot${String(env.TELEGRAM_BOT_TOKEN)}/sendMessage`, {
+    response = await fetch(`${TELEGRAM_API}/bot${String(env.TELEGRAM_BOT_TOKEN)}/${method}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: String(env.TELEGRAM_CHAT_ID),
-        text: cleanText,
-        disable_web_page_preview: true,
-      }),
+      body: JSON.stringify(body),
     });
   } catch (err) {
     throw new Error(`telegram_network_error:${safeText(err?.message || "unknown", 80)}`);
   }
-
   const payload = await response.json().catch(() => null);
   if (!response.ok || payload?.ok === false) {
     const description = safeText(payload?.description || `HTTP ${response.status}`, 120);
     throw new Error(`telegram_api_error:${description}`);
   }
+  return payload;
+}
+
+async function discoverTelegramChatId(env, username, reqId) {
+  if (!env.DB || !env.TELEGRAM_BOT_TOKEN) return null;
+  const payload = await telegramApi(env, "getUpdates", {
+    timeout: 0,
+    limit: 100,
+    allowed_updates: ["message"],
+  });
+  const updates = Array.isArray(payload?.result) ? payload.result.slice().reverse() : [];
+  const match = updates.find(update => {
+    const message = update?.message;
+    const fromUsername = normalizedUsername(message?.from?.username || "");
+    const privateChat = String(message?.chat?.type || "").toLowerCase() === "private";
+    return privateChat && fromUsername === username && message?.chat?.id !== undefined && message?.chat?.id !== null;
+  });
+  if (!match) return null;
+  const chatId = String(match.message.chat.id);
+  await saveTelegramChatId(env, username, chatId, reqId);
+  return chatId;
+}
+
+export async function resolveTelegramChatId(env, reqId = crypto.randomUUID()) {
+  const explicit = String(env?.TELEGRAM_CHAT_ID || "").trim();
+  if (explicit) return explicit;
+  if (!env?.TELEGRAM_BOT_TOKEN || !env?.DB) return null;
+  const username = normalizedUsername(env.TELEGRAM_TARGET_USERNAME || DEFAULT_TARGET_USERNAME);
+  if (!username) return null;
+  const saved = await loadSavedTelegramChatId(env, username);
+  if (saved) return saved;
+  return discoverTelegramChatId(env, username, reqId);
+}
+
+export async function sendTelegramMessage(env, text, reqId = crypto.randomUUID()) {
+  if (!telegramTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
+  const cleanText = safeText(text, 4096);
+  if (!cleanText) return { sent: false, reason: "EMPTY_MESSAGE" };
+  const chatId = await resolveTelegramChatId(env, reqId);
+  if (!chatId) return { sent: false, reason: "TARGET_NOT_CONNECTED" };
+
+  const payload = await telegramApi(env, "sendMessage", {
+    chat_id: chatId,
+    text: cleanText,
+    disable_web_page_preview: true,
+  });
 
   return {
     sent: true,
@@ -79,7 +155,7 @@ export async function sendTelegramMessage(env, text) {
 }
 
 export async function sendTelegramTest(env, reqId = crypto.randomUUID()) {
-  const result = await sendTelegramMessage(env, formatTelegramTestMessage(new Date()));
+  const result = await sendTelegramMessage(env, formatTelegramTestMessage(new Date()), reqId);
   if (!result.sent) return result;
   return { ...result, requestId: safeText(reqId, 120) };
 }
@@ -130,7 +206,7 @@ export async function notifyPaidOrder(env, orderId, reqId = crypto.randomUUID())
   if (!claim.claimed) return { sent: false, duplicate: true };
 
   try {
-    const delivery = await sendTelegramMessage(env, formatSaleMessage(row));
+    const delivery = await sendTelegramMessage(env, formatSaleMessage(row), reqId);
     if (!delivery.sent) throw new Error(delivery.reason || "telegram_not_sent");
   } catch (err) {
     await releaseFailedClaim(env, claim.claimId);

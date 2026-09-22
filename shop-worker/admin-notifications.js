@@ -100,6 +100,12 @@ export async function handleAdminNotifications(request, env, url, reqId, origin 
 
     const result = await sendTelegramTest(env, reqId);
     if (!result.sent) {
+      if (result.reason === "TARGET_NOT_CONNECTED") {
+        throw new AdminNotificationsError("TELEGRAM_TARGET_NOT_CONNECTED", 409);
+      }
+      if (result.reason === "NOT_CONFIGURED") {
+        throw new AdminNotificationsError("TELEGRAM_NOT_CONFIGURED", 503);
+      }
       throw new AdminNotificationsError("TELEGRAM_DELIVERY_FAILED", 502);
     }
     return json({

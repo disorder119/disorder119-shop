@@ -15,6 +15,21 @@ function request(method = "POST", token = "owner-test-token") {
   });
 }
 
+function emptyLinkDb() {
+  return {
+    prepare() {
+      return {
+        bind() {
+          return {
+            async first() { return null; },
+            async run() { return { meta: { changes: 1 } }; },
+          };
+        },
+      };
+    },
+  };
+}
+
 test("Telegram admin test endpoint sends through configured transport", async () => {
   const originalFetch = globalThis.fetch;
   let body = null;
@@ -59,4 +74,28 @@ test("Telegram admin test endpoint reports missing Telegram configuration", asyn
   }, URL, "req-admin-not-configured", ORIGIN);
   assert.equal(response.status, 503);
   assert.equal((await response.json()).error, "TELEGRAM_NOT_CONFIGURED");
+});
+
+test("Telegram admin test endpoint tells owner to start @joelb119 bot before auto-link", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async url => {
+    if (String(url).endsWith("/getUpdates")) {
+      return new Response(JSON.stringify({ ok: true, result: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    throw new Error("unexpected Telegram method");
+  };
+  try {
+    const response = await handleAdminNotifications(request(), {
+      ADMIN_TOKEN: "owner-test-token",
+      TELEGRAM_BOT_TOKEN: "fake-bot-token",
+      DB: emptyLinkDb(),
+    }, URL, "req-admin-unlinked", ORIGIN);
+    assert.equal(response.status, 409);
+    assert.equal((await response.json()).error, "TELEGRAM_TARGET_NOT_CONNECTED");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
