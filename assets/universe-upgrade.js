@@ -87,9 +87,15 @@
 
   function startWarpGame() {
     removeStar();
-    [0, 38, 76].forEach(function (delay) {
-      window.setTimeout(function () { dispatchGameKey("keydown", "1"); }, delay);
-    });
+    // Reuse the existing game's own start wiring instead of duplicating or
+    // reaching into its protected closure. The hidden replay control is
+    // permanently wired to chaosGameStart() by the main runtime, so click()
+    // invokes the exact same start path as a normal replay.
+    var nativeStart = document.getElementById("chaosGameAgain");
+    if (nativeStart) {
+      nativeStart.click();
+      return;
+    }
   }
 
   function removeStar() {
