@@ -7,13 +7,13 @@
   if (!document.querySelector('link[data-d119-universe-upgrade]')) {
     var universeCss = document.createElement("link");
     universeCss.rel = "stylesheet";
-    universeCss.href = "/assets/universe-upgrade.css?v=20260922-3";
+    universeCss.href = "/assets/universe-upgrade.css?v=20260923-1";
     universeCss.setAttribute("data-d119-universe-upgrade", "");
     document.head.appendChild(universeCss);
   }
   if (!document.querySelector('script[data-d119-universe-upgrade]')) {
     var universeScript = document.createElement("script");
-    universeScript.src = "/assets/universe-upgrade.js?v=20260922-3";
+    universeScript.src = "/assets/universe-upgrade.js?v=20260923-1";
     universeScript.async = false;
     universeScript.setAttribute("data-d119-universe-upgrade", "");
     document.head.appendChild(universeScript);
