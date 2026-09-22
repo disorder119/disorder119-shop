@@ -56,13 +56,13 @@ test("sendTelegramTest calls Telegram Bot API with configured private chat id", 
   };
   try {
     const result = await sendTelegramTest({
-      TELEGRAM_BOT_TOKEN: "123456:TEST_ONLY_TOKEN_VALUE",
+      TELEGRAM_BOT_TOKEN: "fake-bot-token",
       TELEGRAM_CHAT_ID: "99887766",
     }, "req-test-1");
     assert.equal(result.sent, true);
     assert.equal(result.messageId, 119);
     assert.equal(result.requestId, "req-test-1");
-    assert.match(seenUrl, /^https:\/\/api\.telegram\.org\/bot123456:TEST_ONLY_TOKEN_VALUE\/sendMessage$/);
+    assert.equal(seenUrl, "https://api.telegram.org/botfake-bot-token/sendMessage");
     assert.equal(seenBody.chat_id, "99887766");
     assert.match(seenBody.text, /DISORDER119 — TELEGRAM TEST/);
     assert.equal(seenBody.disable_web_page_preview, true);
