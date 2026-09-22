@@ -2,8 +2,12 @@ import { safeText } from "./commerce-core.js";
 
 const TELEGRAM_API = "https://api.telegram.org";
 
+export function telegramTransportReady(env = {}) {
+  return Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID);
+}
+
 export function telegramNotificationReady(env = {}) {
-  return Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID && env.DB);
+  return Boolean(telegramTransportReady(env) && env.DB);
 }
 
 function euroAmount(cents, currency = "EUR") {
@@ -28,6 +32,56 @@ export function formatSaleMessage(order = {}) {
     `Betrag: ${amount}`,
     "Zahlung: PayPal bestätigt",
   ].filter(Boolean).join("\n");
+}
+
+export function formatTelegramTestMessage(now = new Date()) {
+  const timestamp = now instanceof Date && !Number.isNaN(now.getTime())
+    ? now.toISOString()
+    : new Date().toISOString();
+  return [
+    "DISORDER119 — TELEGRAM TEST",
+    "Status: Verbindung funktioniert",
+    `Zeit: ${timestamp}`,
+    "Künftige bestätigte Verkäufe können hier automatisch gemeldet werden.",
+  ].join("\n");
+}
+
+export async function sendTelegramMessage(env, text) {
+  if (!telegramTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
+  const cleanText = safeText(text, 4096);
+  if (!cleanText) return { sent: false, reason: "EMPTY_MESSAGE" };
+
+  let response;
+  try {
+    response = await fetch(`${TELEGRAM_API}/bot${String(env.TELEGRAM_BOT_TOKEN)}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: String(env.TELEGRAM_CHAT_ID),
+        text: cleanText,
+        disable_web_page_preview: true,
+      }),
+    });
+  } catch (err) {
+    throw new Error(`telegram_network_error:${safeText(err?.message || "unknown", 80)}`);
+  }
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || payload?.ok === false) {
+    const description = safeText(payload?.description || `HTTP ${response.status}`, 120);
+    throw new Error(`telegram_api_error:${description}`);
+  }
+
+  return {
+    sent: true,
+    messageId: Number(payload?.result?.message_id || 0) || null,
+  };
+}
+
+export async function sendTelegramTest(env, reqId = crypto.randomUUID()) {
+  const result = await sendTelegramMessage(env, formatTelegramTestMessage(new Date()));
+  if (!result.sent) return result;
+  return { ...result, requestId: safeText(reqId, 120) };
 }
 
 async function claimDelivery(env, orderId, reqId) {
@@ -75,23 +129,12 @@ export async function notifyPaidOrder(env, orderId, reqId = crypto.randomUUID())
   const claim = await claimDelivery(env, row.id, reqId);
   if (!claim.claimed) return { sent: false, duplicate: true };
 
-  let response;
   try {
-    response = await fetch(`${TELEGRAM_API}/bot${String(env.TELEGRAM_BOT_TOKEN)}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: String(env.TELEGRAM_CHAT_ID),
-        text: formatSaleMessage(row),
-        disable_web_page_preview: true,
-      }),
-    });
-    if (!response.ok) throw new Error(`telegram_http_${response.status}`);
-    const payload = await response.json().catch(() => null);
-    if (payload && payload.ok === false) throw new Error("telegram_api_rejected");
+    const delivery = await sendTelegramMessage(env, formatSaleMessage(row));
+    if (!delivery.sent) throw new Error(delivery.reason || "telegram_not_sent");
   } catch (err) {
     await releaseFailedClaim(env, claim.claimId);
-    throw new Error(`telegram_sale_notification_failed:${safeText(err?.message || "unknown", 80)}`);
+    throw new Error(`telegram_sale_notification_failed:${safeText(err?.message || "unknown", 120)}`);
   }
 
   // Once Telegram has accepted the message, keep the claim even if this bookkeeping
