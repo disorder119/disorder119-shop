@@ -38,6 +38,7 @@ jobs:
           node --check shop-worker/backend-runtime.js
           node --check shop-worker/worker.js
           node --check shop-worker/game-rewards.js
+          node --check shop-worker/coupon-checkout.js
           node --check assets/ios-zoom-lock.js
           node --check assets/universe-upgrade.js
           node --check assets/secret-games.js
@@ -47,7 +48,15 @@ jobs:
         run: node --test shop-worker/notifications.test.mjs
 
       - name: Game- und Gutschein-Regressionen pruefen
-        run: node --test shop-worker/game-rewards.test.mjs
+        run: node --test shop-worker/game-rewards.test.mjs shop-worker/coupon-checkout.test.mjs
+
+      - name: Gutschein-Migration pruefen
+        run: |
+          {
+            echo "CREATE TABLE commerce_orders (id TEXT PRIMARY KEY, status TEXT NOT NULL);"
+            cat shop-worker/migrations/0009_secret_games.sql
+            cat shop-worker/migrations/0010_coupon_checkout.sql
+          } | sqlite3 :memory:
 
       - name: Universum-Mobile-Regressionen pruefen
         run: python scripts/universe_regression.py
