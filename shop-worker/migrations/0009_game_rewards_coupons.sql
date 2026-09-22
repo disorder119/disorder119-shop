@@ -69,3 +69,25 @@ BEGIN
      SET redeemed_at = COALESCE(redeemed_at, strftime('%Y-%m-%dT%H:%M:%fZ','now'))
    WHERE order_id = NEW.id;
 END;
+
+-- If checkout setup fails after a purchase reservation was created, release the
+-- unique item through the existing legal state transitions. This avoids a
+-- temporary ghost reservation while preserving the stricter 0003 state machine.
+CREATE TRIGGER IF NOT EXISTS trg_purchase_cancel_release_inventory
+AFTER UPDATE OF status ON reservations
+WHEN NEW.kind = 'PURCHASE' AND NEW.status = 'CANCELLED' AND OLD.status <> 'CANCELLED'
+BEGIN
+  UPDATE inventory
+     SET status = 'CANCELLED',
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+         version = version + 1
+   WHERE id = NEW.inventory_id
+     AND status IN ('RESERVED','PAYMENT_PENDING');
+
+  UPDATE inventory
+     SET status = 'AVAILABLE',
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+         version = version + 1
+   WHERE id = NEW.inventory_id
+     AND status = 'CANCELLED';
+END;
