@@ -27,9 +27,10 @@ require('mode-rail__icon--universe' in js and '<svg viewBox="0 0 32 32"' in js, 
 require('reduceMotion() ? " is-reduced" : ""' in js, "reduced-motion shooting-star fallback missing")
 require('.universe-shooting-star.is-reduced' in css, "reduced-motion static star style missing")
 
-# Trigger the existing Warp Hunt without reaching into its private closure:
-# the legacy game already exposes the documented 119 keyboard easter egg.
-require('[0, 38, 76]' in js and 'dispatchGameKey("keydown", "1")' in js, "shooting star no longer triggers Warp Hunt via 119")
+# Reuse the existing Warp Hunt's native replay/start wiring. This deliberately
+# avoids duplicating protected game logic or relying on synthetic secret keys.
+require('getElementById("chaosGameAgain")' in js and 'nativeStart.click()' in js, "shooting star no longer uses native Warp Hunt start wiring")
+require('[0, 38, 76]' not in js, "legacy synthetic 119 trigger must not return")
 
 # Mobile game must have a holdable Turbo control mapped to the existing space
 # boost input, with both press and release so boost cannot get stuck.
