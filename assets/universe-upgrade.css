@@ -1,4 +1,4 @@
-/* Disorder119 Universe Mode mobile/game enhancement. Loaded by ios-zoom-lock.js on every shop page. */
+/* Disorder119 Universe Mode shell enhancement. */
 .mode-rail__icon--universe svg {
   width: 1.35em;
   height: 1.35em;
@@ -6,184 +6,23 @@
   overflow: visible;
 }
 
-.universe-shooting-star {
-  position: absolute;
-  z-index: 7;
-  top: 18%;
-  left: -92px;
-  width: 86px;
-  height: 64px;
-  padding: 0;
-  border: 0;
+/* iOS Safari can otherwise select product cards/images while the visitor drags
+   around the Universe. Keep inputs selectable, but make the visual universe
+   itself behave like an interaction surface rather than a document. */
+#chaosScreen,
+#chaosScreen *:not(input):not(textarea):not([contenteditable="true"]) {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+#chaosScreen img,
+#chaosScreen canvas {
+  -webkit-user-drag: none;
+}
+#chaosScreen ::selection {
   background: transparent;
-  color: #fff4d6;
-  cursor: pointer;
-  touch-action: manipulation;
+}
+
+.mode-rail__btn[data-universe-mode] {
   -webkit-tap-highlight-color: transparent;
-  animation: universe-shoot 1.95s cubic-bezier(.18,.7,.28,1) forwards;
-}
-.universe-shooting-star::after {
-  content: "";
-  position: absolute;
-  inset: 5px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 244, 214, 0);
-}
-.universe-shooting-star:focus-visible::after {
-  border-color: rgba(255, 244, 214, .9);
-}
-.universe-shooting-star__core {
-  position: absolute;
-  right: 16px;
-  top: 24px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #fff4d6;
-  box-shadow: 0 0 8px #fff4d6, 0 0 22px rgba(255, 196, 84, .95), 0 0 44px rgba(255, 196, 84, .55);
-}
-.universe-shooting-star__tail {
-  position: absolute;
-  right: 21px;
-  top: 27px;
-  width: 58px;
-  height: 2px;
-  transform-origin: right center;
-  transform: rotate(-9deg);
-  background: linear-gradient(90deg, rgba(242,239,231,0), rgba(255,226,160,.92));
-  box-shadow: 0 0 8px rgba(255,226,160,.45);
-}
-.universe-shooting-star.is-reduced {
-  left: auto;
-  right: max(14px, env(safe-area-inset-right, 0px));
-  top: calc(82px + env(safe-area-inset-top, 0px));
-  animation: none;
-  background: rgba(0,0,0,.42);
-  border: 1px solid rgba(255,244,214,.42);
-}
-.universe-shooting-star.is-reduced::before {
-  content: "WARP";
-  position: absolute;
-  right: 12px;
-  bottom: 6px;
-  font: 700 .52rem/1 "Helvetica Neue", Helvetica, Arial, sans-serif;
-  letter-spacing: .14em;
-  color: rgba(255,244,214,.8);
-}
-
-@keyframes universe-shoot {
-  0% { left: -92px; top: 14%; transform: translate3d(0,0,0) rotate(-4deg); opacity: 0; }
-  8% { opacity: 1; }
-  100% { left: calc(100% + 12px); top: 48%; transform: translate3d(0,0,0) rotate(5deg); opacity: .96; }
-}
-
-.universe-game__turbo {
-  display: none;
-  position: absolute;
-  z-index: 9;
-  right: max(16px, env(safe-area-inset-right, 0px));
-  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-  width: 86px;
-  height: 86px;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-  border: 1px solid rgba(242,239,231,.66);
-  border-radius: 50%;
-  background: rgba(7,7,7,.72);
-  color: #f2efe7;
-  font: 800 .66rem/1 "Helvetica Neue", Helvetica, Arial, sans-serif;
-  letter-spacing: .17em;
-  text-indent: .17em;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform .08s ease, background-color .08s ease, border-color .08s ease;
-}
-.universe-game__turbo.is-active {
-  transform: scale(.92);
-  background: rgba(255,196,84,.24);
-  border-color: #ffc454;
-  color: #fff4d6;
-}
-
-@media (pointer: coarse), (max-width: 700px) {
-  .universe-game__turbo { display: flex; }
-
-  .chaos-game__hud {
-    top: calc(8px + env(safe-area-inset-top, 0px));
-    width: calc(100% - 20px);
-    max-width: 420px;
-    gap: 4px;
-  }
-  .chaos-game__stat {
-    flex: 1 1 0;
-    min-width: 0;
-    padding: 7px 6px;
-    background: rgba(6,6,6,.68);
-  }
-  .chaos-game__label {
-    font-size: .49rem;
-    letter-spacing: .1em;
-  }
-  .chaos-game__stat strong { font-size: .96rem; }
-  .chaos-game__keys {
-    left: 14px;
-    right: 112px;
-    bottom: calc(22px + env(safe-area-inset-bottom, 0px));
-    max-width: 270px;
-    font-size: .55rem;
-    line-height: 1.45;
-    letter-spacing: .08em;
-    text-align: left;
-    color: rgba(242,239,231,.76);
-    text-shadow: 0 1px 6px #000;
-  }
-  .chaos-game__banner {
-    top: 30%;
-    font-size: clamp(2.6rem, 16vw, 5.4rem);
-  }
-  .chaos-game__result {
-    width: calc(100% - 24px);
-    max-height: calc(100% - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .universe-shooting-star {
-    width: 104px;
-    height: 78px;
-  }
-  .universe-shooting-star__core {
-    right: 20px;
-    top: 31px;
-    width: 10px;
-    height: 10px;
-  }
-  .universe-shooting-star__tail {
-    right: 25px;
-    top: 35px;
-    width: 72px;
-    height: 3px;
-  }
-}
-
-@media (max-width: 390px) {
-  .universe-game__turbo {
-    width: 78px;
-    height: 78px;
-    right: 12px;
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  }
-  .chaos-game__keys {
-    right: 98px;
-    bottom: calc(15px + env(safe-area-inset-bottom, 0px));
-    font-size: .5rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .universe-game__turbo { transition: none; }
 }
