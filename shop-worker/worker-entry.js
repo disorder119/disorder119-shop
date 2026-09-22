@@ -12,6 +12,7 @@ import { handleAdminSystem } from "./admin-system.js";
 import { handleAdminAlerts } from "./admin-alerts.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
+import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications.js";
 import {
   ADMIN_ROLE_OWNER,
   ADMIN_ROLE_READER,
@@ -188,9 +189,15 @@ export default {
 
       if (shouldInspectCapture) {
         try {
-          const payload = await requestCopy.json();
+          const [payload, result] = await Promise.all([
+            requestCopy.json(),
+            response.clone().json(),
+          ]);
           if (payload?.orderId) {
             await runBackground(ctx, snapshotPaypalOrder(runtimeEnv, String(payload.orderId), reqId), "checkout_snapshot_failed", reqId);
+          }
+          if (result?.orderId) {
+            await runBackground(ctx, notifyPaidOrder(runtimeEnv, String(result.orderId), reqId), "sale_notification_failed", reqId);
           }
         } catch (err) {
           logBackgroundFailure("capture_observer_failed", reqId, err);
@@ -204,6 +211,7 @@ export default {
             const providerOrderId = event?.resource?.supplementary_data?.related_ids?.order_id;
             if (providerOrderId) {
               await runBackground(ctx, snapshotPaypalOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_checkout_snapshot_failed", reqId);
+              await runBackground(ctx, notifyPaidOrderByProviderOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_sale_notification_failed", reqId);
             }
           }
         } catch (err) {
