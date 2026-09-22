@@ -16,6 +16,13 @@ import { handleRentalBundle } from "./rental-bundle.js";
 import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
 import {
+  CouponCheckoutError,
+  applyCouponToCreatedOrder,
+  assertCouponUsable,
+  couponCodeFromCreateRequest,
+  redeemCouponAfterPayment,
+} from "./coupon-checkout.js";
+import {
   ADMIN_ROLE_OWNER,
   ADMIN_ROLE_READER,
   RuntimeGuardError,
@@ -119,6 +126,25 @@ async function runBackground(ctx, task, event, reqId) {
   await guarded;
 }
 
+function replaceJsonResponse(response, payload) {
+  const headers = new Headers(response.headers);
+  headers.set("Content-Type", "application/json; charset=utf-8");
+  headers.delete("Content-Length");
+  return new Response(JSON.stringify(payload), {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+function couponRuntimeError(error) {
+  if (error instanceof RuntimeGuardError) return error;
+  if (error instanceof CouponCheckoutError || error?.code) {
+    return new RuntimeGuardError(String(error.code || "COUPON_APPLY_FAILED"), Number(error.status) || 409);
+  }
+  return new RuntimeGuardError("COUPON_APPLY_FAILED", 502);
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -176,11 +202,33 @@ export default {
       }
 
       const shouldInspectRental = url.pathname === "/rental-request" && request.method === "POST";
+      const shouldInspectCreate = url.pathname === "/create-order" && request.method === "POST";
       const shouldInspectCapture = url.pathname === "/capture-order" && request.method === "POST";
       const shouldInspectWebhook = url.pathname === "/paypal-webhook" && request.method === "POST";
-      const requestCopy = (shouldInspectRental || shouldInspectCapture || shouldInspectWebhook) ? request.clone() : null;
+      const requestCopy = (shouldInspectRental || shouldInspectCreate || shouldInspectCapture || shouldInspectWebhook) ? request.clone() : null;
 
-      const response = await shopWorker.fetch(request, runtimeEnv, ctx);
+      let couponCode = "";
+      if (shouldInspectCreate && requestCopy) {
+        try {
+          couponCode = await couponCodeFromCreateRequest(requestCopy.clone());
+          if (couponCode) await assertCouponUsable(runtimeEnv, couponCode);
+        } catch (error) {
+          throw couponRuntimeError(error);
+        }
+      }
+
+      let response = await shopWorker.fetch(request, runtimeEnv, ctx);
+
+      if (response.ok && shouldInspectCreate && couponCode && runtimeEnv.DB) {
+        try {
+          const result = await response.clone().json();
+          const coupon = await applyCouponToCreatedOrder(runtimeEnv, couponCode, result, reqId);
+          response = replaceJsonResponse(response, { ...result, coupon });
+        } catch (error) {
+          throw couponRuntimeError(error);
+        }
+      }
+
       if (!response.ok || !requestCopy || !runtimeEnv.DB) return finish(response);
 
       if (shouldInspectRental) {
@@ -207,6 +255,7 @@ export default {
             await runBackground(ctx, snapshotPaypalOrder(runtimeEnv, String(payload.orderId), reqId), "checkout_snapshot_failed", reqId);
           }
           if (result?.orderId) {
+            await runBackground(ctx, redeemCouponAfterPayment(runtimeEnv, String(result.orderId), reqId), "coupon_redeem_failed", reqId);
             await runBackground(ctx, notifyPaidOrder(runtimeEnv, String(result.orderId), reqId), "sale_notification_failed", reqId);
           }
         } catch (err) {
