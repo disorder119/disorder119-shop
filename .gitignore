@@ -4,3 +4,39 @@ Thumbs.db
 .vscode/
 .idea/
 __pycache__/
+
+# Secrets and local environment files — never commit real credentials.
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+**/.dev.vars
+**/.dev.vars.*
+!**/.dev.vars.example
+
+# Cloudflare/Wrangler local state.
+.wrangler/
+**/.wrangler/
+
+# Private keys / certificates.
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# Local databases and test/runtime output.
+*.sqlite
+*.sqlite3
+*.db
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
