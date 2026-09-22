@@ -2,11 +2,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 upgrade = (ROOT / "assets" / "universe-upgrade.js").read_text(encoding="utf-8")
+upgrade_css = (ROOT / "assets" / "universe-upgrade.css").read_text(encoding="utf-8")
 games = (ROOT / "assets" / "secret-games.js").read_text(encoding="utf-8")
 games_css = (ROOT / "assets" / "secret-games.css").read_text(encoding="utf-8")
 promos = (ROOT / "assets" / "shop-promos.js").read_text(encoding="utf-8")
 loader = (ROOT / "assets" / "ios-zoom-lock.js").read_text(encoding="utf-8")
 pwa = (ROOT / "assets" / "pwa.js").read_text(encoding="utf-8")
+worker = (ROOT / "shop-worker" / "game-rewards.js").read_text(encoding="utf-8")
 
 
 def require(condition, message):
@@ -14,58 +16,69 @@ def require(condition, message):
         raise SystemExit(f"Universe regression failed: {message}")
 
 
-# Universe keeps the curated mode name/icon and removes the old permanent
-# Warp/Turbo entry. Games must be discovered as in-world encounters instead.
+# Universe identity stays stable.
 require('mode: "Universum-Modus"' in upgrade, "German mode name is not Universum-Modus")
 require('mode: "Universe Mode"' in upgrade, "English mode name is not Universe Mode")
 require('mode: "Mode Univers"' in upgrade, "French mode name is not Mode Univers")
 require('mode-rail__icon--universe' in upgrade and '<svg viewBox="0 0 32 32"' in upgrade, "orbit/planet icon missing")
-require('universe-shooting-star,.d119-warp-control,#universeTurbo' in upgrade, "legacy visible Warp controls are not removed")
-require('startWarpGame' not in upgrade and 'universe-game__turbo' not in upgrade, "legacy visible Warp/Turbo bootstrap returned")
+require('.universe-shooting-star,.d119-warp-control,#universeTurbo,.d119-secret-relic' in upgrade, "legacy visible entries are not removed")
 
-# Same stable backend ids, completely new Universe-native mechanics.
-require('GAME_IDS = ["warp", "signal", "memory"]' in games, "three stable game ids missing")
-require('STARSHIP 119' in games and 'function startWarp' in games, "STARSHIP 119 encounter missing")
-require('WORMHOLE LOCK' in games and 'function startSignal' in games, "WORMHOLE LOCK encounter missing")
-require('ZERO-G BAG' in games and 'function startMemory' in games, "ZERO-G BAG encounter missing")
-require('d119-game-card' not in games and 'Drei Signale. Drei Spiele.' not in games, "old visible game menu returned")
-require('params.get("game")' in games and 'value === "1"' in games and 'value === "2"' in games and 'value === "3"' in games, "direct test links missing")
+# Exactly one public game: ARCHIVE RAID 119. Old links may alias to it, but the
+# old three mechanics/menu must be gone from the shipped game bundle.
+require('ARCHIVE RAID 119' in games, "Archive Raid title missing")
+require('GAME_VERSION = "archive-raid-v3"' in games, "Archive Raid version missing")
+require('function startRaid' in games, "single raid engine missing")
+require('function startSignal' not in games and 'function startMemory' not in games, "old minigames still shipped")
+require('WORMHOLE LOCK' not in games and 'ZERO-G BAG' not in games, "old game names still shipped")
+require('d119-game-card' not in games and 'Drei Signale. Drei Spiele.' not in games, "old game menu returned")
+require('params.get("game")' in games and '"raid"' in games and '"signal"' in games and '"memory"' in games, "backwards-compatible direct-link aliases missing")
 
-# Random discovery is represented by actual Universe objects: ship, rift and bag.
-require('function spawnEncounter' in games and 'GAME_IDS[Math.floor(Math.random() * GAME_IDS.length)]' in games, "random encounter selection missing")
-require('6500 + Math.random() * 24000' in games, "first encounter timing is not randomized")
-require('28000 + Math.random() * 72000' in games, "repeat encounter timing is not randomized")
-for encounter in ("ship", "rift", "bag"):
-    require(f'encounter: "{encounter}"' in games, f"{encounter} encounter metadata missing")
-    require(f'.d119-universe-encounter--{encounter}' in games_css, f"{encounter} encounter visual missing")
-require('btn.className = "d119-universe-encounter d119-universe-encounter--" + type' in games, "dynamic encounter class wiring missing")
+# One random in-world discovery: a passing STARSHIP 119. There is no permanent
+# button and no random selection between unrelated game types.
+require('function spawnEncounter' in games, "random encounter bootstrap missing")
+require('d119-universe-encounter--raid' in games and '.d119-universe-encounter--raid' in games_css, "ship encounter visual missing")
+require('7000 + Math.random() * 21000' in games, "first ship encounter timing is not randomized")
+require('34000 + Math.random() * 62000' in games, "repeat ship encounter timing is not randomized")
 require('discover: spawnEncounter' in games, "deterministic CI discovery hook missing")
 
-# Mobile controls are direct pointer controls, not tiny tap targets.
-require('d119-flight-field d119-warp-field' in games, "ship flight field missing")
-require('field.addEventListener("pointermove", steer' in games, "drag steering missing")
-require('d119-player-ship' in games and '.d119-player-ship' in games_css, "ship control visual missing")
-require('d119-orbit-ring--1' in games and 'field.addEventListener("pointermove", moveRing' in games, "wormhole ring control missing")
-require('d119-catch-bag' in games and '.d119-catch-bag' in games_css, "shopping bag control missing")
-require('touch-action: none' in games_css, "game fields do not suppress browser touch gestures")
-require('@media (pointer: coarse), (max-width: 700px)' in games_css, "mobile/coarse-pointer layout missing")
+# Gameplay is a real mobile canvas arcade loop: steering + auto-cannon,
+# destructible threats, cargo rescue, escalating phases and final boss.
+require('d119-raid-canvas' in games and '.d119-raid-canvas' in games_css, "canvas game surface missing")
+require('pointerdown' in games and 'pointermove' in games and 'setPointerCapture' in games, "mobile drag steering missing")
+require('function firePlayer' in games and 'spawnBullet' in games, "player weapon system missing")
+require('asteroid' in games and 'drone' in games and 'mine' in games, "destructible hazards missing")
+require('function spawnCargo' in games and 'ARCHIVE' in games, "archive cargo rescue missing")
+require('NULL CARRIER' in games and 'function spawnBoss' in games, "final boss phase missing")
+require('overdriveUntil' in games and 'shieldUntil' in games, "power-up system missing")
+require('touch-action: none' in games_css, "canvas does not own mobile touch input")
+require('@media (pointer: coarse), (max-width: 700px)' in games_css, "mobile layout missing")
 require('env(safe-area-inset-bottom' in games_css and 'env(safe-area-inset-top' in games_css, "iPhone safe-area support missing")
 
-# Usernames, leaderboards, reward targets and the shop-wide coupon field remain intact.
-require('/games/start' in games and '/games/score' in games, "score API wiring missing")
-require('d119_secret_player' in games and 'd119_game_board_v2' in games, "callsign/local leaderboard persistence missing")
-require('target: 4500' in games and 'target: 18000' in games and 'target: 7600' in games, "reward targets changed unexpectedly")
+# Regression for the user's blue iOS selection/drag handles.
+for source, label in ((upgrade_css, "Universe shell"), (games_css, "game bundle")):
+    require('-webkit-user-select: none' in source and '-webkit-touch-callout: none' in source, f"{label} selection guard missing")
+require('selectstart' in games and 'dragstart' in games, "runtime selection/drag guard missing")
+
+# One hard reward threshold and a fresh v3 leaderboard; checkout coupon field is
+# still shop-wide and server validated.
+require('target: 48000' in games, "48k reward target missing from game UI")
 require('10 % UNLOCKED' in games, "10 percent reward result missing")
+require('GAME_VERSION = "archive-raid-v3"' in worker, "worker game version mismatch")
+require('target: 48000' in worker and 'maxScore: 150000' in worker, "worker hard-score rule mismatch")
+require('detail_json LIKE ?' in worker, "v3 leaderboard is not isolated from old scores")
+require('GAME_VERSION_REQUIRED' in worker, "server does not reject old score payloads")
 require('document.getElementById("cartFoot")' in promos and 'data-d119-coupon' in promos, "shop coupon field missing")
 require('/coupons/validate' in promos and 'payload.couponCode = code' in promos, "server coupon validation/checkout forwarding missing")
 
-# Global loader must actually bust the old encounter assets on Safari/Pages.
-require('ASSET_VERSION = "20260922-3"' in upgrade, "Universe encounter asset version not bumped")
-require('/assets/secret-games.js?v=' in upgrade, "secret game bundle is not bootstrapped")
-require('/assets/shop-promos.js?v=' in upgrade, "coupon bundle is not bootstrapped")
-require('chaos-view--game' in upgrade and 'D119SecretGames.start' in upgrade, "legacy canvas bridge missing")
-require('/assets/universe-upgrade.js?v=20260922-3' in loader, "Universe JS cache-bust missing")
-require('/assets/universe-upgrade.css?v=20260922-3' in loader, "Universe CSS cache-bust missing")
+# Heavy arcade assets load only on Universe pages; cache-bust prevents Safari
+# from keeping the superseded games.
+require('ASSET_VERSION = "20260923-1"' in upgrade, "Archive Raid asset version not bumped")
+require('if (!document.getElementById("chaosView")) return;' in upgrade, "game bundle is still loaded on normal shop pages")
+require('/assets/secret-games.js?v=' in upgrade, "game bundle bootstrap missing")
+require('/assets/shop-promos.js?v=' in upgrade, "shop promo bootstrap missing")
+require('D119SecretGames.start("raid")' in upgrade, "legacy canvas bridge does not route to Archive Raid")
+require('/assets/universe-upgrade.js?v=20260923-1' in loader, "Universe JS cache-bust missing")
+require('/assets/universe-upgrade.css?v=20260923-1' in loader, "Universe CSS cache-bust missing")
 require('/assets/ios-zoom-lock.js?v=20260922-1' in pwa, "global iOS helper loader missing")
 
-print("Universe encounter v2 regression checks passed")
+print("Universe Archive Raid v3 regression checks passed")
