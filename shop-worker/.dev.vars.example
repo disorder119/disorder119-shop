@@ -1,0 +1,20 @@
+# Copy to .dev.vars for local development only.
+# .dev.vars is gitignored. Never commit real values.
+
+PAYPAL_ENVIRONMENT="sandbox"
+PAYPAL_CLIENT_ID=""
+PAYPAL_CLIENT_SECRET=""
+PAYPAL_WEBHOOK_ID=""
+
+ADMIN_READ_TOKEN=""
+ADMIN_WRITE_TOKEN=""
+TURNSTILE_SECRET=""
+GITHUB_TOKEN=""
+
+# Optional, free push notification after a confirmed sale.
+TELEGRAM_BOT_TOKEN=""
+TELEGRAM_CHAT_ID=""
+
+# Legacy local-only bridge. Keep disabled for remote/production deployments.
+ALLOW_LEGACY_ADMIN_TOKEN="false"
+ADMIN_TOKEN=""
