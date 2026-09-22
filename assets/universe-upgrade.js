@@ -4,7 +4,8 @@
   if (window.__D119_UNIVERSE_UPGRADE__) return;
   window.__D119_UNIVERSE_UPGRADE__ = true;
 
-  var ASSET_VERSION = "20260922-3";
+  var ASSET_VERSION = "20260922-4";
+  var PROMO_VERSION = "20260922-2";
   var legacyObserver = null;
   var redirectingLegacyGame = false;
 
@@ -98,16 +99,23 @@
     legacyObserver.observe(view, { attributes: true, attributeFilter: ["class"] });
   }
 
+  function loadPromos() {
+    injectCss("/assets/shop-promos.css?v=" + PROMO_VERSION, "data-d119-shop-promos");
+    injectScript("/assets/shop-promos.js?v=" + PROMO_VERSION, "data-d119-shop-promos", null);
+  }
+
   function loadSecretSystem() {
+    // The encounter bundle is substantial and is only useful inside Universe.
+    // Keeping it off normal archive/product pages protects mobile LCP.
+    if (!document.getElementById("chaosView")) return;
     injectCss("/assets/secret-games.css?v=" + ASSET_VERSION, "data-d119-secret-games");
-    injectCss("/assets/shop-promos.css?v=" + ASSET_VERSION, "data-d119-shop-promos");
-    injectScript("/assets/shop-promos.js?v=" + ASSET_VERSION, "data-d119-shop-promos", null);
     injectScript("/assets/secret-games.js?v=" + ASSET_VERSION, "data-d119-secret-games", installLegacyGameBridge);
   }
 
   function install() {
     installModeBranding();
     removeLegacyVisibleControls();
+    loadPromos();
     loadSecretSystem();
   }
 
