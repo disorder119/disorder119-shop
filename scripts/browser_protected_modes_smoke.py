@@ -93,7 +93,8 @@ def test_chaos(driver) -> None:
     assert_mode_links(driver)
 
     universe_button = driver.find_element(By.CSS_SELECTOR, '#modeRail [data-mode-view="chaos"]')
-    universe_label = universe_button.find_element(By.CSS_SELECTOR, ".mode-rail__label").text.strip()
+    universe_label_el = universe_button.find_element(By.CSS_SELECTOR, ".mode-rail__label")
+    universe_label = (universe_label_el.get_attribute("textContent") or "").strip()
     if universe_label != "Universum-Modus":
         fail(f"Universum: Moduslabel ist {universe_label!r} statt 'Universum-Modus'")
     if not universe_button.find_elements(By.CSS_SELECTOR, ".mode-rail__icon svg"):
