@@ -7,16 +7,34 @@
   if (!document.querySelector('link[data-d119-universe-upgrade]')) {
     var universeCss = document.createElement("link");
     universeCss.rel = "stylesheet";
-    universeCss.href = "/assets/universe-upgrade.css?v=20260922-1";
+    universeCss.href = "/assets/universe-upgrade.css?v=20260922-2";
     universeCss.setAttribute("data-d119-universe-upgrade", "");
     document.head.appendChild(universeCss);
   }
   if (!document.querySelector('script[data-d119-universe-upgrade]')) {
     var universeScript = document.createElement("script");
-    universeScript.src = "/assets/universe-upgrade.js?v=20260922-1";
+    universeScript.src = "/assets/universe-upgrade.js?v=20260922-2";
     universeScript.async = false;
     universeScript.setAttribute("data-d119-universe-upgrade", "");
     document.head.appendChild(universeScript);
+  }
+
+  // Global rewards/coupon layer: available on archive, Universe, cart and
+  // product pages. It contains no secrets and only talks to the configured
+  // shop Worker for public leaderboard/coupon operations.
+  if (!document.querySelector('link[data-d119-rewards-coupon]')) {
+    var rewardsCss = document.createElement("link");
+    rewardsCss.rel = "stylesheet";
+    rewardsCss.href = "/assets/rewards-coupon.css?v=20260922-1";
+    rewardsCss.setAttribute("data-d119-rewards-coupon", "");
+    document.head.appendChild(rewardsCss);
+  }
+  if (!document.querySelector('script[data-d119-rewards-coupon]')) {
+    var rewardsScript = document.createElement("script");
+    rewardsScript.src = "/assets/rewards-coupon.js?v=20260922-1";
+    rewardsScript.async = false;
+    rewardsScript.setAttribute("data-d119-rewards-coupon", "");
+    document.head.appendChild(rewardsScript);
   }
 
   // Product pages get a dedicated full-screen image viewer enhancement.
