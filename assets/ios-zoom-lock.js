@@ -1,6 +1,24 @@
 (function () {
   "use strict";
 
+  // This helper is injected by pwa.js on every shop page, not only on iOS.
+  // Keep the Universe Mode enhancement here so it is available everywhere
+  // without adding another blocking tag to the main HTML template.
+  if (!document.querySelector('link[data-d119-universe-upgrade]')) {
+    var universeCss = document.createElement("link");
+    universeCss.rel = "stylesheet";
+    universeCss.href = "/assets/universe-upgrade.css?v=20260922-1";
+    universeCss.setAttribute("data-d119-universe-upgrade", "");
+    document.head.appendChild(universeCss);
+  }
+  if (!document.querySelector('script[data-d119-universe-upgrade]')) {
+    var universeScript = document.createElement("script");
+    universeScript.src = "/assets/universe-upgrade.js?v=20260922-1";
+    universeScript.async = false;
+    universeScript.setAttribute("data-d119-universe-upgrade", "");
+    document.head.appendChild(universeScript);
+  }
+
   // Product pages get a dedicated full-screen image viewer enhancement.
   // Normal page zoom stays locked on iOS, while the opened product image
   // handles its own controlled pinch zoom and swipe navigation.
