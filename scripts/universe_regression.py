@@ -58,6 +58,8 @@ require('/assets/shop-promos.js?v=' in upgrade, "coupon bundle is not bootstrapp
 require('chaos-view--game' in upgrade and 'D119SecretGames.start' in upgrade, "legacy canvas secret bridge missing")
 require('/assets/universe-upgrade.js?v=20260922-2' in loader, "Universe JS cache-bust missing")
 require('/assets/universe-upgrade.css?v=20260922-2' in loader, "Universe CSS cache-bust missing")
-require('/assets/ios-zoom-lock.js?v=20260922-2' in pwa, "iOS loader cache-bust missing")
+# pwa.js keeps its stable helper URL; the helper itself cache-busts the new
+# Universe bundle. GitHub Pages revalidates the helper asset on deployment.
+require('/assets/ios-zoom-lock.js?v=20260922-1' in pwa, "global iOS helper loader missing")
 
 print("Universe secret games regression checks passed")
