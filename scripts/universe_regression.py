@@ -79,6 +79,6 @@ require('/assets/shop-promos.js?v=' in upgrade, "shop promo bootstrap missing")
 require('D119SecretGames.start("raid")' in upgrade, "legacy canvas bridge does not route to Archive Raid")
 require('/assets/universe-upgrade.js?v=20260923-1' in loader, "Universe JS cache-bust missing")
 require('/assets/universe-upgrade.css?v=20260923-1' in loader, "Universe CSS cache-bust missing")
-require('/assets/ios-zoom-lock.js?v=20260922-1' in pwa, "global iOS helper loader missing")
+require('/assets/ios-zoom-lock.js?v=20260923-1' in pwa, "fresh global iOS helper loader missing")
 
 print("Universe Archive Raid v3 regression checks passed")
