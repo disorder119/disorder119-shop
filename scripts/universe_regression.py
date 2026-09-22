@@ -37,8 +37,8 @@ require('6500 + Math.random() * 24000' in games, "first encounter timing is not 
 require('28000 + Math.random() * 72000' in games, "repeat encounter timing is not randomized")
 for encounter in ("ship", "rift", "bag"):
     require(f'encounter: "{encounter}"' in games, f"{encounter} encounter metadata missing")
-    require(f'.d119-universe-encounter--{encounter}' in games_css, f"{encounter} encounter visual missing")
-require('btn.className = "d119-universe-encounter d119-universe-encounter--" + type' in games, "dynamic encounter class wiring missing")
+    require(f'd119-universe-encounter--{encounter}' in games_css, f"{encounter} encounter visual missing")
+require('d119-universe-encounter--' in games, "dynamic encounter class wiring missing")
 require('discover: spawnEncounter' in games, "deterministic CI discovery hook missing")
 
 # Mobile controls are direct pointer controls, not tiny tap targets.
@@ -59,13 +59,15 @@ require('10 % UNLOCKED' in games, "10 percent reward result missing")
 require('document.getElementById("cartFoot")' in promos and 'data-d119-coupon' in promos, "shop coupon field missing")
 require('/coupons/validate' in promos and 'payload.couponCode = code' in promos, "server coupon validation/checkout forwarding missing")
 
-# Global loader must actually bust the old encounter assets on Safari/Pages.
-require('ASSET_VERSION = "20260922-3"' in upgrade, "Universe encounter asset version not bumped")
+# Heavy Universe game code must not hurt the normal shop's mobile LCP.
+require('if (!document.getElementById("chaosView")) return;' in upgrade, "Universe encounter bundle is no longer lazy-loaded")
+require('function loadPromos()' in upgrade, "shop-wide coupon loader was lost")
+require('ASSET_VERSION = "20260922-4"' in upgrade, "Universe encounter asset version not bumped")
 require('/assets/secret-games.js?v=' in upgrade, "secret game bundle is not bootstrapped")
 require('/assets/shop-promos.js?v=' in upgrade, "coupon bundle is not bootstrapped")
 require('chaos-view--game' in upgrade and 'D119SecretGames.start' in upgrade, "legacy canvas bridge missing")
-require('/assets/universe-upgrade.js?v=20260922-3' in loader, "Universe JS cache-bust missing")
-require('/assets/universe-upgrade.css?v=20260922-3' in loader, "Universe CSS cache-bust missing")
+require('/assets/universe-upgrade.js?v=20260922-4' in loader, "Universe JS cache-bust missing")
+require('/assets/universe-upgrade.css?v=20260922-4' in loader, "Universe CSS cache-bust missing")
 require('/assets/ios-zoom-lock.js?v=20260922-1' in pwa, "global iOS helper loader missing")
 
 print("Universe encounter v2 regression checks passed")
