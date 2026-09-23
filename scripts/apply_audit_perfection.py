@@ -96,7 +96,8 @@ def patch_app() -> None:
     text = replace_once(
         text,
         'var footHtml = \'<div class="cart-total"><span>\' + t("cartTotal") + \'</span><span>\' + fmtPrice(total) + "</span></div>" +',
-        'var footHtml = \'<div class="cart-total"><span>\' + t("cartTotal") + \'</span><span>\' + cartTotalDisplay(total, hasUnknownPrice) + "</span></div>" +',
+        'var footHtml = sumHtml +\n'
+        '      \'<div class="cart-total"><span>\' + t("cartTotal") + \'</span><span>\' + cartTotalDisplay(total + shipping, hasUnknownPrice) + "</span></div>" +',
         "cart footer total",
     )
 

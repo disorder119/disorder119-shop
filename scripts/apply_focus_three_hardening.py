@@ -187,7 +187,9 @@ def product_data_gap_html(it, lang):
 
     # Add explicit unresolved-data disclosure to purchasable product pages.
     old_cta = '''    parts.append('<p class="info__note">' + esc(trust_notes.get(lang, trust_notes["de"])) + '</p>')\n    if not shop_config["whatsappNumber"] and not shop_config["email"]:\n'''
-    new_cta = '''    parts.append('<p class="info__note">' + esc(trust_notes.get(lang, trust_notes["de"])) + '</p>')\n    parts.append(product_data_gap_html(it, lang))\n    if not shop_config["whatsappNumber"] and not shop_config["email"]:\n'''
+    # note_text statt trust_notes[...]: der Hinweis traegt seit der
+    # Versandpauschale zusaetzlich den Satz zu den Versandkosten.
+    new_cta = '''    parts.append('<p class="info__note">' + esc(note_text) + '</p>')\n    parts.append(product_data_gap_html(it, lang))\n    if not shop_config["whatsappNumber"] and not shop_config["email"]:\n'''
     text = replace_once(text, old_cta, new_cta, "product data gap disclosure")
     return text
 
