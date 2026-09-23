@@ -35,8 +35,46 @@ import {
   scopeAdminEnv,
   timingSafeEqualText,
 } from "./backend-runtime.js";
+import { markCatalogSold } from "./worker.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+
+test("a sale changes only the two status lines and keeps the file ending", async () => {
+  // Der Main-Waechter laesst einen "Verkauft: Artikel"-Commit nur stehen,
+  // wenn sich genau diese Zeilen aendern. Ein fehlender Zeilenumbruch am
+  // Dateiende waere eine dritte Aenderung - der Verkauf wuerde zurueckgedreht.
+  const original = JSON.stringify([
+    { id: 1, title: "Mantel", price: 90, status: "Verfügbar", public_status: "AVAILABLE" },
+    { id: 2, title: "Hose", price: 50, status: "Verfügbar", public_status: "AVAILABLE" },
+  ], null, 2) + "\n";
+  const puts = [];
+  const echtesFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    if (!init.method || init.method === "GET") {
+      return new Response(JSON.stringify({ content: Buffer.from(original, "utf8").toString("base64"), sha: "sha-1" }), { status: 200 });
+    }
+    puts.push(JSON.parse(init.body));
+    return new Response("{}", { status: 200 });
+  };
+  try {
+    await markCatalogSold({ GITHUB_TOKEN: "test" }, 2);
+  } finally {
+    globalThis.fetch = echtesFetch;
+  }
+  assert.equal(puts.length, 1);
+  assert.equal(puts[0].message, "Verkauft: Artikel 2");
+  assert.equal(puts[0].sha, "sha-1");
+  const geschrieben = Buffer.from(puts[0].content, "base64").toString("utf8");
+  assert.ok(geschrieben.endsWith("]\n"), "Zeilenumbruch am Dateiende muss bleiben");
+  const alt = original.split("\n");
+  const neu = geschrieben.split("\n");
+  assert.equal(neu.length, alt.length);
+  const geaendert = alt.map((zeile, i) => [zeile, neu[i]]).filter(([a, b]) => a !== b);
+  assert.deepEqual(geaendert, [
+    ['    "status": "Verfügbar",', '    "status": "Verkauft",'],
+    ['    "public_status": "AVAILABLE"', '    "public_status": "SOLD"'],
+  ]);
+});
 
 test("daily rent is exactly 10% of authoritative sale price rounded to cents", () => {
   assert.equal(rentalDailyPriceCents(parsePriceToCents(125)), 1250);

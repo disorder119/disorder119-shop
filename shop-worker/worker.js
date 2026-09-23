@@ -173,7 +173,7 @@ async function loadItems(env) {
   if (!res.ok) throw new Error(`catalog_load_${res.status}`);
   const file = await res.json();
   const text = new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g, "")), c => c.charCodeAt(0)));
-  return { items: JSON.parse(text), sha: file.sha };
+  return { items: JSON.parse(text), sha: file.sha, text };
 }
 
 async function findItem(env, itemId) {
@@ -425,9 +425,15 @@ async function verifyPaypalWebhook(env, headers, body) {
   return (await res.json()).verification_status === "SUCCESS";
 }
 
-async function markCatalogSold(env, itemId) {
+// Der Commit muss genau die Statuszeilen eines Artikels aendern und sonst
+// nichts: der Main-Waechter (.github/workflows/main-integrity.yml) laesst
+// einen "Verkauft: Artikel"-Commit nur unter dieser Bedingung stehen und
+// dreht alles andere zurueck. JSON.stringify(..., 2) erzeugt dieselbe Form wie
+// build_site.py - bis auf den Zeilenumbruch am Dateiende, der deshalb
+// erhalten bleibt.
+export async function markCatalogSold(env, itemId) {
   for (let attempt = 0; attempt < 4; attempt++) {
-    const { items, sha } = await loadItems(env);
+    const { items, sha, text } = await loadItems(env);
     const item = items.find(it => String(it.id) === String(itemId));
     if (!item) throw new Error("catalog_item_missing");
     const alreadySold = String(item.public_status || "").toUpperCase() === "SOLD";
@@ -440,7 +446,8 @@ async function markCatalogSold(env, itemId) {
     delete item.reserved_until;
     delete item.reserved_price;
     delete item.reserved_currency;
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(items, null, 2))));
+    const serialized = JSON.stringify(items, null, 2) + (text.endsWith("\n") ? "\n" : "");
+    const content = btoa(unescape(encodeURIComponent(serialized)));
     const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.itemsPath}`;
     const res = await fetch(url, { method: "PUT", headers: ghHeaders(env), body: JSON.stringify({
       message: `Verkauft: Artikel ${itemId}`, content, sha, branch: CONFIG.githubBranch,
