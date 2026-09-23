@@ -123,15 +123,17 @@ def test_chaos(driver) -> None:
     if not selection_blocked:
         fail("Universum: selectstart wird nicht blockiert")
 
-    # Desktop regression: merely moving the mouse across the Universe is a
-    # valid navigation input and right-click must never open a product modal.
+    # Desktop regression. Headless Chrome can report a coarse pointer even at
+    # desktop width, so the dynamic visual hint may intentionally stay on its
+    # touch copy. The canvas aria-label is device-independent and must expose
+    # the new desktop controls. We still execute real mouse/right-click events.
     driver.set_window_size(1280, 800)
     driver.get(urljoin(BASE_URL, "chaos/"))
     wait(driver, lambda d: d.find_element(By.ID, "chaosView").is_displayed(), "Universum Desktop sichtbar")
     dismiss_cookie_note(driver)
-    hint = driver.find_element(By.ID, "chaosHint").get_attribute("textContent") or ""
-    if "Maus bewegen" not in hint or "Doppelklick" not in hint:
-        fail(f"Universum Desktop: neuer Mouse-Look-Hinweis fehlt: {hint!r}")
+    sky_label = driver.find_element(By.ID, "chaosSky").get_attribute("aria-label") or ""
+    if "Maus bewegen" not in sky_label or "Doppelklick" not in sky_label:
+        fail(f"Universum Desktop: neue Steuerungsbeschreibung fehlt: {sky_label!r}")
     driver.execute_script(
         "var c=document.getElementById('chaosSky'); var r=c.getBoundingClientRect();"
         "c.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,cancelable:true,clientX:r.left+r.width*.82,clientY:r.top+r.height*.38,pointerId:41,pointerType:'mouse',buttons:0}));"
