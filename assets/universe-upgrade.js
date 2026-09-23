@@ -4,7 +4,7 @@
   if (window.__D119_UNIVERSE_UPGRADE__) return;
   window.__D119_UNIVERSE_UPGRADE__ = true;
 
-  var ASSET_VERSION = "20260923-1";
+  var ASSET_VERSION = "20260923-2";
   var legacyObserver = null;
   var redirectingLegacyGame = false;
 
@@ -80,14 +80,14 @@
       var back = document.getElementById("chaosGameBack");
       if (back) back.click();
       window.setTimeout(function () {
-        try { window.D119SecretGames.start("raid"); }
+        try { window.D119SecretGames.start("dodge"); }
         finally { redirectingLegacyGame = false; }
       }, 0);
     });
     legacyObserver.observe(view, { attributes: true, attributeFilter: ["class"] });
   }
   function loadSystems() {
-    // Coupon field remains shop-wide; the heavy game/canvas bundle loads only on Universe pages.
+    // Coupon field remains shop-wide; the game bundle loads only where Universe exists.
     injectCss("/assets/shop-promos.css?v=" + ASSET_VERSION, "data-d119-shop-promos");
     injectScript("/assets/shop-promos.js?v=" + ASSET_VERSION, "data-d119-shop-promos", null);
     if (!document.getElementById("chaosView")) return;
