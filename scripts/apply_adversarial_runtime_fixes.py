@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Apply only runtime fixes proven by adversarial browser tests.
+"""Apply runtime fixes proven by adversarial/browser review.
 
-The protected Match/Chaos/Baukasten JS and markup are not modified. The fixes
-only correct shared overlay layering where a globally fixed helper/navigation
-layer was proven to intercept an open modal control in real Chromium.
+Shared overlay fixes remain narrowly scoped. In addition, the explicitly
+requested Universe piece-size change is delegated to a dedicated guarded
+migration which updates only the known ITEM_W constant and deliberately
+refreshes the protected-mode hash for that exact transition.
 """
 from pathlib import Path
+import subprocess
+import sys
 
 BASE = Path(__file__).resolve().parents[1]
 CSS = BASE / "assets" / "app.css"
@@ -34,6 +37,11 @@ QUICKVIEW_OVERRIDE = r'''
 '''
 
 
+def apply_universe_scale() -> None:
+    script = BASE / "scripts" / "apply_universe_piece_scale.py"
+    subprocess.run([sys.executable, str(script)], cwd=BASE, check=True)
+
+
 def main() -> None:
     text = CSS.read_text(encoding="utf-8")
     changed = []
@@ -43,11 +51,15 @@ def main() -> None:
     if QUICKVIEW_MARKER not in text:
         text = text.rstrip() + QUICKVIEW_OVERRIDE + "\n"
         changed.append("Quickview vs. Modusleiste")
-    if not changed:
+    if changed:
+        CSS.write_text(text, encoding="utf-8")
+        print("Adversarial Runtime-Fixes angewendet: " + ", ".join(changed) + ".")
+    else:
         print("Adversarial Runtime-Fixes bereits aktuell.")
-        return
-    CSS.write_text(text, encoding="utf-8")
-    print("Adversarial Runtime-Fixes angewendet: " + ", ".join(changed) + ".")
+
+    # Explicit product request: floating clothes in Universe should be larger.
+    # The delegated migration also keeps touch hitboxes/fly-to geometry aligned.
+    apply_universe_scale()
 
 
 if __name__ == "__main__":
