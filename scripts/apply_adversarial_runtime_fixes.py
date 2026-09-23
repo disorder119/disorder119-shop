@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Apply runtime fixes proven by adversarial/browser review.
 
-Shared overlay fixes remain narrowly scoped. In addition, the explicitly
-requested Universe piece-size change is delegated to a dedicated guarded
-migration which updates only the known ITEM_W constant and deliberately
-refreshes the protected-mode hash for that exact transition.
+Shared overlay fixes remain narrowly scoped. Intentional Universe changes are
+delegated to guarded migrations so protected creative-mode hashes are refreshed
+only for exact, reviewed transitions.
 """
 from pathlib import Path
 import subprocess
@@ -37,8 +36,8 @@ QUICKVIEW_OVERRIDE = r'''
 '''
 
 
-def apply_universe_scale() -> None:
-    script = BASE / "scripts" / "apply_universe_piece_scale.py"
+def run_guarded(script_name: str) -> None:
+    script = BASE / "scripts" / script_name
     subprocess.run([sys.executable, str(script)], cwd=BASE, check=True)
 
 
@@ -57,9 +56,8 @@ def main() -> None:
     else:
         print("Adversarial Runtime-Fixes bereits aktuell.")
 
-    # Explicit product request: floating clothes in Universe should be larger.
-    # The delegated migration also keeps touch hitboxes/fly-to geometry aligned.
-    apply_universe_scale()
+    run_guarded("apply_universe_piece_scale.py")
+    run_guarded("apply_universe_desktop_controls.py")
 
 
 if __name__ == "__main__":
