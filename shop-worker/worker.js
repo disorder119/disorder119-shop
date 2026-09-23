@@ -352,7 +352,7 @@ async function paypalAccessToken(env) {
   return (await res.json()).access_token;
 }
 
-async function createPaypalOrder(env, item, cents, idempotency) {
+async function createPaypalOrder(env, item, itemCents, shippingCents, idempotency) {
   const token = await paypalAccessToken(env);
   const res = await fetch(`${paypalApiBase(env)}/v2/checkout/orders`, {
     method: "POST",
@@ -366,7 +366,17 @@ async function createPaypalOrder(env, item, cents, idempotency) {
       purchase_units: [{
         custom_id: String(item.id),
         description: `${item.brand || ""} ${item.title || ""}`.trim().slice(0,127),
-        amount: { currency_code: CURRENCY, value: money(cents) },
+        // Versand getrennt ausweisen: PayPal zeigt dem Kunden damit Warenwert
+        // und Versandkosten einzeln an, und die Gutschein-Korrektur kann spaeter
+        // genau den Warenwert ersetzen, ohne die Pauschale zu verschieben.
+        amount: {
+          currency_code: CURRENCY,
+          value: money(itemCents + shippingCents),
+          breakdown: {
+            item_total: { currency_code: CURRENCY, value: money(itemCents) },
+            shipping: { currency_code: CURRENCY, value: money(shippingCents) },
+          },
+        },
       }],
       application_context: { shipping_preference: "GET_FROM_FILE", brand_name: "Disorder119" },
     }),
@@ -441,22 +451,23 @@ async function markCatalogSold(env, itemId) {
   throw new Error("catalog_mark_sold_conflict");
 }
 
-async function createOrderRecords(env, item, cents, reservation, providerOrder, key, reqId) {
+async function createOrderRecords(env, item, cents, shippingCents, reservation, providerOrder, key, reqId) {
   const db = requireDb(env);
   const orderId = crypto.randomUUID();
   const paymentId = crypto.randomUUID();
   const now = new Date().toISOString();
   const orderNumber = publicOrderNumber(orderId, new Date());
+  const totalCents = cents + shippingCents;
   await db.batch([
     db.prepare(`INSERT INTO commerce_orders
       (id,order_number,reservation_id,status,currency,subtotal_cents,shipping_cents,total_cents,idempotency_key,created_at)
-      VALUES (?,?,?,'PAYMENT_PENDING',?,?,0,?,?,?)`).bind(orderId, orderNumber, reservation.reservationId, CURRENCY, cents, cents, key, now),
+      VALUES (?,?,?,'PAYMENT_PENDING',?,?,?,?,?,?)`).bind(orderId, orderNumber, reservation.reservationId, CURRENCY, cents, shippingCents, totalCents, key, now),
     db.prepare(`INSERT INTO order_items
       (id,order_id,inventory_id,item_id,article_no,title_snapshot,unit_price_cents,quantity,currency)
       VALUES (?,?,?,?,?,?,?,1,?)`).bind(crypto.randomUUID(), orderId, reservation.inventoryId, Number(item.id), String(item.article || item.id), `${item.brand || ""} ${item.title || ""}`.trim(), cents, CURRENCY),
     db.prepare(`INSERT INTO payments
       (id,order_id,provider,provider_order_id,status,amount_cents,currency,idempotency_key,created_at)
-      VALUES (?,?,'PAYPAL',?,'CREATED',?,?,?,?)`).bind(paymentId, orderId, providerOrder.id, cents, CURRENCY, `paypal-create:${key}`, now),
+      VALUES (?,?,'PAYPAL',?,'CREATED',?,?,?,?)`).bind(paymentId, orderId, providerOrder.id, totalCents, CURRENCY, `paypal-create:${key}`, now),
     db.prepare("UPDATE reservations SET status='RESERVED',updated_at=? WHERE id=?").bind(now, reservation.reservationId),
     db.prepare("UPDATE inventory SET status='PAYMENT_PENDING',updated_at=?,version=version+1 WHERE id=? AND status='RESERVED'").bind(now, reservation.inventoryId),
   ]);
@@ -466,12 +477,15 @@ async function createOrderRecords(env, item, cents, reservation, providerOrder, 
 
 async function completePayment(env, providerOrderId, capture, reqId) {
   const db = requireDb(env);
-  const payment = await db.prepare(`SELECT p.*,o.id AS commerce_order_id,o.order_number,o.reservation_id,oi.inventory_id,oi.item_id,oi.unit_price_cents
+  // Verglichen wird gegen den Zahlbetrag der Bestellung (Ware + Versand, nach
+  // einem eingeloesten Gutschein der reduzierte Betrag) - nicht mehr gegen den
+  // reinen Artikelpreis.
+  const payment = await db.prepare(`SELECT p.*,o.id AS commerce_order_id,o.order_number,o.reservation_id,o.total_cents,oi.inventory_id,oi.item_id,oi.unit_price_cents
     FROM payments p JOIN commerce_orders o ON o.id=p.order_id JOIN order_items oi ON oi.order_id=o.id
     WHERE p.provider='PAYPAL' AND p.provider_order_id=?`).bind(providerOrderId).first();
   if (!payment) throw new PublicError("ORDER_NOT_FOUND", 404);
   if (payment.status === "COMPLETED") return payment;
-  if (!captureMatches(capture, payment.item_id, payment.unit_price_cents)) throw new PublicError("PAYMENT_MISMATCH", 409);
+  if (!captureMatches(capture, payment.item_id, Number(payment.amount_cents ?? payment.total_cents))) throw new PublicError("PAYMENT_MISMATCH", 409);
   const providerPayment = capturePayment(capture);
   const now = new Date().toISOString();
   await db.batch([
@@ -602,16 +616,18 @@ export default {
         if (!/^\d+$/.test(String(body.itemId || ""))) throw new PublicError("INVALID_ITEM_ID", 400);
         const item = await findItem(env, body.itemId);
         const cents = assertCatalogItemForSale(item);
+        const shippingCents = shippingCentsFor(cents);
         const reservation = await reserveForPurchase(env, item, key, reqId);
         let providerOrder;
         try {
-          providerOrder = await createPaypalOrder(env, item, cents, key);
+          providerOrder = await createPaypalOrder(env, item, cents, shippingCents, key);
         } catch (err) {
           await releasePurchaseReservation(env, reservation.reservationId, "provider_create_failed", reqId);
           throw err;
         }
-        const local = await createOrderRecords(env, item, cents, reservation, providerOrder, key, reqId);
-        const response = { id: providerOrder.id, orderId: local.orderId, orderNumber: local.orderNumber, expiresAt: reservation.expiresAt };
+        const local = await createOrderRecords(env, item, cents, shippingCents, reservation, providerOrder, key, reqId);
+        const response = { id: providerOrder.id, orderId: local.orderId, orderNumber: local.orderNumber, expiresAt: reservation.expiresAt,
+          currency: CURRENCY, itemPrice: money(cents), shipping: money(shippingCents), total: money(cents + shippingCents) };
         await finishIdempotency(env, "create-order", key, 200, response, local.orderId);
         return json(response, 200, origin);
       }

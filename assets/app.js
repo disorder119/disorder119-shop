@@ -138,7 +138,7 @@
       menuCart: "Warenkorb",
       loadMore: "Weitere laden", footerAbout: "Über Disorder119", footerFaq: "FAQ", footerContact: "Kontakt",
       aboutHtml: "<h2>Über Disorder119</h2><p>DISORDER119 ist ein unabhängig geführtes, kuratiertes Archiv für ausgewählte Designer-, Vintage- und Contemporary-Pieces mit Fokus auf Qualität, Authentizität und Zeitlosigkeit.</p><h3>Auswahl &amp; Dokumentation</h3><p>Jedes angebotene Stück wird einzeln ausgewählt, fotografiert und beschrieben. Da es sich überwiegend um gebrauchte Einzelstücke handelt, werden Zustand und erkennbare Besonderheiten nach bestem Wissen dokumentiert. Wenn zu einem Artikel Angaben fehlen oder du zusätzliche Detailfotos oder Maße brauchst, klären wir das vor dem Kauf.</p><h3>Transparent einkaufen</h3><p>Hinter Disorder119 steht Joel Bittner als Einzelunternehmer in Aschaffenburg. Anbieterangaben, Widerrufsbelehrung, Gewährleistungsinformationen und Datenschutz findest du jederzeit in Impressum, AGB und Datenschutz.</p>",
-      faqHtml: "<h2>FAQ</h2><h3>Sind alle Artikel Einzelstücke?</h3><p>Ja. Alle verfügbaren Artikel sind kuratierte Einzelstücke. Deshalb kann ein Artikel nach Verkauf nicht erneut bestellt werden.</p><h3>Wie funktioniert eine Bestellung?</h3><p>Lege verfügbare Artikel in den Warenkorb und sende die Bestellanfrage über die angebotene Kontaktmöglichkeit. Die Anfrage ist zunächst unverbindlich. Verfügbarkeit, Gesamtpreis, Zahlungsart und Versand werden bestätigt; erst mit dieser Bestätigung kommt der Kaufvertrag zustande.</p><h3>Sind die Artikel neu?</h3><p>In der Regel nicht. Disorder119 ist ein Designer-, Vintage- und Second-Hand-Archiv. Zustand und erkennbare Besonderheiten werden nach bestem Wissen in den Produktangaben beschrieben.</p><h3>Was ist, wenn Angaben wie Größe, Zustand oder Maße fehlen?</h3><p>Dann solltest du vor dem Kauf nachfragen. Zusätzliche Maße, Detailfotos und produktbezogene Informationen können vor Vertragsabschluss geklärt werden.</p><h3>Wie wird mit Authentizität umgegangen?</h3><p>Authentizität ist Teil des Auswahlfokus von Disorder119. Eine Prüfung oder Zertifizierung durch den jeweiligen Markenhersteller oder einen externen Authentifizierungsdienst wird jedoch nur dann zugesichert, wenn dies beim konkreten Artikel ausdrücklich angegeben ist. Bei Fragen können zusätzliche Detailfotos angefragt werden.</p><h3>Kann ich widerrufen und welche Gewährleistung gilt?</h3><p>Für Verbraucher:innen gilt das gesetzliche 14-tägige Widerrufsrecht. Außerdem gelten die gesetzlichen Gewährleistungsrechte. Die vollständigen Bedingungen und die Widerrufsbelehrung findest du in den AGB.</p><h3>Wie werden meine Daten behandelt?</h3><p>Die Website verwendet keine Analyse-, Marketing- oder Tracking-Cookies. Warenkorb und Outfit-Baukasten werden lokal im Browser gespeichert. Details findest du in der Datenschutzerklärung.</p><h3>Warum bleiben verkaufte Artikel sichtbar?</h3><p>Verkaufte Pieces bleiben als Teil des DISORDER119-Archivs sichtbar und sind eindeutig als verkauft gekennzeichnet.</p>",
+      faqHtml: "<h2>FAQ</h2><h3>Sind alle Artikel Einzelstücke?</h3><p>Ja. Alle verfügbaren Artikel sind kuratierte Einzelstücke. Deshalb kann ein Artikel nach Verkauf nicht erneut bestellt werden.</p><h3>Wie funktioniert eine Bestellung?</h3><p>Lege verfügbare Artikel in den Warenkorb und sende die Bestellanfrage über die angebotene Kontaktmöglichkeit. Die Anfrage ist zunächst unverbindlich. Verfügbarkeit, Gesamtpreis, Zahlungsart und Versand werden bestätigt; erst mit dieser Bestätigung kommt der Kaufvertrag zustande.</p><h3>Was kostet der Versand?</h3><p>Innerhalb Deutschlands {versand} pauschal pro Bestellung — egal wie viele Teile im Warenkorb liegen. Der Betrag steht im Warenkorb und vor Abschluss der Bestellung. Versand ins Ausland und Abholung klären wir individuell.</p><h3>Sind die Artikel neu?</h3><p>In der Regel nicht. Disorder119 ist ein Designer-, Vintage- und Second-Hand-Archiv. Zustand und erkennbare Besonderheiten werden nach bestem Wissen in den Produktangaben beschrieben.</p><h3>Was ist, wenn Angaben wie Größe, Zustand oder Maße fehlen?</h3><p>Dann solltest du vor dem Kauf nachfragen. Zusätzliche Maße, Detailfotos und produktbezogene Informationen können vor Vertragsabschluss geklärt werden.</p><h3>Wie wird mit Authentizität umgegangen?</h3><p>Authentizität ist Teil des Auswahlfokus von Disorder119. Eine Prüfung oder Zertifizierung durch den jeweiligen Markenhersteller oder einen externen Authentifizierungsdienst wird jedoch nur dann zugesichert, wenn dies beim konkreten Artikel ausdrücklich angegeben ist. Bei Fragen können zusätzliche Detailfotos angefragt werden.</p><h3>Kann ich widerrufen und welche Gewährleistung gilt?</h3><p>Für Verbraucher:innen gilt das gesetzliche 14-tägige Widerrufsrecht. Außerdem gelten die gesetzlichen Gewährleistungsrechte. Die vollständigen Bedingungen und die Widerrufsbelehrung findest du in den AGB.</p><h3>Wie werden meine Daten behandelt?</h3><p>Die Website verwendet keine Analyse-, Marketing- oder Tracking-Cookies. Warenkorb und Outfit-Baukasten werden lokal im Browser gespeichert. Details findest du in der Datenschutzerklärung.</p><h3>Warum bleiben verkaufte Artikel sichtbar?</h3><p>Verkaufte Pieces bleiben als Teil des DISORDER119-Archivs sichtbar und sind eindeutig als verkauft gekennzeichnet.</p>",
       legalImpressum: "Impressum", legalAgb: "AGB", legalDatenschutz: "Datenschutz",
       legalEmailPending: "wird nachgereicht, sobald der Shop live geht",
       closeAria: "Schließen",
@@ -156,7 +156,7 @@
       removeFromCartAria: "Aus Warenkorb entfernen",
       cartHeading: "Warenkorb", cartAria: "Warenkorb", cartEmpty: "Dein Warenkorb ist leer.",
       cartItemsRemovedSold: "Inzwischen verkauft und aus dem Warenkorb entfernt: {items}.",
-      cartRemove: "Entfernen", cartTotal: "Gesamt",
+      cartRemove: "Entfernen", cartTotal: "Gesamt", cartSubtotal: "Zwischensumme", cartShipping: "Versand (DE)",
       cartWhatsapp: "Anfrage per WhatsApp senden", cartEmail: "Anfrage per E-Mail senden",
       cartConfigWarning: "Shop-Kontakt noch nicht eingerichtet: Trage in index.html bei SHOP_CONFIG deine WhatsApp-Nummer oder E-Mail-Adresse ein, damit Bestellanfragen bei dir ankommen.",
       cartNote: "Alle Artikel sind Einzelstücke. Nach deiner Anfrage bestätigen wir Verfügbarkeit, Gesamtpreis, Zahlungs- und Versandart. Erst mit dieser Bestätigung kommt der Kaufvertrag zustande. Für Verbraucher:innen gilt das gesetzliche 14-tägige Widerrufsrecht.",
@@ -245,8 +245,10 @@
         "Ein Kaufvertrag kommt erst durch gesonderte Bestätigung (Verfügbarkeit, Preis, Zahlungs- und Versandart) zustande — nicht bereits durch das Absenden der Anfrage.</p>" +
         "<h3>3. Artikel</h3><p>Alle angebotenen Artikel sind gebrauchte Einzelstücke (Vintage / Second Hand). Kleine gebrauchsbedingte " +
         "Abweichungen sind möglich und werden nach bestem Wissen in der Artikelbeschreibung angegeben.</p>" +
-        "<h3>4. Preise &amp; Zahlung</h3><p>Alle Preise verstehen sich in Euro. Kleinunternehmer gemäß § 19 UStG, keine Umsatzsteuer ausgewiesen. " +
-        "Zahlungs- und Versandart werden individuell vereinbart.</p>" +
+        "<h3>4. Preise, Zahlung &amp; Versand</h3><p>Alle Preise verstehen sich in Euro. Kleinunternehmer gemäß § 19 UStG, keine Umsatzsteuer ausgewiesen.</p>" +
+        "<p>Für den Versand innerhalb Deutschlands wird je Bestellung eine Pauschale von {versand} berechnet, unabhängig von der Anzahl der Artikel. " +
+        "Der Gesamtpreis einschließlich Versandkosten wird im Warenkorb vor Abschluss der Bestellung ausgewiesen. " +
+        "Versand ins Ausland sowie eine Abholung werden auf Anfrage individuell vereinbart.</p>" +
         "<h3>5. Gewährleistung</h3><p>Es gelten die gesetzlichen Gewährleistungsrechte. Da alle Artikel gebrauchte Einzelstücke sind, wird der " +
         "Zustand nach bestem Wissen in der jeweiligen Artikelbeschreibung angegeben.</p>" +
         "<h3>6. Widerrufsbelehrung für Verbraucher:innen</h3>" +
@@ -321,7 +323,7 @@
       menuCart: "Cart",
       loadMore: "Load more", footerAbout: "About Disorder119", footerFaq: "FAQ", footerContact: "Contact",
       aboutHtml: "<h2>About Disorder119</h2><p>DISORDER119 is an independently run, curated archive of selected designer, vintage and contemporary pieces with a focus on quality, authenticity and timelessness.</p><h3>Selection &amp; documentation</h3><p>Every listed piece is individually selected, photographed and described. As most pieces are pre-owned one-offs, condition and visible characteristics are documented to the best of our knowledge. If information is missing or you need additional detail photos or measurements, we clarify this before purchase.</p><h3>Transparent shopping</h3><p>Disorder119 is operated by Joel Bittner as a sole proprietor in Aschaffenburg, Germany. Seller information, withdrawal instructions, statutory warranty information and privacy details are available at all times in the legal notice, terms and privacy policy.</p>",
-      faqHtml: "<h2>FAQ</h2><h3>Is every item one of a kind?</h3><p>Yes. Every available item is a curated one-off piece, so an item cannot be ordered again once sold.</p><h3>How do orders work?</h3><p>Add available pieces to the cart and send an order enquiry through the available contact method. The enquiry is initially non-binding. Availability, total price, payment method and shipping are confirmed; the purchase contract is only formed with that confirmation.</p><h3>Are the items new?</h3><p>Usually not. Disorder119 is a designer, vintage and second-hand archive. Condition and visible characteristics are described in the product information to the best of our knowledge.</p><h3>What if size, condition or measurements are missing?</h3><p>Please ask before purchasing. Additional measurements, detail photos and product-specific information can be clarified before the contract is concluded.</p><h3>How is authenticity handled?</h3><p>Authenticity is part of Disorder119’s selection focus. Authentication or certification by the respective brand or an external authentication service is only promised when this is explicitly stated for the specific item. Additional detail photos can be requested if needed.</p><h3>Can I withdraw and what warranty applies?</h3><p>Consumers have the statutory 14-day right of withdrawal. Statutory warranty rights also apply. Full terms and withdrawal instructions are available in the terms and conditions.</p><h3>How is my data handled?</h3><p>The website does not use analytics, marketing or tracking cookies. The cart and outfit builder are stored locally in your browser. See the privacy policy for details.</p><h3>Why do sold pieces remain visible?</h3><p>Sold pieces remain visible as part of the DISORDER119 archive and are clearly marked as sold.</p>",
+      faqHtml: "<h2>FAQ</h2><h3>Is every item one of a kind?</h3><p>Yes. Every available item is a curated one-off piece, so an item cannot be ordered again once sold.</p><h3>How do orders work?</h3><p>Add available pieces to the cart and send an order enquiry through the available contact method. The enquiry is initially non-binding. Availability, total price, payment method and shipping are confirmed; the purchase contract is only formed with that confirmation.</p><h3>What does shipping cost?</h3><p>{versand} flat per order within Germany — no matter how many pieces are in the cart. The amount is shown in the cart and before the order is placed. International shipping and pickup are arranged individually.</p><h3>Are the items new?</h3><p>Usually not. Disorder119 is a designer, vintage and second-hand archive. Condition and visible characteristics are described in the product information to the best of our knowledge.</p><h3>What if size, condition or measurements are missing?</h3><p>Please ask before purchasing. Additional measurements, detail photos and product-specific information can be clarified before the contract is concluded.</p><h3>How is authenticity handled?</h3><p>Authenticity is part of Disorder119’s selection focus. Authentication or certification by the respective brand or an external authentication service is only promised when this is explicitly stated for the specific item. Additional detail photos can be requested if needed.</p><h3>Can I withdraw and what warranty applies?</h3><p>Consumers have the statutory 14-day right of withdrawal. Statutory warranty rights also apply. Full terms and withdrawal instructions are available in the terms and conditions.</p><h3>How is my data handled?</h3><p>The website does not use analytics, marketing or tracking cookies. The cart and outfit builder are stored locally in your browser. See the privacy policy for details.</p><h3>Why do sold pieces remain visible?</h3><p>Sold pieces remain visible as part of the DISORDER119 archive and are clearly marked as sold.</p>",
       legalImpressum: "Legal notice", legalAgb: "Terms", legalDatenschutz: "Privacy",
       legalEmailPending: "to be added once the shop goes live",
       closeAria: "Close",
@@ -339,7 +341,7 @@
       removeFromCartAria: "Remove from cart",
       cartHeading: "Cart", cartAria: "Cart", cartEmpty: "Your cart is empty.",
       cartItemsRemovedSold: "Sold in the meantime and removed from your cart: {items}.",
-      cartRemove: "Remove", cartTotal: "Total",
+      cartRemove: "Remove", cartTotal: "Total", cartSubtotal: "Subtotal", cartShipping: "Shipping (DE)",
       cartWhatsapp: "Send request via WhatsApp", cartEmail: "Send request via e-mail",
       cartConfigWarning: "Shop contact not set up yet: add your WhatsApp number or e-mail address to SHOP_CONFIG in index.html so order requests reach you.",
       cartNote: "All pieces are one-offs. After your enquiry we confirm availability, total price, payment and shipping method. The purchase contract is only formed with that confirmation. Consumers have the statutory 14-day right of withdrawal.",
@@ -430,8 +432,10 @@
         "A purchase contract is only formed once separately confirmed (availability, price, payment and shipping method) — not simply by sending the enquiry.</p>" +
         "<h3>3. Items</h3><p>All items offered are used one-off pieces (vintage / second-hand). Minor wear-related " +
         "variations are possible and are noted to the best of our knowledge in the item description.</p>" +
-        "<h3>4. Prices &amp; payment</h3><p>All prices are in euros. Small business as per § 19 UStG, no VAT shown. " +
-        "Payment and shipping method are agreed individually.</p>" +
+        "<h3>4. Prices, payment &amp; shipping</h3><p>All prices are in euros. Small business as per § 19 UStG, no VAT shown.</p>" +
+        "<p>A flat shipping fee of {versand} is charged per order within Germany, regardless of the number of items. " +
+        "The total price including shipping is shown in the cart before the order is placed. " +
+        "International shipping and local pickup are agreed individually on request.</p>" +
         "<h3>5. Warranty</h3><p>Statutory warranty rights apply. As all items are used one-off pieces, condition is described to the best of our " +
         "knowledge in the respective item description.</p>" +
         "<h3>6. Right of withdrawal for consumers</h3>" +
@@ -505,7 +509,7 @@
       menuCart: "Panier",
       loadMore: "Charger plus", footerAbout: "À propos de Disorder119", footerFaq: "FAQ", footerContact: "Contact",
       aboutHtml: "<h2>À propos de Disorder119</h2><p>DISORDER119 est une archive indépendante et sélectionnée de pièces de créateurs, vintage et contemporaines, axée sur la qualité, l’authenticité et l’intemporalité.</p><h3>Sélection &amp; documentation</h3><p>Chaque pièce proposée est sélectionnée, photographiée et décrite individuellement. La plupart étant des pièces uniques d’occasion, leur état et leurs particularités visibles sont documentés au mieux de notre connaissance. Si une information manque ou si tu souhaites des photos de détail ou des mesures supplémentaires, nous clarifions cela avant l’achat.</p><h3>Achat transparent</h3><p>Disorder119 est exploité par Joel Bittner en tant qu’entreprise individuelle à Aschaffenburg, en Allemagne. Les informations vendeur, le droit de rétractation, les droits de garantie légaux et les informations de confidentialité sont disponibles à tout moment dans les mentions légales, les CGV et la politique de confidentialité.</p>",
-      faqHtml: "<h2>FAQ</h2><h3>Chaque article est-il unique ?</h3><p>Oui. Chaque article disponible est une pièce unique sélectionnée ; une fois vendu, il ne peut donc pas être commandé une seconde fois.</p><h3>Comment commander ?</h3><p>Ajoute les articles disponibles au panier et envoie une demande de commande via le moyen de contact proposé. La demande est d’abord sans engagement. La disponibilité, le prix total, le mode de paiement et l’expédition sont confirmés ; le contrat de vente n’est conclu qu’avec cette confirmation.</p><h3>Les articles sont-ils neufs ?</h3><p>En général non. Disorder119 est une archive de créateurs, vintage et seconde main. L’état et les particularités visibles sont décrits au mieux de notre connaissance dans les informations produit.</p><h3>Que faire si la taille, l’état ou les mesures manquent ?</h3><p>Merci de demander avant l’achat. Des mesures, photos de détail et informations spécifiques supplémentaires peuvent être clarifiées avant la conclusion du contrat.</p><h3>Comment l’authenticité est-elle traitée ?</h3><p>L’authenticité fait partie des critères de sélection de Disorder119. Une authentification ou certification par la marque concernée ou un service externe n’est toutefois garantie que si cela est expressément indiqué pour l’article concerné. Des photos de détail supplémentaires peuvent être demandées.</p><h3>Puis-je me rétracter et quelle garantie s’applique ?</h3><p>Les consommateurs disposent du droit légal de rétractation de 14 jours. Les droits de garantie légaux s’appliquent également. Les conditions complètes et les informations de rétractation figurent dans les CGV.</p><h3>Comment mes données sont-elles traitées ?</h3><p>Le site n’utilise aucun cookie d’analyse, de marketing ou de suivi. Le panier et le configurateur de tenues sont enregistrés localement dans le navigateur. Consulte la politique de confidentialité pour les détails.</p><h3>Pourquoi les articles vendus restent-ils visibles ?</h3><p>Les pièces vendues restent visibles dans l’archive DISORDER119 et sont clairement indiquées comme vendues.</p>",
+      faqHtml: "<h2>FAQ</h2><h3>Chaque article est-il unique ?</h3><p>Oui. Chaque article disponible est une pièce unique sélectionnée ; une fois vendu, il ne peut donc pas être commandé une seconde fois.</p><h3>Comment commander ?</h3><p>Ajoute les articles disponibles au panier et envoie une demande de commande via le moyen de contact proposé. La demande est d’abord sans engagement. La disponibilité, le prix total, le mode de paiement et l’expédition sont confirmés ; le contrat de vente n’est conclu qu’avec cette confirmation.</p><h3>Combien coûte la livraison ?</h3><p>{versand} forfaitaire par commande en Allemagne — quel que soit le nombre de pièces dans le panier. Le montant est indiqué dans le panier et avant la validation de la commande. Les envois à l'étranger et le retrait sur place sont convenus individuellement.</p><h3>Les articles sont-ils neufs ?</h3><p>En général non. Disorder119 est une archive de créateurs, vintage et seconde main. L’état et les particularités visibles sont décrits au mieux de notre connaissance dans les informations produit.</p><h3>Que faire si la taille, l’état ou les mesures manquent ?</h3><p>Merci de demander avant l’achat. Des mesures, photos de détail et informations spécifiques supplémentaires peuvent être clarifiées avant la conclusion du contrat.</p><h3>Comment l’authenticité est-elle traitée ?</h3><p>L’authenticité fait partie des critères de sélection de Disorder119. Une authentification ou certification par la marque concernée ou un service externe n’est toutefois garantie que si cela est expressément indiqué pour l’article concerné. Des photos de détail supplémentaires peuvent être demandées.</p><h3>Puis-je me rétracter et quelle garantie s’applique ?</h3><p>Les consommateurs disposent du droit légal de rétractation de 14 jours. Les droits de garantie légaux s’appliquent également. Les conditions complètes et les informations de rétractation figurent dans les CGV.</p><h3>Comment mes données sont-elles traitées ?</h3><p>Le site n’utilise aucun cookie d’analyse, de marketing ou de suivi. Le panier et le configurateur de tenues sont enregistrés localement dans le navigateur. Consulte la politique de confidentialité pour les détails.</p><h3>Pourquoi les articles vendus restent-ils visibles ?</h3><p>Les pièces vendues restent visibles dans l’archive DISORDER119 et sont clairement indiquées comme vendues.</p>",
       legalImpressum: "Mentions légales", legalAgb: "CGV", legalDatenschutz: "Confidentialité",
       legalEmailPending: "sera ajoutée dès la mise en ligne de la boutique",
       closeAria: "Fermer",
@@ -523,7 +527,7 @@
       removeFromCartAria: "Retirer du panier",
       cartHeading: "Panier", cartAria: "Panier", cartEmpty: "Ton panier est vide.",
       cartItemsRemovedSold: "Entre-temps vendu(s) et retiré(s) du panier : {items}.",
-      cartRemove: "Retirer", cartTotal: "Total",
+      cartRemove: "Retirer", cartTotal: "Total", cartSubtotal: "Sous-total", cartShipping: "Livraison (DE)",
       cartWhatsapp: "Envoyer la demande par WhatsApp", cartEmail: "Envoyer la demande par e-mail",
       cartConfigWarning: "Le contact de la boutique n'est pas encore configuré : renseigne ton numéro WhatsApp ou ton adresse e-mail dans SHOP_CONFIG (index.html) pour recevoir les demandes de commande.",
       cartNote: "Toutes les pièces sont uniques. Après ta demande, nous confirmons la disponibilité, le prix total, le mode de paiement et l’expédition. Le contrat de vente n’est conclu qu’avec cette confirmation. Les consommateurs disposent du droit légal de rétractation de 14 jours.",
@@ -614,8 +618,10 @@
         "Un contrat de vente n'est conclu qu'après confirmation séparée (disponibilité, prix, mode de paiement et d'expédition) — pas par le simple envoi de la demande.</p>" +
         "<h3>3. Articles</h3><p>Tous les articles proposés sont des pièces uniques d'occasion (vintage / seconde main). De légères " +
         "variations liées à l'usage sont possibles et sont indiquées au mieux de notre connaissance dans la description de l'article.</p>" +
-        "<h3>4. Prix &amp; paiement</h3><p>Tous les prix s'entendent en euros. Micro-entreprise selon le § 19 UStG, TVA non indiquée. " +
-        "Le mode de paiement et d'expédition est convenu individuellement.</p>" +
+        "<h3>4. Prix, paiement &amp; livraison</h3><p>Tous les prix s'entendent en euros. Micro-entreprise selon le § 19 UStG, TVA non indiquée.</p>" +
+        "<p>Un forfait de livraison de {versand} est facturé par commande en Allemagne, quel que soit le nombre d'articles. " +
+        "Le prix total, frais de livraison inclus, est indiqué dans le panier avant la validation de la commande. " +
+        "Les envois à l'étranger et le retrait sur place sont convenus individuellement sur demande.</p>" +
         "<h3>5. Garantie</h3><p>Les droits de garantie légaux s'appliquent. Tous les articles étant des pièces uniques d'occasion, leur état est décrit " +
         "au mieux de notre connaissance dans la description de l'article concerné.</p>" +
         "<h3>6. Droit de rétractation des consommateurs</h3>" +
@@ -830,7 +836,7 @@
     }
     if (typeof currentInfoKey !== "undefined" && currentInfoKey) {
       var infoContentEl = document.getElementById("legalContent");
-      if (infoContentEl) infoContentEl.innerHTML = t(INFO_HTML_KEY[currentInfoKey]);
+      if (infoContentEl) infoContentEl.innerHTML = fillLegalPlaceholders(t(INFO_HTML_KEY[currentInfoKey]));
     }
   }
 
@@ -995,6 +1001,13 @@
     if (currentItem && currentItem.id === id) updateModalCartBtn();
   }
 
+  // Versandpauschale je Bestellung. Der Wert steht in config/shop-config.json
+  // und stammt damit aus derselben Quelle wie AGB, Produktseite und Worker.
+  function shippingFlat() {
+    var cents = Number(SHOP_CONFIG && SHOP_CONFIG.shippingFlatCents);
+    return cents > 0 ? cents / 100 : 0;
+  }
+
   function cartTotalDisplay(total, hasUnknownPrice) { // AUDIT_PERFECT_CART_TOTAL
     if (!hasUnknownPrice) return fmtPrice(total);
     return LANG === "fr" ? "partiellement sur demande" : LANG === "en" ? "partly on request" : "teilweise auf Anfrage";
@@ -1022,9 +1035,11 @@
       var it = findItem(id);
       return sum + (it && it.price > 0 ? it.price : 0);
     }, 0);
+    var shipping = cart.length ? shippingFlat() : 0;
     return t("orderGreeting") + "\n\n" +
       lines.join("\n\n") +
-      "\n\n" + t("cartTotal") + ": " + cartTotalDisplay(total, hasUnknownPrice) +
+      (shipping > 0 ? "\n\n" + t("cartShipping") + ": " + fmtPrice(shipping) : "") +
+      "\n\n" + t("cartTotal") + ": " + cartTotalDisplay(total + shipping, hasUnknownPrice) +
       (cartOrderMessage.trim() ? "\n" + purchaseMessageLabel() + ": " + cartOrderMessage.trim() : "") +
       "\n" + (LANG === "de" ? "Zeitpunkt" : LANG === "fr" ? "Horodatage" : "Timestamp") + ": " + new Date().toLocaleString() +
       "\n\n" + t("orderAvailQuestion");
@@ -1078,7 +1093,18 @@
 
     var hasWhatsapp = !!SHOP_CONFIG.whatsappNumber;
     var hasEmail = !!SHOP_CONFIG.email;
-    var footHtml = '<div class="cart-total"><span>' + t("cartTotal") + '</span><span>' + cartTotalDisplay(total, hasUnknownPrice) + "</span></div>" +
+    // Versand als eigene Zeile: der Gesamtpreis inklusive Versand muss vor der
+    // Bestellung sichtbar sein, nicht erst bei PayPal.
+    var shipping = shippingFlat();
+    var sumHtml = "";
+    if (shipping > 0) {
+      if (!hasUnknownPrice) {
+        sumHtml += '<div class="cart-total cart-total--line"><span>' + t("cartSubtotal") + '</span><span>' + fmtPrice(total) + "</span></div>";
+      }
+      sumHtml += '<div class="cart-total cart-total--line"><span>' + t("cartShipping") + '</span><span>' + fmtPrice(shipping) + "</span></div>";
+    }
+    var footHtml = sumHtml +
+      '<div class="cart-total"><span>' + t("cartTotal") + '</span><span>' + cartTotalDisplay(total + shipping, hasUnknownPrice) + "</span></div>" +
       '<label class="cart-order-message"><span>' + purchaseMessageLabel() + ' <small>(' + (LANG === "de" ? "optional" : LANG === "fr" ? "facultatif" : "optional") + ')</small></span>' +
       '<textarea id="cartOrderMessage" maxlength="500" placeholder="' + escapeHtml(purchaseMessagePlaceholder()) + '">' + escapeHtml(cartOrderMessage) + '</textarea></label>';
     if (hasWhatsapp) {
@@ -3832,6 +3858,19 @@
   loadOutfit();
 
   // ---- Rechtliches (Impressum / AGB / Datenschutz) ----
+  // Derselbe Betrag wie in config/shop-config.json, AGB-Seite und Worker.
+  function legalShippingLine() {
+    var cents = Number(SHOP_CONFIG && SHOP_CONFIG.shippingFlatCents) || 0;
+    var whole = Math.floor(cents / 100);
+    var rest = cents % 100;
+    if (LANG === "en") return "\u20ac" + whole + "." + (rest < 10 ? "0" : "") + rest;
+    return whole + "," + (rest < 10 ? "0" : "") + rest + "\u00a0\u20ac";
+  }
+
+  function fillLegalPlaceholders(html) {
+    return String(html).split("{versand}").join(legalShippingLine());
+  }
+
   function legalEmailLine() {
     return SHOP_CONFIG.email
       ? '<a href="mailto:' + SHOP_CONFIG.email + '">' + escapeHtml(SHOP_CONFIG.email) + "</a>"
@@ -3843,7 +3882,7 @@
   function legalContent(key) {
     var htmlKey = LEGAL_HTML_KEY[key];
     if (!htmlKey) return "";
-    return t(htmlKey).split("{email}").join(legalEmailLine());
+    return fillLegalPlaceholders(t(htmlKey).split("{email}").join(legalEmailLine()));
   }
 
   // Jede Rechts-/Infoseite hat wie der Warenkorb eine echte, eigene URL
@@ -3879,7 +3918,7 @@
     if (!INFO_HTML_KEY[key]) return;
     currentLegalKey = null;
     currentInfoKey = key;
-    document.getElementById("legalContent").innerHTML = t(INFO_HTML_KEY[key]);
+    document.getElementById("legalContent").innerHTML = fillLegalPlaceholders(t(INFO_HTML_KEY[key]));
     legalBackdrop.classList.add("open");
     document.getElementById("legalClose").focus();
     var path = INFO_PATHS[key];

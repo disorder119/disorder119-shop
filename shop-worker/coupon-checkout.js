@@ -21,11 +21,24 @@ export function formatEuros(cents) {
   return (value / 100).toFixed(2);
 }
 
-export function paypalAmountPatch(cents) {
+// Der Gutschein rabattiert nur den Warenwert. Die Versandpauschale bleibt
+// unveraendert stehen, deshalb wird der Betrag bei PayPal immer als Aufteilung
+// (Ware + Versand) geschrieben - sonst wuerde die Pauschale im Rabatt
+// verschwinden oder PayPal die Summe als widerspruechlich ablehnen.
+export function paypalAmountPatch(itemCents, shippingCents = 0) {
+  const item = Math.max(0, Math.round(Number(itemCents) || 0));
+  const shipping = Math.max(0, Math.round(Number(shippingCents) || 0));
+  const amount = { currency_code: CURRENCY, value: formatEuros(item + shipping) };
+  if (shipping > 0) {
+    amount.breakdown = {
+      item_total: { currency_code: CURRENCY, value: formatEuros(item) },
+      shipping: { currency_code: CURRENCY, value: formatEuros(shipping) },
+    };
+  }
   return [{
     op: "replace",
     path: "/purchase_units/@reference_id=='default'/amount",
-    value: { currency_code: CURRENCY, value: formatEuros(cents) },
+    value: amount,
   }];
 }
 
@@ -73,7 +86,7 @@ async function paypalAccessToken(env) {
   return data.access_token;
 }
 
-async function patchPaypalAmount(env, providerOrderId, cents) {
+async function patchPaypalAmount(env, providerOrderId, itemCents, shippingCents = 0) {
   const token = await paypalAccessToken(env);
   const response = await fetch(`${paypalBase(env)}/v2/checkout/orders/${encodeURIComponent(providerOrderId)}`, {
     method: "PATCH",
@@ -81,7 +94,7 @@ async function patchPaypalAmount(env, providerOrderId, cents) {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(paypalAmountPatch(cents)),
+    body: JSON.stringify(paypalAmountPatch(itemCents, shippingCents)),
   });
   if (!response.ok) throw new CouponCheckoutError("COUPON_PROVIDER_UPDATE_FAILED", 502);
 }
@@ -152,10 +165,6 @@ export async function applyCouponToCreatedOrder(env, code, createResult, request
 
   const row = await orderSnapshot(env, orderId);
   if (!row || !row.provider_order_id) throw new CouponCheckoutError("COUPON_ORDER_NOT_FOUND", 502);
-  if (Number(row.shipping_cents || 0) !== 0) {
-    throw new CouponCheckoutError("COUPON_SHIPPING_MODE_UNSUPPORTED", 409);
-  }
-
   // create-order itself is idempotent. If the same request is replayed after we
   // already patched the provider and DB, return the existing coupon state rather
   // than trying to claim the one-time code a second time.
@@ -175,7 +184,8 @@ export async function applyCouponToCreatedOrder(env, code, createResult, request
 
   let claim = null;
   const originalSubtotal = Number(row.subtotal_cents || row.unit_price_cents || 0);
-  const originalTotal = Number(row.total_cents || row.amount_cents || originalSubtotal);
+  const shippingCents = Math.max(0, Number(row.shipping_cents || 0));
+  const originalTotal = Number(row.total_cents || row.amount_cents || originalSubtotal + shippingCents);
   if (!Number.isFinite(originalSubtotal) || originalSubtotal <= 0 || !Number.isFinite(originalTotal) || originalTotal <= 0) {
     throw new CouponCheckoutError("COUPON_ORDER_AMOUNT_INVALID", 502);
   }
@@ -189,7 +199,8 @@ export async function applyCouponToCreatedOrder(env, code, createResult, request
   }
 
   const discountedSubtotal = Number(claim.totalCents || 0);
-  const finalTotal = discountedSubtotal; // Current checkout has shipping_cents = 0.
+  // Rabattiert wird der Warenwert, der Versand kommt unveraendert obendrauf.
+  const finalTotal = discountedSubtotal + shippingCents;
   if (!Number.isFinite(finalTotal) || finalTotal <= 0 || finalTotal >= originalTotal) {
     await releaseCouponClaim(env, claim.couponId, orderId);
     await cancelCreatedOrder(env, row, requestId, "coupon_amount_invalid");
@@ -198,7 +209,7 @@ export async function applyCouponToCreatedOrder(env, code, createResult, request
 
   let providerPatched = false;
   try {
-    await patchPaypalAmount(env, row.provider_order_id, finalTotal);
+    await patchPaypalAmount(env, row.provider_order_id, discountedSubtotal, shippingCents);
     providerPatched = true;
 
     const now = new Date().toISOString();
@@ -233,7 +244,7 @@ export async function applyCouponToCreatedOrder(env, code, createResult, request
     // If local synchronization failed after the PayPal patch, restore PayPal to
     // the original trusted amount before releasing the coupon whenever possible.
     if (providerPatched) {
-      try { await patchPaypalAmount(env, row.provider_order_id, originalTotal); } catch {}
+      try { await patchPaypalAmount(env, row.provider_order_id, originalSubtotal, shippingCents); } catch {}
     }
     try { await releaseCouponClaim(env, claim?.couponId, orderId); } catch {}
     await cancelCreatedOrder(env, row, requestId, "coupon_provider_or_db_update_failed");
