@@ -81,6 +81,24 @@ Eintraege im Porkbun-Panel:
 5. Danach `config/shop-config.json` → `email` auf die neue Adresse umstellen,
    damit Impressum, AGB und Kontaktknoepfe dieselbe Adresse nennen.
 
+## Buchhaltung
+
+Aufgebaut wie der Vinted-Datenexport: eine Liste aller Bestellungen, eine
+Rechnung je Bestellung, eine Zusammenfassung je Jahr. Alle drei Wege brauchen
+den Owner-Token:
+
+- `GET /admin/buchhaltung/jahr/2026` — Umsatz je Monat, Warenwert, Versand,
+  Gesamt, plus Fruehwarnung zu den Kleinunternehmergrenzen nach § 19 UStG
+  (25.000 EUR Vorjahr / 100.000 EUR laufendes Jahr).
+- `GET /admin/buchhaltung/bestellungen.csv?jahr=2026` — fuer den Steuerberater,
+  deutsche Dezimaltrennung, oeffnet direkt in Excel.
+- `GET /admin/buchhaltung/rechnung/<bestell-id>` — die Rechnung zum Ausdrucken
+  oder Ablegen als PDF. Wortgleich zu der, die die Kundin per Mail bekommen hat.
+
+Gezaehlt werden nur bezahlte Bestellungen. Storniert, erstattet und
+zurueckgesendet bleiben draussen, sonst stuende Geld in den Buechern, das nie
+verdient wurde.
+
 ## Vor Livebetrieb
 
 - Sandbox-Test mit mindestens zwei parallelen Kaufversuchen fuer dasselbe Einzelstueck.
