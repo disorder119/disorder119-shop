@@ -45,7 +45,7 @@ jobs:
           node --check assets/shop-promos.js
 
       - name: Benachrichtigungs-Regressionen pruefen
-        run: node --test shop-worker/notifications.test.mjs
+        run: node --test shop-worker/notifications.test.mjs shop-worker/admin-notifications.test.mjs
 
       - name: Game- und Gutschein-Regressionen pruefen
         run: node --test shop-worker/game-rewards.test.mjs shop-worker/coupon-checkout.test.mjs
