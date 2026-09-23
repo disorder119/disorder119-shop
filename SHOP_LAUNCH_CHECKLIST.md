@@ -32,6 +32,13 @@ Diese Datei dokumentiert den technischen Stand fuer einen echten Checkout, ohne 
    - `TELEGRAM_CHAT_ID` nur, wenn die automatische Verknuepfung nicht genutzt
      wird: sonst reicht eine private Nachricht an den eigenen Bot, der Worker
      merkt sich die Chat-ID selbst (`notifications.js`).
+   - `MAIL_API_KEY` (Brevo, EU-Anbieter) — ohne diesen Schluessel wird **keine**
+     Bestellbestaetigung verschickt. Die Bestaetigung ist nach § 312f BGB
+     Pflicht, der Shop darf ohne sie nicht live gehen.
+   - `MAIL_FROM` (z. B. `bestellung@disorder119.com`) und optional
+     `MAIL_FROM_NAME`, `MAIL_REPLY_TO`.
+   - Testen: `POST /admin/notifications/mail/test` (Owner-Token). Ohne Angabe
+     im Aufruf geht die Testmail an `MAIL_REPLY_TO` bzw. `MAIL_FROM`.
 5. DHL: Es gibt bisher **keine** DHL-Anbindung im Code, nur die Datenfelder
    fuer Versandstatus und Sendungsnummer. Labels werden vorerst manuell im
    DHL-Portal erzeugt und die Sendungsnummer im Admin eingetragen. Erst eine
@@ -50,6 +57,29 @@ Diese Datei dokumentiert den technischen Stand fuer einen echten Checkout, ohne 
    - Order-Eintrag in D1
    - DHL-Fehler darf Zahlung/SOLD nicht rueckgaengig machen
    - Webhook ist idempotent
+
+## Eigene Shop-Mailadresse einrichten
+
+Die Domain liegt bei Porkbun, ein Postfach gibt es noch nicht (kein MX-Eintrag).
+Die Nameserver muessen dafuer **nicht** umgezogen werden — beides laeuft ueber
+Eintraege im Porkbun-Panel:
+
+1. **Empfangen:** Porkbun → Domain → *Email Forwarding*. `bestellung@disorder119.com`
+   auf das eigene Postfach weiterleiten. Kostenlos, fertig in zwei Minuten.
+2. **Senden:** Konto bei Brevo anlegen (Sitz Frankreich, Server in der EU —
+   bewusst kein US-Anbieter, damit in der Datenschutzerklaerung keine
+   Datenuebermittlung in die USA stehen muss). Dort die Domain
+   `disorder119.com` verifizieren; Brevo nennt dazu drei DNS-Eintraege
+   (DKIM, DMARC und eine Bestaetigung), die bei Porkbun eingetragen werden.
+   Der bestehende SPF-Eintrag muss um `include:spf.brevo.com` ergaenzt werden.
+3. **Schluessel setzen:** in Brevo einen API-Key erzeugen und selbst per
+   `npx wrangler secret put MAIL_API_KEY` eintragen, dazu
+   `npx wrangler secret put MAIL_FROM` mit `bestellung@disorder119.com`.
+4. **Pruefen:** `POST /admin/notifications/mail/test` schickt eine Testmail an
+   die eigene Adresse. Kommt sie an und landet nicht im Spam, ist DKIM/SPF in
+   Ordnung.
+5. Danach `config/shop-config.json` → `email` auf die neue Adresse umstellen,
+   damit Impressum, AGB und Kontaktknoepfe dieselbe Adresse nennen.
 
 ## Vor Livebetrieb
 

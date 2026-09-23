@@ -56,6 +56,10 @@ ARTICLE_CSS_VERSION = _asset_version("assets/article.css")
 ARTICLE_JS_VERSION = _asset_version("assets/article.js")
 PWA_JS_VERSION = _asset_version("assets/pwa.js")
 PRODUCT_PAGE_CSS_VERSION = _asset_version("assets/product-page-v4.css")
+# Eine gemeinsame Kennung fuer beide Kontodateien: aendert sich eine davon,
+# laedt der Browser auch die andere neu. Sonst koennte ein neues Skript auf
+# altem CSS landen.
+KONTO_ASSET_VERSION = _asset_version("assets/konto.js")[:5] + _asset_version("assets/konto.css")[:5]
 PWA_JS_VERSION = _asset_version("assets/pwa.js")
 
 # The first mobile product viewport must not wait for two external stylesheets
@@ -1310,6 +1314,44 @@ def build_special_pages():
     print(f"{n} Sonderseiten geschrieben ({len(SPECIAL_PAGES)} x {len(LANGS)} Sprachen).")
 
 
+ACCOUNT_TITLES = {
+    "de": ("Kundenkonto", "Deine Bestellungen, Lieferadresse und Daten bei Disorder119."),
+    "en": ("Customer account", "Your orders, delivery address and data at Disorder119."),
+    "fr": ("Compte client", "Tes commandes, ton adresse de livraison et tes données chez Disorder119."),
+}
+
+
+def build_account_pages():
+    # Eigene, schlanke Seite statt eines weiteren Zustands im Archiv-Bundle:
+    # das Konto teilt sich mit dem Katalog weder Filter noch Warenkorb noch
+    # Modi. Eine Aenderung hier kann den laufenden Shop nicht beschaedigen,
+    # und die Kundin laedt nicht das komplette Archiv-JavaScript nur, um ihre
+    # Bestellungen zu sehen.
+    tmpl = (BASE / "konto_template.html").read_text(encoding="utf-8")
+    shop_config = get_shop_config()
+    count = 0
+    for lang in LANGS:
+        titel, beschreibung = ACCOUNT_TITLES[lang]
+        home = lang_home(lang)
+        out = tmpl
+        out = out.replace("__HTML_LANG__", lang)
+        out = out.replace("__META_TITLE__", esc(titel + " | Disorder119"))
+        out = out.replace("__META_DESC__", esc(beschreibung))
+        out = out.replace("__CANONICAL_URL__", SITE_URL.rstrip("/") + home + "konto/")
+        out = out.replace("__HOME__", home)
+        out = out.replace("__APP_CSS_VERSION__", KONTO_ASSET_VERSION)
+        out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
+        for token in ("__HTML_LANG__", "__META_TITLE__", "__META_DESC__", "__CANONICAL_URL__",
+                      "__HOME__", "__APP_CSS_VERSION__", "__SHOP_CONFIG_JSON__"):
+            if token in out:
+                raise SystemExit(f"FEHLER: Platzhalter {token} blieb in der Kontoseite stehen.")
+        out_dir = (BASE / "konto") if lang == "de" else (BASE / lang / "konto")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "index.html").write_text(out, encoding="utf-8")
+        count += 1
+    print(f"{count} Kontoseiten geschrieben ({len(LANGS)} Sprachen).")
+
+
 def article_dir(lang, item_id):
     base = BASE if lang == "de" else BASE / lang
     return base / "artikel" / str(item_id)
@@ -1609,6 +1651,7 @@ def main():
     clean_old_flat_article_files()
     build_index()
     build_special_pages()
+    build_account_pages()
     build_articles()
     build_catalog_json()
     build_sitemap()

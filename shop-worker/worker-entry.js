@@ -14,6 +14,8 @@ import { handleAdminNotifications } from "./admin-notifications.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
 import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications.js";
+import { sendOrderConfirmation, sendOrderConfirmationByProviderOrder } from "./customer-mail.js";
+import { handleAccountRequest, isAccountRoute } from "./customer-account.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
 import {
   CouponCheckoutError,
@@ -180,7 +182,13 @@ export default {
         return finish(await handleAdminAlerts(request, runtimeEnv, url, reqId, origin));
       }
 
-      if (url.pathname === "/admin/notifications/telegram/test") {
+      // Das Kundenkonto laeuft vor den Shop-Routen, weil worker.js /account/
+      // bisher bewusst mit 501 beantwortet hat.
+      if (isAccountRoute(url)) {
+        return finish(await handleAccountRequest(request, runtimeEnv, url, reqId, origin));
+      }
+
+      if (url.pathname === "/admin/notifications/telegram/test" || url.pathname === "/admin/notifications/mail/test") {
         return finish(await handleAdminNotifications(request, runtimeEnv, url, reqId, origin));
       }
 
@@ -252,7 +260,19 @@ export default {
             response.clone().json(),
           ]);
           if (payload?.orderId) {
-            await runBackground(ctx, snapshotPaypalOrder(runtimeEnv, String(payload.orderId), reqId), "checkout_snapshot_failed", reqId);
+            // Reihenfolge ist wichtig: die Bestellbestaetigung braucht die
+            // Kundenadresse, die erst der PayPal-Abzug in die Datenbank
+            // schreibt. Scheitert der Abzug, wird das protokolliert und die
+            // Mail meldet sauber NO_CUSTOMER_EMAIL, statt die Kette zu kippen.
+            const confirmFor = result?.orderId ? String(result.orderId) : "";
+            await runBackground(
+              ctx,
+              snapshotPaypalOrder(runtimeEnv, String(payload.orderId), reqId)
+                .catch(err => logBackgroundFailure("checkout_snapshot_failed", reqId, err))
+                .then(() => (confirmFor ? sendOrderConfirmation(runtimeEnv, confirmFor, reqId) : null)),
+              "order_confirmation_failed",
+              reqId,
+            );
           }
           if (result?.orderId) {
             await runBackground(ctx, redeemCouponAfterPayment(runtimeEnv, String(result.orderId), reqId), "coupon_redeem_failed", reqId);
@@ -269,7 +289,14 @@ export default {
           if (event?.event_type === "PAYMENT.CAPTURE.COMPLETED") {
             const providerOrderId = event?.resource?.supplementary_data?.related_ids?.order_id;
             if (providerOrderId) {
-              await runBackground(ctx, snapshotPaypalOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_checkout_snapshot_failed", reqId);
+              await runBackground(
+                ctx,
+                snapshotPaypalOrder(runtimeEnv, String(providerOrderId), reqId)
+                  .catch(err => logBackgroundFailure("webhook_checkout_snapshot_failed", reqId, err))
+                  .then(() => sendOrderConfirmationByProviderOrder(runtimeEnv, String(providerOrderId), reqId)),
+                "webhook_order_confirmation_failed",
+                reqId,
+              );
               await runBackground(ctx, notifyPaidOrderByProviderOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_sale_notification_failed", reqId);
             }
           }

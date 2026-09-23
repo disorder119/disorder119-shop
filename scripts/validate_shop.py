@@ -183,6 +183,23 @@ def validate_and_report() -> None:
             "Versandpauschale laeuft auseinander: shop-worker/commerce-core.js "
             f"sagt {match.group(1)} Cent, config/shop-config.json sagt {shipping_cfg} Cent."
         )
+    # Die Bestellbestaetigung ist eine Pflichtmail mit Anbieterkennung. Steht
+    # dort eine andere Anschrift als im Impressum, ist das ein echter
+    # Rechtsfehler - deshalb werden beide Stellen hier verglichen.
+    mail_js = (BASE / "shop-worker" / "customer-mail.js").read_text(encoding="utf-8")
+    build_py = (BASE / "build_site.py").read_text(encoding="utf-8")
+    for feld, muster in (
+        ("street", r'street:\s*"([^"]+)"'),
+        ("city", r'city:\s*"([^"]+)"'),
+    ):
+        treffer = re.search(muster, mail_js)
+        if not treffer:
+            fail(f"shop-worker/customer-mail.js: SELLER.{feld} nicht gefunden.")
+        elif treffer.group(1) not in build_py:
+            fail(
+                f"Anbieterkennung laeuft auseinander: SELLER.{feld}="
+                f"{treffer.group(1)!r} steht nicht im Impressum (build_site.py)."
+            )
 
     ids: list[int] = []
     article_numbers: list[str] = []
