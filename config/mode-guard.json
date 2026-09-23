@@ -2,10 +2,10 @@
   "_comment": "Automatischer Regression-Guard. Diese Hashes frieren ausschliesslich Match/Chaos/Baukasten ein. Nur bewusst mit `python scripts/validate_shop.py --init-mode-guard` aktualisieren, wenn genau diese Modi absichtlich geaendert werden.",
   "hashes": {
     "html_match": "5d5115070ec3adab92bdb5ced896d51b077dd207ecc4816f67a405f9ece707ab",
-    "html_chaos": "f5879009a857f795e50a5816a3d4ad4c571cb58c522a94682852646bac50cfb6",
+    "html_chaos": "13982d9bc9006ae522ce9462b90b1d5105beaef9ed78c52a295d38c6bc3b8ce1",
     "html_baukasten": "3122e0517d245201aca2d9e5eec3c801fc44292dec5e1c8b76dcccd5741c0095",
     "js_match": "0d745f4fb59dca83671c2275e1620e56e251d5138928faf89fb7d8b9cb046a17",
-    "js_chaos": "0752977181dfcad0bb330e54396c7555d948fe9ba49727b519f9c4e45818c659",
+    "js_chaos": "34dbb7a1aba8be22be08ad71a9ce36543555d6539fab1912889f37484b0976a7",
     "js_baukasten": "1a865df88001fa51052ade151bcf6d33f11250245d24950b8941a6f07474c21c"
   }
 }

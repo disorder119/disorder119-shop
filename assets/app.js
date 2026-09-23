@@ -202,9 +202,9 @@
       swipeViewCart: "Warenkorb ansehen", swipePlayAgain: "Nochmal spielen", swipeNopeTag: "Nope",
       swipeNopeAria: "Nicht mein Stil", swipeLikeAria: "Merken",
       chaosShuffle: "Mischen",
-      chaosSkyLabel: "Universum: Artikel im Raum. Zoomen mit zwei Fingern oder Mausrad, ziehen zum Umsehen, tippen oder klicken für Details. Tastatur: Pfeiltasten, Plus und Minus, Eingabe öffnet das Teil in der Mitte.",
+      chaosSkyLabel: "Universum: Artikel im Raum. Am Desktop Maus bewegen zum Umsehen, Trackpad oder Mausrad zum Zoomen, Doppelklick öffnet ein Teil. Pfeil hoch und runter zoomt.",
       chaosHintTouch: "Zwei Finger: zoomen · Wischen: umsehen · Tippen: hinfliegen",
-      chaosHintMouse: "Mausrad: zoomen · Ziehen: umsehen · Klicken: hinfliegen",
+      chaosHintMouse: "Maus bewegen: umsehen · Trackpad/Mausrad: zoomen · Doppelklick: öffnen",
       chaosFocusEmpty: "Näher heranzoomen",
       chaosFocusSize: "Gr.",
       gameTitle: "Warp-Jagd", gameTime: "Zeit", gameScore: "Warenwert", gameCombo: "Serie", gameGo: "Los!",
@@ -387,9 +387,9 @@
       swipeViewCart: "View cart", swipePlayAgain: "Play again", swipeNopeTag: "Nope",
       swipeNopeAria: "Not my style", swipeLikeAria: "Save",
       chaosShuffle: "Shuffle",
-      chaosSkyLabel: "Universe: pieces floating in space. Zoom with two fingers or the mouse wheel, drag to look around, tap or click for details. Keyboard: arrow keys, plus and minus, Enter opens the piece in the centre.",
+      chaosSkyLabel: "Universe: pieces floating in space. On desktop move the mouse to look around, use the trackpad or wheel to zoom, double-click to open a piece. Arrow up and down zoom.",
       chaosHintTouch: "Two fingers: zoom · Swipe: look around · Tap: fly there",
-      chaosHintMouse: "Wheel: zoom · Drag: look around · Click: fly there",
+      chaosHintMouse: "Move mouse: look around · Trackpad/wheel: zoom · Double-click: open",
       chaosFocusEmpty: "Zoom in closer",
       chaosFocusSize: "Size",
       gameTitle: "Warp Hunt", gameTime: "Time", gameScore: "Value", gameCombo: "Streak", gameGo: "Go!",
@@ -573,9 +573,9 @@
       swipeViewCart: "Voir le panier", swipePlayAgain: "Rejouer", swipeNopeTag: "Non",
       swipeNopeAria: "Pas mon style", swipeLikeAria: "Garder",
       chaosShuffle: "Mélanger",
-      chaosSkyLabel: "Univers : les pièces flottent dans l'espace. Zoomer à deux doigts ou à la molette, glisser pour explorer, toucher ou cliquer pour les détails. Clavier : flèches, plus et moins, Entrée ouvre la pièce au centre.",
+      chaosSkyLabel: "Univers : les pièces flottent dans l'espace. Sur ordinateur, déplacez la souris pour explorer, utilisez le pavé tactile ou la molette pour zoomer et double-cliquez pour ouvrir une pièce.",
       chaosHintTouch: "Deux doigts : zoomer · Glisser : explorer · Toucher : s'approcher",
-      chaosHintMouse: "Molette : zoomer · Glisser : explorer · Clic : s'approcher",
+      chaosHintMouse: "Déplacer la souris : explorer · Pavé/molette : zoomer · Double-clic : ouvrir",
       chaosFocusEmpty: "Zoomez plus près",
       chaosFocusSize: "Taille",
       gameTitle: "Chasse Warp", gameTime: "Temps", gameScore: "Valeur", gameCombo: "Série", gameGo: "Go !",
@@ -2669,7 +2669,8 @@
     seed: 1, anim: null, trails: 0, storm: 0, stormSpin: 0,
     pool: [], stars: [], drawn: [], buttons: [],
     focusKey: null, focusItem: null, hoverKey: "",
-    lastInput: 0, pointers: new Map(), gesture: null, lastTap: { t: 0, x: 0, y: 0 },
+    mouseLook: { active: false, x: 0, y: 0 }, // UNIVERSE_DESKTOP_GAZE_V1
+    lastInput: 0, pointers: new Map(), gesture: null, lastTap: { t: 0, x: 0, y: 0, key: "" },
     thumbs: {}, displays: new Map(), shoot: null, nextShoot: 0
   };
   var chaosSky = document.getElementById("chaosSky");
@@ -3008,6 +3009,17 @@
       S.cam.z = S.anim.from.z + (S.anim.to.z - S.anim.from.z) * e;
       if (p >= 1) { S.anim = null; S.lastInput = now; }
     } else if (S.pointers.size === 0) {
+      // Desktop: der Mauszeiger steuert die Blickrichtung bereits beim
+      // Bewegen/Positionieren, ohne dass eine Taste gehalten werden muss.
+      // In der Mitte ist eine kleine Ruhezone; Richtung Rand steigt das Tempo.
+      if (S.mouseLook && S.mouseLook.active && chaosFinePointer()) {
+        var lx = S.mouseLook.x, ly = S.mouseLook.y, dead = 0.12;
+        var ax = Math.abs(lx) > dead ? (Math.abs(lx) - dead) / (1 - dead) * (lx < 0 ? -1 : 1) : 0;
+        var ay = Math.abs(ly) > dead ? (Math.abs(ly) - dead) / (1 - dead) * (ly < 0 ? -1 : 1) : 0;
+        S.cam.x += ax * 0.00042 * dt * (1 + Math.abs(ax) * 0.75);
+        S.cam.y += ay * 0.00042 * dt * (1 + Math.abs(ay) * 0.75);
+        if (ax || ay) S.lastInput = now;
+      }
       var v = S.vel;
       if (Math.abs(v.x) + Math.abs(v.y) + Math.abs(v.z) > 1e-6) {
         S.cam.x += v.x * dt; S.cam.y += v.y * dt; S.cam.z += v.z * dt;
@@ -3063,25 +3075,45 @@
     }
     return null;
   }
-  function chaosUTap(x, y) {
+  function chaosUTap(x, y, pointerType) {
     var S = chaosU, now = performance.now();
     var sh = S.shoot;
     if (sh && sh.hx !== undefined && Math.hypot(x - sh.hx, y - sh.hy) < 42) { S.shoot = null; chaosGameStart(); return; }
     var hit = chaosUHitTest(x, y);
     if (hit) {
-      S.lastTap.t = 0;
-      if (hit.w >= CHAOS_U.BIG) { openModal(hit.it); return; }
-      // Kleines oder fernes Teil: hinfliegen, bis es gross in der Mitte steht
-      var targetD = CHAOS_U.ITEM_W * S.FOC / Math.min(S.W * 0.62, 260);
-      chaosUFlyTo(hit.x, hit.y, hit.z - targetD, 900);
+      // Touch bleibt direkt. Am Desktop verhindert ein einzelner Klick jetzt
+      // versehentliches Oeffnen: 1x fokussieren/anfahren, Doppelklick oeffnet.
+      if (pointerType !== "mouse") {
+        S.lastTap.t = 0;
+        if (hit.w >= CHAOS_U.BIG) { openModal(hit.it); return; }
+        var touchTargetD = CHAOS_U.ITEM_W * S.FOC / Math.min(S.W * 0.62, 260);
+        chaosUFlyTo(hit.x, hit.y, hit.z - touchTargetD, 900);
+        return;
+      }
+      var samePiece = S.lastTap.key === hit.key && now - S.lastTap.t < 360 &&
+        Math.hypot(x - S.lastTap.x, y - S.lastTap.y) < 36;
+      if (samePiece) {
+        S.lastTap = { t: 0, x: x, y: y, key: "" };
+        if (S.mouseLook) S.mouseLook.active = false;
+        openModal(hit.it);
+        return;
+      }
+      S.lastTap = { t: now, x: x, y: y, key: hit.key };
+      if (hit.w < CHAOS_U.BIG) {
+        var targetD = CHAOS_U.ITEM_W * S.FOC / Math.min(S.W * 0.62, 260);
+        chaosUFlyTo(hit.x, hit.y, hit.z - targetD, 720);
+      } else {
+        S.focusKey = hit.key; S.focusItem = hit.it;
+        chaosURequest();
+      }
       return;
     }
-    if (now - S.lastTap.t < 320 && Math.hypot(x - S.lastTap.x, y - S.lastTap.y) < 30) {
+    if (now - S.lastTap.t < 320 && !S.lastTap.key && Math.hypot(x - S.lastTap.x, y - S.lastTap.y) < 30) {
       S.lastTap.t = 0;
-      chaosUZoomAt(x, y, 2.4);
+      chaosUZoomAt(x, y, 2.0);
       return;
     }
-    S.lastTap = { t: now, x: x, y: y };
+    S.lastTap = { t: now, x: x, y: y, key: "" };
   }
 
   // ---- Geheim: Warp-Jagd (Minigame) und Chaos-Sturm ----
@@ -3289,6 +3321,9 @@
     chaosSky.addEventListener("pointerdown", function (e) {
       var S = chaosU;
       if (!S.active) return;
+      // Rechts-/Mittelklick darf im Universum nie einen Artikel aktivieren.
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      if (S.mouseLook) S.mouseLook.active = false;
       try { chaosSky.setPointerCapture(e.pointerId); } catch (err) {}
       var p = chaosULocal(e);
       if (chaosG.phase !== "idle") {
@@ -3312,7 +3347,16 @@
       var p = chaosULocal(e);
       if (chaosG.phase !== "idle") { chaosG.mx = p.x; chaosG.my = p.y; return; }
       if (!S.pointers.has(e.pointerId) || !S.gesture) {
-        if (e.pointerType === "mouse" && !e.buttons) chaosUHover(p.x, p.y);
+        if (e.pointerType === "mouse" && !e.buttons) {
+          chaosUHover(p.x, p.y);
+          // Position relativ zur Mitte (-1..1) treibt den Blick kontinuierlich.
+          S.mouseLook.active = true;
+          S.mouseLook.x = Math.max(-1, Math.min(1, (p.x - S.W / 2) / Math.max(1, S.W / 2)));
+          S.mouseLook.y = Math.max(-1, Math.min(1, (p.y - S.H / 2) / Math.max(1, S.H / 2)));
+          S.anim = null; S.vel.x = S.vel.y = S.vel.z = 0;
+          S.lastInput = performance.now();
+          chaosURequest();
+        }
         return;
       }
       S.pointers.set(e.pointerId, p);
@@ -3346,7 +3390,7 @@
       var g = S.gesture; S.gesture = null;
       if (!g) return;
       if (wasSingle && g.moved < 10 && performance.now() - g.t0 < 350 && e.type === "pointerup") {
-        chaosUTap(local.x, local.y);
+        chaosUTap(local.x, local.y, e.pointerType);
         return;
       }
       // Schwung aus den letzten ~110 ms mitnehmen
@@ -3361,7 +3405,10 @@
     chaosSky.addEventListener("pointerup", chaosUEnd);
     chaosSky.addEventListener("pointercancel", chaosUEnd);
     chaosSky.addEventListener("pointerleave", function (e) {
-      if (e.pointerType === "mouse") { chaosTooltip.classList.remove("visible"); chaosU.hoverKey = ""; }
+      if (e.pointerType === "mouse") {
+        chaosTooltip.classList.remove("visible"); chaosU.hoverKey = "";
+        if (chaosU.mouseLook) chaosU.mouseLook.active = false;
+      }
     });
     // iOS: Safari soll die Seite beim Zwei-Finger-Zoom nicht selbst vergroessern
     chaosSky.addEventListener("gesturestart", function (e) { e.preventDefault(); });
@@ -3371,9 +3418,11 @@
       if (chaosG.phase !== "idle") return;
       chaosU.anim = null; chaosU.vel.x = chaosU.vel.y = chaosU.vel.z = 0;
       var p = chaosULocal(e);
-      // Trackpads melden viele kleine Schritte, Mausraeder wenige grosse
-      var delta = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
-      chaosUZoomStep(p.x, p.y, Math.exp(-Math.max(-240, Math.min(240, delta)) * 0.0016));
+      // Trackpads melden viele kleine Schritte, Mausraeder wenige grosse.
+      // Sanftere Kurve + engeres Clamping verhindert das bisherige Springen.
+      var delta = e.deltaMode === 1 ? e.deltaY * 28 : e.deltaY;
+      delta = Math.max(-120, Math.min(120, delta));
+      if (Math.abs(delta) > 0.01) chaosUZoomStep(p.x, p.y, Math.exp(-delta * 0.00105));
       chaosTooltip.classList.remove("visible");
       chaosU.lastInput = performance.now(); chaosUHideHint(); chaosURequest();
     }, { passive: false });
@@ -3382,10 +3431,10 @@
       if (!S.active || chaosG.phase !== "idle") return;
       if (e.key === "+" || e.key === "=") chaosUZoomAt(S.W / 2, S.H / 2, 1.8, 380);
       else if (e.key === "-") chaosUZoomAt(S.W / 2, S.H / 2, 1 / 1.8, 380);
-      else if (e.key === "ArrowLeft") chaosUFlyTo(S.cam.x - step, S.cam.y, S.cam.z, 240);
-      else if (e.key === "ArrowRight") chaosUFlyTo(S.cam.x + step, S.cam.y, S.cam.z, 240);
-      else if (e.key === "ArrowUp") chaosUFlyTo(S.cam.x, S.cam.y - step, S.cam.z, 240);
-      else if (e.key === "ArrowDown") chaosUFlyTo(S.cam.x, S.cam.y + step, S.cam.z, 240);
+      else if (e.key === "ArrowLeft") chaosUFlyTo(S.cam.x - step, S.cam.y, S.cam.z, 210);
+      else if (e.key === "ArrowRight") chaosUFlyTo(S.cam.x + step, S.cam.y, S.cam.z, 210);
+      else if (e.key === "ArrowUp") chaosUZoomAt(S.W / 2, S.H / 2, 1.35, 190);
+      else if (e.key === "ArrowDown") chaosUZoomAt(S.W / 2, S.H / 2, 1 / 1.35, 190);
       else if (e.key === "Enter" && S.focusItem) openModal(S.focusItem);
       else return;
       e.preventDefault();
@@ -3429,6 +3478,7 @@
     S.vel = { x: 0, y: 0, z: 0 };
     S.anim = null; S.trails = 0; S.storm = 0; S.focusKey = null; S.lastT = 0; S.shoot = null; S.nextShoot = 0;
     S.pointers.clear(); S.gesture = null;
+    if (S.mouseLook) { S.mouseLook.active = false; S.mouseLook.x = 0; S.mouseLook.y = 0; }
     S.lastInput = performance.now();
     S.active = true;
     chaosUShowHint(t(chaosFinePointer() ? "chaosHintMouse" : "chaosHintTouch"), 7000);
@@ -3466,6 +3516,7 @@
     if (S.raf) cancelAnimationFrame(S.raf);
     S.raf = 0; S.anim = null; S.gesture = null;
     S.pointers.clear();
+    if (S.mouseLook) S.mouseLook.active = false;
     if (chaosTooltip) chaosTooltip.classList.remove("visible");
     if (chaosHint) chaosHint.classList.add("is-gone");
   }
