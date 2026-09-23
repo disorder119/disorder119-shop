@@ -2627,7 +2627,7 @@
   // am Handy zu langsam. Die groessten sichtbaren Teile bekommen zusaetzlich
   // unsichtbare Knoepfe fuer Tastatur und Screenreader (#chaosItems .chaos-item).
   var CHAOS_U = {
-    ITEM_W: 0.78,   // Breite eines Fotos in Raumeinheiten (inkl. transparentem Rand)
+    ITEM_W: 1.02,   // UNIVERSE_PIECE_SCALE_V1: ~31% groesser, inkl. Touch-/Hitbox-Geometrie
     FILL: 0.14,     // Anteil belegter Zellen - Platz zwischen den Teilen
     NEAR: 0.32,     // naeher als das wird nichts gezeichnet
     FAR: 12,        // ab hier nur noch Sterne
