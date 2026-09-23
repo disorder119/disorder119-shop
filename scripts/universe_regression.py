@@ -85,7 +85,7 @@ require('/coupons/validate' in promos and 'payload.couponCode = code' in promos,
 # Cache-bust the new game and the Universe loader.
 require('ASSET_VERSION = "20260923-3"' in upgrade, "Zero-G asset version not bumped")
 require('if (!document.getElementById("chaosView")) return;' in upgrade, "game bundle is loaded on normal shop pages")
-require('/assets/universe-upgrade.js?v=20260923-2' in loader, "Universe JS cache-bust missing")
-require('/assets/universe-upgrade.css?v=20260923-2' in loader, "Universe CSS cache-bust missing")
+require('/assets/universe-upgrade.js?v=20260923-3' in loader, "Universe JS cache-bust missing")
+require('/assets/universe-upgrade.css?v=20260923-3' in loader, "Universe CSS cache-bust missing")
 
 print("Universe Zero-G Runway 119 regression checks passed")
