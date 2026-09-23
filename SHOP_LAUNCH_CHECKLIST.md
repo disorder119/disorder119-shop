@@ -108,8 +108,21 @@ den Owner-Token:
   (25.000 EUR Vorjahr / 100.000 EUR laufendes Jahr).
 - `GET /admin/buchhaltung/bestellungen.csv?jahr=2026` — fuer den Steuerberater,
   deutsche Dezimaltrennung, oeffnet direkt in Excel.
+- `GET /admin/buchhaltung/rechnungen?jahr=2026` — alle ausgestellten Rechnungen
+  des Jahres mit Nummer, Datum, Betrag und Pruefsumme.
 - `GET /admin/buchhaltung/rechnung/<bestell-id>` — die Rechnung zum Ausdrucken
-  oder Ablegen als PDF. Wortgleich zu der, die die Kundin per Mail bekommen hat.
+  oder Ablegen als PDF.
+
+Jede verschickte Rechnung wird im Moment des Versands unveraenderlich
+festgeschrieben (Tabelle `rechnungen`, Migration 0012). Aendert sich die
+Bestellung spaeter im Admin, bleibt die ausgestellte Rechnung wie sie war -
+genau das verlangt die GoBD. Liegt zu einer alten Bestellung keine archivierte
+Fassung vor, wird eine aus den Bestelldaten erzeugt und sichtbar als solche
+gekennzeichnet.
+
+Mit gesetztem `MAIL_BCC` geht jede Rechnung zusaetzlich als Durchschlag ins
+eigene Postfach. Der Durchschlag haengt ausdruecklich an der Rechnungsmail -
+Anmeldelinks und Datenauskuenfte bekommen nie einen.
 
 Gezaehlt werden nur bezahlte Bestellungen. Storniert, erstattet und
 zurueckgesendet bleiben draussen, sonst stuende Geld in den Buechern, das nie

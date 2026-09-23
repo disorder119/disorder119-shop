@@ -7,6 +7,7 @@ import {
   mailTransportReady,
   normalizeEmail,
   sendMail,
+  pruefsumme,
   sendOrderConfirmation,
   sendShippingConfirmation,
   trackingUrlFor,
@@ -190,10 +191,56 @@ test("order confirmation is sent once and claimed in the audit trail", async () 
   const stub = stubFetch(async () => new Response(JSON.stringify({ messageId: "<one@brevo>" }), { status: 201 }));
   try {
     const result = await sendOrderConfirmation({ ...READY_ENV, DB: db }, "order-1", "req-1");
-    assert.deepEqual(result, { sent: true, recorded: true });
+    assert.deepEqual(result, { sent: true, recorded: true, archiviert: true });
     assert.equal(stub.calls.length, 1);
     assert.ok(db.writes.some(w => w.text.includes("INSERT OR IGNORE INTO audit_events")));
     assert.ok(db.writes.some(w => w.text.includes("ORDER_CONFIRMATION_SENT")));
+
+    // Die Rechnung wird im Moment des Versands festgeschrieben - mit
+    // demselben Text, der beim Kunden gelandet ist.
+    const archiv = db.writes.find(w => w.text.includes("INSERT OR IGNORE INTO rechnungen"));
+    assert.ok(archiv, "Rechnung wurde nicht archiviert");
+    assert.equal(archiv.args[1], "order-1");
+    assert.equal(archiv.args[2], "D119-20260923-ABC12345");
+    assert.equal(archiv.args[5], 38000);
+    assert.equal(archiv.args[6], 590);
+    assert.equal(archiv.args[7], 38590);
+    assert.equal(archiv.args[8], "kundin@example.com");
+    assert.match(String(archiv.args[10]), /D119-20260923-ABC12345/);
+    assert.equal(String(archiv.args[11]), await pruefsumme(String(archiv.args[10])));
+
+    // Der Durchschlag geht nur mit gesetzter Adresse und nie an die Kundin.
+    const gesendet = JSON.parse(stub.calls[0].init.body);
+    assert.equal(gesendet.bcc, undefined);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("the shop copy goes out only for the invoice, never for a login link", async () => {
+  const db = confirmationDb();
+  const stub = stubFetch(async () => new Response(JSON.stringify({ messageId: "<b@brevo>" }), { status: 201 }));
+  const env = { ...READY_ENV, MAIL_BCC: "buchhaltung@disorder119.com", DB: db };
+  try {
+    await sendOrderConfirmation(env, "order-1", "req-bcc");
+    assert.deepEqual(JSON.parse(stub.calls[0].init.body).bcc, [{ email: "buchhaltung@disorder119.com" }]);
+
+    // Ohne kopieAnShop bleibt der Durchschlag aus - ein Anmeldelink oder eine
+    // Datenauskunft darf nie nebenbei in einem zweiten Postfach landen.
+    await sendMail(env, { to: "kundin@example.com", subject: "Anmeldelink", text: "x" });
+    assert.equal(JSON.parse(stub.calls[1].init.body).bcc, undefined);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("the shop copy is dropped when it would go to the customer herself", async () => {
+  const stub = stubFetch(async () => new Response(JSON.stringify({ messageId: "<c@brevo>" }), { status: 201 }));
+  try {
+    await sendMail({ ...READY_ENV, MAIL_BCC: "kundin@example.com" }, {
+      to: "kundin@example.com", subject: "Rechnung", text: "x", kopieAnShop: true,
+    });
+    assert.equal(JSON.parse(stub.calls[0].init.body).bcc, undefined);
   } finally {
     stub.restore();
   }

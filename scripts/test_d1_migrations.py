@@ -230,10 +230,52 @@ def main() -> None:
     if offene != ["hash-neu"]:
         raise SystemExit(f"FEHLER: Alter Anmeldelink bleibt neben dem neuen gueltig: {offene!r}")
 
+    # Eine ausgestellte Rechnung muss unveraenderlich sein (GoBD). Korrekturen
+    # laufen ueber eine Gutschrift, nicht ueber das Ueberschreiben des Originals.
+    if "rechnungen" not in tables:
+        raise SystemExit("FEHLER: Tabelle rechnungen fehlt nach Migration")
+    db.execute(
+        """INSERT INTO commerce_orders
+        (id,order_number,status,currency,subtotal_cents,shipping_cents,total_cents,idempotency_key,created_at)
+        VALUES ('ord-rech','D119-TEST-0001','PAID','EUR',1000,590,1590,'rech-test-key','2026-09-23T10:00:00Z')"""
+    )
+    db.execute(
+        """INSERT INTO rechnungen
+        (id,order_id,rechnungsnummer,ausgestellt_am,waehrung,warenwert_cents,versand_cents,
+         gesamt_cents,empfaenger_email,html,text,pruefsumme,erstellt_am)
+        VALUES ('r1','ord-rech','D119-TEST-0001','2026-09-23T10:00:00Z','EUR',1000,590,1590,
+                'kundin@example.com','<html></html>','Rechnung','abc','2026-09-23T10:00:00Z')"""
+    )
+    for anweisung, erwartet in (
+        ("UPDATE rechnungen SET gesamt_cents=1 WHERE id='r1'", "rechnung_ist_unveraenderlich"),
+        ("DELETE FROM rechnungen WHERE id='r1'", "rechnung_ist_aufbewahrungspflichtig"),
+    ):
+        try:
+            db.execute(anweisung)
+        except sqlite3.IntegrityError as exc:
+            if erwartet not in str(exc):
+                raise SystemExit(f"FEHLER: falscher Rechnungs-Triggerfehler: {exc}") from exc
+        else:
+            raise SystemExit(f"FEHLER: D1 liess '{anweisung}' zu - Rechnung waere veraenderbar")
+
+    try:
+        db.execute(
+            """INSERT INTO rechnungen
+            (id,order_id,rechnungsnummer,ausgestellt_am,waehrung,warenwert_cents,versand_cents,
+             gesamt_cents,html,text,pruefsumme,erstellt_am)
+            VALUES ('r2','ord-rech','D119-TEST-0002','2026-09-23T11:00:00Z','EUR',1000,590,1590,
+                    '<html></html>','Rechnung','def','2026-09-23T11:00:00Z')"""
+        )
+    except sqlite3.IntegrityError:
+        pass
+    else:
+        raise SystemExit("FEHLER: zweite Rechnung zur selben Bestellung wurde zugelassen")
+
     print(
         f"D1-Migrationskette: OK (schema + {len(MIGRATIONS)} Migrationen bis "
         f"{MIGRATIONS[-1].stem if MIGRATIONS else '-'}, inkl. Durable-Rental-Materialisierung, "
-        "Rental-Group-Lifecycle, Operations-Cases, Alert-Dedupe und Kundenkonto)"
+        "Rental-Group-Lifecycle, Operations-Cases, Alert-Dedupe, Kundenkonto und "
+        "unveraenderlichem Rechnungsarchiv)"
     )
 
 

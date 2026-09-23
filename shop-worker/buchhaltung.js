@@ -224,15 +224,36 @@ async function jahresUmsatzCents(env, jahr) {
 
 // Die Rechnung ist wortgleich zur Bestellbestaetigung, nur als Seite zum
 // Ausdrucken oder Ablegen als PDF.
+//
+// Zuerst wird die archivierte Fassung gesucht: die ist der Text, der beim
+// Kunden gelandet ist, und aendert sich nicht mehr, auch wenn die Bestellung
+// spaeter im Admin angefasst wird. Nur wenn es keine gibt (etwa weil die
+// Bestellung aus der Zeit vor dem Archiv stammt), wird neu erzeugt - dann
+// aber sichtbar gekennzeichnet, damit niemand eine erzeugte Fassung fuer
+// die ausgestellte haelt.
 export async function rechnungHtml(env, orderId) {
+  const archiviert = await env.DB.prepare(`SELECT html FROM rechnungen
+    WHERE order_id=? OR rechnungsnummer=? LIMIT 1`)
+    .bind(String(orderId), String(orderId)).first();
+  if (archiviert?.html) return druckfassung(String(archiviert.html));
+
   const bestellung = await loadOrderForConfirmation(env, orderId);
   if (!bestellung) throw new BuchhaltungError("BESTELLUNG_NICHT_GEFUNDEN", 404);
   const absender = mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200);
   const mail = formatOrderConfirmation(bestellung, { contactEmail: absender });
-  return mail.html.replace(
-    "</head>",
-    "<style>@media print{body{background:#fff}}</style></head>",
-  );
+  return druckfassung(mail.html, true);
+}
+
+function druckfassung(html, erzeugt = false) {
+  const hinweis = erzeugt
+    ? '<p style="margin:0;padding:10px 14px;background:#fdf3d8;border-left:3px solid #c9a227;'
+      + 'font:13px/1.5 \'Helvetica Neue\',Helvetica,Arial,sans-serif;color:#4a463f;">'
+      + 'Aus den Bestelldaten erzeugte Fassung — zu dieser Bestellung liegt keine archivierte Rechnung vor.</p>'
+    : "";
+  return html
+    .replace("</head>", "<style>@media print{body{background:#fff}.hinweis{display:none}}</style></head>")
+    .replace("<body", hinweis ? `<body data-erzeugt="1"` : "<body")
+    .replace(/(<body[^>]*>)/, `$1${hinweis ? `<div class="hinweis">${hinweis}</div>` : ""}`);
 }
 
 export function istBuchhaltungsRoute(url) {
@@ -272,6 +293,32 @@ export async function handleBuchhaltung(request, env, url, reqId = crypto.random
       return antwort(csv, "text/csv; charset=utf-8", 200, origin, {
         "Content-Disposition": `attachment; filename="disorder119-bestellungen-${jahr}.csv"`,
       });
+    }
+
+    if (pfad === "/admin/buchhaltung/rechnungen") {
+      const jahr = jahrAusText(url.searchParams.get("jahr") || new Date().getUTCFullYear());
+      const liste = await env.DB.prepare(`SELECT order_id,rechnungsnummer,ausgestellt_am,
+          waehrung,warenwert_cents,versand_cents,gesamt_cents,pruefsumme
+        FROM rechnungen WHERE ausgestellt_am>=? AND ausgestellt_am<?
+        ORDER BY ausgestellt_am`)
+        .bind(`${jahr}-01-01T00:00:00.000Z`, `${jahr + 1}-01-01T00:00:00.000Z`).all();
+      const zeilen = (liste?.results || []).map(row => ({
+        rechnungsnummer: String(row.rechnungsnummer),
+        ausgestelltAm: String(row.ausgestellt_am),
+        waehrung: row.waehrung || "EUR",
+        warenwertCents: Number(row.warenwert_cents || 0),
+        versandCents: Number(row.versand_cents || 0),
+        gesamtCents: Number(row.gesamt_cents || 0),
+        pruefsumme: String(row.pruefsumme || ""),
+        weg: `/admin/buchhaltung/rechnung/${encodeURIComponent(String(row.order_id))}`,
+      }));
+      return json({
+        ok: true,
+        jahr,
+        anzahl: zeilen.length,
+        gesamtCents: zeilen.reduce((summe, z) => summe + z.gesamtCents, 0),
+        rechnungen: zeilen,
+      }, 200, origin);
     }
 
     const rechnungTreffer = /^\/admin\/buchhaltung\/rechnung\/([^/]+)$/.exec(pfad);

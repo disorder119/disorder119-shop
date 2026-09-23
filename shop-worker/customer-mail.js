@@ -355,6 +355,13 @@ export async function sendMail(env, message = {}) {
   const replyTo = normalizeEmail(message.replyTo || env.MAIL_REPLY_TO || "");
   if (replyTo) payload.replyTo = { email: replyTo };
   if (message.tag) payload.tags = [safeText(message.tag, 40)];
+  // Der Durchschlag wird je Nachricht ausdruecklich angefordert, nie pauschal:
+  // ein Anmeldelink oder eine Auskunft nach Art. 15 DSGVO darf niemals
+  // nebenbei in einem zweiten Postfach landen.
+  if (message.kopieAnShop) {
+    const kopie = normalizeEmail(env.MAIL_BCC || "");
+    if (kopie && kopie !== to) payload.bcc = [{ email: kopie }];
+  }
 
   let response;
   try {
@@ -470,6 +477,9 @@ export async function sendOrderConfirmation(env, orderId, reqId = crypto.randomU
       html: message.html,
       text: message.text,
       tag: "order-confirmation",
+      // Diese eine Mail ist zugleich die Rechnung, deshalb geht ein
+      // Durchschlag ins Shop-Postfach.
+      kopieAnShop: true,
     });
     if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
   } catch (err) {
@@ -477,11 +487,63 @@ export async function sendOrderConfirmation(env, orderId, reqId = crypto.randomU
     throw new Error(`order_confirmation_failed:${safeText(err?.message || "unknown", 120)}`);
   }
 
+  // Erst nach erfolgreichem Versand ins Archiv: eine Rechnung gilt als
+  // ausgestellt, wenn sie beim Kunden ist. Scheitert das Schreiben, hat die
+  // Kundin ihre Rechnung trotzdem - deshalb wird das nur gemeldet, nicht
+  // geworfen, und die Buchhaltung faellt auf die erzeugte Fassung zurueck.
+  const archiviert = await archiviereRechnung(env, order, message, recipient);
+
   try {
     await markConfirmationSent(env, claim.claimId);
-    return { sent: true, recorded: true };
+    return { sent: true, recorded: true, archiviert };
   } catch {
-    return { sent: true, recorded: false };
+    return { sent: true, recorded: false, archiviert };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rechnungsarchiv
+// ---------------------------------------------------------------------------
+
+export async function pruefsumme(text) {
+  const bytes = new TextEncoder().encode(String(text || ""));
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function archiviereRechnung(env, order, message, recipient) {
+  try {
+    const jetzt = new Date().toISOString();
+    const warenwert = Number(order.subtotal_cents ?? 0);
+    const versand = Number(order.shipping_cents ?? 0);
+    const ergebnis = await env.DB.prepare(`INSERT OR IGNORE INTO rechnungen
+      (id,order_id,rechnungsnummer,ausgestellt_am,waehrung,warenwert_cents,versand_cents,
+       gesamt_cents,empfaenger_email,html,text,pruefsumme,erstellt_am)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(
+        crypto.randomUUID(),
+        String(order.id),
+        safeText(order.order_number || "", 80),
+        String(order.created_at || jetzt),
+        order.currency || "EUR",
+        warenwert,
+        versand,
+        Number(order.total_cents ?? warenwert + versand),
+        recipient,
+        message.html,
+        message.text,
+        await pruefsumme(message.text),
+        jetzt,
+      ).run();
+    return Boolean(ergebnis?.meta?.changes);
+  } catch (err) {
+    console.error(JSON.stringify({
+      level: "error",
+      event: "rechnung_nicht_archiviert",
+      orderId: String(order?.id || ""),
+      message: safeText(err?.message || "unknown", 160),
+    }));
+    return false;
   }
 }
 
