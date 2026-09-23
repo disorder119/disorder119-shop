@@ -72,7 +72,6 @@ def test_match(driver) -> None:
 
 
 def test_chaos(driver) -> None:
-    # /chaos/ stays the technical route; the user-facing mode is Universe.
     driver.set_window_size(390, 844)
     driver.get(urljoin(BASE_URL, "chaos/"))
     wait(driver, lambda d: d.find_element(By.ID, "chaosView").is_displayed(), "Universum sichtbar")
@@ -98,9 +97,9 @@ def test_chaos(driver) -> None:
     if before < 8 or after < 8:
         fail(f"Universum: zu wenige Objekte vor/nach Shuffle ({before}/{after})")
 
-    wait(driver, lambda d: d.execute_script("return !!window.D119SecretGames"), "Dodge-the-Drop-System geladen")
+    wait(driver, lambda d: d.execute_script("return !!window.D119SecretGames"), "Zero-G-Runway-System geladen")
     version = driver.execute_script("return window.D119SecretGames && window.D119SecretGames.version")
-    if version != "dodge-the-drop-v1":
+    if version != "zero-g-runway-v1":
         fail(f"Universum: falsche Game-Version {version!r}")
 
     if driver.find_elements(By.CSS_SELECTOR, ".universe-shooting-star, .d119-warp-control, #universeTurbo, .d119-secret-relic"):
@@ -110,8 +109,6 @@ def test_chaos(driver) -> None:
     if not driver.find_element(By.ID, "d119SecretGames").get_attribute("hidden"):
         fail("Universum: Game-Overlay ist ohne Start sichtbar")
 
-    # Regression for the iPhone screenshot: Universe visuals must not create
-    # Safari's blue text/image selection handles while the user drags.
     user_select = driver.find_element(By.ID, "chaosScreen").value_of_css_property("user-select")
     if user_select != "none":
         fail(f"Universum: user-select ist {user_select!r} statt none")
@@ -123,10 +120,8 @@ def test_chaos(driver) -> None:
     if not selection_blocked:
         fail("Universum: selectstart wird nicht blockiert")
 
-    # Desktop regression. Headless Chrome can report a coarse pointer even at
-    # desktop width, so the dynamic visual hint may intentionally stay on its
-    # touch copy. The canvas aria-label is device-independent and must expose
-    # the new desktop controls. We still execute real mouse/right-click events.
+    # Desktop navigation remains mouse-look without a held button; right click
+    # must never open a product.
     driver.set_window_size(1280, 800)
     driver.get(urljoin(BASE_URL, "chaos/"))
     wait(driver, lambda d: d.find_element(By.ID, "chaosView").is_displayed(), "Universum Desktop sichtbar")
@@ -144,47 +139,54 @@ def test_chaos(driver) -> None:
         fail("Universum Desktop: Rechtsklick hat einen Artikel geöffnet")
     assert_no_js_exceptions(driver, "Universum Desktop Mouse-Look")
 
-    # Direct link is deterministic CI only. It must now enter the clothing
-    # dodge game; old ?game=raid links are backwards-compatible aliases.
-    driver.get(urljoin(BASE_URL, "chaos/?game=dodge"))
-    wait(driver, lambda d: d.execute_script("return !!window.D119SecretGames"), "Dodge the Drop am Direktlink geladen")
+    # Direct link deterministically enters Zero-G Runway. Verify gate, username,
+    # fashion-slot HUD, mouse steering, touch steering and the real catalogue.
+    driver.get(urljoin(BASE_URL, "chaos/?game=zero"))
+    wait(driver, lambda d: d.execute_script("return !!window.D119SecretGames"), "Zero-G Runway am Direktlink geladen")
     wait(
         driver,
         lambda d: d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-view='gate']").is_displayed(),
-        "Dodge-the-Drop-Startscreen sichtbar",
+        "Zero-G-Startscreen sichtbar",
     )
+    username = driver.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-player-name]")
+    username.clear()
+    username.send_keys("CI_PLAYER")
     driver.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-action='start']").click()
     wait(
         driver,
         lambda d: d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-view='stage']").is_displayed(),
-        "Dodge the Drop startet",
+        "Zero-G Runway startet",
     )
-    canvas = driver.find_element(By.CSS_SELECTOR, ".d119-dodge-canvas")
+    canvas = driver.find_element(By.CSS_SELECTOR, ".d119-runway-canvas")
     if not canvas.is_displayed():
-        fail("Universum: Dodge-the-Drop-Canvas ist nicht sichtbar")
+        fail("Universum: Zero-G-Runway-Canvas ist nicht sichtbar")
     if canvas.value_of_css_property("touch-action") != "none":
-        fail("Universum: Dodge-Canvas besitzt touch-action:none nicht")
+        fail("Universum: Zero-G-Canvas besitzt touch-action:none nicht")
+    if driver.find_element(By.CSS_SELECTOR, "[data-target]").text.strip() != "TOP":
+        fail("Zero-G Runway: erster Fashion-Slot ist nicht TOP")
+    if len(driver.find_elements(By.CSS_SELECTOR, ".d119-dock-slot")) != 4:
+        fail("Zero-G Runway: Look-Dock besitzt nicht vier Slots")
 
     rect = canvas.rect
-    cx = rect["x"] + rect["width"] * 0.23
-    cy = rect["y"] + rect["height"] * 0.76
-    # Mouse movement must steer without pointerdown/click. Then exercise the
-    # touch path as well; neither is allowed to throw a browser exception.
+    cx = rect["x"] + rect["width"] * 0.26
+    cy = rect["y"] + rect["height"] * 0.74
     driver.execute_script(
-        "var c=document.querySelector('.d119-dodge-canvas');"
+        "var c=document.querySelector('.d119-runway-canvas');"
         "c.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,cancelable:true,clientX:arguments[0],clientY:arguments[1],pointerId:71,pointerType:'mouse',buttons:0}));"
-        "c.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,clientX:arguments[0]+25,clientY:arguments[1]-35,pointerId:72,pointerType:'touch'}));"
-        "c.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,cancelable:true,clientX:arguments[0]+55,clientY:arguments[1]-55,pointerId:72,pointerType:'touch'}));",
+        "c.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,clientX:arguments[0]+30,clientY:arguments[1]-30,pointerId:72,pointerType:'touch'}));"
+        "c.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,cancelable:true,clientX:arguments[0]+50,clientY:arguments[1]-50,pointerId:72,pointerType:'touch'}));",
         cx,
         cy,
     )
     wait(
         driver,
-        lambda d: int(d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-hud='time']").text or "42") < 42,
-        "Dodge the Drop laeuft",
+        lambda d: int(d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-hud='time']").text or "52") < 52,
+        "Zero-G Runway laeuft",
     )
-    assert_no_horizontal_overflow(driver, "Universum Dodge the Drop")
-    assert_no_js_exceptions(driver, "Universum Dodge the Drop")
+    if driver.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-hud='score']").text.strip() == "":
+        fail("Zero-G Runway: Score-HUD fehlt")
+    assert_no_horizontal_overflow(driver, "Universum Zero-G Runway")
+    assert_no_js_exceptions(driver, "Universum Zero-G Runway")
 
 
 def test_baukasten(driver) -> None:
@@ -253,7 +255,7 @@ def run_case(test_fn) -> None:
 def main() -> None:
     for test_fn in (test_match, test_chaos, test_baukasten, test_localized_direct_routes):
         run_case(test_fn)
-    print("Protected-Mode Browser-Smoke: OK — Match, Universe Desktop-Mouse-Look, Dodge the Drop + iOS selection guard und Baukasten in echtem Chromium getestet.")
+    print("Protected-Mode Browser-Smoke: OK — Match, Universe Desktop-Mouse-Look, Zero-G Runway + iOS selection guard und Baukasten in echtem Chromium getestet.")
 
 
 if __name__ == "__main__":
