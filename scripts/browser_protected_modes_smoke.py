@@ -120,8 +120,6 @@ def test_chaos(driver) -> None:
     if not selection_blocked:
         fail("Universum: selectstart wird nicht blockiert")
 
-    # Desktop navigation remains mouse-look without a held button; right click
-    # must never open a product.
     driver.set_window_size(1280, 800)
     driver.get(urljoin(BASE_URL, "chaos/"))
     wait(driver, lambda d: d.find_element(By.ID, "chaosView").is_displayed(), "Universum Desktop sichtbar")
@@ -139,8 +137,6 @@ def test_chaos(driver) -> None:
         fail("Universum Desktop: Rechtsklick hat einen Artikel geöffnet")
     assert_no_js_exceptions(driver, "Universum Desktop Mouse-Look")
 
-    # Direct link deterministically enters Zero-G Runway. Verify gate, username,
-    # fashion-slot HUD, mouse steering, touch steering and the real catalogue.
     driver.get(urljoin(BASE_URL, "chaos/?game=zero"))
     wait(driver, lambda d: d.execute_script("return !!window.D119SecretGames"), "Zero-G Runway am Direktlink geladen")
     wait(
@@ -157,9 +153,13 @@ def test_chaos(driver) -> None:
         lambda d: d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-view='stage']").is_displayed(),
         "Zero-G Runway startet",
     )
+    wait(
+        driver,
+        lambda d: bool(d.find_elements(By.CSS_SELECTOR, ".d119-runway-canvas"))
+        and d.find_element(By.CSS_SELECTOR, ".d119-runway-canvas").is_displayed(),
+        "Zero-G Runway Canvas bereit",
+    )
     canvas = driver.find_element(By.CSS_SELECTOR, ".d119-runway-canvas")
-    if not canvas.is_displayed():
-        fail("Universum: Zero-G-Runway-Canvas ist nicht sichtbar")
     if canvas.value_of_css_property("touch-action") != "none":
         fail("Universum: Zero-G-Canvas besitzt touch-action:none nicht")
     if driver.find_element(By.CSS_SELECTOR, "[data-target]").text.strip() != "TOP":
