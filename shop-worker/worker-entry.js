@@ -15,6 +15,7 @@ import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
 import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications.js";
 import { sendOrderConfirmation, sendOrderConfirmationByProviderOrder } from "./customer-mail.js";
+import { handleAccountRequest, isAccountRoute } from "./customer-account.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
 import {
   CouponCheckoutError,
@@ -179,6 +180,12 @@ export default {
 
       if (url.pathname === "/admin/alerts/sync") {
         return finish(await handleAdminAlerts(request, runtimeEnv, url, reqId, origin));
+      }
+
+      // Das Kundenkonto laeuft vor den Shop-Routen, weil worker.js /account/
+      // bisher bewusst mit 501 beantwortet hat.
+      if (isAccountRoute(url)) {
+        return finish(await handleAccountRequest(request, runtimeEnv, url, reqId, origin));
       }
 
       if (url.pathname === "/admin/notifications/telegram/test" || url.pathname === "/admin/notifications/mail/test") {

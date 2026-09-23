@@ -6,15 +6,11 @@ import sqlite3
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
-FILES = [
-    BASE / "shop-worker" / "schema.sql",
-    BASE / "shop-worker" / "migrations" / "0002_commerce_foundation.sql",
-    BASE / "shop-worker" / "migrations" / "0003_state_integrity.sql",
-    BASE / "shop-worker" / "migrations" / "0004_admin_operations.sql",
-    BASE / "shop-worker" / "migrations" / "0005_rental_groups.sql",
-    BASE / "shop-worker" / "migrations" / "0006_operations_cases.sql",
-    BASE / "shop-worker" / "migrations" / "0007_operations_automation.sql",
-]
+# Alle Migrationen in Nummernreihenfolge statt einer Liste von Hand: die Liste
+# war bei 0007 stehen geblieben, wodurch 0008 bis 0010 ungeprueft blieben. Ein
+# Glob kann dieses Zurueckbleiben nicht wiederholen.
+MIGRATIONS = sorted((BASE / "shop-worker" / "migrations").glob("[0-9][0-9][0-9][0-9]_*.sql"))
+FILES = [BASE / "shop-worker" / "schema.sql", *MIGRATIONS]
 
 
 def main() -> None:
@@ -215,9 +211,29 @@ def main() -> None:
     else:
         raise SystemExit("FEHLER: Ungueltiger Rental-Group-Statussprung wurde von D1 nicht blockiert")
 
+    # Kundenkonto: Anmeldelinks und Sitzungen muessen strukturell vorhanden sein,
+    # und je Adresse darf nur ein Anmeldelink gueltig bleiben.
+    for name in ("customer_login_tokens", "customer_sessions"):
+        if name not in tables:
+            raise SystemExit(f"FEHLER: Tabelle fehlt nach Migration: {name}")
+    db.execute(
+        """INSERT INTO customer_login_tokens (id,email_normalized,created_at,expires_at)
+        VALUES ('hash-alt','kundin@example.com','2026-09-05T10:00:00Z','2026-09-05T10:20:00Z')"""
+    )
+    db.execute(
+        """INSERT INTO customer_login_tokens (id,email_normalized,created_at,expires_at)
+        VALUES ('hash-neu','kundin@example.com','2026-09-05T10:05:00Z','2026-09-05T10:25:00Z')"""
+    )
+    offene = [row[0] for row in db.execute(
+        "SELECT id FROM customer_login_tokens WHERE email_normalized='kundin@example.com'"
+    )]
+    if offene != ["hash-neu"]:
+        raise SystemExit(f"FEHLER: Alter Anmeldelink bleibt neben dem neuen gueltig: {offene!r}")
+
     print(
-        "D1-Migrationskette: OK (schema + 0002 + 0003 + 0004 + 0005 + 0006 + 0007, "
-        "inkl. Durable-Rental-Materialisierung, Rental-Group-Lifecycle, Operations-Cases und Alert-Dedupe)"
+        f"D1-Migrationskette: OK (schema + {len(MIGRATIONS)} Migrationen bis "
+        f"{MIGRATIONS[-1].stem if MIGRATIONS else '-'}, inkl. Durable-Rental-Materialisierung, "
+        "Rental-Group-Lifecycle, Operations-Cases, Alert-Dedupe und Kundenkonto)"
     )
 
 
