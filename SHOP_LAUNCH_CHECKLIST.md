@@ -19,19 +19,23 @@ Diese Datei dokumentiert den technischen Stand fuer einen echten Checkout, ohne 
 1. Cloudflare Worker deployen.
 2. D1-Datenbank anlegen und `shop-worker/schema.sql` anwenden.
 3. D1 als Binding `DB` am Worker konfigurieren.
-4. Worker-Secrets setzen:
+4. Worker-Secrets setzen (`npx wrangler secret put NAME`):
    - `PAYPAL_CLIENT_ID`
    - `PAYPAL_CLIENT_SECRET`
    - `PAYPAL_WEBHOOK_ID`
    - `GITHUB_TOKEN` (nur Contents read/write fuer dieses Repository)
-   - `ADMIN_TOKEN`
-5. Fuer DHL zusaetzlich:
-   - `DHL_API_KEY`
-   - `DHL_API_SECRET`
-   - `DHL_PORTAL_USER`
-   - `DHL_PORTAL_PASSWORD`
-   - `DHL_BILLING_NUMBER`
-   - `DHL_SHIPPER_ADDRESS`
+   - `ADMIN_READ_TOKEN` und `ADMIN_WRITE_TOKEN` (getrennte Rollen; der alte
+     gemeinsame `ADMIN_TOKEN` funktioniert auf einem entfernten Worker nicht
+     mehr, siehe `backend-runtime.js`)
+   - `TURNSTILE_SECRET`
+   - `TELEGRAM_BOT_TOKEN` (optional, fuer die Verkaufsmeldung)
+   - `TELEGRAM_CHAT_ID` nur, wenn die automatische Verknuepfung nicht genutzt
+     wird: sonst reicht eine private Nachricht an den eigenen Bot, der Worker
+     merkt sich die Chat-ID selbst (`notifications.js`).
+5. DHL: Es gibt bisher **keine** DHL-Anbindung im Code, nur die Datenfelder
+   fuer Versandstatus und Sendungsnummer. Labels werden vorerst manuell im
+   DHL-Portal erzeugt und die Sendungsnummer im Admin eingetragen. Erst eine
+   echte Label-Integration braucht eigene DHL-Zugangsdaten.
 6. `PAYPAL_ENVIRONMENT=sandbox` am Worker setzen.
 7. `config/shop-config.json` setzen:
    - `paypalClientId`
