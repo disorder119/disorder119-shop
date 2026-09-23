@@ -891,11 +891,15 @@
     var payload = requestPayload();
     var bundleHash = stableHash(payload);
     payload.termsAcceptedAt = bundleAcceptanceTimestamp(bundleHash, acceptedAt);
-    fetch(String(SHOP_CONFIG.shopWorkerUrl).replace(/\/+$/, "") + "/rental-bundle", { // RUNTIME_AUDIT_ATOMIC_BUNDLE_POST
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": "rental-bundle-v2:" + bundleHash },
-      body: JSON.stringify(payload),
-      keepalive: true
+    schutzLaden().then(function (S) { return S.waechter().token(); }).then(function (token) {
+      var headers = { "Content-Type": "application/json", "Idempotency-Key": "rental-bundle-v2:" + bundleHash };
+      if (token) headers["X-Turnstile-Token"] = token;
+      return fetch(String(SHOP_CONFIG.shopWorkerUrl).replace(/\/+$/, "") + "/rental-bundle", { // RUNTIME_AUDIT_ATOMIC_BUNDLE_POST
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(payload),
+        keepalive: true
+      });
     }).then(function (response) {
       return response.text().then(function (raw) {
         var data = {};
@@ -908,6 +912,21 @@
       showToast(t("serverSaved"));
     }).catch(function () {
       showToast(t("serverSaveFailed"));
+    });
+  }
+
+  // Der Server reserviert fuer jede Mietanfrage Stuecke. Im Livebetrieb nimmt
+  // er sie deshalb nur mit Turnstile-Token an - sonst koennte ein Skript den
+  // ganzen Verleih blockieren. schutz.js wird erst beim Absenden geladen.
+  function schutzLaden() {
+    if (window.D119Schutz) return Promise.resolve(window.D119Schutz);
+    return new Promise(function (ok, nein) {
+      var s = document.createElement("script");
+      s.src = "/assets/schutz.js";
+      s.async = true;
+      s.onload = function () { if (window.D119Schutz) ok(window.D119Schutz); else nein(new Error("schutz_fehlt")); };
+      s.onerror = function () { nein(new Error("schutz_nicht_ladbar")); };
+      document.head.appendChild(s);
     });
   }
 

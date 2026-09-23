@@ -225,10 +225,22 @@ def main() -> None:
         VALUES ('hash-neu','kundin@example.com','2026-09-05T10:05:00Z','2026-09-05T10:25:00Z')"""
     )
     offene = [row[0] for row in db.execute(
-        "SELECT id FROM customer_login_tokens WHERE email_normalized='kundin@example.com'"
+        "SELECT id FROM customer_login_tokens WHERE email_normalized='kundin@example.com' AND used_at IS NULL"
     )]
     if offene != ["hash-neu"]:
         raise SystemExit(f"FEHLER: Alter Anmeldelink bleibt neben dem neuen gueltig: {offene!r}")
+    # Der alte Link muss entwertet, aber noch vorhanden sein - sonst zaehlt die
+    # Grenze je Adresse nie mehr als einen Link, und ein fremdes Postfach
+    # liesse sich mit Anmeldemails fluten.
+    gezaehlt = db.execute(
+        "SELECT COUNT(*) FROM customer_login_tokens WHERE email_normalized='kundin@example.com'"
+    ).fetchone()[0]
+    if gezaehlt != 2:
+        raise SystemExit(f"FEHLER: Alter Anmeldelink wurde geloescht statt entwertet ({gezaehlt} statt 2)")
+    login_indexe = {row[1] for row in db.execute("PRAGMA index_list(customer_login_tokens)")}
+    for name in ("idx_login_tokens_ip", "idx_login_tokens_created"):
+        if name not in login_indexe:
+            raise SystemExit(f"FEHLER: Index fuer Anmelde-Grenzen fehlt: {name}")
 
     # Eine ausgestellte Rechnung muss unveraenderlich sein (GoBD). Korrekturen
     # laufen ueber eine Gutschrift, nicht ueber das Ueberschreiben des Originals.

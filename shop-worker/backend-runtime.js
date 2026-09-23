@@ -23,10 +23,14 @@ const EXACT_METHODS = Object.freeze({
   "/rental-requests": "GET",
 });
 
+// Die Konto-Anmeldung schreibt nicht nur in die Datenbank, sie verschickt
+// auch eine Mail - ohne Bot-Schutz waere das Tageskontingent des Shops mit
+// einem Skript leer, und Bestellbestaetigungen kaemen nicht mehr an.
 const HUMAN_LIVE_WRITES = new Set([
   "/rental-request",
   "/rental-bundle",
   "/create-order",
+  "/account/login",
 ]);
 
 const COMMERCE_LIVE_WRITES = new Set([
@@ -41,6 +45,7 @@ const LIVE_DB_WRITES = new Set([
   "/create-order",
   "/capture-order",
   "/paypal-webhook",
+  "/account/login",
 ]);
 
 const ADMIN_READ_METHODS = new Set(["GET", "HEAD"]);
@@ -241,7 +246,10 @@ async function assertRequestBodySize(request) {
   }
 }
 
-function assertLiveControls(env, pathname) {
+function assertLiveControls(env, rawPathname) {
+  // Das Konto-Routing schneidet Schraegstriche am Ende ab: "/account/login/"
+  // landet in derselben Anmeldung und darf diese Pruefung nicht umgehen.
+  const pathname = String(rawPathname || "").replace(/\/+$/, "") || "/";
   if (!isLive(env) || !LIVE_DB_WRITES.has(pathname)) return;
   if (!env.DB) throw new RuntimeGuardError("LIVE_BACKEND_NOT_READY", 503);
 

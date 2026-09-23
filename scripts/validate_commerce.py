@@ -176,8 +176,13 @@ def main() -> None:
     if features.get("paypalCheckout"):
         if not cfg.get("paypalClientId") or not cfg.get("shopWorkerUrl"):
             errors.append("paypalCheckout darf ohne Client-ID und Worker-URL nicht aktiviert sein")
-    if features.get("customerAccounts") and not cfg.get("authProvider"):
-        errors.append("customerAccounts darf ohne externen Auth-Provider nicht aktiviert sein")
+    # Die Anmeldung laeuft ueber den eigenen Worker (Link per E-Mail, siehe
+    # shop-worker/customer-account.js) - ein externer Auth-Provider ist nicht
+    # mehr noetig, wohl aber die Worker-Adresse.
+    if features.get("customerAccounts") and not cfg.get("shopWorkerUrl"):
+        errors.append("customerAccounts braucht shopWorkerUrl - die Anmeldung laeuft ueber den Worker")
+    if cfg.get("environment") == "live" and cfg.get("shopWorkerUrl") and not cfg.get("turnstileSiteKey"):
+        errors.append("environment=live braucht turnstileSiteKey - der Live-Worker lehnt Kauf, Miete und Anmeldung ohne Token ab")
 
     for sale, daily in [(12500, 1250), (25000, 2500), (49000, 4900)]:
         if expected_daily_cents(sale) != daily:

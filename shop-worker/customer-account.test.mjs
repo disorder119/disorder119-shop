@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   AccountError,
+  LOGIN_DAILY_CAP,
   LOGIN_RATE_LIMIT_PER_HOUR,
+  LOGIN_RATE_LIMIT_PER_IP_HOUR,
   handleAccountRequest,
+  loginDailyCap,
   randomToken,
   redeemLoginToken,
   requestAccountDeletion,
@@ -43,14 +46,30 @@ function fakeDb(seed = {}) {
     const s = sql.replace(/\s+/g, " ").trim();
     state.statements.push(s);
 
+    if (s.startsWith("DELETE FROM customer_login_tokens WHERE created_at<?")) {
+      const vorher = state.loginTokens.length;
+      state.loginTokens = state.loginTokens.filter(t => t.created_at >= args[0]);
+      return { changes: vorher - state.loginTokens.length };
+    }
     if (s.startsWith("SELECT COUNT(*) AS anzahl FROM customer_login_tokens")) {
-      const [email, since] = args;
-      return { first: { anzahl: state.loginTokens.filter(t => t.email_normalized === email && t.created_at >= since).length } };
+      if (s.includes("WHERE email_normalized=?")) {
+        const [email, since] = args;
+        return { first: { anzahl: state.loginTokens.filter(t => t.email_normalized === email && t.created_at >= since).length } };
+      }
+      if (s.includes("WHERE request_ip_hash=?")) {
+        const [ip, since] = args;
+        return { first: { anzahl: state.loginTokens.filter(t => t.request_ip_hash === ip && t.created_at >= since).length } };
+      }
+      const [since] = args;
+      return { first: { anzahl: state.loginTokens.filter(t => t.created_at >= since).length } };
     }
     if (s.startsWith("INSERT INTO customer_login_tokens")) {
       const [id, email, created, expires, ipHash] = args;
-      // Der Trigger der Migration haelt je Adresse nur den neuesten Link.
-      state.loginTokens = state.loginTokens.filter(t => t.email_normalized !== email);
+      // Der Trigger (Migration 0013) entwertet aeltere Links derselben
+      // Adresse, loescht sie aber nicht - die Grenzen zaehlen sie weiter.
+      for (const t of state.loginTokens) {
+        if (t.email_normalized === email && !t.used_at) t.used_at = created;
+      }
       state.loginTokens.push({ id, email_normalized: email, created_at: created, expires_at: expires, request_ip_hash: ipHash, used_at: null });
       return { changes: 1 };
     }
@@ -208,12 +227,13 @@ test("the login mail carries the link and only one link stays valid", async () =
     await requestLoginLink({ ...READY, DB: db }, "Kundin@Example.com", "req-2");
     await requestLoginLink({ ...READY, DB: db }, "kundin@example.com", "req-3");
     assert.equal(mail.sent.length, 2);
-    assert.equal(db.loginTokens.length, 1);
+    const gueltig = db.loginTokens.filter(t => !t.used_at);
+    assert.equal(gueltig.length, 1);
     assert.match(mail.sent[0].subject, /Anmeldelink/);
     assert.match(mail.sent[0].textContent, /anmeldung=/);
     // Das Token steht im Link, der Abdruck in der Datenbank - nie andersherum.
     const link = /anmeldung=([A-Za-z0-9_%-]+)/.exec(mail.sent[1].textContent)[1];
-    assert.equal(db.loginTokens[0].id, await tokenFingerprint(decodeURIComponent(link)));
+    assert.equal(gueltig[0].id, await tokenFingerprint(decodeURIComponent(link)));
   } finally {
     mail.restore();
   }
@@ -232,6 +252,149 @@ test("a postbox cannot be flooded with login links", async () => {
   try {
     const result = await requestLoginLink({ ...READY, DB: db }, "kundin@example.com", "req-4");
     assert.deepEqual(result, { queued: false, reason: "RATE_LIMITED" });
+    assert.equal(mail.sent.length, 0);
+  } finally {
+    mail.restore();
+  }
+});
+
+test("requesting links one after another stops at the hourly limit", async () => {
+  // Genau diese Luecke hatte der Loesch-Trigger aus 0011: jeder neue Link
+  // loeschte die alten, die Grenze sah nie mehr als einen.
+  const db = fakeDb();
+  const mail = stubMail();
+  try {
+    const ergebnisse = [];
+    for (let i = 0; i <= LOGIN_RATE_LIMIT_PER_HOUR; i++) {
+      ergebnisse.push(await requestLoginLink({ ...READY, DB: db }, "opfer@example.com", `req-f${i}`));
+    }
+    assert.equal(mail.sent.length, LOGIN_RATE_LIMIT_PER_HOUR);
+    assert.deepEqual(ergebnisse.at(-1), { queued: false, reason: "RATE_LIMITED" });
+  } finally {
+    mail.restore();
+  }
+});
+
+test("one connection cannot mail many different addresses", async () => {
+  const db = fakeDb();
+  const mail = stubMail();
+  try {
+    let letztes;
+    for (let i = 0; i <= LOGIN_RATE_LIMIT_PER_IP_HOUR; i++) {
+      letztes = await requestLoginLink({ ...READY, DB: db }, `person${i}@example.com`, `req-ip${i}`, "abdruck-1");
+    }
+    assert.equal(mail.sent.length, LOGIN_RATE_LIMIT_PER_IP_HOUR);
+    assert.deepEqual(letztes, { queued: false, reason: "IP_RATE_LIMITED" });
+    // Ein anderer Anschluss ist davon nicht betroffen.
+    const anderer = await requestLoginLink({ ...READY, DB: db }, "jemand@example.com", "req-ip-b", "abdruck-2");
+    assert.equal(anderer.queued, true);
+  } finally {
+    mail.restore();
+  }
+});
+
+test("a daily cap keeps the mail quota free for order confirmations", async () => {
+  const jetzt = Date.now();
+  const bestehend = Array.from({ length: 3 }, (_, i) => ({
+    id: `tag-${i}`,
+    email_normalized: `frueher${i}@example.com`,
+    created_at: new Date(jetzt - (i + 2) * 3_600_000).toISOString(),
+    expires_at: new Date(jetzt - (i + 2) * 3_600_000 + 1_200_000).toISOString(),
+    request_ip_hash: `abdruck-${i}`,
+    used_at: null,
+  }));
+  const db = fakeDb({ loginTokens: bestehend });
+  const mail = stubMail();
+  const warnungen = [];
+  const warnOriginal = console.warn;
+  console.warn = zeile => warnungen.push(String(zeile));
+  try {
+    const result = await requestLoginLink({ ...READY, DB: db, LOGIN_DAILY_CAP: "3" }, "neu@example.com", "req-cap", "abdruck-neu");
+    assert.deepEqual(result, { queued: false, reason: "DAILY_CAP" });
+    assert.equal(mail.sent.length, 0);
+    assert.ok(warnungen.some(w => w.includes("login_daily_cap_reached")), "Erreichte Tagesgrenze muss im Log stehen");
+  } finally {
+    console.warn = warnOriginal;
+    mail.restore();
+  }
+  assert.equal(loginDailyCap({}), LOGIN_DAILY_CAP);
+  assert.equal(loginDailyCap({ LOGIN_DAILY_CAP: "abc" }), LOGIN_DAILY_CAP);
+  assert.equal(loginDailyCap({ LOGIN_DAILY_CAP: "-5" }), LOGIN_DAILY_CAP);
+  assert.equal(loginDailyCap({ LOGIN_DAILY_CAP: "250" }), 250);
+});
+
+test("links older than two days are cleaned up", async () => {
+  const alt = new Date(Date.now() - 3 * 86_400_000).toISOString();
+  const db = fakeDb({ loginTokens: [{ id: "uralt", email_normalized: "x@example.com", created_at: alt, expires_at: alt, used_at: null }] });
+  const mail = stubMail();
+  try {
+    await requestLoginLink({ ...READY, DB: db }, "kundin@example.com", "req-clean");
+    assert.equal(db.loginTokens.some(t => t.id === "uralt"), false);
+  } finally {
+    mail.restore();
+  }
+});
+
+function loginRequest(body, headers = {}) {
+  const url = new URL("https://worker.example/account/login");
+  return {
+    url,
+    request: new Request(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: ORIGIN, "CF-Connecting-IP": "203.0.113.7", ...headers },
+      body: JSON.stringify(body),
+    }),
+  };
+}
+
+test("login requires a Turnstile token once the secret is configured", async () => {
+  const original = globalThis.fetch;
+  const mails = [];
+  const pruefungen = [];
+  globalThis.fetch = async (url, init) => {
+    if (String(url).includes("turnstile/v0/siteverify")) {
+      pruefungen.push(init.body.get("response"));
+      return new Response(JSON.stringify({ success: init.body.get("response") === "echtes-token" }), { status: 200 });
+    }
+    mails.push(JSON.parse(init.body));
+    return new Response(JSON.stringify({ messageId: "<x>" }), { status: 201 });
+  };
+  try {
+    const env = { ...READY, TURNSTILE_SECRET: "geheim", DB: fakeDb() };
+
+    const ohne = loginRequest({ email: "kundin@example.com" });
+    const r1 = await handleAccountRequest(ohne.request, env, ohne.url, "req-t1", ORIGIN);
+    assert.equal(r1.status, 403);
+    assert.equal((await r1.json()).error, "TURNSTILE_REQUIRED");
+
+    const falsch = loginRequest({ email: "kundin@example.com", turnstileToken: "gefaelscht" });
+    const r2 = await handleAccountRequest(falsch.request, env, falsch.url, "req-t2", ORIGIN);
+    assert.equal(r2.status, 403);
+    assert.equal((await r2.json()).error, "TURNSTILE_FAILED");
+    assert.equal(mails.length, 0, "ohne gueltige Pruefung darf keine Mail rausgehen");
+
+    const echt = loginRequest({ email: "kundin@example.com", turnstileToken: "echtes-token" });
+    const r3 = await handleAccountRequest(echt.request, env, echt.url, "req-t3", ORIGIN);
+    assert.equal(r3.status, 200);
+    assert.equal(mails.length, 1);
+    assert.deepEqual(pruefungen, ["gefaelscht", "echtes-token"]);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("the rate limiter stops a connection before any database work", async () => {
+  const db = fakeDb();
+  const mail = stubMail();
+  const schluessel = [];
+  try {
+    const env = { ...READY, DB: db, RATE_LIMITER: { async limit({ key }) { schluessel.push(key); return { success: false }; } } };
+    const { request, url } = loginRequest({ email: "kundin@example.com" });
+    const response = await handleAccountRequest(request, env, url, "req-rl", ORIGIN);
+    assert.equal(response.status, 429);
+    assert.equal((await response.json()).error, "RATE_LIMITED");
+    assert.deepEqual(schluessel, ["account-login:203.0.113.7"]);
+    assert.equal(db.statements.length, 0);
     assert.equal(mail.sent.length, 0);
   } finally {
     mail.restore();

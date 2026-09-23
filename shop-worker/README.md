@@ -142,34 +142,26 @@ Der PayPal-Webhook:
 
 ## D1 einrichten
 
-Migrationen in dieser Reihenfolge anwenden:
+Im Ordner `shop-worker`:
 
-1. `shop-worker/schema.sql` fuer bestehende Legacy-Installationen, falls noch nicht vorhanden.
-2. `shop-worker/migrations/0002_commerce_foundation.sql`.
-3. `shop-worker/migrations/0003_state_integrity.sql`.
-4. `shop-worker/migrations/0004_admin_operations.sql`.
-5. `shop-worker/migrations/0005_rental_groups.sql`.
-6. `shop-worker/migrations/0006_operations_cases.sql`.
-7. `shop-worker/migrations/0007_operations_automation.sql`.
-8. `shop-worker/migrations/0008_backend_hardening.sql`.
-9. Datenbank als Worker-Binding `DB` konfigurieren.
+1. `npx wrangler d1 create disorder119-shop` und die ausgegebene `database_id`
+   im vorbereiteten `[[d1_databases]]`-Block in `wrangler.toml` eintragen.
+2. `npx wrangler d1 execute disorder119-shop --remote --file=schema.sql`.
+3. `npx wrangler d1 migrations apply disorder119-shop --remote` wendet alle
+   Dateien in `migrations/` der Nummer nach an (derzeit 0002 bis 0013) und
+   merkt sich, welche schon gelaufen sind.
 
-Die CI fuehrt die komplette Kette inklusive `0008` zusaetzlich in einer frischen SQLite-Datenbank aus. Vor Produktion muss die Migration dennoch in einer Cloudflare-D1-Testumgebung durchgespielt und ein Backup/Restore-Verfahren getestet werden.
+Die CI fuehrt die komplette Kette (`scripts/test_d1_migrations.py`, alle Dateien per Glob) zusaetzlich in einer frischen SQLite-Datenbank aus. Vor Produktion muss die Migration dennoch in einer Cloudflare-D1-Testumgebung durchgespielt und ein Backup/Restore-Verfahren getestet werden.
 
 Die Migrationen sind fuer eine einmalige, geordnete Anwendung gedacht. Bereits angewendete `ALTER TABLE`-Migrationen duerfen nicht blind erneut ausgefuehrt werden. Vor einem produktiven Schemawechsel muss der erkannte Stand ueber `/admin/system` mit dem erwarteten Target abgeglichen werden.
 
 ## Kundenkonten
 
-Keine eigene Passwortdatenbank bauen. Vorgesehen ist ein externer Auth-Provider, bevorzugt Supabase Auth oder ein anderer OIDC-kompatibler Dienst.
+Anmeldung per Link aus der E-Mail, ohne Passwort (`customer-account.js`, Migrationen 0011 und 0013). Von Anmeldelinks und Sitzungen liegt nur der SHA-256-Abdruck in D1; die Sitzung steckt in einem HttpOnly-Cookie.
 
-Vorbereitet sind Datenmodelle fuer:
+Gegen Missbrauch: `RATE_LIMITER` je Anschluss, Turnstile (`TURNSTILE_SECRET`), hoechstens fuenf Links je Adresse und zehn je Anschluss pro Stunde sowie eine Tagesobergrenze fuer den ganzen Shop (`LOGIN_DAILY_CAP`, Standard 100), damit das Mail-Kontingent fuer Bestellbestaetigungen frei bleibt. Im Livebetrieb laesst `backend-runtime.js` die Anmeldung ohne Ratenbegrenzer und Turnstile gar nicht zu.
 
-- Kundenprofile und Adressen,
-- externe Auth-Subjects,
-- Bestell- und Mietverlauf,
-- Account-Export und Account-Loeschung.
-
-Die `/account/*`-Routen bleiben absichtlich deaktiviert und antworten mit `AUTH_PROVIDER_NOT_CONFIGURED`, bis echte JWT-/Session-Verifikation konfiguriert ist. Gastbestellung bleibt vorgesehen.
+Kundinnen sehen ihre Bestellungen mit Bildern und Sendungsverfolgung, pflegen ihre Adresse, erklaeren den Widerruf und koennen ihre Daten exportieren oder die Loeschung beantragen. Gastbestellung bleibt moeglich; beim ersten Anmelden werden fruehere Gastbestellungen derselben Adresse dem Konto zugeordnet.
 
 ## Abuse-Schutz
 
@@ -184,18 +176,9 @@ Schreibende Requests werden zentral auf maximal `MAX_REQUEST_BYTES` (aktuell 32 
 
 ## Versand, E-Mail und DHL
 
-Die Datenstruktur fuer Versandstatus und Tracking existiert, aber eine produktive DHL-Label-Integration und ein E-Mail-Provider sind derzeit **nicht** implementiert/konfiguriert. Es wird daher nichts automatisch als versendet bestaetigt und kein DHL-Label vorgetaeuscht.
+Bestellbestaetigung mit Rechnung und Widerrufsbelehrung sowie Versandbestaetigung mit Sendungsnummer laufen ueber Brevo (`customer-mail.js`, Secret `MAIL_API_KEY`). Versandscheine erzeugt `dhl.js`, sobald DHL-Geschaeftskundenzugang hinterlegt ist; ohne ihn wird das Label im DHL-Portal erstellt und die Sendungsnummer im Admin eingetragen. Einrichtung: `SHOP_LAUNCH_CHECKLIST.md`.
 
-Spaeter koennen auf Basis der gespeicherten Statuswechsel insbesondere folgende Nachrichten ausgeloest werden:
-
-- Bestellbestaetigung
-- Zahlungsbestaetigung
-- Versand-/Trackingbestaetigung
-- Retourenbestaetigung
-- Refund-Bestaetigung
-- Mietbestaetigung
-- Rueckgabe-Erinnerung
-- Kautionsfreigabe
+Noch nicht automatisiert sind Retouren-, Erstattungs- und Miet-Mails.
 
 ## Health, Logs und Fehler
 

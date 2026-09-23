@@ -348,6 +348,34 @@ test("live human writes fail closed without abuse controls", async () => {
   }));
 });
 
+test("live account login fails closed without bot protection, also with a trailing slash", async () => {
+  // Jede Anmeldung verschickt eine Mail aus dem Tageskontingent des Shops.
+  // Ohne Turnstile und Ratenbegrenzer liesse sich das Kontingent leeren.
+  for (const pfad of ["/account/login", "/account/login/"]) {
+    const request = () => new Request(`https://worker.example${pfad}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    await assert.rejects(
+      () => guardRuntimeRequest(request(), { PAYPAL_ENVIRONMENT: "live", DB: {}, RATE_LIMITER: { limit() {} } }),
+      err => err instanceof RuntimeGuardError && err.code === "LIVE_BACKEND_NOT_READY",
+      `${pfad} ohne Turnstile-Secret muss gesperrt sein`,
+    );
+    await assert.rejects(
+      () => guardRuntimeRequest(request(), { PAYPAL_ENVIRONMENT: "live", DB: {}, TURNSTILE_SECRET: "configured" }),
+      err => err instanceof RuntimeGuardError && err.code === "LIVE_BACKEND_NOT_READY",
+      `${pfad} ohne Ratenbegrenzer muss gesperrt sein`,
+    );
+    await assert.doesNotReject(() => guardRuntimeRequest(request(), {
+      PAYPAL_ENVIRONMENT: "live",
+      DB: {},
+      RATE_LIMITER: { limit() {} },
+      TURNSTILE_SECRET: "configured",
+    }));
+  }
+});
+
 test("live checkout refuses partial provider or catalog configuration", async () => {
   const request = new Request("https://worker.example/create-order", {
     method: "POST",

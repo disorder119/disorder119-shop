@@ -51,6 +51,8 @@
       loeschFrage: "Konto wirklich löschen lassen? Bestell- und Rechnungsdaten müssen wir gesetzlich aufbewahren (§ 147 AO). Dein Konto wird gesperrt und du wirst abgemeldet.",
       loeschOk: "Dein Löschwunsch ist eingegangen. Du wurdest abgemeldet.",
       fehler: "Das hat nicht geklappt. Versuch es bitte noch einmal.",
+      pruefungFehlgeschlagen: "Die Sicherheitsprüfung hat nicht geklappt. Lade die Seite bitte neu und versuch es noch einmal.",
+      zuOft: "Zu viele Versuche in kurzer Zeit. Warte bitte ein paar Minuten.",
       nichtAktiv: "Das Kundenkonto ist noch nicht freigeschaltet.",
       status: {
         PAID: "Bezahlt", PREPARING: "Wird gepackt", SHIPPED: "Unterwegs",
@@ -93,6 +95,8 @@
       loeschFrage: "Really request deletion? Order and invoice data must be kept by law. Your account will be locked and you will be signed out.",
       loeschOk: "Your deletion request has been received. You have been signed out.",
       fehler: "That did not work. Please try again.",
+      pruefungFehlgeschlagen: "The security check did not work. Please reload the page and try again.",
+      zuOft: "Too many attempts in a short time. Please wait a few minutes.",
       nichtAktiv: "Customer accounts are not active yet.",
       status: {
         PAID: "Paid", PREPARING: "Being packed", SHIPPED: "On its way",
@@ -135,6 +139,8 @@
       loeschFrage: "Demander vraiment la suppression ? Les données de commande et de facturation doivent être conservées par la loi. Ton compte sera bloqué et tu seras déconnecté.",
       loeschOk: "Ta demande de suppression est enregistrée. Tu as été déconnecté.",
       fehler: "Cela n'a pas fonctionné. Réessaie.",
+      pruefungFehlgeschlagen: "La vérification de sécurité a échoué. Recharge la page et réessaie.",
+      zuOft: "Trop de tentatives en peu de temps. Patiente quelques minutes.",
       nichtAktiv: "Le compte client n'est pas encore activé.",
       status: {
         PAID: "Payée", PREPARING: "En préparation", SHIPPED: "En route",
@@ -231,6 +237,9 @@
     zeigen(el("kontoAnmeldung"), true);
     zeigen(el("kontoBereich"), false);
     zeigen(el("kontoAbmelden"), false);
+    // Pruefung schon starten, waehrend die Adresse getippt wird - dann liegt
+    // beim Absenden ein Token bereit.
+    if (API) schutzLaden().then(function (S) { S.waechter(); }).catch(function () {});
   }
 
   function angemeldet(email) {
@@ -242,15 +251,41 @@
     profilLaden();
   }
 
+  // Jeder Anmeldelink ist eine Mail auf Kosten des Shop-Kontingents. Ohne
+  // Turnstile koennte ein Skript damit das Tageskontingent leeren - und dann
+  // kaeme auch keine Bestellbestaetigung mehr an.
+  function schutzLaden() {
+    if (window.D119Schutz) return Promise.resolve(window.D119Schutz);
+    return new Promise(function (ok, nein) {
+      var s = document.createElement("script");
+      s.src = "/assets/schutz.js";
+      s.async = true;
+      s.onload = function () { if (window.D119Schutz) ok(window.D119Schutz); else nein(new Error("schutz_fehlt")); };
+      s.onerror = function () { nein(new Error("schutz_nicht_ladbar")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function anmeldeFehlerText(fehler) {
+    var code = (fehler && (fehler.code || fehler.message)) || "";
+    if (/^TURNSTILE_|^turnstile_|^schutz_/.test(code)) return t.pruefungFehlgeschlagen;
+    if (code === "RATE_LIMITED") return t.zuOft;
+    return t.fehler;
+  }
+
   function anmeldelinkAnfordern(ereignis) {
     ereignis.preventDefault();
     var knopf = el("kontoLoginBtn");
     var email = el("kontoLoginEmail").value.trim();
     if (!email) return;
     knopf.disabled = true;
-    api("/account/login", { method: "POST", body: { email: email } })
+    schutzLaden()
+      .then(function (S) { return S.waechter().token(); })
+      .then(function (token) {
+        return api("/account/login", { method: "POST", body: { email: email, turnstileToken: token } });
+      })
       .then(function () { meldung("ok", t.loginGesendet); })
-      .catch(function () { meldung("fehler", t.fehler); })
+      .catch(function (fehler) { meldung("fehler", anmeldeFehlerText(fehler)); })
       .then(function () { knopf.disabled = false; });
   }
 

@@ -11,3 +11,21 @@ compatibility_date = "2025-01-01"
 [observability]
 enabled = true
 head_sampling_rate = 1
+
+# Ratenbegrenzer (RATE_LIMITER). Ohne ihn verweigert der Worker im
+# Livebetrieb Kauf, Miete und Konto-Anmeldung (backend-runtime.js). Gezaehlt
+# wird je Route und Anschluss: 20 Anfragen pro Minute reichen jedem Menschen
+# und bremsen jedes Skript. namespace_id ist eine frei gewaehlte Zahl, die im
+# Cloudflare-Konto nur einmal vorkommen darf.
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1190"
+simple = { limit = 20, period = 60 }
+
+# D1-Datenbank (DB). `npx wrangler d1 create disorder119-shop` gibt die
+# database_id aus - dann die vier Zeilen hier einkommentieren und die ID
+# eintragen. Die ID ist kein Geheimnis, sie darf ins Repo.
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "disorder119-shop"
+# database_id = "HIER-DIE-ID-EINTRAGEN"
