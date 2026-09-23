@@ -98,15 +98,17 @@ def test_chaos(driver) -> None:
     if before < 8 or after < 8:
         fail(f"Universum: zu wenige Objekte vor/nach Shuffle ({before}/{after})")
 
-    wait(driver, lambda d: d.execute_script("return !!window.D119SecretGames"), "Archive-Raid-System geladen")
+    wait(driver, lambda d: d.execute_script("return !!window.D119SecretGames"), "Dodge-the-Drop-System geladen")
     version = driver.execute_script("return window.D119SecretGames && window.D119SecretGames.version")
-    if version != "archive-raid-v3":
+    if version != "dodge-the-drop-v1":
         fail(f"Universum: falsche Game-Version {version!r}")
 
     if driver.find_elements(By.CSS_SELECTOR, ".universe-shooting-star, .d119-warp-control, #universeTurbo, .d119-secret-relic"):
         fail("Universum: alter sichtbarer Game-Einstieg ist wieder vorhanden")
+    if not driver.find_elements(By.CSS_SELECTOR, "[data-d119-game-launch]"):
+        fail("Universum: sichtbarer GAME-Launcher fehlt")
     if not driver.find_element(By.ID, "d119SecretGames").get_attribute("hidden"):
-        fail("Universum: Game-Overlay ist ohne Entdeckung sichtbar")
+        fail("Universum: Game-Overlay ist ohne Start sichtbar")
 
     # Regression for the iPhone screenshot: Universe visuals must not create
     # Safari's blue text/image selection handles while the user drags.
@@ -121,53 +123,66 @@ def test_chaos(driver) -> None:
     if not selection_blocked:
         fail("Universum: selectstart wird nicht blockiert")
 
-    # Use the direct link only for deterministic CI. Old game links are aliases
-    # to the same single game, while real visitors discover the ship at random.
-    driver.execute_script("localStorage.setItem('d119_secret_player','CI_PLAYER')")
-    driver.get(urljoin(BASE_URL, "chaos/?game=raid"))
-    wait(driver, lambda d: d.execute_script("return !!window.D119SecretGames"), "Archive Raid am Direktlink geladen")
+    # Desktop regression: merely moving the mouse across the Universe is a
+    # valid navigation input and right-click must never open a product modal.
+    driver.set_window_size(1280, 800)
+    driver.get(urljoin(BASE_URL, "chaos/"))
+    wait(driver, lambda d: d.find_element(By.ID, "chaosView").is_displayed(), "Universum Desktop sichtbar")
+    dismiss_cookie_note(driver)
+    hint = driver.find_element(By.ID, "chaosHint").get_attribute("textContent") or ""
+    if "Maus bewegen" not in hint or "Doppelklick" not in hint:
+        fail(f"Universum Desktop: neuer Mouse-Look-Hinweis fehlt: {hint!r}")
+    driver.execute_script(
+        "var c=document.getElementById('chaosSky'); var r=c.getBoundingClientRect();"
+        "c.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,cancelable:true,clientX:r.left+r.width*.82,clientY:r.top+r.height*.38,pointerId:41,pointerType:'mouse',buttons:0}));"
+        "c.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,clientX:r.left+r.width*.5,clientY:r.top+r.height*.5,pointerId:42,pointerType:'mouse',button:2,buttons:2}));"
+        "c.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,cancelable:true,clientX:r.left+r.width*.5,clientY:r.top+r.height*.5,pointerId:42,pointerType:'mouse',button:2,buttons:0}));"
+    )
+    if driver.find_elements(By.CSS_SELECTOR, ".modal-backdrop.open"):
+        fail("Universum Desktop: Rechtsklick hat einen Artikel geöffnet")
+    assert_no_js_exceptions(driver, "Universum Desktop Mouse-Look")
+
+    # Direct link is deterministic CI only. It must now enter the clothing
+    # dodge game; old ?game=raid links are backwards-compatible aliases.
+    driver.get(urljoin(BASE_URL, "chaos/?game=dodge"))
+    wait(driver, lambda d: d.execute_script("return !!window.D119SecretGames"), "Dodge the Drop am Direktlink geladen")
+    wait(
+        driver,
+        lambda d: d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-view='gate']").is_displayed(),
+        "Dodge-the-Drop-Startscreen sichtbar",
+    )
+    driver.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-action='start']").click()
     wait(
         driver,
         lambda d: d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-view='stage']").is_displayed(),
-        "ARCHIVE RAID 119 startet ueber Direktlink",
+        "Dodge the Drop startet",
     )
-    canvas = driver.find_element(By.CSS_SELECTOR, ".d119-raid-canvas")
+    canvas = driver.find_element(By.CSS_SELECTOR, ".d119-dodge-canvas")
     if not canvas.is_displayed():
-        fail("Universum: Archive-Raid-Canvas ist nicht sichtbar")
+        fail("Universum: Dodge-the-Drop-Canvas ist nicht sichtbar")
     if canvas.value_of_css_property("touch-action") != "none":
-        fail("Universum: Canvas besitzt touch-action:none nicht")
+        fail("Universum: Dodge-Canvas besitzt touch-action:none nicht")
 
     rect = canvas.rect
-    cx = rect["x"] + rect["width"] * 0.52
-    cy = rect["y"] + rect["height"] * 0.72
+    cx = rect["x"] + rect["width"] * 0.23
+    cy = rect["y"] + rect["height"] * 0.76
+    # Mouse movement must steer without pointerdown/click. Then exercise the
+    # touch path as well; neither is allowed to throw a browser exception.
     driver.execute_script(
-        "var c=document.querySelector('.d119-raid-canvas');"
-        "c.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,clientX:arguments[0],clientY:arguments[1],pointerId:7,pointerType:'touch'}));"
-        "c.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,cancelable:true,clientX:arguments[0]-35,clientY:arguments[1]-45,pointerId:7,pointerType:'touch'}));",
+        "var c=document.querySelector('.d119-dodge-canvas');"
+        "c.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,cancelable:true,clientX:arguments[0],clientY:arguments[1],pointerId:71,pointerType:'mouse',buttons:0}));"
+        "c.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,clientX:arguments[0]+25,clientY:arguments[1]-35,pointerId:72,pointerType:'touch'}));"
+        "c.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,cancelable:true,clientX:arguments[0]+55,clientY:arguments[1]-55,pointerId:72,pointerType:'touch'}));",
         cx,
         cy,
     )
     wait(
         driver,
-        lambda d: int(d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-view='stage']").get_attribute("data-shots") or "0") >= 4,
-        "Archive Raid feuert",
+        lambda d: int(d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-hud='time']").text or "42") < 42,
+        "Dodge the Drop laeuft",
     )
-    wait(
-        driver,
-        lambda d: int(d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-view='stage']").get_attribute("data-score") or "0") > 0,
-        "Archive Raid Score steigt",
-    )
-    driver.execute_script(
-        "var c=document.querySelector('.d119-raid-canvas');"
-        "c.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,cancelable:true,clientX:arguments[0],clientY:arguments[1],pointerId:7,pointerType:'touch'}));",
-        cx,
-        cy,
-    )
-
-    if driver.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-view='stage']").get_attribute("data-running") != "1":
-        fail("Universum: Archive Raid laeuft nicht")
-    assert_no_horizontal_overflow(driver, "Universum mobile Archive Raid")
-    assert_no_js_exceptions(driver, "Universum")
+    assert_no_horizontal_overflow(driver, "Universum Dodge the Drop")
+    assert_no_js_exceptions(driver, "Universum Dodge the Drop")
 
 
 def test_baukasten(driver) -> None:
@@ -236,7 +251,7 @@ def run_case(test_fn) -> None:
 def main() -> None:
     for test_fn in (test_match, test_chaos, test_baukasten, test_localized_direct_routes):
         run_case(test_fn)
-    print("Protected-Mode Browser-Smoke: OK — Match, single Archive Raid + iOS selection guard und Baukasten in echtem Chromium getestet.")
+    print("Protected-Mode Browser-Smoke: OK — Match, Universe Desktop-Mouse-Look, Dodge the Drop + iOS selection guard und Baukasten in echtem Chromium getestet.")
 
 
 if __name__ == "__main__":
