@@ -1,0 +1,265 @@
+/* Kundenkonto. Baut auf den Farb- und Schrifttokens aus app.css auf, damit das
+   Konto nicht wie eine fremde Seite wirkt - aber ohne eine einzige Regel des
+   Archivs zu ueberschreiben. */
+
+.konto-seite {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.konto-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px max(16px, calc((100% - 720px) / 2));
+  border-bottom: 1px solid var(--rule);
+}
+
+.konto-marke {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.22em;
+}
+
+.konto-inhalt {
+  flex: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 16px 64px;
+}
+
+.konto-inhalt h1 {
+  margin: 0 0 20px;
+  font-size: clamp(1.6rem, 5vw, 2.1rem);
+  letter-spacing: -0.01em;
+}
+
+.konto-konto {
+  margin: 0 0 28px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.konto-block {
+  margin: 0 0 40px;
+}
+
+.konto-block h2 {
+  margin: 0 0 14px;
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.konto-meldung {
+  margin: 0 0 22px;
+  padding: 12px 14px;
+  border-left: 2px solid var(--accent);
+  background: var(--surface);
+  font-size: 0.92rem;
+}
+
+.konto-meldung--fehler { border-left-color: #c86a5a; }
+.konto-meldung--ok { border-left-color: #7d9a72; }
+
+.konto-leer {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------------ Formulare */
+
+.konto-form {
+  display: grid;
+  gap: 14px;
+}
+
+.konto-form--schmal { max-width: 380px; }
+
+.konto-form--adresse {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  align-items: end;
+}
+
+.konto-feld {
+  display: grid;
+  gap: 5px;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.konto-feld--breit { grid-column: 1 / -1; }
+
+.konto-feld input {
+  font-family: inherit;
+  font-size: 1rem;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  padding: 11px 12px;
+  width: 100%;
+}
+
+.konto-feld input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.konto-btn {
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  text-align: center;
+  color: var(--ink);
+  background: var(--text);
+  border: 1px solid var(--text);
+  padding: 12px 18px;
+  cursor: pointer;
+}
+
+.konto-form--adresse .konto-btn { grid-column: 1 / -1; justify-self: start; }
+
+.konto-btn:disabled { opacity: 0.5; cursor: default; }
+
+.konto-btn--schlicht {
+  color: var(--text);
+  background: transparent;
+  border-color: var(--rule-strong);
+}
+
+.konto-btn--warnung {
+  color: #e2a094;
+  background: transparent;
+  border-color: rgba(226, 160, 148, 0.4);
+}
+
+.konto-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.konto-datenknoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* --------------------------------------------------------------- Bestellungen */
+
+.bestellung {
+  border: 1px solid var(--rule);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.bestellung__kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 16px;
+}
+
+.bestellung__kopf h3 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+.bestellung__meta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.bestellung__teile {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.bestellung__teile li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.bestellung__teile img {
+  width: 72px;
+  height: 96px;
+  object-fit: contain;
+  background: var(--mount);
+  flex: none;
+}
+
+.bestellung__teile strong { font-weight: 700; }
+.bestellung__teile a { color: var(--text); }
+
+.bestellung__teile div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bestellung__art,
+.bestellung__preis {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.bestellung__summe {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 16px;
+  margin: 0 0 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.bestellung__summe dt { margin: 0; }
+.bestellung__summe dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.bestellung__summe .ist-gesamt { color: var(--text); font-weight: 700; }
+
+.bestellung__fuss {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* --------------------------------------------------------------------- Fuss */
+
+.konto-fuss {
+  border-top: 1px solid var(--rule);
+  padding: 18px max(16px, calc((100% - 720px) / 2));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  font-size: 0.82rem;
+}
+
+.konto-fuss a { color: var(--text-muted); }
+.konto-fuss a:hover { color: var(--text); }
+
+@media (max-width: 520px) {
+  .bestellung__teile img { width: 60px; height: 80px; }
+  .konto-datenknoepfe .konto-btn { flex: 1 1 auto; }
+}
