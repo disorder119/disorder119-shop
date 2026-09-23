@@ -98,18 +98,27 @@ test("the small-business thresholds are reported, not silently passed", () => {
   assert.match(vorjahr.kleinunternehmer.hinweis, /Vorjahresumsatz/);
 });
 
-function db(zeilen = [zeile()]) {
+function db(zeilen = [zeile()], archiv = []) {
   return {
     prepare(sql) {
+      const text = String(sql);
       return {
         bind(...args) {
           return {
             async all() {
-              const von = String(args[0] || "");
-              const jahr = von.slice(0, 4);
+              if (text.includes("FROM rechnungen")) {
+                const jahr = String(args[0] || "").slice(0, 4);
+                return { results: archiv.filter(r => String(r.ausgestellt_am).startsWith(jahr)) };
+              }
+              const jahr = String(args[0] || "").slice(0, 4);
               return { results: zeilen.filter(z => String(z.created_at).startsWith(jahr)) };
             },
-            async first() { return null; },
+            async first() {
+              if (text.includes("SELECT html FROM rechnungen")) {
+                return archiv.find(r => r.order_id === args[0] || r.rechnungsnummer === args[1]) || null;
+              }
+              return null;
+            },
             async run() { return { meta: { changes: 1 } }; },
           };
         },
@@ -164,6 +173,52 @@ test("the CSV download is delivered as a file with a BOM", async () => {
   const bytes = new Uint8Array(await antwort.clone().arrayBuffer());
   assert.deepEqual([...bytes.slice(0, 3)], [0xEF, 0xBB, 0xBF]);
   assert.match(await antwort.text(), /D119-20260115-ABC12345/);
+});
+
+const ARCHIV = [{
+  order_id: "o1",
+  rechnungsnummer: "D119-20260115-ABC12345",
+  ausgestellt_am: "2026-01-15T10:00:00.000Z",
+  waehrung: "EUR",
+  warenwert_cents: 38000,
+  versand_cents: 590,
+  gesamt_cents: 38590,
+  pruefsumme: "abc123",
+  html: "<html><head></head><body><p>ARCHIVIERTE FASSUNG</p></body></html>",
+}];
+
+test("an archived invoice is served unchanged, not rebuilt", async () => {
+  const { request, url } = anfrage("/admin/buchhaltung/rechnung/o1");
+  const antwort = await handleBuchhaltung(request, { ADMIN_TOKEN: TOKEN, DB: db([zeile()], ARCHIV) }, url, "r6", ORIGIN);
+  const html = await antwort.text();
+  assert.equal(antwort.status, 200);
+  assert.match(html, /ARCHIVIERTE FASSUNG/);
+  // Keine Warnung: das ist die Fassung, die der Kunde bekommen hat.
+  assert.doesNotMatch(html, /Aus den Bestelldaten erzeugte Fassung/);
+});
+
+test("without an archived copy the generated one says so", async () => {
+  const { request, url } = anfrage("/admin/buchhaltung/rechnung/o1");
+  const antwort = await handleBuchhaltung(request, { ADMIN_TOKEN: TOKEN, DB: db() }, url, "r7", ORIGIN);
+  // Ohne Archiv faellt die Buchhaltung auf die erzeugte Fassung zurueck und
+  // kennzeichnet sie - niemand soll sie fuer die ausgestellte halten.
+  if (antwort.status === 200) {
+    assert.match(await antwort.text(), /Aus den Bestelldaten erzeugte Fassung/);
+  } else {
+    assert.equal((await antwort.json()).error, "BESTELLUNG_NICHT_GEFUNDEN");
+  }
+});
+
+test("the invoice list carries number, date, total and checksum", async () => {
+  const { request, url } = anfrage("/admin/buchhaltung/rechnungen?jahr=2026");
+  const antwort = await handleBuchhaltung(request, { ADMIN_TOKEN: TOKEN, DB: db([zeile()], ARCHIV) }, url, "r8", ORIGIN);
+  const daten = await antwort.json();
+  assert.equal(antwort.status, 200);
+  assert.equal(daten.anzahl, 1);
+  assert.equal(daten.gesamtCents, 38590);
+  assert.equal(daten.rechnungen[0].rechnungsnummer, "D119-20260115-ABC12345");
+  assert.equal(daten.rechnungen[0].pruefsumme, "abc123");
+  assert.match(daten.rechnungen[0].weg, /\/admin\/buchhaltung\/rechnung\/o1$/);
 });
 
 test("an implausible year is refused instead of scanning everything", async () => {
