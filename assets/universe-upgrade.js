@@ -4,7 +4,7 @@
   if (window.__D119_UNIVERSE_UPGRADE__) return;
   window.__D119_UNIVERSE_UPGRADE__ = true;
 
-  var ASSET_VERSION = "20260923-2";
+  var ASSET_VERSION = "20260923-3";
   var legacyObserver = null;
   var redirectingLegacyGame = false;
 
@@ -80,19 +80,18 @@
       var back = document.getElementById("chaosGameBack");
       if (back) back.click();
       window.setTimeout(function () {
-        try { window.D119SecretGames.start("dodge"); }
+        try { window.D119SecretGames.start("zero"); }
         finally { redirectingLegacyGame = false; }
       }, 0);
     });
     legacyObserver.observe(view, { attributes: true, attributeFilter: ["class"] });
   }
   function loadSystems() {
-    // Coupon field remains shop-wide; the game bundle loads only where Universe exists.
     injectCss("/assets/shop-promos.css?v=" + ASSET_VERSION, "data-d119-shop-promos");
     injectScript("/assets/shop-promos.js?v=" + ASSET_VERSION, "data-d119-shop-promos", null);
     if (!document.getElementById("chaosView")) return;
-    injectCss("/assets/secret-games.css?v=" + ASSET_VERSION, "data-d119-secret-games");
-    injectScript("/assets/secret-games.js?v=" + ASSET_VERSION, "data-d119-secret-games", installLegacyGameBridge);
+    injectCss("/assets/zero-g-runway.css?v=" + ASSET_VERSION, "data-d119-zero-g-runway");
+    injectScript("/assets/zero-g-runway.js?v=" + ASSET_VERSION, "data-d119-zero-g-runway", installLegacyGameBridge);
   }
   function install() {
     installModeBranding();

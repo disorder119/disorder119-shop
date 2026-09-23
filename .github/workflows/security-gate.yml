@@ -45,6 +45,7 @@ jobs:
           node --check shop-worker/dhl.js
           node --check assets/ios-zoom-lock.js
           node --check assets/universe-upgrade.js
+          node --check assets/zero-g-runway.js
           node --check assets/secret-games.js
           node --check assets/shop-promos.js
 
