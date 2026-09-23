@@ -3,10 +3,13 @@ import test from "node:test";
 import {
   SELLER,
   formatOrderConfirmation,
+  formatShippingConfirmation,
   mailTransportReady,
   normalizeEmail,
   sendMail,
   sendOrderConfirmation,
+  sendShippingConfirmation,
+  trackingUrlFor,
 } from "./customer-mail.js";
 
 const ORDER = {
@@ -218,6 +221,115 @@ test("an unpaid order is never confirmed", async () => {
   const db = confirmationDb({ order: { ...ORDER, status: "PAYMENT_PENDING" } });
   const result = await sendOrderConfirmation({ ...READY_ENV, DB: db }, "order-1", "req-4");
   assert.deepEqual(result, { sent: false, reason: "ORDER_NOT_PAID" });
+});
+
+// --------------------------------------------------------- Versandbestaetigung
+
+function shippedDb({ claimed = true, order = {} } = {}) {
+  const writes = [];
+  const row = {
+    id: "order-1",
+    order_number: "D119-20260923-ABC12345",
+    status: "SHIPPED",
+    carrier: "DHL",
+    tracking_number: "00340434161234567890",
+    ...order,
+  };
+  return {
+    writes,
+    prepare(sql) {
+      const text = String(sql);
+      return {
+        bind(...args) {
+          return {
+            async first() {
+              if (text.includes("FROM commerce_orders")) return row;
+              if (text.includes("FROM order_contact_snapshots")) {
+                return order.contact === null ? null : { email: "kundin@example.com", recipient_name: "A. Beispiel" };
+              }
+              return null;
+            },
+            async all() {
+              if (text.includes("FROM order_items")) return { results: [{ title_snapshot: "Prada Reversible Jacket" }] };
+              return { results: [] };
+            },
+            async run() {
+              writes.push({ text, args });
+              if (text.includes("INSERT OR IGNORE INTO audit_events")) {
+                return { meta: { changes: claimed ? 1 : 0 } };
+              }
+              return { meta: { changes: 1 } };
+            },
+          };
+        },
+      };
+    },
+  };
+}
+
+test("a tracking link is only built for a carrier we actually know", () => {
+  assert.match(trackingUrlFor("DHL", "00340434161234567890"), /dhl\.de.*00340434161234567890/);
+  assert.match(trackingUrlFor("deutsche post", "123"), /dhl\.de/);
+  assert.equal(trackingUrlFor("Hermes", "123"), "");
+  assert.equal(trackingUrlFor("DHL", ""), "");
+});
+
+test("the shipping notice names the parcel, the number and the link", () => {
+  const mail = formatShippingConfirmation({
+    order_number: "D119-20260923-ABC12345",
+    carrier: "DHL",
+    tracking_number: "00340434161234567890",
+    items: [{ title_snapshot: "Prada Reversible Jacket" }],
+  }, { contactEmail: "bestellung@disorder119.com" });
+  for (const part of [mail.text, mail.html]) {
+    assert.match(part, /D119-20260923-ABC12345/);
+    assert.match(part, /00340434161234567890/);
+    assert.match(part, /Prada Reversible Jacket/);
+    assert.match(part, /dhl\.de/);
+  }
+  assert.match(mail.subject, /unterwegs/);
+});
+
+test("without a tracking number the notice still makes sense", () => {
+  const mail = formatShippingConfirmation({
+    order_number: "D119-1", carrier: "Selbstabholung", items: [],
+  });
+  assert.match(mail.text, /Versand mit Selbstabholung/);
+  assert.doesNotMatch(mail.html, /Sendung verfolgen/);
+});
+
+test("the shipping notice goes out once per tracking number", async () => {
+  const db = shippedDb();
+  const stub = stubFetch(async () => new Response(JSON.stringify({ messageId: "<s@brevo>" }), { status: 201 }));
+  try {
+    const result = await sendShippingConfirmation({ ...READY_ENV, DB: db }, "order-1", "req-s1");
+    assert.deepEqual(result, { sent: true, recorded: true });
+    assert.equal(stub.calls.length, 1);
+    const claim = db.writes.find(w => w.text.includes("INSERT OR IGNORE INTO audit_events"));
+    // Der Anspruch traegt die Sendungsnummer: eine korrigierte Nummer darf
+    // erneut verschickt werden, dieselbe nicht.
+    assert.match(String(claim.args[0]), /notify:email:shipped:order-1:00340434161234567890/);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("the same tracking number is never announced twice", async () => {
+  const db = shippedDb({ claimed: false });
+  const stub = stubFetch(async () => { throw new Error("must not send twice"); });
+  try {
+    const result = await sendShippingConfirmation({ ...READY_ENV, DB: db }, "order-1", "req-s2");
+    assert.deepEqual(result, { sent: false, duplicate: true });
+    assert.equal(stub.calls.length, 0);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("an order that has not shipped yet announces nothing", async () => {
+  const db = shippedDb({ order: { status: "PAID" } });
+  const result = await sendShippingConfirmation({ ...READY_ENV, DB: db }, "order-1", "req-s3");
+  assert.deepEqual(result, { sent: false, reason: "ORDER_NOT_SHIPPED" });
 });
 
 test("a failed send releases the claim so a retry can still reach the customer", async () => {

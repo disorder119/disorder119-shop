@@ -39,10 +39,26 @@ Diese Datei dokumentiert den technischen Stand fuer einen echten Checkout, ohne 
      `MAIL_FROM_NAME`, `MAIL_REPLY_TO`.
    - Testen: `POST /admin/notifications/mail/test` (Owner-Token). Ohne Angabe
      im Aufruf geht die Testmail an `MAIL_REPLY_TO` bzw. `MAIL_FROM`.
-5. DHL: Es gibt bisher **keine** DHL-Anbindung im Code, nur die Datenfelder
-   fuer Versandstatus und Sendungsnummer. Labels werden vorerst manuell im
-   DHL-Portal erzeugt und die Sendungsnummer im Admin eingetragen. Erst eine
-   echte Label-Integration braucht eigene DHL-Zugangsdaten.
+5. DHL — **zwei Wege, beide funktionieren:**
+   - **Ohne Zugangsdaten (sofort nutzbar):** Label im DHL-Portal erzeugen,
+     Sendungsnummer im Admin bei der Bestellung eintragen und den Status auf
+     SHIPPED setzen. Die Kundin bekommt automatisch die Versandbestaetigung mit
+     Sendungsnummer und Verfolgungslink. Der Shop kann so live gehen.
+   - **Mit Anbindung (`shop-worker/dhl.js`):** `POST /admin/versand/<bestell-id>/label`
+     erzeugt den Versandschein, traegt die Sendungsnummer ein und liefert die
+     Label-Adresse zurueck. Dafuer noetig, alle als Worker-Secret:
+     `DHL_API_KEY` (developer.dhl.com), `DHL_USER` und `DHL_PASSWORD`
+     (Geschaeftskundenportal), `DHL_BILLING_NUMBER` (Abrechnungsnummer aus dem
+     EKP). Optional `DHL_ENVIRONMENT=live` (Standard ist Sandbox),
+     `DHL_DEFAULT_WEIGHT_G` und die `DHL_SHIPPER_*`-Felder.
+     Voraussetzung ist ein **DHL-Geschaeftskundenvertrag** — ohne EKP-Nummer
+     gibt es keinen API-Zugang.
+   - Angebunden ist nur der nationale Versand (V01PAK). Auslandssendungen
+     werden klar abgelehnt statt geraten: sie brauchen ein anderes Produkt und
+     eine Zollinhaltserklaerung.
+   - Ein zweiter Aufruf fuer dieselbe Bestellung erzeugt **keinen** zweiten
+     Versandschein, sondern gibt den vorhandenen zurueck. Ein Schein kostet
+     Geld und laesst sich nicht einfach zurueckgeben.
 6. `PAYPAL_ENVIRONMENT=sandbox` am Worker setzen.
 7. `config/shop-config.json` setzen:
    - `paypalClientId`
@@ -80,6 +96,24 @@ Eintraege im Porkbun-Panel:
    Ordnung.
 5. Danach `config/shop-config.json` → `email` auf die neue Adresse umstellen,
    damit Impressum, AGB und Kontaktknoepfe dieselbe Adresse nennen.
+
+## Buchhaltung
+
+Aufgebaut wie der Vinted-Datenexport: eine Liste aller Bestellungen, eine
+Rechnung je Bestellung, eine Zusammenfassung je Jahr. Alle drei Wege brauchen
+den Owner-Token:
+
+- `GET /admin/buchhaltung/jahr/2026` — Umsatz je Monat, Warenwert, Versand,
+  Gesamt, plus Fruehwarnung zu den Kleinunternehmergrenzen nach § 19 UStG
+  (25.000 EUR Vorjahr / 100.000 EUR laufendes Jahr).
+- `GET /admin/buchhaltung/bestellungen.csv?jahr=2026` — fuer den Steuerberater,
+  deutsche Dezimaltrennung, oeffnet direkt in Excel.
+- `GET /admin/buchhaltung/rechnung/<bestell-id>` — die Rechnung zum Ausdrucken
+  oder Ablegen als PDF. Wortgleich zu der, die die Kundin per Mail bekommen hat.
+
+Gezaehlt werden nur bezahlte Bestellungen. Storniert, erstattet und
+zurueckgesendet bleiben draussen, sonst stuende Geld in den Buechern, das nie
+verdient wurde.
 
 ## Vor Livebetrieb
 

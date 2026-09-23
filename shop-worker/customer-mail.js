@@ -257,6 +257,83 @@ export function formatOrderConfirmation(order = {}, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Versandbestaetigung
+// ---------------------------------------------------------------------------
+
+// Deutsche Post/DHL-Sendungsverfolgung. Gleiche Quelle wie im Kundenkonto -
+// stuende der Link an zwei Stellen, koennte einer davon veralten.
+export const DHL_TRACKING_BASE =
+  "https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=";
+
+export function trackingUrlFor(carrier, trackingNumber) {
+  const nummer = safeText(trackingNumber || "", 60).trim();
+  if (!nummer) return "";
+  const dienst = safeText(carrier || "DHL", 40).trim().toUpperCase();
+  // Nur fuer bekannte Dienste wird ein Link gebaut. Bei einem unbekannten
+  // Dienst steht die Nummer ohne Link in der Mail, statt auf eine geratene
+  // Adresse zu zeigen.
+  if (dienst === "DHL" || dienst === "DEUTSCHE POST") return DHL_TRACKING_BASE + encodeURIComponent(nummer);
+  return "";
+}
+
+export function formatShippingConfirmation(order = {}, options = {}) {
+  const number = safeText(order.order_number || order.orderNumber || "", 80) || "—";
+  const carrier = safeText(order.carrier || "DHL", 40) || "DHL";
+  const tracking = safeText(order.tracking_number || order.trackingNumber || "", 60);
+  const url = trackingUrlFor(carrier, tracking);
+  const contactEmail = safeText(options.contactEmail || "", 200);
+  const items = Array.isArray(order.items) ? order.items : [];
+  const titles = items.map(item => safeText(item.title_snapshot || item.title || "", 180)).filter(Boolean);
+
+  const subject = `Deine Bestellung ${number} ist unterwegs`;
+
+  const text = [
+    "DISORDER119",
+    "",
+    `Deine Bestellung ${number} ist unterwegs.`,
+    "",
+    ...(titles.length ? ["IM PAKET", ...titles.map(title => `· ${title}`), ""] : []),
+    ...(tracking ? [`Sendungsnummer: ${tracking} (${carrier})`] : [`Versand mit ${carrier}.`]),
+    ...(url ? [`Verfolgen: ${url}`] : []),
+    "",
+    "Bis die Sendung beim Dienstleister erfasst ist, kann es ein paar Stunden dauern.",
+    "",
+    ...(contactEmail ? [`Fragen? Antworte einfach auf diese Mail oder schreib an ${contactEmail}.`] : []),
+  ].join("\n");
+
+  const html = `<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><title>${escapeHtml(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f2efe7;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2efe7;padding:24px 12px;">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#141310;font-size:15px;line-height:1.55;">
+  <tr><td style="background:#0b0b0b;color:#f2efe7;padding:22px 28px;letter-spacing:0.22em;font-size:13px;font-weight:700;">DISORDER119</td></tr>
+  <tr><td style="padding:28px 28px 0;">
+    <h1 style="margin:0 0 10px;font-size:21px;line-height:1.25;">Dein Paket ist unterwegs</h1>
+    <p style="margin:0;">Bestellung <strong>${escapeHtml(number)}</strong></p>
+  </td></tr>
+  ${titles.length ? `<tr><td style="padding:20px 28px 0;">
+    <h2 style="margin:0 0 6px;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:#6f6a60;">Im Paket</h2>
+    <p style="margin:0;">${titles.map(escapeHtml).join("<br>")}</p>
+  </td></tr>` : ""}
+  <tr><td style="padding:20px 28px 0;">
+    ${tracking
+      ? `<p style="margin:0 0 4px;color:#6f6a60;font-size:13px;">Sendungsnummer (${escapeHtml(carrier)})</p>
+         <p style="margin:0 0 16px;font-size:17px;font-weight:700;letter-spacing:0.02em;">${escapeHtml(tracking)}</p>`
+      : `<p style="margin:0 0 16px;">Versand mit ${escapeHtml(carrier)}.</p>`}
+    ${url ? `<p style="margin:0;"><a href="${escapeHtml(url)}" style="display:inline-block;background:#0b0b0b;color:#f2efe7;text-decoration:none;padding:13px 22px;font-weight:700;letter-spacing:0.06em;">Sendung verfolgen</a></p>` : ""}
+  </td></tr>
+  <tr><td style="padding:20px 28px 28px;">
+    <p style="margin:0;color:#6f6a60;font-size:13px;">Bis die Sendung beim Dienstleister erfasst ist, kann es ein paar Stunden dauern.${contactEmail ? ` Fragen? Antworte einfach auf diese Mail oder schreib an <a href="mailto:${escapeHtml(contactEmail)}" style="color:#141310;">${escapeHtml(contactEmail)}</a>.` : ""}</p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+
+  return { subject, text, html };
+}
+
+// ---------------------------------------------------------------------------
 // Versand
 // ---------------------------------------------------------------------------
 
@@ -402,6 +479,78 @@ export async function sendOrderConfirmation(env, orderId, reqId = crypto.randomU
 
   try {
     await markConfirmationSent(env, claim.claimId);
+    return { sent: true, recorded: true };
+  } catch {
+    return { sent: true, recorded: false };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Versandbestaetigung ausloesen
+// ---------------------------------------------------------------------------
+
+async function loadShippedOrder(env, orderId) {
+  const order = await env.DB.prepare(`SELECT o.id,o.order_number,o.status,
+      s.carrier,s.tracking_number
+    FROM commerce_orders o
+    LEFT JOIN shipments s ON s.order_id=o.id
+    WHERE o.id=? ORDER BY s.created_at DESC LIMIT 1`).bind(String(orderId)).first();
+  if (!order) return null;
+  const items = await env.DB.prepare(`SELECT title_snapshot FROM order_items
+    WHERE order_id=? ORDER BY id`).bind(String(orderId)).all();
+  const contact = await env.DB.prepare(`SELECT email,recipient_name FROM order_contact_snapshots
+    WHERE order_id=? LIMIT 1`).bind(String(orderId)).first();
+  return { ...order, items: items?.results || [], contact: contact || {} };
+}
+
+export async function sendShippingConfirmation(env, orderId, reqId = crypto.randomUUID()) {
+  if (!mailTransportReady(env) || !env.DB) return { sent: false, reason: "NOT_CONFIGURED" };
+  const order = await loadShippedOrder(env, orderId);
+  if (!order) return { sent: false, reason: "ORDER_NOT_FOUND" };
+  if (!["SHIPPED", "DELIVERED"].includes(String(order.status || "").toUpperCase())) {
+    return { sent: false, reason: "ORDER_NOT_SHIPPED" };
+  }
+  const recipient = normalizeEmail(order.contact?.email);
+  if (!recipient) return { sent: false, reason: "NO_CUSTOMER_EMAIL" };
+
+  // Der Anspruch haengt an der Sendungsnummer, nicht nur an der Bestellung:
+  // wird eine falsch eingetragene Nummer korrigiert, soll die Kundin die
+  // richtige noch bekommen - dieselbe Nummer aber nur einmal.
+  const tracking = safeText(order.tracking_number || "", 60) || "ohne-nummer";
+  const claimId = `notify:email:shipped:${order.id}:${tracking}`;
+  const claim = await env.DB.prepare(`INSERT OR IGNORE INTO audit_events
+    (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'SYSTEM','order',?,'SHIPPING_NOTICE_CLAIMED',?,?,?)`)
+    .bind(claimId, String(order.id), safeText(reqId, 120), JSON.stringify({ channel: "email" }), new Date().toISOString())
+    .run();
+  if (!claim?.meta?.changes) return { sent: false, duplicate: true };
+
+  const message = formatShippingConfirmation(order, {
+    contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200),
+  });
+  try {
+    const delivery = await sendMail(env, {
+      to: recipient,
+      toName: safeText(order.contact?.recipient_name || "", 120),
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      tag: "shipping-confirmation",
+    });
+    if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
+  } catch (err) {
+    try {
+      await env.DB.prepare("DELETE FROM audit_events WHERE id=? AND event_type='SHIPPING_NOTICE_CLAIMED'")
+        .bind(claimId).run();
+    } catch {
+      // Eine fehlgeschlagene Mail darf den Versand nie kippen.
+    }
+    throw new Error(`shipping_confirmation_failed:${safeText(err?.message || "unknown", 120)}`);
+  }
+
+  try {
+    await env.DB.prepare("UPDATE audit_events SET event_type='SHIPPING_NOTICE_SENT',metadata_json=? WHERE id=?")
+      .bind(JSON.stringify({ channel: "email", sentAt: new Date().toISOString() }), claimId).run();
     return { sent: true, recorded: true };
   } catch {
     return { sent: true, recorded: false };

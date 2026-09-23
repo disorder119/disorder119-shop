@@ -41,6 +41,8 @@ jobs:
           node --check shop-worker/coupon-checkout.js
           node --check shop-worker/customer-mail.js
           node --check shop-worker/customer-account.js
+          node --check shop-worker/buchhaltung.js
+          node --check shop-worker/dhl.js
           node --check assets/ios-zoom-lock.js
           node --check assets/universe-upgrade.js
           node --check assets/secret-games.js
@@ -50,7 +52,7 @@ jobs:
         run: node --test shop-worker/notifications.test.mjs shop-worker/admin-notifications.test.mjs shop-worker/customer-mail.test.mjs shop-worker/customer-account.test.mjs
 
       - name: Game- und Gutschein-Regressionen pruefen
-        run: node --test shop-worker/game-rewards.test.mjs shop-worker/coupon-checkout.test.mjs
+        run: node --test shop-worker/game-rewards.test.mjs shop-worker/coupon-checkout.test.mjs shop-worker/buchhaltung.test.mjs shop-worker/dhl.test.mjs
 
       - name: Gutschein-Migration pruefen
         run: |
