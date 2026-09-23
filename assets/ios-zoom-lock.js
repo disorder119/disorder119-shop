@@ -7,21 +7,18 @@
   if (!document.querySelector('link[data-d119-universe-upgrade]')) {
     var universeCss = document.createElement("link");
     universeCss.rel = "stylesheet";
-    universeCss.href = "/assets/universe-upgrade.css?v=20260923-1";
+    universeCss.href = "/assets/universe-upgrade.css?v=20260923-2";
     universeCss.setAttribute("data-d119-universe-upgrade", "");
     document.head.appendChild(universeCss);
   }
   if (!document.querySelector('script[data-d119-universe-upgrade]')) {
     var universeScript = document.createElement("script");
-    universeScript.src = "/assets/universe-upgrade.js?v=20260923-1";
+    universeScript.src = "/assets/universe-upgrade.js?v=20260923-2";
     universeScript.async = false;
     universeScript.setAttribute("data-d119-universe-upgrade", "");
     document.head.appendChild(universeScript);
   }
 
-  // Product pages get a dedicated full-screen image viewer enhancement.
-  // Normal page zoom stays locked on iOS, while the opened product image
-  // handles its own controlled pinch zoom and swipe navigation.
   if (window.ARTICLE_ITEM && document.getElementById("lightbox") &&
       !document.querySelector('script[data-d119-product-lightbox-v2]')) {
     var productLightbox = document.createElement("script");
@@ -44,18 +41,11 @@
     var target = event && event.target;
     return !!(target && target.closest && target.closest(".lightbox.open"));
   }
-
-  function stopGesture(event) {
-    event.preventDefault();
-  }
-
+  function stopGesture(event) { event.preventDefault(); }
   document.addEventListener("gesturestart", stopGesture, { passive: false });
   document.addEventListener("gesturechange", stopGesture, { passive: false });
   document.addEventListener("gestureend", stopGesture, { passive: false });
-
   document.addEventListener("touchmove", function (event) {
-    // The product lightbox has its own bounded pinch/pan handler. Do not run
-    // a second document-level two-finger preventDefault path on top of it.
     if (insideOpenLightbox(event)) return;
     if (event.touches && event.touches.length > 1) event.preventDefault();
   }, { passive: false });
