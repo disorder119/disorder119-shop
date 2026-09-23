@@ -52,7 +52,7 @@ def validate_purchase_price_on_request() -> None:
     require("AUDIT_PERFECT_CART_TOTAL" in app, "Warenkorb kennt keine teilweise offenen Preise")
     require("rows.push(fmtPriceDisplay(it.price));" in app, "Warenkorb-Anfragetext kann 0,00 EUR ausgeben")
     require("fmtPriceDisplay(it.price) + \"</span>\"" in app, "Warenkorbzeile kann 0,00 EUR ausgeben")
-    require("cartTotalDisplay(total, hasUnknownPrice)" in app, "Warenkorb-Gesamt ignoriert offene Preise")
+    require("cartTotalDisplay(total + shipping, hasUnknownPrice)" in app, "Warenkorb-Gesamt ignoriert offene Preise oder den Versand")
     require("AUDIT_PERFECT_ARTICLE_PRICE_REQUEST" in article, "Direktanfrage kann 0,00 EUR ausgeben")
 
 

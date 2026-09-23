@@ -1147,6 +1147,15 @@
     margin-bottom: 4px;
   }
 
+  /* Zwischensumme und Versand stehen ueber dem Gesamtpreis, bleiben aber
+     optisch zurueck - gefettet wird nur die Zahl, die wirklich bezahlt wird. */
+  .cart-total--line {
+    font-size: 0.86rem;
+    font-weight: 400;
+    color: var(--muted);
+    margin-bottom: 0;
+  }
+
   .cart-checkout-btn {
     display: block;
     width: 100%;

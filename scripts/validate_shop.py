@@ -166,6 +166,23 @@ def validate_and_report() -> None:
         if not cfg.get("paypalClientId") or not cfg.get("shopWorkerUrl"):
             fail("paypalCheckout=true, aber paypalClientId oder shopWorkerUrl fehlt.")
 
+    # Die Versandpauschale steht an zwei Stellen: im Worker (berechnet den
+    # Betrag, den der Kunde zahlt) und in der oeffentlichen Konfiguration
+    # (zeigt ihn in Warenkorb, AGB und Produktseite). Laufen die beiden
+    # auseinander, zahlt der Kunde etwas anderes als angezeigt - genau das
+    # faengt diese Pruefung ab.
+    shipping_cfg = cfg.get("shippingFlatCents", 0)
+    if not isinstance(shipping_cfg, int) or isinstance(shipping_cfg, bool) or shipping_cfg < 0:
+        fail("config/shop-config.json: shippingFlatCents muss eine ganze Zahl in Cent sein.")
+    core = (BASE / "shop-worker" / "commerce-core.js").read_text(encoding="utf-8")
+    match = re.search(r"export const SHIPPING_FLAT_CENTS\s*=\s*(\d+)\s*;", core)
+    if not match:
+        fail("shop-worker/commerce-core.js: SHIPPING_FLAT_CENTS nicht gefunden.")
+    elif int(match.group(1)) != shipping_cfg:
+        fail(
+            "Versandpauschale laeuft auseinander: shop-worker/commerce-core.js "
+            f"sagt {match.group(1)} Cent, config/shop-config.json sagt {shipping_cfg} Cent."
+        )
     # Die Bestellbestaetigung ist eine Pflichtmail mit Anbieterkennung. Steht
     # dort eine andere Anschrift als im Impressum, ist das ein echter
     # Rechtsfehler - deshalb werden beide Stellen hier verglichen.
