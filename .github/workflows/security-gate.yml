@@ -39,13 +39,14 @@ jobs:
           node --check shop-worker/worker.js
           node --check shop-worker/game-rewards.js
           node --check shop-worker/coupon-checkout.js
+          node --check shop-worker/customer-mail.js
           node --check assets/ios-zoom-lock.js
           node --check assets/universe-upgrade.js
           node --check assets/secret-games.js
           node --check assets/shop-promos.js
 
       - name: Benachrichtigungs-Regressionen pruefen
-        run: node --test shop-worker/notifications.test.mjs shop-worker/admin-notifications.test.mjs
+        run: node --test shop-worker/notifications.test.mjs shop-worker/admin-notifications.test.mjs shop-worker/customer-mail.test.mjs
 
       - name: Game- und Gutschein-Regressionen pruefen
         run: node --test shop-worker/game-rewards.test.mjs shop-worker/coupon-checkout.test.mjs

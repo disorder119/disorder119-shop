@@ -1,5 +1,6 @@
 import { safeText } from "./commerce-core.js";
 import { sendTelegramTest, telegramTransportReady } from "./notifications.js";
+import { mailTransportReady, normalizeEmail, sendMailTest } from "./customer-mail.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -88,6 +89,43 @@ export async function handleAdminNotifications(request, env, url, reqId, origin 
       throw new AdminNotificationsError("ORIGIN_NOT_ALLOWED", 403);
     }
     await requireAdmin(request, env);
+    if (url.pathname === "/admin/notifications/mail/test") {
+      if (request.method !== "POST") {
+        throw new AdminNotificationsError("METHOD_NOT_ALLOWED", 405);
+      }
+      if (!mailTransportReady(env)) {
+        throw new AdminNotificationsError("MAIL_NOT_CONFIGURED", 503);
+      }
+      // Ziel ist entweder die im Aufruf genannte Adresse oder die
+      // Absenderadresse selbst - so kann der Test nie fremde Postfaecher
+      // treffen, auch nicht durch einen vertippten Aufruf.
+      let requested = "";
+      try {
+        const body = await request.json();
+        requested = normalizeEmail(body?.to || "");
+      } catch {
+        requested = "";
+      }
+      const target = requested || normalizeEmail(env.MAIL_REPLY_TO || env.MAIL_FROM || "");
+      if (!target) throw new AdminNotificationsError("MAIL_RECIPIENT_INVALID", 400);
+      const mailResult = await sendMailTest(env, target, reqId);
+      if (!mailResult.sent) {
+        if (mailResult.reason === "NOT_CONFIGURED") {
+          throw new AdminNotificationsError("MAIL_NOT_CONFIGURED", 503);
+        }
+        if (mailResult.reason === "INVALID_RECIPIENT") {
+          throw new AdminNotificationsError("MAIL_RECIPIENT_INVALID", 400);
+        }
+        throw new AdminNotificationsError("MAIL_DELIVERY_FAILED", 502);
+      }
+      return json({
+        ok: true,
+        channel: "email",
+        sent: true,
+        messageId: mailResult.messageId || null,
+        requestId: reqId,
+      }, 200, origin);
+    }
     if (url.pathname !== "/admin/notifications/telegram/test") {
       throw new AdminNotificationsError("NOT_FOUND", 404);
     }
@@ -122,11 +160,14 @@ export async function handleAdminNotifications(request, env, url, reqId, origin 
     const message = safeText(err?.message || "unknown", 180);
     console.error(JSON.stringify({
       level: "error",
-      event: "admin_telegram_test_error",
+      event: "admin_notification_test_error",
       requestId: reqId,
       message,
     }));
-    const code = message.startsWith("telegram_") ? "TELEGRAM_DELIVERY_FAILED" : "INTERNAL_ADMIN_NOTIFICATIONS_ERROR";
-    return json({ error: code, requestId: reqId }, code === "TELEGRAM_DELIVERY_FAILED" ? 502 : 500, origin);
+    let code = "INTERNAL_ADMIN_NOTIFICATIONS_ERROR";
+    if (message.startsWith("telegram_")) code = "TELEGRAM_DELIVERY_FAILED";
+    else if (message.startsWith("mail_")) code = "MAIL_DELIVERY_FAILED";
+    const status = code === "INTERNAL_ADMIN_NOTIFICATIONS_ERROR" ? 500 : 502;
+    return json({ error: code, requestId: reqId }, status, origin);
   }
 }

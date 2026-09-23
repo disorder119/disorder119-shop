@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -164,6 +165,24 @@ def validate_and_report() -> None:
     if features.get("paypalCheckout"):
         if not cfg.get("paypalClientId") or not cfg.get("shopWorkerUrl"):
             fail("paypalCheckout=true, aber paypalClientId oder shopWorkerUrl fehlt.")
+
+    # Die Bestellbestaetigung ist eine Pflichtmail mit Anbieterkennung. Steht
+    # dort eine andere Anschrift als im Impressum, ist das ein echter
+    # Rechtsfehler - deshalb werden beide Stellen hier verglichen.
+    mail_js = (BASE / "shop-worker" / "customer-mail.js").read_text(encoding="utf-8")
+    build_py = (BASE / "build_site.py").read_text(encoding="utf-8")
+    for feld, muster in (
+        ("street", r'street:\s*"([^"]+)"'),
+        ("city", r'city:\s*"([^"]+)"'),
+    ):
+        treffer = re.search(muster, mail_js)
+        if not treffer:
+            fail(f"shop-worker/customer-mail.js: SELLER.{feld} nicht gefunden.")
+        elif treffer.group(1) not in build_py:
+            fail(
+                f"Anbieterkennung laeuft auseinander: SELLER.{feld}="
+                f"{treffer.group(1)!r} steht nicht im Impressum (build_site.py)."
+            )
 
     ids: list[int] = []
     article_numbers: list[str] = []
