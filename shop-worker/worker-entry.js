@@ -17,6 +17,7 @@ import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications
 import { sendOrderConfirmation, sendOrderConfirmationByProviderOrder } from "./customer-mail.js";
 import { handleAccountRequest, isAccountRoute } from "./customer-account.js";
 import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
+import { handleVersand, istVersandRoute } from "./dhl.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
 import {
   CouponCheckoutError,
@@ -187,6 +188,10 @@ export default {
       // bisher bewusst mit 501 beantwortet hat.
       if (isAccountRoute(url)) {
         return finish(await handleAccountRequest(request, runtimeEnv, url, reqId, origin));
+      }
+
+      if (istVersandRoute(url)) {
+        return finish(await handleVersand(request, runtimeEnv, url, reqId, origin));
       }
 
       if (istBuchhaltungsRoute(url)) {

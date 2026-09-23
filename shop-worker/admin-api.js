@@ -5,6 +5,7 @@ import {
   canTransitionRental,
   safeText,
 } from "./commerce-core.js";
+import { sendShippingConfirmation } from "./customer-mail.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -403,6 +404,28 @@ async function updateOrder(env, id, body, reqId) {
   } else if (effectiveStatus === "DELIVERED") {
     await db.prepare("UPDATE shipments SET status='DELIVERED',delivered_at=COALESCE(delivered_at,?),updated_at=? WHERE order_id=?")
       .bind(now, now, order.id).run();
+  }
+
+  // Sobald die Bestellung auf SHIPPED steht, bekommt die Kundin die
+  // Sendungsnummer. Ohne diese Mail muesste sie im Konto nachsehen, um
+  // ueberhaupt zu erfahren, dass das Paket unterwegs ist.
+  //
+  // Bewusst nach dem Speichern und bewusst nicht blockierend: ein Aussetzer
+  // beim Mailanbieter darf den Versandeintrag nicht verhindern. Die
+  // Verdopplungssperre haengt an der Sendungsnummer, ein erneuter Aufruf
+  // schickt also nichts zweimal.
+  if (effectiveStatus === "SHIPPED") {
+    try {
+      await sendShippingConfirmation(env, order.id, reqId);
+    } catch (err) {
+      console.error(JSON.stringify({
+        level: "error",
+        event: "shipping_confirmation_failed",
+        requestId: reqId,
+        orderId: String(order.id),
+        message: String(err?.message || "unknown").slice(0, 180),
+      }));
+    }
   }
 
   return getOrderDetail(env, order.id);
