@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var EXPIRES_AT = Date.parse("2026-09-25T15:50:49+02:00");
+  var EXPIRES_AT = Date.parse("2026-09-27T23:59:00+02:00");
   var AUTH_KEY = "d119_temp_private_until";
   var EXPECTED_HASH = "a65bd46ba7f83f1b2a7b54c9ee00f0be4e7fd90aafa39699704be1781a2f9d0e";
   var RUNTIME = "/assets/pwa-runtime.js?v=64d42bd7c7";
