@@ -135,6 +135,7 @@ jobs:
           done
           D119_SMOKE_URL=http://127.0.0.1:4173 python scripts/browser_smoke.py
           D119_SMOKE_URL=http://127.0.0.1:4173 python scripts/browser_protected_modes_smoke.py
+          D119_SMOKE_URL=http://127.0.0.1:4173 python scripts/browser_zero_g_launcher_smoke.py
           D119_SMOKE_URL=http://127.0.0.1:4173 python scripts/browser_adversarial_stress.py
           D119_SMOKE_URL=http://127.0.0.1:4173 D119_SERVER_PID=$SERVER_PID python scripts/browser_pwa_smoke.py
 
