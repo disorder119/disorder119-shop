@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS admin_passkeys (
   algorithm INTEGER NOT NULL CHECK (algorithm IN (-7, -257)),
   sign_count INTEGER NOT NULL DEFAULT 0,
   aaguid TEXT,
+  -- 1 = synchronisierbarer Passkey (iCloud-Schluesselbund, Google- oder
+  -- anderer Passwort-Manager), 0 = liegt nur im Chip dieses Geraets.
+  backup_eligible INTEGER NOT NULL DEFAULT 0 CHECK (backup_eligible IN (0, 1)),
   created_at TEXT NOT NULL,
   last_used_at TEXT,
   revoked_at TEXT

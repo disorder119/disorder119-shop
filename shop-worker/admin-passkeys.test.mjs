@@ -170,7 +170,7 @@ async function setupFirstDevice(env, options = {}) {
   const opts = await call(env, "/admin/auth/register/options", { bearer: SETUP_TOKEN, body: {} });
   assert.equal(opts.status, 200, JSON.stringify(opts.data));
   const done = await call(env, "/admin/auth/register/verify", {
-    body: { credential: await device.register(opts.data.publicKey, ADMIN), name: options.name || "Laptop" },
+    body: { credential: await device.register(opts.data.publicKey, ADMIN, { flags: options.registerFlags }), name: options.name || "Laptop" },
   });
   assert.equal(done.status, 200, JSON.stringify(done.data));
   return { device, cookie: cookieOf(done.setCookie) };
@@ -298,6 +298,37 @@ test("a second device joins only with a pairing code from a signed-in device", a
   assert.equal(token.data.error, "PASSKEY_LIMIT_REACHED");
 });
 
+test("the device list shows which key stays on the chip and which one syncs through a cloud keychain", async () => {
+  const env = freshEnv();
+  // Laptop mit Windows Hello: UP, UV, AT - kein BE.
+  const { cookie } = await setupFirstDevice(env);
+  const pairing = await call(env, "/admin/auth/pairing", { cookie, body: {} });
+  // iPhone mit iCloud-Schluesselbund: zusaetzlich BE und BS.
+  const phone = await authenticator();
+  const opts = await call(env, "/admin/auth/register/options", { body: { pairingCode: pairing.data.code } });
+  const done = await call(env, "/admin/auth/register/verify", {
+    body: { credential: await phone.register(opts.data.publicKey, ADMIN, { flags: 0x5d }), name: "iPhone" },
+  });
+  assert.equal(done.status, 200, JSON.stringify(done.data));
+
+  const list = await call(env, "/admin/auth/passkeys", { method: "GET", cookie });
+  assert.equal(list.status, 200);
+  assert.deepEqual(list.data.passkeys.map(p => [p.name, p.synced]), [["Laptop", false], ["iPhone", true]]);
+});
+
+test("a key that claims to be backed up without being backup-eligible is refused", async () => {
+  const env = freshEnv();
+  const device = await authenticator();
+  const opts = await call(env, "/admin/auth/register/options", { bearer: SETUP_TOKEN, body: {} });
+  const done = await call(env, "/admin/auth/register/verify", {
+    body: { credential: await device.register(opts.data.publicKey, ADMIN, { flags: 0x55 }), name: "Laptop" },
+  });
+  assert.equal(done.data.error, "AUTH_DATA_INVALID");
+  assert.equal(done.setCookie, "");
+  const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM admin_passkeys").first();
+  assert.equal(count.n, 0);
+});
+
 test("a pairing code works once and not after it expired", async () => {
   const env = freshEnv({ ADMIN_MAX_PASSKEYS: "3" });
   const { cookie } = await setupFirstDevice(env);
@@ -335,6 +366,7 @@ test("forged, foreign and unverified logins are refused", async () => {
     [{ rpId: "admin.disorder119.com.evil.example" }, "RP_ID_MISMATCH"],
     [{ origin: "https://disorder119.com" }, "ORIGIN_MISMATCH"],
     [{ flags: 0x01 }, "USER_VERIFICATION_REQUIRED"],
+    [{ flags: 0x15 }, "AUTH_DATA_INVALID"], // "gesichert" ohne "sicherbar" gibt es nicht
     [{ type: "webauthn.create" }, "CLIENT_DATA_INVALID"],
   ];
   for (const [overrides, code] of cases) {
@@ -425,7 +457,7 @@ test("every new device and every login is reported to Telegram", async () => {
     const { device } = await setupFirstDevice(env);
     await login(env, device);
     assert.equal(messages.length, 2);
-    assert.match(messages[0], /NEUES ADMIN-GERÄT[\s\S]*Laptop/);
+    assert.match(messages[0], /NEUES ADMIN-GERÄT[\s\S]*Laptop[\s\S]*Schlüssel: nur auf diesem Gerät/);
     assert.match(messages[1], /ADMIN-ANMELDUNG[\s\S]*Laptop/);
   } finally {
     globalThis.fetch = original;

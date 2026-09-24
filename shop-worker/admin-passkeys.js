@@ -184,8 +184,13 @@ export function parseAuthenticatorData(data) {
     flags,
     userPresent: Boolean(flags & 0x01),
     userVerified: Boolean(flags & 0x04),
+    // BE: darf der Schluessel das Geraet verlassen (Cloud-Schluesselbund)?
+    // BS: ist er gerade gesichert? Ohne BE darf BS nie gesetzt sein.
+    backupEligible: Boolean(flags & 0x08),
+    backedUp: Boolean(flags & 0x10),
     signCount: ((data[33] << 24) >>> 0) + (data[34] << 16) + (data[35] << 8) + data[36],
   };
+  if (result.backedUp && !result.backupEligible) throw new AdminAuthError("AUTH_DATA_INVALID", 400);
   if (flags & 0x40) {
     if (data.length < 55) throw new AdminAuthError("AUTH_DATA_INVALID", 400);
     result.aaguid = data.subarray(37, 53);
@@ -559,17 +564,20 @@ async function verifyRegistration(env, origin, body, reqId) {
   const now = new Date().toISOString();
   try {
     await db.prepare(`INSERT INTO admin_passkeys
-      (id,name,rp_id,public_key_jwk,algorithm,sign_count,aaguid,created_at)
-      VALUES (?,?,?,?,?,?,?,?)`).bind(
-      credentialId, name, record.rp_id, JSON.stringify(jwk), alg, auth.signCount, hex(auth.aaguid || new Uint8Array(16)), now,
+      (id,name,rp_id,public_key_jwk,algorithm,sign_count,aaguid,backup_eligible,created_at)
+      VALUES (?,?,?,?,?,?,?,?,?)`).bind(
+      credentialId, name, record.rp_id, JSON.stringify(jwk), alg, auth.signCount, hex(auth.aaguid || new Uint8Array(16)),
+      auth.backupEligible ? 1 : 0, now,
     ).run();
-  } catch {
-    throw new AdminAuthError("PASSKEY_ALREADY_REGISTERED", 409);
+  } catch (err) {
+    if (/UNIQUE|PRIMARY KEY/i.test(String(err?.message || err))) throw new AdminAuthError("PASSKEY_ALREADY_REGISTERED", 409);
+    throw err;
   }
 
   await notifyOwner(env, [
     "DISORDER119 — NEUES ADMIN-GERÄT",
     `Gerät: ${name}`,
+    `Schlüssel: ${auth.backupEligible ? "synchronisiert (iCloud-Schlüsselbund bzw. Passwort-Manager)" : "nur auf diesem Gerät"}`,
     `Zeit: ${now}`,
     "Warst du das nicht? Sofort in der Admin-App unter Geräte entfernen.",
   ].join("\n"), reqId);
@@ -665,11 +673,12 @@ async function createPairing(env, session) {
 }
 
 async function listPasskeys(env, session) {
-  const rows = await requireDb(env).prepare(`SELECT id,name,created_at,last_used_at FROM admin_passkeys
+  const rows = await requireDb(env).prepare(`SELECT id,name,backup_eligible,created_at,last_used_at FROM admin_passkeys
     WHERE revoked_at IS NULL ORDER BY created_at`).all();
   return (rows?.results || []).map(row => ({
     id: String(row.id),
     name: String(row.name || ""),
+    synced: Number(row.backup_eligible) === 1,
     createdAt: row.created_at,
     lastUsedAt: row.last_used_at || null,
     current: String(row.id) === session.passkeyId,
