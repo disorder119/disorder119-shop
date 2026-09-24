@@ -4,9 +4,10 @@
   if (window.__D119_UNIVERSE_UPGRADE__) return;
   window.__D119_UNIVERSE_UPGRADE__ = true;
 
-  var ASSET_VERSION = "20260923-3";
+  var ASSET_VERSION = "20260924-1";
   var legacyObserver = null;
   var redirectingLegacyGame = false;
+  var launcherWaitTimer = 0;
 
   function lang() {
     var value = String(document.documentElement.lang || "de").toLowerCase();
@@ -14,9 +15,9 @@
   }
   function copy() {
     var all = {
-      de: { mode: "Universum-Modus", modeAria: "Universum-Modus öffnen" },
-      en: { mode: "Universe Mode", modeAria: "Open Universe Mode" },
-      fr: { mode: "Mode Univers", modeAria: "Ouvrir le mode Univers" }
+      de: { mode: "Universum-Modus", modeAria: "Universum-Modus öffnen", gameAria: "Zero-G Runway 119 starten" },
+      en: { mode: "Universe Mode", modeAria: "Open Universe Mode", gameAria: "Start Zero-G Runway 119" },
+      fr: { mode: "Mode Univers", modeAria: "Ouvrir le mode Univers", gameAria: "Lancer Zero-G Runway 119" }
     };
     return all[lang()];
   }
@@ -70,7 +71,38 @@
       node.remove();
     });
   }
+  function startZeroGWhenReady() {
+    window.clearInterval(launcherWaitTimer);
+    var attempts = 0;
+    function tryStart() {
+      attempts += 1;
+      if (window.D119SecretGames && typeof window.D119SecretGames.start === "function") {
+        window.clearInterval(launcherWaitTimer);
+        launcherWaitTimer = 0;
+        window.D119SecretGames.start("zero");
+        return true;
+      }
+      if (attempts >= 80) {
+        window.clearInterval(launcherWaitTimer);
+        launcherWaitTimer = 0;
+      }
+      return false;
+    }
+    if (!tryStart()) launcherWaitTimer = window.setInterval(tryStart, 50);
+  }
+  function bindGameLauncher() {
+    var launcher = document.querySelector("[data-d119-game-launch]");
+    if (!launcher || launcher.getAttribute("data-d119-zero-g-bound") === "1") return;
+    launcher.setAttribute("data-d119-zero-g-bound", "1");
+    launcher.setAttribute("aria-label", copy().gameAria);
+    launcher.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      startZeroGWhenReady();
+    });
+  }
   function installLegacyGameBridge() {
+    bindGameLauncher();
     var view = document.getElementById("chaosView");
     if (!view || legacyObserver) return;
     legacyObserver = new MutationObserver(function () {
@@ -96,6 +128,7 @@
   function install() {
     installModeBranding();
     removeLegacyVisibleControls();
+    bindGameLauncher();
     loadSystems();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
