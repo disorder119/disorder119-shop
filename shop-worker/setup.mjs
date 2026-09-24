@@ -5,6 +5,7 @@
 //   node setup.mjs            # kompletter Durchgang (setzt dort fort, wo du warst)
 //   node setup.mjs --status   # nur pruefen: was ist gesetzt, was fehlt
 //   node setup.mjs --alles    # auch bewusst uebersprungene Optionen nochmal anbieten
+//   node setup.mjs --live     # nach dem Sandbox-Test: PayPal und DHL auf echten Betrieb
 //
 // Der Assistent oeffnet die jeweils passende Anbieter-Seite im Browser, erklaert
 // welcher Wert wohin gehoert und uebergibt ihn direkt an Cloudflare. Geheime
@@ -327,7 +328,12 @@ async function stepSecrets(state) {
   line(); line(bold("Admin-Zugang"));
   const tokens = {};
   for (const name of ["ADMIN_READ_TOKEN", "ADMIN_WRITE_TOKEN"]) {
-    if (done(name)) continue;
+    // Vorhandene Admin-Schluessel werden nie beilaeufig ersetzt - sonst waere
+    // die Admin-App sofort ausgesperrt. Bewusstes Erneuern: --neue-admin-tokens.
+    if (have.has(name) && !process.argv.includes("--neue-admin-tokens")) {
+      ok(`${name} ist schon gesetzt.`);
+      continue;
+    }
     tokens[name] = generatedToken();
     await putSecret(name, tokens[name]);
   }
@@ -516,8 +522,8 @@ async function stepNext() {
   info("2. Sandbox-Testkauf: in config/shop-config.json features.paypalCheckout auf true,");
   info("   per PR mergen, mit einem PayPal-Sandbox-Käuferkonto ein günstiges Stück kaufen.");
   info("   Danach das Stück in der Admin-App wieder auf verfügbar setzen.");
-  info("3. Live: `node setup.mjs` erneut starten, PayPal-Umgebung auf live und Live-App-Daten");
-  info("   eintragen, environment in config/shop-config.json auf live – per PR.");
+  info("3. Live: `node setup.mjs --live` – stellt PayPal (und auf Wunsch DHL) auf echten");
+  info("   Betrieb um und traegt environment=live in config/shop-config.json ein – per PR.");
   line();
   ok(bold("Einrichtung abgeschlossen. Den Stand prüfst du jederzeit mit: node setup.mjs --status"));
 }
@@ -535,9 +541,65 @@ async function statusOnly(state) {
   await stepHealth(state);
 }
 
+async function goLive(state) {
+  line();
+  line(bold("DISORDER119 · Umstellung auf echten Betrieb"));
+  info("Nur nach einem erfolgreichen Sandbox-Testkauf. Admin-Schlüssel, Mail, GitHub und");
+  info("Botschutz bleiben unverändert; umgestellt werden PayPal und auf Wunsch DHL.");
+  if (!(await confirm("Sandbox-Testkauf war erfolgreich und du willst jetzt live gehen?", false))) return;
+  await stepLogin();
+
+  line(); line(bold("PayPal Live"));
+  info("PayPal Developer → Apps & Credentials → Umschalter oben auf „Live“ → „Create App“.");
+  info("Voraussetzung ist ein PayPal-Geschäftskonto.");
+  openUrl("https://developer.paypal.com/dashboard/applications/live");
+  await pause();
+  state.paypalClientId = await ask("Live Client ID (öffentlich):", { validate: validators.paypalClientId });
+  saveState(state);
+  await putSecret("PAYPAL_CLIENT_ID", state.paypalClientId);
+  info("Jetzt das Live-Secret in die versteckte Eingabe:");
+  await putSecret("PAYPAL_CLIENT_SECRET");
+  info("In der Live-App „Add Webhook“:");
+  info(`• Webhook URL: ${bold(`${state.workerUrl || "<deine Worker-Adresse>"}/paypal-webhook`)}`);
+  info("• Event: Payment capture completed (PAYMENT.CAPTURE.COMPLETED)");
+  await pause();
+  await putSecret("PAYPAL_WEBHOOK_ID");
+  await putSecret("PAYPAL_ENVIRONMENT", "live");
+  state.paypalEnvironment = "live";
+  saveState(state);
+
+  line(); line(bold("DHL Live"));
+  if (await confirm("DHL-Etiketten ab jetzt echt erzeugen (kostenpflichtig)?", false)) {
+    info("Jetzt die echten Zugangsdaten deines Geschäftskundenportals und die echte");
+    info("Abrechnungsnummer – nicht die Sandbox-Testdaten.");
+    openUrl("https://geschaeftskunden.dhl.de");
+    await putSecret("DHL_USER");
+    await putSecret("DHL_PASSWORD");
+    await putSecret("DHL_BILLING_NUMBER", await ask("Abrechnungsnummer (14 Ziffern):", { validate: validators.billingNumber }));
+    await putSecret("DHL_ENVIRONMENT", "live");
+  } else {
+    warn("DHL bleibt in der Sandbox – echte Etiketten weiter im Portal erstellen.");
+  }
+
+  const config = JSON.parse(fs.readFileSync(SHOP_CONFIG_PATH, "utf8"));
+  if (!config.turnstileSiteKey && !state.turnstileSiteKey) {
+    warn("turnstileSiteKey fehlt – ohne Botschutz lehnt der Worker live jeden Kauf ab. Erst `node setup.mjs` abschließen.");
+  }
+  const values = { paypalClientId: state.paypalClientId, environment: "live" };
+  if (!config.turnstileSiteKey && state.turnstileSiteKey) values.turnstileSiteKey = state.turnstileSiteKey;
+  fs.writeFileSync(SHOP_CONFIG_PATH, updateShopConfig(fs.readFileSync(SHOP_CONFIG_PATH, "utf8"), values));
+  ok("config/shop-config.json: Live Client ID und environment=live eingetragen.");
+  await stepHealth(state);
+  line();
+  info("Letzter Schritt: config/shop-config.json per Pull Request übernehmen. Nach dem");
+  info("automatischen Rebuild kaufen Kundinnen mit echtem Geld. Direkt danach eine");
+  info("Testbestellung mit kleinem Betrag machen und im PayPal-Konto erstatten.");
+}
+
 async function main() {
   const state = loadState();
   if (process.argv.includes("--status")) return statusOnly(state);
+  if (process.argv.includes("--live")) return goLive(state);
   await stepWelcome();
   await stepLogin();
   await stepDatabase(state);
