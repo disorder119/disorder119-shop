@@ -58,6 +58,8 @@ def main() -> None:
 
     run_guarded("apply_universe_piece_scale.py")
     run_guarded("apply_universe_desktop_controls.py")
+    run_guarded("apply_universe_desktop_response_v2.py")
+    run_guarded("apply_zero_g_cache_refresh.py")
 
 
 if __name__ == "__main__":

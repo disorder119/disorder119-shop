@@ -32,7 +32,7 @@ jobs:
 
       - name: Security-Code Syntax pruefen
         run: |
-          python -m py_compile scripts/security_scan.py scripts/universe_regression.py
+          python -m py_compile scripts/security_scan.py scripts/universe_regression.py scripts/apply_universe_desktop_response_v2.py scripts/apply_zero_g_cache_refresh.py
           node --check shop-worker/notifications.js
           node --check shop-worker/worker-entry.js
           node --check shop-worker/backend-runtime.js

@@ -8,6 +8,8 @@ game_css = (ROOT / "assets" / "zero-g-runway.css").read_text(encoding="utf-8")
 promos = (ROOT / "assets" / "shop-promos.js").read_text(encoding="utf-8")
 loader = (ROOT / "assets" / "ios-zoom-lock.js").read_text(encoding="utf-8")
 worker = (ROOT / "shop-worker" / "game-rewards.js").read_text(encoding="utf-8")
+response_v2 = (ROOT / "scripts" / "apply_universe_desktop_response_v2.py").read_text(encoding="utf-8")
+cache_refresh = (ROOT / "scripts" / "apply_zero_g_cache_refresh.py").read_text(encoding="utf-8")
 
 
 def require(condition, message):
@@ -28,6 +30,14 @@ require('function startRunway' in game, "Zero-G runway engine missing")
 require('/assets/zero-g-runway.js?v=' in upgrade and '/assets/zero-g-runway.css?v=' in upgrade, "Zero-G bundle bootstrap missing")
 require('/assets/secret-games.js?v=' not in upgrade and '/assets/secret-games.css?v=' not in upgrade, "superseded game bundle is still loaded")
 require('D119SecretGames.start("zero")' in upgrade, "legacy Universe game bridge does not route to Zero-G")
+
+# The visible GAME launcher must work even if the heavy game bundle is still loading.
+require('function bindGameLauncher()' in upgrade, "visible GAME launcher is not bound")
+require('function startZeroGWhenReady()' in upgrade, "launcher has no load-race fallback")
+require('data-d119-zero-g-bound' in upgrade, "launcher binding is not idempotent")
+require('launcher.addEventListener("click"' in upgrade, "launcher click handler missing")
+require('window.D119SecretGames.start("zero")' in upgrade, "launcher does not start Zero-G")
+require('gameAria: "Zero-G Runway 119 starten"' in upgrade, "German GAME launcher label is stale")
 
 # Fashion is the actual game mechanic.
 require('/data/catalog.json' in game, "game does not source public catalogue pieces")
@@ -55,6 +65,13 @@ require('touch-action:none' in game_css, "canvas does not own mobile touch input
 require('cursor:none' in game_css, "native cursor is not hidden during the run")
 require('env(safe-area-inset-bottom' in game_css and 'env(safe-area-inset-top' in game_css, "iPhone safe-area support missing")
 
+# Desktop Universe response V2: materially faster without changing the no-click mouse-look model.
+require('UNIVERSE_DESKTOP_GAZE_V2' in response_v2, "desktop response V2 migration missing")
+require('dead = 0.055' in response_v2, "desktop mouse dead-zone was not reduced")
+require('0.00072' in response_v2 and '1.05' in response_v2, "desktop mouse speed/edge acceleration was not increased")
+require('0.00145' in response_v2, "trackpad/wheel zoom remains too sluggish")
+require('validate_shop.init_mode_guard()' in response_v2, "desktop response migration does not refresh protected mode guard")
+
 # Discovery is a floating Disorder119 shopping bag.
 require('function spawnEncounter' in game, "random encounter bootstrap missing")
 require('d119-zero-g-bag' in game and '.d119-zero-g-bag__icon' in game_css, "floating shopping-bag discovery missing")
@@ -80,10 +97,11 @@ require('target: 48000' in worker and 'maxScore: 150000' in worker, "worker scor
 require('document.getElementById("cartFoot")' in promos and 'data-d119-coupon' in promos, "shop coupon field missing")
 require('/coupons/validate' in promos and 'payload.couponCode = code' in promos, "server coupon validation/checkout forwarding missing")
 
-# Cache-bust the game and the Universe loader.
-require('ASSET_VERSION = "20260923-3"' in upgrade, "Zero-G asset version not bumped")
+# Cache-bust the game and the complete Universe loader chain.
+require('ASSET_VERSION = "20260924-1"' in upgrade, "Zero-G asset version not refreshed")
 require('if (!document.getElementById("chaosView")) return;' in upgrade, "game bundle is loaded on normal shop pages")
-require('/assets/universe-upgrade.js?v=20260923-3' in loader, "Universe JS cache-bust missing")
-require('/assets/universe-upgrade.css?v=20260923-3' in loader, "Universe CSS cache-bust missing")
+require('/assets/universe-upgrade.js?v=20260924-1' in loader, "Universe JS cache-bust missing")
+require('/assets/universe-upgrade.css?v=20260924-1' in loader, "Universe CSS cache-bust missing")
+require('20260924-1' in cache_refresh and 'ios-zoom-lock.js?v=20260923-1' not in cache_refresh, "outer PWA loader cache refresh missing")
 
-print("Universe Zero-G Runway 119 regression checks passed")
+print("Universe Zero-G Runway 119 launch + response regression checks passed")
