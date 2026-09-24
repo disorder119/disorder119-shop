@@ -30,7 +30,7 @@ def main() -> None:
     )
     changed |= replace_version(
         PWA,
-        "20260923-1",
+        "20260923-3",
         NEW,
         1,
         "iOS/Universe Loader Cache-Bust",
