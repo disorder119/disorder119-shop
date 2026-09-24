@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="Univers Disorder119 — explorez les pièces designer et vintage dans un espace interactif.">
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://disorder119.com/fr/">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/favicon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<title>Disorder119 — Univers</title>
+<link rel="stylesheet" href="/assets/universe.css?v=20260924-1">
+</head>
+<body>
+<nav class="u-nav" aria-label="Changer de vue">
+  <a class="u-brand" href="/fr/">DISORDER119</a>
+  <div class="u-modes">
+    <a class="u-mode" href="/fr/match/"><span aria-hidden="true">♥</span><span>Match</span></a>
+    <a class="u-mode" href="/fr/universe/" aria-current="page"><span aria-hidden="true">✦</span><span>Univers</span></a>
+    <a class="u-mode" href="/fr/baukasten/"><span aria-hidden="true">⛃</span><span>Builder</span></a>
+  </div>
+  <a class="u-archive" href="/fr/">Archive</a>
+</nav>
+<main class="u-stage" id="uStage">
+  <canvas class="u-canvas" id="uCanvas" tabindex="0" aria-label="Univers : déplacez la souris pour regarder, utilisez la molette ou le trackpad pour zoomer, double-cliquez pour ouvrir un article."></canvas>
+  <p class="u-hint" id="uHint">Chargement de l’univers …</p>
+  <span class="u-tooltip" id="uTooltip"></span>
+  <span class="u-status" id="uStatus">Chargement …</span>
+  <button class="u-focus is-empty" id="uFocus" type="button">
+    <span class="u-focus__brand" id="uFocusBrand"></span>
+    <span class="u-focus__title" id="uFocusTitle">Zoomer davantage</span>
+    <span class="u-focus__meta" id="uFocusMeta"></span>
+  </button>
+  <div class="u-actions">
+    <button class="u-btn" id="uShuffle" type="button">Mélanger</button>
+    <a class="u-btn" href="/fr/">Vers l’archive →</a>
+  </div>
+  <div class="u-error" id="uError" hidden></div>
+</main>
+<script src="/assets/pwa.js?v=20260924-2"></script>
+<script src="/assets/universe.js?v=20260924-1"></script>
+</body>
+</html>
