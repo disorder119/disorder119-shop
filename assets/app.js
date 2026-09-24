@@ -3013,11 +3013,11 @@
       // Bewegen/Positionieren, ohne dass eine Taste gehalten werden muss.
       // In der Mitte ist eine kleine Ruhezone; Richtung Rand steigt das Tempo.
       if (S.mouseLook && S.mouseLook.active && chaosFinePointer()) {
-        var lx = S.mouseLook.x, ly = S.mouseLook.y, dead = 0.12;
+        var lx = S.mouseLook.x, ly = S.mouseLook.y, dead = 0.055; // UNIVERSE_DESKTOP_GAZE_V2
         var ax = Math.abs(lx) > dead ? (Math.abs(lx) - dead) / (1 - dead) * (lx < 0 ? -1 : 1) : 0;
         var ay = Math.abs(ly) > dead ? (Math.abs(ly) - dead) / (1 - dead) * (ly < 0 ? -1 : 1) : 0;
-        S.cam.x += ax * 0.00042 * dt * (1 + Math.abs(ax) * 0.75);
-        S.cam.y += ay * 0.00042 * dt * (1 + Math.abs(ay) * 0.75);
+        S.cam.x += ax * 0.00072 * dt * (1 + Math.abs(ax) * 1.05);
+        S.cam.y += ay * 0.00072 * dt * (1 + Math.abs(ay) * 1.05);
         if (ax || ay) S.lastInput = now;
       }
       var v = S.vel;
@@ -3421,8 +3421,8 @@
       // Trackpads melden viele kleine Schritte, Mausraeder wenige grosse.
       // Sanftere Kurve + engeres Clamping verhindert das bisherige Springen.
       var delta = e.deltaMode === 1 ? e.deltaY * 28 : e.deltaY;
-      delta = Math.max(-120, Math.min(120, delta));
-      if (Math.abs(delta) > 0.01) chaosUZoomStep(p.x, p.y, Math.exp(-delta * 0.00105));
+      delta = Math.max(-140, Math.min(140, delta));
+      if (Math.abs(delta) > 0.01) chaosUZoomStep(p.x, p.y, Math.exp(-delta * 0.00145));
       chaosTooltip.classList.remove("visible");
       chaosU.lastInput = performance.now(); chaosUHideHint(); chaosURequest();
     }, { passive: false });
