@@ -317,3 +317,50 @@
     window.setTimeout(registerWorker, 3500);
   }, { once: true });
 })();
+
+/* UNIVERSE_V2_ROUTE_GUARD — the old /chaos/ runtime contained game code and
+   lived inside the heavy archive bundle. Keep old URLs compatible, but route
+   every normal Universe entry to the dedicated, game-free renderer. */
+(function () {
+  "use strict";
+
+  function langPrefixFromPath(path) {
+    var match = /^\/(en|fr)(?:\/|$)/.exec(path || "");
+    return match ? "/" + match[1] + "/" : "/";
+  }
+  function isLegacyUniverse(path) {
+    return /^\/(?:en\/|fr\/)?chaos\/?$/i.test(path || "");
+  }
+  function universePath(path) {
+    return langPrefixFromPath(path) + "universe/";
+  }
+
+  // Direct links/bookmarks to the former route remain valid.
+  if (isLegacyUniverse(location.pathname)) {
+    location.replace(universePath(location.pathname) + location.search + location.hash);
+    return;
+  }
+
+  // Remove all visible game entry points from the shared archive shell. The
+  // detached legacy code is never entered because Universe navigation below
+  // always performs a real navigation to the standalone renderer.
+  var gameStyle = document.createElement("style");
+  gameStyle.textContent = "[data-d119-game-launch],.chaos-game{display:none!important}";
+  document.head.appendChild(gameStyle);
+
+  document.addEventListener("click", function (event) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    var target = event.target;
+    if (!target || !target.closest) return;
+    var link = target.closest('a[data-mode-view="chaos"]');
+    if (!link) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    location.assign(universePath(location.pathname));
+  }, true);
+
+  // Browser back/forward can otherwise restore the old in-page /chaos/ state.
+  window.addEventListener("popstate", function () {
+    if (isLegacyUniverse(location.pathname)) location.replace(universePath(location.pathname));
+  });
+})();
