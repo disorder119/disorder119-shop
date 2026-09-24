@@ -29,7 +29,10 @@ Diese Datei dokumentiert den technischen Stand fuer einen echten Checkout, ohne 
    - `PAYPAL_CLIENT_ID`
    - `PAYPAL_CLIENT_SECRET`
    - `PAYPAL_WEBHOOK_ID`
-   - `GITHUB_TOKEN` (nur Contents read/write fuer dieses Repository)
+   - `GITHUB_TOKEN` (fine-grained, nur dieses Repository: **Contents: Read and
+     write** und **Pull requests: Read and write**). Damit markiert der Worker
+     Verkaeufe und speichert der Katalog-Editor der Admin-App - ueber Pull
+     Requests, weil der Main-Waechter direkte Pushes zurueckdreht.
    - `ADMIN_READ_TOKEN` und `ADMIN_WRITE_TOKEN` (getrennte Rollen; der alte
      gemeinsame `ADMIN_TOKEN` funktioniert auf einem entfernten Worker nicht
      mehr, siehe `backend-runtime.js`)
@@ -87,6 +90,45 @@ Diese Datei dokumentiert den technischen Stand fuer einen echten Checkout, ohne 
    - Order-Eintrag in D1
    - DHL-Fehler darf Zahlung/SOLD nicht rueckgaengig machen
    - Webhook ist idempotent
+
+## Admin-App: Anmeldung per Face ID / Windows Hello
+
+Die Admin-App (`admin.disorder119.com`, Repository `disorder119-admin`) meldet
+sich per Passkey an (`shop-worker/admin-passkeys.js`, Migration 0014):
+
+- **Erstes Geraet:** Admin-App oeffnen, einmal den `ADMIN_WRITE_TOKEN`
+  einfuegen, Face ID bzw. Windows Hello bestaetigen. Das geht nur, solange noch
+  kein Passkey existiert.
+- **Weitere Geraete:** Auf einem angemeldeten Geraet unter *Geraete* einen
+  Kopplungscode erzeugen (10 Minuten gueltig, einmal nutzbar) und auf dem
+  neuen Geraet eintippen. Hoechstens `ADMIN_MAX_PASSKEYS` Geraete (Standard 2).
+- Sobald ein Passkey existiert, oeffnen `ADMIN_READ_TOKEN`/`ADMIN_WRITE_TOKEN`
+  allein nichts mehr (`PASSKEY_REQUIRED`). Fuer Skripte kann
+  `ADMIN_BEARER_ENABLED=true` den Token bewusst weiter zulassen.
+- Jede Anmeldung und jedes neue Geraet meldet sich per Telegram.
+- Sitzung: HttpOnly-Cookie, `SameSite=Strict`, nur `/admin`, 12 Stunden
+  (`ADMIN_SESSION_HOURS`), nur von `admin.disorder119.com` aus gueltig.
+- **Beide Geraete verloren:** im Ordner `shop-worker`
+  `npx wrangler d1 execute disorder119-shop --remote --command "DELETE FROM admin_sessions; DELETE FROM admin_pairing_codes; DELETE FROM admin_passkeys;"`
+  - danach gilt wieder der Token fuer das erste Geraet. Das geht nur mit
+  Zugang zum Cloudflare-Konto (Zwei-Faktor!).
+
+## DHL-Versandmarke als QR-Code
+
+Ohne Geschaeftskundenvertrag, fuer unter 200 Pakete im Jahr
+(`shop-worker/dhl-qr.js`, Migration 0015, DHL "Parcel DE Private Shipping"):
+
+1. Kostenloses Konto im DHL-Entwicklerportal, dort eine App anlegen und die
+   API "DHL Parcel DE Private Shipping" freischalten lassen.
+2. `npx wrangler secret put DHL_PRIVAT_API_KEY`, zum Testen
+   `DHL_PRIVAT_ENVIRONMENT=sandbox`, danach `live`.
+3. Absender: `DHL_SHIPPER_NAME`, `DHL_SHIPPER_STREET` (mit Hausnummer),
+   `DHL_SHIPPER_POSTAL`, `DHL_SHIPPER_CITY` - ohne Angabe gelten die Werte aus
+   dem Impressum.
+4. In der Admin-App bei der Bestellung *QR-Versandmarke*: Groesse waehlen,
+   Adresse pruefen, auf der DHL-Seite bezahlen, zurueck in die App - der
+   QR-Code erscheint. An Packstation oder Filiale vorzeigen, dann
+   *Versendet* tippen: die Kundin bekommt die Versandmail.
 
 ## Eigene Shop-Mailadresse einrichten
 

@@ -43,6 +43,10 @@ jobs:
           node --check shop-worker/customer-account.js
           node --check shop-worker/buchhaltung.js
           node --check shop-worker/dhl.js
+          node --check shop-worker/dhl-qr.js
+          node --check shop-worker/admin-passkeys.js
+          node --check shop-worker/admin-katalog.js
+          node --check shop-worker/github-datei.js
           node --check assets/ios-zoom-lock.js
           node --check assets/universe-upgrade.js
           node --check assets/zero-g-runway.js
@@ -54,6 +58,9 @@ jobs:
 
       - name: Game- und Gutschein-Regressionen pruefen
         run: node --test shop-worker/game-rewards.test.mjs shop-worker/coupon-checkout.test.mjs shop-worker/buchhaltung.test.mjs shop-worker/dhl.test.mjs
+
+      - name: Admin-Anmeldung, QR-Versand und Katalog pruefen
+        run: node --test shop-worker/admin-passkeys.test.mjs shop-worker/dhl-qr.test.mjs shop-worker/admin-katalog.test.mjs
 
       - name: Gutschein-Migration pruefen
         run: |

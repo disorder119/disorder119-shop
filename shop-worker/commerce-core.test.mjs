@@ -47,24 +47,45 @@ test("a sale changes only the two status lines and keeps the file ending", async
     { id: 1, title: "Mantel", price: 90, status: "Verfügbar", public_status: "AVAILABLE" },
     { id: 2, title: "Hose", price: 50, status: "Verfügbar", public_status: "AVAILABLE" },
   ], null, 2) + "\n";
-  const puts = [];
+  const MAIN = "a".repeat(40);
+  const TREE = "b".repeat(40);
+  const aufrufe = [];
   const echtesFetch = globalThis.fetch;
   globalThis.fetch = async (url, init = {}) => {
-    if (!init.method || init.method === "GET") {
-      return new Response(JSON.stringify({ content: Buffer.from(original, "utf8").toString("base64"), sha: "sha-1" }), { status: 200 });
+    const methode = init.method || "GET";
+    const pfad = new URL(String(url)).pathname.replace("/repos/disorder119/disorder119-shop", "");
+    const ziel = pfad + new URL(String(url)).search;
+    const koerper = init.body ? JSON.parse(init.body) : null;
+    aufrufe.push({ methode, ziel, koerper, accept: init.headers?.Accept });
+    if (methode === "GET" && pfad === "/git/ref/heads/main") return Response.json({ object: { sha: MAIN } });
+    if (methode === "GET" && pfad === `/git/commits/${MAIN}`) return Response.json({ tree: { sha: TREE } });
+    // Verzeichnis fuer den SHA, dann der Roh-Blob - nie die Contents-API der
+    // Datei selbst, die ab 1 MiB keinen Inhalt mehr liefert.
+    if (methode === "GET" && ziel === `/contents/data?ref=${MAIN}`) {
+      return Response.json([{ name: "catalog.json", type: "file", sha: "sha-x" }, { name: "items.json", type: "file", sha: "sha-1" }]);
     }
-    puts.push(JSON.parse(init.body));
-    return new Response("{}", { status: 200 });
+    if (methode === "GET" && pfad === "/git/blobs/sha-1") return new Response(original, { status: 200 });
+    if (methode === "POST" && pfad === "/git/blobs") return Response.json({ sha: "c".repeat(40) });
+    if (methode === "POST" && pfad === "/git/trees") return Response.json({ sha: "d".repeat(40) });
+    if (methode === "POST" && pfad === "/git/commits") return Response.json({ sha: "e".repeat(40) });
+    if (methode === "PATCH" && pfad === "/git/refs/heads/main") return Response.json({ object: { sha: "e".repeat(40) } });
+    return new Response("nicht erwartet", { status: 404 });
   };
   try {
     await markCatalogSold({ GITHUB_TOKEN: "test" }, 2);
   } finally {
     globalThis.fetch = echtesFetch;
   }
-  assert.equal(puts.length, 1);
-  assert.equal(puts[0].message, "Verkauft: Artikel 2");
-  assert.equal(puts[0].sha, "sha-1");
-  const geschrieben = Buffer.from(puts[0].content, "base64").toString("utf8");
+  const blob = aufrufe.find(a => a.methode === "POST" && a.ziel === "/git/blobs");
+  const baum = aufrufe.find(a => a.methode === "POST" && a.ziel === "/git/trees");
+  const commit = aufrufe.find(a => a.methode === "POST" && a.ziel === "/git/commits");
+  const vorspulen = aufrufe.find(a => a.methode === "PATCH");
+  assert.equal(aufrufe.find(a => a.ziel === "/git/blobs/sha-1").accept, "application/vnd.github.raw+json");
+  assert.equal(blob.koerper.encoding, "utf-8", "ohne Base64 - sonst sprengt es das Rechenzeit-Limit");
+  assert.deepEqual(baum.koerper, { base_tree: TREE, tree: [{ path: "data/items.json", mode: "100644", type: "blob", sha: "c".repeat(40) }] });
+  assert.deepEqual(commit.koerper, { message: "Verkauft: Artikel 2", tree: "d".repeat(40), parents: [MAIN] });
+  assert.deepEqual(vorspulen.koerper, { sha: "e".repeat(40), force: false });
+  const geschrieben = blob.koerper.content;
   assert.ok(geschrieben.endsWith("]\n"), "Zeilenumbruch am Dateiende muss bleiben");
   const alt = original.split("\n");
   const neu = geschrieben.split("\n");

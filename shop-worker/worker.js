@@ -10,6 +10,7 @@ import {
   rentalQuoteFromItem,
   safeText,
 } from "./commerce-core.js";
+import { branchHead, createCommit, fastForward, readRepoFile } from "./github-datei.js";
 
 const CONFIG = Object.freeze({
   githubOwner: "disorder119",
@@ -168,12 +169,13 @@ function ghHeaders(env) {
 }
 
 async function loadItems(env) {
-  const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.itemsPath}?ref=${CONFIG.githubBranch}`;
-  const res = await fetch(url, { headers: ghHeaders(env) });
-  if (!res.ok) throw new Error(`catalog_load_${res.status}`);
-  const file = await res.json();
-  const text = new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g, "")), c => c.charCodeAt(0)));
-  return { items: JSON.parse(text), sha: file.sha, text };
+  ghHeaders(env); // ohne GITHUB_TOKEN: CATALOG_BACKEND_NOT_CONFIGURED wie bisher
+  // Ueber den Blob statt die Contents-API: items.json ist groesser als die
+  // 1 MiB, bis zu der GitHub dort noch Inhalt mitschickt (github-datei.js).
+  const { text, sha } = await readRepoFile(env, CONFIG.itemsPath, {
+    repo: { owner: CONFIG.githubOwner, repo: CONFIG.githubRepo, branch: CONFIG.githubBranch },
+  });
+  return { items: JSON.parse(text), sha, text };
 }
 
 async function findItem(env, itemId) {
@@ -432,8 +434,15 @@ async function verifyPaypalWebhook(env, headers, body) {
 // build_site.py - bis auf den Zeilenumbruch am Dateiende, der deshalb
 // erhalten bleibt.
 export async function markCatalogSold(env, itemId) {
+  ghHeaders(env); // ohne GITHUB_TOKEN: CATALOG_BACKEND_NOT_CONFIGURED
+  const repo = { owner: CONFIG.githubOwner, repo: CONFIG.githubRepo, branch: CONFIG.githubBranch };
   for (let attempt = 0; attempt < 4; attempt++) {
-    const { items, sha, text } = await loadItems(env);
+    // Lesen und Schreiben auf genau demselben Stand von main: bewegt sich main
+    // dazwischen (etwa durch den Rebuild), scheitert das Vorspulen und wir
+    // setzen neu auf, statt eine fremde Aenderung zu ueberschreiben.
+    const head = await branchHead(env, { repo });
+    const { text } = await readRepoFile(env, CONFIG.itemsPath, { repo, ref: head.commitSha });
+    const items = JSON.parse(text);
     const item = items.find(it => String(it.id) === String(itemId));
     if (!item) throw new Error("catalog_item_missing");
     const alreadySold = String(item.public_status || "").toUpperCase() === "SOLD";
@@ -447,13 +456,16 @@ export async function markCatalogSold(env, itemId) {
     delete item.reserved_price;
     delete item.reserved_currency;
     const serialized = JSON.stringify(items, null, 2) + (text.endsWith("\n") ? "\n" : "");
-    const content = btoa(unescape(encodeURIComponent(serialized)));
-    const url = `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${CONFIG.itemsPath}`;
-    const res = await fetch(url, { method: "PUT", headers: ghHeaders(env), body: JSON.stringify({
-      message: `Verkauft: Artikel ${itemId}`, content, sha, branch: CONFIG.githubBranch,
-    }) });
-    if (res.ok) return;
-    if (res.status !== 409) throw new Error(`catalog_mark_sold_${res.status}`);
+    // Als UTF-8-Blob ueber die Git-Datenschnittstelle: kein Base64, das im
+    // kostenlosen Worker-Tarif allein schon das Rechenzeit-Limit sprengt.
+    const commitSha = await createCommit(env, {
+      repo,
+      parent: head.commitSha,
+      baseTree: head.treeSha,
+      message: `Verkauft: Artikel ${itemId}`,
+      files: [{ path: CONFIG.itemsPath, text: serialized }],
+    });
+    if (await fastForward(env, commitSha, { repo })) return;
   }
   throw new Error("catalog_mark_sold_conflict");
 }
