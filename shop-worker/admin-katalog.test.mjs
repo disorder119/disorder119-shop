@@ -29,6 +29,8 @@ function fakeGithub({ conflicts = 0 } = {}) {
     if (method === "GET" && path === "/git/ref/heads/main") return Response.json({ object: { sha: MAIN } });
     if (method === "GET" && path === `/git/commits/${MAIN}`) return Response.json({ tree: { sha: TREE } });
     if (method === "GET" && path === "/contents/data") return Response.json([{ name: "items.json", type: "file", sha: "items-sha" }]);
+    if (method === "GET" && path === "/contents/assets/img/b2-241/thumbs") return Response.json([{ name: "0.webp", type: "file" }, { name: "9.webp", type: "file" }]);
+    if (method === "GET" && path === "/contents/assets/img/b2-241") return Response.json([{ name: "0.webp", type: "file" }]);
     if (method === "GET" && path === "/git/blobs/items-sha") return new Response(ITEMS_TEXT);
     if (method === "GET" && path === "/commits") {
       return Response.json([{ sha: "c".repeat(40), commit: { message: "Admin: Titel geändert\n\nDetails", author: { name: "disorder119", date: "2026-09-24T10:00:00Z" } } }]);
@@ -149,7 +151,8 @@ test("photos must be real WebP files in the image folders", async () => {
       body: {
         images: [{ path: "assets/img/b2-241/1.webp", base64: WEBP }, { path: "assets/img/b2-241/thumbs/1.webp", base64: WEBP }],
         changes: [{ id: 6241, set: { gallery: ["assets/img/b2-241/0.webp", "assets/img/b2-241/1.webp"] } }],
-        remove: ["assets/img/b2-241/thumbs/9.webp"],
+        // 7.webp gibt es nicht: wird still uebergangen statt den Commit zu kippen.
+        remove: ["assets/img/b2-241/thumbs/9.webp", "assets/img/b2-241/7.webp"],
       },
     });
     assert.equal(good.status, 200, JSON.stringify(good.data));

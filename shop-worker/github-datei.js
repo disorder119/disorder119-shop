@@ -62,6 +62,17 @@ export async function branchHead(env, { repo = SHOP_REPO, userAgent } = {}) {
   return { commitSha, treeSha };
 }
 
+/** Dateinamen eines Ordners auf einem Stand - fuers Loeschen nur, was es gibt. */
+export async function listDirectory(env, dir, { repo = SHOP_REPO, ref, userAgent } = {}) {
+  try {
+    const entries = await ghJson(env, repo, `/contents/${dir}?ref=${encodeURIComponent(ref || repo.branch)}`, { userAgent });
+    return new Set((Array.isArray(entries) ? entries : []).filter(e => e?.type === "file").map(e => String(e.name)));
+  } catch (err) {
+    if (err instanceof GithubError && err.status === 404) return new Set();
+    throw err;
+  }
+}
+
 /** Eine Datei als Text, optional genau auf einem Commit-Stand. */
 export async function readRepoFile(env, path, { userAgent = "disorder119-shop-worker", repo = SHOP_REPO, ref } = {}) {
   const slash = path.lastIndexOf("/");

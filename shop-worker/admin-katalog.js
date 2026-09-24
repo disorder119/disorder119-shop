@@ -13,6 +13,7 @@ import {
   GithubError,
   branchHead,
   createCommit,
+  listDirectory,
   mergeViaPullRequest,
   readRepoFile,
   recentCommits,
@@ -149,7 +150,17 @@ export async function saveCatalog(env, body = {}) {
 
   for (let versuch = 0; versuch < 3; versuch++) {
     const head = await branchHead(env, { userAgent: USER_AGENT });
-    const files = [...images, ...removals];
+    // Nur loeschen, was auf diesem Stand existiert - ein fehlendes Vorschaubild
+    // darf das Speichern nicht scheitern lassen.
+    const existing = new Map();
+    for (const dir of new Set(removals.map(r => r.path.slice(0, r.path.lastIndexOf("/"))))) {
+      existing.set(dir, await listDirectory(env, dir, { ref: head.commitSha, userAgent: USER_AGENT }));
+    }
+    const presentRemovals = removals.filter(r => {
+      const slash = r.path.lastIndexOf("/");
+      return existing.get(r.path.slice(0, slash))?.has(r.path.slice(slash + 1));
+    });
+    const files = [...images, ...presentRemovals];
     if (changes.length) {
       const { text: itemsText } = await readRepoFile(env, ITEMS_PATH, { userAgent: USER_AGENT, ref: head.commitSha });
       const items = applyChanges(JSON.parse(itemsText), changes);
