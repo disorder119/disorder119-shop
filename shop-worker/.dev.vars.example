@@ -11,9 +11,27 @@ ADMIN_WRITE_TOKEN=""
 TURNSTILE_SECRET=""
 GITHUB_TOKEN=""
 
+# Order confirmation mail (Brevo, EU). Required before going live.
+MAIL_API_KEY=""
+MAIL_FROM=""
+MAIL_REPLY_TO=""
+MAIL_BCC=""
+
 # Optional, free push notification after a confirmed sale.
 TELEGRAM_BOT_TOKEN=""
 TELEGRAM_CHAT_ID=""
+
+# Optional DHL label API (Parcel DE Shipping v2). Requires a DHL business contract.
+DHL_ENVIRONMENT="sandbox"
+DHL_API_KEY=""
+DHL_USER=""
+DHL_PASSWORD=""
+DHL_BILLING_NUMBER=""
+
+# Optional game coupon limits (safe defaults apply when unset).
+GAME_COUPONS_ENABLED=""
+GAME_COUPONS_MAX_PER_DAY=""
+GAME_COUPONS_MAX_PER_USER_PER_DAY=""
 
 # Legacy local-only bridge. Keep disabled for remote/production deployments.
 ALLOW_LEGACY_ADMIN_TOKEN="false"

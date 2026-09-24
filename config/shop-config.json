@@ -5,6 +5,7 @@
   "shippingFlatCents": 590,
   "paypalClientId": "",
   "shopWorkerUrl": "",
+  "turnstileSiteKey": "",
   "environment": "sandbox",
   "features": {
     "paypalCheckout": false,

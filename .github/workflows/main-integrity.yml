@@ -19,12 +19,70 @@ jobs:
         if: github.event_name == 'pull_request'
         run: echo "PR path detected — provenance OK."
 
+      # Der Pruefer fuer Verkaufsbuchungen kommt aus dem VORHERIGEN main-Stand,
+      # nie aus dem gepushten Commit: sonst koennte ein Push seinen eigenen
+      # Pruefer mitbringen.
+      # Beide Zusatzschritte duerfen den Job nie scheitern lassen: sie koennen
+      # die Verkaufs-Ausnahme nur gewaehren oder verweigern, die normale
+      # Herkunftspruefung fuer gemergte PRs laeuft unveraendert danach.
+      - name: Vertrauenswuerdigen Main-Stand fuer Verkaufspruefung auschecken
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        continue-on-error: true
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.before }}
+          path: trusted
+          persist-credentials: false
+
+      - name: Verkaufsbuchung des Shop-Workers inhaltlich pruefen
+        id: sale
+        if: github.event_name == 'push'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          BEFORE: ${{ github.event.before }}
+          HEAD_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          # Nur Pushes, deren letzter Commit exakt "Verkauft: Artikel <id>" heisst,
+          # kommen fuer diese Ausnahme ueberhaupt in Frage. Alles Weitere prueft
+          # scripts/verify_sale_commit.py ueber den gesamten Push.
+          message="$(printf '%s' "$HEAD_MESSAGE" | sed -e 's/[[:space:]]*$//')"
+          if [[ ! "$message" =~ ^Verkauft:\ Artikel\ [0-9]+$ ]]; then
+            echo "Kein Verkaufs-Commit - normale Herkunftspruefung."
+            exit 0
+          fi
+          if [ ! -f trusted/scripts/verify_sale_commit.py ]; then
+            echo "Pruefer im vorherigen main-Stand nicht vorhanden - keine Ausnahme."
+            exit 0
+          fi
+          work="${RUNNER_TEMP:-/tmp}/sale-check"
+          mkdir -p "$work"
+          api() {
+            curl -fsSL --retry 3 --retry-all-errors \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "$@"
+          }
+          api -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/compare/$BEFORE...$SHA" -o "$work/compare.json"
+          api -H "Accept: application/vnd.github.raw+json" \
+            "https://api.github.com/repos/$REPO/contents/data/items.json?ref=$BEFORE" -o "$work/before.json"
+          api -H "Accept: application/vnd.github.raw+json" \
+            "https://api.github.com/repos/$REPO/contents/data/items.json?ref=$SHA" -o "$work/after.json"
+          if python trusted/scripts/verify_sale_commit.py "$work/compare.json" "$work/before.json" "$work/after.json"; then
+            echo "verified=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Main push must come from a merged PR or trusted automation
         if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
+          SALE_VERIFIED: ${{ steps.sale.outputs.verified }}
         run: |
           set -euo pipefail
           # Die Antwort enthaelt die vollstaendige Dateiliste des Commits samt
@@ -78,7 +136,7 @@ jobs:
           done
 
           python - "$commit_json_file" "$prs_json_file" "$SHA" <<'PY'
-          import json, sys
+          import json, os, sys
           with open(sys.argv[1], encoding="utf-8") as fh:
               commit = json.load(fh)
           with open(sys.argv[2], encoding="utf-8") as fh:
@@ -108,6 +166,12 @@ jobs:
           if (trusted_actions_identity and name == "disorder119-guard" and
                   message.startswith("Automatischer Schutz-Revert eines unautorisierten main-Push")):
               print("Main guard self-heal provenance OK.")
+              raise SystemExit(0)
+          # Verkaufsbuchung des Shop-Workers: im Schritt davor inhaltlich ueber den
+          # ganzen Push geprueft (nur data/items.json, nur SOLD-Markierung der
+          # genannten Artikel), mit dem Pruefer aus dem vorherigen main-Stand.
+          if os.environ.get("SALE_VERIFIED") == "true":
+              print("Content-verified shop worker sale provenance OK.")
               raise SystemExit(0)
 
           raise SystemExit(

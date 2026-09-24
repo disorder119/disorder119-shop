@@ -14,6 +14,20 @@ Diese Datei dokumentiert den technischen Stand fuer einen echten Checkout, ohne 
 - Match/Chaos/Baukasten sind ueber `config/mode-guard.json` gegen unbeabsichtigte Aenderungen geschuetzt.
 - Personenbezogene Betriebsdaten gehoeren in Cloudflare D1, nicht in das oeffentliche GitHub-Repository.
 
+## Gefuehrte Einrichtung
+
+Schritte 1 bis 7 unten erledigt der Assistent in einem Durchgang: er meldet
+bei Cloudflare an, legt D1 an und traegt die ID in `wrangler.toml` ein, spielt
+alle Migrationen ein, veroeffentlicht den Worker, oeffnet fuer jedes Secret die
+passende Anbieter-Seite im Browser und schreibt die oeffentlichen Werte in
+`config/shop-config.json` (Checkout bleibt dabei aus).
+
+```bash
+cd shop-worker
+node setup.mjs            # setzt dort fort, wo du aufgehoert hast
+node setup.mjs --status   # was ist gesetzt, was fehlt
+```
+
 ## Vor PayPal-Sandbox aktivieren
 
 1. Cloudflare Worker deployen.
@@ -63,6 +77,8 @@ Diese Datei dokumentiert den technischen Stand fuer einen echten Checkout, ohne 
 7. `config/shop-config.json` setzen:
    - `paypalClientId`
    - `shopWorkerUrl`
+   - `turnstileSiteKey` (oeffentlicher Site-Key; im Live-Betrieb Pflicht, sonst
+     bricht der Build ab, weil der Worker jeden Kauf ohne Turnstile-Token ablehnt)
    - `environment: "sandbox"`
    - `features.paypalCheckout: true`
 8. Sandbox-Testkauf durchfuehren und pruefen:

@@ -32,6 +32,16 @@
       soldBadge: "SOLD — DISORDER119 ARCHIVE",
       soldNote: "Dieses Stück ist bereits verkauft und bleibt als Teil des Disorder119-Archivs sichtbar.",
       addToCart: "In den Warenkorb", inCartRemove: "Im Warenkorb ✓ — entfernen",
+      paypalError: "Da ist leider etwas schiefgelaufen. Bitte versuch es gleich nochmal oder schreib uns.",
+      checkoutSecurityPending: "Kurze Sicherheitsprüfung …",
+      checkoutSecurityFailed: "Die Sicherheitsprüfung hat nicht geklappt. Bitte lade die Seite neu und versuch es nochmal.",
+      checkoutUnavailable: "Dieses Stück ist gerade reserviert oder schon verkauft.",
+      checkoutExpired: "Die Reservierung ist abgelaufen. Bitte starte den Kauf nochmal.",
+      checkoutRateLimited: "Zu viele Versuche in kurzer Zeit. Bitte warte eine Minute.",
+      checkoutCouponInvalid: "Der Gutscheincode ist ungültig oder wurde schon benutzt.",
+      checkoutCapturing: "Zahlung wird abgeschlossen …",
+      checkoutPaid: "Danke! Deine Bestellung {number} ist bezahlt. Die Bestätigung mit Rechnung kommt per E-Mail.",
+      checkoutPaidNoNumber: "Danke! Deine Zahlung ist eingegangen. Die Bestätigung mit Rechnung kommt per E-Mail.",
       inquireWhatsapp: "Anfrage per WhatsApp", inquireEmail: "Anfrage per E-Mail",
       rentalTeaser: "Auch mietbar – Für Miete anfragen",
       configWarning: "Shop-Kontakt noch nicht eingerichtet: WhatsApp-Nummer oder E-Mail-Adresse fehlen in SHOP_CONFIG (index.html).",
@@ -54,6 +64,16 @@
       soldBadge: "SOLD — DISORDER119 ARCHIVE",
       soldNote: "This piece has already been sold and remains visible as part of the Disorder119 archive.",
       addToCart: "Add to cart", inCartRemove: "In cart ✓ — remove",
+      paypalError: "Something went wrong. Please try again in a moment or send us a message.",
+      checkoutSecurityPending: "Quick security check …",
+      checkoutSecurityFailed: "The security check did not pass. Please reload the page and try again.",
+      checkoutUnavailable: "This piece is currently reserved or already sold.",
+      checkoutExpired: "The reservation has expired. Please start the purchase again.",
+      checkoutRateLimited: "Too many attempts in a short time. Please wait a minute.",
+      checkoutCouponInvalid: "The coupon code is invalid or has already been used.",
+      checkoutCapturing: "Completing payment …",
+      checkoutPaid: "Thank you! Your order {number} is paid. The confirmation and invoice are on their way by e-mail.",
+      checkoutPaidNoNumber: "Thank you! Your payment has been received. The confirmation and invoice are on their way by e-mail.",
       inquireWhatsapp: "Enquire via WhatsApp", inquireEmail: "Enquire via e-mail",
       rentalTeaser: "Also rentable – Request to rent",
       configWarning: "Shop contact not set up yet: WhatsApp number or e-mail address missing in SHOP_CONFIG (index.html).",
@@ -76,6 +96,16 @@
       soldBadge: "SOLD — DISORDER119 ARCHIVE",
       soldNote: "Cette pièce est déjà vendue et reste visible comme partie de l'archive Disorder119.",
       addToCart: "Ajouter au panier", inCartRemove: "Dans le panier ✓ — retirer",
+      paypalError: "Un problème est survenu. Merci de réessayer dans un instant ou de nous écrire.",
+      checkoutSecurityPending: "Vérification de sécurité …",
+      checkoutSecurityFailed: "La vérification de sécurité a échoué. Merci de recharger la page et de réessayer.",
+      checkoutUnavailable: "Cette pièce est actuellement réservée ou déjà vendue.",
+      checkoutExpired: "La réservation a expiré. Merci de relancer l'achat.",
+      checkoutRateLimited: "Trop de tentatives en peu de temps. Merci de patienter une minute.",
+      checkoutCouponInvalid: "Le code promo est invalide ou a déjà été utilisé.",
+      checkoutCapturing: "Finalisation du paiement …",
+      checkoutPaid: "Merci ! Ta commande {number} est payée. La confirmation et la facture arrivent par e-mail.",
+      checkoutPaidNoNumber: "Merci ! Ton paiement a bien été reçu. La confirmation et la facture arrivent par e-mail.",
       inquireWhatsapp: "Demande par WhatsApp", inquireEmail: "Demande par e-mail",
       rentalTeaser: "Également louable – Demander la location",
       configWarning: "Le contact de la boutique n'est pas encore configuré : numéro WhatsApp ou e-mail manquant dans SHOP_CONFIG (index.html).",
@@ -377,47 +407,215 @@
   // ---- PayPal "Jetzt kaufen" (nur gerendert, wenn CONFIG.paypalClientId +
   // shopWorkerUrl gesetzt sind - build_site.py laesst den Container sonst
   // ganz weg, siehe shop-worker/README.md fuer die Einrichtung) ----
+  //
+  // Der Worker verlangt fuer Kaufstart und Zahlungsabschluss einen
+  // Idempotency-Key und im Live-Betrieb zusaetzlich ein Turnstile-Token.
+  // Ohne beides lehnt er jeden Kauf ab.
   var paypalContainer = document.getElementById("paypalButtons");
+  var checkoutStatus = document.getElementById("checkoutStatus");
+  var guardBox = document.getElementById("checkoutGuard");
   if (paypalContainer && window.paypal && SHOP_CONFIG.shopWorkerUrl &&
       SHOP_CONFIG.features && SHOP_CONFIG.features.paypalCheckout) {
     var workerUrl = SHOP_CONFIG.shopWorkerUrl.replace(/\/$/, "");
+    var CHECKOUT_KEY_STORE = "d119_checkout_key_" + IT.id;
+    // Knapp unter der 15-Minuten-Reservierung des Workers. Innerhalb dieser
+    // Zeit liefert ein erneuter Klick dieselbe Bestellung zurueck (etwa nach
+    // geschlossenem PayPal-Fenster), statt das Stueck ein zweites Mal zu
+    // reservieren. Danach startet ein frischer Kauf.
+    var CHECKOUT_KEY_MAX_AGE_MS = 13 * 60 * 1000;
+    var GUARD_TOKEN_MAX_AGE_MS = 4 * 60 * 1000;
+    var lastCheckoutError = "";
+
+    var showCheckoutStatus = function (message, kind) {
+      if (!checkoutStatus) return;
+      checkoutStatus.textContent = message || "";
+      checkoutStatus.className = "checkout-status" + (kind ? " checkout-status--" + kind : "");
+      checkoutStatus.hidden = !message;
+    };
+
+    var randomKey = function () {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID();
+      var bytes = new Uint8Array(16);
+      window.crypto.getRandomValues(bytes);
+      return Array.prototype.map.call(bytes, function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
+    };
+
+    var checkoutKey = function (forceNew) {
+      var now = Date.now();
+      if (!forceNew) {
+        try {
+          var saved = JSON.parse(window.sessionStorage.getItem(CHECKOUT_KEY_STORE) || "null");
+          if (saved && saved.key && now - Number(saved.at) < CHECKOUT_KEY_MAX_AGE_MS) return saved.key;
+        } catch (e) {}
+      }
+      var fresh = "buy-" + IT.id + "-" + randomKey();
+      try { window.sessionStorage.setItem(CHECKOUT_KEY_STORE, JSON.stringify({ key: fresh, at: now })); } catch (e) {}
+      return fresh;
+    };
+
+    var clearCheckoutKey = function () {
+      try { window.sessionStorage.removeItem(CHECKOUT_KEY_STORE); } catch (e) {}
+    };
+
+    // Cloudflare Turnstile: erscheint nur, wenn Cloudflare wirklich eine
+    // Interaktion braucht. Jedes Token gilt genau einmal und rund fuenf
+    // Minuten, deshalb wird nach jedem Verbrauch sofort ein neues vorbereitet.
+    var guard = { id: null, token: "", at: 0, waiting: [] };
+    var guardEnabled = Boolean(SHOP_CONFIG.turnstileSiteKey && window.turnstile && guardBox);
+    var resetGuard = function () {
+      if (!guardEnabled || guard.id === null) return;
+      try { window.turnstile.reset(guard.id); } catch (e) {}
+    };
+    if (guardEnabled) {
+      try {
+        guard.id = window.turnstile.render(guardBox, {
+          sitekey: SHOP_CONFIG.turnstileSiteKey,
+          action: "checkout",
+          appearance: "interaction-only",
+          callback: function (token) {
+            var waiting = guard.waiting.splice(0);
+            if (waiting.length) {
+              waiting[0].resolve(token);
+              return;
+            }
+            guard.token = token;
+            guard.at = Date.now();
+          },
+          "expired-callback": function () { guard.token = ""; guard.at = 0; },
+          "error-callback": function () { guard.token = ""; guard.at = 0; },
+        });
+      } catch (e) {
+        guardEnabled = false;
+      }
+    }
+
+    var freshGuardToken = function () {
+      if (!guardEnabled) return Promise.resolve("");
+      if (guard.token && Date.now() - guard.at < GUARD_TOKEN_MAX_AGE_MS) {
+        var ready = guard.token;
+        guard.token = "";
+        guard.at = 0;
+        setTimeout(resetGuard, 0);
+        return Promise.resolve(ready);
+      }
+      showCheckoutStatus(t("checkoutSecurityPending"), "info");
+      return new Promise(function (resolve, reject) {
+        var entry = { resolve: resolve };
+        guard.waiting.push(entry);
+        resetGuard();
+        setTimeout(function () {
+          var pos = guard.waiting.indexOf(entry);
+          if (pos === -1) return;
+          guard.waiting.splice(pos, 1);
+          var err = new Error("TURNSTILE_TIMEOUT");
+          err.code = "TURNSTILE_TIMEOUT";
+          reject(err);
+        }, 45000);
+      }).then(function (token) {
+        showCheckoutStatus("", "");
+        setTimeout(resetGuard, 0);
+        return token;
+      });
+    };
+
+    var workerPost = function (path, body, key, token) {
+      var headers = { "Content-Type": "application/json", "Idempotency-Key": key };
+      if (token) headers["X-Turnstile-Token"] = token;
+      return fetch(workerUrl + path, { method: "POST", headers: headers, body: JSON.stringify(body) })
+        .then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (data) {
+            return { ok: r.ok, data: data || {} };
+          });
+        });
+    };
+
+    var checkoutError = function (code) {
+      var err = new Error(code || "CHECKOUT_FAILED");
+      err.code = code || "CHECKOUT_FAILED";
+      return err;
+    };
+
+    var messageFor = function (code) {
+      switch (code) {
+        case "ITEM_UNAVAILABLE": case "ITEM_NOT_FOUND": case "PRICE_ON_REQUEST":
+          return t("checkoutUnavailable");
+        case "RESERVATION_EXPIRED":
+          return t("checkoutExpired");
+        case "RATE_LIMITED":
+          return t("checkoutRateLimited");
+        case "TURNSTILE_REQUIRED": case "TURNSTILE_FAILED": case "TURNSTILE_TIMEOUT":
+          return t("checkoutSecurityFailed");
+        case "COUPON_INVALID_OR_USED": case "COUPON_ORDER_NOT_PAYABLE":
+          return t("checkoutCouponInvalid");
+        default:
+          return t("paypalError");
+      }
+    };
+
+    var markPurchased = function (orderNumber) {
+      clearCheckoutKey();
+      var cart = loadCart();
+      var pos = cart.indexOf(IT.id);
+      if (pos !== -1) cart.splice(pos, 1);
+      saveCart(cart);
+      refreshCartCount();
+      // Der serverseitige SOLD-Status ist massgeblich; der automatische
+      // Rebuild zeigt ihn in wenigen Minuten auch auf dieser Seite. Bis dahin
+      // bleibt die Bestaetigung stehen, statt die Seite neu zu laden.
+      paypalContainer.hidden = true;
+      if (guardBox) guardBox.hidden = true;
+      var addBtn = document.getElementById("addToCartBtn");
+      if (addBtn) addBtn.hidden = true;
+      showCheckoutStatus(
+        orderNumber ? tFormat("checkoutPaid", { number: orderNumber }) : t("checkoutPaidNoNumber"),
+        "success"
+      );
+    };
+
     paypal.Buttons({
       style: { shape: "rect", color: "black", layout: "vertical", label: "paypal" },
       createOrder: function () {
-        return fetch(workerUrl + "/create-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ itemId: IT.id }),
-        })
-          .then(function (r) {
-            if (!r.ok) throw new Error("nicht mehr verfuegbar");
-            return r.json();
-          })
-          .then(function (data) { return data.id; });
+        lastCheckoutError = "";
+        showCheckoutStatus("", "");
+        var attempt = function (forceNewKey, retried) {
+          var key = checkoutKey(forceNewKey);
+          return freshGuardToken()
+            .then(function (token) { return workerPost("/create-order", { itemId: IT.id }, key, token); })
+            .then(function (res) {
+              if (res.ok && res.data.id) return res.data.id;
+              var code = String(res.data.error || "CHECKOUT_FAILED");
+              // Gleicher Schluessel mit anderem Inhalt (etwa ein spaeter
+              // eingetragener Gutschein): einmal mit neuem Schluessel.
+              if (!retried && code === "IDEMPOTENCY_KEY_REUSED") return attempt(true, true);
+              throw checkoutError(code);
+            });
+        };
+        return attempt(false, false).catch(function (err) {
+          lastCheckoutError = (err && err.code) || "CHECKOUT_FAILED";
+          showCheckoutStatus(messageFor(lastCheckoutError), "error");
+          throw err;
+        });
       },
       onApprove: function (data) {
-        return fetch(workerUrl + "/capture-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: data.orderID, itemId: IT.id }),
-        })
-          .then(function (r) { if (!r.ok) throw new Error("Zahlung fehlgeschlagen"); })
-          .then(function () {
-            // Erfolgreich bezahltes Einzelstueck sofort aus dem lokalen
-            // Warenkorb entfernen. Der serverseitige SOLD-Status bleibt die
-            // autoritative Quelle; der anschliessende Reload zeigt ihn nach
-            // dem automatischen Rebuild auch auf der Produktseite.
-            var cart = loadCart();
-            var pos = cart.indexOf(IT.id);
-            if (pos !== -1) cart.splice(pos, 1);
-            saveCart(cart);
-            refreshCartCount();
-            location.reload();
+        var orderId = String((data && data.orderID) || "");
+        var captureKey = "capture-" + orderId.replace(/[^A-Za-z0-9._:-]/g, "");
+        showCheckoutStatus(t("checkoutCapturing"), "info");
+        return workerPost("/capture-order", { orderId: orderId, itemId: IT.id }, captureKey, "")
+          .then(function (res) {
+            if (!res.ok) throw checkoutError(String(res.data.error || "CAPTURE_FAILED"));
+            markPurchased(res.data.orderNumber ? String(res.data.orderNumber) : "");
+          })
+          .catch(function (err) {
+            lastCheckoutError = (err && err.code) || "CAPTURE_FAILED";
+            showCheckoutStatus(messageFor(lastCheckoutError), "error");
           });
+      },
+      onCancel: function () {
+        showCheckoutStatus("", "");
       },
       onError: function (err) {
         console.error(err);
-        alert(t("paypalError") || "Da ist leider etwas schiefgelaufen. Bitte versuch es gleich nochmal oder schreib uns.");
+        if (!lastCheckoutError) showCheckoutStatus(t("paypalError"), "error");
       },
     }).render("#paypalButtons");
   }

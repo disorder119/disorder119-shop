@@ -459,3 +459,18 @@ img[data-d119-image-protected] {
   -webkit-user-drag: none;
 }
 
+
+/* Checkout: Botschutz-Widget und Kaufstatus unter dem PayPal-Button. */
+.checkout-guard { margin-top: 10px; }
+.checkout-guard:empty { display: none; }
+.checkout-status {
+  margin: 12px 0 0;
+  padding: 11px 13px;
+  border: 1px solid var(--rule-strong);
+  color: var(--paper);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.checkout-status--info { color: var(--text-muted); }
+.checkout-status--error { border-color: rgba(255, 138, 112, 0.55); color: #ffb3a1; }
+.checkout-status--success { border-color: rgba(143, 209, 158, 0.6); color: #b9e8c4; }

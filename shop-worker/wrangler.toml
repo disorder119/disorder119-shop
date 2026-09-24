@@ -4,6 +4,8 @@ compatibility_date = "2025-01-01"
 
 # Alle echten Zugangsdaten sind Secrets (nie hier eintragen, nie committen) -
 # siehe README.md fuer die genauen `wrangler secret put ...`-Befehle.
+# Der gefuehrte Einrichtungs-Assistent erledigt Datenbank, Migrationen und
+# Secrets in einem Durchgang:  node setup.mjs  (im Ordner shop-worker/).
 
 # Produktionsfehler muessen nachtraeglich ueber Request-ID und strukturierte Logs
 # untersuchbar bleiben. Bei wachsendem Traffic kann die Sampling-Rate bewusst
@@ -11,3 +13,22 @@ compatibility_date = "2025-01-01"
 [observability]
 enabled = true
 head_sampling_rate = 1
+
+# Ratelimiter je Quelle (IP) fuer Kaufstart, Mietanfragen, Spiele und
+# Anmeldelinks. Im Live-Betrieb Pflicht: ohne dieses Binding verweigert der
+# Worker Kauf- und Mietschreibungen (backend-runtime.js, assertLiveControls).
+# 30 Anfragen je Minute und Schluessel reichen fuer echte Kundschaft locker.
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1119"
+simple = { limit = 30, period = 60 }
+
+# Betriebs-Monitor: legt alle 30 Minuten interne Aufgaben fuer ueberfaellige
+# Mieten, offene Rueckgaben, haengende Zahlungen usw. an (scheduled() in
+# worker-entry.js). Fuehrt keine Provider-Aktion aus - keine Zahlung, kein
+# Versand, keine Mail.
+[triggers]
+crons = ["*/30 * * * *"]
+
+# Die D1-Datenbank (Binding "DB") traegt setup.mjs mit der echten
+# database_id hier unten ein. Die ID ist kein Geheimnis und darf ins Repo.

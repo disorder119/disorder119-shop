@@ -55,6 +55,12 @@ jobs:
       - name: Game- und Gutschein-Regressionen pruefen
         run: node --test shop-worker/game-rewards.test.mjs shop-worker/coupon-checkout.test.mjs shop-worker/buchhaltung.test.mjs shop-worker/dhl.test.mjs
 
+      - name: Einrichtungs-Assistent und Verkaufsbuchungs-Pruefer testen
+        run: |
+          node --check shop-worker/setup.mjs
+          node --test shop-worker/setup.test.mjs
+          python scripts/test_verify_sale_commit.py
+
       - name: Gutschein-Migration pruefen
         run: |
           {

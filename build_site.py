@@ -565,6 +565,10 @@ def cta_html(it, shop_config, home, lang):
         # Bleibt leer/unsichtbar, bis paypal_buy_button() in article.js den
         # echten PayPal-Button hineinrendert (siehe shop-worker/README.md).
         parts.append('<div id="paypalButtons" data-item-id="' + str(it["id"]) + '" data-price="' + f'{it["price"]:.2f}' + '"></div>')
+        # Botschutz-Widget (erscheint nur, wenn Cloudflare eine Interaktion
+        # braucht) und die Statuszeile fuer Kaufbestaetigung bzw. Fehler.
+        parts.append('<div id="checkoutGuard" class="checkout-guard"></div>')
+        parts.append('<p id="checkoutStatus" class="checkout-status" role="status" aria-live="polite" hidden></p>')
     if shop_config.get("whatsappNumber") or shop_config.get("email"):
         message_copy = {
             "de": ("Kundennachricht", "optional", "Frage, Maße, Versandwunsch …"),
@@ -777,8 +781,15 @@ def build_page(it, shop_config, lang):
     if paypal_enabled and shop_config.get("paypalClientId") and shop_config.get("shopWorkerUrl") and not sold and it.get("price", 0) > 0:
         paypal_sdk_tag = (
             '<script src="https://www.paypal.com/sdk/js?client-id='
-            + esc(shop_config["paypalClientId"]) + '&currency=EUR"></script>\n'
+            + esc(shop_config["paypalClientId"]) + '&currency=EUR&intent=capture"></script>\n'
         )
+        # Botschutz fuer den Kaufstart. Explizites Rendern, damit article.js
+        # das Widget genau in den Checkout-Bereich setzt und fuer jeden
+        # Kaufversuch ein frisches Einmal-Token holen kann.
+        if shop_config.get("turnstileSiteKey"):
+            paypal_sdk_tag += (
+                '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"></script>\n'
+            )
 
     # ARTICLE_ITEM enthaelt bei SOLD-Artikeln bewusst KEINEN Preis (Task 2) -
     # article.js bekommt stattdessen nur sold:true und zeigt ausschliesslich
@@ -940,12 +951,25 @@ def get_shop_config():
         raise SystemExit(
             f"FEHLER: {SHOP_CONFIG_PATH} shippingFlatCents muss eine ganze Zahl in Cent sein (0 = keine Pauschale)."
         )
+    turnstile_site_key = str(raw.get("turnstileSiteKey") or "").strip()
+    if turnstile_site_key and not re.fullmatch(r"[0-9A-Za-z_-]{10,100}", turnstile_site_key):
+        raise SystemExit(
+            f"FEHLER: {SHOP_CONFIG_PATH} turnstileSiteKey sieht nicht wie ein Cloudflare-Turnstile-"
+            "Site-Key aus (z. B. 0x4AAAAAAA...). Nur den oeffentlichen Site-Key eintragen, nie das Secret."
+        )
+    worker_url = str(raw.get("shopWorkerUrl") or "").strip().rstrip("/")
+    if worker_url and not re.fullmatch(r"https://[A-Za-z0-9.-]+(?::\d+)?", worker_url):
+        raise SystemExit(
+            f"FEHLER: {SHOP_CONFIG_PATH} shopWorkerUrl muss eine https-Adresse ohne Pfad sein, "
+            "z. B. https://disorder119-shop-worker.<konto>.workers.dev"
+        )
     cfg = {
         "whatsappNumber": raw.get("whatsappNumber") or "",
         "email": raw.get("email") or "",
         "shippingFlatCents": shipping_raw,
         "paypalClientId": raw.get("paypalClientId") or "",
-        "shopWorkerUrl": raw.get("shopWorkerUrl") or "",
+        "shopWorkerUrl": worker_url,
+        "turnstileSiteKey": turnstile_site_key,
         "environment": environment,
         "features": {
             "paypalCheckout": bool(features_raw.get("paypalCheckout")),
@@ -956,6 +980,15 @@ def get_shop_config():
         raise SystemExit(
             "FEHLER: paypalCheckout=true, aber paypalClientId oder shopWorkerUrl fehlt. "
             "Checkout bleibt aus, bis die Sandbox-Konfiguration vollstaendig ist."
+        )
+    # Der Worker verlangt im Live-Betrieb fuer jeden Kaufstart ein Turnstile-
+    # Token (backend-runtime.js, assertLiveControls). Ohne Site-Key koennte die
+    # Produktseite keins erzeugen - jeder echte Kauf wuerde abgelehnt. Lieber
+    # hier laut scheitern als live einen Kaufbutton zeigen, der nie funktioniert.
+    if cfg["features"]["paypalCheckout"] and environment == "live" and not turnstile_site_key:
+        raise SystemExit(
+            "FEHLER: environment=live mit paypalCheckout=true braucht turnstileSiteKey. "
+            "Ohne Botschutz-Token lehnt der Worker im Live-Betrieb jeden Kauf ab."
         )
     for secret_key in ("paypalClientSecret", "dhlApiSecret", "dpdApiSecret", "hermesApiSecret", "dbKey", "adminKey", "serviceRoleKey"):
         if raw.get(secret_key):
