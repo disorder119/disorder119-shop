@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   GAME_RULES,
   GAME_VERSION,
+  couponBudgetAvailable,
   discountForSubtotal,
   normalizeCouponCode,
   normalizeGame,
@@ -10,6 +11,55 @@ import {
   qualifiedScore,
   scoreIsPlausible,
 } from "./game-rewards.js";
+
+// Kleiner In-Memory-Ersatz fuer die beiden COUNT-Abfragen des Farming-Schutzes.
+function couponCountDb(rows = []) {
+  return {
+    prepare(sql) {
+      const s = sql.replace(/\s+/g, " ").trim();
+      return {
+        bind(...args) {
+          return {
+            async first() {
+              const since = s.includes("username_key=?") ? args[1] : args[0];
+              const usernameKey = s.includes("username_key=?") ? args[0] : null;
+              const anzahl = rows.filter(r =>
+                r.source_game &&
+                r.created_at >= since &&
+                (usernameKey === null || r.username_key === usernameKey)
+              ).length;
+              return { anzahl };
+            },
+          };
+        },
+      };
+    },
+  };
+}
+
+const NOW_ISO = new Date().toISOString();
+
+test("coupon budget stops farming once the daily caps are reached", async () => {
+  // Fresh username, empty ledger, defaults: a code may be issued.
+  assert.equal(await couponBudgetAvailable(couponCountDb([]), {}, "neu"), true);
+
+  // Same username already has today's coupon → blocked (default per-user cap 1).
+  const withUserCoupon = [{ source_game: "warp", username_key: "neu", created_at: NOW_ISO }];
+  assert.equal(await couponBudgetAvailable(couponCountDb(withUserCoupon), {}, "neu"), false);
+  // A different username is still within the per-user cap...
+  assert.equal(await couponBudgetAvailable(couponCountDb(withUserCoupon), {}, "andere"), true);
+
+  // ...but the global daily cap bounds the blast radius across all usernames.
+  const many = Array.from({ length: 100 }, (_, i) => ({ source_game: "warp", username_key: "u" + i, created_at: NOW_ISO }));
+  assert.equal(await couponBudgetAvailable(couponCountDb(many), {}, "ganzneu"), false);
+
+  // An explicit kill switch disables issuance entirely.
+  assert.equal(await couponBudgetAvailable(couponCountDb([]), { GAME_COUPONS_ENABLED: "false" }, "neu"), false);
+
+  // Old coupons outside the 24h window do not count against the caps.
+  const old = { source_game: "warp", username_key: "neu", created_at: "2020-01-01T00:00:00.000Z" };
+  assert.equal(await couponBudgetAvailable(couponCountDb([old]), {}, "neu"), true);
+});
 
 test("Archive Raid is the single public reward game with a hard target", () => {
   assert.equal(GAME_VERSION, "archive-raid-v3");

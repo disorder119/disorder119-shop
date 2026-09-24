@@ -18,6 +18,35 @@ const COUPON_RESERVATION_MS = 22 * 60 * 1000;
 const DISCOUNT_BPS = 1000;
 const MAX_BODY_BYTES = 24 * 1024;
 
+// Farming-Schutz: Ein plausibler, ausreichend langer Run allein beweist keinen
+// echten Spieldurchlauf. Ohne Deckel koennte ein Skript beliebig viele
+// Einmal-Gutscheine erzeugen (Run starten, 35 s warten, Score einreichen). Der
+// Score und das Leaderboard bleiben davon unberuehrt - gedeckelt wird nur die
+// Gutschein-AUSGABE. Die Grenzen sind per Worker-Variable anpassbar; die
+// Standardwerte sind bewusst niedrig gehalten.
+const COUPON_WINDOW_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_MAX_COUPONS_PER_DAY = 100;
+const DEFAULT_MAX_COUPONS_PER_USER_PER_DAY = 1;
+
+function nonNegativeIntEnv(value, fallback) {
+  if (value === undefined || value === null || String(value).trim() === "") return fallback;
+  const parsed = Math.trunc(Number(value));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function couponsEnabled(env) {
+  // Nur ein ausdrueckliches "false" schaltet die Ausgabe komplett ab; sonst
+  // bleiben Gutscheine aktiv, aber gedeckelt.
+  return String(env?.GAME_COUPONS_ENABLED ?? "true").trim().toLowerCase() !== "false";
+}
+
+function couponDailyLimits(env) {
+  return {
+    global: nonNegativeIntEnv(env?.GAME_COUPONS_MAX_PER_DAY, DEFAULT_MAX_COUPONS_PER_DAY),
+    perUser: nonNegativeIntEnv(env?.GAME_COUPONS_MAX_PER_USER_PER_DAY, DEFAULT_MAX_COUPONS_PER_USER_PER_DAY),
+  };
+}
+
 export class GameRewardError extends Error {
   constructor(code, status = 400) {
     super(code);
@@ -189,6 +218,28 @@ async function startRun(request, env, origin) {
   return json({ runId, runToken: token, game, startedAt: nowMs, expiresAt }, 201, origin);
 }
 
+// Liefert true, wenn innerhalb des Tagesfensters noch ein Gutschein ausgegeben
+// werden darf - global und fuer diesen Usernamen. Wird die Grenze erreicht,
+// bekommt der Run trotzdem seinen Score und das Leaderboard, nur eben keinen
+// weiteren Code.
+export async function couponBudgetAvailable(db, env, usernameKey) {
+  if (!couponsEnabled(env)) return false;
+  const limits = couponDailyLimits(env);
+  if (limits.global <= 0 || limits.perUser <= 0) return false;
+  const sinceIso = new Date(Date.now() - COUPON_WINDOW_MS).toISOString();
+
+  const perUserRow = await db.prepare(`SELECT COUNT(*) AS anzahl FROM reward_coupons
+    WHERE username_key=? AND source_game IS NOT NULL AND created_at>=?`)
+    .bind(usernameKey, sinceIso).first();
+  if (Number(perUserRow?.anzahl || 0) >= limits.perUser) return false;
+
+  const globalRow = await db.prepare(`SELECT COUNT(*) AS anzahl FROM reward_coupons
+    WHERE source_game IS NOT NULL AND created_at>=?`).bind(sinceIso).first();
+  if (Number(globalRow?.anzahl || 0) >= limits.global) return false;
+
+  return true;
+}
+
 async function issueCoupon(db, game, scoreId, usernameKey) {
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = makeCouponCode();
@@ -270,7 +321,9 @@ async function submitScore(request, env, origin) {
   }
 
   const qualified = qualifiedScore(game, score);
-  const couponCode = qualified ? await issueCoupon(db, game, scoreId, usernameKey) : "";
+  const couponCode = qualified && await couponBudgetAvailable(db, env, usernameKey)
+    ? await issueCoupon(db, game, scoreId, usernameKey)
+    : "";
   return json({
     ok: true,
     gameTitle: "ARCHIVE RAID 119",

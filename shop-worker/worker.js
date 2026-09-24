@@ -9,6 +9,7 @@ import {
   publicOrderNumber,
   rentalQuoteFromItem,
   safeText,
+  shippingCentsFor,
 } from "./commerce-core.js";
 
 const CONFIG = Object.freeze({

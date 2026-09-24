@@ -22,6 +22,12 @@ export const SESSION_TTL_DAYS = 30;
 // Fuenf Anmeldelinks je Adresse und Stunde. Genug fuer eine Kundin, die den
 // ersten Link im Spam sucht - zu wenig, um ein fremdes Postfach zuzumuellen.
 export const LOGIN_RATE_LIMIT_PER_HOUR = 5;
+// Zusaetzliche Schranken gegen Missbrauch als Spam-Schleuder: Ohne sie koennte
+// eine einzelne Quelle Anmeldelinks an beliebig viele fremde Adressen schicken
+// und die Zustellreputation des Shops verbrennen. Der Zaehler je Adresse allein
+// genuegt nicht - ein Angreifer variiert einfach die Zieladresse.
+export const LOGIN_RATE_LIMIT_PER_IP_PER_HOUR = 8;
+export const LOGIN_RATE_LIMIT_GLOBAL_PER_HOUR = 60;
 
 const SHOP_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -128,10 +134,32 @@ function loginMail(link) {
   };
 }
 
+async function loginRateLimit(request, env) {
+  if (!env?.RATE_LIMITER || typeof env.RATE_LIMITER.limit !== "function") return;
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const result = await env.RATE_LIMITER.limit({ key: `account-login:${ip}` });
+  if (result && result.success === false) throw new AccountError("RATE_LIMITED", 429);
+}
+
 async function recentLoginCount(env, email) {
   const since = new Date(Date.now() - 3_600_000).toISOString();
   const row = await env.DB.prepare(`SELECT COUNT(*) AS anzahl FROM customer_login_tokens
     WHERE email_normalized=? AND created_at>=?`).bind(email, since).first();
+  return Number(row?.anzahl || 0);
+}
+
+async function recentLoginCountByIp(env, ipHash) {
+  if (!ipHash) return 0;
+  const since = new Date(Date.now() - 3_600_000).toISOString();
+  const row = await env.DB.prepare(`SELECT COUNT(*) AS anzahl FROM customer_login_tokens
+    WHERE request_ip_hash=? AND created_at>=?`).bind(ipHash, since).first();
+  return Number(row?.anzahl || 0);
+}
+
+async function recentLoginCountGlobal(env) {
+  const since = new Date(Date.now() - 3_600_000).toISOString();
+  const row = await env.DB.prepare(`SELECT COUNT(*) AS anzahl FROM customer_login_tokens
+    WHERE created_at>=?`).bind(since).first();
   return Number(row?.anzahl || 0);
 }
 
@@ -143,7 +171,18 @@ export async function requestLoginLink(env, rawEmail, reqId = crypto.randomUUID(
   // wuerde verraten, wer hier schon einmal bestellt hat.
   if (!email) return { queued: false, reason: "INVALID_EMAIL" };
 
+  const cleanIpHash = safeText(ipHash, 64) || "";
+  // Reihenfolge egal, alle drei Schranken muessen halten: je Adresse (gegen das
+  // Fluten eines einzelnen Postfachs), je Quelle (gegen einen Absender, der viele
+  // fremde Adressen anschreibt) und global (harte Obergrenze fuer die Menge an
+  // Anmeldemails, die der Shop pro Stunde ueberhaupt ausloest).
   if (await recentLoginCount(env, email) >= LOGIN_RATE_LIMIT_PER_HOUR) {
+    return { queued: false, reason: "RATE_LIMITED" };
+  }
+  if (await recentLoginCountByIp(env, cleanIpHash) >= LOGIN_RATE_LIMIT_PER_IP_PER_HOUR) {
+    return { queued: false, reason: "RATE_LIMITED" };
+  }
+  if (await recentLoginCountGlobal(env) >= LOGIN_RATE_LIMIT_GLOBAL_PER_HOUR) {
     return { queued: false, reason: "RATE_LIMITED" };
   }
 
@@ -517,6 +556,11 @@ export async function handleAccountRequest(request, env, url, reqId = crypto.ran
     const path = url.pathname.replace(/\/+$/, "") || "/account";
 
     if (path === "/account/login" && request.method === "POST") {
+      // Erste Schranke vor jeder DB-Arbeit: der Cloudflare-Ratelimiter greift
+      // auch dann, wenn ein Angreifer dieselbe Adresse flutet (der DB-Trigger
+      // haelt je Adresse nur den neuesten Token, ein reiner Zeilenzaehler wuerde
+      // das nicht sehen). Ohne konfigurierten Ratelimiter passiert hier nichts.
+      await loginRateLimit(request, env);
       const body = await readJson(request);
       const ipHash = await tokenFingerprint(
         `${safeText(request.headers.get("CF-Connecting-IP") || "", 60)}:${safeText(env.LOGIN_IP_PEPPER || "d119", 60)}`,

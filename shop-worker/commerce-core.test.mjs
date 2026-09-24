@@ -127,6 +127,19 @@ test("worker no longer contains public GitHub JSON rental storage", () => {
   assert.equal(worker.includes("loadRentalRequests(env"), false);
 });
 
+test("worker imports every commerce-core helper it calls at checkout", () => {
+  // shippingCentsFor is used on the /create-order path. It was referenced
+  // without being imported, so a real purchase (DB + PayPal + GitHub set) hit a
+  // ReferenceError -> 500 instead of starting the order. node --check does not
+  // catch an undeclared reference, so this guards the import list directly.
+  const worker = fs.readFileSync(path.join(here, "worker.js"), "utf8");
+  const importBlock = worker.slice(0, worker.indexOf('} from "./commerce-core.js";'));
+  if (/\bshippingCentsFor\(/.test(worker)) {
+    assert.match(importBlock, /\bshippingCentsFor\b/,
+      "worker.js calls shippingCentsFor() but does not import it from commerce-core.js");
+  }
+});
+
 test("worker binds idempotency to request payload and keeps provider IDs private", () => {
   const worker = fs.readFileSync(path.join(here, "worker.js"), "utf8");
   assert.match(worker, /request_hash/);

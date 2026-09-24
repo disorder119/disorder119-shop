@@ -3,6 +3,8 @@ import test from "node:test";
 import {
   AccountError,
   LOGIN_RATE_LIMIT_PER_HOUR,
+  LOGIN_RATE_LIMIT_PER_IP_PER_HOUR,
+  LOGIN_RATE_LIMIT_GLOBAL_PER_HOUR,
   handleAccountRequest,
   randomToken,
   redeemLoginToken,
@@ -43,9 +45,17 @@ function fakeDb(seed = {}) {
     const s = sql.replace(/\s+/g, " ").trim();
     state.statements.push(s);
 
-    if (s.startsWith("SELECT COUNT(*) AS anzahl FROM customer_login_tokens")) {
+    if (s.startsWith("SELECT COUNT(*) AS anzahl FROM customer_login_tokens WHERE email_normalized=?")) {
       const [email, since] = args;
       return { first: { anzahl: state.loginTokens.filter(t => t.email_normalized === email && t.created_at >= since).length } };
+    }
+    if (s.startsWith("SELECT COUNT(*) AS anzahl FROM customer_login_tokens WHERE request_ip_hash=?")) {
+      const [ipHash, since] = args;
+      return { first: { anzahl: state.loginTokens.filter(t => t.request_ip_hash === ipHash && t.created_at >= since).length } };
+    }
+    if (s.startsWith("SELECT COUNT(*) AS anzahl FROM customer_login_tokens WHERE created_at>=?")) {
+      const [since] = args;
+      return { first: { anzahl: state.loginTokens.filter(t => t.created_at >= since).length } };
     }
     if (s.startsWith("INSERT INTO customer_login_tokens")) {
       const [id, email, created, expires, ipHash] = args;
@@ -231,6 +241,48 @@ test("a postbox cannot be flooded with login links", async () => {
   const mail = stubMail();
   try {
     const result = await requestLoginLink({ ...READY, DB: db }, "kundin@example.com", "req-4");
+    assert.deepEqual(result, { queued: false, reason: "RATE_LIMITED" });
+    assert.equal(mail.sent.length, 0);
+  } finally {
+    mail.restore();
+  }
+});
+
+test("one source cannot spray login links across many foreign addresses", async () => {
+  // Gleiche Quelle (IP-Abdruck), viele unterschiedliche Zieladressen: der
+  // Adress-Zaehler allein wuerde das nie sehen. Der IP-Deckel muss greifen.
+  const bestehend = Array.from({ length: LOGIN_RATE_LIMIT_PER_IP_PER_HOUR }, (_, i) => ({
+    id: `ip-${i}`,
+    email_normalized: `opfer${i}@example.com`,
+    created_at: new Date().toISOString(),
+    expires_at: new Date(Date.now() + 600_000).toISOString(),
+    request_ip_hash: "angreifer-ip",
+    used_at: null,
+  }));
+  const db = fakeDb({ loginTokens: bestehend });
+  const mail = stubMail();
+  try {
+    const result = await requestLoginLink({ ...READY, DB: db }, "neues-opfer@example.com", "req-ip", "angreifer-ip");
+    assert.deepEqual(result, { queued: false, reason: "RATE_LIMITED" });
+    assert.equal(mail.sent.length, 0);
+  } finally {
+    mail.restore();
+  }
+});
+
+test("a global hourly cap bounds the total volume of login mails", async () => {
+  const bestehend = Array.from({ length: LOGIN_RATE_LIMIT_GLOBAL_PER_HOUR }, (_, i) => ({
+    id: `global-${i}`,
+    email_normalized: `konto${i}@example.com`,
+    created_at: new Date().toISOString(),
+    expires_at: new Date(Date.now() + 600_000).toISOString(),
+    request_ip_hash: `ip-${i}`,
+    used_at: null,
+  }));
+  const db = fakeDb({ loginTokens: bestehend });
+  const mail = stubMail();
+  try {
+    const result = await requestLoginLink({ ...READY, DB: db }, "noch-jemand@example.com", "req-global", "frische-ip");
     assert.deepEqual(result, { queued: false, reason: "RATE_LIMITED" });
     assert.equal(mail.sent.length, 0);
   } finally {

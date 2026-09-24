@@ -67,7 +67,11 @@ export function escapeHtml(value) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    // Auch das einfache Anfuehrungszeichen entschaerfen: Damit bleibt der
+    // Escaper auch dann sicher, wenn ein Wert einmal in einem einfach
+    // gequoteten Attribut landet.
+    .replace(/'/g, "&#39;");
 }
 
 function sellerBlockText() {
