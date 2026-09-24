@@ -27,6 +27,26 @@ const SHOP_CONFIG_PATH = path.join(REPO, "config", "shop-config.json");
 const STATE_PATH = path.join(HERE, ".wrangler", "setup-state.json");
 const DB_NAME = "disorder119-shop";
 const IS_WINDOWS = process.platform === "win32";
+// Hier laeuft das Shop-Backend bereits (Custom Domain im Cloudflare-Dashboard).
+const EXISTING_WORKER_URL = "https://api.disorder119.com";
+
+// Je Migration ein Datenbank-Objekt, das genau diese Datei anlegt. Damit
+// erkennt der Assistent, welche Migrationen auf einer von Hand eingerichteten
+// Datenbank schon laufen, und fuehrt sie nicht ein zweites Mal aus.
+export const MIGRATION_MARKERS = Object.freeze({
+  "0002_commerce_foundation.sql": "commerce_orders",
+  "0003_state_integrity.sql": "trg_order_status_transition",
+  "0004_admin_operations.sql": "order_contact_snapshots",
+  "0005_rental_groups.sql": "rental_groups",
+  "0006_operations_cases.sql": "operations_tasks",
+  "0007_operations_automation.sql": "uniq_operations_tasks_automation_key",
+  "0008_backend_hardening.sql": "trg_rental_duration_insert",
+  "0009_secret_games.sql": "reward_coupons",
+  "0010_coupon_checkout.sql": "trg_reward_coupon_redeem_paid_order",
+  "0011_customer_accounts.sql": "customer_login_tokens",
+  "0012_rechnungsarchiv.sql": "rechnungen",
+  "0013_postfach.sql": "postfach_nachrichten",
+});
 
 // ------------------------------------------------------------------ Ausgabe
 
@@ -148,17 +168,45 @@ function saveState(state) {
 
 // ------------------------------------------------------------------ Dateien
 
-export function upsertD1Block(tomlText, databaseId) {
+export function upsertD1Block(tomlText, databaseId, databaseName = DB_NAME) {
   const block = [
     "[[d1_databases]]",
     'binding = "DB"',
-    `database_name = "${DB_NAME}"`,
+    `database_name = "${databaseName}"`,
     `database_id = "${databaseId}"`,
     'migrations_dir = "migrations"',
   ].join("\n");
   const pattern = /\[\[d1_databases\]\][\s\S]*?(?=\n\[|\s*$)/;
   if (pattern.test(tomlText)) return tomlText.replace(pattern, block);
   return `${tomlText.replace(/\s*$/, "")}\n\n${block}\n`;
+}
+
+export function currentD1Binding(tomlText) {
+  const block = (tomlText.match(/\[\[d1_databases\]\][\s\S]*?(?=\n\[|\s*$)/) || [""])[0];
+  const name = (block.match(/database_name\s*=\s*"([^"]+)"/) || [])[1] || "";
+  const id = (block.match(/database_id\s*=\s*"([^"]+)"/) || [])[1] || "";
+  return name && id ? { name, id } : null;
+}
+
+export function tomlWorkerName(tomlText) {
+  return (tomlText.match(/^name\s*=\s*"([^"]+)"/m) || [])[1] || "";
+}
+
+export function setTomlWorkerName(tomlText, name) {
+  return tomlText.replace(/^name\s*=\s*"[^"]*"/m, `name = "${name}"`);
+}
+
+// Liefert die Migrationen, die auf einer bestehenden, von Hand eingerichteten
+// Datenbank schon wirksam sind, aber in Cloudflares Buchfuehrung
+// (d1_migrations) fehlen. Leer, wenn die Datenbank neu ist oder Wrangler sie
+// schon selbst verwaltet.
+export function migrationsToBaseline(objectNames, migrationFiles) {
+  const names = new Set(objectNames);
+  if (names.has("d1_migrations") || !names.has("commerce_orders")) return [];
+  return migrationFiles
+    .filter(file => /^\d{4}_[a-z0-9_]+\.sql$/.test(file))
+    .filter(file => MIGRATION_MARKERS[file] && names.has(MIGRATION_MARKERS[file]))
+    .sort();
 }
 
 export function updateShopConfig(configText, values) {
@@ -184,7 +232,18 @@ const validators = {
   paypalClientId: v => (/^[A-Za-z0-9_-]{20,128}$/.test(v) ? null : "Die Client ID ist eine lange Zeichenfolge aus Buchstaben und Ziffern."),
   billingNumber: v => (/^\d{14}$/.test(v) ? null : "Die Abrechnungsnummer hat 14 Ziffern (EKP + 01 + Teilnahme)."),
   environment: v => (["sandbox", "live"].includes(v) ? null : "Bitte sandbox oder live eingeben."),
+  workerName: v => (/^[a-z0-9][a-z0-9-]{0,62}$/.test(v) ? null : "Worker-Namen bestehen aus Kleinbuchstaben, Ziffern und Bindestrichen."),
 };
+
+async function probeHealth(url) {
+  try {
+    const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(10000) });
+    const data = await res.json();
+    return res.ok && String(data.version || "").startsWith("commerce-") ? data : null;
+  } catch {
+    return null;
+  }
+}
 
 // ------------------------------------------------------------------ Secrets
 
@@ -211,7 +270,7 @@ function generatedToken() {
 
 // ------------------------------------------------------------------ Schritte
 
-const TOTAL = 8;
+const TOTAL = 9;
 
 async function stepWelcome() {
   line();
@@ -244,65 +303,167 @@ async function stepLogin() {
   ok(`Bei Cloudflare angemeldet${email ? ` als ${email}` : ""}.`);
 }
 
+async function stepExisting(state) {
+  heading(2, TOTAL, "Bestehende Installation prüfen");
+  const live = await probeHealth(EXISTING_WORKER_URL);
+  if (live) {
+    state.existing = true;
+    if (!state.workerUrl) state.workerUrl = EXISTING_WORKER_URL;
+    saveState(state);
+    ok(`Dein Shop-Backend läuft bereits unter ${EXISTING_WORKER_URL} (${live.environment || "?"}).`);
+    info("Der Assistent aktualisiert diese Installation und legt nichts doppelt an.");
+  } else {
+    info(`Unter ${EXISTING_WORKER_URL} läuft noch kein Shop-Backend – es wird neu eingerichtet.`);
+  }
+  let name = tomlWorkerName(fs.readFileSync(TOML_PATH, "utf8"));
+  const found = await wrangler(["deployments", "list", "--json"], { mode: "capture" });
+  if (found.code === 0) {
+    ok(`Worker „${name}“ gefunden – er wird aktualisiert, nicht neu angelegt.`);
+    return;
+  }
+  if (!live) {
+    info(`Worker „${name}“ wird beim Veröffentlichen neu angelegt.`);
+    return;
+  }
+  warn(`In deinem Cloudflare-Konto gibt es keinen Worker namens „${name}“.`);
+  info("Dein laufendes Backend heißt also anders. Öffne „Workers & Pages“ und sieh nach, welcher");
+  info("Worker die Domain api.disorder119.com hat. Seinen Namen gibst du gleich ein – sonst würde ein");
+  info("zweiter Worker entstehen.");
+  openUrl("https://dash.cloudflare.com/?to=/:account/workers-and-pages");
+  for (;;) {
+    name = await ask("Name des laufenden Workers:", { validate: validators.workerName });
+    const check = await wrangler(["deployments", "list", "--name", name, "--json"], { mode: "capture" });
+    if (check.code === 0) break;
+    warn(`Auch „${name}“ wurde nicht gefunden. Bitte genau so abschreiben, wie er im Dashboard steht.`);
+  }
+  fs.writeFileSync(TOML_PATH, setTomlWorkerName(fs.readFileSync(TOML_PATH, "utf8"), name));
+  ok(`wrangler.toml nutzt jetzt den Worker-Namen „${name}“.`);
+}
+
 async function stepDatabase(state) {
-  heading(2, TOTAL, "Datenbank (D1) anlegen");
+  heading(3, TOTAL, "Datenbank (D1) verbinden");
   info("D1 ist die private Datenbank für Bestellungen, Zahlungen und Reservierungen.");
   const listDatabases = async () => {
     const res = await wrangler(["d1", "list", "--json"], { mode: "capture" });
     const parsed = jsonFrom(res.out);
     return Array.isArray(parsed) ? parsed : [];
   };
-  let found = (await listDatabases()).find(db => db.name === DB_NAME);
-  if (!found) {
+  const idOf = db => db && (db.uuid || db.database_id || db.id);
+  const databases = await listDatabases();
+  const bound = currentD1Binding(fs.readFileSync(TOML_PATH, "utf8"));
+  let chosen = bound ? databases.find(db => idOf(db) === bound.id) : null;
+  if (!chosen) chosen = databases.find(db => db.name === DB_NAME) || null;
+  if (!chosen && databases.length) {
+    info("In deinem Cloudflare-Konto gibt es schon diese Datenbanken:");
+    databases.forEach((db, i) => info(`${i + 1}. ${db.name}`));
+    info("Wähle die, mit der dein laufendes Backend arbeitet (Workers & Pages → dein Worker →");
+    info("Settings → Bindings → DB). Mit „neu“ entsteht eine leere Datenbank.");
+    const suggestion = databases.findIndex(db => /disorder|shop/i.test(db.name));
+    const answer = await ask("Nummer der Datenbank oder „neu“:", {
+      fallback: suggestion >= 0 ? String(suggestion + 1) : "neu",
+      validate: v => (v === "neu" || (Number(v) >= 1 && Number(v) <= databases.length) ? null : "Bitte eine Nummer aus der Liste oder „neu“."),
+    });
+    if (answer !== "neu") chosen = databases[Number(answer) - 1];
+    else if (state.existing && !(await confirm("Wirklich eine neue, leere Datenbank? Dein laufendes Backend verliert dann den Zugriff auf seine bisherigen Daten.", false))) {
+      process.exit(1);
+    }
+  }
+  if (!chosen) {
     info(`Lege Datenbank "${DB_NAME}" an …`);
     const created = await wrangler(["d1", "create", DB_NAME]);
     if (created.code !== 0) { fail("Datenbank konnte nicht angelegt werden."); process.exit(1); }
-    found = (await listDatabases()).find(db => db.name === DB_NAME);
+    chosen = (await listDatabases()).find(db => db.name === DB_NAME);
   }
-  const id = found && (found.uuid || found.database_id || found.id);
+  const id = idOf(chosen);
   if (!id) { fail("Datenbank-ID nicht gefunden. Bitte `npx wrangler d1 list` prüfen."); process.exit(1); }
   const before = fs.readFileSync(TOML_PATH, "utf8");
-  const after = upsertD1Block(before, id);
+  const after = upsertD1Block(before, id, chosen.name);
   if (after !== before) fs.writeFileSync(TOML_PATH, after);
   state.databaseId = id;
+  state.dbName = chosen.name;
   saveState(state);
-  ok(`Datenbank "${DB_NAME}" verbunden (ID in wrangler.toml eingetragen).`);
+  ok(`Datenbank "${chosen.name}" verbunden (ID in wrangler.toml eingetragen).`);
+}
+
+async function remoteObjectNames(dbName) {
+  const res = await wrangler(["d1", "execute", dbName, "--remote", "--json", "--command", "SELECT name FROM sqlite_master"], { mode: "capture" });
+  const parsed = jsonFrom(res.out);
+  if (!Array.isArray(parsed)) return null;
+  return parsed.flatMap(block => (Array.isArray(block?.results) ? block.results : [])).map(row => String(row.name));
 }
 
 async function stepMigrations(state) {
-  heading(3, TOTAL, "Datenbank-Tabellen einrichten");
+  heading(4, TOTAL, "Datenbank-Tabellen einrichten");
+  const dbName = state.dbName || DB_NAME;
   if (state.migratedAt && !(await confirm(`Bereits am ${state.migratedAt.slice(0, 10)} eingerichtet. Auf neue Migrationen prüfen?`, true))) {
     ok("Übersprungen.");
     return;
   }
-  info("Erst das Grundschema, dann alle Migrationen in der richtigen Reihenfolge.");
+  const names = await remoteObjectNames(dbName);
+  if (names === null) { fail("Die Datenbank ließ sich nicht lesen. Bitte Anmeldung und Datenbank prüfen."); process.exit(1); }
+  const files = fs.readdirSync(path.join(HERE, "migrations")).filter(f => /^\d{4}_[a-z0-9_]+\.sql$/.test(f)).sort();
+  const baseline = migrationsToBaseline(names, files);
+  if (baseline.length) {
+    info("Deine Datenbank wurde bisher von Hand eingerichtet. Damit Cloudflare nichts doppelt");
+    info(`ausführt, werden ${baseline.length} bereits vorhandene Migrationen als erledigt vermerkt:`);
+    info(dim(baseline.join(", ")));
+    if (!(await confirm("Vermerken und fortfahren?", true))) process.exit(1);
+    const sql = [
+      "CREATE TABLE IF NOT EXISTS d1_migrations(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL)",
+      ...baseline.map(file => `INSERT OR IGNORE INTO d1_migrations (name) VALUES ('${file}')`),
+    ].join("; ");
+    const marked = await wrangler(["d1", "execute", dbName, "--remote", "--yes", "--command", sql]);
+    if (marked.code !== 0) { fail("Vermerk fehlgeschlagen – es wurde nichts verändert."); process.exit(1); }
+    ok("Vorhandene Migrationen vermerkt.");
+  }
+  info("Jetzt das Grundschema und alle noch fehlenden Migrationen in der richtigen Reihenfolge.");
   info("Cloudflare merkt sich, welche schon gelaufen sind – ein zweiter Lauf ist harmlos.");
-  const schema = await wrangler(["d1", "execute", DB_NAME, "--remote", "--file=schema.sql"]);
+  const schema = await wrangler(["d1", "execute", dbName, "--remote", "--yes", "--file=schema.sql"]);
   if (schema.code !== 0) { fail("Grundschema fehlgeschlagen."); process.exit(1); }
-  const migrations = await wrangler(["d1", "migrations", "apply", DB_NAME, "--remote"]);
+  const migrations = await wrangler(["d1", "migrations", "apply", dbName, "--remote"]);
   if (migrations.code !== 0) { fail("Migrationen fehlgeschlagen."); process.exit(1); }
   state.migratedAt = new Date().toISOString();
   saveState(state);
   ok("Alle Tabellen, Trigger und Schutzregeln sind eingerichtet.");
 }
 
+function npmCommand(args) {
+  return new Promise(resolve => {
+    const child = spawn("npm", args, { cwd: HERE, stdio: "inherit", shell: IS_WINDOWS, env: process.env });
+    child.on("error", () => resolve(127));
+    child.on("close", code => resolve(code));
+  });
+}
+
 async function stepDeploy(state) {
-  heading(4, TOTAL, "Worker veröffentlichen");
-  info("Lädt den Shop-Worker zu Cloudflare hoch. Beim allerersten Mal fragt Cloudflare");
-  info("eventuell nach einer workers.dev-Subdomain – nimm z. B. „disorder119“.");
+  heading(5, TOTAL, "Worker veröffentlichen");
+  if (fs.existsSync(path.join(HERE, "package.json")) && !process.env.SETUP_WRANGLER_BIN) {
+    info("Installiere die Bausteine des Workers (einmalig) …");
+    if (await npmCommand(["ci", "--no-audit", "--no-fund"]) !== 0) {
+      fail("npm ci fehlgeschlagen. Bitte Internetverbindung prüfen und nochmal starten.");
+      process.exit(1);
+    }
+  }
+  info(state.existing
+    ? "Aktualisiert dein laufendes Backend mit dem neuen Code. Zugangsdaten und Domain bleiben erhalten."
+    : "Lädt den Shop-Worker zu Cloudflare hoch. Beim ersten Mal fragt Cloudflare eventuell nach einer\n  workers.dev-Subdomain – nimm z. B. „disorder119“.");
   const deployed = await wrangler(["deploy"]);
   if (deployed.code !== 0) { fail("Veröffentlichung fehlgeschlagen."); process.exit(1); }
   line();
-  info("Oben in der Ausgabe steht die Adresse deines Workers, z. B.");
-  info(dim("https://disorder119-shop-worker.disorder119.workers.dev"));
+  if (!state.existing) {
+    info("Oben in der Ausgabe steht die Adresse deines Workers, z. B.");
+    info(dim("https://disorder119-shop-worker.disorder119.workers.dev"));
+  }
   const url = await ask("Worker-Adresse:", { fallback: state.workerUrl || "", validate: validators.workerUrl });
   state.workerUrl = url.replace(/\/$/, "");
   saveState(state);
-  ok(`Worker läuft unter ${state.workerUrl}`);
+  const health = await probeHealth(state.workerUrl);
+  if (health) ok(`Worker antwortet unter ${state.workerUrl}`);
+  else warn(`Unter ${state.workerUrl} antwortet noch kein Shop-Backend – das kann nach dem ersten Veröffentlichen ein bis zwei Minuten dauern.`);
 }
 
 async function stepSecrets(state) {
-  heading(5, TOTAL, "Zugangsdaten sicher hinterlegen");
+  heading(6, TOTAL, "Zugangsdaten sicher hinterlegen");
   info("Geheime Werte gibst du in Wranglers versteckte Eingabe ein – sie erscheinen nicht");
   info("auf dem Bildschirm und landen nur verschlüsselt bei Cloudflare, nie im Repository.");
   const have = await existingSecrets();
@@ -394,6 +555,29 @@ async function stepSecrets(state) {
     await putSecret("MAIL_BCC", bcc);
   }
 
+  // --- Postfach
+  line(); line(bold("Postfach: Mails an bestellung@disorder119.com empfangen"));
+  info("Eingehende Mails landen im Postfach deiner Admin-App und zusätzlich als vollständige");
+  info("Kopie mit allen Anhängen in deinem normalen Postfach.");
+  if (needs("MAIL_FORWARD_TO")) {
+    const ziel = await ask("Dein normales Postfach für die Kopie:", { fallback: "disorder119shop@gmail.com", validate: validators.email });
+    await putSecret("MAIL_FORWARD_TO", ziel);
+  } else ok("MAIL_FORWARD_TO ist schon gesetzt.");
+  if (!state.emailRoutingDone || process.argv.includes("--alles")) {
+    info("Jetzt in Cloudflare das E-Mail-Routing für disorder119.com einrichten:");
+    info("1. „Email Routing“ aktivieren. Cloudflare ersetzt dabei die MX-Einträge der bisherigen");
+    info("   Porkbun-Weiterleitung – das ist so gewollt. Weitere Porkbun-Weiterleitungen hier neu anlegen.");
+    info("2. „Destination addresses“: dein normales Postfach hinzufügen und die Bestätigungsmail anklicken.");
+    info("3. „Routing rules“ → Custom address „bestellung“ → Action „Send to a Worker“ → dein Shop-Worker.");
+    info("   Optional: „Catch-all“ ebenfalls an den Worker, dann landet auch kontakt@… im Postfach.");
+    info("4. Unter DNS den SPF-Eintrag (TXT, beginnt mit v=spf1) so zusammenführen, dass es nur einen gibt:");
+    info(dim("   v=spf1 include:_spf.mx.cloudflare.net include:spf.brevo.com ~all"));
+    openUrl("https://dash.cloudflare.com/?to=/:account/:zone/email/routing/overview");
+    await pause("Alles eingerichtet? Weiter mit Enter.");
+    state.emailRoutingDone = true;
+    saveState(state);
+  } else ok("E-Mail-Routing ist eingerichtet.");
+
   // --- PayPal
   line(); line(bold("PayPal"));
   if (needs("PAYPAL_ENVIRONMENT")) {
@@ -474,8 +658,8 @@ async function stepSecrets(state) {
 }
 
 async function stepHealth(state) {
-  heading(6, TOTAL, "Gesundheitscheck");
-  if (!state.workerUrl) { warn("Keine Worker-Adresse bekannt – erst Schritt 4 abschließen."); return; }
+  heading(7, TOTAL, "Gesundheitscheck");
+  if (!state.workerUrl) { warn("Keine Worker-Adresse bekannt – erst Schritt 5 abschließen."); return; }
   let data;
   try {
     const res = await fetch(`${state.workerUrl}/health`);
@@ -497,7 +681,7 @@ async function stepHealth(state) {
 }
 
 async function stepFrontend(state) {
-  heading(7, TOTAL, "Shop-Webseite verbinden");
+  heading(8, TOTAL, "Shop-Webseite verbinden");
   const values = {
     shopWorkerUrl: state.workerUrl || "",
     paypalClientId: state.paypalClientId || "",
@@ -513,7 +697,7 @@ async function stepFrontend(state) {
 }
 
 async function stepNext() {
-  heading(8, TOTAL, "Übernehmen und testen");
+  heading(9, TOTAL, "Übernehmen und testen");
   info("1. Änderungen per Pull Request übernehmen (main nimmt keine Direkt-Pushes an):");
   info(dim("   git checkout -b shop-einrichtung"));
   info(dim("   git add shop-worker/wrangler.toml config/shop-config.json"));
@@ -535,7 +719,7 @@ async function statusOnly(state) {
     "ADMIN_READ_TOKEN", "ADMIN_WRITE_TOKEN", "GITHUB_TOKEN", "TURNSTILE_SECRET", "MAIL_API_KEY", "MAIL_FROM",
     "PAYPAL_ENVIRONMENT", "PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "PAYPAL_WEBHOOK_ID",
   ];
-  const optional = ["MAIL_BCC", "TELEGRAM_BOT_TOKEN", "DHL_API_KEY", "DHL_USER", "DHL_PASSWORD", "DHL_BILLING_NUMBER", "DHL_ENVIRONMENT"];
+  const optional = ["MAIL_FORWARD_TO", "MAIL_BCC", "TELEGRAM_BOT_TOKEN", "DHL_API_KEY", "DHL_USER", "DHL_PASSWORD", "DHL_BILLING_NUMBER", "DHL_ENVIRONMENT"];
   for (const name of expected) (have.has(name) ? ok : warn)(`${name}${have.has(name) ? "" : " fehlt"}`);
   for (const name of optional) if (have.has(name)) ok(`${name} ${dim("(optional)")}`);
   await stepHealth(state);
@@ -602,6 +786,7 @@ async function main() {
   if (process.argv.includes("--live")) return goLive(state);
   await stepWelcome();
   await stepLogin();
+  await stepExisting(state);
   await stepDatabase(state);
   await stepMigrations(state);
   await stepDeploy(state);

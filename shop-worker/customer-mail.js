@@ -359,6 +359,14 @@ export async function sendMail(env, message = {}) {
   const replyTo = normalizeEmail(message.replyTo || env.MAIL_REPLY_TO || "");
   if (replyTo) payload.replyTo = { email: replyTo };
   if (message.tag) payload.tags = [safeText(message.tag, 40)];
+  // Nur einfache Kopfzeilen fuer Antwort-Verlaeufe (In-Reply-To, References).
+  if (message.headers && typeof message.headers === "object") {
+    const headers = {};
+    for (const [key, value] of Object.entries(message.headers)) {
+      if (/^[A-Za-z][A-Za-z0-9-]{0,40}$/.test(key) && value) headers[key] = safeText(value, 400);
+    }
+    if (Object.keys(headers).length) payload.headers = headers;
+  }
   // Der Durchschlag wird je Nachricht ausdruecklich angefordert, nie pauschal:
   // ein Anmeldelink oder eine Auskunft nach Art. 15 DSGVO darf niemals
   // nebenbei in einem zweiten Postfach landen.

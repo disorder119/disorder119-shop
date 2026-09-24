@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import test from "node:test";
-import { updateShopConfig, upsertD1Block } from "./setup.mjs";
+import { fileURLToPath } from "node:url";
+import {
+  MIGRATION_MARKERS,
+  currentD1Binding,
+  migrationsToBaseline,
+  setTomlWorkerName,
+  tomlWorkerName,
+  updateShopConfig,
+  upsertD1Block,
+} from "./setup.mjs";
 
 const BASE_TOML = `name = "disorder119-shop-worker"
 main = "worker-entry.js"
@@ -47,4 +58,43 @@ test("setup only fills public values into shop-config and keeps checkout off", (
   assert.equal(out.turnstileSiteKey, "0x4AAAAAAAtest");
   assert.equal(out.features.paypalCheckout, false);
   assert.deepEqual(Object.keys(out).slice(0, 5), ["email", "shippingFlatCents", "paypalClientId", "shopWorkerUrl", "turnstileSiteKey"]);
+});
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const MIGRATION_FILES = fs.readdirSync(path.join(HERE, "migrations")).filter(f => /^\d{4}_.*\.sql$/.test(f)).sort();
+
+test("every migration has a marker object that the file really creates", () => {
+  for (const file of MIGRATION_FILES) {
+    const marker = MIGRATION_MARKERS[file];
+    assert.ok(marker, `${file} braucht einen Eintrag in MIGRATION_MARKERS`);
+    const sql = fs.readFileSync(path.join(HERE, "migrations", file), "utf8");
+    assert.match(sql, new RegExp(`CREATE (TABLE|TRIGGER|UNIQUE INDEX|INDEX) IF NOT EXISTS ${marker}\\b`), `${file} legt ${marker} nicht an`);
+  }
+});
+
+test("setup records manually applied migrations and leaves managed or new databases alone", () => {
+  // Fresh database: nothing to record, wrangler applies everything.
+  assert.deepEqual(migrationsToBaseline([], MIGRATION_FILES), []);
+  // Already managed by wrangler: never touch its bookkeeping.
+  assert.deepEqual(migrationsToBaseline(["d1_migrations", "commerce_orders"], MIGRATION_FILES), []);
+  // Hand-made database with 0002-0005 applied: exactly those are recorded.
+  const handMade = ["commerce_orders", "trg_order_status_transition", "order_contact_snapshots", "rental_groups", "inventory"];
+  assert.deepEqual(migrationsToBaseline(handMade, MIGRATION_FILES), [
+    "0002_commerce_foundation.sql", "0003_state_integrity.sql", "0004_admin_operations.sql", "0005_rental_groups.sql",
+  ]);
+  // Unsafe file names are never inlined into SQL.
+  assert.deepEqual(migrationsToBaseline(["commerce_orders"], ["0002_commerce_foundation.sql", "0099_x'; DROP TABLE a;--.sql"]), [
+    "0002_commerce_foundation.sql",
+  ]);
+});
+
+test("setup reads the bound database and can point wrangler.toml at the running worker", () => {
+  const toml = `name = "disorder119-shop-worker"\nmain = "worker-entry.js"\n\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "shop-db"\ndatabase_id = "abc-123"\n`;
+  assert.deepEqual(currentD1Binding(toml), { name: "shop-db", id: "abc-123" });
+  assert.equal(currentD1Binding('name = "x"\n'), null);
+  assert.equal(tomlWorkerName(toml), "disorder119-shop-worker");
+  const renamed = setTomlWorkerName(toml, "disorder119-api");
+  assert.equal(tomlWorkerName(renamed), "disorder119-api");
+  assert.match(renamed, /main = "worker-entry.js"/);
+  assert.match(renamed, /database_name = "shop-db"/, "only the top-level worker name changes");
 });

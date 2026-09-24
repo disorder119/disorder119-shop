@@ -1,0 +1,9 @@
+{
+  "name": "disorder119-shop-worker",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker fuer den Disorder119-Shop (Checkout, Admin-API, Postfach).",
+  "dependencies": {
+    "postal-mime": "3.0.0"
+  }
+}

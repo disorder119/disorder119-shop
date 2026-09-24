@@ -61,6 +61,11 @@ jobs:
           node --test shop-worker/setup.test.mjs
           python scripts/test_verify_sale_commit.py
 
+      - name: Postfach (E-Mail-Empfang und Antworten) pruefen
+        run: |
+          node --check shop-worker/postfach.js
+          node --test shop-worker/postfach.test.mjs
+
       - name: Gutschein-Migration pruefen
         run: |
           {

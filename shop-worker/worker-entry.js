@@ -19,6 +19,7 @@ import { handleAccountRequest, isAccountRoute } from "./customer-account.js";
 import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
 import { handleVersand, istVersandRoute } from "./dhl.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
+import { handleInboundEmail, handlePostfach, istPostfachRoute } from "./postfach.js";
 import {
   CouponCheckoutError,
   applyCouponToCreatedOrder,
@@ -198,6 +199,10 @@ export default {
         return finish(await handleBuchhaltung(request, runtimeEnv, url, reqId, origin));
       }
 
+      if (istPostfachRoute(url)) {
+        return finish(await handlePostfach(request, runtimeEnv, url, reqId, origin));
+      }
+
       if (url.pathname === "/admin/notifications/telegram/test" || url.pathname === "/admin/notifications/mail/test") {
         return finish(await handleAdminNotifications(request, runtimeEnv, url, reqId, origin));
       }
@@ -322,6 +327,13 @@ export default {
       }
       return finish(runtimeErrorResponse(err, reqId, origin));
     }
+  },
+
+  // Cloudflare Email Routing: Mails an die Shop-Adresse landen hier (Regel
+  // "Send to a Worker" im Dashboard). Ablage im Postfach + Kopie an
+  // MAIL_FORWARD_TO, siehe postfach.js.
+  async email(message, env, ctx) {
+    await handleInboundEmail(message, env, ctx);
   },
 
   async scheduled(event, env, ctx) {

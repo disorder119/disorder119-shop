@@ -92,25 +92,29 @@ node setup.mjs --status   # was ist gesetzt, was fehlt
 
 ## Eigene Shop-Mailadresse einrichten
 
-Die Domain liegt bei Porkbun, ein Postfach gibt es noch nicht (kein MX-Eintrag).
-Die Nameserver muessen dafuer **nicht** umgezogen werden — beides laeuft ueber
-Eintraege im Porkbun-Panel:
+Die Domain laeuft ueber Cloudflare-Nameserver (DNS in Cloudflare, registriert
+bei Porkbun). Empfangen wird deshalb ueber **Cloudflare Email Routing** direkt
+in den Worker, gesendet ueber Brevo:
 
-1. **Empfangen:** Porkbun → Domain → *Email Forwarding*. `bestellung@disorder119.com`
-   auf das eigene Postfach weiterleiten. Kostenlos, fertig in zwei Minuten.
-2. **Senden:** Konto bei Brevo anlegen (Sitz Frankreich, Server in der EU —
-   bewusst kein US-Anbieter, damit in der Datenschutzerklaerung keine
-   Datenuebermittlung in die USA stehen muss). Dort die Domain
-   `disorder119.com` verifizieren; Brevo nennt dazu drei DNS-Eintraege
-   (DKIM, DMARC und eine Bestaetigung), die bei Porkbun eingetragen werden.
-   Der bestehende SPF-Eintrag muss um `include:spf.brevo.com` ergaenzt werden.
-3. **Schluessel setzen:** in Brevo einen API-Key erzeugen und selbst per
-   `npx wrangler secret put MAIL_API_KEY` eintragen, dazu
-   `npx wrangler secret put MAIL_FROM` mit `bestellung@disorder119.com`.
-4. **Pruefen:** `POST /admin/notifications/mail/test` schickt eine Testmail an
-   die eigene Adresse. Kommt sie an und landet nicht im Spam, ist DKIM/SPF in
-   Ordnung.
-5. Danach `config/shop-config.json` → `email` auf die neue Adresse umstellen,
+1. **Empfangen:** Cloudflare → disorder119.com → Email Routing aktivieren. Dabei
+   ersetzt Cloudflare die MX-Eintraege der bisherigen Porkbun-Weiterleitung.
+   Unter „Destination addresses“ das eigene Postfach bestaetigen, unter
+   „Routing rules“ `bestellung@disorder119.com` → „Send to a Worker“ → Shop-Worker.
+2. **Postfach:** Der Worker (`postfach.js`) legt jede Mail als Text in D1 ab
+   (Admin-API `GET /admin/postfach`) und schickt das vollstaendige Original mit
+   Anhaengen an `MAIL_FORWARD_TO`. Fremdes HTML wird nie gespeichert oder
+   ausgeliefert. Antworten gehen ueber `POST /admin/postfach/<id>/antwort`.
+3. **Senden:** Konto bei Brevo anlegen (Sitz Frankreich, Server in der EU —
+   bewusst kein US-Anbieter). Domain `disorder119.com` verifizieren und die drei
+   DNS-Eintraege (DKIM, DMARC, Brevo-Code) in Cloudflare eintragen. Es darf nur
+   **einen** SPF-Eintrag geben:
+   `v=spf1 include:_spf.mx.cloudflare.net include:spf.brevo.com ~all`
+4. **Schluessel setzen:** laeuft ueber `node setup.mjs` (MAIL_API_KEY, MAIL_FROM,
+   MAIL_FORWARD_TO).
+5. **Pruefen:** `POST /admin/notifications/mail/test` schickt eine Testmail. Eine
+   Mail an `bestellung@disorder119.com` muss danach im Postfach der Admin-API
+   und als Kopie im eigenen Postfach auftauchen.
+6. Danach `config/shop-config.json` → `email` auf die neue Adresse umstellen,
    damit Impressum, AGB und Kontaktknoepfe dieselbe Adresse nennen.
 
 ## Buchhaltung

@@ -2,6 +2,11 @@ name = "disorder119-shop-worker"
 main = "worker-entry.js"
 compatibility_date = "2025-01-01"
 
+# Das Backend laeuft bereits und wurde teils im Cloudflare-Dashboard
+# konfiguriert. keep_vars verhindert, dass ein Deploy dort gesetzte
+# Klartext-Variablen loescht (Secrets bleiben ohnehin erhalten).
+keep_vars = true
+
 # Alle echten Zugangsdaten sind Secrets (nie hier eintragen, nie committen) -
 # siehe README.md fuer die genauen `wrangler secret put ...`-Befehle.
 # Der gefuehrte Einrichtungs-Assistent erledigt Datenbank, Migrationen und
