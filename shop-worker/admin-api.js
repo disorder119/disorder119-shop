@@ -284,13 +284,15 @@ async function getOrders(env, url) {
   const db = requireDb(env);
   const limit = clampAdminLimit(url.searchParams.get("limit"));
   const offset = clampAdminOffset(url.searchParams.get("offset"));
-  const status = safeText(url.searchParams.get("status"), 40).toUpperCase();
+  // Ein Status oder mehrere mit Komma - "Offen" in der Admin-App ist
+  // PAID,PREPARING, "Retouren" RETURN_REQUESTED,RETURNED.
+  const statuses = safeText(url.searchParams.get("status"), 200).toUpperCase().split(",").map(s => s.trim()).filter(Boolean);
   const q = safeText(url.searchParams.get("q"), 120);
-  if (status && !ORDER_STATUSES.includes(status)) throw new AdminError("INVALID_ORDER_STATUS", 400);
+  if (statuses.length > 6 || statuses.some(s => !ORDER_STATUSES.includes(s))) throw new AdminError("INVALID_ORDER_STATUS", 400);
 
   const where = [];
   const binds = [];
-  if (status) { where.push("o.status=?"); binds.push(status); }
+  if (statuses.length) { where.push(`o.status IN (${statuses.map(() => "?").join(",")})`); binds.push(...statuses); }
   if (q) {
     where.push(`(o.order_number LIKE ? OR o.guest_email LIKE ? OR EXISTS (
       SELECT 1 FROM order_items qi WHERE qi.order_id=o.id AND (qi.article_no LIKE ? OR qi.title_snapshot LIKE ?)
@@ -303,6 +305,9 @@ async function getOrders(env, url) {
   const rows = await db.prepare(`SELECT o.*,
       (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=o.id) AS itemCount,
       (SELECT GROUP_CONCAT(oi.title_snapshot,' · ') FROM order_items oi WHERE oi.order_id=o.id) AS itemTitles,
+      (SELECT GROUP_CONCAT(oi.item_id) FROM order_items oi WHERE oi.order_id=o.id) AS itemIds,
+      (SELECT COALESCE(NULLIF(c.recipient_name,''),TRIM(COALESCE(c.given_name,'')||' '||COALESCE(c.surname,''))) FROM order_contact_snapshots c WHERE c.order_id=o.id) AS customerName,
+      (SELECT c.city FROM order_contact_snapshots c WHERE c.order_id=o.id) AS customerCity,
       (SELECT p.status FROM payments p WHERE p.order_id=o.id ORDER BY p.created_at DESC LIMIT 1) AS paymentStatus,
       (SELECT p.provider FROM payments p WHERE p.order_id=o.id ORDER BY p.created_at DESC LIMIT 1) AS paymentProvider,
       (SELECT s.status FROM shipments s WHERE s.order_id=o.id ORDER BY s.created_at DESC LIMIT 1) AS shipmentStatus,
