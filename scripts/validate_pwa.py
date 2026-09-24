@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
+TEMP_LOCK_MARKER = "d119_temp_private_until"
 
 
 def require(condition: bool, message: str) -> None:
@@ -66,6 +67,17 @@ def validate_admin_pwa() -> None:
         require(needle in admin_html, f"Admin-App-Integration fehlt: {needle}")
 
 
+def public_pwa_runtime(pwa_js_path: Path) -> str:
+    wrapper = pwa_js_path.read_text(encoding="utf-8")
+    if TEMP_LOCK_MARKER not in wrapper:
+        return wrapper
+
+    runtime_path = BASE / "assets" / "pwa-runtime.js"
+    require(runtime_path.is_file(), "temporärer Site-Lock aktiv, aber assets/pwa-runtime.js fehlt")
+    require('/assets/pwa-runtime.js' in wrapper, "temporärer Site-Lock lädt die erhaltene PWA-Runtime nicht")
+    return runtime_path.read_text(encoding="utf-8")
+
+
 def main() -> None:
     manifest_path = BASE / "manifest.webmanifest"
     sw_path = BASE / "sw.js"
@@ -108,9 +120,9 @@ def main() -> None:
     ]:
         require(needle in sw, f"Service-Worker-Invariante fehlt: {needle}")
 
-    pwa_js = pwa_js_path.read_text(encoding="utf-8")
-    require('navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" })' in pwa_js, "Service Worker wird nicht rootweit registriert")
-    require('(display-mode: standalone)' in pwa_js and 'navigator.standalone === true' in pwa_js, "Standalone-Erkennung fuer Android/iOS fehlt")
+    pwa_runtime = public_pwa_runtime(pwa_js_path)
+    require('navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" })' in pwa_runtime, "Service Worker wird nicht rootweit registriert")
+    require('(display-mode: standalone)' in pwa_runtime and 'navigator.standalone === true' in pwa_runtime, "Standalone-Erkennung fuer Android/iOS fehlt")
 
     template = (BASE / "index_template.html").read_text(encoding="utf-8")
     build = (BASE / "build_site.py").read_text(encoding="utf-8")
