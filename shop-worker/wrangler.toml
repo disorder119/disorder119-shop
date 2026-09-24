@@ -2,6 +2,13 @@ name = "disorder119-shop-worker"
 main = "worker-entry.js"
 compatibility_date = "2025-01-01"
 
+# Nur ueber die eigene Adresse erreichbar. Cloudflare legt DNS-Eintrag und
+# Zertifikat beim Deploy selbst an (die Zone disorder119.com muss aktiv sein).
+# Die workers.dev-Adresse und Vorschau-Links bleiben aus: eine Tuer weniger.
+routes = [{ pattern = "api.disorder119.com", custom_domain = true }]
+workers_dev = false
+preview_urls = false
+
 # Alle echten Zugangsdaten sind Secrets (nie hier eintragen, nie committen) -
 # siehe README.md fuer die genauen `wrangler secret put ...`-Befehle.
 
@@ -22,10 +29,11 @@ name = "RATE_LIMITER"
 namespace_id = "1190"
 simple = { limit = 20, period = 60 }
 
-# D1-Datenbank (DB). `npx wrangler d1 create disorder119-shop` gibt die
-# database_id aus - dann die vier Zeilen hier einkommentieren und die ID
-# eintragen. Die ID ist kein Geheimnis, sie darf ins Repo.
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "disorder119-shop"
-# database_id = "HIER-DIE-ID-EINTRAGEN"
+# D1-Datenbank (DB), angelegt am 24.09.2026 in Westeuropa (WEUR). Die ID ist
+# kein Geheimnis, sie darf ins Repo. Zuerst schema.sql, dann die Dateien in
+# migrations/ der Nummer nach (siehe README.md).
+[[d1_databases]]
+binding = "DB"
+database_name = "disorder119-shop"
+database_id = "ef1485f7-c816-414c-b7f0-9d92e6a3aa18"
+migrations_dir = "migrations"
