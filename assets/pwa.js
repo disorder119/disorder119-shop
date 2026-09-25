@@ -1,366 +1,82 @@
 (function () {
   "use strict";
 
-  var standalone = false;
-  try {
-    standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-  } catch (e) {
-    standalone = window.navigator.standalone === true;
-  }
-  document.documentElement.setAttribute("data-display-mode", standalone ? "standalone" : "browser");
+  var EXPIRES_AT = Date.parse("2026-09-26T13:53:00+02:00");
+  var AUTH_KEY = "d119_temp_private_until";
+  var EXPECTED_HASH = "a65bd46ba7f83f1b2a7b54c9ee00f0be4e7fd90aafa39699704be1781a2f9d0e";
+  var RUNTIME = "/assets/pwa-runtime.js?v=64d42bd7c7";
 
-  // iOS Safari can ignore viewport zoom restrictions. Load the dedicated
-  // iPhone/iPad guard on every shop page while leaving other platforms alone.
-  if (!document.querySelector('script[data-d119-ios-zoom-lock]')) {
-    var zoomLockScript = document.createElement("script");
-    zoomLockScript.src = "/assets/ios-zoom-lock.js?v=20260924-1";
-    zoomLockScript.async = false;
-    zoomLockScript.setAttribute("data-d119-ios-zoom-lock", "");
-    document.head.appendChild(zoomLockScript);
+  function loadRuntime() {
+    if (document.querySelector('script[data-d119-pwa-runtime]')) return;
+    var script = document.createElement("script");
+    script.src = RUNTIME;
+    script.async = false;
+    script.setAttribute("data-d119-pwa-runtime", "");
+    (document.head || document.documentElement).appendChild(script);
   }
 
-  var ARTICLE_NAV_KEY = "disorder119_article_nav_v2";
-  var ARTICLE_NAV_TTL_MS = 2 * 60 * 60 * 1000;
-  var PRODUCT_CSS_ID = "d119-product-page-v4";
-
-  function articleIdFromHref(href) {
-    var match = /\/artikel\/(\d+)\/?/i.exec(href || "");
-    return match ? String(match[1]) : "";
+  function authorized() {
+    try { return localStorage.getItem(AUTH_KEY) === String(EXPIRES_AT); }
+    catch (e) { return false; }
   }
 
-  function saveCatalogSequence(ids) {
-    if (!Array.isArray(ids) || ids.length < 2) return;
-    var clean = [];
-    var seen = {};
-    ids.forEach(function (id) {
-      id = String(id || "");
-      if (!id || seen[id]) return;
-      seen[id] = true;
-      clean.push(id);
-    });
-    if (clean.length < 2) return;
-    try {
-      window.sessionStorage.setItem(ARTICLE_NAV_KEY, JSON.stringify({
-        ids: clean,
-        savedAt: Date.now(),
-        sourcePath: location.pathname + location.search
-      }));
-    } catch (e) {}
-  }
-
-  // Capture the exact rendered catalogue order before entering a product.
-  // This preserves active filters and sorting across previous/next navigation.
-  function captureCatalogSequenceBeforeOpen(event) {
-    var target = event.target;
-    if (!target || !target.closest) return;
-
-    var plate = target.closest("a.plate");
-    if (!plate) return;
-
-    var grid = document.getElementById("grid");
-    if (!grid || !grid.contains(plate)) return;
-    if (target.closest("button, input, select, textarea, [data-brand-filter]")) return;
-
-    var clickedId = articleIdFromHref(plate.getAttribute("href") || plate.href);
-    if (!clickedId) return;
-
-    var simpleLeftClick = event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
-    if (simpleLeftClick) event.preventDefault();
-
-    var loadMore = document.getElementById("loadMoreBtn");
-    var guard = 0;
-    while (loadMore && !loadMore.classList.contains("hidden") && guard < 100) {
-      loadMore.click();
-      guard += 1;
-    }
-
-    var ids = [];
-    Array.prototype.forEach.call(grid.querySelectorAll("a.plate[href*='/artikel/']"), function (link) {
-      var id = articleIdFromHref(link.getAttribute("href") || link.href);
-      if (id) ids.push(id);
-    });
-
-    if (ids.indexOf(clickedId) !== -1) saveCatalogSequence(ids);
-    if (simpleLeftClick) location.href = plate.href;
-  }
-
-  document.addEventListener("click", captureCatalogSequenceBeforeOpen, true);
-
-  function loadStoredSequence(currentId) {
-    try {
-      var raw = window.sessionStorage.getItem(ARTICLE_NAV_KEY);
-      if (!raw) return null;
-      var data = JSON.parse(raw);
-      if (!data || !Array.isArray(data.ids)) return null;
-      if (!data.savedAt || Date.now() - Number(data.savedAt) > ARTICLE_NAV_TTL_MS) return null;
-
-      var ids = data.ids.map(function (id) { return String(id); }).filter(Boolean);
-      if (ids.length < 2 || ids.indexOf(String(currentId)) === -1) return null;
-      return ids;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function copyFor(lang) {
-    var labels = {
-      de: {
-        prev: "← Vorheriger",
-        archive: "Zum Archiv",
-        next: "Nächster →",
-        prevAria: "Zum vorherigen Artikel",
-        archiveAria: "Zum Archiv",
-        nextAria: "Zum nächsten Artikel",
-        navAria: "Artikelnavigation",
-        menuAria: "Archiv öffnen",
-        cartAria: "Warenkorb öffnen"
-      },
-      en: {
-        prev: "← Previous",
-        archive: "To archive",
-        next: "Next →",
-        prevAria: "Go to previous item",
-        archiveAria: "To archive",
-        nextAria: "Go to next item",
-        navAria: "Item navigation",
-        menuAria: "Open archive",
-        cartAria: "Open cart"
-      },
-      fr: {
-        prev: "← Précédent",
-        archive: "Vers l’archive",
-        next: "Suivant →",
-        prevAria: "Voir l’article précédent",
-        archiveAria: "Vers l’archive",
-        nextAria: "Voir l’article suivant",
-        navAria: "Navigation des articles",
-        menuAria: "Ouvrir l’archive",
-        cartAria: "Ouvrir le panier"
-      }
-    };
-    return labels[lang] || labels.de;
-  }
-
-  function prefixFor(lang) {
-    return lang === "de" ? "/" : "/" + lang + "/";
-  }
-
-  function installProductLayout(lang) {
-    if (!document.getElementById(PRODUCT_CSS_ID)) {
-      var css = document.createElement("link");
-      css.id = PRODUCT_CSS_ID;
-      css.rel = "stylesheet";
-      css.href = "/assets/product-page-v4.css?v=20260911-1";
-      document.head.appendChild(css);
-    }
-
-    var head = document.querySelector(".page-head");
-    var brand = document.querySelector(".page-head__brand");
-    if (head && brand && !head.querySelector(".page-head__menu")) {
-      var menu = document.createElement("a");
-      menu.className = "page-head__menu";
-      menu.href = prefixFor(lang);
-      menu.setAttribute("aria-label", copyFor(lang).menuAria);
-      menu.innerHTML = "<span></span><span></span><span></span>";
-      head.insertBefore(menu, brand);
-    }
-
-    var cart = document.getElementById("pageHeadCart");
-    if (cart) cart.setAttribute("aria-label", copyFor(lang).cartAria);
-  }
-
-  function ensureArticleNavShell(lang) {
-    var existing = document.querySelector(".article-sequence-nav");
-    if (existing) return existing;
-
-    var copy = copyFor(lang);
-    var nav = document.createElement("nav");
-    nav.className = "article-sequence-nav";
-    nav.setAttribute("aria-label", copy.navAria);
-
-    var previous = document.createElement("a");
-    previous.className = "article-sequence-nav__link article-sequence-nav__link--prev";
-    previous.textContent = copy.prev;
-    previous.setAttribute("aria-label", copy.prevAria);
-    previous.style.visibility = "hidden";
-
-    var archive = document.createElement("a");
-    archive.className = "article-sequence-nav__link article-sequence-nav__link--archive";
-    archive.href = prefixFor(lang);
-    archive.textContent = copy.archive;
-    archive.setAttribute("aria-label", copy.archiveAria);
-
-    var next = document.createElement("a");
-    next.className = "article-sequence-nav__link article-sequence-nav__link--next";
-    next.textContent = copy.next;
-    next.setAttribute("aria-label", copy.nextAria);
-    next.style.visibility = "hidden";
-
-    nav.appendChild(previous);
-    nav.appendChild(archive);
-    nav.appendChild(next);
-
-    var product = document.querySelector(".product");
-    if (product && product.parentNode) product.parentNode.insertBefore(nav, product);
-    else document.body.appendChild(nav);
-    return nav;
-  }
-
-  function renderArticleSequence(ids, currentId, lang) {
-    var currentIndex = ids.indexOf(String(currentId));
-    if (currentIndex < 0 || ids.length < 2) return;
-
-    var previousId = ids[(currentIndex - 1 + ids.length) % ids.length];
-    var nextId = ids[(currentIndex + 1) % ids.length];
-    if (!previousId || !nextId) return;
-
-    var prefix = prefixFor(lang);
-    var nav = ensureArticleNavShell(lang);
-    var previous = nav.querySelector(".article-sequence-nav__link--prev");
-    var next = nav.querySelector(".article-sequence-nav__link--next");
-
-    previous.href = prefix + "artikel/" + encodeURIComponent(previousId) + "/";
-    previous.rel = "prev";
-    previous.style.visibility = "visible";
-
-    next.href = prefix + "artikel/" + encodeURIComponent(nextId) + "/";
-    next.rel = "next";
-    next.style.visibility = "visible";
-
-    if (!document.querySelector('link[rel="prev"][data-d119-sequence]')) {
-      var headPrev = document.createElement("link");
-      headPrev.rel = "prev";
-      headPrev.href = previous.href;
-      headPrev.setAttribute("data-d119-sequence", "");
-      document.head.appendChild(headPrev);
-    }
-    if (!document.querySelector('link[rel="next"][data-d119-sequence]')) {
-      var headNext = document.createElement("link");
-      headNext.rel = "next";
-      headNext.href = next.href;
-      headNext.setAttribute("data-d119-sequence", "");
-      document.head.appendChild(headNext);
-    }
-  }
-
-  function initArticleSequence() {
-    var current = window.ARTICLE_ITEM;
-    if (!current || !current.id || !/\/(?:en\/|fr\/)?artikel\/\d+\/?$/i.test(location.pathname)) return;
-
-    var lang = window.ARTICLE_LANG || "de";
-    var currentId = String(current.id);
-
-    installProductLayout(lang);
-    ensureArticleNavShell(lang);
-
-    var stored = loadStoredSequence(currentId);
-    if (stored) {
-      renderArticleSequence(stored, currentId, lang);
-      return;
-    }
-
-    // Directly opened product pages use the normal public archive fallback:
-    // AVAILABLE items only, never SOLD. The navigation shell is reserved from
-    // first paint so asynchronous catalogue loading does not shift the page.
-    function loadFallbackSequence() {
-      fetch("/data/catalog.json", { cache: "no-store" })
-      .then(function (response) {
-        if (!response.ok) throw new Error("catalog HTTP " + response.status);
-        return response.json();
-      })
-      .then(function (items) {
-        if (!Array.isArray(items)) return;
-        var available = items.filter(function (item) {
-          return item && item.id && item.public_status === "AVAILABLE";
-        });
-        available.sort(function (a, b) {
-          var av = typeof a.brightness === "number" ? a.brightness : 0.5;
-          var bv = typeof b.brightness === "number" ? b.brightness : 0.5;
-          return bv - av;
-        });
-        var ids = available.map(function (item) { return String(item.id); });
-        if (ids.indexOf(currentId) === -1) return;
-        renderArticleSequence(ids, currentId, lang);
-      })
-      .catch(function () {
-        // Navigation is optional. Never block the product page on failure.
-      });
-    }
-
-    // The 170 KB catalogue only powers optional previous/next links. Let the
-    // already-preloaded product hero paint first so this request and JSON
-    // parsing cannot compete with the mobile LCP.
-    function scheduleFallbackSequence() {
-      window.setTimeout(loadFallbackSequence, 2500);
-    }
-    if (document.readyState === "complete") scheduleFallbackSequence();
-    else window.addEventListener("load", scheduleFallbackSequence, { once: true });
-  }
-
-  initArticleSequence();
-
-  if (!("serviceWorker" in navigator)) return;
-  var secureEnough = location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1";
-  if (!secureEnough) return;
-
-  function registerWorker() {
-    navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(function (error) {
-      console.warn("Disorder119 App-Service-Worker konnte nicht registriert werden.", error);
-    });
-  }
-
-  window.addEventListener("load", function () {
-    if (standalone) {
-      registerWorker();
-      return;
-    }
-    window.setTimeout(registerWorker, 3500);
-  }, { once: true });
-})();
-
-/* UNIVERSE_V2_ROUTE_GUARD — the old /chaos/ runtime contained game code and
-   lived inside the heavy archive bundle. Keep old URLs compatible, but route
-   every normal Universe entry to the dedicated, game-free renderer. */
-(function () {
-  "use strict";
-
-  function langPrefixFromPath(path) {
-    var match = /^\/(en|fr)(?:\/|$)/.exec(path || "");
-    return match ? "/" + match[1] + "/" : "/";
-  }
-  function isLegacyUniverse(path) {
-    return /^\/(?:en\/|fr\/)?chaos\/?$/i.test(path || "");
-  }
-  function universePath(path) {
-    return langPrefixFromPath(path) + "universe/";
-  }
-
-  // Direct links/bookmarks to the former route remain valid.
-  if (isLegacyUniverse(location.pathname)) {
-    location.replace(universePath(location.pathname) + location.search + location.hash);
+  if (Date.now() >= EXPIRES_AT) {
+    try { localStorage.removeItem(AUTH_KEY); } catch (e) {}
+    loadRuntime();
     return;
   }
 
-  // Remove all visible game entry points from the shared archive shell. The
-  // detached legacy code is never entered because Universe navigation below
-  // always performs a real navigation to the standalone renderer.
-  var gameStyle = document.createElement("style");
-  gameStyle.textContent = "[data-d119-game-launch],.chaos-game{display:none!important}";
-  document.head.appendChild(gameStyle);
+  if (authorized()) {
+    loadRuntime();
+    return;
+  }
 
-  document.addEventListener("click", function (event) {
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    var target = event.target;
-    if (!target || !target.closest) return;
-    var link = target.closest('a[data-mode-view="chaos"]');
-    if (!link) return;
+  window.__D119_TEMP_LOCK__ = true;
+  try { window.stop(); } catch (e) {}
+
+  var robots = document.querySelector('meta[name="robots"]');
+  if (!robots) {
+    robots = document.createElement("meta");
+    robots.name = "robots";
+    document.head.appendChild(robots);
+  }
+  robots.content = "noindex,nofollow,noarchive";
+
+  var style = document.createElement("style");
+  style.id = "d119-temp-lock-style";
+  style.textContent = "html,body{margin:0!important;min-height:100%!important;background:#000!important;color:#f2efe7!important;font-family:Helvetica,Arial,sans-serif!important;overflow:hidden!important}body>*:not(#d119-temp-lock){visibility:hidden!important}#d119-temp-lock{visibility:visible!important;position:fixed!important;inset:0!important;z-index:2147483647!important;background:#000!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:24px!important;box-sizing:border-box!important}#d119-temp-lock *{box-sizing:border-box!important;visibility:visible!important}.d119-lock-card{width:min(420px,100%);border:1px solid rgba(242,239,231,.25);padding:30px 24px;background:#080808}.d119-lock-kicker{margin:0 0 12px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.55}.d119-lock-title{margin:0 0 8px;font-size:26px;line-height:1.05;text-transform:uppercase}.d119-lock-copy{margin:0 0 22px;font-size:13px;line-height:1.5;opacity:.72}.d119-lock-form{display:flex;gap:8px}.d119-lock-input{min-width:0;flex:1;background:#000;color:#f2efe7;border:1px solid rgba(242,239,231,.35);padding:12px 13px;font:inherit;outline:none}.d119-lock-input:focus{border-color:#f2efe7}.d119-lock-btn{border:1px solid #f2efe7;background:#f2efe7;color:#000;padding:12px 15px;font:700 12px/1 Helvetica,Arial,sans-serif;text-transform:uppercase;cursor:pointer}.d119-lock-error{min-height:18px;margin:10px 0 0;font-size:12px;opacity:.8}.d119-lock-brand{margin-top:26px;padding-top:18px;border-top:1px solid rgba(242,239,231,.15);font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.45}@media(max-width:520px){.d119-lock-form{display:block}.d119-lock-input,.d119-lock-btn{width:100%}.d119-lock-btn{margin-top:8px}}";
+  document.head.appendChild(style);
+
+  var lock = document.createElement("div");
+  lock.id = "d119-temp-lock";
+  lock.innerHTML = '<main class="d119-lock-card"><p class="d119-lock-kicker">Private access</p><h1 class="d119-lock-title">Disorder119 ist vorübergehend privat.</h1><p class="d119-lock-copy">Die Website ist derzeit nur mit Passwort zugänglich.</p><form class="d119-lock-form" id="d119-lock-form"><input class="d119-lock-input" id="d119-lock-input" type="password" autocomplete="current-password" placeholder="Passwort" aria-label="Passwort" required><button class="d119-lock-btn" type="submit">Öffnen</button></form><p class="d119-lock-error" id="d119-lock-error" aria-live="polite"></p><div class="d119-lock-brand">Disorder119</div></main>';
+  document.body.appendChild(lock);
+
+  function sha256(value) {
+    if (!window.crypto || !window.crypto.subtle || typeof TextEncoder === "undefined") return Promise.reject(new Error("crypto unavailable"));
+    return window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)).then(function (buf) {
+      return Array.prototype.map.call(new Uint8Array(buf), function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+    });
+  }
+
+  var form = document.getElementById("d119-lock-form");
+  var input = document.getElementById("d119-lock-input");
+  var error = document.getElementById("d119-lock-error");
+  if (input) input.focus();
+
+  form.addEventListener("submit", function (event) {
     event.preventDefault();
-    event.stopImmediatePropagation();
-    location.assign(universePath(location.pathname));
-  }, true);
-
-  // Browser back/forward can otherwise restore the old in-page /chaos/ state.
-  window.addEventListener("popstate", function () {
-    if (isLegacyUniverse(location.pathname)) location.replace(universePath(location.pathname));
+    error.textContent = "Prüfe …";
+    sha256(input.value).then(function (hash) {
+      if (hash !== EXPECTED_HASH) {
+        error.textContent = "Falsches Passwort.";
+        input.select();
+        return;
+      }
+      try { localStorage.setItem(AUTH_KEY, String(EXPIRES_AT)); } catch (e) {}
+      location.reload();
+    }).catch(function () {
+      error.textContent = "Passwortprüfung ist in diesem Browser nicht verfügbar.";
+    });
   });
 })();
