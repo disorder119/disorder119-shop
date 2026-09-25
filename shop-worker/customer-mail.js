@@ -264,10 +264,12 @@ export function formatOrderConfirmation(order = {}, options = {}) {
 // Versandbestaetigung
 // ---------------------------------------------------------------------------
 
-// Deutsche Post/DHL-Sendungsverfolgung. Gleiche Quelle wie im Kundenkonto -
-// stuende der Link an zwei Stellen, koennte einer davon veralten.
+// Sendungsverfolgung je Versanddienst. Einzige Quelle fuer Versandmail und
+// Kundenkonto - stuende der Link an zwei Stellen, koennte einer veralten.
 export const DHL_TRACKING_BASE =
   "https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=";
+export const DPD_TRACKING_BASE = "https://tracking.dpd.de/status/de_DE/parcel/";
+export const HERMES_TRACKING_BASE = "https://www.myhermes.de/empfangen/sendungsverfolgung/sendungsinformation#";
 
 export function trackingUrlFor(carrier, trackingNumber) {
   const nummer = safeText(trackingNumber || "", 60).trim();
@@ -277,6 +279,8 @@ export function trackingUrlFor(carrier, trackingNumber) {
   // Dienst steht die Nummer ohne Link in der Mail, statt auf eine geratene
   // Adresse zu zeigen.
   if (dienst === "DHL" || dienst === "DEUTSCHE POST") return DHL_TRACKING_BASE + encodeURIComponent(nummer);
+  if (dienst === "DPD") return DPD_TRACKING_BASE + encodeURIComponent(nummer);
+  if (dienst === "HERMES") return HERMES_TRACKING_BASE + encodeURIComponent(nummer);
   return "";
 }
 

@@ -15,6 +15,7 @@ import {
   mailTransportReady,
   normalizeEmail,
   sendMail,
+  trackingUrlFor,
 } from "./customer-mail.js";
 
 export const LOGIN_TOKEN_TTL_MINUTES = 20;
@@ -325,8 +326,6 @@ export async function revokeAllSessions(env, customerId) {
 
 // ----------------------------------------------------------------- Bestellungen
 
-const TRACKING_BASE = "https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=";
-
 function shipmentView(row) {
   if (!row?.tracking_number && !row?.status) return null;
   const tracking = safeText(row.tracking_number || "", 60);
@@ -334,7 +333,9 @@ function shipmentView(row) {
     carrier: safeText(row.carrier || "", 40) || null,
     status: safeText(row.status || "", 30) || null,
     trackingNumber: tracking || null,
-    trackingUrl: tracking ? TRACKING_BASE + encodeURIComponent(tracking) : null,
+    // Ohne Angabe war es bisher immer DHL; ein unbekannter Dienst bekommt
+    // keinen geratenen Link.
+    trackingUrl: tracking ? trackingUrlFor(row.carrier || "DHL", tracking) || null : null,
     shippedAt: row.shipped_at || null,
     deliveredAt: row.delivered_at || null,
   };

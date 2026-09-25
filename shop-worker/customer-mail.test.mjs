@@ -317,7 +317,9 @@ function shippedDb({ claimed = true, order = {} } = {}) {
 test("a tracking link is only built for a carrier we actually know", () => {
   assert.match(trackingUrlFor("DHL", "00340434161234567890"), /dhl\.de.*00340434161234567890/);
   assert.match(trackingUrlFor("deutsche post", "123"), /dhl\.de/);
-  assert.equal(trackingUrlFor("Hermes", "123"), "");
+  assert.equal(trackingUrlFor("DPD", "01234567890123"), "https://tracking.dpd.de/status/de_DE/parcel/01234567890123");
+  assert.match(trackingUrlFor("hermes", "H1001990123456789"), /myhermes\.de.*H1001990123456789$/);
+  assert.equal(trackingUrlFor("GLS", "123"), "");
   assert.equal(trackingUrlFor("DHL", ""), "");
 });
 
