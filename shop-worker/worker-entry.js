@@ -20,6 +20,7 @@ import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
 import { handleVersand, istVersandRoute } from "./dhl.js";
 import { handleDhlQr, isDhlQrRoute } from "./dhl-qr.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
+import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
 import { handleAdminAuth, isAdminAuthRoute } from "./admin-passkeys.js";
 import {
@@ -216,6 +217,12 @@ export default {
       // GitHub-Token im Browser.
       if (isKatalogRoute(url)) {
         return finish(await handleKatalog(request, runtimeEnv, url, reqId, origin));
+      }
+
+      // Shop voruebergehend sperren: /site-status und /site-unlock fragt der
+      // Shop ohne Anmeldung, /admin/site-lock schaltet die Admin-App.
+      if (isSiteLockRoute(url)) {
+        return finish(await handleSiteLock(request, runtimeEnv, url, reqId, origin));
       }
 
       // QR-Versandmarke (DHL Online Frankierung) vor dem Geschaeftskunden-Versand:
