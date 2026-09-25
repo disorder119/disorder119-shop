@@ -315,6 +315,24 @@ async function stepExisting(state) {
   } else {
     info(`Unter ${EXISTING_WORKER_URL} läuft noch kein Shop-Backend – es wird neu eingerichtet.`);
   }
+  // Schutz vor Rueckschritt: Hat das laufende Backend Funktionen, die dieser
+  // Code nicht kennt (z. B. Passkey-Anmeldung unter /admin/auth/), wurde es aus
+  // einem neueren, nicht gepushten Stand veroeffentlicht. Ein Deploy von hier
+  // wuerde diese Funktionen loeschen.
+  if (live && !process.env.SETUP_WRANGLER_BIN) {
+    const liveAuth = await fetch(`${EXISTING_WORKER_URL}/admin/auth/status`, {
+      headers: { Origin: "https://admin.disorder119.com" },
+      signal: AbortSignal.timeout(10000),
+    }).then(res => res.status === 200).catch(() => false);
+    const hiesigerCode = fs.readdirSync(HERE).filter(f => f.endsWith(".js"))
+      .some(f => fs.readFileSync(path.join(HERE, f), "utf8").includes("/admin/auth/"));
+    if (liveAuth && !hiesigerCode) {
+      fail("Dein laufendes Backend ist NEUER als dieser Code (es hat Passkey-Anmeldung, dieser Stand nicht).");
+      info("Ein Deploy von hier würde Passkey-Login, Katalog-Speichern und weitere Funktionen löschen.");
+      info("Erst den neueren Worker-Code nach GitHub pushen und hier zusammenführen, dann erneut starten.");
+      process.exit(1);
+    }
+  }
   let name = tomlWorkerName(fs.readFileSync(TOML_PATH, "utf8"));
   const found = await wrangler(["deployments", "list", "--json"], { mode: "capture" });
   if (found.code === 0) {
