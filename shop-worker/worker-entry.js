@@ -21,6 +21,7 @@ import { handleVersand, istVersandRoute } from "./dhl.js";
 import { handleDhlQr, isDhlQrRoute } from "./dhl-qr.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
+import { handleIncomingEmail, handlePostfach, isPostfachRoute } from "./postfach.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
 import { handleAdminAuth, isAdminAuthRoute } from "./admin-passkeys.js";
 import {
@@ -225,6 +226,11 @@ export default {
         return finish(await handleSiteLock(request, runtimeEnv, url, reqId, origin));
       }
 
+      // Postfach der Admin-App (Mails an kontakt@disorder119.com).
+      if (isPostfachRoute(url)) {
+        return finish(await handlePostfach(request, runtimeEnv, url, reqId, origin));
+      }
+
       // QR-Versandmarke (DHL Online Frankierung) vor dem Geschaeftskunden-Versand:
       // beide liegen unter /admin/versand/.
       if (isDhlQrRoute(url)) {
@@ -378,5 +384,10 @@ export default {
       "operations_automation_failed",
       reqId,
     );
+  },
+
+  // Cloudflare Email Routing: kontakt@disorder119.com -> Postfach + Kopie ins Gmail.
+  async email(message, env, ctx) {
+    return handleIncomingEmail(message, env, ctx);
   },
 };
