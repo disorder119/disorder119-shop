@@ -884,7 +884,7 @@ def build_page(it, shop_config, lang):
   <a class="article-sequence-nav__link article-sequence-nav__link--archive" href="{home}" aria-label="{esc(product_nav_copy['archive_aria'])}">{esc(product_nav_copy['archive'])}</a>
   <a class="article-sequence-nav__link article-sequence-nav__link--next" aria-label="{esc(product_nav_copy['next_aria'])}" style="visibility:hidden">{esc(product_nav_copy['next'])}</a>
 </nav>
-<div class="product">
+<div class="product" role="main">
   <div class="gallery">
     <div class="gallery__stage">
 {'      <span class="gallery__badge">SOLD</span>' if sold else ""}
