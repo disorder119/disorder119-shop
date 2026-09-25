@@ -158,6 +158,7 @@
       cartItemsRemovedSold: "Inzwischen verkauft und aus dem Warenkorb entfernt: {items}.",
       cartRemove: "Entfernen", cartTotal: "Gesamt", cartSubtotal: "Zwischensumme", cartShipping: "Versand (DE)",
       cartWhatsapp: "Anfrage per WhatsApp senden", cartEmail: "Anfrage per E-Mail senden",
+      paypalSoon: "Bald verfügbar", paypalSoonAria: "Bezahlen mit PayPal – bald verfügbar",
       cartConfigWarning: "Shop-Kontakt noch nicht eingerichtet: Trage in index.html bei SHOP_CONFIG deine WhatsApp-Nummer oder E-Mail-Adresse ein, damit Bestellanfragen bei dir ankommen.",
       cartNote: "Alle Artikel sind Einzelstücke. Nach deiner Anfrage bestätigen wir Verfügbarkeit, Gesamtpreis, Zahlungs- und Versandart. Erst mit dieser Bestätigung kommt der Kaufvertrag zustande. Für Verbraucher:innen gilt das gesetzliche 14-tägige Widerrufsrecht.",
       orderGreeting: "Hallo! Ich interessiere mich für folgende Artikel aus dem Disorder119-Archiv:",
@@ -343,6 +344,7 @@
       cartItemsRemovedSold: "Sold in the meantime and removed from your cart: {items}.",
       cartRemove: "Remove", cartTotal: "Total", cartSubtotal: "Subtotal", cartShipping: "Shipping (DE)",
       cartWhatsapp: "Send request via WhatsApp", cartEmail: "Send request via e-mail",
+      paypalSoon: "Coming soon", paypalSoonAria: "Pay with PayPal – coming soon",
       cartConfigWarning: "Shop contact not set up yet: add your WhatsApp number or e-mail address to SHOP_CONFIG in index.html so order requests reach you.",
       cartNote: "All pieces are one-offs. After your enquiry we confirm availability, total price, payment and shipping method. The purchase contract is only formed with that confirmation. Consumers have the statutory 14-day right of withdrawal.",
       orderGreeting: "Hello! I'm interested in the following pieces from the Disorder119 archive:",
@@ -529,6 +531,7 @@
       cartItemsRemovedSold: "Entre-temps vendu(s) et retiré(s) du panier : {items}.",
       cartRemove: "Retirer", cartTotal: "Total", cartSubtotal: "Sous-total", cartShipping: "Livraison (DE)",
       cartWhatsapp: "Envoyer la demande par WhatsApp", cartEmail: "Envoyer la demande par e-mail",
+      paypalSoon: "Bientôt disponible", paypalSoonAria: "Payer avec PayPal – bientôt disponible",
       cartConfigWarning: "Le contact de la boutique n'est pas encore configuré : renseigne ton numéro WhatsApp ou ton adresse e-mail dans SHOP_CONFIG (index.html) pour recevoir les demandes de commande.",
       cartNote: "Toutes les pièces sont uniques. Après ta demande, nous confirmons la disponibilité, le prix total, le mode de paiement et l’expédition. Le contrat de vente n’est conclu qu’avec cette confirmation. Les consommateurs disposent du droit légal de rétractation de 14 jours.",
       orderGreeting: "Bonjour ! Je suis intéressé(e) par les pièces suivantes de l'archive Disorder119 :",
@@ -1107,6 +1110,12 @@
       '<div class="cart-total"><span>' + t("cartTotal") + '</span><span>' + cartTotalDisplay(total + shipping, hasUnknownPrice) + "</span></div>" +
       '<label class="cart-order-message"><span>' + purchaseMessageLabel() + ' <small>(' + (LANG === "de" ? "optional" : LANG === "fr" ? "facultatif" : "optional") + ')</small></span>' +
       '<textarea id="cartOrderMessage" maxlength="500" placeholder="' + escapeHtml(purchaseMessagePlaceholder()) + '">' + escapeHtml(cartOrderMessage) + '</textarea></label>';
+    // PAYPAL_VORSCHAU: PayPal schon sichtbar, bis features.paypalCheckout aktiv ist.
+    if (!(SHOP_CONFIG.features && SHOP_CONFIG.features.paypalCheckout && SHOP_CONFIG.paypalClientId)) {
+      footHtml += '<div class="paypal-soon" role="note" aria-label="' + escapeHtml(t("paypalSoonAria")) + '">' +
+        '<span class="paypal-soon__mark" aria-hidden="true"><i>Pay</i><i>Pal</i></span>' +
+        '<span class="paypal-soon__tag">' + escapeHtml(t("paypalSoon")) + '</span></div>';
+    }
     if (hasWhatsapp) {
       footHtml += '<a class="cart-checkout-btn cart-checkout-btn--whatsapp" data-cart-inquiry="whatsapp" target="_blank" rel="noopener" href="#">' + t("cartWhatsapp") + '</a>';
     }

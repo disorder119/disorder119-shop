@@ -548,6 +548,24 @@ def price_block_html(it):
     return '<div class="info__price">Preis auf Anfrage</div>'
 
 
+PAYPAL_VORSCHAU_TEXT = {
+    "de": ("Bald verfügbar", "Bezahlen mit PayPal – bald verfügbar"),
+    "en": ("Coming soon", "Pay with PayPal – coming soon"),
+    "fr": ("Bientôt disponible", "Payer avec PayPal – bientôt disponible"),
+}
+
+
+def paypal_vorschau_html(lang):
+    """PAYPAL_VORSCHAU: PayPal schon sichtbar zeigen. Sobald features.paypalCheckout
+    mit Client-ID und Worker-URL aktiv ist, rendert article.js den echten Button."""
+    tag, aria = PAYPAL_VORSCHAU_TEXT.get(lang, PAYPAL_VORSCHAU_TEXT["de"])
+    return (
+        '<div class="paypal-soon" role="note" aria-label="' + esc(aria) + '" data-i18n-aria="paypalSoonAria">'
+        '<span class="paypal-soon__mark" aria-hidden="true"><i>Pay</i><i>Pal</i></span>'
+        '<span class="paypal-soon__tag" data-i18n="paypalSoon">' + esc(tag) + "</span></div>"
+    )
+
+
 def cta_html(it, shop_config, home, lang):
     sold = it.get("public_status") == "SOLD"
     if sold:
@@ -561,6 +579,8 @@ def cta_html(it, shop_config, home, lang):
     parts = ['<div class="info__cta">']
     if has_price:
         parts.append('<button type="button" class="btn" id="addToCartBtn" data-i18n="addToCart">In den Warenkorb</button>')
+    if has_price and not paypal_ready:
+        parts.append(paypal_vorschau_html(lang))
     if has_price and paypal_ready:
         # Bleibt leer/unsichtbar, bis paypal_buy_button() in article.js den
         # echten PayPal-Button hineinrendert (siehe shop-worker/README.md).
