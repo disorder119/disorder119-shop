@@ -922,9 +922,9 @@ def build_page(it, shop_config, lang):
   window.ARTICLE_SHOP_CONFIG = {json.dumps(shop_config, ensure_ascii=False)};
   window.ARTICLE_LANG = "{lang}";
 </script>
+<script src="/assets/newsletter.js?v={NEWSLETTER_ASSET_VERSION}" defer></script>
 <script src="/assets/pwa.js?v={PWA_JS_VERSION}"></script>
 <script src="/assets/article.js?v={ARTICLE_JS_VERSION}"></script>
-<script src="/assets/newsletter.js?v={NEWSLETTER_ASSET_VERSION}" defer></script>
 </body>
 </html>
 """
@@ -1302,6 +1302,10 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__ROBOTS_META__", f'<meta name="robots" content="{robots_value}">')
     out = out.replace("__OG_LOCALE__", OG_LOCALES[lang])
     out = out.replace("__OG_LOCALE_ALTERNATES__", locale_alternates)
+    # Bewusst hier und nicht bei den uebrigen Versions-Tokens: CI-Skripte
+    # (apply_focus_three_hardening, apply_pwa) suchen die Zeilen darunter
+    # als zusammenhaengenden Block.
+    out = out.replace("__NEWSLETTER_VERSION__", NEWSLETTER_ASSET_VERSION)
     out = out.replace("__STATIC_PAGE_CONTENT__", static_content)
     initial_ssr_home = (lang == "de" and path_segment == "" and slug == "")
     out = out.replace("__CRITICAL_IMAGE_PRELOADS__", initial_archive_preloads() if initial_ssr_home else "")
@@ -1309,7 +1313,6 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__SSR_GRID_ATTR__", ' data-ssr-initial="1"' if initial_ssr_home else "")
     out = out.replace("__SSR_INITIAL_GRID__", initial_archive_grid_html(lang) if initial_ssr_home else "")
     out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
-    out = out.replace("__NEWSLETTER_VERSION__", NEWSLETTER_ASSET_VERSION)
     out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
     out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)
     out = out.replace("__PWA_JS_VERSION__", PWA_JS_VERSION)
