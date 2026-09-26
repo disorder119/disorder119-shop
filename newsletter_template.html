@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="__HTML_LANG__">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-title" content="Disorder119">
+<meta name="description" content="__META_DESC__">
+<!-- Bestaetigen und Abmelden laufen ueber Links mit Token: nichts davon
+     gehoert in einen Suchindex, und kein Token soll als Referrer weiterwandern. -->
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="canonical" href="__CANONICAL_URL__">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/favicon.png">
+<title>__META_TITLE__</title>
+<link rel="stylesheet" href="/assets/app.css?v=__APP_CSS_VERSION__">
+<link rel="stylesheet" href="/assets/konto.css?v=__KONTO_VERSION__">
+<link rel="stylesheet" href="/assets/newsletter.css?v=__NEWSLETTER_VERSION__">
+</head>
+<body class="konto-seite newsletter-seite">
+<header class="konto-kopf">
+  <a class="konto-marke" href="__HOME__">DISORDER119</a>
+</header>
+
+<main class="konto-inhalt">
+  <h1>Newsletter</h1>
+  <section class="d119-nl d119-nl-status" id="d119NewsletterStatus" aria-live="polite" hidden></section>
+  <div data-d119-newsletter data-quelle="seite"></div>
+  <noscript><p>__NOSCRIPT__</p></noscript>
+</main>
+
+<footer class="konto-fuss">
+  <a href="__HOME__agb/">AGB</a>
+  <a href="__HOME__datenschutz/">Datenschutz</a>
+  <a href="__HOME__impressum/">Impressum</a>
+</footer>
+
+<script>window.SHOP_CONFIG = __SHOP_CONFIG_JSON__;</script>
+<script src="/assets/newsletter.js?v=__NEWSLETTER_VERSION__" defer></script>
+</body>
+</html>
