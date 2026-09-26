@@ -40,7 +40,7 @@
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Archive", "item": "https://disorder119.com/en/"}, {"@type": "ListItem", "position": 2, "name": "Disorder119 — Privacy Policy", "item": "https://disorder119.com/en/datenschutz/"}]}</script>
 <title>Disorder119 — Privacy Policy</title>
 
-<link rel="stylesheet" href="/assets/app.css?v=2c432ca3e3">
+<link rel="stylesheet" href="/assets/app.css?v=e23515ec01">
 </head>
 <body>
 
@@ -236,7 +236,7 @@
   </aside>
 </div>
 
-<div class="static-page"><div class="legal-panel"><h2>Privacy policy</h2><p>This page is translated for convenience — the German version is the legally binding one.</p><h3>Controller</h3><p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg, Germany — contact details in the legal notice.</p><h3>Local storage (localStorage)</h3><p>The cart and outfit builder save your selection exclusively locally in your browser (localStorage). This data is never transmitted to us or third parties and never leaves your device. You can delete it at any time via your browser settings.</p><h3>Order enquiries</h3><p>If you send an enquiry via WhatsApp or e-mail, the data you enter (e.g. name, message) is transmitted to the respective service (WhatsApp/Meta or your e-mail provider) and to us in order to process your enquiry. It is not passed on to any further third parties.</p><h3>Hosting</h3><p>This site is hosted on GitHub Pages (GitHub Inc.). GitHub technically processes access data required for delivery (including IP address). See the <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub privacy statement</a> for details.</p><h3>No tracking cookies</h3><p>This site does not use analytics, marketing or tracking cookies.</p></div></div>
+<div class="static-page"><div class="legal-panel"><h2>Privacy policy</h2><p>This page is translated for convenience — the German version is the legally binding one.</p><h3>Controller</h3><p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg, Germany — contact details in the legal notice.</p><h3>Local storage (localStorage)</h3><p>The cart and outfit builder save your selection exclusively locally in your browser (localStorage). This data is never transmitted to us or third parties and never leaves your device. You can delete it at any time via your browser settings.</p><h3>Order enquiries</h3><p>If you send an enquiry via WhatsApp or e-mail, the data you enter (e.g. name, message) is transmitted to the respective service (WhatsApp/Meta or your e-mail provider) and to us in order to process your enquiry. It is not passed on to any further third parties.</p><h3>Hosting</h3><p>This site is hosted on GitHub Pages (GitHub Inc.). GitHub technically processes access data required for delivery (including IP address). See the <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub privacy statement</a> for details.</p><h3>Customer account</h3><p>You can sign in with your email address – instead of a password we send you a sign-in link. We store your email address, your orders, a delivery address if you add one, sign-in times and a non-reversible checksum (hash) of your IP address to prevent misuse. For signing in we set a technically necessary session cookie. The legal basis is Art. 6(1)(b) GDPR. In your account you can download your data and request deletion; order and invoice data are kept as long as the law requires (§ 147 AO, § 257 HGB).</p><h3>Newsletter</h3><p>You subscribe to the newsletter with your email address and your explicit consent. We then send you a confirmation email; you are only subscribed once you click the link in it (double opt-in). As a thank-you you receive a one-time code for 10% off one order – one code per person. We store your email address, language, the time and wording of your consent and non-reversible checksums (hashes) of the IP addresses used to subscribe and confirm, so we can prove your consent and prevent misuse of the discount. The legal basis is your consent (Art. 6(1)(a) GDPR, § 7(2) UWG) and our legitimate interest in preventing misuse (Art. 6(1)(f) GDPR). We measure whether newsletters are opened and links are clicked in order to improve them – this is covered by your consent as well. We also save your code locally in your browser so it is already filled in in the cart. You can withdraw your consent at any time, e.g. via the unsubscribe link in every email; after that we won't send you any more newsletters. We keep proof of your consent for up to three years after you unsubscribe.</p><h3>Email delivery (Brevo)</h3><p>Order confirmations, sign-in links and the newsletter are sent via Brevo (Sendinblue SAS, Paris, France) using servers in the EU. Brevo processes your email address and the content of the email on our behalf (data processing under Art. 28 GDPR).</p><h3>Shop server and incoming email (Cloudflare)</h3><p>The customer account, newsletter, rental requests and discount codes run on our server at Cloudflare (Cloudflare, Inc., San Francisco, USA); the database is located in Western Europe. Emails to disorder119.com addresses also reach us via Cloudflare. Cloudflare processes technically necessary connection data such as your IP address on our behalf (Art. 28 GDPR). Where data reaches the USA, Cloudflare is certified under the EU-US Data Privacy Framework (Art. 45 GDPR).</p><h3>No tracking cookies</h3><p>This site does not use analytics, marketing or tracking cookies.</p></div></div>
 <div class="app-shell hidden" id="appShell">
 <div class="masthead">
   <div class="masthead__top reveal" style="animation-delay:0.05s">
@@ -335,7 +335,7 @@
   <div class="active-filter-row hidden" id="activeFilters" aria-live="polite"></div>
 </div>
 
-<div class="grid-wrap">
+<div class="grid-wrap" role="main">
   <div class="grid" id="grid"></div>
   <div class="empty-state" id="emptyState">
     <p class="empty-state__title" data-i18n="emptyTitle">Keine Treffer im Archiv</p>
@@ -347,6 +347,7 @@
 </div>
 
 <footer class="footer">
+  <div class="footer__newsletter" data-d119-newsletter data-quelle="footer"></div>
   <nav class="footer__nav" aria-label="Footer">
     <a href="/ueber-uns/" data-info="about" data-i18n="footerAbout">Über Disorder119</a>
     <button type="button" id="footerArchive" data-i18n="menuArchive">Archiv</button>
@@ -440,13 +441,14 @@
   </div>
 </div>
 
-<script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "shippingFlatCents": 590, "paypalClientId": "", "shopWorkerUrl": "", "turnstileSiteKey": "", "environment": "sandbox", "features": {"paypalCheckout": false, "customerAccounts": false}};</script>
-<script src="/assets/pwa.js?v=08ac9faa17"></script>
-<script src="/assets/app.js?v=01f06df7b1"></script>
+<script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "shippingFlatCents": 590, "paypalClientId": "", "shopWorkerUrl": "https://api.disorder119.com", "turnstileSiteKey": "", "environment": "sandbox", "features": {"paypalCheckout": false, "customerAccounts": true}};</script>
+<script src="/assets/pwa.js?v=3b8863e296"></script>
+<script src="/assets/app.js?v=1e660d7bc1"></script>
 <script src="/assets/catalog-filter-simplify.js"></script>
 <script src="/assets/rental-v2.js"></script>
 <script src="/assets/rental-v2-ui.js"></script>
 <script src="/assets/rental-v2-picker.js"></script>
 
+<script src="/assets/newsletter.js?v=35d853f70f" defer></script>
 </body>
 </html>

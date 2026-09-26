@@ -43,7 +43,7 @@
 <link rel="preload" as="image" href="/assets/img/9479/display/0.webp" media="(min-width: 601px)" fetchpriority="high">
 <link rel="preload" as="image" href="/assets/img/9378/thumbs/0.webp" media="(max-width: 600px)" fetchpriority="high">
 <link rel="preload" as="image" href="/assets/img/9378/display/0.webp" media="(min-width: 601px)" fetchpriority="high">
-<link rel="stylesheet" href="/assets/app.css?v=2c432ca3e3">
+<link rel="stylesheet" href="/assets/app.css?v=e23515ec01">
 </head>
 <body>
 
@@ -338,7 +338,7 @@
   <div class="active-filter-row hidden" id="activeFilters" aria-live="polite"></div>
 </div>
 
-<div class="grid-wrap">
+<div class="grid-wrap" role="main">
   <div class="grid" id="grid" data-ssr-initial="1"><a class="plate" data-ssr-item-id="9479" href="/artikel/9479/"><div class="plate__frame"><picture><source media="(max-width: 600px)" srcset="/assets/img/9479/thumbs/0.webp"><img src="/assets/img/9479/display/0.webp" alt="Alexander McQueen Jacke" loading="eager" fetchpriority="high" decoding="sync"></picture></div><div class="plate__body"><button type="button" class="plate__brand" data-brand-filter>Alexander McQueen</button><span class="plate__title">Alexander McQueen Jacke</span><span class="plate__size">46</span><div class="plate__row"><span class="plate__price">130,00 €</span></div></div></a><a class="plate" data-ssr-item-id="9378" href="/artikel/9378/"><div class="plate__frame"><picture><source media="(max-width: 600px)" srcset="/assets/img/9378/thumbs/0.webp"><img src="/assets/img/9378/display/0.webp" alt="Walter Van Beirendonck Top Neongrün" loading="eager" fetchpriority="high" decoding="sync"></picture></div><div class="plate__body"><button type="button" class="plate__brand" data-brand-filter>Walter Van Beirendonck</button><span class="plate__title">Walter Van Beirendonck Top Neongrün</span><span class="plate__size">M</span><div class="plate__row"><span class="plate__price">99,00 €</span></div></div></a></div>
   <div class="empty-state" id="emptyState">
     <p class="empty-state__title" data-i18n="emptyTitle">Keine Treffer im Archiv</p>
@@ -350,6 +350,7 @@
 </div>
 
 <footer class="footer">
+  <div class="footer__newsletter" data-d119-newsletter data-quelle="footer"></div>
   <nav class="footer__nav" aria-label="Footer">
     <a href="/ueber-uns/" data-info="about" data-i18n="footerAbout">Über Disorder119</a>
     <button type="button" id="footerArchive" data-i18n="menuArchive">Archiv</button>
@@ -443,9 +444,10 @@
   </div>
 </div>
 
-<script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "shippingFlatCents": 590, "paypalClientId": "", "shopWorkerUrl": "", "turnstileSiteKey": "", "environment": "sandbox", "features": {"paypalCheckout": false, "customerAccounts": false}};</script>
-<script src="/assets/pwa.js?v=08ac9faa17"></script>
-<script>/* FOCUS3_MOBILE_RUNTIME_AFTER_LCP */(function(){var s=["/assets/app.js?v=01f06df7b1","/assets/catalog-filter-simplify.js","/assets/rental-v2.js","/assets/rental-v2-ui.js","/assets/rental-v2-picker.js"],i=0,started=false;function next(){if(i>=s.length)return;var e=document.createElement("script");e.src=s[i++];e.onload=next;e.onerror=next;document.body.appendChild(e);}function boot(){if(started)return;started=true;next();}function later(){setTimeout(boot,180);}if(document.readyState==="complete")later();else window.addEventListener("load",later,{once:true});})();</script>
+<script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "shippingFlatCents": 590, "paypalClientId": "", "shopWorkerUrl": "https://api.disorder119.com", "turnstileSiteKey": "", "environment": "sandbox", "features": {"paypalCheckout": false, "customerAccounts": true}};</script>
+<script src="/assets/pwa.js?v=3b8863e296"></script>
+<script>/* FOCUS3_MOBILE_RUNTIME_AFTER_LCP */(function(){var s=["/assets/app.js?v=1e660d7bc1","/assets/catalog-filter-simplify.js","/assets/rental-v2.js","/assets/rental-v2-ui.js","/assets/rental-v2-picker.js"],i=0,started=false;function next(){if(i>=s.length)return;var e=document.createElement("script");e.src=s[i++];e.onload=next;e.onerror=next;document.body.appendChild(e);}function boot(){if(started)return;started=true;next();}function later(){setTimeout(boot,180);}if(document.readyState==="complete")later();else window.addEventListener("load",later,{once:true});})();</script>
 
+<script src="/assets/newsletter.js?v=35d853f70f" defer></script>
 </body>
 </html>
