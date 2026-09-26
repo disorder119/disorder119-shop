@@ -971,6 +971,11 @@ def get_shop_config():
         "shippingFlatCents": shipping_raw,
         "paypalClientId": raw.get("paypalClientId") or "",
         "shopWorkerUrl": raw.get("shopWorkerUrl") or "",
+        # Oeffentlicher Turnstile-Site-Key (kein Secret - das Gegenstueck
+        # TURNSTILE_SECRET liegt nur im Worker). assets/schutz.js holt damit
+        # das Token, das der Worker im Livebetrieb fuer Kauf, Miete und
+        # Konto-Anmeldung verlangt.
+        "turnstileSiteKey": raw.get("turnstileSiteKey") or "",
         "environment": environment,
         "features": {
             "paypalCheckout": bool(features_raw.get("paypalCheckout")),
@@ -981,6 +986,13 @@ def get_shop_config():
         raise SystemExit(
             "FEHLER: paypalCheckout=true, aber paypalClientId oder shopWorkerUrl fehlt. "
             "Checkout bleibt aus, bis die Sandbox-Konfiguration vollstaendig ist."
+        )
+    if environment == "live" and cfg["shopWorkerUrl"] and not cfg["turnstileSiteKey"]:
+        # Der Live-Worker lehnt Kauf, Miete und Anmeldung ohne Turnstile-Token
+        # ab. Ohne Site-Key saehe der Shop fertig aus, und jeder Kauf scheiterte.
+        raise SystemExit(
+            "FEHLER: environment=live mit shopWorkerUrl, aber turnstileSiteKey fehlt. "
+            "Ohne ihn lehnt der Live-Worker jede Bestellung ab."
         )
     for secret_key in ("paypalClientSecret", "dhlApiSecret", "dpdApiSecret", "hermesApiSecret", "dbKey", "adminKey", "serviceRoleKey"):
         if raw.get(secret_key):

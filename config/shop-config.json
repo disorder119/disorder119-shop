@@ -5,6 +5,7 @@
   "shippingFlatCents": 590,
   "paypalClientId": "",
   "shopWorkerUrl": "https://api.disorder119.com",
+  "turnstileSiteKey": "",
   "environment": "sandbox",
   "features": {
     "paypalCheckout": false,

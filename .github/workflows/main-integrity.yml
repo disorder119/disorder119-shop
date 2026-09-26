@@ -110,6 +110,45 @@ jobs:
               print("Main guard self-heal provenance OK.")
               raise SystemExit(0)
 
+          # Verkauf aus dem Shop-Worker (shop-worker/worker.js, markCatalogSold):
+          # nach bezahlter Bestellung setzt er genau einen Artikel auf SOLD.
+          # Ohne diese Ausnahme dreht der Self-Heal den Verkauf zurueck und das
+          # Einzelstueck steht wieder als verfuegbar im Shop. Zugelassen nur,
+          # wenn der Commit vom Repo-Eigentuemer kommt, ausschliesslich
+          # data/items.json aendert und dort nur die Statuszeilen eines Artikels
+          # auf SOLD/Verkauft setzt. Ein Preis, ein Text oder eine zweite Datei
+          # im selben Commit - oder ein Diff, den GitHub nicht mitliefert -
+          # fuehrt wie bisher zum Revert.
+          import os, re
+          owner = (os.environ.get("REPO") or "").split("/")[0]
+          files = commit.get("files") or []
+          if (re.fullmatch(r"Verkauft: Artikel \d+", message.strip())
+                  and owner and github_author == owner
+                  and len(files) == 1
+                  and files[0].get("filename") == "data/items.json"
+                  and files[0].get("status") == "modified"):
+              patch = files[0].get("patch") or ""
+              removed, added, lines_ok = [], [], bool(patch)
+              for line in patch.splitlines():
+                  if line.startswith("@@") or line.startswith(" ") or line == "":
+                      continue
+                  if line.startswith("-"):
+                      removed.append(line[1:].strip().rstrip(","))
+                  elif line.startswith("+"):
+                      added.append(line[1:].strip().rstrip(","))
+                  else:
+                      lines_ok = False
+              status_line = re.compile(r'"(public_status|status)": "[^"\\]*"')
+              if (lines_ok
+                      and all(status_line.fullmatch(z) for z in removed)
+                      and sorted(added) in (
+                          ['"public_status": "SOLD"'],
+                          ['"public_status": "SOLD"', '"status": "Verkauft"'],
+                      )
+                      and sorted(z.split(":")[0] for z in removed) == sorted(z.split(":")[0] for z in added)):
+                  print("Shop sale provenance OK:", message.strip())
+                  raise SystemExit(0)
+
           raise SystemExit(
               "UNAUTHORIZED MAIN PUSH: commit is neither a merged PR nor a trusted GitHub Actions rebuild/guard commit."
           )

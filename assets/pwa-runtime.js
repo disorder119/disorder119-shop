@@ -9,6 +9,16 @@
   }
   document.documentElement.setAttribute("data-display-mode", standalone ? "standalone" : "browser");
 
+  // Passwort-Sperre (in der Admin-App schaltbar): als Erstes laden, damit ein
+  // gesperrter Shop so kurz wie moeglich sichtbar ist.
+  if (!document.querySelector('script[data-d119-site-lock]')) {
+    var siteLockScript = document.createElement("script");
+    siteLockScript.src = "/assets/site-lock.js?v=20260925-1";
+    siteLockScript.async = false;
+    siteLockScript.setAttribute("data-d119-site-lock", "");
+    document.head.appendChild(siteLockScript);
+  }
+
   // iOS Safari can ignore viewport zoom restrictions. Load the dedicated
   // iPhone/iPad guard on every shop page while leaving other platforms alone.
   if (!document.querySelector('script[data-d119-ios-zoom-lock]')) {

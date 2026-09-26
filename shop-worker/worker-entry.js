@@ -18,7 +18,13 @@ import { sendOrderConfirmation, sendOrderConfirmationByProviderOrder } from "./c
 import { handleAccountRequest, isAccountRoute } from "./customer-account.js";
 import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
 import { handleVersand, istVersandRoute } from "./dhl.js";
+import { handleDhlQr, isDhlQrRoute } from "./dhl-qr.js";
+import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
+import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
+import { handleIncomingEmail, handlePostfach, isPostfachRoute } from "./postfach.js";
+import { handleNewsletter, isNewsletterRoute } from "./newsletter.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
+import { handleAdminAuth, isAdminAuthRoute } from "./admin-passkeys.js";
 import {
   CouponCheckoutError,
   applyCouponToCreatedOrder,
@@ -91,10 +97,10 @@ function assertAdminOrigin(request) {
 async function authorizeRouteEnv(request, env, url, reqId) {
   const adminRoute = isAdminRoute(url);
   const legacyAdminRoute = isLegacyAdminRoute(url.pathname);
-  if (!adminRoute && !legacyAdminRoute) return env;
+  if (!adminRoute && !legacyAdminRoute) return { env, request };
 
   assertAdminOrigin(request);
-  if (request.method === "OPTIONS" && adminRoute) return env;
+  if (request.method === "OPTIONS" && adminRoute) return { env, request };
 
   let requiredRole;
   if (legacyAdminRoute) {
@@ -111,7 +117,17 @@ async function authorizeRouteEnv(request, env, url, reqId) {
         authMode: auth.mode,
       });
     }
-    return scopeAdminEnv(env, auth);
+    let routedRequest = request;
+    if (auth.mode === "PASSKEY_SESSION") {
+      // Jedes Admin-Modul prueft selbst noch einen Bearer-Token. Eine per
+      // Passkey angemeldete Anfrage bekommt dafuer einen Einmal-Schluessel,
+      // der nur fuer genau diese Anfrage gilt und den Worker nie verlaesst.
+      auth.token = `${crypto.randomUUID()}${crypto.randomUUID()}`;
+      const headers = new Headers(request.headers);
+      headers.set("Authorization", `Bearer ${auth.token}`);
+      routedRequest = new Request(request, { headers });
+    }
+    return { env: scopeAdminEnv(env, auth), request: routedRequest };
   } catch (err) {
     logAdminSecurity("warn", "admin_access_denied", reqId, request, url, {
       requiredRole,
@@ -157,7 +173,16 @@ export default {
     const finish = response => finalizeRuntimeResponse(response, request, env, reqId, url.pathname);
 
     try {
-      const runtimeEnv = await authorizeRouteEnv(request, env, url, reqId);
+      // Face-ID-/Windows-Hello-Anmeldung der Admin-App: muss ohne Sitzung
+      // erreichbar sein und prueft Herkunft und Berechtigung selbst.
+      if (isAdminAuthRoute(url)) {
+        await guardRuntimeRequest(request, env, url);
+        return finish(await handleAdminAuth(request, env, url, reqId));
+      }
+
+      const routed = await authorizeRouteEnv(request, env, url, reqId);
+      const runtimeEnv = routed.env;
+      request = routed.request;
       await guardRuntimeRequest(request, runtimeEnv, url);
 
       if (isGameRewardsRoute(url.pathname)) {
@@ -188,6 +213,35 @@ export default {
       // bisher bewusst mit 501 beantwortet hat.
       if (isAccountRoute(url)) {
         return finish(await handleAccountRequest(request, runtimeEnv, url, reqId, origin));
+      }
+
+      // Katalog-Editor der Admin-App: speichert ueber Pull Requests, ohne
+      // GitHub-Token im Browser.
+      if (isKatalogRoute(url)) {
+        return finish(await handleKatalog(request, runtimeEnv, url, reqId, origin));
+      }
+
+      // Shop voruebergehend sperren: /site-status und /site-unlock fragt der
+      // Shop ohne Anmeldung, /admin/site-lock schaltet die Admin-App.
+      if (isSiteLockRoute(url)) {
+        return finish(await handleSiteLock(request, runtimeEnv, url, reqId, origin));
+      }
+
+      // Postfach der Admin-App (Mails an kontakt@disorder119.com).
+      if (isPostfachRoute(url)) {
+        return finish(await handlePostfach(request, runtimeEnv, url, reqId, origin));
+      }
+
+      // Newsletter: Anmeldung, Bestaetigung und Abmeldung von der Website,
+      // /admin/newsletter fuer die Liste in der Admin-App.
+      if (isNewsletterRoute(url)) {
+        return finish(await handleNewsletter(request, runtimeEnv, url, reqId, origin));
+      }
+
+      // QR-Versandmarke (DHL Online Frankierung) vor dem Geschaeftskunden-Versand:
+      // beide liegen unter /admin/versand/.
+      if (isDhlQrRoute(url)) {
+        return finish(await handleDhlQr(request, runtimeEnv, url, reqId, origin));
       }
 
       if (istVersandRoute(url)) {
@@ -337,5 +391,10 @@ export default {
       "operations_automation_failed",
       reqId,
     );
+  },
+
+  // Cloudflare Email Routing: kontakt@disorder119.com -> Postfach + Kopie ins Gmail.
+  async email(message, env, ctx) {
+    return handleIncomingEmail(message, env, ctx);
   },
 };

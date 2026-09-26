@@ -8,6 +8,7 @@ import {
   rentalQuoteFromItem,
   safeText,
 } from "./commerce-core.js";
+import { readRepoFile } from "./github-datei.js";
 
 const ALLOWED_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -142,24 +143,15 @@ async function releaseIdempotencyClaim(env, key, requestOwner) {
     .bind(key, requestOwner).run().catch(() => {});
 }
 
-function decodeGitHubContent(content) {
-  const binary = atob(String(content || "").replace(/\n/g, ""));
-  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-
 async function loadItems(env) {
   if (env.GITHUB_TOKEN) {
-    const res = await fetch("https://api.github.com/repos/disorder119/disorder119-shop/contents/data/items.json?ref=main", {
-      headers: {
-        Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-        Accept: "application/vnd.github+json",
-        "User-Agent": "disorder119-rental-bundle",
-      },
-    });
-    if (res.ok) {
-      const file = await res.json();
-      return JSON.parse(decodeGitHubContent(file.content));
+    // Ueber den Blob: items.json ist groesser als die 1 MiB, bis zu der die
+    // Contents-API noch Inhalt mitschickt (github-datei.js).
+    try {
+      const { text } = await readRepoFile(env, "data/items.json", { userAgent: "disorder119-rental-bundle" });
+      return JSON.parse(text);
+    } catch (err) {
+      console.warn(JSON.stringify({ level: "warn", event: "rental_catalog_github_failed", message: String(err?.message || err).slice(0, 120) }));
     }
   }
   const fallback = await fetch("https://raw.githubusercontent.com/disorder119/disorder119-shop/main/data/items.json", {
