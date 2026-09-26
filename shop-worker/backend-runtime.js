@@ -22,16 +22,21 @@ const EXACT_METHODS = Object.freeze({
   "/capture-order": "POST",
   "/paypal-webhook": "POST",
   "/rental-requests": "GET",
+  "/newsletter/subscribe": "POST",
+  "/newsletter/confirm": "POST",
+  "/newsletter/unsubscribe": "POST",
 });
 
-// Die Konto-Anmeldung schreibt nicht nur in die Datenbank, sie verschickt
-// auch eine Mail - ohne Bot-Schutz waere das Tageskontingent des Shops mit
-// einem Skript leer, und Bestellbestaetigungen kaemen nicht mehr an.
+// Konto-Anmeldung und Newsletter-Anmeldung schreiben nicht nur in die
+// Datenbank, sie verschicken auch eine Mail - ohne Bot-Schutz waere das
+// Tageskontingent des Shops mit einem Skript leer, und Bestellbestaetigungen
+// kaemen nicht mehr an.
 const HUMAN_LIVE_WRITES = new Set([
   "/rental-request",
   "/rental-bundle",
   "/create-order",
   "/account/login",
+  "/newsletter/subscribe",
 ]);
 
 const COMMERCE_LIVE_WRITES = new Set([
@@ -47,6 +52,9 @@ const LIVE_DB_WRITES = new Set([
   "/capture-order",
   "/paypal-webhook",
   "/account/login",
+  "/newsletter/subscribe",
+  "/newsletter/confirm",
+  "/newsletter/unsubscribe",
 ]);
 
 const ADMIN_READ_METHODS = new Set(["GET", "HEAD"]);

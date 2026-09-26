@@ -189,16 +189,20 @@ async function startRun(request, env, origin) {
   return json({ runId, runToken: token, game, startedAt: nowMs, expiresAt }, 201, origin);
 }
 
-async function issueCoupon(db, game, scoreId, usernameKey) {
+// Einmaliger 10-%-Code. Auch der Newsletter vergibt seine Codes hierueber
+// (ohne Spiel und Punktestand), damit Warenkorb und Checkout nur eine Sorte
+// Gutschein kennen.
+export async function issueRewardCoupon(db, { game = null, scoreId = null, usernameKey = null } = {}) {
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = makeCouponCode();
     const hash = await sha256Hex(code);
+    const id = crypto.randomUUID();
     try {
       await db.prepare(`INSERT INTO reward_coupons
         (id,code_hash,code_hint,discount_bps,source_game,source_score_id,username_key,status,created_at)
         VALUES (?,?,?,?,?,?,?,'ACTIVE',?)`)
         .bind(
-          crypto.randomUUID(),
+          id,
           hash,
           code.slice(-4),
           DISCOUNT_BPS,
@@ -207,12 +211,16 @@ async function issueCoupon(db, game, scoreId, usernameKey) {
           usernameKey,
           new Date().toISOString(),
         ).run();
-      return code;
+      return { id, code, hint: code.slice(-4) };
     } catch (error) {
       if (!String(error?.message || error).toLowerCase().includes("unique")) throw error;
     }
   }
   throw new GameRewardError("COUPON_ISSUE_FAILED", 503);
+}
+
+async function issueCoupon(db, game, scoreId, usernameKey) {
+  return (await issueRewardCoupon(db, { game, scoreId, usernameKey })).code;
 }
 
 async function submitScore(request, env, origin) {
