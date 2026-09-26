@@ -60,6 +60,9 @@ PRODUCT_PAGE_CSS_VERSION = _asset_version("assets/product-page-v4.css")
 # laedt der Browser auch die andere neu. Sonst koennte ein neues Skript auf
 # altem CSS landen.
 KONTO_ASSET_VERSION = _asset_version("assets/konto.js")[:5] + _asset_version("assets/konto.css")[:5]
+# Dasselbe fuer die Newsletter-Anmeldung: newsletter.js laedt sein CSS mit
+# derselben Kennung nach.
+NEWSLETTER_ASSET_VERSION = _asset_version("assets/newsletter.js")[:5] + _asset_version("assets/newsletter.css")[:5]
 PWA_JS_VERSION = _asset_version("assets/pwa.js")
 
 # The first mobile product viewport must not wait for two external stylesheets
@@ -251,9 +254,9 @@ LEGAL_CONTENT_HTML = {
         "fr": "<h2>Conditions générales de vente</h2><p>Cette page est traduite par courtoisie — la version allemande fait foi juridiquement.</p><h3>1. Champ d'application</h3><p>Ces conditions s'appliquent aux demandes d'achat effectuées via ce site entre Joel Bittner (Disorder119) et les client(e)s.</p><h3>2. Formation du contrat</h3><p>Une demande sans engagement peut être envoyée par WhatsApp ou e-mail via le panier. Un contrat de vente n'est conclu qu'après confirmation séparée (disponibilité, prix, mode de paiement et d'expédition) — pas par le simple envoi de la demande.</p><h3>3. Articles</h3><p>Tous les articles proposés sont des pièces uniques d'occasion (vintage / seconde main). De légères variations liées à l'usage sont possibles et sont indiquées au mieux de notre connaissance dans la description de l'article.</p><h3>4. Prix, paiement &amp; livraison</h3><p>Tous les prix s'entendent en euros. Micro-entreprise selon le § 19 UStG, TVA non indiquée.</p><p>Un forfait de livraison de {versand} est facturé par commande en Allemagne, quel que soit le nombre d'articles. Le prix total, frais de livraison inclus, est indiqué dans le panier avant la validation de la commande. Les envois à l'étranger et le retrait sur place sont convenus individuellement sur demande.</p><h3>5. Garantie</h3><p>Les droits de garantie légaux s'appliquent. Tous les articles étant des pièces uniques d'occasion, leur état est décrit au mieux de notre connaissance dans la description de l'article concerné.</p><h3>6. Droit de rétractation des consommateurs</h3><p><strong>Droit de rétractation</strong><br>Tu disposes d'un délai de 14 jours pour te rétracter du présent contrat sans avoir à motiver ta décision. Le délai de rétractation expire 14 jours après le jour où toi, ou un tiers autre que le transporteur et désigné par toi, prend physiquement possession du bien. Pour exercer le droit de rétractation, tu dois nous notifier (Joel Bittner, Disorder119, Nelseestraße 25, 63739 Aschaffenburg, Allemagne, e-mail : {email}) ta décision de te rétracter du présent contrat au moyen d'une déclaration dénuée d'ambiguïté (par exemple lettre envoyée par la poste ou e-mail). Tu peux utiliser le formulaire type de rétractation ci-dessous, sans que cela soit obligatoire. Pour respecter le délai de rétractation, il suffit que tu transmettes ta communication relative à l'exercice du droit de rétractation avant l'expiration du délai de rétractation.</p><p><strong>Effets de la rétractation</strong><br>En cas de rétractation, nous te rembourserons tous les paiements reçus, y compris les frais de livraison (à l'exception des frais supplémentaires découlant du fait que tu as choisi un mode de livraison autre que le mode le moins coûteux de livraison standard proposé par nous), sans retard excessif et en tout état de cause au plus tard 14 jours à compter du jour où nous sommes informés de ta décision de te rétracter. Nous procéderons au remboursement en utilisant le même moyen de paiement que celui utilisé pour la transaction initiale, sauf accord exprès contraire ; en tout état de cause, ce remboursement ne t'occasionnera aucun frais. Nous pouvons différer le remboursement jusqu'à ce que nous ayons reçu le bien ou jusqu'à ce que tu aies fourni une preuve de l'expédition du bien, la date retenue étant celle du premier de ces faits. Tu devras renvoyer ou restituer les biens sans retard excessif et en tout état de cause au plus tard 14 jours après nous avoir communiqué ta décision de te rétracter. Ce délai est réputé respecté si tu renvoies le bien avant l'expiration du délai de 14 jours. Les frais directs de renvoi du bien sont à ta charge. Ta responsabilité n'est engagée qu'à l'égard de la dépréciation du bien résultant de manipulations autres que celles nécessaires pour établir la nature, les caractéristiques et le bon fonctionnement de ce bien.</p><p><strong>Formulaire type de rétractation</strong><br>(Veuillez compléter et renvoyer le présent formulaire uniquement si vous souhaitez vous rétracter du contrat.)</p><p>À l'attention de : Joel Bittner, Disorder119, Nelseestraße 25, 63739 Aschaffenburg, Allemagne, e-mail : {email}<br>Je/nous (*) vous notifie/notifions par la présente ma/notre (*) rétractation du contrat portant sur la vente du bien (*)/pour la prestation de service (*) ci-dessous<br>Commandé le (*)/reçu le (*)<br>Nom du (des) consommateur(s)<br>Adresse du (des) consommateur(s)<br>Signature du (des) consommateur(s) (uniquement en cas de notification du présent formulaire sur papier)<br>Date<br>(*) Rayez la mention inutile.</p>",
     },
     "legalDatenschutzHtml": {
-        "de": '<h2>Datenschutzerklärung</h2><h3>Verantwortlicher</h3><p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg — Kontakt siehe Impressum.</p><h3>Lokale Speicherung (localStorage)</h3><p>Warenkorb und Outfit-Baukasten speichern deine Auswahl ausschließlich lokal in deinem Browser (localStorage). Diese Daten werden nicht an uns oder Dritte übertragen und verlassen nie dein Gerät. Du kannst sie jederzeit über die Browser-Einstellungen löschen.</p><h3>Bestellanfragen</h3><p>Wenn du über WhatsApp oder E-Mail eine Anfrage sendest, werden die von dir eingegebenen Daten (z. B. Name, Nachricht) an den jeweiligen Dienst (WhatsApp/Meta bzw. deinen E-Mail-Anbieter) und an uns übermittelt, um deine Anfrage zu bearbeiten. Es findet keine Weitergabe an weitere Dritte statt.</p><h3>Hosting</h3><p>Diese Seite wird bei GitHub Pages (GitHub Inc.) gehostet. Beim Aufruf verarbeitet GitHub technisch notwendige Zugriffsdaten (u. a. IP-Adresse) zur Auslieferung der Seite. Näheres in der <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p><h3>Keine Tracking-Cookies</h3><p>Diese Seite verwendet keine Analyse-, Marketing- oder Tracking-Cookies.</p>',
-        "en": '<h2>Privacy policy</h2><p>This page is translated for convenience — the German version is the legally binding one.</p><h3>Controller</h3><p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg, Germany — contact details in the legal notice.</p><h3>Local storage (localStorage)</h3><p>The cart and outfit builder save your selection exclusively locally in your browser (localStorage). This data is never transmitted to us or third parties and never leaves your device. You can delete it at any time via your browser settings.</p><h3>Order enquiries</h3><p>If you send an enquiry via WhatsApp or e-mail, the data you enter (e.g. name, message) is transmitted to the respective service (WhatsApp/Meta or your e-mail provider) and to us in order to process your enquiry. It is not passed on to any further third parties.</p><h3>Hosting</h3><p>This site is hosted on GitHub Pages (GitHub Inc.). GitHub technically processes access data required for delivery (including IP address). See the <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub privacy statement</a> for details.</p><h3>No tracking cookies</h3><p>This site does not use analytics, marketing or tracking cookies.</p>',
-        "fr": '<h2>Politique de confidentialité</h2><p>Cette page est traduite par courtoisie — la version allemande fait foi juridiquement.</p><h3>Responsable</h3><p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg, Allemagne — contact, voir mentions légales.</p><h3>Stockage local (localStorage)</h3><p>Le panier et le configurateur de tenues enregistrent ta sélection exclusivement en local dans ton navigateur (localStorage). Ces données ne sont jamais transmises à nous ou à des tiers et ne quittent jamais ton appareil. Tu peux les supprimer à tout moment via les réglages de ton navigateur.</p><h3>Demandes de commande</h3><p>Si tu envoies une demande par WhatsApp ou e-mail, les données que tu saisis (par ex. nom, message) sont transmises au service concerné (WhatsApp/Meta ou ton fournisseur e-mail) ainsi qu\'à nous, afin de traiter ta demande. Aucune transmission à d\'autres tiers n\'a lieu.</p><h3>Hébergement</h3><p>Ce site est hébergé sur GitHub Pages (GitHub Inc.). Lors de l\'accès, GitHub traite les données techniques nécessaires (dont l\'adresse IP) pour la mise à disposition du site. Plus de détails dans la <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">politique de confidentialité de GitHub</a>.</p><h3>Aucun cookie de suivi</h3><p>Ce site n\'utilise aucun cookie d\'analyse, marketing ou de suivi.</p>',
+        "de": '<h2>Datenschutzerklärung</h2><h3>Verantwortlicher</h3><p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg — Kontakt siehe Impressum.</p><h3>Lokale Speicherung (localStorage)</h3><p>Warenkorb und Outfit-Baukasten speichern deine Auswahl ausschließlich lokal in deinem Browser (localStorage). Diese Daten werden nicht an uns oder Dritte übertragen und verlassen nie dein Gerät. Du kannst sie jederzeit über die Browser-Einstellungen löschen.</p><h3>Bestellanfragen</h3><p>Wenn du über WhatsApp oder E-Mail eine Anfrage sendest, werden die von dir eingegebenen Daten (z. B. Name, Nachricht) an den jeweiligen Dienst (WhatsApp/Meta bzw. deinen E-Mail-Anbieter) und an uns übermittelt, um deine Anfrage zu bearbeiten. Es findet keine Weitergabe an weitere Dritte statt.</p><h3>Hosting</h3><p>Diese Seite wird bei GitHub Pages (GitHub Inc.) gehostet. Beim Aufruf verarbeitet GitHub technisch notwendige Zugriffsdaten (u. a. IP-Adresse) zur Auslieferung der Seite. Näheres in der <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p><h3>Kundenkonto</h3><p>Du kannst dich mit deiner E-Mail-Adresse anmelden – statt eines Passworts schicken wir dir einen Anmeldelink. Gespeichert werden deine E-Mail-Adresse, deine Bestellungen, eine Lieferadresse, falls du sie hinterlegst, sowie Anmeldezeitpunkte und eine nicht umkehrbare Prüfsumme (Hash) deiner IP-Adresse zum Schutz vor Missbrauch. Für die Anmeldung setzen wir ein technisch notwendiges Sitzungs-Cookie. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Im Konto kannst du deine Daten herunterladen und die Löschung beantragen; Bestell- und Rechnungsdaten bewahren wir so lange auf, wie es gesetzlich vorgeschrieben ist (§ 147 AO, § 257 HGB).</p><h3>Newsletter</h3><p>Für den Newsletter meldest du dich mit deiner E-Mail-Adresse und einer ausdrücklichen Einwilligung an. Danach bekommst du eine Bestätigungsmail; erst wenn du den Link darin anklickst, bist du angemeldet (Double-Opt-in). Als Dankeschön erhältst du einmalig einen Code über 10 % für eine Bestellung – pro Person nur ein Code. Wir speichern deine E-Mail-Adresse, die Sprache, Zeitpunkt und Wortlaut deiner Einwilligung sowie nicht umkehrbare Prüfsummen (Hashes) der IP-Adressen bei Anmeldung und Bestätigung, um die Einwilligung nachweisen und Missbrauch des Rabatts verhindern zu können. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 7 Abs. 2 UWG), für den Schutz vor Missbrauch unser berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO). Wir messen, ob Newsletter geöffnet und Links angeklickt werden, um sie zu verbessern – auch das umfasst deine Einwilligung. Deinen Code speichern wir zusätzlich lokal in deinem Browser, damit er im Warenkorb schon eingetragen ist. Du kannst die Einwilligung jederzeit widerrufen, zum Beispiel über den Abmeldelink in jeder Mail; danach schicken wir dir keinen Newsletter mehr. Den Nachweis der Einwilligung bewahren wir bis zu drei Jahre nach deiner Abmeldung auf.</p><h3>E-Mail-Versand (Brevo)</h3><p>Bestellbestätigungen, Anmeldelinks und den Newsletter verschicken wir über Brevo (Sendinblue SAS, Paris, Frankreich) mit Servern in der EU. Brevo verarbeitet dafür deine E-Mail-Adresse und den Inhalt der Mail in unserem Auftrag (Auftragsverarbeitung nach Art. 28 DSGVO).</p><h3>Shop-Server und E-Mail-Empfang (Cloudflare)</h3><p>Kundenkonto, Newsletter, Mietanfragen und Rabattcodes laufen über unseren Server bei Cloudflare (Cloudflare, Inc., San Francisco, USA); die Datenbank liegt in Westeuropa. Auch E-Mails an Adressen von disorder119.com laufen über Cloudflare zu uns. Cloudflare verarbeitet dabei technisch notwendige Verbindungsdaten wie deine IP-Adresse in unserem Auftrag (Art. 28 DSGVO). Soweit dabei Daten in die USA gelangen, ist Cloudflare nach dem EU-US Data Privacy Framework zertifiziert (Art. 45 DSGVO).</p><h3>Keine Tracking-Cookies</h3><p>Diese Seite verwendet keine Analyse-, Marketing- oder Tracking-Cookies.</p>',
+        "en": '<h2>Privacy policy</h2><p>This page is translated for convenience — the German version is the legally binding one.</p><h3>Controller</h3><p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg, Germany — contact details in the legal notice.</p><h3>Local storage (localStorage)</h3><p>The cart and outfit builder save your selection exclusively locally in your browser (localStorage). This data is never transmitted to us or third parties and never leaves your device. You can delete it at any time via your browser settings.</p><h3>Order enquiries</h3><p>If you send an enquiry via WhatsApp or e-mail, the data you enter (e.g. name, message) is transmitted to the respective service (WhatsApp/Meta or your e-mail provider) and to us in order to process your enquiry. It is not passed on to any further third parties.</p><h3>Hosting</h3><p>This site is hosted on GitHub Pages (GitHub Inc.). GitHub technically processes access data required for delivery (including IP address). See the <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub privacy statement</a> for details.</p><h3>Customer account</h3><p>You can sign in with your email address – instead of a password we send you a sign-in link. We store your email address, your orders, a delivery address if you add one, sign-in times and a non-reversible checksum (hash) of your IP address to prevent misuse. For signing in we set a technically necessary session cookie. The legal basis is Art. 6(1)(b) GDPR. In your account you can download your data and request deletion; order and invoice data are kept as long as the law requires (§ 147 AO, § 257 HGB).</p><h3>Newsletter</h3><p>You subscribe to the newsletter with your email address and your explicit consent. We then send you a confirmation email; you are only subscribed once you click the link in it (double opt-in). As a thank-you you receive a one-time code for 10% off one order – one code per person. We store your email address, language, the time and wording of your consent and non-reversible checksums (hashes) of the IP addresses used to subscribe and confirm, so we can prove your consent and prevent misuse of the discount. The legal basis is your consent (Art. 6(1)(a) GDPR, § 7(2) UWG) and our legitimate interest in preventing misuse (Art. 6(1)(f) GDPR). We measure whether newsletters are opened and links are clicked in order to improve them – this is covered by your consent as well. We also save your code locally in your browser so it is already filled in in the cart. You can withdraw your consent at any time, e.g. via the unsubscribe link in every email; after that we won\'t send you any more newsletters. We keep proof of your consent for up to three years after you unsubscribe.</p><h3>Email delivery (Brevo)</h3><p>Order confirmations, sign-in links and the newsletter are sent via Brevo (Sendinblue SAS, Paris, France) using servers in the EU. Brevo processes your email address and the content of the email on our behalf (data processing under Art. 28 GDPR).</p><h3>Shop server and incoming email (Cloudflare)</h3><p>The customer account, newsletter, rental requests and discount codes run on our server at Cloudflare (Cloudflare, Inc., San Francisco, USA); the database is located in Western Europe. Emails to disorder119.com addresses also reach us via Cloudflare. Cloudflare processes technically necessary connection data such as your IP address on our behalf (Art. 28 GDPR). Where data reaches the USA, Cloudflare is certified under the EU-US Data Privacy Framework (Art. 45 GDPR).</p><h3>No tracking cookies</h3><p>This site does not use analytics, marketing or tracking cookies.</p>',
+        "fr": '<h2>Politique de confidentialité</h2><p>Cette page est traduite par courtoisie — la version allemande fait foi juridiquement.</p><h3>Responsable</h3><p>Joel Bittner, Nelseestraße 25, 63739 Aschaffenburg, Allemagne — contact, voir mentions légales.</p><h3>Stockage local (localStorage)</h3><p>Le panier et le configurateur de tenues enregistrent ta sélection exclusivement en local dans ton navigateur (localStorage). Ces données ne sont jamais transmises à nous ou à des tiers et ne quittent jamais ton appareil. Tu peux les supprimer à tout moment via les réglages de ton navigateur.</p><h3>Demandes de commande</h3><p>Si tu envoies une demande par WhatsApp ou e-mail, les données que tu saisis (par ex. nom, message) sont transmises au service concerné (WhatsApp/Meta ou ton fournisseur e-mail) ainsi qu\'à nous, afin de traiter ta demande. Aucune transmission à d\'autres tiers n\'a lieu.</p><h3>Hébergement</h3><p>Ce site est hébergé sur GitHub Pages (GitHub Inc.). Lors de l\'accès, GitHub traite les données techniques nécessaires (dont l\'adresse IP) pour la mise à disposition du site. Plus de détails dans la <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">politique de confidentialité de GitHub</a>.</p><h3>Compte client</h3><p>Tu peux te connecter avec ton adresse e-mail – au lieu d\'un mot de passe, nous t\'envoyons un lien de connexion. Nous enregistrons ton adresse e-mail, tes commandes, une adresse de livraison si tu en indiques une, les heures de connexion ainsi qu\'une empreinte non réversible (hash) de ton adresse IP pour prévenir les abus. Pour la connexion, nous utilisons un cookie de session techniquement nécessaire. Base légale : art. 6, par. 1, point b) du RGPD. Dans ton compte, tu peux télécharger tes données et demander leur suppression ; les données de commande et de facturation sont conservées aussi longtemps que la loi l\'exige (§ 147 AO, § 257 HGB).</p><h3>Newsletter</h3><p>Tu t\'inscris à la newsletter avec ton adresse e-mail et ton consentement explicite. Nous t\'envoyons ensuite un e-mail de confirmation ; tu n\'es inscrit·e qu\'après avoir cliqué sur le lien (double opt-in). En remerciement, tu reçois une seule fois un code de 10 % pour une commande – un code par personne. Nous enregistrons ton adresse e-mail, ta langue, la date et le texte de ton consentement ainsi que des empreintes non réversibles (hashes) des adresses IP utilisées pour l\'inscription et la confirmation, afin de pouvoir prouver ton consentement et d\'empêcher l\'abus de la remise. Base légale : ton consentement (art. 6, par. 1, point a) du RGPD, § 7 al. 2 UWG) et notre intérêt légitime à prévenir les abus (art. 6, par. 1, point f) du RGPD). Nous mesurons si les newsletters sont ouvertes et si les liens sont cliqués afin de les améliorer – ton consentement couvre également cela. Nous enregistrons aussi ton code localement dans ton navigateur pour qu\'il soit déjà saisi dans le panier. Tu peux retirer ton consentement à tout moment, p. ex. via le lien de désinscription présent dans chaque e-mail ; ensuite, nous ne t\'enverrons plus de newsletter. Nous conservons la preuve de ton consentement jusqu\'à trois ans après ta désinscription.</p><h3>Envoi d\'e-mails (Brevo)</h3><p>Les confirmations de commande, les liens de connexion et la newsletter sont envoyés via Brevo (Sendinblue SAS, Paris, France) avec des serveurs dans l\'UE. Brevo traite ton adresse e-mail et le contenu de l\'e-mail pour notre compte (sous-traitance selon l\'art. 28 du RGPD).</p><h3>Serveur de la boutique et réception d\'e-mails (Cloudflare)</h3><p>Le compte client, la newsletter, les demandes de location et les codes de réduction passent par notre serveur chez Cloudflare (Cloudflare, Inc., San Francisco, États-Unis) ; la base de données se trouve en Europe de l\'Ouest. Les e-mails adressés à disorder119.com nous parviennent également via Cloudflare. Cloudflare traite les données de connexion techniquement nécessaires, comme ton adresse IP, pour notre compte (art. 28 du RGPD). Dans la mesure où des données parviennent aux États-Unis, Cloudflare est certifié selon le EU-US Data Privacy Framework (art. 45 du RGPD).</p><h3>Aucun cookie de suivi</h3><p>Ce site n\'utilise aucun cookie d\'analyse, marketing ou de suivi.</p>',
     },
 }
 
@@ -548,6 +551,24 @@ def price_block_html(it):
     return '<div class="info__price">Preis auf Anfrage</div>'
 
 
+PAYPAL_VORSCHAU_TEXT = {
+    "de": ("Bald verfügbar", "Bezahlen mit PayPal – bald verfügbar"),
+    "en": ("Coming soon", "Pay with PayPal – coming soon"),
+    "fr": ("Bientôt disponible", "Payer avec PayPal – bientôt disponible"),
+}
+
+
+def paypal_vorschau_html(lang):
+    """PAYPAL_VORSCHAU: PayPal schon sichtbar zeigen. Sobald features.paypalCheckout
+    mit Client-ID und Worker-URL aktiv ist, rendert article.js den echten Button."""
+    tag, aria = PAYPAL_VORSCHAU_TEXT.get(lang, PAYPAL_VORSCHAU_TEXT["de"])
+    return (
+        '<div class="paypal-soon" role="note" aria-label="' + esc(aria) + '" data-i18n-aria="paypalSoonAria">'
+        '<span class="paypal-soon__mark" aria-hidden="true"><i>Pay</i><i>Pal</i></span>'
+        '<span class="paypal-soon__tag" data-i18n="paypalSoon">' + esc(tag) + "</span></div>"
+    )
+
+
 def cta_html(it, shop_config, home, lang):
     sold = it.get("public_status") == "SOLD"
     if sold:
@@ -561,6 +582,8 @@ def cta_html(it, shop_config, home, lang):
     parts = ['<div class="info__cta">']
     if has_price:
         parts.append('<button type="button" class="btn" id="addToCartBtn" data-i18n="addToCart">In den Warenkorb</button>')
+    if has_price and not paypal_ready:
+        parts.append(paypal_vorschau_html(lang))
     if has_price and paypal_ready:
         # Bleibt leer/unsichtbar, bis paypal_buy_button() in article.js den
         # echten PayPal-Button hineinrendert (siehe shop-worker/README.md).
@@ -864,7 +887,7 @@ def build_page(it, shop_config, lang):
   <a class="article-sequence-nav__link article-sequence-nav__link--archive" href="{home}" aria-label="{esc(product_nav_copy['archive_aria'])}">{esc(product_nav_copy['archive'])}</a>
   <a class="article-sequence-nav__link article-sequence-nav__link--next" aria-label="{esc(product_nav_copy['next_aria'])}" style="visibility:hidden">{esc(product_nav_copy['next'])}</a>
 </nav>
-<div class="product">
+<div class="product" role="main">
   <div class="gallery">
     <div class="gallery__stage">
 {'      <span class="gallery__badge">SOLD</span>' if sold else ""}
@@ -886,6 +909,7 @@ def build_page(it, shop_config, lang):
 </div>
 {related_sections_html(it, lang)}
 <div class="page-foot">
+  <div data-d119-newsletter data-quelle="artikel"></div>
   <p data-i18n="footerNote">Disorder119 · Kuratiertes Archiv für Designer-, Vintage- und Contemporary-Mode. Jedes Stück wird einzeln ausgewählt, fotografiert und beschrieben.</p>
   <p><a href="{home}" data-i18n="footerFullArchive">Zum vollständigen Archiv</a></p>
 </div>
@@ -900,6 +924,7 @@ def build_page(it, shop_config, lang):
 </script>
 <script src="/assets/pwa.js?v={PWA_JS_VERSION}"></script>
 <script src="/assets/article.js?v={ARTICLE_JS_VERSION}"></script>
+<script src="/assets/newsletter.js?v={NEWSLETTER_ASSET_VERSION}" defer></script>
 </body>
 </html>
 """
@@ -1284,6 +1309,7 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__SSR_GRID_ATTR__", ' data-ssr-initial="1"' if initial_ssr_home else "")
     out = out.replace("__SSR_INITIAL_GRID__", initial_archive_grid_html(lang) if initial_ssr_home else "")
     out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
+    out = out.replace("__NEWSLETTER_VERSION__", NEWSLETTER_ASSET_VERSION)
     out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
     out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)
     out = out.replace("__PWA_JS_VERSION__", PWA_JS_VERSION)
@@ -1352,9 +1378,10 @@ def build_account_pages():
         out = out.replace("__CANONICAL_URL__", SITE_URL.rstrip("/") + home + "konto/")
         out = out.replace("__HOME__", home)
         out = out.replace("__APP_CSS_VERSION__", KONTO_ASSET_VERSION)
+        out = out.replace("__NEWSLETTER_VERSION__", NEWSLETTER_ASSET_VERSION)
         out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
         for token in ("__HTML_LANG__", "__META_TITLE__", "__META_DESC__", "__CANONICAL_URL__",
-                      "__HOME__", "__APP_CSS_VERSION__", "__SHOP_CONFIG_JSON__"):
+                      "__HOME__", "__APP_CSS_VERSION__", "__NEWSLETTER_VERSION__", "__SHOP_CONFIG_JSON__"):
             if token in out:
                 raise SystemExit(f"FEHLER: Platzhalter {token} blieb in der Kontoseite stehen.")
         out_dir = (BASE / "konto") if lang == "de" else (BASE / lang / "konto")
@@ -1362,6 +1389,47 @@ def build_account_pages():
         (out_dir / "index.html").write_text(out, encoding="utf-8")
         count += 1
     print(f"{count} Kontoseiten geschrieben ({len(LANGS)} Sprachen).")
+
+
+NEWSLETTER_TITLES = {
+    "de": ("Newsletter", "Neue Stücke zuerst sehen – und 10 % auf deine nächste Bestellung bei Disorder119.",
+           "Für die Newsletter-Anmeldung braucht diese Seite JavaScript."),
+    "en": ("Newsletter", "See new pieces first – and get 10% off your next order at Disorder119.",
+           "This page needs JavaScript for the newsletter sign-up."),
+    "fr": ("Newsletter", "Découvre les nouvelles pièces en premier – et profite de 10 % sur ta prochaine commande chez Disorder119.",
+           "Cette page a besoin de JavaScript pour l'inscription à la newsletter."),
+}
+
+
+def build_newsletter_pages():
+    # Anmelden, Bestaetigen (?bestaetigen=) und Abmelden (?abmelden=) auf einer
+    # eigenen, schlanken Seite wie das Konto: die Links aus den Mails fuehren
+    # hierher, newsletter.js erledigt den Rest.
+    tmpl = (BASE / "newsletter_template.html").read_text(encoding="utf-8")
+    shop_config = get_shop_config()
+    count = 0
+    for lang in LANGS:
+        titel, beschreibung, noscript = NEWSLETTER_TITLES[lang]
+        home = lang_home(lang)
+        out = tmpl
+        out = out.replace("__HTML_LANG__", lang)
+        out = out.replace("__META_TITLE__", esc(titel + " | Disorder119"))
+        out = out.replace("__META_DESC__", esc(beschreibung))
+        out = out.replace("__CANONICAL_URL__", SITE_URL.rstrip("/") + home + "newsletter/")
+        out = out.replace("__HOME__", home)
+        out = out.replace("__NOSCRIPT__", esc(noscript))
+        out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
+        out = out.replace("__KONTO_VERSION__", KONTO_ASSET_VERSION)
+        out = out.replace("__NEWSLETTER_VERSION__", NEWSLETTER_ASSET_VERSION)
+        out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
+        leftover = re.findall(r"__[A-Z_]+__", out)
+        if leftover:
+            raise SystemExit(f"FEHLER: Platzhalter {leftover[0]} blieb in der Newsletter-Seite stehen.")
+        out_dir = (BASE / "newsletter") if lang == "de" else (BASE / lang / "newsletter")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "index.html").write_text(out, encoding="utf-8")
+        count += 1
+    print(f"{count} Newsletter-Seiten geschrieben ({len(LANGS)} Sprachen).")
 
 
 def article_dir(lang, item_id):
@@ -1664,6 +1732,7 @@ def main():
     build_index()
     build_special_pages()
     build_account_pages()
+    build_newsletter_pages()
     build_articles()
     build_catalog_json()
     build_sitemap()

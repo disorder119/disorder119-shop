@@ -330,7 +330,7 @@ __STATIC_PAGE_CONTENT__
   <div class="active-filter-row hidden" id="activeFilters" aria-live="polite"></div>
 </div>
 
-<div class="grid-wrap">
+<div class="grid-wrap" role="main">
   <div class="grid" id="grid"__SSR_GRID_ATTR__>__SSR_INITIAL_GRID__</div>
   <div class="empty-state" id="emptyState">
     <p class="empty-state__title" data-i18n="emptyTitle">Keine Treffer im Archiv</p>
@@ -342,6 +342,7 @@ __STATIC_PAGE_CONTENT__
 </div>
 
 <footer class="footer">
+  <div class="footer__newsletter" data-d119-newsletter data-quelle="footer"></div>
   <nav class="footer__nav" aria-label="Footer">
     <a href="/ueber-uns/" data-info="about" data-i18n="footerAbout">Über Disorder119</a>
     <button type="button" id="footerArchive" data-i18n="menuArchive">Archiv</button>
@@ -443,5 +444,6 @@ __STATIC_PAGE_CONTENT__
 <script src="/assets/rental-v2-ui.js"></script>
 <script src="/assets/rental-v2-picker.js"></script>
 
+<script src="/assets/newsletter.js?v=__NEWSLETTER_VERSION__" defer></script>
 </body>
 </html>

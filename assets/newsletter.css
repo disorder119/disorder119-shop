@@ -1,0 +1,229 @@
+/* Newsletter-Anmeldung (assets/newsletter.js). Laeuft auf Startseite,
+   Produktseiten, Kontoseite und /newsletter/ - dort gelten unterschiedliche
+   Token-Saetze (app.css kennt --text, article.css nur --paper). Deshalb eigene
+   Kurznamen mit Rueckfall, statt einen der beiden Saetze vorauszusetzen.
+   Der Seitengrund ist schwarz (--ink): helle Schrift, schwarzer Knopftext. */
+
+.d119-nl {
+  --nl-text: var(--text, var(--paper, #f2efe7));
+  --nl-muted: var(--text-muted, rgba(242, 239, 231, 0.58));
+  --nl-faint: var(--text-faint, rgba(242, 239, 231, 0.36));
+  --nl-rule: var(--rule-strong, rgba(242, 239, 231, 0.28));
+  --nl-ground: var(--ink, #000000);
+  --nl-focus: var(--accent-text, #d6d0c2);
+  display: block;
+  color: var(--nl-text);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.d119-nl[hidden] { display: none; }
+
+.d119-nl__form {
+  display: grid;
+  gap: 18px;
+  max-width: 620px;
+}
+
+.d119-nl__head { display: grid; gap: 6px; }
+
+.d119-nl__eyebrow {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--nl-muted);
+}
+
+.d119-nl__title {
+  margin: 0;
+  font-size: clamp(1.35rem, 3.4vw, 1.9rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.d119-nl__intro {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 0.86rem;
+  color: var(--nl-muted);
+}
+
+.d119-nl__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+}
+
+.d119-nl__field {
+  flex: 1 1 240px;
+  display: grid;
+  gap: 6px;
+}
+
+.d119-nl__label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--nl-muted);
+}
+
+.d119-nl__input {
+  width: 100%;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid var(--nl-rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--nl-text);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.d119-nl__input::placeholder { color: var(--nl-faint); }
+
+.d119-nl__input:focus-visible {
+  outline: none;
+  border-bottom-color: var(--nl-text);
+  box-shadow: 0 1px 0 0 var(--nl-text);
+}
+
+.d119-nl__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px 22px;
+  border: 1px solid var(--nl-text);
+  border-radius: 0;
+  background: var(--nl-text);
+  color: var(--nl-ground);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.d119-nl__btn:hover { background: transparent; color: var(--nl-text); }
+.d119-nl__btn:focus-visible { outline: 2px solid var(--nl-focus); outline-offset: 3px; }
+.d119-nl__btn:disabled { opacity: 0.5; cursor: default; }
+
+.d119-nl__btn--schlicht {
+  background: transparent;
+  color: var(--nl-text);
+  border-color: var(--nl-rule);
+}
+
+.d119-nl__btn--schlicht:hover { border-color: var(--nl-text); }
+
+.d119-nl__consent {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 10px;
+  align-items: start;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--nl-muted);
+  cursor: pointer;
+}
+
+.d119-nl__consent input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--nl-text);
+}
+
+.d119-nl__consent input:focus-visible { outline: 2px solid var(--nl-focus); outline-offset: 2px; }
+.d119-nl__consent a { color: var(--nl-text); text-decoration: underline; }
+
+.d119-nl__msg {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--nl-rule);
+  font-size: 0.84rem;
+}
+
+.d119-nl__msg--ok { border-left-color: #7d9a72; }
+.d119-nl__msg--fehler { border-left-color: #c86a5a; }
+
+/* Nach dem Absenden bleibt nur die Meldung stehen. */
+.d119-nl__form--fertig .d119-nl__row,
+.d119-nl__form--fertig .d119-nl__consent { display: none; }
+
+/* ------------------------------------------------------------ Einbauorte */
+
+/* Startseite und Sonderseiten: eigener Abschnitt ueber der Fussnavigation. */
+.footer__newsletter {
+  padding: clamp(38px, 6vw, 72px) 0;
+  border-top: 1px solid var(--rule);
+}
+
+/* Produktseiten: .page-foot setzt kleine, blasse Schrift - hier nicht. */
+.page-foot .d119-nl { margin: 4px 0 36px; }
+.page-foot .d119-nl a { color: var(--nl-text); }
+
+/* Kontoseite */
+.konto-block--newsletter {
+  padding-top: 32px;
+  border-top: 1px solid var(--rule);
+}
+
+/* ------------------------------------------------------------ /newsletter/ */
+
+/* Die Seite traegt "Newsletter" schon als Ueberschrift. */
+.newsletter-seite .d119-nl__eyebrow { display: none; }
+
+.d119-nl-status { margin: 0 0 44px; }
+
+.d119-nl__status-titel {
+  margin: 0 0 12px;
+  font-size: clamp(1.3rem, 4vw, 1.7rem);
+  letter-spacing: -0.01em;
+}
+
+.d119-nl__status-titel:empty { display: none; }
+
+.d119-nl__status-text { margin: 0 0 20px; max-width: 52ch; }
+.d119-nl__status-text[hidden] { display: none; }
+
+.d119-nl__code {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  margin: 0 0 24px;
+}
+
+.d119-nl__code-intro { margin: 0; color: var(--nl-muted); }
+
+.d119-nl__code-wert {
+  margin: 0;
+  padding: 14px 18px;
+  border: 1px solid var(--nl-text);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: clamp(1.25rem, 5.4vw, 1.9rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+.d119-nl__code-hinweis {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 0.82rem;
+  color: var(--nl-muted);
+}
+
+@media (max-width: 480px) {
+  .d119-nl__row .d119-nl__btn { width: 100%; }
+}

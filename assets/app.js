@@ -158,6 +158,7 @@
       cartItemsRemovedSold: "Inzwischen verkauft und aus dem Warenkorb entfernt: {items}.",
       cartRemove: "Entfernen", cartTotal: "Gesamt", cartSubtotal: "Zwischensumme", cartShipping: "Versand (DE)",
       cartWhatsapp: "Anfrage per WhatsApp senden", cartEmail: "Anfrage per E-Mail senden",
+      paypalSoon: "Bald verfügbar", paypalSoonAria: "Bezahlen mit PayPal – bald verfügbar",
       cartConfigWarning: "Shop-Kontakt noch nicht eingerichtet: Trage in index.html bei SHOP_CONFIG deine WhatsApp-Nummer oder E-Mail-Adresse ein, damit Bestellanfragen bei dir ankommen.",
       cartNote: "Alle Artikel sind Einzelstücke. Nach deiner Anfrage bestätigen wir Verfügbarkeit, Gesamtpreis, Zahlungs- und Versandart. Erst mit dieser Bestätigung kommt der Kaufvertrag zustande. Für Verbraucher:innen gilt das gesetzliche 14-tägige Widerrufsrecht.",
       orderGreeting: "Hallo! Ich interessiere mich für folgende Artikel aus dem Disorder119-Archiv:",
@@ -165,7 +166,7 @@
       orderSizeAbbrev: "Gr. ", orderArticleAbbrev: "Art.-Nr. ",
       modeArchiv: "Archiv", modeMatch: "Match", modeChaos: "Universum", modeBaukasten: "Baukasten",
       menuRental: "Verleih",
-      pageTitleHome: "Disorder119 — Archiv-Katalog", pageTitleMatch: "Disorder119 — Match",
+      pageTitleHome: "Designer Second Hand & Vintage Mode | Disorder119", pageTitleMatch: "Disorder119 — Match",
       pageTitleChaos: "Disorder119 — Universum", pageTitleOutfit: "Disorder119 — Outfit-Baukasten",
       modeHint: "Entdecke auch Match, Universum & Baukasten", hintCloseAria: "Hinweis schließen",
       modeRailAria: "Ansicht wechseln",
@@ -285,6 +286,10 @@
         "<h3>Hosting</h3><p>Diese Seite wird bei GitHub Pages (GitHub Inc.) gehostet. Beim Aufruf verarbeitet GitHub technisch " +
         "notwendige Zugriffsdaten (u. a. IP-Adresse) zur Auslieferung der Seite. Näheres in der " +
         '<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>' +
+        "<h3>Kundenkonto</h3><p>Du kannst dich mit deiner E-Mail-Adresse anmelden – statt eines Passworts schicken wir dir einen Anmeldelink. Gespeichert werden deine E-Mail-Adresse, deine Bestellungen, eine Lieferadresse, falls du sie hinterlegst, sowie Anmeldezeitpunkte und eine nicht umkehrbare Prüfsumme (Hash) deiner IP-Adresse zum Schutz vor Missbrauch. Für die Anmeldung setzen wir ein technisch notwendiges Sitzungs-Cookie. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Im Konto kannst du deine Daten herunterladen und die Löschung beantragen; Bestell- und Rechnungsdaten bewahren wir so lange auf, wie es gesetzlich vorgeschrieben ist (§ 147 AO, § 257 HGB).</p>" +
+        "<h3>Newsletter</h3><p>Für den Newsletter meldest du dich mit deiner E-Mail-Adresse und einer ausdrücklichen Einwilligung an. Danach bekommst du eine Bestätigungsmail; erst wenn du den Link darin anklickst, bist du angemeldet (Double-Opt-in). Als Dankeschön erhältst du einmalig einen Code über 10 % für eine Bestellung – pro Person nur ein Code. Wir speichern deine E-Mail-Adresse, die Sprache, Zeitpunkt und Wortlaut deiner Einwilligung sowie nicht umkehrbare Prüfsummen (Hashes) der IP-Adressen bei Anmeldung und Bestätigung, um die Einwilligung nachweisen und Missbrauch des Rabatts verhindern zu können. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 7 Abs. 2 UWG), für den Schutz vor Missbrauch unser berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO). Wir messen, ob Newsletter geöffnet und Links angeklickt werden, um sie zu verbessern – auch das umfasst deine Einwilligung. Deinen Code speichern wir zusätzlich lokal in deinem Browser, damit er im Warenkorb schon eingetragen ist. Du kannst die Einwilligung jederzeit widerrufen, zum Beispiel über den Abmeldelink in jeder Mail; danach schicken wir dir keinen Newsletter mehr. Den Nachweis der Einwilligung bewahren wir bis zu drei Jahre nach deiner Abmeldung auf.</p>" +
+        "<h3>E-Mail-Versand (Brevo)</h3><p>Bestellbestätigungen, Anmeldelinks und den Newsletter verschicken wir über Brevo (Sendinblue SAS, Paris, Frankreich) mit Servern in der EU. Brevo verarbeitet dafür deine E-Mail-Adresse und den Inhalt der Mail in unserem Auftrag (Auftragsverarbeitung nach Art. 28 DSGVO).</p>" +
+        "<h3>Shop-Server und E-Mail-Empfang (Cloudflare)</h3><p>Kundenkonto, Newsletter, Mietanfragen und Rabattcodes laufen über unseren Server bei Cloudflare (Cloudflare, Inc., San Francisco, USA); die Datenbank liegt in Westeuropa. Auch E-Mails an Adressen von disorder119.com laufen über Cloudflare zu uns. Cloudflare verarbeitet dabei technisch notwendige Verbindungsdaten wie deine IP-Adresse in unserem Auftrag (Art. 28 DSGVO). Soweit dabei Daten in die USA gelangen, ist Cloudflare nach dem EU-US Data Privacy Framework zertifiziert (Art. 45 DSGVO).</p>" +
         "<h3>Keine Tracking-Cookies</h3><p>Diese Seite verwendet keine Analyse-, Marketing- oder Tracking-Cookies.</p>"
     },
     en: {
@@ -343,6 +348,7 @@
       cartItemsRemovedSold: "Sold in the meantime and removed from your cart: {items}.",
       cartRemove: "Remove", cartTotal: "Total", cartSubtotal: "Subtotal", cartShipping: "Shipping (DE)",
       cartWhatsapp: "Send request via WhatsApp", cartEmail: "Send request via e-mail",
+      paypalSoon: "Coming soon", paypalSoonAria: "Pay with PayPal – coming soon",
       cartConfigWarning: "Shop contact not set up yet: add your WhatsApp number or e-mail address to SHOP_CONFIG in index.html so order requests reach you.",
       cartNote: "All pieces are one-offs. After your enquiry we confirm availability, total price, payment and shipping method. The purchase contract is only formed with that confirmation. Consumers have the statutory 14-day right of withdrawal.",
       orderGreeting: "Hello! I'm interested in the following pieces from the Disorder119 archive:",
@@ -350,7 +356,7 @@
       orderSizeAbbrev: "Size ", orderArticleAbbrev: "Item no. ",
       modeArchiv: "Archive", modeMatch: "Match", modeChaos: "Universe", modeBaukasten: "Outfit builder",
       menuRental: "Rental",
-      pageTitleHome: "Disorder119 — Curated Archive", pageTitleMatch: "Disorder119 — Match",
+      pageTitleHome: "Pre-Owned Designer & Vintage Fashion | Disorder119", pageTitleMatch: "Disorder119 — Match",
       pageTitleChaos: "Disorder119 — Universe", pageTitleOutfit: "Disorder119 — Outfit Builder",
       modeHint: "Also discover Match, the Universe & the outfit builder", hintCloseAria: "Close hint",
       modeRailAria: "Switch view",
@@ -471,6 +477,10 @@
         "<h3>Hosting</h3><p>This site is hosted on GitHub Pages (GitHub Inc.). GitHub technically processes " +
         "access data required for delivery (including IP address). See the " +
         '<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub privacy statement</a> for details.</p>' +
+        "<h3>Customer account</h3><p>You can sign in with your email address – instead of a password we send you a sign-in link. We store your email address, your orders, a delivery address if you add one, sign-in times and a non-reversible checksum (hash) of your IP address to prevent misuse. For signing in we set a technically necessary session cookie. The legal basis is Art. 6(1)(b) GDPR. In your account you can download your data and request deletion; order and invoice data are kept as long as the law requires (§ 147 AO, § 257 HGB).</p>" +
+        "<h3>Newsletter</h3><p>You subscribe to the newsletter with your email address and your explicit consent. We then send you a confirmation email; you are only subscribed once you click the link in it (double opt-in). As a thank-you you receive a one-time code for 10% off one order – one code per person. We store your email address, language, the time and wording of your consent and non-reversible checksums (hashes) of the IP addresses used to subscribe and confirm, so we can prove your consent and prevent misuse of the discount. The legal basis is your consent (Art. 6(1)(a) GDPR, § 7(2) UWG) and our legitimate interest in preventing misuse (Art. 6(1)(f) GDPR). We measure whether newsletters are opened and links are clicked in order to improve them – this is covered by your consent as well. We also save your code locally in your browser so it is already filled in in the cart. You can withdraw your consent at any time, e.g. via the unsubscribe link in every email; after that we won't send you any more newsletters. We keep proof of your consent for up to three years after you unsubscribe.</p>" +
+        "<h3>Email delivery (Brevo)</h3><p>Order confirmations, sign-in links and the newsletter are sent via Brevo (Sendinblue SAS, Paris, France) using servers in the EU. Brevo processes your email address and the content of the email on our behalf (data processing under Art. 28 GDPR).</p>" +
+        "<h3>Shop server and incoming email (Cloudflare)</h3><p>The customer account, newsletter, rental requests and discount codes run on our server at Cloudflare (Cloudflare, Inc., San Francisco, USA); the database is located in Western Europe. Emails to disorder119.com addresses also reach us via Cloudflare. Cloudflare processes technically necessary connection data such as your IP address on our behalf (Art. 28 GDPR). Where data reaches the USA, Cloudflare is certified under the EU-US Data Privacy Framework (Art. 45 GDPR).</p>" +
         "<h3>No tracking cookies</h3><p>This site does not use analytics, marketing or tracking cookies.</p>"
     },
     fr: {
@@ -529,6 +539,7 @@
       cartItemsRemovedSold: "Entre-temps vendu(s) et retiré(s) du panier : {items}.",
       cartRemove: "Retirer", cartTotal: "Total", cartSubtotal: "Sous-total", cartShipping: "Livraison (DE)",
       cartWhatsapp: "Envoyer la demande par WhatsApp", cartEmail: "Envoyer la demande par e-mail",
+      paypalSoon: "Bientôt disponible", paypalSoonAria: "Payer avec PayPal – bientôt disponible",
       cartConfigWarning: "Le contact de la boutique n'est pas encore configuré : renseigne ton numéro WhatsApp ou ton adresse e-mail dans SHOP_CONFIG (index.html) pour recevoir les demandes de commande.",
       cartNote: "Toutes les pièces sont uniques. Après ta demande, nous confirmons la disponibilité, le prix total, le mode de paiement et l’expédition. Le contrat de vente n’est conclu qu’avec cette confirmation. Les consommateurs disposent du droit légal de rétractation de 14 jours.",
       orderGreeting: "Bonjour ! Je suis intéressé(e) par les pièces suivantes de l'archive Disorder119 :",
@@ -536,7 +547,7 @@
       orderSizeAbbrev: "Taille ", orderArticleAbbrev: "N° d'article ",
       modeArchiv: "Archive", modeMatch: "Match", modeChaos: "Univers", modeBaukasten: "Configurateur",
       menuRental: "Location",
-      pageTitleHome: "Disorder119 — Archive Sélectionnée", pageTitleMatch: "Disorder119 — Match",
+      pageTitleHome: "Mode Designer Seconde Main & Vintage | Disorder119", pageTitleMatch: "Disorder119 — Match",
       pageTitleChaos: "Disorder119 — Univers", pageTitleOutfit: "Disorder119 — Configurateur de tenues",
       modeHint: "Découvre aussi Match, l'Univers et le configurateur de tenues", hintCloseAria: "Fermer l'info",
       modeRailAria: "Changer de vue",
@@ -659,6 +670,10 @@
         "<h3>Hébergement</h3><p>Ce site est hébergé sur GitHub Pages (GitHub Inc.). Lors de l'accès, GitHub traite les " +
         "données techniques nécessaires (dont l'adresse IP) pour la mise à disposition du site. Plus de détails dans la " +
         '<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">politique de confidentialité de GitHub</a>.</p>' +
+        "<h3>Compte client</h3><p>Tu peux te connecter avec ton adresse e-mail – au lieu d'un mot de passe, nous t'envoyons un lien de connexion. Nous enregistrons ton adresse e-mail, tes commandes, une adresse de livraison si tu en indiques une, les heures de connexion ainsi qu'une empreinte non réversible (hash) de ton adresse IP pour prévenir les abus. Pour la connexion, nous utilisons un cookie de session techniquement nécessaire. Base légale : art. 6, par. 1, point b) du RGPD. Dans ton compte, tu peux télécharger tes données et demander leur suppression ; les données de commande et de facturation sont conservées aussi longtemps que la loi l'exige (§ 147 AO, § 257 HGB).</p>" +
+        "<h3>Newsletter</h3><p>Tu t'inscris à la newsletter avec ton adresse e-mail et ton consentement explicite. Nous t'envoyons ensuite un e-mail de confirmation ; tu n'es inscrit·e qu'après avoir cliqué sur le lien (double opt-in). En remerciement, tu reçois une seule fois un code de 10 % pour une commande – un code par personne. Nous enregistrons ton adresse e-mail, ta langue, la date et le texte de ton consentement ainsi que des empreintes non réversibles (hashes) des adresses IP utilisées pour l'inscription et la confirmation, afin de pouvoir prouver ton consentement et d'empêcher l'abus de la remise. Base légale : ton consentement (art. 6, par. 1, point a) du RGPD, § 7 al. 2 UWG) et notre intérêt légitime à prévenir les abus (art. 6, par. 1, point f) du RGPD). Nous mesurons si les newsletters sont ouvertes et si les liens sont cliqués afin de les améliorer – ton consentement couvre également cela. Nous enregistrons aussi ton code localement dans ton navigateur pour qu'il soit déjà saisi dans le panier. Tu peux retirer ton consentement à tout moment, p. ex. via le lien de désinscription présent dans chaque e-mail ; ensuite, nous ne t'enverrons plus de newsletter. Nous conservons la preuve de ton consentement jusqu'à trois ans après ta désinscription.</p>" +
+        "<h3>Envoi d'e-mails (Brevo)</h3><p>Les confirmations de commande, les liens de connexion et la newsletter sont envoyés via Brevo (Sendinblue SAS, Paris, France) avec des serveurs dans l'UE. Brevo traite ton adresse e-mail et le contenu de l'e-mail pour notre compte (sous-traitance selon l'art. 28 du RGPD).</p>" +
+        "<h3>Serveur de la boutique et réception d'e-mails (Cloudflare)</h3><p>Le compte client, la newsletter, les demandes de location et les codes de réduction passent par notre serveur chez Cloudflare (Cloudflare, Inc., San Francisco, États-Unis) ; la base de données se trouve en Europe de l'Ouest. Les e-mails adressés à disorder119.com nous parviennent également via Cloudflare. Cloudflare traite les données de connexion techniquement nécessaires, comme ton adresse IP, pour notre compte (art. 28 du RGPD). Dans la mesure où des données parviennent aux États-Unis, Cloudflare est certifié selon le EU-US Data Privacy Framework (art. 45 du RGPD).</p>" +
         "<h3>Aucun cookie de suivi</h3><p>Ce site n'utilise aucun cookie d'analyse, marketing ou de suivi.</p>"
     }
   };
@@ -1107,6 +1122,12 @@
       '<div class="cart-total"><span>' + t("cartTotal") + '</span><span>' + cartTotalDisplay(total + shipping, hasUnknownPrice) + "</span></div>" +
       '<label class="cart-order-message"><span>' + purchaseMessageLabel() + ' <small>(' + (LANG === "de" ? "optional" : LANG === "fr" ? "facultatif" : "optional") + ')</small></span>' +
       '<textarea id="cartOrderMessage" maxlength="500" placeholder="' + escapeHtml(purchaseMessagePlaceholder()) + '">' + escapeHtml(cartOrderMessage) + '</textarea></label>';
+    // PAYPAL_VORSCHAU: PayPal schon sichtbar, bis features.paypalCheckout aktiv ist.
+    if (!(SHOP_CONFIG.features && SHOP_CONFIG.features.paypalCheckout && SHOP_CONFIG.paypalClientId)) {
+      footHtml += '<div class="paypal-soon" role="note" aria-label="' + escapeHtml(t("paypalSoonAria")) + '">' +
+        '<span class="paypal-soon__mark" aria-hidden="true"><i>Pay</i><i>Pal</i></span>' +
+        '<span class="paypal-soon__tag">' + escapeHtml(t("paypalSoon")) + '</span></div>';
+    }
     if (hasWhatsapp) {
       footHtml += '<a class="cart-checkout-btn cart-checkout-btn--whatsapp" data-cart-inquiry="whatsapp" target="_blank" rel="noopener" href="#">' + t("cartWhatsapp") + '</a>';
     }
