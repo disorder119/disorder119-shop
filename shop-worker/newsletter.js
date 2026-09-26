@@ -19,9 +19,10 @@
 // (reward_coupons), pro Bestellung zaehlt genau ein Code; bei Verkaeufen
 // ausserhalb des Shops entwertet die Admin-App ihn ueber /admin/coupons/redeem.
 //
-// Ist NEWSLETTER_LIST_ID gesetzt, landet jede bestaetigte Adresse zusaetzlich
-// in dieser Brevo-Liste. Von dort verschickst du die Newsletter; Brevo haengt
-// an jede Kampagne selbst einen Abmeldelink.
+// Jede bestaetigte Adresse landet zusaetzlich in der Brevo-Liste "Newsletter
+// DISORDER119" (legt der Worker beim ersten Mal selbst an, NEWSLETTER_LIST_ID
+// kann eine andere Liste vorgeben). Von dort verschickst du die Newsletter;
+// Brevo haengt an jede Kampagne selbst einen Abmeldelink.
 import { SHOP_URL, escapeHtml, mailTransportReady, normalizeEmail, sendMail } from "./customer-mail.js";
 import { issueRewardCoupon, normalizeCouponCode } from "./game-rewards.js";
 
@@ -228,21 +229,55 @@ export function welcomeMail(lang, code, unsubscribeLink) {
 
 // ------------------------------------------------------------------ Brevo-Liste
 
-async function brevoContacts(env, path, body) {
+export const BREVO_LIST_NAME = "Newsletter DISORDER119";
+
+async function brevoContacts(env, path, body, method = "POST") {
   const response = await fetch(`${BREVO_CONTACTS}${path}`, {
-    method: "POST",
+    method,
     headers: { "api-key": String(env.MAIL_API_KEY), "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(body),
+    ...(body ? { body: JSON.stringify(body) } : {}),
   });
-  if (!response.ok && response.status !== 204) {
-    const data = await response.json().catch(() => null);
+  const data = response.status === 204 ? null : await response.json().catch(() => null);
+  if (!response.ok) {
     throw new Error(`brevo_contacts:${String(data?.code || data?.message || `HTTP ${response.status}`).slice(0, 80)}`);
   }
+  return data;
 }
 
-function listId(env) {
+function configuredListId(env) {
   const id = Number(env?.NEWSLETTER_LIST_ID);
   return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+// Die Brevo-Liste richtet sich selbst ein: gibt es "Newsletter DISORDER119"
+// noch nicht, legt der Worker sie im ersten Ordner an und merkt sich die
+// Nummer in site_settings. NEWSLETTER_LIST_ID ueberschreibt das.
+async function ensureListId(env) {
+  const configured = configuredListId(env);
+  if (configured) return configured;
+  const cached = await env.DB.prepare("SELECT value FROM site_settings WHERE key='newsletter_list_id'").first();
+  if (Number(cached?.value) > 0) return Number(cached.value);
+
+  const lists = await brevoContacts(env, "/lists?limit=50&offset=0", null, "GET");
+  let id = (lists?.lists || []).find(list => list.name === BREVO_LIST_NAME)?.id;
+  if (!id) {
+    const folders = await brevoContacts(env, "/folders?limit=10&offset=0", null, "GET");
+    let folderId = folders?.folders?.[0]?.id;
+    if (!folderId) folderId = (await brevoContacts(env, "/folders", { name: "DISORDER119" }))?.id;
+    id = (await brevoContacts(env, "/lists", { name: BREVO_LIST_NAME, folderId }))?.id;
+  }
+  if (!(Number(id) > 0)) throw new Error("brevo_list_missing");
+  await env.DB.prepare(`INSERT INTO site_settings (key,value,updated_at) VALUES ('newsletter_list_id',?,?)
+    ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at`)
+    .bind(String(id), new Date().toISOString()).run();
+  return Number(id);
+}
+
+async function knownListId(env) {
+  const configured = configuredListId(env);
+  if (configured) return configured;
+  const cached = await env.DB.prepare("SELECT value FROM site_settings WHERE key='newsletter_list_id'").first();
+  return Number(cached?.value) > 0 ? Number(cached.value) : null;
 }
 
 function logFailure(event, reqId, err) {
@@ -369,9 +404,9 @@ export async function confirm(env, rawToken, { reqId = crypto.randomUUID(), ip =
   }
   if (!firstConfirm && !couponCode) return { alreadyConfirmed: true, lang: row.lang };
 
-  const list = listId(env);
-  if (firstConfirm && list && env.MAIL_API_KEY) {
+  if (firstConfirm && env.MAIL_API_KEY) {
     try {
+      const list = await ensureListId(env);
       await brevoContacts(env, "", { email: row.email_normalized, listIds: [list], updateEnabled: true });
       await db.prepare("UPDATE newsletter_subscribers SET brevo_synced_at=? WHERE id=?").bind(nowIso, row.id).run();
     } catch (err) {
@@ -452,7 +487,7 @@ export async function unsubscribe(env, rawToken, { reqId = crypto.randomUUID(), 
     await db.prepare(`UPDATE newsletter_subscribers
         SET status='UNSUBSCRIBED',unsubscribed_at=?,confirm_token_hash=NULL,confirm_expires_at=NULL,updated_at=?
       WHERE id=?`).bind(nowIso, nowIso, row.id).run();
-    const list = listId(env);
+    const list = await knownListId(env);
     if (list && env.MAIL_API_KEY) {
       try {
         await brevoContacts(env, `/lists/${list}/contacts/remove`, { emails: [row.email_normalized] });
@@ -478,7 +513,9 @@ export async function overview(env, { limit = 100 } = {}) {
     confirmed: counts.CONFIRMED,
     pending: counts.PENDING,
     unsubscribed: counts.UNSUBSCRIBED,
-    brevoList: Boolean(listId(env)),
+    brevoList: await knownListId(env),
+    notInBrevo: Number((await db.prepare(`SELECT COUNT(*) AS n FROM newsletter_subscribers
+      WHERE status='CONFIRMED' AND brevo_synced_at IS NULL`).first())?.n || 0),
     subscribers: (results || []).map(r => ({ ...r, couponRedeemed: r.couponStatus === "REDEEMED" })),
   };
 }

@@ -14,10 +14,15 @@ function brevoStub() {
   const original = globalThis.fetch;
   globalThis.fetch = async (url, init = {}) => {
     const body = init.body ? JSON.parse(init.body) : null;
-    calls.push({ url: String(url), body });
-    if (String(url).endsWith("/v3/smtp/email")) {
-      return new Response(JSON.stringify({ messageId: `<m${calls.length}@brevo>` }), { status: 201 });
-    }
+    const method = init.method || "GET";
+    calls.push({ url: String(url), method, body });
+    const path = String(url).replace("https://api.brevo.com/v3", "");
+    const antwort = (data, status = 200) => new Response(JSON.stringify(data), { status });
+    if (path === "/smtp/email") return antwort({ messageId: `<m${calls.length}@brevo>` }, 201);
+    if (path.startsWith("/contacts/lists?") && method === "GET") return antwort({ lists: [{ id: 3, name: "Alte Liste", folderId: 1 }], count: 1 });
+    if (path.startsWith("/contacts/folders?") && method === "GET") return antwort({ folders: [{ id: 1, name: "Your first folder" }], count: 1 });
+    if (path === "/contacts/lists" && method === "POST") return antwort({ id: 12 }, 201);
+    if (path === "/contacts" && method === "POST") return antwort({ id: 99 }, 201);
     return new Response(null, { status: 204 });
   };
   return { calls, restore: () => { globalThis.fetch = original; } };
@@ -122,6 +127,27 @@ test("Den Rabatt gibt es pro Adresse nur einmal", async () => {
     assert.equal(r.data.couponCode, "");
     assert.equal((await e.DB.prepare("SELECT COUNT(*) AS n FROM reward_coupons").first()).n, 1);
     assert.equal(mails(brevo.calls).length, 3, "ohne neuen Code keine Willkommensmail");
+  } finally {
+    brevo.restore();
+  }
+});
+
+test("Brevo-Liste richtet sich beim ersten Mal selbst ein", async () => {
+  const brevo = brevoStub();
+  try {
+    const e = env();
+    for (const adresse of ["f@example.com", "g@example.org"]) {
+      await call(post("/newsletter/subscribe", { email: adresse, consent: true }), e);
+      const bestaetigung = mails(brevo.calls).filter(m => m.body.to[0].email === adresse)[0];
+      await call(post("/newsletter/confirm", { token: tokenFrom(bestaetigung, "bestaetigen") }), e);
+    }
+    const angelegt = brevo.calls.filter(c => c.url === "https://api.brevo.com/v3/contacts/lists" && c.method === "POST");
+    assert.equal(angelegt.length, 1, "Liste nur einmal anlegen");
+    assert.deepEqual(angelegt[0].body, { name: "Newsletter DISORDER119", folderId: 1 });
+    assert.equal((await e.DB.prepare("SELECT value FROM site_settings WHERE key='newsletter_list_id'").first()).value, "12");
+    const kontakte = brevo.calls.filter(c => c.url === "https://api.brevo.com/v3/contacts");
+    assert.deepEqual(kontakte.map(c => c.body.listIds), [[12], [12]]);
+    assert.equal((await e.DB.prepare("SELECT COUNT(*) AS n FROM newsletter_subscribers WHERE brevo_synced_at IS NOT NULL").first()).n, 2);
   } finally {
     brevo.restore();
   }
