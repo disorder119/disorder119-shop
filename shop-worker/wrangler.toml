@@ -12,6 +12,12 @@ preview_urls = false
 # Alle echten Zugangsdaten sind Secrets (nie hier eintragen, nie committen) -
 # siehe README.md fuer die genauen `wrangler secret put ...`-Befehle.
 
+# Oeffentliche Einstellungen ohne Geheimnis.
+# ADMIN_SESSION_HOURS: Eine Anmeldung in der Admin-App (Face ID / Windows
+# Hello) haelt 7 Tage - das Maximum, das admin-passkeys.js zulaesst.
+[vars]
+ADMIN_SESSION_HOURS = "168"
+
 # Produktionsfehler muessen nachtraeglich ueber Request-ID und strukturierte Logs
 # untersuchbar bleiben. Bei wachsendem Traffic kann die Sampling-Rate bewusst
 # reduziert werden, ohne die Observability komplett abzuschalten.
