@@ -35,8 +35,67 @@ import {
   scopeAdminEnv,
   timingSafeEqualText,
 } from "./backend-runtime.js";
+import { markCatalogSold } from "./worker.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+
+test("a sale changes only the two status lines and keeps the file ending", async () => {
+  // Der Main-Waechter laesst einen "Verkauft: Artikel"-Commit nur stehen,
+  // wenn sich genau diese Zeilen aendern. Ein fehlender Zeilenumbruch am
+  // Dateiende waere eine dritte Aenderung - der Verkauf wuerde zurueckgedreht.
+  const original = JSON.stringify([
+    { id: 1, title: "Mantel", price: 90, status: "Verfügbar", public_status: "AVAILABLE" },
+    { id: 2, title: "Hose", price: 50, status: "Verfügbar", public_status: "AVAILABLE" },
+  ], null, 2) + "\n";
+  const MAIN = "a".repeat(40);
+  const TREE = "b".repeat(40);
+  const aufrufe = [];
+  const echtesFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    const methode = init.method || "GET";
+    const pfad = new URL(String(url)).pathname.replace("/repos/disorder119/disorder119-shop", "");
+    const ziel = pfad + new URL(String(url)).search;
+    const koerper = init.body ? JSON.parse(init.body) : null;
+    aufrufe.push({ methode, ziel, koerper, accept: init.headers?.Accept });
+    if (methode === "GET" && pfad === "/git/ref/heads/main") return Response.json({ object: { sha: MAIN } });
+    if (methode === "GET" && pfad === `/git/commits/${MAIN}`) return Response.json({ tree: { sha: TREE } });
+    // Verzeichnis fuer den SHA, dann der Roh-Blob - nie die Contents-API der
+    // Datei selbst, die ab 1 MiB keinen Inhalt mehr liefert.
+    if (methode === "GET" && ziel === `/contents/data?ref=${MAIN}`) {
+      return Response.json([{ name: "catalog.json", type: "file", sha: "sha-x" }, { name: "items.json", type: "file", sha: "sha-1" }]);
+    }
+    if (methode === "GET" && pfad === "/git/blobs/sha-1") return new Response(original, { status: 200 });
+    if (methode === "POST" && pfad === "/git/blobs") return Response.json({ sha: "c".repeat(40) });
+    if (methode === "POST" && pfad === "/git/trees") return Response.json({ sha: "d".repeat(40) });
+    if (methode === "POST" && pfad === "/git/commits") return Response.json({ sha: "e".repeat(40) });
+    if (methode === "PATCH" && pfad === "/git/refs/heads/main") return Response.json({ object: { sha: "e".repeat(40) } });
+    return new Response("nicht erwartet", { status: 404 });
+  };
+  try {
+    await markCatalogSold({ GITHUB_TOKEN: "test" }, 2);
+  } finally {
+    globalThis.fetch = echtesFetch;
+  }
+  const blob = aufrufe.find(a => a.methode === "POST" && a.ziel === "/git/blobs");
+  const baum = aufrufe.find(a => a.methode === "POST" && a.ziel === "/git/trees");
+  const commit = aufrufe.find(a => a.methode === "POST" && a.ziel === "/git/commits");
+  const vorspulen = aufrufe.find(a => a.methode === "PATCH");
+  assert.equal(aufrufe.find(a => a.ziel === "/git/blobs/sha-1").accept, "application/vnd.github.raw+json");
+  assert.equal(blob.koerper.encoding, "utf-8", "ohne Base64 - sonst sprengt es das Rechenzeit-Limit");
+  assert.deepEqual(baum.koerper, { base_tree: TREE, tree: [{ path: "data/items.json", mode: "100644", type: "blob", sha: "c".repeat(40) }] });
+  assert.deepEqual(commit.koerper, { message: "Verkauft: Artikel 2", tree: "d".repeat(40), parents: [MAIN] });
+  assert.deepEqual(vorspulen.koerper, { sha: "e".repeat(40), force: false });
+  const geschrieben = blob.koerper.content;
+  assert.ok(geschrieben.endsWith("]\n"), "Zeilenumbruch am Dateiende muss bleiben");
+  const alt = original.split("\n");
+  const neu = geschrieben.split("\n");
+  assert.equal(neu.length, alt.length);
+  const geaendert = alt.map((zeile, i) => [zeile, neu[i]]).filter(([a, b]) => a !== b);
+  assert.deepEqual(geaendert, [
+    ['    "status": "Verfügbar",', '    "status": "Verkauft",'],
+    ['    "public_status": "AVAILABLE"', '    "public_status": "SOLD"'],
+  ]);
+});
 
 test("daily rent is exactly 10% of authoritative sale price rounded to cents", () => {
   assert.equal(rentalDailyPriceCents(parsePriceToCents(125)), 1250);
@@ -346,6 +405,34 @@ test("live human writes fail closed without abuse controls", async () => {
     RATE_LIMITER: { limit() {} },
     TURNSTILE_SECRET: "configured",
   }));
+});
+
+test("live account login fails closed without bot protection, also with a trailing slash", async () => {
+  // Jede Anmeldung verschickt eine Mail aus dem Tageskontingent des Shops.
+  // Ohne Turnstile und Ratenbegrenzer liesse sich das Kontingent leeren.
+  for (const pfad of ["/account/login", "/account/login/"]) {
+    const request = () => new Request(`https://worker.example${pfad}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    await assert.rejects(
+      () => guardRuntimeRequest(request(), { PAYPAL_ENVIRONMENT: "live", DB: {}, RATE_LIMITER: { limit() {} } }),
+      err => err instanceof RuntimeGuardError && err.code === "LIVE_BACKEND_NOT_READY",
+      `${pfad} ohne Turnstile-Secret muss gesperrt sein`,
+    );
+    await assert.rejects(
+      () => guardRuntimeRequest(request(), { PAYPAL_ENVIRONMENT: "live", DB: {}, TURNSTILE_SECRET: "configured" }),
+      err => err instanceof RuntimeGuardError && err.code === "LIVE_BACKEND_NOT_READY",
+      `${pfad} ohne Ratenbegrenzer muss gesperrt sein`,
+    );
+    await assert.doesNotReject(() => guardRuntimeRequest(request(), {
+      PAYPAL_ENVIRONMENT: "live",
+      DB: {},
+      RATE_LIMITER: { limit() {} },
+      TURNSTILE_SECRET: "configured",
+    }));
+  }
 });
 
 test("live checkout refuses partial provider or catalog configuration", async () => {

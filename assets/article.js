@@ -43,7 +43,21 @@
       orderArticleAbbrev: "Art.-Nr. ", orderAvailQuestion: "Ist dieses Stück noch verfügbar?",
       orderSubjectPrefix: "Anfrage Disorder119 – ",
       noBrand: "Ohne Marke", noDesc: "Keine Beschreibung hinterlegt.",
-      autoDescTemplate: "{name}{facts}. Aus dem kuratierten Archiv von Disorder119."
+      autoDescTemplate: "{name}{facts}. Aus dem kuratierten Archiv von Disorder119.",
+      checkoutTitle: "Deine Bestellung", checkoutShipping: "Versand (DHL, Deutschland)", checkoutTotal: "Gesamt",
+      checkoutLegal: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Versand in der Regel innerhalb von 2 Werktagen. Mit dem PayPal-Knopf und deiner Bestätigung bei PayPal bestellst du zahlungspflichtig.",
+      checkoutTerms: "AGB und Widerrufsbelehrung", checkoutPrivacy: "Datenschutz",
+      checkoutCapturing: "Zahlung wird abgeschlossen …",
+      checkoutThanks: "Danke für deine Bestellung!", checkoutOrderNo: "Bestellnummer:",
+      checkoutThanksText: "Die Bestätigung mit Rechnung kommt gleich per E-Mail an die Adresse deines PayPal-Kontos. Wir packen dein Teil von Hand und verschicken es in der Regel innerhalb von 2 Werktagen.",
+      checkoutAccount: "Bestellung im Konto ansehen",
+      checkoutCancelled: "Kauf abgebrochen. Es wurde nichts abgebucht.",
+      checkoutCancelledHeld: "Kauf abgebrochen, es wurde nichts abgebucht. Das Stück bleibt bis {zeit} Uhr für dich reserviert.",
+      checkoutExpired: "Die Reservierung ist abgelaufen, es wurde nichts abgebucht. Klick bitte noch einmal auf Kaufen.",
+      checkoutUnavailable: "Dieses Stück ist gerade reserviert oder schon verkauft.",
+      checkoutBotCheck: "Die Sicherheitsprüfung hat nicht geklappt. Lade die Seite bitte neu und versuch es noch einmal.",
+      checkoutTooFast: "Zu viele Versuche in kurzer Zeit. Warte bitte eine Minute.",
+      paypalError: "Da ist leider etwas schiefgelaufen. Bitte versuch es gleich nochmal oder schreib uns."
     },
     en: {
       langGroupAria: "Choose language", backToArchive: "← To the archive", cartLink: "Cart",
@@ -65,7 +79,21 @@
       orderArticleAbbrev: "Item no. ", orderAvailQuestion: "Is this piece still available?",
       orderSubjectPrefix: "Disorder119 enquiry – ",
       noBrand: "No brand", noDesc: "No description available.",
-      autoDescTemplate: "{name}{facts}. From the curated archive of Disorder119."
+      autoDescTemplate: "{name}{facts}. From the curated archive of Disorder119.",
+      checkoutTitle: "Your order", checkoutShipping: "Shipping (DHL, Germany)", checkoutTotal: "Total",
+      checkoutLegal: "Small business under § 19 UStG, so no VAT is charged. Usually ships within 2 working days. By using the PayPal button and confirming in PayPal, you place an order with an obligation to pay.",
+      checkoutTerms: "Terms and cancellation policy", checkoutPrivacy: "Privacy",
+      checkoutCapturing: "Completing payment …",
+      checkoutThanks: "Thank you for your order!", checkoutOrderNo: "Order number:",
+      checkoutThanksText: "Your confirmation and invoice are on their way to the e-mail address of your PayPal account. We pack your piece by hand and usually ship within 2 working days.",
+      checkoutAccount: "View order in your account",
+      checkoutCancelled: "Purchase cancelled. Nothing was charged.",
+      checkoutCancelledHeld: "Purchase cancelled, nothing was charged. The piece stays reserved for you until {zeit}.",
+      checkoutExpired: "The reservation has expired and nothing was charged. Please click buy again.",
+      checkoutUnavailable: "This piece is currently reserved or already sold.",
+      checkoutBotCheck: "The security check did not work. Please reload the page and try again.",
+      checkoutTooFast: "Too many attempts in a short time. Please wait a minute.",
+      paypalError: "Something went wrong. Please try again in a moment or write to us."
     },
     fr: {
       langGroupAria: "Choisir la langue", backToArchive: "← Vers l'archive", cartLink: "Panier",
@@ -87,7 +115,21 @@
       orderArticleAbbrev: "N° d'article ", orderAvailQuestion: "Cette pièce est-elle toujours disponible ?",
       orderSubjectPrefix: "Demande Disorder119 – ",
       noBrand: "Sans marque", noDesc: "Aucune description disponible.",
-      autoDescTemplate: "{name}{facts}. Issu de l'archive sélectionnée de Disorder119."
+      autoDescTemplate: "{name}{facts}. Issu de l'archive sélectionnée de Disorder119.",
+      checkoutTitle: "Votre commande", checkoutShipping: "Livraison (DHL, Allemagne)", checkoutTotal: "Total",
+      checkoutLegal: "Micro-entreprise selon le § 19 UStG, TVA non applicable. Expédition en général sous 2 jours ouvrés. En utilisant le bouton PayPal et en confirmant dans PayPal, vous passez une commande avec obligation de paiement.",
+      checkoutTerms: "CGV et droit de rétractation", checkoutPrivacy: "Confidentialité",
+      checkoutCapturing: "Finalisation du paiement …",
+      checkoutThanks: "Merci pour votre commande !", checkoutOrderNo: "Numéro de commande :",
+      checkoutThanksText: "La confirmation avec facture arrive par e-mail à l'adresse de votre compte PayPal. Nous emballons votre pièce à la main et l'expédions en général sous 2 jours ouvrés.",
+      checkoutAccount: "Voir la commande dans votre compte",
+      checkoutCancelled: "Achat annulé. Rien n'a été débité.",
+      checkoutCancelledHeld: "Achat annulé, rien n'a été débité. La pièce reste réservée pour vous jusqu'à {zeit}.",
+      checkoutExpired: "La réservation a expiré, rien n'a été débité. Cliquez à nouveau sur acheter.",
+      checkoutUnavailable: "Cette pièce est actuellement réservée ou déjà vendue.",
+      checkoutBotCheck: "La vérification de sécurité a échoué. Rechargez la page et réessayez.",
+      checkoutTooFast: "Trop de tentatives en peu de temps. Veuillez patienter une minute.",
+      paypalError: "Une erreur s'est produite. Réessayez dans un instant ou écrivez-nous."
     }
   };
 
@@ -380,44 +422,243 @@
   var paypalContainer = document.getElementById("paypalButtons");
   if (paypalContainer && window.paypal && SHOP_CONFIG.shopWorkerUrl &&
       SHOP_CONFIG.features && SHOP_CONFIG.features.paypalCheckout) {
-    var workerUrl = SHOP_CONFIG.shopWorkerUrl.replace(/\/$/, "");
+    paypalKaufEinrichten(paypalContainer, SHOP_CONFIG.shopWorkerUrl.replace(/\/$/, ""));
+  }
+
+  // Der Server nimmt eine Bestellung nur mit Einmal-Schluessel und - im
+  // Livebetrieb - mit Turnstile-Token an. Beides liefert schutz.js; es wird
+  // erst geladen, wenn es hier wirklich einen Kaufknopf gibt.
+  function schutzLaden() {
+    if (window.D119Schutz) return Promise.resolve(window.D119Schutz);
+    return new Promise(function (ok, nein) {
+      var s = document.createElement("script");
+      s.src = "/assets/schutz.js";
+      s.async = true;
+      s.onload = function () { if (window.D119Schutz) ok(window.D119Schutz); else nein(new Error("schutz_fehlt")); };
+      s.onerror = function () { nein(new Error("schutz_nicht_ladbar")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function antwortLesen(r) {
+    return r.json().catch(function () { return {}; }).then(function (daten) {
+      if (!r.ok) {
+        var fehler = new Error(daten.error || "HTTP_" + r.status);
+        fehler.code = daten.error || "";
+        fehler.status = r.status;
+        throw fehler;
+      }
+      return daten;
+    });
+  }
+
+  function kaufFehlerText(fehler) {
+    var code = (fehler && (fehler.code || fehler.message)) || "";
+    if (code === "RESERVATION_EXPIRED") return t("checkoutExpired");
+    if (/^TURNSTILE_|^turnstile_|^schutz_/.test(code)) return t("checkoutBotCheck");
+    if (code === "RATE_LIMITED") return t("checkoutTooFast");
+    if (fehler && fehler.status === 409) return t("checkoutUnavailable");
+    return t("paypalError");
+  }
+
+  function uhrzeit(ms) {
+    var d = new Date(ms);
+    return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+  }
+
+  // Button-Loesung (§ 312j BGB): Direkt ueber dem Kaufknopf muss stehen, was
+  // der Kauf kostet und dass er zahlungspflichtig ist - nicht nur irgendwo
+  // weiter oben auf der Seite oder in den AGB.
+  function kaufUebersicht(container) {
+    var home = LANG === "de" ? "/" : "/" + LANG + "/";
+    var versand = (Number(SHOP_CONFIG.shippingFlatCents) || 0) / 100;
+    var name = displayName() + (IT.size ? " · " + t("factSize") + " " + trSize(IT.size) : "");
+    var box = document.createElement("div");
+    box.className = "checkout-summary";
+    box.id = "checkoutSummary";
+    var titel = document.createElement("p");
+    titel.className = "checkout-summary__title";
+    titel.textContent = t("checkoutTitle");
+    box.appendChild(titel);
+    var liste = document.createElement("dl");
+    [[name, fmtPrice(IT.price), ""],
+     [t("checkoutShipping"), fmtPrice(versand), ""],
+     [t("checkoutTotal"), fmtPrice(IT.price + versand), "checkout-summary__total"]].forEach(function (zeile) {
+      var reihe = document.createElement("div");
+      if (zeile[2]) reihe.className = zeile[2];
+      var dt = document.createElement("dt");
+      dt.textContent = zeile[0];
+      var dd = document.createElement("dd");
+      dd.textContent = zeile[1];
+      reihe.appendChild(dt);
+      reihe.appendChild(dd);
+      liste.appendChild(reihe);
+    });
+    box.appendChild(liste);
+    var recht = document.createElement("p");
+    recht.className = "checkout-summary__legal";
+    recht.appendChild(document.createTextNode(t("checkoutLegal") + " "));
+    var agb = document.createElement("a");
+    agb.href = home + "agb/";
+    agb.textContent = t("checkoutTerms");
+    recht.appendChild(agb);
+    recht.appendChild(document.createTextNode(" · "));
+    var datenschutz = document.createElement("a");
+    datenschutz.href = home + "datenschutz/";
+    datenschutz.textContent = t("checkoutPrivacy");
+    recht.appendChild(datenschutz);
+    box.appendChild(recht);
+    container.parentNode.insertBefore(box, container);
+
+    var status = document.createElement("p");
+    status.className = "checkout-status";
+    status.id = "checkoutStatus";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    status.hidden = true;
+    container.parentNode.insertBefore(status, container.nextSibling);
+    return function melden(art, inhalt) {
+      status.textContent = inhalt || "";
+      status.className = "checkout-status" + (art ? " checkout-status--" + art : "");
+      status.hidden = !inhalt;
+    };
+  }
+
+  function kaufDanke(bestellNr) {
+    var cta = document.querySelector(".info__cta");
+    if (!cta) return;
+    // style statt hidden: .btn setzt display:block und schlaegt das Attribut.
+    Array.prototype.forEach.call(cta.children, function (kind) { kind.style.display = "none"; });
+    var miete = document.querySelector(".btn--rental");
+    if (miete) miete.style.display = "none";
+    var home = LANG === "de" ? "/" : "/" + LANG + "/";
+    var box = document.createElement("div");
+    box.className = "checkout-thanks";
+    box.setAttribute("role", "status");
+    box.tabIndex = -1;
+    var titel = document.createElement("p");
+    titel.className = "checkout-thanks__title";
+    titel.textContent = t("checkoutThanks");
+    box.appendChild(titel);
+    if (bestellNr) {
+      var nr = document.createElement("p");
+      nr.textContent = t("checkoutOrderNo") + " ";
+      var stark = document.createElement("strong");
+      stark.textContent = bestellNr;
+      nr.appendChild(stark);
+      box.appendChild(nr);
+    }
+    var text = document.createElement("p");
+    text.textContent = t("checkoutThanksText");
+    box.appendChild(text);
+    var konto = document.createElement("a");
+    konto.className = "btn btn--outline";
+    konto.href = home + "konto/";
+    konto.textContent = t("checkoutAccount");
+    box.appendChild(konto);
+    cta.insertBefore(box, cta.firstChild);
+    box.focus();
+  }
+
+  function paypalKaufEinrichten(container, workerUrl) {
+    var melden = kaufUebersicht(container);
+    var schutz = schutzLaden();
+    // Ein Kaufversuch behaelt seinen Schluessel, solange die Reservierung
+    // laeuft: Schliesst jemand das PayPal-Fenster und klickt erneut, liefert
+    // der Server dieselbe PayPal-Bestellung noch einmal aus, statt das Stueck
+    // als "schon reserviert" abzulehnen - reserviert ist es ja fuer genau
+    // diese Person.
+    var versuch = null;
+    var bezahlSchluessel = {};
+    var letzterFehler = "";
+
+    // Turnstile schon beim Sichtbarwerden des Kaufbereichs starten, damit
+    // beim Klick ein Token bereitliegt.
+    schutz.then(function (S) {
+      var box = document.getElementById("checkoutSummary");
+      if (!("IntersectionObserver" in window) || !box) { S.waechter(); return; }
+      var beobachter = new IntersectionObserver(function (eintraege) {
+        if (!eintraege.some(function (e) { return e.isIntersecting; })) return;
+        beobachter.disconnect();
+        S.waechter();
+      });
+      beobachter.observe(box);
+    }).catch(function () { /* meldet sich beim Klick */ });
+
     paypal.Buttons({
-      style: { shape: "rect", color: "black", layout: "vertical", label: "paypal" },
+      style: { shape: "rect", color: "black", layout: "vertical", label: "buynow" },
       createOrder: function () {
-        return fetch(workerUrl + "/create-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ itemId: IT.id }),
+        letzterFehler = "";
+        melden("", "");
+        return schutz.then(function (S) {
+          if (!versuch || (versuch.ablauf && Date.now() > versuch.ablauf - 60000)) {
+            versuch = { schluessel: S.schluessel("create-order"), ablauf: 0, bestellNr: "" };
+          }
+          return S.waechter().token();
         })
-          .then(function (r) {
-            if (!r.ok) throw new Error("nicht mehr verfuegbar");
-            return r.json();
+          .then(function (token) {
+            var kopf = { "Content-Type": "application/json", "Idempotency-Key": versuch.schluessel };
+            if (token) kopf["X-Turnstile-Token"] = token;
+            return fetch(workerUrl + "/create-order", {
+              method: "POST",
+              headers: kopf,
+              body: JSON.stringify({ itemId: IT.id }),
+            });
           })
-          .then(function (data) { return data.id; });
+          .then(antwortLesen)
+          .then(function (daten) {
+            versuch.ablauf = Date.parse(daten.expiresAt) || 0;
+            versuch.bestellNr = daten.orderNumber || "";
+            return daten.id;
+          })
+          .catch(function (fehler) {
+            letzterFehler = kaufFehlerText(fehler);
+            throw fehler;
+          });
       },
       onApprove: function (data) {
-        return fetch(workerUrl + "/capture-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: data.orderID, itemId: IT.id }),
+        melden("info", t("checkoutCapturing"));
+        return schutz.then(function (S) {
+          // Eigener Schluessel je PayPal-Bestellung: Bricht die Verbindung
+          // nach dem Abbuchen ab, liefert ein zweiter Versuch das gespeicherte
+          // Ergebnis, statt ein zweites Mal abzubuchen.
+          var schluessel = bezahlSchluessel[data.orderID] || (bezahlSchluessel[data.orderID] = S.schluessel("capture-order"));
+          return fetch(workerUrl + "/capture-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Idempotency-Key": schluessel },
+            body: JSON.stringify({ orderId: data.orderID, itemId: IT.id }),
+          });
         })
-          .then(function (r) { if (!r.ok) throw new Error("Zahlung fehlgeschlagen"); })
-          .then(function () {
+          .then(antwortLesen)
+          .then(function (daten) {
             // Erfolgreich bezahltes Einzelstueck sofort aus dem lokalen
             // Warenkorb entfernen. Der serverseitige SOLD-Status bleibt die
-            // autoritative Quelle; der anschliessende Reload zeigt ihn nach
-            // dem automatischen Rebuild auch auf der Produktseite.
+            // autoritative Quelle; die Seite zeigt ihn nach dem automatischen
+            // Rebuild. Bis dahin ersetzt die Bestaetigung den Kaufbereich -
+            // ein Neuladen wuerde das Stueck noch als verfuegbar zeigen.
             var cart = loadCart();
             var pos = cart.indexOf(IT.id);
             if (pos !== -1) cart.splice(pos, 1);
             saveCart(cart);
             refreshCartCount();
-            location.reload();
+            melden("", "");
+            kaufDanke(daten.orderNumber || (versuch && versuch.bestellNr) || "");
+            versuch = null;
+          })
+          .catch(function (fehler) {
+            if ((fehler && fehler.code) === "RESERVATION_EXPIRED") versuch = null;
+            letzterFehler = kaufFehlerText(fehler);
+            throw fehler;
           });
+      },
+      onCancel: function () {
+        melden("info", versuch && versuch.ablauf > Date.now()
+          ? tFormat("checkoutCancelledHeld", { zeit: uhrzeit(versuch.ablauf) })
+          : t("checkoutCancelled"));
       },
       onError: function (err) {
         console.error(err);
-        alert(t("paypalError") || "Da ist leider etwas schiefgelaufen. Bitte versuch es gleich nochmal oder schreib uns.");
+        melden("fehler", letzterFehler || t("paypalError"));
       },
     }).render("#paypalButtons");
   }

@@ -1,4 +1,5 @@
 import { MAX_RENTAL_DAYS, MAX_REQUEST_BYTES } from "./commerce-core.js";
+import { PASSKEY_ORIGINS, activePasskeyCount, resolveAdminSession } from "./admin-passkeys.js";
 
 export const BACKEND_HARDENING_VERSION = "backend-runtime-v3";
 export const ADMIN_ROLE_READER = "READER";
@@ -21,12 +22,21 @@ const EXACT_METHODS = Object.freeze({
   "/capture-order": "POST",
   "/paypal-webhook": "POST",
   "/rental-requests": "GET",
+  "/newsletter/subscribe": "POST",
+  "/newsletter/confirm": "POST",
+  "/newsletter/unsubscribe": "POST",
 });
 
+// Konto-Anmeldung und Newsletter-Anmeldung schreiben nicht nur in die
+// Datenbank, sie verschicken auch eine Mail - ohne Bot-Schutz waere das
+// Tageskontingent des Shops mit einem Skript leer, und Bestellbestaetigungen
+// kaemen nicht mehr an.
 const HUMAN_LIVE_WRITES = new Set([
   "/rental-request",
   "/rental-bundle",
   "/create-order",
+  "/account/login",
+  "/newsletter/subscribe",
 ]);
 
 const COMMERCE_LIVE_WRITES = new Set([
@@ -41,6 +51,10 @@ const LIVE_DB_WRITES = new Set([
   "/create-order",
   "/capture-order",
   "/paypal-webhook",
+  "/account/login",
+  "/newsletter/subscribe",
+  "/newsletter/confirm",
+  "/newsletter/unsubscribe",
 ]);
 
 const ADMIN_READ_METHODS = new Set(["GET", "HEAD"]);
@@ -122,10 +136,25 @@ export function adminAuthReadiness(env = {}) {
   };
 }
 
+function bearerAlwaysAllowed(env) {
+  return String(env?.ADMIN_BEARER_ENABLED || "").trim().toLowerCase() === "true";
+}
+
 export async function authorizeAdminRequest(request, env, requiredRole = adminRequiredRoleForMethod(request.method)) {
   if (!requiredRole) return { role: null, mode: "PREFLIGHT", token: "" };
   const supplied = bearerToken(request);
-  if (!supplied) throw new RuntimeGuardError("UNAUTHORIZED", 401);
+  if (!supplied) {
+    // Admin-App: Sitzung aus der Passkey-Anmeldung (Face ID, Windows Hello).
+    const session = await resolveAdminSession(request, env);
+    if (!session) throw new RuntimeGuardError("UNAUTHORIZED", 401);
+    return { role: ADMIN_ROLE_OWNER, mode: "PASSKEY_SESSION", token: "", passkeyId: session.passkeyId, readiness: adminAuthReadiness(env) };
+  }
+  // Sobald ein Geraet per Passkey freigeschaltet ist, oeffnet ein Token allein
+  // nichts mehr - ein abgeschriebener oder geleakter Token bringt dann keinen
+  // Zugang. Fuer Skripte laesst ADMIN_BEARER_ENABLED=true ihn bewusst weiter zu.
+  if (!bearerAlwaysAllowed(env) && await activePasskeyCount(env) > 0) {
+    throw new RuntimeGuardError("PASSKEY_REQUIRED", 401);
+  }
 
   const readiness = adminAuthReadiness(env);
   if (readiness.splitConfigured && !readiness.productionRbacReady) {
@@ -208,7 +237,13 @@ function assertMethod(request, pathname) {
   }
 }
 
-async function assertRequestBodySize(request) {
+// Nur hier duerfen Anfragen groesser sein: der Katalog-Editor laedt Fotos hoch.
+// Die Route verlangt eine Admin-Anmeldung, bevor der Koerper gelesen wird.
+const LARGE_BODY_ROUTES = Object.freeze({
+  "/admin/katalog/speichern": 8 * 1024 * 1024,
+});
+
+async function assertRequestBodySize(request, limit = MAX_REQUEST_BYTES) {
   if (!REQUEST_BODY_METHODS.has(request.method) || !request.body) return;
 
   const header = request.headers.get("Content-Length");
@@ -217,7 +252,7 @@ async function assertRequestBodySize(request) {
     if (!Number.isFinite(declared) || declared < 0) {
       throw new RuntimeGuardError("INVALID_CONTENT_LENGTH", 400);
     }
-    if (declared > MAX_REQUEST_BYTES) {
+    if (declared > limit) {
       throw new RuntimeGuardError("REQUEST_TOO_LARGE", 413);
     }
   }
@@ -231,7 +266,7 @@ async function assertRequestBodySize(request) {
       const { done, value } = await reader.read();
       if (done) break;
       total += value?.byteLength || 0;
-      if (total > MAX_REQUEST_BYTES) {
+      if (total > limit) {
         reader.cancel().catch(() => {});
         throw new RuntimeGuardError("REQUEST_TOO_LARGE", 413);
       }
@@ -241,7 +276,10 @@ async function assertRequestBodySize(request) {
   }
 }
 
-function assertLiveControls(env, pathname) {
+function assertLiveControls(env, rawPathname) {
+  // Das Konto-Routing schneidet Schraegstriche am Ende ab: "/account/login/"
+  // landet in derselben Anmeldung und darf diese Pruefung nicht umgehen.
+  const pathname = String(rawPathname || "").replace(/\/+$/, "") || "/";
   if (!isLive(env) || !LIVE_DB_WRITES.has(pathname)) return;
   if (!env.DB) throw new RuntimeGuardError("LIVE_BACKEND_NOT_READY", 503);
 
@@ -268,7 +306,7 @@ function assertLiveControls(env, pathname) {
 export async function guardRuntimeRequest(request, env, url = new URL(request.url)) {
   const pathname = url.pathname;
   assertMethod(request, pathname);
-  await assertRequestBodySize(request);
+  await assertRequestBodySize(request, LARGE_BODY_ROUTES[pathname.replace(/\/+$/, "")] || MAX_REQUEST_BYTES);
 
   if (pathname === "/rental-requests" && request.method === "GET") {
     await authorizeAdminRequest(request, env, ADMIN_ROLE_READER);
@@ -330,6 +368,14 @@ export async function finalizeRuntimeResponse(response, request, env, requestId,
   let out = response;
   if (pathname === "/health") out = await augmentHealth(out, env);
   const headers = new Headers(out.headers);
+  // Die Admin-App schickt ihr Sitzungs-Cookie mit (credentials: "include").
+  // Das erlaubt der Browser nur mit dieser Freigabe - und nur fuer genau die
+  // Admin-Adressen, die die Antwort ohnehin schon als Origin zulaesst.
+  const origin = request.headers.get("Origin");
+  if (pathname.startsWith("/admin") && origin && PASSKEY_ORIGINS[origin]
+      && headers.get("Access-Control-Allow-Origin") === origin) {
+    headers.set("Access-Control-Allow-Credentials", "true");
+  }
   headers.set("X-Request-Id", requestId);
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "no-referrer");

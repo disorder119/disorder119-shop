@@ -22,6 +22,15 @@ export const SESSION_TTL_DAYS = 30;
 // Fuenf Anmeldelinks je Adresse und Stunde. Genug fuer eine Kundin, die den
 // ersten Link im Spam sucht - zu wenig, um ein fremdes Postfach zuzumuellen.
 export const LOGIN_RATE_LIMIT_PER_HOUR = 5;
+// Die Grenze je Adresse allein haelt niemanden auf, der viele verschiedene
+// Adressen durchprobiert. Deshalb zusaetzlich je Anschluss ...
+export const LOGIN_RATE_LIMIT_PER_IP_HOUR = 10;
+// ... und eine Obergrenze fuer den ganzen Shop. Jeder Anmeldelink ist eine
+// Mail aus demselben Tageskontingent wie Bestellbestaetigung und
+// Versandmail (Brevo kostenlos: 300 am Tag). Ist es leer, bekommt auch die
+// Kundin, die gerade bezahlt hat, keine Rechnung mehr. 100 Links lassen
+// genug Luft fuer den Bestellbetrieb; LOGIN_DAILY_CAP stellt das um.
+export const LOGIN_DAILY_CAP = 100;
 
 const SHOP_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -135,6 +144,25 @@ async function recentLoginCount(env, email) {
   return Number(row?.anzahl || 0);
 }
 
+async function recentLoginCountForIp(env, ipHash) {
+  const since = new Date(Date.now() - 3_600_000).toISOString();
+  const row = await env.DB.prepare(`SELECT COUNT(*) AS anzahl FROM customer_login_tokens
+    WHERE request_ip_hash=? AND created_at>=?`).bind(ipHash, since).first();
+  return Number(row?.anzahl || 0);
+}
+
+async function loginCountLastDay(env) {
+  const since = new Date(Date.now() - 86_400_000).toISOString();
+  const row = await env.DB.prepare(`SELECT COUNT(*) AS anzahl FROM customer_login_tokens
+    WHERE created_at>=?`).bind(since).first();
+  return Number(row?.anzahl || 0);
+}
+
+export function loginDailyCap(env) {
+  const configured = Number(env?.LOGIN_DAILY_CAP);
+  return Number.isInteger(configured) && configured > 0 ? configured : LOGIN_DAILY_CAP;
+}
+
 export async function requestLoginLink(env, rawEmail, reqId = crypto.randomUUID(), ipHash = "") {
   if (!env?.DB) throw new AccountError("ACCOUNT_DATABASE_NOT_CONFIGURED", 503);
   if (!mailTransportReady(env)) throw new AccountError("ACCOUNT_MAIL_NOT_CONFIGURED", 503);
@@ -143,8 +171,23 @@ export async function requestLoginLink(env, rawEmail, reqId = crypto.randomUUID(
   // wuerde verraten, wer hier schon einmal bestellt hat.
   if (!email) return { queued: false, reason: "INVALID_EMAIL" };
 
+  // Aeltere Links bleiben nach 0013 als entwertete Zeilen stehen, damit die
+  // Grenzen sie zaehlen. Nach zwei Tagen zaehlen sie fuer keine Grenze mehr.
+  await env.DB.prepare("DELETE FROM customer_login_tokens WHERE created_at<?")
+    .bind(new Date(Date.now() - 2 * 86_400_000).toISOString()).run();
+
   if (await recentLoginCount(env, email) >= LOGIN_RATE_LIMIT_PER_HOUR) {
     return { queued: false, reason: "RATE_LIMITED" };
+  }
+  const ip = safeText(ipHash, 64);
+  if (ip && await recentLoginCountForIp(env, ip) >= LOGIN_RATE_LIMIT_PER_IP_HOUR) {
+    return { queued: false, reason: "IP_RATE_LIMITED" };
+  }
+  if (await loginCountLastDay(env) >= loginDailyCap(env)) {
+    // Gehoert ins Log: Wird die Grenze erreicht, probiert entweder jemand
+    // Adressen durch - oder der Shop ist gewachsen und die Grenze zu knapp.
+    console.warn(JSON.stringify({ level: "warn", event: "login_daily_cap_reached", requestId: safeText(reqId, 120) }));
+    return { queued: false, reason: "DAILY_CAP" };
   }
 
   const token = randomToken();
@@ -506,6 +549,33 @@ async function readJson(request) {
   }
 }
 
+// Schnelle Bremse vor jeder Datenbankarbeit: der Cloudflare-Ratenbegrenzer
+// zaehlt je Anschluss und Minute. Die Stundengrenzen in requestLoginLink
+// greifen danach, weil sie auf gespeicherten Anmeldelinks beruhen.
+async function limitLoginRequests(request, env) {
+  if (!env.RATE_LIMITER || typeof env.RATE_LIMITER.limit !== "function") return;
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const result = await env.RATE_LIMITER.limit({ key: `account-login:${ip}` });
+  if (result && result.success === false) throw new AccountError("RATE_LIMITED", 429);
+}
+
+// Wie bei Bestellung und Mietanfrage: ohne Secret (Testbetrieb) keine
+// Pruefung, im Livebetrieb laesst backend-runtime.js die Route ohne Secret
+// gar nicht erst zu.
+async function verifyTurnstile(env, request, body) {
+  if (!env.TURNSTILE_SECRET) return;
+  const token = request.headers.get("X-Turnstile-Token") || body?.turnstileToken;
+  if (!token) throw new AccountError("TURNSTILE_REQUIRED", 403);
+  const form = new FormData();
+  form.append("secret", env.TURNSTILE_SECRET);
+  form.append("response", safeText(token, 2048));
+  const ip = request.headers.get("CF-Connecting-IP");
+  if (ip) form.append("remoteip", ip);
+  const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: form });
+  const result = await res.json();
+  if (!result.success) throw new AccountError("TURNSTILE_FAILED", 403);
+}
+
 export async function handleAccountRequest(request, env, url, reqId = crypto.randomUUID(), origin = null) {
   try {
     if (request.method === "OPTIONS") {
@@ -517,7 +587,9 @@ export async function handleAccountRequest(request, env, url, reqId = crypto.ran
     const path = url.pathname.replace(/\/+$/, "") || "/account";
 
     if (path === "/account/login" && request.method === "POST") {
+      await limitLoginRequests(request, env);
       const body = await readJson(request);
+      await verifyTurnstile(env, request, body);
       const ipHash = await tokenFingerprint(
         `${safeText(request.headers.get("CF-Connecting-IP") || "", 60)}:${safeText(env.LOGIN_IP_PEPPER || "d119", 60)}`,
       );
