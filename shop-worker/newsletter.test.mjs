@@ -183,6 +183,104 @@ test("Abgelaufener und falscher Link", async () => {
   }
 });
 
+test("Schreibweisen desselben Postfachs bekommen keinen zweiten Code", async () => {
+  const brevo = brevoStub();
+  try {
+    const e = env();
+    await call(post("/newsletter/subscribe", { email: "Max.Muster+shop@googlemail.com", consent: true }), e);
+    const token = tokenFrom(mails(brevo.calls)[0], "bestaetigen");
+    const r = await call(post("/newsletter/confirm", { token }), e);
+    assert.match(r.data.couponCode, /^D119-10-/);
+
+    for (const variante of ["maxmuster@gmail.com", "m.a.x.muster+2@gmail.com", "MAXMUSTER@GOOGLEMAIL.COM"]) {
+      const antwort = await call(post("/newsletter/subscribe", { email: variante, consent: true }), e);
+      assert.deepEqual(antwort.data, { ok: true }, "Antwort bleibt gleich");
+    }
+    assert.equal(mails(brevo.calls).length, 2, "nur Bestätigung und Willkommen der ersten Anmeldung");
+    assert.equal((await e.DB.prepare("SELECT COUNT(*) AS n FROM newsletter_subscribers").first()).n, 1);
+    assert.equal((await e.DB.prepare("SELECT COUNT(*) AS n FROM reward_coupons").first()).n, 1);
+
+    // Andere Anbieter: nur der Plus-Anhang faellt weg, Punkte zaehlen.
+    await call(post("/newsletter/subscribe", { email: "max.muster+x@web.de", consent: true }), e);
+    await call(post("/newsletter/subscribe", { email: "max.muster@web.de", consent: true }), e);
+    assert.equal((await e.DB.prepare("SELECT COUNT(*) AS n FROM newsletter_subscribers WHERE email_canonical='max.muster@web.de'").first()).n, 1);
+  } finally {
+    brevo.restore();
+  }
+});
+
+test("Wegwerf-Adressen werden abgelehnt", async () => {
+  const brevo = brevoStub();
+  try {
+    const e = env();
+    const r = await call(post("/newsletter/subscribe", { email: "rabatt@mailinator.com", consent: true }), e);
+    assert.equal(r.status, 400);
+    assert.equal(r.data.error, "DISPOSABLE_EMAIL");
+    assert.equal(mails(brevo.calls).length, 0);
+  } finally {
+    brevo.restore();
+  }
+});
+
+test("Pro Anschluss hoechstens zwei Codes in 30 Tagen", async () => {
+  const brevo = brevoStub();
+  try {
+    const e = env();
+    const ergebnisse = [];
+    for (const adresse of ["eins@example.com", "zwei@example.com", "drei@example.com"]) {
+      await call(post("/newsletter/subscribe", { email: adresse, consent: true }), e);
+      const bestaetigung = mails(brevo.calls).filter(m => m.body.to[0].email === adresse)[0];
+      ergebnisse.push((await call(post("/newsletter/confirm", { token: tokenFrom(bestaetigung, "bestaetigen") }), e)).data);
+    }
+    assert.match(ergebnisse[0].couponCode, /^D119-10-/);
+    assert.match(ergebnisse[1].couponCode, /^D119-10-/);
+    assert.equal(ergebnisse[2].confirmed, true, "angemeldet ist die dritte Adresse trotzdem");
+    assert.equal(ergebnisse[2].couponCode, "");
+    assert.equal(ergebnisse[2].couponLimited, true);
+    assert.equal((await e.DB.prepare("SELECT COUNT(*) AS n FROM reward_coupons").first()).n, 2);
+  } finally {
+    brevo.restore();
+  }
+});
+
+test("Admin-App prueft und entwertet Codes, danach gilt der Code nirgends mehr", async () => {
+  const brevo = brevoStub();
+  try {
+    const e = env({ ADMIN_TOKEN: "sitzung-2" });
+    await call(post("/newsletter/subscribe", { email: "e@example.com", consent: true }), e);
+    const token = tokenFrom(mails(brevo.calls)[0], "bestaetigen");
+    const { couponCode } = (await call(post("/newsletter/confirm", { token }), e)).data;
+
+    const adminPost = (pfad, body) => new Request(`https://api.disorder119.com${pfad}`, {
+      method: "POST",
+      headers: { Origin: ADMIN, Authorization: "Bearer sitzung-2", "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    let r = await call(adminPost("/admin/coupons/check", { code: couponCode.toLowerCase() }), e);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.status, "ACTIVE");
+    assert.equal(r.data.source, "newsletter");
+    assert.equal(r.data.email, "e@example.com");
+
+    r = await call(adminPost("/admin/coupons/redeem", { code: couponCode, note: "Vinted Jacke" }), e);
+    assert.equal(r.data.redeemed, true);
+    assert.equal(r.data.status, "REDEEMED");
+    assert.equal(r.data.redeemedFor, "MANUELL:Vinted Jacke");
+    assert.equal(await findValidCoupon(e, couponCode), null, "Warenkorb und Checkout lehnen ihn ab");
+
+    r = await call(adminPost("/admin/coupons/redeem", { code: couponCode }), e);
+    assert.equal(r.data.redeemed, false, "zweites Einlösen geht nicht");
+    assert.equal(r.data.status, "REDEEMED");
+
+    r = await call(adminPost("/admin/coupons/check", { code: "D119-10-XXXXXXXXXX" }), e);
+    assert.equal(r.status, 404);
+    r = await call(adminPost("/admin/coupons/check", { code: "RABATT" }), e);
+    assert.equal(r.status, 400);
+  } finally {
+    brevo.restore();
+  }
+});
+
 test("Fremde Herkunft wird abgewiesen, Admin-Liste braucht Anmeldung", async () => {
   const brevo = brevoStub();
   try {

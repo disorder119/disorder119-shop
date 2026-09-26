@@ -7,9 +7,12 @@
 -- laesst. Tokens liegen nur als SHA-256 in der Datenbank.
 -- coupon_id bleibt auch nach einer Abmeldung gesetzt: den Rabatt gibt es pro
 -- Adresse genau einmal, auch wenn sich jemand ab- und wieder anmeldet.
+-- email_canonical fasst Schreibweisen desselben Postfachs zusammen
+-- (name+x@..., bei Gmail Punkte und googlemail.com) - eine Zeile, ein Code.
 CREATE TABLE IF NOT EXISTS newsletter_subscribers (
   id TEXT PRIMARY KEY,
   email_normalized TEXT NOT NULL UNIQUE,
+  email_canonical TEXT NOT NULL UNIQUE,
   status TEXT NOT NULL CHECK (status IN ('PENDING','CONFIRMED','UNSUBSCRIBED')),
   lang TEXT NOT NULL DEFAULT 'de' CHECK (lang IN ('de','en','fr')),
   source TEXT,
@@ -35,3 +38,4 @@ CREATE INDEX IF NOT EXISTS idx_newsletter_status ON newsletter_subscribers(statu
 CREATE INDEX IF NOT EXISTS idx_newsletter_confirm_token ON newsletter_subscribers(confirm_token_hash);
 CREATE INDEX IF NOT EXISTS idx_newsletter_mail_window ON newsletter_subscribers(last_confirm_mail_at);
 CREATE INDEX IF NOT EXISTS idx_newsletter_ip_window ON newsletter_subscribers(request_ip_hash, last_confirm_mail_at);
+CREATE INDEX IF NOT EXISTS idx_newsletter_code_network ON newsletter_subscribers(confirm_ip_hash, confirmed_at);

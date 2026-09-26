@@ -12,11 +12,18 @@
 // Nach aussen antwortet die Anmeldung immer gleich - ob eine Adresse schon
 // eingetragen ist, erfaehrt niemand, der sie nur ausprobiert.
 //
+// Gegen Mehrfach-Rabatte: ein Code pro Postfach (name+x@ und bei Gmail
+// n.a.m.e@ zaehlen als dieselbe Adresse, auch nach Ab- und Neuanmeldung),
+// keine Wegwerf-Adressen, hoechstens CODES_PER_NETWORK Codes pro
+// Internetanschluss in 30 Tagen. Jeder Code ist einmal einloesbar
+// (reward_coupons), pro Bestellung zaehlt genau ein Code; bei Verkaeufen
+// ausserhalb des Shops entwertet die Admin-App ihn ueber /admin/coupons/redeem.
+//
 // Ist NEWSLETTER_LIST_ID gesetzt, landet jede bestaetigte Adresse zusaetzlich
 // in dieser Brevo-Liste. Von dort verschickst du die Newsletter; Brevo haengt
 // an jede Kampagne selbst einen Abmeldelink.
 import { SHOP_URL, escapeHtml, mailTransportReady, normalizeEmail, sendMail } from "./customer-mail.js";
-import { issueRewardCoupon } from "./game-rewards.js";
+import { issueRewardCoupon, normalizeCouponCode } from "./game-rewards.js";
 
 const SHOP_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -31,7 +38,36 @@ export const CONFIRM_TTL_HOURS = 48;
 export const RESEND_PAUSE_MINUTES = 10;
 export const IP_MAILS_PER_HOUR = 10;
 export const NEWSLETTER_DAILY_CAP = 150;
+export const CODES_PER_NETWORK = 2;
+export const CODE_NETWORK_WINDOW_DAYS = 30;
 export const CONSENT_VERSION = "2026-09-26";
+
+// Die bekanntesten Wegwerf-Postfaecher. Wer dort einen Code holt, meint ihn
+// nicht ernst - und koennte sich beliebig viele holen.
+const DISPOSABLE_DOMAINS = new Set([
+  "mailinator.com", "guerrillamail.com", "guerrillamail.de", "sharklasers.com", "grr.la",
+  "10minutemail.com", "10minutemail.net", "temp-mail.org", "tempmail.com", "tempmail.de",
+  "tempmailo.com", "tempr.email", "yopmail.com", "yopmail.fr", "trashmail.com", "trashmail.de",
+  "wegwerfmail.de", "wegwerfemail.de", "einrot.com", "spambog.com", "getnada.com", "nada.email",
+  "dispostable.com", "maildrop.cc", "throwawaymail.com", "fakeinbox.com", "mailnesia.com",
+  "mintemail.com", "emailondeck.com", "moakt.com", "discard.email", "mohmal.com",
+  "burnermail.io", "mailcatch.com", "spamgourmet.com", "trbvm.com", "byom.de", "muell.email",
+]);
+
+// Ein Postfach, eine Schreibweise: Plus-Anhang weg, bei Gmail zaehlen Punkte
+// nicht und googlemail.com ist gmail.com.
+export function canonicalEmail(email) {
+  const [local = "", domain = ""] = String(email || "").split("@");
+  const host = domain === "googlemail.com" ? "gmail.com" : domain;
+  let name = local.split("+")[0];
+  if (host === "gmail.com") name = name.replace(/\./g, "");
+  return `${name}@${host}`;
+}
+
+export function isDisposableEmail(email) {
+  const domain = String(email || "").split("@")[1] || "";
+  return DISPOSABLE_DOMAINS.has(domain) || [...DISPOSABLE_DOMAINS].some(d => domain.endsWith(`.${d}`));
+}
 
 export const CONSENT_TEXT = Object.freeze({
   de: "Ja, ich möchte den DISORDER119-Newsletter mit neuen Stücken und Aktionen per E-Mail erhalten. Die Einwilligung kann ich jederzeit widerrufen, z. B. über den Abmeldelink in jeder Mail.",
@@ -52,7 +88,9 @@ export function isNewsletterRoute(url) {
   return path === "/newsletter/subscribe" ||
     path === "/newsletter/confirm" ||
     path === "/newsletter/unsubscribe" ||
-    path === "/admin/newsletter";
+    path === "/admin/newsletter" ||
+    path === "/admin/coupons/check" ||
+    path === "/admin/coupons/redeem";
 }
 
 function language(value) {
@@ -218,13 +256,17 @@ export async function subscribe(env, input = {}, { reqId = crypto.randomUUID(), 
   if (!mailTransportReady(env)) throw new NewsletterError("NEWSLETTER_MAIL_NOT_CONFIGURED", 503);
   const email = normalizeEmail(input.email);
   if (!email) throw new NewsletterError("INVALID_EMAIL", 400);
+  if (isDisposableEmail(email)) throw new NewsletterError("DISPOSABLE_EMAIL", 400);
   if (input.consent !== true) throw new NewsletterError("CONSENT_REQUIRED", 400);
   const lang = language(input.lang);
   const source = String(input.source || "").replace(/[^a-z0-9_-]/gi, "").slice(0, 40) || null;
   const nowIso = now.toISOString();
   const db = env.DB;
+  const canonical = canonicalEmail(email);
 
-  const existing = await db.prepare("SELECT * FROM newsletter_subscribers WHERE email_normalized=?").bind(email).first();
+  // Dieselbe Zeile fuer alle Schreibweisen eines Postfachs: die Mail geht an
+  // die zuerst eingetragene Adresse, der Code bleibt einer.
+  const existing = await db.prepare("SELECT * FROM newsletter_subscribers WHERE email_canonical=?").bind(canonical).first();
   // Schon bestaetigt: nichts verschicken, gleiche Antwort wie immer.
   if (existing?.status === "CONFIRMED") return { queued: false, reason: "ALREADY_CONFIRMED" };
   if (existing?.status === "PENDING" && existing.last_confirm_mail_at &&
@@ -268,18 +310,19 @@ export async function subscribe(env, input = {}, { reqId = crypto.randomUUID(), 
       .run();
   } else {
     await db.prepare(`INSERT INTO newsletter_subscribers
-        (id,email_normalized,status,lang,source,consent_text,consent_version,requested_at,request_ip_hash,
-         confirm_token_hash,confirm_expires_at,last_confirm_mail_at,updated_at)
-      VALUES (?,?,'PENDING',?,?,?,?,?,?,?,?,?,?)`)
-      .bind(crypto.randomUUID(), email, fields.lang, fields.source, fields.consent_text, fields.consent_version,
-        fields.requested_at, fields.request_ip_hash, fields.confirm_token_hash, fields.confirm_expires_at,
-        fields.last_confirm_mail_at, fields.updated_at)
+        (id,email_normalized,email_canonical,status,lang,source,consent_text,consent_version,requested_at,
+         request_ip_hash,confirm_token_hash,confirm_expires_at,last_confirm_mail_at,updated_at)
+      VALUES (?,?,?,'PENDING',?,?,?,?,?,?,?,?,?,?)`)
+      .bind(crypto.randomUUID(), email, canonical, fields.lang, fields.source, fields.consent_text,
+        fields.consent_version, fields.requested_at, fields.request_ip_hash, fields.confirm_token_hash,
+        fields.confirm_expires_at, fields.last_confirm_mail_at, fields.updated_at)
       .run();
   }
 
   const link = `${pageUrl(lang)}?bestaetigen=${token}`;
   const message = confirmMail(lang, link);
-  await sendMail(env, { to: email, subject: message.subject, text: message.text, html: message.html, tag: "newsletter-bestaetigung" });
+  const recipient = existing?.email_normalized || email;
+  await sendMail(env, { to: recipient, subject: message.subject, text: message.text, html: message.html, tag: "newsletter-bestaetigung" });
   return { queued: true };
 }
 
@@ -307,8 +350,17 @@ export async function confirm(env, rawToken, { reqId = crypto.randomUUID(), ip =
   // abgebrochener Versuch), wird er jetzt vergeben. Klicken zwei Tabs
   // gleichzeitig, gewinnt einer; der Code des anderen wird entwertet.
   let couponCode = "";
+  let couponLimited = false;
   const current = await db.prepare("SELECT coupon_id FROM newsletter_subscribers WHERE id=?").bind(row.id).first();
-  if (!current?.coupon_id) {
+  if (!current?.coupon_id && ip) {
+    // Viele Adressen, ein Anschluss: nach CODES_PER_NETWORK Codes in 30 Tagen
+    // bleibt die Anmeldung gueltig, aber ohne weiteren Rabatt.
+    const since = new Date(now.getTime() - CODE_NETWORK_WINDOW_DAYS * 86_400_000).toISOString();
+    const issued = await db.prepare(`SELECT COUNT(*) AS n FROM newsletter_subscribers
+      WHERE confirm_ip_hash=? AND coupon_id IS NOT NULL AND confirmed_at>=? AND id<>?`).bind(ip, since, row.id).first();
+    couponLimited = Number(issued?.n || 0) >= CODES_PER_NETWORK;
+  }
+  if (!current?.coupon_id && !couponLimited) {
     const coupon = await issueRewardCoupon(db, { usernameKey: "newsletter" });
     const linked = await db.prepare(`UPDATE newsletter_subscribers SET coupon_id=?,coupon_hint=?,updated_at=?
       WHERE id=? AND coupon_id IS NULL`).bind(coupon.id, coupon.hint, nowIso, row.id).run();
@@ -342,7 +394,50 @@ export async function confirm(env, rawToken, { reqId = crypto.randomUUID(), ip =
       logFailure("newsletter_welcome_mail_failed", reqId, err);
     }
   }
-  return { confirmed: true, lang: row.lang, couponCode, discountPercent: couponCode ? 10 : 0 };
+  return { confirmed: true, lang: row.lang, couponCode, discountPercent: couponCode ? 10 : 0, ...(couponLimited ? { couponLimited: true } : {}) };
+}
+
+// ------------------------------------------------------------------ Codes in der Admin-App
+//
+// Verkaeufe per Nachricht oder auf dem Flohmarkt laufen nicht durch den
+// Checkout. Damit ein Code dort nicht zweimal zaehlt, prueft und entwertet
+// die Admin-App ihn hier - danach lehnen Warenkorb und Checkout ihn ab.
+
+async function couponRow(db, rawCode) {
+  const code = normalizeCouponCode(rawCode);
+  if (!code) throw new NewsletterError("COUPON_FORMAT_INVALID", 400);
+  const row = await db.prepare(`SELECT c.*, s.email_normalized AS newsletter_email
+    FROM reward_coupons c LEFT JOIN newsletter_subscribers s ON s.coupon_id = c.id
+    WHERE c.code_hash=? LIMIT 1`).bind(await sha256Hex(code)).first();
+  if (!row) throw new NewsletterError("COUPON_NOT_FOUND", 404);
+  return row;
+}
+
+function couponInfo(row) {
+  return {
+    status: row.status,
+    discountPercent: Number(row.discount_bps || 0) / 100,
+    source: row.source_game ? "spiel" : row.username_key === "newsletter" ? "newsletter" : "sonstiges",
+    email: row.newsletter_email || null,
+    createdAt: row.created_at,
+    redeemedAt: row.redeemed_at || null,
+    redeemedFor: row.redeemed_order_id || null,
+  };
+}
+
+export async function checkCoupon(env, rawCode) {
+  return couponInfo(await couponRow(env.DB, rawCode));
+}
+
+export async function redeemCouponManually(env, rawCode, note = "", now = new Date()) {
+  const db = env.DB;
+  const row = await couponRow(db, rawCode);
+  if (row.status !== "ACTIVE") return { redeemed: false, ...couponInfo(row) };
+  const label = `MANUELL:${String(note || "").replace(/\s+/g, " ").trim().slice(0, 60) || "Admin-App"}`;
+  const changed = await db.prepare(`UPDATE reward_coupons SET status='REDEEMED',redeemed_order_id=?,redeemed_at=?,reserved_until=NULL
+    WHERE id=? AND status='ACTIVE'`).bind(label, now.toISOString(), row.id).run();
+  const after = await couponRow(db, rawCode);
+  return { redeemed: Boolean(changed?.meta?.changes), ...couponInfo(after) };
 }
 
 export async function unsubscribe(env, rawToken, { reqId = crypto.randomUUID(), now = new Date() } = {}) {
@@ -397,7 +492,7 @@ function headers(origin, admin) {
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
-    "Access-Control-Allow-Methods": admin ? "GET, OPTIONS" : "POST, OPTIONS",
+    "Access-Control-Allow-Methods": admin ? "GET, POST, OPTIONS" : "POST, OPTIONS",
     "Access-Control-Allow-Headers": admin ? "Content-Type, Authorization" : "Content-Type",
     "Access-Control-Max-Age": "600",
     Vary: "Origin",
@@ -452,7 +547,7 @@ async function verifyTurnstile(env, request, body) {
 
 export async function handleNewsletter(request, env, url, reqId = crypto.randomUUID(), origin = null) {
   const path = url.pathname.replace(/\/+$/, "");
-  const admin = path === "/admin/newsletter";
+  const admin = path.startsWith("/admin/");
   try {
     if (request.method === "OPTIONS") {
       const allowed = admin ? ADMIN_ORIGINS : SHOP_ORIGINS;
@@ -464,9 +559,17 @@ export async function handleNewsletter(request, env, url, reqId = crypto.randomU
       if (origin && !ADMIN_ORIGINS.includes(origin)) throw new NewsletterError("ORIGIN_NOT_ALLOWED", 403);
       const supplied = String(request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
       if (!env.ADMIN_TOKEN || !(await tokenEquals(supplied, env.ADMIN_TOKEN))) throw new NewsletterError("UNAUTHORIZED", 401);
-      if (request.method !== "GET") throw new NewsletterError("METHOD_NOT_ALLOWED", 405);
       if (!env.DB) throw new NewsletterError("NEWSLETTER_DATABASE_NOT_CONFIGURED", 503);
-      return reply({ ok: true, ...(await overview(env, { limit: url.searchParams.get("limit") })) }, 200, origin, true);
+      if (path === "/admin/newsletter") {
+        if (request.method !== "GET") throw new NewsletterError("METHOD_NOT_ALLOWED", 405);
+        return reply({ ok: true, ...(await overview(env, { limit: url.searchParams.get("limit") })) }, 200, origin, true);
+      }
+      if (request.method !== "POST") throw new NewsletterError("METHOD_NOT_ALLOWED", 405);
+      const body = await readJson(request);
+      if (path === "/admin/coupons/check") {
+        return reply({ ok: true, ...(await checkCoupon(env, body.code)) }, 200, origin, true);
+      }
+      return reply({ ok: true, ...(await redeemCouponManually(env, body.code, body.note)) }, 200, origin, true);
     }
 
     if (origin && !SHOP_ORIGINS.includes(origin)) throw new NewsletterError("ORIGIN_NOT_ALLOWED", 403);
