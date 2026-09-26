@@ -71,9 +71,9 @@ export function isDisposableEmail(email) {
 }
 
 export const CONSENT_TEXT = Object.freeze({
-  de: "Ja, ich möchte den DISORDER119-Newsletter mit neuen Stücken und Aktionen per E-Mail erhalten. Die Einwilligung kann ich jederzeit widerrufen, z. B. über den Abmeldelink in jeder Mail.",
-  en: "Yes, I want to receive the DISORDER119 newsletter with new pieces and offers by email. I can withdraw my consent at any time, e.g. via the unsubscribe link in every email.",
-  fr: "Oui, je souhaite recevoir la newsletter DISORDER119 avec les nouvelles pièces et offres par e-mail. Je peux retirer mon consentement à tout moment, p. ex. via le lien de désinscription dans chaque e-mail.",
+  de: "Ja, ich möchte den DISORDER119-Newsletter mit neuen Stücken und Aktionen per E-Mail erhalten – einschließlich der Messung, ob die Mails geöffnet und Links angeklickt werden. Die Einwilligung kann ich jederzeit widerrufen, z. B. über den Abmeldelink in jeder Mail.",
+  en: "Yes, I want to receive the DISORDER119 newsletter with new pieces and offers by email – including measurement of whether the emails are opened and links are clicked. I can withdraw my consent at any time, e.g. via the unsubscribe link in every email.",
+  fr: "Oui, je souhaite recevoir la newsletter DISORDER119 avec les nouvelles pièces et offres par e-mail – y compris la mesure de l'ouverture des e-mails et des clics sur les liens. Je peux retirer mon consentement à tout moment, p. ex. via le lien de désinscription dans chaque e-mail.",
 });
 
 export class NewsletterError extends Error {
