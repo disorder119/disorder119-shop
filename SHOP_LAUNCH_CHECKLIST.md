@@ -172,7 +172,9 @@ Die Datenschutzerklaerung (DE/EN/FR in `assets/app.js`) beschreibt das bereits.
 - [ ] Eigene Besuche ausschliessen: auf jedem eigenen Geraet einmal `https://disorder119.com/#nicht-zaehlen` oeffnen
 - Optional als Worker-Variablen: `BESUCHER_TELEGRAM=alles` (auch jeder angesehene Artikel) oder `aus`,
   `BESUCHER_TELEGRAM_PRO_STUNDE` (Standard 40), `BESUCHER_AUFBEWAHRUNG_TAGE` (Standard 30), `BESUCHER_TRACKING=aus`
-- Admin-API: `GET /admin/besucher/live?minuten=30` und `GET /admin/besucher/statistik?tage=7`
+- Admin-API: `GET /admin/besucher/live?minuten=30`, `GET /admin/besucher/statistik?tage=7` und
+  `GET /admin/besucher/auswertung?tage=7` (Besuche mit Weg, Dauer und Verweildauer je Schritt)
+- [ ] Migration `0020_besucher_verlassen.sql` angewendet (Verweildauer der letzten Seite)
 
 ## Buchhaltung
 

@@ -1,5 +1,6 @@
 /* Live-Besucher: meldet Seitenaufrufe, angesehene Artikel, Warenkorb-
-   Aenderungen und geoeffnete Anfragen an den Shop-Worker (POST /besuch).
+   Aenderungen, geoeffnete Anfragen und das Verlassen der Seite (fuer die
+   Verweildauer) an den Shop-Worker (POST /besuch).
    Keine Cookies, nichts wird fuer das Tracking im Browser gespeichert.
    "Do Not Track" und Global Privacy Control werden respektiert.
    Eigene Besuche ausschliessen: einmal https://disorder119.com/#nicht-zaehlen
@@ -70,6 +71,38 @@
   // Artikel-Detail auf der Startseite (Overlay ohne eigene URL).
   document.addEventListener("d119:artikel", function (e) {
     if (e.detail && e.detail.id !== undefined) senden({ t: "artikel", a: e.detail.id });
+  });
+
+  // Seitenwechsel ohne Neuladen (Warenkorb, Kategorien, Universe laufen per
+  // pushState auf der Startseite): jede neue Adresse zaehlt als Seite.
+  var letzterPfad = location.pathname;
+  function pfadPruefen() {
+    if (location.pathname === letzterPfad) return;
+    letzterPfad = location.pathname;
+    senden({ t: "seite" });
+  }
+  try {
+    var pushOriginal = history.pushState;
+    history.pushState = function () {
+      var ergebnis = pushOriginal.apply(this, arguments);
+      setTimeout(pfadPruefen, 0);
+      return ergebnis;
+    };
+  } catch (e) {}
+  window.addEventListener("popstate", function () { setTimeout(pfadPruefen, 0); });
+
+  // Verlassen oder in den Hintergrund: ergibt die Verweildauer der letzten
+  // Seite. pagehide und visibilitychange feuern beim Schliessen oft beide.
+  var zuletztVerlassen = 0;
+  function verlassen() {
+    var jetzt = Date.now();
+    if (jetzt - zuletztVerlassen < 2000) return;
+    zuletztVerlassen = jetzt;
+    senden({ t: "verlassen" });
+  }
+  window.addEventListener("pagehide", verlassen);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") verlassen();
   });
 
   var artikel = window.ARTICLE_ITEM;

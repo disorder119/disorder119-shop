@@ -292,7 +292,7 @@
         "<h3>Shop-Server und E-Mail-Empfang (Cloudflare)</h3><p>Kundenkonto, Newsletter, Mietanfragen und Rabattcodes laufen über unseren Server bei Cloudflare (Cloudflare, Inc., San Francisco, USA); die Datenbank liegt in Westeuropa. Auch E-Mails an Adressen von disorder119.com laufen über Cloudflare zu uns. Cloudflare verarbeitet dabei technisch notwendige Verbindungsdaten wie deine IP-Adresse in unserem Auftrag (Art. 28 DSGVO). Soweit dabei Daten in die USA gelangen, ist Cloudflare nach dem EU-US Data Privacy Framework zertifiziert (Art. 45 DSGVO).</p>" +
         "<h3>Keine Tracking-Cookies</h3><p>Diese Seite verwendet keine Analyse-, Marketing- oder Tracking-Cookies.</p>" +
         "<h3>Besucherstatistik ohne Cookies</h3><p>Damit wir sehen, welche Stücke gefragt sind, meldet die Seite an unseren Server bei Cloudflare " +
-        "(Cloudflare Inc., Auftragsverarbeitung): aufgerufene Seite bzw. Artikel, Warenkorb-Änderungen, das Öffnen einer Bestellanfrage, " +
+        "(Cloudflare Inc., Auftragsverarbeitung): aufgerufene Seite bzw. Artikel und wie lange sie geöffnet war, Warenkorb-Änderungen, das Öffnen einer Bestellanfrage, " +
         "die verweisende Website sowie Gerätetyp und Browser. Aus deiner IP-Adresse wird dabei nur der ungefähre Ort (Stadt, Region, Land) abgeleitet; " +
         "die IP-Adresse selbst wird nicht gespeichert. Zur Zuordnung eines Besuchs dient eine zufällige Kennung, die täglich wechselt und sich danach " +
         "keiner Person mehr zuordnen lässt. Es werden keine Cookies gesetzt und keine Daten auf deinem Gerät gespeichert. " +
@@ -492,7 +492,7 @@
         "<h3>Shop server and incoming email (Cloudflare)</h3><p>The customer account, newsletter, rental requests and discount codes run on our server at Cloudflare (Cloudflare, Inc., San Francisco, USA); the database is located in Western Europe. Emails to disorder119.com addresses also reach us via Cloudflare. Cloudflare processes technically necessary connection data such as your IP address on our behalf (Art. 28 GDPR). Where data reaches the USA, Cloudflare is certified under the EU-US Data Privacy Framework (Art. 45 GDPR).</p>" +
         "<h3>No tracking cookies</h3><p>This site does not use analytics, marketing or tracking cookies.</p>" +
         "<h3>Cookieless visitor statistics</h3><p>So we can see which pieces are in demand, the site reports to our server at Cloudflare " +
-        "(Cloudflare Inc., data processor): the page or item viewed, cart changes, opening an order request, the referring website, " +
+        "(Cloudflare Inc., data processor): the page or item viewed and how long it stayed open, cart changes, opening an order request, the referring website, " +
         "and device type and browser. Only the approximate location (city, region, country) is derived from your IP address; " +
         "the IP address itself is not stored. A random identifier that changes daily links the events of one visit and cannot be traced back to a person afterwards. " +
         "No cookies are set and nothing is stored on your device. The operator receives a short Telegram notification (location, device, item) without the IP address. " +
@@ -692,7 +692,7 @@
         "<h3>Serveur de la boutique et réception d'e-mails (Cloudflare)</h3><p>Le compte client, la newsletter, les demandes de location et les codes de réduction passent par notre serveur chez Cloudflare (Cloudflare, Inc., San Francisco, États-Unis) ; la base de données se trouve en Europe de l'Ouest. Les e-mails adressés à disorder119.com nous parviennent également via Cloudflare. Cloudflare traite les données de connexion techniquement nécessaires, comme ton adresse IP, pour notre compte (art. 28 du RGPD). Dans la mesure où des données parviennent aux États-Unis, Cloudflare est certifié selon le EU-US Data Privacy Framework (art. 45 du RGPD).</p>" +
         "<h3>Aucun cookie de suivi</h3><p>Ce site n'utilise aucun cookie d'analyse, marketing ou de suivi.</p>" +
         "<h3>Statistiques de visite sans cookies</h3><p>Pour savoir quelles pièces intéressent, le site transmet à notre serveur chez Cloudflare " +
-        "(Cloudflare Inc., sous-traitant) : la page ou l'article consulté, les modifications du panier, l'ouverture d'une demande de commande, " +
+        "(Cloudflare Inc., sous-traitant) : la page ou l'article consulté et la durée d'affichage, les modifications du panier, l'ouverture d'une demande de commande, " +
         "le site référent ainsi que le type d'appareil et le navigateur. Seule la localisation approximative (ville, région, pays) est déduite de ton adresse IP ; " +
         "l'adresse IP elle-même n'est pas enregistrée. Un identifiant aléatoire qui change chaque jour relie les événements d'une visite et ne permet plus ensuite d'identifier une personne. " +
         "Aucun cookie n'est déposé et rien n'est enregistré sur ton appareil. L'exploitant reçoit une brève notification Telegram (lieu, appareil, article) sans adresse IP. " +
