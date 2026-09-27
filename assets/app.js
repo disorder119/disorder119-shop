@@ -285,7 +285,16 @@
         "<h3>Hosting</h3><p>Diese Seite wird bei GitHub Pages (GitHub Inc.) gehostet. Beim Aufruf verarbeitet GitHub technisch " +
         "notwendige Zugriffsdaten (u. a. IP-Adresse) zur Auslieferung der Seite. Näheres in der " +
         '<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>' +
-        "<h3>Keine Tracking-Cookies</h3><p>Diese Seite verwendet keine Analyse-, Marketing- oder Tracking-Cookies.</p>"
+        "<h3>Keine Tracking-Cookies</h3><p>Diese Seite verwendet keine Analyse-, Marketing- oder Tracking-Cookies.</p>" +
+        "<h3>Besucherstatistik ohne Cookies</h3><p>Damit wir sehen, welche Stücke gefragt sind, meldet die Seite an unseren Server bei Cloudflare " +
+        "(Cloudflare Inc., Auftragsverarbeitung): aufgerufene Seite bzw. Artikel, Warenkorb-Änderungen, das Öffnen einer Bestellanfrage, " +
+        "die verweisende Website sowie Gerätetyp und Browser. Aus deiner IP-Adresse wird dabei nur der ungefähre Ort (Stadt, Region, Land) abgeleitet; " +
+        "die IP-Adresse selbst wird nicht gespeichert. Zur Zuordnung eines Besuchs dient eine zufällige Kennung, die täglich wechselt und sich danach " +
+        "keiner Person mehr zuordnen lässt. Es werden keine Cookies gesetzt und keine Daten auf deinem Gerät gespeichert. " +
+        "Der Betreiber erhält über Telegram eine kurze Benachrichtigung (Ort, Gerät, Artikel) ohne IP-Adresse. " +
+        "Rechtsgrundlage ist unser berechtigtes Interesse an der Verbesserung des Angebots (Art. 6 Abs. 1 lit. f DSGVO). " +
+        "Die Daten werden nach 30 Tagen gelöscht. Wenn dein Browser „Do Not Track“ oder „Global Privacy Control“ sendet, wird nichts erfasst. " +
+        "Du kannst der Verarbeitung jederzeit per E-Mail widersprechen.</p>"
     },
     en: {
       langGroupAria: "Choose language", cartOpenAria: "Open cart",
@@ -471,7 +480,14 @@
         "<h3>Hosting</h3><p>This site is hosted on GitHub Pages (GitHub Inc.). GitHub technically processes " +
         "access data required for delivery (including IP address). See the " +
         '<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub privacy statement</a> for details.</p>' +
-        "<h3>No tracking cookies</h3><p>This site does not use analytics, marketing or tracking cookies.</p>"
+        "<h3>No tracking cookies</h3><p>This site does not use analytics, marketing or tracking cookies.</p>" +
+        "<h3>Cookieless visitor statistics</h3><p>So we can see which pieces are in demand, the site reports to our server at Cloudflare " +
+        "(Cloudflare Inc., data processor): the page or item viewed, cart changes, opening an order request, the referring website, " +
+        "and device type and browser. Only the approximate location (city, region, country) is derived from your IP address; " +
+        "the IP address itself is not stored. A random identifier that changes daily links the events of one visit and cannot be traced back to a person afterwards. " +
+        "No cookies are set and nothing is stored on your device. The operator receives a short Telegram notification (location, device, item) without the IP address. " +
+        "The legal basis is our legitimate interest in improving the shop (Art. 6(1)(f) GDPR). Data is deleted after 30 days. " +
+        "If your browser sends “Do Not Track” or “Global Privacy Control”, nothing is recorded. You can object at any time by e-mail.</p>"
     },
     fr: {
       langGroupAria: "Choisir la langue", cartOpenAria: "Ouvrir le panier",
@@ -659,7 +675,14 @@
         "<h3>Hébergement</h3><p>Ce site est hébergé sur GitHub Pages (GitHub Inc.). Lors de l'accès, GitHub traite les " +
         "données techniques nécessaires (dont l'adresse IP) pour la mise à disposition du site. Plus de détails dans la " +
         '<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">politique de confidentialité de GitHub</a>.</p>' +
-        "<h3>Aucun cookie de suivi</h3><p>Ce site n'utilise aucun cookie d'analyse, marketing ou de suivi.</p>"
+        "<h3>Aucun cookie de suivi</h3><p>Ce site n'utilise aucun cookie d'analyse, marketing ou de suivi.</p>" +
+        "<h3>Statistiques de visite sans cookies</h3><p>Pour savoir quelles pièces intéressent, le site transmet à notre serveur chez Cloudflare " +
+        "(Cloudflare Inc., sous-traitant) : la page ou l'article consulté, les modifications du panier, l'ouverture d'une demande de commande, " +
+        "le site référent ainsi que le type d'appareil et le navigateur. Seule la localisation approximative (ville, région, pays) est déduite de ton adresse IP ; " +
+        "l'adresse IP elle-même n'est pas enregistrée. Un identifiant aléatoire qui change chaque jour relie les événements d'une visite et ne permet plus ensuite d'identifier une personne. " +
+        "Aucun cookie n'est déposé et rien n'est enregistré sur ton appareil. L'exploitant reçoit une brève notification Telegram (lieu, appareil, article) sans adresse IP. " +
+        "La base légale est notre intérêt légitime à améliorer la boutique (art. 6, par. 1, point f du RGPD). Les données sont supprimées après 30 jours. " +
+        "Si ton navigateur envoie « Do Not Track » ou « Global Privacy Control », rien n'est enregistré. Tu peux t'y opposer à tout moment par e-mail.</p>"
     }
   };
 
@@ -870,6 +893,16 @@
   var SHOP_CONFIG = window.SHOP_CONFIG || {
     whatsappNumber: "", email: "", paypalClientId: "", shopWorkerUrl: ""
   };
+
+  // Live-Besucher (assets/besucher.js): nur mit eingerichtetem Shop-Worker.
+  if (/^https:\/\//.test(String(SHOP_CONFIG.shopWorkerUrl || ""))) {
+    try {
+      var besucherScript = document.createElement("script");
+      besucherScript.src = "/assets/besucher.js";
+      besucherScript.defer = true;
+      document.head.appendChild(besucherScript);
+    } catch (e) {}
+  }
 
   // Bild-/Asset-Pfade aus items.json sind Site-Wurzel-relativ ohne fuehrenden
   // Schraegstrich (z.B. "assets/img/123/0.webp"). Diese Seite (index.html)
@@ -2008,6 +2041,7 @@
   function openModal(it) {
     lastFocused = document.activeElement;
     currentItem = it;
+    try { document.dispatchEvent(new CustomEvent("d119:artikel", { detail: { id: it.id } })); } catch (e) {}
     showPhoto(0);
     modalBrand.textContent = it.brand || t("noBrand");
     modalTitle.textContent = it.title;

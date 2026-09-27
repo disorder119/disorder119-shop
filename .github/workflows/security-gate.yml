@@ -66,6 +66,12 @@ jobs:
           node --check shop-worker/postfach.js
           node --test shop-worker/postfach.test.mjs
 
+      - name: Live-Besucher (Statistik und Telegram) pruefen
+        run: |
+          node --check shop-worker/besucher.js
+          node --check assets/besucher.js
+          node --test shop-worker/besucher.test.mjs
+
       - name: Gutschein-Migration pruefen
         run: |
           {

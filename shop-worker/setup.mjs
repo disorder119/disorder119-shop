@@ -46,6 +46,7 @@ export const MIGRATION_MARKERS = Object.freeze({
   "0011_customer_accounts.sql": "customer_login_tokens",
   "0012_rechnungsarchiv.sql": "rechnungen",
   "0013_postfach.sql": "postfach_nachrichten",
+  "0014_besucher.sql": "besucher_ereignisse",
 });
 
 // ------------------------------------------------------------------ Ausgabe

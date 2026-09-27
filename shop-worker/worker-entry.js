@@ -20,6 +20,7 @@ import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
 import { handleVersand, istVersandRoute } from "./dhl.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
 import { handleInboundEmail, handlePostfach, istPostfachRoute } from "./postfach.js";
+import { besucherAufraeumen, handleBesucher, istBesucherRoute } from "./besucher.js";
 import {
   CouponCheckoutError,
   applyCouponToCreatedOrder,
@@ -199,6 +200,10 @@ export default {
         return finish(await handleBuchhaltung(request, runtimeEnv, url, reqId, origin));
       }
 
+      if (istBesucherRoute(url)) {
+        return finish(await handleBesucher(request, runtimeEnv, url, reqId, ctx));
+      }
+
       if (istPostfachRoute(url)) {
         return finish(await handlePostfach(request, runtimeEnv, url, reqId, origin));
       }
@@ -349,5 +354,6 @@ export default {
       "operations_automation_failed",
       reqId,
     );
+    await runBackground(ctx, besucherAufraeumen(env, scheduledTime), "besucher_cleanup_failed", reqId);
   },
 };

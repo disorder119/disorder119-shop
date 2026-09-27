@@ -36,3 +36,9 @@ GAME_COUPONS_MAX_PER_USER_PER_DAY=""
 # Legacy local-only bridge. Keep disabled for remote/production deployments.
 ALLOW_LEGACY_ADMIN_TOKEN="false"
 ADMIN_TOKEN=""
+
+# Live-Besucher (optional, normale Variablen, keine Geheimnisse)
+# BESUCHER_TRACKING=aus            # Erfassung komplett abschalten
+# BESUCHER_TELEGRAM=wichtig        # wichtig (Standard) | alles | aus
+# BESUCHER_TELEGRAM_PRO_STUNDE=40  # Deckel fuer Telegram-Meldungen pro Stunde
+# BESUCHER_AUFBEWAHRUNG_TAGE=30    # danach loescht der Cron die Ereignisse
