@@ -387,6 +387,16 @@
     try { window.localStorage.setItem(CART_KEY, JSON.stringify(c)); } catch (e) {}
   }
 
+  // Live-Besucher (assets/besucher.js): nur mit eingerichtetem Shop-Worker.
+  if (/^https:\/\//.test(String(SHOP_CONFIG.shopWorkerUrl || ""))) {
+    try {
+      var besucherScript = document.createElement("script");
+      besucherScript.src = "/assets/besucher.js";
+      besucherScript.defer = true;
+      document.head.appendChild(besucherScript);
+    } catch (e) {}
+  }
+
   var cartBtn = document.getElementById("addToCartBtn");
   var pageHeadCartCount = document.getElementById("pageHeadCartCount");
   function refreshCartBtn() {

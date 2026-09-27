@@ -137,7 +137,12 @@ export async function resolveTelegramChatId(env, reqId = crypto.randomUUID()) {
 
 export async function sendTelegramMessage(env, text, reqId = crypto.randomUUID()) {
   if (!telegramTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
-  const cleanText = safeText(text, 4096);
+  // Zeilenumbrueche bleiben erhalten, sonst klebt jede Meldung in einer Zeile.
+  const cleanText = String(text ?? "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, " ")
+    .trim()
+    .slice(0, 4096);
   if (!cleanText) return { sent: false, reason: "EMPTY_MESSAGE" };
   const chatId = await resolveTelegramChatId(env, reqId);
   if (!chatId) return { sent: false, reason: "TARGET_NOT_CONNECTED" };

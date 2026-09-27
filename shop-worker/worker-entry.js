@@ -22,6 +22,7 @@ import { handleDhlQr, isDhlQrRoute } from "./dhl-qr.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
 import { handleIncomingEmail, handlePostfach, isPostfachRoute } from "./postfach.js";
+import { besucherAufraeumen, handleBesucher, istBesucherRoute } from "./besucher.js";
 import { handleNewsletter, isNewsletterRoute } from "./newsletter.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
 import { handleAdminAuth, isAdminAuthRoute } from "./admin-passkeys.js";
@@ -228,6 +229,10 @@ export default {
       }
 
       // Postfach der Admin-App (Mails an kontakt@disorder119.com).
+      if (istBesucherRoute(url)) {
+        return finish(await handleBesucher(request, runtimeEnv, url, reqId, ctx));
+      }
+
       if (isPostfachRoute(url)) {
         return finish(await handlePostfach(request, runtimeEnv, url, reqId, origin));
       }
@@ -391,6 +396,7 @@ export default {
       "operations_automation_failed",
       reqId,
     );
+    await runBackground(ctx, besucherAufraeumen(env, scheduledTime), "besucher_cleanup_failed", reqId);
   },
 
   // Cloudflare Email Routing: kontakt@disorder119.com -> Postfach + Kopie ins Gmail.

@@ -153,6 +153,27 @@ Eintraege im Porkbun-Panel:
 5. Danach `config/shop-config.json` → `email` auf die neue Adresse umstellen,
    damit Impressum, AGB und Kontaktknoepfe dieselbe Adresse nennen.
 
+## Live-Besucher (Telegram + Admin)
+
+Der Shop meldet ohne Cookies an `POST /besuch`: Seitenaufruf, angesehener Artikel,
+Warenkorb rein/raus und geoeffnete Anfrage (WhatsApp/E-Mail). Telegram bekommt:
+
+- neuer Besucher (Ort, Geraet, Browser, Herkunft wie instagram.com, erste Seite)
+- jedes Teil, das in den Warenkorb wandert, mit Titel und Preis
+- jede geoeffnete Anfrage mit dem Warenkorbinhalt
+
+Die IP-Adresse wird weder gespeichert noch nach Telegram geschickt; der Ort kommt
+grob aus Cloudflare. Browser mit "Do Not Track"/GPC und Bots werden nicht erfasst.
+Die Datenschutzerklaerung (DE/EN/FR in `assets/app.js`) beschreibt das bereits.
+
+- [ ] `shopWorkerUrl` in `config/shop-config.json` gesetzt (ohne diese Adresse sendet der Shop nichts)
+- [ ] Migration `0019_besucher.sql` angewendet (`npx wrangler d1 migrations apply <DB> --remote`)
+- [ ] Telegram-Bot verbunden (`TELEGRAM_BOT_TOKEN`, siehe oben)
+- [ ] Eigene Besuche ausschliessen: auf jedem eigenen Geraet einmal `https://disorder119.com/#nicht-zaehlen` oeffnen
+- Optional als Worker-Variablen: `BESUCHER_TELEGRAM=alles` (auch jeder angesehene Artikel) oder `aus`,
+  `BESUCHER_TELEGRAM_PRO_STUNDE` (Standard 40), `BESUCHER_AUFBEWAHRUNG_TAGE` (Standard 30), `BESUCHER_TRACKING=aus`
+- Admin-API: `GET /admin/besucher/live?minuten=30` und `GET /admin/besucher/statistik?tage=7`
+
 ## Buchhaltung
 
 Aufgebaut wie der Vinted-Datenexport: eine Liste aller Bestellungen, eine
