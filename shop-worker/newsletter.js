@@ -25,6 +25,7 @@
 // Brevo haengt an jede Kampagne selbst einen Abmeldelink.
 import { SHOP_URL, escapeHtml, mailTransportReady, normalizeEmail, sendMail } from "./customer-mail.js";
 import { issueRewardCoupon, normalizeCouponCode } from "./game-rewards.js";
+import { absatz, artikelRaster, artikelStreifen, codeBox, kleingedruckt, knopf, mailRahmen, neuesteArtikel, shopHome } from "./mail-design.js";
 
 const SHOP_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -91,7 +92,8 @@ export function isNewsletterRoute(url) {
     path === "/newsletter/unsubscribe" ||
     path === "/admin/newsletter" ||
     path === "/admin/coupons/check" ||
-    path === "/admin/coupons/redeem";
+    path === "/admin/coupons/redeem" ||
+    path === "/admin/newsletter/entwurf";
 }
 
 function language(value) {
@@ -135,96 +137,122 @@ function plusHours(hours, from = new Date()) {
 }
 
 // ------------------------------------------------------------------ Mails
+//
+// Schwarz wie der Shop (mail-design.js): die Bestaetigungsmail zeigt einen
+// Streifen mit drei neuen Stuecken, die Willkommensmail Code, Knopf und die
+// vier neuesten Artikel. Ohne Katalog (Abruf fehlgeschlagen) kommen beide
+// Mails eben ohne Bilder - der Text allein reicht immer.
 
 const MAIL_TEXT = {
   de: {
+    eyebrow: "Newsletter",
     confirmSubject: "Bitte bestätige deine Anmeldung – DISORDER119",
     confirmTitle: "Fast geschafft",
-    confirmBody: "Bestätige deine Anmeldung zum DISORDER119-Newsletter. Danach bekommst du deinen Code für 10 % auf deine nächste Bestellung.",
+    confirmBody: "Ein Klick noch: Bestätige deine Anmeldung zum DISORDER119-Newsletter. Danach bekommst du deinen Code für 10 % auf deine nächste Bestellung.",
     confirmButton: "Anmeldung bestätigen",
     confirmNote: `Der Link gilt ${CONFIRM_TTL_HOURS} Stunden. Wenn du dich nicht angemeldet hast, ignorier diese Mail einfach – ohne Klick passiert nichts.`,
-    welcomeSubject: "Willkommen bei DISORDER119 – dein 10-%-Code",
-    welcomeTitle: "Willkommen im Archiv",
-    welcomeBody: "Danke für deine Anmeldung. Hier ist dein Code für 10 % auf deine nächste Bestellung – einmal einlösbar, einfach im Warenkorb eingeben:",
-    welcomeShop: "Zum Shop",
-    welcomeNote: "Du bekommst ab jetzt Neuheiten und Aktionen von DISORDER119. Abmelden kannst du dich jederzeit:",
+    confirmPreview: "Nur noch ein Klick – dann gehören 10 % dir.",
+    welcomeSubject: "Dein 10-%-Code – willkommen bei DISORDER119",
+    welcomeEyebrow: "Willkommen im Archiv",
+    welcomeTitle: "10 % für dich",
+    welcomeBody: "Danke für deine Anmeldung. Dein Code gilt für deine nächste Bestellung – einfach im Warenkorb eingeben.",
+    codeNote: "Einmal einlösbar · 10 % auf deine nächste Bestellung",
+    welcomeShop: "Zum Archiv",
+    newArrivals: "Neu im Archiv",
+    welcomePreview: "Dein Code für 10 % – und die neuesten Stücke im Archiv.",
     unsubscribe: "Newsletter abbestellen",
   },
   en: {
+    eyebrow: "Newsletter",
     confirmSubject: "Please confirm your subscription – DISORDER119",
     confirmTitle: "Almost there",
-    confirmBody: "Confirm your subscription to the DISORDER119 newsletter. Afterwards you get your code for 10% off your next order.",
+    confirmBody: "One more click: confirm your subscription to the DISORDER119 newsletter. Afterwards you get your code for 10% off your next order.",
     confirmButton: "Confirm subscription",
     confirmNote: `The link is valid for ${CONFIRM_TTL_HOURS} hours. If you didn't sign up, just ignore this email – nothing happens without a click.`,
-    welcomeSubject: "Welcome to DISORDER119 – your 10% code",
-    welcomeTitle: "Welcome to the archive",
-    welcomeBody: "Thanks for subscribing. Here is your code for 10% off your next order – valid once, just enter it in the cart:",
-    welcomeShop: "Visit the shop",
-    welcomeNote: "From now on you'll get new arrivals and offers from DISORDER119. You can unsubscribe at any time:",
+    confirmPreview: "One more click – then 10% is yours.",
+    welcomeSubject: "Your 10% code – welcome to DISORDER119",
+    welcomeEyebrow: "Welcome to the archive",
+    welcomeTitle: "10% for you",
+    welcomeBody: "Thanks for subscribing. Your code is valid for your next order – just enter it in the cart.",
+    codeNote: "Valid once · 10% off your next order",
+    welcomeShop: "Visit the archive",
+    newArrivals: "New in the archive",
+    welcomePreview: "Your 10% code – and the newest pieces in the archive.",
     unsubscribe: "Unsubscribe",
   },
   fr: {
+    eyebrow: "Newsletter",
     confirmSubject: "Confirme ton inscription – DISORDER119",
     confirmTitle: "Presque fini",
-    confirmBody: "Confirme ton inscription à la newsletter DISORDER119. Ensuite, tu recevras ton code de 10 % sur ta prochaine commande.",
+    confirmBody: "Encore un clic : confirme ton inscription à la newsletter DISORDER119. Ensuite, tu recevras ton code de 10 % sur ta prochaine commande.",
     confirmButton: "Confirmer l'inscription",
     confirmNote: `Le lien est valable ${CONFIRM_TTL_HOURS} heures. Si tu ne t'es pas inscrit·e, ignore simplement cet e-mail – rien ne se passe sans clic.`,
-    welcomeSubject: "Bienvenue chez DISORDER119 – ton code de 10 %",
-    welcomeTitle: "Bienvenue dans l'archive",
-    welcomeBody: "Merci pour ton inscription. Voici ton code de 10 % sur ta prochaine commande – valable une fois, à saisir dans le panier :",
-    welcomeShop: "Voir la boutique",
-    welcomeNote: "Tu recevras désormais les nouveautés et offres de DISORDER119. Désinscription possible à tout moment :",
+    confirmPreview: "Encore un clic – et les 10 % sont à toi.",
+    welcomeSubject: "Ton code de 10 % – bienvenue chez DISORDER119",
+    welcomeEyebrow: "Bienvenue dans l'archive",
+    welcomeTitle: "10 % pour toi",
+    welcomeBody: "Merci pour ton inscription. Ton code est valable pour ta prochaine commande – à saisir dans le panier.",
+    codeNote: "Valable une fois · 10 % sur ta prochaine commande",
+    welcomeShop: "Voir l'archive",
+    newArrivals: "Nouveau dans l'archive",
+    welcomePreview: "Ton code de 10 % – et les nouvelles pièces de l'archive.",
     unsubscribe: "Se désinscrire",
   },
 };
 
-function mailFrame(lang, title, inner) {
-  return `<!DOCTYPE html>
-<html lang="${lang}"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head>
-<body style="margin:0;padding:0;background:#f2efe7;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2efe7;padding:24px 12px;">
-<tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#141310;font-size:15px;line-height:1.55;">
-  <tr><td style="background:#0b0b0b;color:#f2efe7;padding:22px 28px;letter-spacing:0.22em;font-size:13px;font-weight:700;">DISORDER119</td></tr>
-  <tr><td style="padding:28px;">
-    <h1 style="margin:0 0 12px;font-size:20px;">${escapeHtml(title)}</h1>
-${inner}
-  </td></tr>
-</table>
-</td></tr></table>
-</body></html>`;
+const ABSTAND = (px) => `<div style="height:${px}px;line-height:${px}px;font-size:1px;">&nbsp;</div>`;
+
+function artikelText(artikel) {
+  return artikel.map(a => `${a.marke} – ${a.titel} – ${a.preis}\n${a.link}`).join("\n\n");
 }
 
-function button(href, label) {
-  return `<p style="margin:0 0 20px;"><a href="${escapeHtml(href)}" style="display:inline-block;background:#0b0b0b;color:#f2efe7;text-decoration:none;padding:13px 22px;font-weight:700;letter-spacing:0.06em;">${escapeHtml(label)}</a></p>`;
-}
-
-export function confirmMail(lang, link) {
-  const t = MAIL_TEXT[language(lang)];
+export function confirmMail(lang, link, artikel = []) {
+  const l = language(lang);
+  const t = MAIL_TEXT[l];
   return {
     subject: t.confirmSubject,
     text: ["DISORDER119", "", t.confirmBody, "", link, "", t.confirmNote].join("\n"),
-    html: mailFrame(language(lang), t.confirmTitle, [
-      `    <p style="margin:0 0 20px;">${escapeHtml(t.confirmBody)}</p>`,
-      `    ${button(link, t.confirmButton)}`,
-      `    <p style="margin:0;color:#6f6a60;font-size:13px;">${escapeHtml(t.confirmNote)}</p>`,
-    ].join("\n")),
+    html: mailRahmen({
+      lang: l, titel: t.confirmTitle, eyebrow: t.eyebrow, vorschau: t.confirmPreview,
+      inhalt: absatz(t.confirmBody) + knopf(link, t.confirmButton) + kleingedruckt(t.confirmNote) + artikelStreifen(artikel),
+    }),
   };
 }
 
-export function welcomeMail(lang, code, unsubscribeLink) {
-  const t = MAIL_TEXT[language(lang)];
-  const shop = `${SHOP_URL}${language(lang) === "de" ? "/" : `/${language(lang)}/`}`;
+export function welcomeMail(lang, code, unsubscribeLink, artikel = []) {
+  const l = language(lang);
+  const t = MAIL_TEXT[l];
   return {
     subject: t.welcomeSubject,
-    text: ["DISORDER119", "", t.welcomeBody, "", code, "", shop, "", t.welcomeNote, unsubscribeLink].join("\n"),
-    html: mailFrame(language(lang), t.welcomeTitle, [
-      `    <p style="margin:0 0 16px;">${escapeHtml(t.welcomeBody)}</p>`,
-      `    <p style="margin:0 0 22px;font-family:'Courier New',Courier,monospace;font-size:20px;font-weight:700;letter-spacing:0.08em;border:2px solid #0b0b0b;padding:12px 16px;text-align:center;">${escapeHtml(code)}</p>`,
-      `    ${button(shop, t.welcomeShop)}`,
-      `    <p style="margin:0;color:#6f6a60;font-size:13px;">${escapeHtml(t.welcomeNote)} <a href="${escapeHtml(unsubscribeLink)}" style="color:#6f6a60;">${escapeHtml(t.unsubscribe)}</a></p>`,
-    ].join("\n")),
+    text: ["DISORDER119", "", t.welcomeBody, "", code, "", shopHome(l),
+      ...(artikel.length ? ["", t.newArrivals.toUpperCase(), "", artikelText(artikel)] : []),
+      "", `${t.unsubscribe}: ${unsubscribeLink}`].join("\n"),
+    html: mailRahmen({
+      lang: l, titel: t.welcomeTitle, eyebrow: t.welcomeEyebrow, vorschau: t.welcomePreview, abmeldeLink: unsubscribeLink,
+      inhalt: absatz(t.welcomeBody) + codeBox(code, t.codeNote) + ABSTAND(32) + knopf(shopHome(l), t.welcomeShop) +
+        ABSTAND(44) + artikelRaster(artikel, t.newArrivals),
+    }),
   };
+}
+
+// Vorlage fuer einen richtigen Newsletter (Brevo-Kampagne): die neuesten
+// Stuecke im Raster. {{ unsubscribe }} ersetzt Brevo durch den Abmeldelink.
+export const ENTWURF_TEXT = Object.freeze({
+  betreff: "Neu im Archiv – DISORDER119",
+  vorschau: "Die neuesten Stücke im Archiv – jedes gibt es nur einmal.",
+  titel: "Neu im Archiv",
+  eyebrow: "DISORDER119 Newsletter",
+  einleitung: "Frisch fotografiert und beschrieben: die neuesten Stücke im Archiv. Jedes davon gibt es genau einmal – wer zuerst kommt.",
+  knopf: "Alle Stücke ansehen",
+});
+
+export function entwurfMail(artikel) {
+  return mailRahmen({
+    lang: "de", titel: ENTWURF_TEXT.titel, eyebrow: ENTWURF_TEXT.eyebrow, vorschau: ENTWURF_TEXT.vorschau,
+    abmeldeLink: "{{ unsubscribe }}",
+    inhalt: absatz(ENTWURF_TEXT.einleitung) + knopf(shopHome("de"), ENTWURF_TEXT.knopf) + ABSTAND(44) +
+      artikelRaster(artikel, "") + ABSTAND(8) + knopf(shopHome("de"), ENTWURF_TEXT.knopf),
+  });
 }
 
 // ------------------------------------------------------------------ Brevo-Liste
@@ -355,7 +383,7 @@ export async function subscribe(env, input = {}, { reqId = crypto.randomUUID(), 
   }
 
   const link = `${pageUrl(lang)}?bestaetigen=${token}`;
-  const message = confirmMail(lang, link);
+  const message = confirmMail(lang, link, await neuesteArtikel(3, lang));
   const recipient = existing?.email_normalized || email;
   await sendMail(env, { to: recipient, subject: message.subject, text: message.text, html: message.html, tag: "newsletter-bestaetigung" });
   return { queued: true };
@@ -422,7 +450,7 @@ export async function confirm(env, rawToken, { reqId = crypto.randomUUID(), ip =
       .bind(await sha256Hex(unsubscribeToken), row.id).run();
     const unsubscribeLink = `${pageUrl(row.lang)}?abmelden=${unsubscribeToken}`;
     try {
-      const message = welcomeMail(row.lang, couponCode, unsubscribeLink);
+      const message = welcomeMail(row.lang, couponCode, unsubscribeLink, await neuesteArtikel(4, row.lang));
       await sendMail(env, { to: row.email_normalized, subject: message.subject, text: message.text, html: message.html, tag: "newsletter-willkommen" });
     } catch (err) {
       // Der Code steht trotzdem auf der Seite - die Mail ist nur die Kopie.
@@ -504,10 +532,13 @@ export async function overview(env, { limit = 100 } = {}) {
   const counts = { PENDING: 0, CONFIRMED: 0, UNSUBSCRIBED: 0 };
   const { results: groups } = await db.prepare("SELECT status, COUNT(*) AS n FROM newsletter_subscribers GROUP BY status").all();
   for (const group of groups || []) counts[group.status] = Number(group.n || 0);
-  const { results } = await db.prepare(`SELECT s.email_normalized AS email, s.lang, s.source, s.confirmed_at AS confirmedAt,
+  // Alle Anmeldungen, neueste zuerst: bestaetigte, noch offene und
+  // abgemeldete - die Admin-App zeigt den Status dazu.
+  const { results } = await db.prepare(`SELECT s.email_normalized AS email, s.status, s.lang, s.source,
+      s.requested_at AS requestedAt, s.confirmed_at AS confirmedAt, s.unsubscribed_at AS unsubscribedAt,
       s.coupon_hint AS couponHint, c.status AS couponStatus
     FROM newsletter_subscribers s LEFT JOIN reward_coupons c ON c.id = s.coupon_id
-    WHERE s.status='CONFIRMED' ORDER BY s.confirmed_at DESC LIMIT ?`)
+    ORDER BY COALESCE(s.unsubscribed_at, s.confirmed_at, s.requested_at) DESC LIMIT ?`)
     .bind(Math.max(1, Math.min(500, Number(limit) || 100))).all();
   return {
     confirmed: counts.CONFIRMED,
@@ -517,6 +548,42 @@ export async function overview(env, { limit = 100 } = {}) {
     notInBrevo: Number((await db.prepare(`SELECT COUNT(*) AS n FROM newsletter_subscribers
       WHERE status='CONFIRMED' AND brevo_synced_at IS NULL`).first())?.n || 0),
     subscribers: (results || []).map(r => ({ ...r, couponRedeemed: r.couponStatus === "REDEEMED" })),
+  };
+}
+
+// Newsletter-Entwurf: legt in Brevo eine Kampagne mit den neuesten Stuecken
+// an - nur als Entwurf, verschickt wird erst in Brevo per Klick.
+const BREVO_KAMPAGNEN = "https://api.brevo.com/v3/emailCampaigns";
+
+export async function createCampaignDraft(env, { anzahl = 6, betreff = "" } = {}, now = new Date()) {
+  if (!mailTransportReady(env)) throw new NewsletterError("NEWSLETTER_MAIL_NOT_CONFIGURED", 503);
+  const artikel = await neuesteArtikel(Math.max(2, Math.min(12, Number(anzahl) || 6)), "de");
+  if (!artikel.length) throw new NewsletterError("KEINE_ARTIKEL", 503);
+  const list = await ensureListId(env);
+  const datum = now.toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Berlin" });
+  const response = await fetch(BREVO_KAMPAGNEN, {
+    method: "POST",
+    headers: { "api-key": String(env.MAIL_API_KEY), "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      name: `Neu im Archiv – ${datum}`,
+      subject: String(betreff || ENTWURF_TEXT.betreff).slice(0, 150),
+      previewText: ENTWURF_TEXT.vorschau,
+      sender: { name: String(env.MAIL_FROM_NAME || "DISORDER119"), email: String(env.MAIL_FROM) },
+      replyTo: normalizeEmail(env.MAIL_REPLY_TO || env.MAIL_FROM) || String(env.MAIL_FROM),
+      htmlContent: entwurfMail(artikel),
+      recipients: { listIds: [list] },
+    }),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    console.error(JSON.stringify({ level: "error", event: "newsletter_campaign_failed", status: response.status, code: String(data?.code || "").slice(0, 60), message: String(data?.message || "").slice(0, 160) }));
+    throw new NewsletterError("BREVO_KAMPAGNE_FEHLGESCHLAGEN", 502);
+  }
+  return {
+    campaignId: data?.id ?? null,
+    artikel: artikel.length,
+    liste: list,
+    link: data?.id ? `https://app.brevo.com/marketing-campaign/edit/${data.id}` : "https://app.brevo.com/marketing-campaign/list",
   };
 }
 
@@ -603,6 +670,9 @@ export async function handleNewsletter(request, env, url, reqId = crypto.randomU
       }
       if (request.method !== "POST") throw new NewsletterError("METHOD_NOT_ALLOWED", 405);
       const body = await readJson(request);
+      if (path === "/admin/newsletter/entwurf") {
+        return reply({ ok: true, ...(await createCampaignDraft(env, { anzahl: body.anzahl, betreff: body.betreff })) }, 200, origin, true);
+      }
       if (path === "/admin/coupons/check") {
         return reply({ ok: true, ...(await checkCoupon(env, body.code)) }, 200, origin, true);
       }
