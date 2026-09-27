@@ -270,6 +270,7 @@ export function ereignisAusBody(raw) {
   }
   if (!body || typeof body !== "object" || Array.isArray(body)) throw new BesucherError("INVALID_JSON", 400);
   const typ = String(body.t || "");
+  if (typ === "verlassen") return { typ, pfad: pfadAus(body.p) };
   if (!BESUCHER_TYPEN.includes(typ)) throw new BesucherError("INVALID_TYPE", 400);
   const artikelId = artikelIdAus(body.a);
   if (["artikel", "warenkorb_rein", "warenkorb_raus"].includes(typ) && !artikelId) {
@@ -370,6 +371,17 @@ export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
   const raw = await request.text();
   if (new TextEncoder().encode(raw).byteLength > MAX_BODY) throw new BesucherError("REQUEST_TOO_LARGE", 413);
   const daten = ereignisAusBody(raw);
+  if (daten.typ === "verlassen") {
+    // Nur der Zeitpunkt fuer die Verweildauer: keine Meldung, kein Ort.
+    const besucher = await besucherSchluessel(env, request, now);
+    try {
+      await env.DB.prepare("INSERT INTO besucher_verlassen (besucher, zeit, pfad) VALUES (?,?,?)")
+        .bind(besucher, new Date(now).toISOString(), daten.pfad).run();
+    } catch {
+      // Migration 0020 noch nicht eingespielt: ohne Verweildauer weiter.
+    }
+    return leer(origin);
+  }
   const cf = request.cf || {};
   const { geraet, browser } = geraetUndBrowser(ua);
   const besucher = await besucherSchluessel(env, request, now);
@@ -425,6 +437,7 @@ export async function besucherAufraeumen(env, now = Date.now()) {
   const tage = ganzzahl(env.BESUCHER_AUFBEWAHRUNG_TAGE, STANDARD_AUFBEWAHRUNG_TAGE, 1, 365);
   const grenze = new Date(now - tage * 24 * 60 * 60 * 1000).toISOString();
   const alt = await env.DB.prepare("DELETE FROM besucher_ereignisse WHERE zeit<?").bind(grenze).run();
+  await env.DB.prepare("DELETE FROM besucher_verlassen WHERE zeit<?").bind(grenze).run().catch(() => {});
   // Salz von gestern und frueher weg: alte Schluessel sind danach nicht mehr
   // einer IP zuzuordnen.
   await env.DB.prepare("DELETE FROM besucher_salz WHERE tag<>?").bind(tagUtc(now)).run();
@@ -521,6 +534,222 @@ async function statistik(env, url, now) {
   };
 }
 
+// ---------------------------------------------------------------- Auswertung
+//
+// Ein Besuch (Sitzung) sind alle Ereignisse eines Besucher-Schluessels ohne
+// Pause ueber 30 Minuten. Die Verweildauer eines Schritts ist die Zeit bis
+// zum naechsten Schritt; beim letzten Schritt bis zum Verlassen der Seite,
+// falls der Browser das gemeldet hat.
+
+const MAX_SCHRITT_MS = SITZUNG_MS;
+const MAX_ZEILEN = 20_000;
+
+function berlin(iso) {
+  const teile = Object.fromEntries(new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23",
+  }).formatToParts(new Date(iso)).map(t => [t.type, t.value]));
+  return { tag: `${teile.year}-${teile.month}-${teile.day}`, stunde: Number(teile.hour) };
+}
+
+export function sitzungenBilden(zeilen, verlassen = []) {
+  const verlassenJe = new Map();
+  for (const v of verlassen) {
+    if (!verlassenJe.has(v.besucher)) verlassenJe.set(v.besucher, []);
+    verlassenJe.get(v.besucher).push(Date.parse(v.zeit));
+  }
+  for (const liste of verlassenJe.values()) liste.sort((a, b) => a - b);
+
+  const sitzungen = [];
+  let aktuell = null;
+  const abschliessen = () => {
+    if (!aktuell) return;
+    const schritte = aktuell.schritte;
+    const letzter = schritte[schritte.length - 1];
+    const ende = (verlassenJe.get(aktuell.schluessel) || [])
+      .find(t => t >= letzter.t && t - letzter.t <= MAX_SCHRITT_MS);
+    if (ende !== undefined) letzter.dauerMs = ende - letzter.t;
+    const bis = ende !== undefined ? ende : letzter.t;
+    const artikel = new Set(schritte.filter(x => x.artikelId && x.typ === "artikel").map(x => x.artikelId));
+    const erste = schritte[0];
+    sitzungen.push({
+      id: `${aktuell.schluessel.slice(0, 12)}-${erste.t}`,
+      besucher: besucherKuerzel(aktuell.schluessel),
+      start: new Date(erste.t).toISOString(),
+      ende: new Date(bis).toISOString(),
+      dauerMs: bis - erste.t,
+      dauerBekannt: schritte.length > 1 || ende !== undefined,
+      ort: aktuell.ort,
+      geraet: aktuell.geraet,
+      browser: aktuell.browser,
+      sprache: aktuell.sprache,
+      quelle: aktuell.quelle,
+      einstieg: erste.artikelId ? `Artikel ${erste.artikelId}` : erste.pfad,
+      seiten: schritte.filter(x => x.typ === "seite" || x.typ === "artikel").length,
+      artikel: artikel.size,
+      warenkorb: schritte.filter(x => x.typ === "warenkorb_rein").length,
+      warenkorbEnde: schritte.reduce((n, x) => (["warenkorb_rein", "warenkorb_raus", "anfrage"].includes(x.typ) ? x.warenkorb : n), 0),
+      anfrage: schritte.some(x => x.typ === "anfrage"),
+      schritte: schritte.map(x => ({
+        zeit: new Date(x.t).toISOString(),
+        typ: x.typ,
+        pfad: x.pfad,
+        artikelId: x.artikelId,
+        titel: x.titel,
+        warenkorb: x.warenkorb,
+        kanal: x.kanal,
+        dauerMs: x.dauerMs,
+      })),
+    });
+    aktuell = null;
+  };
+
+  for (const z of zeilen) {
+    const t = Date.parse(z.zeit);
+    if (!Number.isFinite(t)) continue;
+    const vorher = aktuell && aktuell.schritte[aktuell.schritte.length - 1];
+    if (!aktuell || aktuell.schluessel !== z.besucher || t - vorher.t > SITZUNG_MS) {
+      abschliessen();
+      aktuell = {
+        schluessel: z.besucher,
+        ort: { stadt: z.stadt, region: z.region, land: z.land, landName: landName(z.land) },
+        geraet: z.geraet,
+        browser: z.browser,
+        sprache: z.sprache,
+        quelle: z.quelle,
+        schritte: [],
+      };
+    } else {
+      vorher.dauerMs = Math.min(t - vorher.t, MAX_SCHRITT_MS);
+      if (!aktuell.quelle && z.quelle) aktuell.quelle = z.quelle;
+    }
+    aktuell.schritte.push({
+      t, typ: z.typ, pfad: z.pfad, artikelId: z.artikel_id, titel: z.titel,
+      warenkorb: Number(z.warenkorb || 0), kanal: z.kanal, dauerMs: null,
+    });
+  }
+  abschliessen();
+  sitzungen.sort((a, b) => b.start.localeCompare(a.start));
+  return sitzungen;
+}
+
+function rangliste(map, n = 10) {
+  return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([name, besuche]) => ({ name, besuche }));
+}
+
+function median(werte) {
+  if (!werte.length) return 0;
+  const s = [...werte].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+}
+
+export function auswertungBerechnen(sitzungen, tage, now) {
+  const proTag = new Map();
+  for (let i = tage - 1; i >= 0; i--) proTag.set(berlin(now - i * 86_400_000).tag, { besuche: 0, warenkorb: 0 });
+  const proStunde = Array.from({ length: 24 }, () => 0);
+  const quellen = new Map();
+  const orte = new Map();
+  const geraete = new Map();
+  const browser = new Map();
+  const einstieg = new Map();
+  const artikel = new Map();
+  const dauern = [];
+
+  for (const s of sitzungen) {
+    const b = berlin(s.start);
+    if (proTag.has(b.tag)) {
+      proTag.get(b.tag).besuche++;
+      if (s.warenkorb) proTag.get(b.tag).warenkorb++;
+    }
+    proStunde[b.stunde]++;
+    const plus = (map, key) => map.set(key, (map.get(key) || 0) + 1);
+    plus(quellen, s.quelle || "direkt");
+    plus(orte, [s.ort.stadt, s.ort.landName].filter(Boolean).join(", ") || "unbekannt");
+    plus(geraete, s.geraet || "unbekannt");
+    plus(browser, s.browser || "unbekannt");
+    plus(einstieg, s.einstieg || "/");
+    if (s.dauerBekannt) dauern.push(s.dauerMs);
+    const gesehen = new Set();
+    for (const x of s.schritte) {
+      if (!x.artikelId) continue;
+      let a = artikel.get(x.artikelId);
+      if (!a) {
+        a = { artikelId: x.artikelId, titel: x.titel, aufrufe: 0, besucher: 0, warenkorb: 0, anfragen: 0, dauerSumme: 0, dauerAnzahl: 0 };
+        artikel.set(x.artikelId, a);
+      }
+      if (!a.titel && x.titel) a.titel = x.titel;
+      if (x.typ === "artikel") {
+        a.aufrufe++;
+        if (!gesehen.has(x.artikelId)) { a.besucher++; gesehen.add(x.artikelId); }
+        if (x.dauerMs != null) { a.dauerSumme += x.dauerMs; a.dauerAnzahl++; }
+      }
+      if (x.typ === "warenkorb_rein") a.warenkorb++;
+    }
+  }
+
+  const n = sitzungen.length;
+  const mitWarenkorb = sitzungen.filter(s => s.warenkorb > 0).length;
+  const mitAnfrage = sitzungen.filter(s => s.anfrage).length;
+  const absprung = sitzungen.filter(s => s.seiten <= 1 && !s.warenkorb && !s.anfrage).length;
+  const prozent = x => (n ? Math.round((x / n) * 1000) / 10 : 0);
+  return {
+    kennzahlen: {
+      besuche: n,
+      besucherHeute: sitzungen.filter(s => berlin(s.start).tag === berlin(now).tag).length,
+      dauerMedianMs: median(dauern),
+      dauerSchnittMs: dauern.length ? Math.round(dauern.reduce((a, b) => a + b, 0) / dauern.length) : 0,
+      seitenProBesuch: n ? Math.round((sitzungen.reduce((a, s) => a + s.seiten, 0) / n) * 10) / 10 : 0,
+      warenkorbQuote: prozent(mitWarenkorb),
+      anfrageQuote: prozent(mitAnfrage),
+      absprungQuote: prozent(absprung),
+      mitWarenkorb,
+      mitAnfrage,
+    },
+    proTag: [...proTag.entries()].map(([tag, w]) => ({ tag, ...w })),
+    proStunde,
+    topArtikel: [...artikel.values()]
+      .map(a => ({
+        artikelId: a.artikelId, titel: a.titel, aufrufe: a.aufrufe, besucher: a.besucher, warenkorb: a.warenkorb,
+        dauerSchnittMs: a.dauerAnzahl ? Math.round(a.dauerSumme / a.dauerAnzahl) : null,
+      }))
+      .sort((x, y) => y.warenkorb - x.warenkorb || y.aufrufe - x.aufrufe)
+      .slice(0, 25),
+    quellen: rangliste(quellen),
+    orte: rangliste(orte, 15),
+    geraete: rangliste(geraete),
+    browser: rangliste(browser),
+    einstieg: rangliste(einstieg),
+  };
+}
+
+async function auswertung(env, url, now) {
+  const tage = ganzzahl(url.searchParams.get("tage"), 7, 1, 90);
+  const limit = ganzzahl(url.searchParams.get("limit"), 150, 1, 500);
+  const seit = new Date(now - tage * 24 * 60 * 60 * 1000).toISOString();
+  const { results: zeilen } = await env.DB.prepare(`SELECT besucher, zeit, typ, pfad, artikel_id, titel, warenkorb, kanal,
+      quelle, sprache, land, region, stadt, geraet, browser
+    FROM besucher_ereignisse WHERE zeit>=? ORDER BY besucher, zeit, id LIMIT ${MAX_ZEILEN}`).bind(seit).all();
+  let verlassen = [];
+  try {
+    verlassen = (await env.DB.prepare("SELECT besucher, zeit FROM besucher_verlassen WHERE zeit>=? ORDER BY zeit LIMIT ?")
+      .bind(seit, MAX_ZEILEN).all()).results || [];
+  } catch {
+    // Migration 0020 fehlt noch: Dauer nur aus den Schritten.
+  }
+  const sitzungen = sitzungenBilden(zeilen || [], verlassen);
+  return {
+    ok: true,
+    tage,
+    erstellt: new Date(now).toISOString(),
+    gekuerzt: (zeilen || []).length >= MAX_ZEILEN,
+    verweildauerAktiv: verlassen.length > 0,
+    ...auswertungBerechnen(sitzungen, tage, now),
+    jetztAktiv: sitzungen.filter(s => Date.parse(s.ende) >= now - 5 * 60 * 1000).length,
+    sitzungen: sitzungen.slice(0, limit),
+    einstellungen: { tracking: besucherAktiv(env), telegram: telegramModus(env) },
+  };
+}
+
 export function istBesucherRoute(url) {
   return url.pathname === "/besuch" || url.pathname === "/admin/besucher" || url.pathname.startsWith("/admin/besucher/");
 }
@@ -543,6 +772,7 @@ export async function handleBesucher(request, env, url, reqId = crypto.randomUUI
     const pfad = url.pathname.replace(/\/+$/, "");
     if (pfad === "/admin/besucher/live" || pfad === "/admin/besucher") return json(await live(env, url, now), 200, origin);
     if (pfad === "/admin/besucher/statistik") return json(await statistik(env, url, now), 200, origin);
+    if (pfad === "/admin/besucher/auswertung") return json(await auswertung(env, url, now), 200, origin);
     throw new BesucherError("NOT_FOUND", 404);
   } catch (err) {
     const oeffentlich = url.pathname === "/besuch";

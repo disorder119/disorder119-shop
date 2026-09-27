@@ -251,3 +251,82 @@ test("Cron loescht alte Besuche und altes Salz", async () => {
     n.zurueck();
   }
 });
+
+test("Auswertung: Sitzungen, Verweildauer, Absprung und Top-Artikel", async () => {
+  const db = d1();
+  const n = netz();
+  try {
+    const env = envMit(db);
+    const min = 60_000;
+    // Besucher A: Startseite -> Artikel -> Warenkorb -> verlaesst die Seite
+    await senden(env, { t: "seite", p: "/", r: "https://l.instagram.com/" }, undefined, T0);
+    await senden(env, { t: "artikel", p: "/artikel/6042/", a: 6042 }, undefined, T0 + 1 * min);
+    await senden(env, { t: "warenkorb_rein", p: "/artikel/6042/", a: 6042, n: 1 }, undefined, T0 + 3 * min);
+    await senden(env, { t: "verlassen", p: "/artikel/6042/" }, undefined, T0 + 5 * min);
+    // Besucher B: nur Startseite (Absprung)
+    await senden(env, { t: "seite", p: "/" }, { ip: "198.51.100.20" }, T0 + 10 * min);
+    // Besucher A kommt nach ueber 30 Minuten wieder: neuer Besuch
+    await senden(env, { t: "artikel", p: "/artikel/6184/", a: 6184 }, undefined, T0 + 60 * min);
+    await senden(env, { t: "anfrage", p: "/cart/", k: "whatsapp", n: 1 }, undefined, T0 + 62 * min);
+
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM besucher_verlassen").get().n, 1);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM besucher_ereignisse").get().n, 6, "verlassen landet nicht bei den Ereignissen");
+    const telegramVorher = n.telegram.length;
+
+    const req = new Request("https://api.disorder119.com/admin/besucher/auswertung", { headers: { Origin: ADMIN } });
+    const res = await handleBesucher(req, { ...env, ADMIN_AUTH_CONTEXT: { role: "READER" } },
+      new URL("https://api.disorder119.com/admin/besucher/auswertung?tage=7"), "r", null, T0 + 63 * min);
+    assert.equal(res.status, 200);
+    const a = await res.json();
+    assert.equal(n.telegram.length, telegramVorher, "Auswertung schickt nichts an Telegram");
+    assert.equal(a.verweildauerAktiv, true);
+    assert.equal(a.sitzungen.length, 3);
+    const [zweiterBesuch, besucherB, ersterBesuch] = a.sitzungen;
+    assert.equal(ersterBesuch.dauerMs, 5 * min);
+    assert.equal(ersterBesuch.quelle, "instagram.com");
+    assert.equal(ersterBesuch.einstieg, "/");
+    assert.equal(ersterBesuch.seiten, 2);
+    assert.equal(ersterBesuch.artikel, 1);
+    assert.equal(ersterBesuch.warenkorb, 1);
+    assert.deepEqual(ersterBesuch.schritte.map(x => x.dauerMs), [1 * min, 2 * min, 2 * min]);
+    assert.equal(ersterBesuch.schritte[1].titel, "Prada – Nylonjacke");
+    assert.equal(ersterBesuch.besucher, zweiterBesuch.besucher, "gleicher Besucher, zwei Besuche");
+    assert.equal(zweiterBesuch.anfrage, true);
+    assert.equal(zweiterBesuch.einstieg, "Artikel 6184");
+    assert.equal(besucherB.dauerBekannt, false);
+
+    const k = a.kennzahlen;
+    assert.equal(k.besuche, 3);
+    assert.equal(k.absprungQuote, 33.3);
+    assert.equal(k.warenkorbQuote, 33.3);
+    assert.equal(k.anfrageQuote, 33.3);
+    assert.equal(k.seitenProBesuch, 1.3);
+    assert.equal(k.dauerMedianMs, 3.5 * min, "Median aus 5 und 2 Minuten; Besuch ohne Dauer zaehlt nicht");
+    assert.equal(a.topArtikel[0].artikelId, "6042");
+    assert.equal(a.topArtikel[0].dauerSchnittMs, 2 * min);
+    assert.equal(a.proTag.length, 7);
+    assert.equal(a.proTag.at(-1).besuche, 3);
+    assert.equal(a.proStunde.reduce((x, y) => x + y, 0), 3);
+    assert.equal(a.proStunde[12], 2, "10:00 UTC = 12 Uhr in Berlin");
+    assert.equal(a.quellen[0].name, "direkt");
+    assert.ok(!JSON.stringify(a).includes("203.0.113.7"), "keine IP in der Auswertung");
+  } finally {
+    n.zurueck();
+  }
+});
+
+test("Verlassen-Meldung: nur von der Shop-Seite, ohne Telegram", async () => {
+  const db = d1();
+  const n = netz();
+  try {
+    const env = envMit(db);
+    assert.equal((await senden(env, { t: "verlassen", p: "/" }, { origin: "https://evil.example" })).status, 403);
+    assert.equal((await senden(env, { t: "verlassen", p: "/" })).status, 204);
+    assert.equal(n.telegram.length, 0);
+    // Ohne Migration 0020 bleibt der Shop still statt Fehler zu werfen.
+    db.raw.exec("DROP TABLE besucher_verlassen");
+    assert.equal((await senden(env, { t: "verlassen", p: "/" }, undefined, T0 + 1000)).status, 204);
+  } finally {
+    n.zurueck();
+  }
+});
