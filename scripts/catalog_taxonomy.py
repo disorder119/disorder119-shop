@@ -142,7 +142,7 @@ PRODUCT_TYPE_OVERRIDES = {
     9386: "Hat",
     9434: "Sweatshirt",
     9432: "Underwear Shorts",
-    9496: "Polo Shirt",  # title: Dior Langarm-Poloshirt Herren Schwarz
+    9496: "Polo Shirt",  # title: Dior Herrenpolo Schwarz
     9490: "Sleepwear",
     9489: "Set",
     9424: "Suit",
