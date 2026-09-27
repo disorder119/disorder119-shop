@@ -62,6 +62,12 @@ jobs:
       - name: Admin-Anmeldung, QR-Versand und Katalog pruefen
         run: node --test shop-worker/admin-passkeys.test.mjs shop-worker/dhl-qr.test.mjs shop-worker/admin-katalog.test.mjs shop-worker/admin-orders-list.test.mjs
 
+      - name: Live-Besucher (Statistik und Telegram) pruefen
+        run: |
+          node --check shop-worker/besucher.js
+          node --check assets/besucher.js
+          node --test shop-worker/besucher.test.mjs
+
       - name: Gutschein-Migration pruefen
         run: |
           {

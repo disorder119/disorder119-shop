@@ -290,7 +290,16 @@
         "<h3>Newsletter</h3><p>Für den Newsletter meldest du dich mit deiner E-Mail-Adresse und einer ausdrücklichen Einwilligung an. Danach bekommst du eine Bestätigungsmail; erst wenn du den Link darin anklickst, bist du angemeldet (Double-Opt-in). Als Dankeschön erhältst du einmalig einen Code über 10 % für eine Bestellung – pro Person nur ein Code. Wir speichern deine E-Mail-Adresse, die Sprache, Zeitpunkt und Wortlaut deiner Einwilligung sowie nicht umkehrbare Prüfsummen (Hashes) der IP-Adressen bei Anmeldung und Bestätigung, um die Einwilligung nachweisen und Missbrauch des Rabatts verhindern zu können. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 7 Abs. 2 UWG), für den Schutz vor Missbrauch unser berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO). Wir messen, ob Newsletter geöffnet und Links angeklickt werden, um sie zu verbessern – auch das umfasst deine Einwilligung. Deinen Code speichern wir zusätzlich lokal in deinem Browser, damit er im Warenkorb schon eingetragen ist. Du kannst die Einwilligung jederzeit widerrufen, zum Beispiel über den Abmeldelink in jeder Mail; danach schicken wir dir keinen Newsletter mehr. Den Nachweis der Einwilligung bewahren wir bis zu drei Jahre nach deiner Abmeldung auf.</p>" +
         "<h3>E-Mail-Versand (Brevo)</h3><p>Bestellbestätigungen, Anmeldelinks und den Newsletter verschicken wir über Brevo (Sendinblue SAS, Paris, Frankreich) mit Servern in der EU. Brevo verarbeitet dafür deine E-Mail-Adresse und den Inhalt der Mail in unserem Auftrag (Auftragsverarbeitung nach Art. 28 DSGVO).</p>" +
         "<h3>Shop-Server und E-Mail-Empfang (Cloudflare)</h3><p>Kundenkonto, Newsletter, Mietanfragen und Rabattcodes laufen über unseren Server bei Cloudflare (Cloudflare, Inc., San Francisco, USA); die Datenbank liegt in Westeuropa. Auch E-Mails an Adressen von disorder119.com laufen über Cloudflare zu uns. Cloudflare verarbeitet dabei technisch notwendige Verbindungsdaten wie deine IP-Adresse in unserem Auftrag (Art. 28 DSGVO). Soweit dabei Daten in die USA gelangen, ist Cloudflare nach dem EU-US Data Privacy Framework zertifiziert (Art. 45 DSGVO).</p>" +
-        "<h3>Keine Tracking-Cookies</h3><p>Diese Seite verwendet keine Analyse-, Marketing- oder Tracking-Cookies.</p>"
+        "<h3>Keine Tracking-Cookies</h3><p>Diese Seite verwendet keine Analyse-, Marketing- oder Tracking-Cookies.</p>" +
+        "<h3>Besucherstatistik ohne Cookies</h3><p>Damit wir sehen, welche Stücke gefragt sind, meldet die Seite an unseren Server bei Cloudflare " +
+        "(Cloudflare Inc., Auftragsverarbeitung): aufgerufene Seite bzw. Artikel, Warenkorb-Änderungen, das Öffnen einer Bestellanfrage, " +
+        "die verweisende Website sowie Gerätetyp und Browser. Aus deiner IP-Adresse wird dabei nur der ungefähre Ort (Stadt, Region, Land) abgeleitet; " +
+        "die IP-Adresse selbst wird nicht gespeichert. Zur Zuordnung eines Besuchs dient eine zufällige Kennung, die täglich wechselt und sich danach " +
+        "keiner Person mehr zuordnen lässt. Es werden keine Cookies gesetzt und keine Daten auf deinem Gerät gespeichert. " +
+        "Der Betreiber erhält über Telegram eine kurze Benachrichtigung (Ort, Gerät, Artikel) ohne IP-Adresse. " +
+        "Rechtsgrundlage ist unser berechtigtes Interesse an der Verbesserung des Angebots (Art. 6 Abs. 1 lit. f DSGVO). " +
+        "Die Daten werden nach 30 Tagen gelöscht. Wenn dein Browser „Do Not Track“ oder „Global Privacy Control“ sendet, wird nichts erfasst. " +
+        "Du kannst der Verarbeitung jederzeit per E-Mail widersprechen.</p>"
     },
     en: {
       langGroupAria: "Choose language", cartOpenAria: "Open cart",
@@ -481,7 +490,14 @@
         "<h3>Newsletter</h3><p>You subscribe to the newsletter with your email address and your explicit consent. We then send you a confirmation email; you are only subscribed once you click the link in it (double opt-in). As a thank-you you receive a one-time code for 10% off one order – one code per person. We store your email address, language, the time and wording of your consent and non-reversible checksums (hashes) of the IP addresses used to subscribe and confirm, so we can prove your consent and prevent misuse of the discount. The legal basis is your consent (Art. 6(1)(a) GDPR, § 7(2) UWG) and our legitimate interest in preventing misuse (Art. 6(1)(f) GDPR). We measure whether newsletters are opened and links are clicked in order to improve them – this is covered by your consent as well. We also save your code locally in your browser so it is already filled in in the cart. You can withdraw your consent at any time, e.g. via the unsubscribe link in every email; after that we won't send you any more newsletters. We keep proof of your consent for up to three years after you unsubscribe.</p>" +
         "<h3>Email delivery (Brevo)</h3><p>Order confirmations, sign-in links and the newsletter are sent via Brevo (Sendinblue SAS, Paris, France) using servers in the EU. Brevo processes your email address and the content of the email on our behalf (data processing under Art. 28 GDPR).</p>" +
         "<h3>Shop server and incoming email (Cloudflare)</h3><p>The customer account, newsletter, rental requests and discount codes run on our server at Cloudflare (Cloudflare, Inc., San Francisco, USA); the database is located in Western Europe. Emails to disorder119.com addresses also reach us via Cloudflare. Cloudflare processes technically necessary connection data such as your IP address on our behalf (Art. 28 GDPR). Where data reaches the USA, Cloudflare is certified under the EU-US Data Privacy Framework (Art. 45 GDPR).</p>" +
-        "<h3>No tracking cookies</h3><p>This site does not use analytics, marketing or tracking cookies.</p>"
+        "<h3>No tracking cookies</h3><p>This site does not use analytics, marketing or tracking cookies.</p>" +
+        "<h3>Cookieless visitor statistics</h3><p>So we can see which pieces are in demand, the site reports to our server at Cloudflare " +
+        "(Cloudflare Inc., data processor): the page or item viewed, cart changes, opening an order request, the referring website, " +
+        "and device type and browser. Only the approximate location (city, region, country) is derived from your IP address; " +
+        "the IP address itself is not stored. A random identifier that changes daily links the events of one visit and cannot be traced back to a person afterwards. " +
+        "No cookies are set and nothing is stored on your device. The operator receives a short Telegram notification (location, device, item) without the IP address. " +
+        "The legal basis is our legitimate interest in improving the shop (Art. 6(1)(f) GDPR). Data is deleted after 30 days. " +
+        "If your browser sends “Do Not Track” or “Global Privacy Control”, nothing is recorded. You can object at any time by e-mail.</p>"
     },
     fr: {
       langGroupAria: "Choisir la langue", cartOpenAria: "Ouvrir le panier",
@@ -674,7 +690,14 @@
         "<h3>Newsletter</h3><p>Tu t'inscris à la newsletter avec ton adresse e-mail et ton consentement explicite. Nous t'envoyons ensuite un e-mail de confirmation ; tu n'es inscrit·e qu'après avoir cliqué sur le lien (double opt-in). En remerciement, tu reçois une seule fois un code de 10 % pour une commande – un code par personne. Nous enregistrons ton adresse e-mail, ta langue, la date et le texte de ton consentement ainsi que des empreintes non réversibles (hashes) des adresses IP utilisées pour l'inscription et la confirmation, afin de pouvoir prouver ton consentement et d'empêcher l'abus de la remise. Base légale : ton consentement (art. 6, par. 1, point a) du RGPD, § 7 al. 2 UWG) et notre intérêt légitime à prévenir les abus (art. 6, par. 1, point f) du RGPD). Nous mesurons si les newsletters sont ouvertes et si les liens sont cliqués afin de les améliorer – ton consentement couvre également cela. Nous enregistrons aussi ton code localement dans ton navigateur pour qu'il soit déjà saisi dans le panier. Tu peux retirer ton consentement à tout moment, p. ex. via le lien de désinscription présent dans chaque e-mail ; ensuite, nous ne t'enverrons plus de newsletter. Nous conservons la preuve de ton consentement jusqu'à trois ans après ta désinscription.</p>" +
         "<h3>Envoi d'e-mails (Brevo)</h3><p>Les confirmations de commande, les liens de connexion et la newsletter sont envoyés via Brevo (Sendinblue SAS, Paris, France) avec des serveurs dans l'UE. Brevo traite ton adresse e-mail et le contenu de l'e-mail pour notre compte (sous-traitance selon l'art. 28 du RGPD).</p>" +
         "<h3>Serveur de la boutique et réception d'e-mails (Cloudflare)</h3><p>Le compte client, la newsletter, les demandes de location et les codes de réduction passent par notre serveur chez Cloudflare (Cloudflare, Inc., San Francisco, États-Unis) ; la base de données se trouve en Europe de l'Ouest. Les e-mails adressés à disorder119.com nous parviennent également via Cloudflare. Cloudflare traite les données de connexion techniquement nécessaires, comme ton adresse IP, pour notre compte (art. 28 du RGPD). Dans la mesure où des données parviennent aux États-Unis, Cloudflare est certifié selon le EU-US Data Privacy Framework (art. 45 du RGPD).</p>" +
-        "<h3>Aucun cookie de suivi</h3><p>Ce site n'utilise aucun cookie d'analyse, marketing ou de suivi.</p>"
+        "<h3>Aucun cookie de suivi</h3><p>Ce site n'utilise aucun cookie d'analyse, marketing ou de suivi.</p>" +
+        "<h3>Statistiques de visite sans cookies</h3><p>Pour savoir quelles pièces intéressent, le site transmet à notre serveur chez Cloudflare " +
+        "(Cloudflare Inc., sous-traitant) : la page ou l'article consulté, les modifications du panier, l'ouverture d'une demande de commande, " +
+        "le site référent ainsi que le type d'appareil et le navigateur. Seule la localisation approximative (ville, région, pays) est déduite de ton adresse IP ; " +
+        "l'adresse IP elle-même n'est pas enregistrée. Un identifiant aléatoire qui change chaque jour relie les événements d'une visite et ne permet plus ensuite d'identifier une personne. " +
+        "Aucun cookie n'est déposé et rien n'est enregistré sur ton appareil. L'exploitant reçoit une brève notification Telegram (lieu, appareil, article) sans adresse IP. " +
+        "La base légale est notre intérêt légitime à améliorer la boutique (art. 6, par. 1, point f du RGPD). Les données sont supprimées après 30 jours. " +
+        "Si ton navigateur envoie « Do Not Track » ou « Global Privacy Control », rien n'est enregistré. Tu peux t'y opposer à tout moment par e-mail.</p>"
     }
   };
 
@@ -885,6 +908,16 @@
   var SHOP_CONFIG = window.SHOP_CONFIG || {
     whatsappNumber: "", email: "", paypalClientId: "", shopWorkerUrl: ""
   };
+
+  // Live-Besucher (assets/besucher.js): nur mit eingerichtetem Shop-Worker.
+  if (/^https:\/\//.test(String(SHOP_CONFIG.shopWorkerUrl || ""))) {
+    try {
+      var besucherScript = document.createElement("script");
+      besucherScript.src = "/assets/besucher.js";
+      besucherScript.defer = true;
+      document.head.appendChild(besucherScript);
+    } catch (e) {}
+  }
 
   // Bild-/Asset-Pfade aus items.json sind Site-Wurzel-relativ ohne fuehrenden
   // Schraegstrich (z.B. "assets/img/123/0.webp"). Diese Seite (index.html)
@@ -2029,6 +2062,7 @@
   function openModal(it) {
     lastFocused = document.activeElement;
     currentItem = it;
+    try { document.dispatchEvent(new CustomEvent("d119:artikel", { detail: { id: it.id } })); } catch (e) {}
     showPhoto(0);
     modalBrand.textContent = it.brand || t("noBrand");
     modalTitle.textContent = it.title;
