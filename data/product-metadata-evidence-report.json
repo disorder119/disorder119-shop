@@ -2,11 +2,11 @@
   "policy": "Only explicit source evidence; no guessed physical product facts.",
   "available_items": 165,
   "filled_this_run": {
-    "color": 0,
+    "color": 1,
     "color_corrected": 0,
     "size": 0,
     "condition": 0,
-    "description": 0
+    "description": 3
   },
   "unresolved_available": {
     "size": 10,
@@ -14,7 +14,7 @@
     "condition": 61
   },
   "provenance_counts": {
-    "explicit-title-color": 44
+    "explicit-title-color": 45
   },
   "manual_evidence_queue": [
     {
@@ -28,7 +28,7 @@
     },
     {
       "id": 6239,
-      "title": "Yohji Yamamoto Dark Blue Cat-Eye Sunglasses",
+      "title": "Yohji Yamamoto Cat-Eye-Sonnenbrille Damen Dunkelblau",
       "brand": "Yohji Yamamoto",
       "missing": [
         "condition"
@@ -36,7 +36,7 @@
     },
     {
       "id": 6238,
-      "title": "Yohji Yamamoto Script-Temple Sunglasses",
+      "title": "Yohji Yamamoto Sonnenbrille mit Logo-Bügeln",
       "brand": "Yohji Yamamoto",
       "missing": [
         "color",
@@ -45,7 +45,7 @@
     },
     {
       "id": 6237,
-      "title": "Prada Rotbraune Loafer",
+      "title": "Prada Loafer Herren Rotbraun",
       "brand": "Prada",
       "missing": [
         "condition"
@@ -53,7 +53,7 @@
     },
     {
       "id": 6236,
-      "title": "Prada Nylon Plume Chunky Sneakers",
+      "title": "Prada Plume Nylon-Sneaker Damen",
       "brand": "Prada",
       "missing": [
         "color",
@@ -62,7 +62,7 @@
     },
     {
       "id": 6235,
-      "title": "Dior Homme Beige Leather-Suede High-Tops",
+      "title": "Dior Homme High-Top-Sneaker Herren Beige",
       "brand": "Dior Homme",
       "missing": [
         "condition"
@@ -70,7 +70,7 @@
     },
     {
       "id": 6234,
-      "title": "Y's Brown Multi-Strap High-Top Shoes",
+      "title": "Y's High-Top-Schuhe mit Riemen Damen Braun",
       "brand": "Y's",
       "missing": [
         "condition"
@@ -78,7 +78,7 @@
     },
     {
       "id": 6233,
-      "title": "Dior Homme Black Leather High-Top Sneakers",
+      "title": "Dior Homme High-Top-Sneaker Herren Schwarz",
       "brand": "Dior Homme",
       "missing": [
         "condition"
@@ -86,7 +86,7 @@
     },
     {
       "id": 6232,
-      "title": "Prada America's Cup Navy Sneakers",
+      "title": "Prada America's Cup Sneaker Damen Dunkelblau",
       "brand": "Prada",
       "missing": [
         "condition"
@@ -94,7 +94,7 @@
     },
     {
       "id": 6231,
-      "title": "Prada Black Leather Chelsea Boots",
+      "title": "Prada Leder-Chelsea-Boots Herren Schwarz",
       "brand": "Prada",
       "missing": [
         "condition"
@@ -102,7 +102,7 @@
     },
     {
       "id": 6230,
-      "title": "Prada Green Technical Buckle Sneakers",
+      "title": "Prada Sneaker mit Schnalle Damen Grün",
       "brand": "Prada",
       "missing": [
         "condition"
@@ -110,7 +110,7 @@
     },
     {
       "id": 6229,
-      "title": "Prada Sport Cream Mesh Sneakers",
+      "title": "Prada Sport Mesh-Sneaker Damen Creme",
       "brand": "Prada",
       "missing": [
         "condition"
@@ -118,7 +118,7 @@
     },
     {
       "id": 6228,
-      "title": "Prada Technical Walking Sneakers",
+      "title": "Prada Walking-Sneaker Herren",
       "brand": "Prada",
       "missing": [
         "color",
@@ -127,7 +127,7 @@
     },
     {
       "id": 6227,
-      "title": "Prada Grey Suede Low Sneakers",
+      "title": "Prada Wildleder-Sneaker Herren Grau",
       "brand": "Prada",
       "missing": [
         "condition"
@@ -135,7 +135,7 @@
     },
     {
       "id": 6226,
-      "title": "Prada Grey Suede Chelsea Boots",
+      "title": "Prada Wildleder-Chelsea-Boots Damen Grau",
       "brand": "Prada",
       "missing": [
         "condition"
@@ -143,7 +143,7 @@
     },
     {
       "id": 6225,
-      "title": "Prada Black Leather Ankle Boots",
+      "title": "Prada Leder-Boots Herren Schwarz",
       "brand": "Prada",
       "missing": [
         "condition"
@@ -151,7 +151,7 @@
     },
     {
       "id": 6223,
-      "title": "Prada Black Ribbed-Sole Sneakers",
+      "title": "Prada Sneaker mit Rillensohle Damen Schwarz",
       "brand": "Prada",
       "missing": [
         "condition"
@@ -159,7 +159,7 @@
     },
     {
       "id": 6221,
-      "title": "Rundholz Polka-Dot Slide Sandals",
+      "title": "Rundholz Gepunktete Slide-Sandalen Damen",
       "brand": "Rundholz",
       "missing": [
         "color",
@@ -168,7 +168,7 @@
     },
     {
       "id": 6220,
-      "title": "Y-3 SS25 Oversized Cargo Trousers",
+      "title": "Y-3 Oversized Cargohose Herren",
       "brand": "Y-3",
       "missing": [
         "size",
@@ -178,7 +178,7 @@
     },
     {
       "id": 6219,
-      "title": "Prada Sport Brown Nylon Swim Shorts",
+      "title": "Prada Sport Nylon-Badeshorts Herren Braun",
       "brand": "Prada",
       "missing": [
         "size",
@@ -187,7 +187,7 @@
     },
     {
       "id": 6218,
-      "title": "Rundholz Black Label Balloon Skirt",
+      "title": "Rundholz Black Label Ballonrock Damen Schwarz",
       "brand": "Rundholz",
       "missing": [
         "condition"
@@ -195,7 +195,7 @@
     },
     {
       "id": 6217,
-      "title": "Y-3 Rasta Mütze",
+      "title": "Y-3 Rasta-Mütze",
       "brand": "Y-3",
       "missing": [
         "color",
@@ -204,7 +204,7 @@
     },
     {
       "id": 6216,
-      "title": "Y-3 Graphic Knit Beanie",
+      "title": "Y-3 Grafik-Beanie",
       "brand": "Y-3",
       "missing": [
         "color",
@@ -213,7 +213,7 @@
     },
     {
       "id": 6215,
-      "title": "Ann Demeulemeester Top Braun",
+      "title": "Ann Demeulemeester Top Damen Braun",
       "brand": "Ann Demeulemeester",
       "missing": [
         "condition"
@@ -221,7 +221,7 @@
     },
     {
       "id": 6214,
-      "title": "Jean Paul Gaultier Patterned Long Skirt",
+      "title": "Jean Paul Gaultier Langer Rock mit Muster Damen",
       "brand": "Jean Paul Gaultier",
       "missing": [
         "color",
@@ -230,7 +230,7 @@
     },
     {
       "id": 6213,
-      "title": "Jean Paul Gaultier Classique Patchwork Mesh Top",
+      "title": "Jean Paul Gaultier Classique Patchwork-Mesh-Top Damen",
       "brand": "Jean Paul Gaultier",
       "missing": [
         "color",
@@ -239,7 +239,7 @@
     },
     {
       "id": 6212,
-      "title": "Jean Paul Gaultier Classique Printed Mesh Top",
+      "title": "Jean Paul Gaultier Classique Mesh-Top mit Print Damen",
       "brand": "Jean Paul Gaultier",
       "missing": [
         "color",
@@ -248,7 +248,7 @@
     },
     {
       "id": 6211,
-      "title": "Y-3 Green Logo Cap",
+      "title": "Y-3 Logo-Cap Grün",
       "brand": "Y-3",
       "missing": [
         "condition"
@@ -256,7 +256,7 @@
     },
     {
       "id": 6210,
-      "title": "Prada Sport Black Fleece Jacket",
+      "title": "Prada Sport Fleecejacke Herren Schwarz",
       "brand": "Prada",
       "missing": [
         "condition"
@@ -264,7 +264,7 @@
     },
     {
       "id": 6209,
-      "title": "Prada Sport Green Fleece Jacket",
+      "title": "Prada Sport Fleecejacke Herren Grün",
       "brand": "Prada",
       "missing": [
         "condition"
@@ -272,7 +272,7 @@
     },
     {
       "id": 6208,
-      "title": "Prada Challenge Navy Technical Jacket",
+      "title": "Prada Challenge Funktionsjacke Herren Dunkelblau",
       "brand": "Prada",
       "missing": [
         "size",
@@ -281,7 +281,7 @@
     },
     {
       "id": 6207,
-      "title": "Yves Saint Laurent Black Winter Jacket",
+      "title": "Yves Saint Laurent Leder-Winterjacke Unisex Schwarz",
       "brand": "Yves Saint Laurent",
       "missing": [
         "size",
@@ -290,7 +290,7 @@
     },
     {
       "id": 6206,
-      "title": "Jean Paul Gaultier Jeans Black Denim Skirt",
+      "title": "Jean Paul Gaultier Jeansrock Damen Schwarz",
       "brand": "Jean Paul Gaultier",
       "missing": [
         "condition"
@@ -298,7 +298,7 @@
     },
     {
       "id": 6205,
-      "title": "Jean Paul Gaultier Schwanengürtel",
+      "title": "Jean Paul Gaultier Schwanengürtel Damen",
       "brand": "Jean Paul Gaultier",
       "missing": [
         "color",
@@ -307,7 +307,7 @@
     },
     {
       "id": 6204,
-      "title": "Raf Simons Kinetic Youth Leather Vest",
+      "title": "Raf Simons Kinetic Youth Lederweste Herren",
       "brand": "Raf Simons",
       "missing": [
         "color",
@@ -316,7 +316,7 @@
     },
     {
       "id": 6203,
-      "title": "Y-3 Black Asymmetric Maxi Dress",
+      "title": "Y-3 Asymmetrisches Maxikleid Damen Schwarz",
       "brand": "Y-3",
       "missing": [
         "condition"
@@ -324,7 +324,7 @@
     },
     {
       "id": 6202,
-      "title": "Prada Light Blue Cropped Jacket",
+      "title": "Prada Jacke Kinder Hellblau",
       "brand": "Prada",
       "missing": [
         "condition"
@@ -332,7 +332,7 @@
     },
     {
       "id": 6201,
-      "title": "Walter Van Beirendonck Don't Worry Long Sleeve",
+      "title": "Walter Van Beirendonck Don't Worry Longsleeve Herren",
       "brand": "Walter Van Beirendonck",
       "missing": [
         "color",
@@ -341,7 +341,7 @@
     },
     {
       "id": 6200,
-      "title": "Dior Black Knit Top",
+      "title": "Dior Stricktop Damen Schwarz",
       "brand": "Dior",
       "missing": [
         "condition"
@@ -349,7 +349,7 @@
     },
     {
       "id": 6199,
-      "title": "Rundholz Ivory Asymmetric Cardigan",
+      "title": "Rundholz Asymmetrischer Cardigan Damen Elfenbein",
       "brand": "Rundholz",
       "missing": [
         "size",
@@ -358,7 +358,7 @@
     },
     {
       "id": 6198,
-      "title": "Rundholz Black Balloon Dress",
+      "title": "Rundholz Ballonkleid Damen Schwarz",
       "brand": "Rundholz",
       "missing": [
         "condition"
@@ -366,7 +366,7 @@
     },
     {
       "id": 6197,
-      "title": "Prada Sport Half-Zip Polo",
+      "title": "Prada Sport Half-Zip-Poloshirt Herren",
       "brand": "Prada",
       "missing": [
         "color",
@@ -375,7 +375,7 @@
     },
     {
       "id": 6196,
-      "title": "Miu Miu Black Coat Dress",
+      "title": "Miu Miu Mantelkleid Damen Schwarz",
       "brand": "Miu Miu",
       "missing": [
         "condition"
@@ -383,7 +383,7 @@
     },
     {
       "id": 6195,
-      "title": "A.F. Vandevorst Bluse Blau",
+      "title": "A.F. Vandevorst Bluse Damen Blau",
       "brand": "A.F. Vandevorst",
       "missing": [
         "size",
@@ -392,7 +392,7 @@
     },
     {
       "id": 6194,
-      "title": "A.F. Vandevorst Patterned Cardigan",
+      "title": "A.F. Vandevorst Cardigan mit Muster Damen",
       "brand": "A.F. Vandevorst",
       "missing": [
         "size",
@@ -402,7 +402,7 @@
     },
     {
       "id": 6193,
-      "title": "Prada Linea Rossa Technical Biker Jacket",
+      "title": "Prada Linea Rossa Bikerjacke Herren",
       "brand": "Prada",
       "missing": [
         "color",
@@ -411,7 +411,7 @@
     },
     {
       "id": 6192,
-      "title": "Y-3 Grey Technical Track Jacket",
+      "title": "Y-3 Trainingsjacke Damen Grau",
       "brand": "Y-3",
       "missing": [
         "condition"
@@ -419,7 +419,7 @@
     },
     {
       "id": 6191,
-      "title": "Giorgio Brato Longline Vest",
+      "title": "Giorgio Brato Lange Weste mit Fellkragen Damen",
       "brand": "Giorgio Brato",
       "missing": [
         "color",
@@ -428,7 +428,7 @@
     },
     {
       "id": 6190,
-      "title": "Rundholz Asymmetric Tunic",
+      "title": "Rundholz Asymmetrische Tunika Damen",
       "brand": "Rundholz",
       "missing": [
         "size",
@@ -438,7 +438,7 @@
     },
     {
       "id": 6189,
-      "title": "Y-3 Front Logo T-Shirt",
+      "title": "Y-3 Logo-T-Shirt Herren",
       "brand": "Y-3",
       "missing": [
         "color",
@@ -447,7 +447,7 @@
     },
     {
       "id": 6188,
-      "title": "Christian Dior Beachwear Floral Dress",
+      "title": "Dior Beachwear Blumenkleid Damen",
       "brand": "Dior",
       "missing": [
         "color",
@@ -456,7 +456,7 @@
     },
     {
       "id": 6187,
-      "title": "Dsquared2 Leather Biker Jacket",
+      "title": "Dsquared2 Leder-Bikerjacke Herren",
       "brand": "Dsquared2",
       "missing": [
         "color",
@@ -465,7 +465,7 @@
     },
     {
       "id": 6186,
-      "title": "Prada Sport Black Shirt",
+      "title": "Prada Sport T-Shirt Herren Schwarz",
       "brand": "Prada",
       "missing": [
         "condition"
@@ -491,7 +491,7 @@
     },
     {
       "id": 9535,
-      "title": "Prada Silber Schuhe",
+      "title": "Prada Plateau-Sandaletten Damen Silber",
       "brand": "Prada",
       "missing": [
         "condition"
@@ -499,7 +499,7 @@
     },
     {
       "id": 9521,
-      "title": "Just Cavalli",
+      "title": "Just Cavalli Jacke Damen",
       "brand": "Just Cavalli",
       "missing": [
         "color",
@@ -508,7 +508,7 @@
     },
     {
       "id": 9457,
-      "title": "Prada Schal Furry",
+      "title": "Prada Fellstola Damen",
       "brand": "Prada",
       "missing": [
         "color",
@@ -517,7 +517,7 @@
     },
     {
       "id": 9426,
-      "title": "Burberry Hose",
+      "title": "Burberry Nova Check Shorts Damen",
       "brand": "Burberry",
       "missing": [
         "size",
@@ -527,7 +527,7 @@
     },
     {
       "id": 9437,
-      "title": "Prada Jacke",
+      "title": "Prada Jacke Damen",
       "brand": "Prada",
       "missing": [
         "color",
@@ -536,7 +536,7 @@
     },
     {
       "id": 9365,
-      "title": "Prada Jacke Lila",
+      "title": "Prada Jacke mit Fellbesatz Damen Lila",
       "brand": "Prada",
       "missing": [
         "size",

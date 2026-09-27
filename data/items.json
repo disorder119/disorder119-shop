@@ -33,7 +33,7 @@
     "taxonomy_category": "Pants",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "38"
   },
@@ -195,7 +195,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "9",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -236,7 +236,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 36",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -274,7 +274,7 @@
       "color": "explicit-title-color"
     },
     "department": "Men",
-    "product_type": "Shoes",
+    "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 39.5",
     "size_source": "structured",
@@ -320,7 +320,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 41",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -405,7 +405,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 37.5",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -447,7 +447,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "9",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -488,7 +488,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 38.5",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -530,7 +530,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 36",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -570,7 +570,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "US 9",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -613,7 +613,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "6",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -656,7 +656,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 40",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -697,7 +697,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "7.5",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -740,7 +740,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 38",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -783,7 +783,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 37",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -823,7 +823,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "8.5",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -861,7 +861,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 38",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -946,7 +946,7 @@
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -986,7 +986,7 @@
     "taxonomy_category": "Skirts",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1041,7 +1041,7 @@
     "desc": "Aus dem kuratierten Archiv von Disorder119.\n\nY-3 Grafik-Beanie von Y-3. Kategorie: Accessories. Größe: Einheitsgröße. Fehlende Angaben werden vor dem Kauf bestätigt und nicht geschätzt.",
     "desc_de": "Aus dem kuratierten Archiv von Disorder119.\n\nY-3 Grafik-Beanie von Y-3. Kategorie: Accessories. Größe: Einheitsgröße. Fehlende Angaben werden vor dem Kauf bestätigt und nicht geschätzt.",
     "desc_en": "From the curated archive of Disorder119.\n\nY-3 Grafik-Beanie by Y-3. Category: Accessories. Size: Einheitsgröße. Missing details are confirmed before purchase and are never guessed.",
-    "desc_fr": "Issu des archives sélectionnées de Disorder119.\n\nY-3 Grafik-Beanie par Y-3.",
+    "desc_fr": "Issu des archives sélectionnées de Disorder119.\n\nY-3 Grafik-Beanie par Y-3. Catégorie : Accessories. Taille : Einheitsgröße. Les informations manquantes sont confirmées avant l’achat et ne sont jamais inventées.",
     "gallery": [
       "assets/img/b2-216/0.webp",
       "assets/img/b2-216/1.webp",
@@ -1102,7 +1102,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1145,7 +1145,7 @@
     "taxonomy_category": "Skirts",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1303,7 +1303,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1344,7 +1344,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "XXL",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1387,7 +1387,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1468,7 +1468,7 @@
     "taxonomy_category": "Skirts",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1589,7 +1589,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1605,7 +1605,7 @@
     "condition": "",
     "desc": "Aus dem kuratierten Archiv von Disorder119.\n\nPrada Jacke Kinder Hellblau von Prada.",
     "desc_de": "Aus dem kuratierten Archiv von Disorder119.\n\nPrada Jacke Kinder Hellblau von Prada.",
-    "desc_en": "From the curated archive of Disorder119.\n\nPrada Jacke Kinder Hellblau by Prada.",
+    "desc_en": "From the curated archive of Disorder119.\n\nPrada Jacke Kinder Hellblau by Prada. Category: Jackets. Size: Kindergröße L. Color: Hellblau. Missing details are confirmed before purchase and are never guessed.",
     "desc_fr": "Issu des archives sélectionnées de Disorder119.\n\nPrada Jacke Kinder Hellblau par Prada.",
     "gallery": [
       "assets/img/b2-202/0.webp",
@@ -1671,7 +1671,7 @@
     "taxonomy_category": "Shirts",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1712,7 +1712,7 @@
     "taxonomy_category": "Knitwear",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1752,7 +1752,7 @@
     "taxonomy_category": "Knitwear",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1791,7 +1791,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1831,7 +1831,7 @@
     "taxonomy_category": "Shirts",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1872,7 +1872,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "XS",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1914,7 +1914,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1954,7 +1954,7 @@
     "taxonomy_category": "Knitwear",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -1995,7 +1995,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -2011,7 +2011,7 @@
     "condition": "",
     "desc": "Aus dem kuratierten Archiv von Disorder119.\n\nY-3 Trainingsjacke Damen Grau von Y-3.",
     "desc_de": "Aus dem kuratierten Archiv von Disorder119.\n\nY-3 Trainingsjacke Damen Grau von Y-3.",
-    "desc_en": "From the curated archive of Disorder119.\n\nY-3 Trainingsjacke Damen Grau by Y-3.",
+    "desc_en": "From the curated archive of Disorder119.\n\nY-3 Trainingsjacke Damen Grau by Y-3. Category: Jackets. Size: S. Color: Grau. Missing details are confirmed before purchase and are never guessed.",
     "desc_fr": "Issu des archives sélectionnées de Disorder119.\n\nY-3 Trainingsjacke Damen Grau par Y-3.",
     "gallery": [
       "assets/img/b2-192/2.webp",
@@ -2116,7 +2116,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -2195,7 +2195,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "3",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -2242,7 +2242,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -2279,11 +2279,11 @@
       "color": "explicit-title-color"
     },
     "department": "Men",
-    "product_type": "Shirt",
+    "product_type": "T-Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -2321,7 +2321,7 @@
       "condition"
     ],
     "department": "Unisex",
-    "product_type": "Accessory",
+    "product_type": "Hat",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
@@ -2360,7 +2360,7 @@
       "condition"
     ],
     "department": "Unisex",
-    "product_type": "Accessory",
+    "product_type": "Hat",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
@@ -2525,7 +2525,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -2606,7 +2606,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -2646,7 +2646,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -2679,8 +2679,8 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Unisex",
-    "product_type": "Top",
-    "taxonomy_category": "Tops",
+    "product_type": "Long Sleeve",
+    "taxonomy_category": "Shirts",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
@@ -2721,11 +2721,11 @@
       "color": "explicit-title-color"
     },
     "department": "Women",
-    "product_type": "Shoes",
+    "product_type": "Sandals",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 40",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -2758,7 +2758,7 @@
       "condition"
     ],
     "department": "Men",
-    "product_type": "Shoes",
+    "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 42",
     "size_source": "structured",
@@ -2918,7 +2918,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -2993,7 +2993,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "38"
   },
@@ -3068,7 +3068,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "38"
   },
@@ -3099,11 +3099,11 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Dress",
-    "taxonomy_category": "Dresses",
+    "product_type": "Top",
+    "taxonomy_category": "Tops",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "L"
   },
@@ -3135,11 +3135,11 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Dress",
-    "taxonomy_category": "Dresses",
+    "product_type": "Top",
+    "taxonomy_category": "Tops",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "L"
   },
@@ -3175,7 +3175,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "L"
   },
@@ -3293,7 +3293,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "50"
   },
@@ -3332,7 +3332,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "52"
   },
@@ -3367,7 +3367,7 @@
       "condition"
     ],
     "department": "Men",
-    "product_type": "Shirt",
+    "product_type": "T-Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "L",
     "size_source": "structured",
@@ -3445,7 +3445,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "3"
   },
@@ -3517,11 +3517,11 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Top",
-    "taxonomy_category": "Tops",
+    "product_type": "T-Shirt",
+    "taxonomy_category": "Shirts",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "S (F36 / I40)"
   },
@@ -3562,7 +3562,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -3602,7 +3602,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "XS",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -3834,8 +3834,8 @@
       "condition"
     ],
     "department": "Women",
-    "product_type": "Top",
-    "taxonomy_category": "Tops",
+    "product_type": "Sweatshirt",
+    "taxonomy_category": "Knitwear",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
@@ -3872,7 +3872,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "36"
   },
@@ -3915,7 +3915,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -3951,7 +3951,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "42"
   },
@@ -4033,7 +4033,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -4148,7 +4148,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 39",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -4184,7 +4184,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 37",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "39"
   },
@@ -4261,7 +4261,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 37",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -4374,7 +4374,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "Nicht angegeben, geschätzt ca. S"
   },
@@ -4412,7 +4412,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "52"
   },
@@ -4446,11 +4446,11 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Top",
-    "taxonomy_category": "Tops",
+    "product_type": "Cardigan",
+    "taxonomy_category": "Knitwear",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "S"
   },
@@ -4488,7 +4488,7 @@
     "taxonomy_category": "Coats",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -4603,7 +4603,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "Small"
   },
@@ -4640,7 +4640,7 @@
     "taxonomy_category": "Skirts",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -4671,11 +4671,11 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Shoes",
+    "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 36",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "EU 36"
   },
@@ -4750,7 +4750,7 @@
     "taxonomy_category": "Shirts",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "XL"
   },
@@ -4788,7 +4788,7 @@
     "taxonomy_category": "Knitwear",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -4827,7 +4827,7 @@
     "taxonomy_category": "Skirts",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -4862,7 +4862,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -4899,7 +4899,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "38"
   },
@@ -4936,7 +4936,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "40"
   },
@@ -5046,11 +5046,11 @@
     "public_status": "SOLD",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Top",
-    "taxonomy_category": "Tops",
+    "product_type": "Tank Top",
+    "taxonomy_category": "Shirts",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "40"
   },
@@ -5082,11 +5082,11 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Shoes",
+    "product_type": "Boots",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 38",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -5123,7 +5123,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -5242,7 +5242,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -5385,11 +5385,11 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Skirt",
-    "taxonomy_category": "Skirts",
+    "product_type": "Blazer",
+    "taxonomy_category": "Jackets",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -5429,7 +5429,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -5507,7 +5507,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -5543,7 +5543,7 @@
       "condition"
     ],
     "department": "Men",
-    "product_type": "Shoes",
+    "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "Unknown",
     "size_source": "unknown",
@@ -5584,7 +5584,7 @@
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 39",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -5620,11 +5620,11 @@
       "condition"
     ],
     "department": "Men",
-    "product_type": "Shoes",
+    "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "8",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -5816,7 +5816,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "EU 38"
   },
@@ -5856,7 +5856,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "38"
   },
@@ -5898,7 +5898,7 @@
     "taxonomy_category": "Coats",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -5935,11 +5935,11 @@
       "color": "explicit-title-color"
     },
     "department": "Men",
-    "product_type": "Top",
-    "taxonomy_category": "Tops",
+    "product_type": "Sweatshirt",
+    "taxonomy_category": "Knitwear",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -6070,7 +6070,7 @@
     "status": "Verkauft",
     "category": "Tops",
     "size": "XL",
-    "color": "",
+    "color": "Weiß",
     "condition": "",
     "desc": "Y-3 Longsleeve Herren Weiß – Tops, Größe XL. Aus dem kuratierten Archiv von Disorder119. Kategorie: Shirts. Größe: XL. Fehlende Angaben werden vor dem Kauf bestätigt und nicht geschätzt.",
     "desc_de": "Y-3 Longsleeve Herren Weiß – Tops, Größe XL. Aus dem kuratierten Archiv von Disorder119. Kategorie: Shirts. Größe: XL. Fehlende Angaben werden vor dem Kauf bestätigt und nicht geschätzt.",
@@ -6089,9 +6089,11 @@
     "brightness": 0.469,
     "public_status": "SOLD",
     "data_quality_open": [
-      "color",
       "condition"
     ],
+    "data_quality_sources": {
+      "color": "explicit-title-color"
+    },
     "department": "Men",
     "product_type": "Long Sleeve",
     "taxonomy_category": "Shirts",
@@ -6128,7 +6130,7 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Shirt",
+    "product_type": "Polo Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "M",
     "size_source": "structured",
@@ -6164,7 +6166,7 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Shirt",
+    "product_type": "Polo Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "M",
     "size_source": "structured",
@@ -6205,7 +6207,7 @@
     "taxonomy_category": "Skirts",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -6395,7 +6397,7 @@
     "taxonomy_category": "Knitwear",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "44"
   },
@@ -6541,7 +6543,7 @@
     "taxonomy_category": "Skirts",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "S"
   },
@@ -6581,7 +6583,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "XL",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "42"
   },
@@ -6614,11 +6616,11 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Shirt",
+    "product_type": "T-Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "36"
   },
@@ -6654,7 +6656,7 @@
     "taxonomy_category": "Pants",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "38"
   },
@@ -6692,7 +6694,7 @@
     "taxonomy_category": "Pants",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "38"
   },
@@ -6728,7 +6730,7 @@
       "condition"
     ],
     "department": "Women",
-    "product_type": "Trousers",
+    "product_type": "Shorts",
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
@@ -6768,7 +6770,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "EU 40"
   },
@@ -6806,7 +6808,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "38"
   },
@@ -6843,7 +6845,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "L",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "40"
   },
@@ -6953,8 +6955,8 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Top",
-    "taxonomy_category": "Tops",
+    "product_type": "Dress",
+    "taxonomy_category": "Dresses",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
@@ -6995,7 +6997,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -7034,7 +7036,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "XS",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "XS"
   },
@@ -7102,11 +7104,11 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Top",
-    "taxonomy_category": "Tops",
+    "product_type": "Tank Top",
+    "taxonomy_category": "Shirts",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "S"
   },
@@ -7183,7 +7185,7 @@
     "taxonomy_category": "Skirts",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -7223,7 +7225,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -7299,7 +7301,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -7330,11 +7332,11 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Top",
-    "taxonomy_category": "Tops",
+    "product_type": "Cardigan",
+    "taxonomy_category": "Knitwear",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -7366,8 +7368,8 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Women",
-    "product_type": "Top",
-    "taxonomy_category": "Tops",
+    "product_type": "Long Sleeve",
+    "taxonomy_category": "Shirts",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
@@ -7405,7 +7407,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "S"
   },
@@ -7442,11 +7444,11 @@
       "condition"
     ],
     "department": "Men",
-    "product_type": "Top",
-    "taxonomy_category": "Tops",
+    "product_type": "T-Shirt",
+    "taxonomy_category": "Shirts",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -7637,7 +7639,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -7708,7 +7710,7 @@
       "condition"
     ],
     "department": "Women",
-    "product_type": "Top",
+    "product_type": "Blouse",
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
@@ -7749,7 +7751,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "XS",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "XS"
   },
@@ -7784,8 +7786,8 @@
       "condition"
     ],
     "department": "Unisex",
-    "product_type": "Top",
-    "taxonomy_category": "Tops",
+    "product_type": "Sweatshirt",
+    "taxonomy_category": "Knitwear",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
@@ -7826,7 +7828,7 @@
     "taxonomy_category": "Skirts",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -7909,7 +7911,7 @@
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -7943,7 +7945,7 @@
     "taxonomy_category": "Skirts",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M (Tag: W26)"
   },
@@ -7978,7 +7980,7 @@
     "taxonomy_category": "Pants",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -8093,7 +8095,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "S"
   },
@@ -8211,7 +8213,7 @@
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8250,7 +8252,7 @@
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8290,7 +8292,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8324,7 +8326,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -8404,7 +8406,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8488,7 +8490,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8524,7 +8526,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -8563,7 +8565,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8604,7 +8606,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8640,7 +8642,7 @@
     "taxonomy_category": "Dresses",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -8679,7 +8681,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -8909,7 +8911,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "S"
   },
@@ -9017,7 +9019,7 @@
     "taxonomy_category": "Skirts",
     "size_normalized": "S",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "EUR 36"
   },
@@ -9054,7 +9056,7 @@
     "taxonomy_category": "Skirts",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "EUR 36"
   },
@@ -9127,7 +9129,7 @@
     "taxonomy_category": "Knitwear",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "38"
   },
@@ -9161,7 +9163,7 @@
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
     "label_size": "M"
   },
@@ -9194,11 +9196,11 @@
       "condition"
     ],
     "department": "Women",
-    "product_type": "Shoes",
+    "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 38",
     "size_source": "structured",
-    "taxonomy_confidence": "conservative",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
   {
@@ -9235,7 +9237,7 @@
     "taxonomy_category": "Tops",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "high",
+    "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   }
 ]
