@@ -8,6 +8,19 @@ import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 const SHOP = "https://disorder119.com";
 const ADMIN = "https://admin.disorder119.com";
 
+// Kleiner Katalog wie data/catalog.json: neueste ID zuerst, verkaufte und
+// Stuecke ohne Preis gehoeren nicht in die Mail.
+const KATALOG = [
+  { id: 6001, brand: "Prada", title: "Alte Tasche", price: 300, public_status: "AVAILABLE", grid_image: "assets/img/a/thumbs/0.webp" },
+  { id: 6240, brand: "Maison Margiela", title: "Tabi Boots", price: 420, public_status: "AVAILABLE", grid_image: "assets/img/b/thumbs/0.webp" },
+  { id: 6300, brand: "Raf Simons", title: "Verkaufter Parka", price: 900, public_status: "SOLD", grid_image: "assets/img/c/thumbs/0.webp" },
+  { id: 6250, brand: "Helmut Lang", title: "Ohne Preis", price: 0, public_status: "AVAILABLE", grid_image: "assets/img/d/thumbs/0.webp" },
+  { id: 6241, brand: "Jean Paul Gaultier", title: "Marbled Denim", price: 90, public_status: "AVAILABLE", grid_image: "assets/img/e/thumbs/0.webp" },
+  { id: 6100, brand: "Yohji Yamamoto", title: "Wool Coat", price: 350.5, public_status: "AVAILABLE", look: "assets/img/f/0.webp" },
+  { id: 6050, brand: "Comme des Garçons", title: "Shirt", price: 120, public_status: "AVAILABLE", grid_image: "assets/img/g/thumbs/0.webp" },
+];
+let katalogKaputt = false;
+
 // Brevo abfangen: Mails und Listen-Aufrufe landen in `calls`.
 function brevoStub() {
   const calls = [];
@@ -18,7 +31,12 @@ function brevoStub() {
     calls.push({ url: String(url), method, body });
     const path = String(url).replace("https://api.brevo.com/v3", "");
     const antwort = (data, status = 200) => new Response(JSON.stringify(data), { status });
+    if (String(url) === "https://disorder119.com/data/catalog.json") {
+      if (katalogKaputt) return new Response("kaputt", { status: 500 });
+      return antwort(KATALOG);
+    }
     if (path === "/smtp/email") return antwort({ messageId: `<m${calls.length}@brevo>` }, 201);
+    if (path === "/emailCampaigns" && method === "POST") return antwort({ id: 77 }, 201);
     if (path.startsWith("/contacts/lists?") && method === "GET") return antwort({ lists: [{ id: 3, name: "Alte Liste", folderId: 1 }], count: 1 });
     if (path.startsWith("/contacts/folders?") && method === "GET") return antwort({ folders: [{ id: 1, name: "Your first folder" }], count: 1 });
     if (path === "/contacts/lists" && method === "POST") return antwort({ id: 12 }, 201);
@@ -330,6 +348,106 @@ test("Fremde Herkunft wird abgewiesen, Admin-Liste braucht Anmeldung", async () 
     assert.equal(r.data.subscribers[0].email, "d@example.com");
     assert.equal(r.data.subscribers[0].couponRedeemed, false);
     assert.equal(r.res.headers.get("Access-Control-Allow-Origin"), ADMIN);
+  } finally {
+    brevo.restore();
+  }
+});
+
+test("Willkommensmail schwarz mit den neuesten Stuecken, Bestaetigung mit Bilderstreifen", async () => {
+  const brevo = brevoStub();
+  try {
+    const e = env();
+    await call(post("/newsletter/subscribe", { email: "h@example.com", consent: true }), e);
+    const bestaetigung = mails(brevo.calls)[0];
+    assert.match(bestaetigung.body.htmlContent, /background:#000000/);
+    const streifen = bestaetigung.body.htmlContent.match(/<img /g) || [];
+    assert.equal(streifen.length, 3, "drei Artikelbilder in der Bestätigung");
+
+    await call(post("/newsletter/confirm", { token: tokenFrom(bestaetigung, "bestaetigen") }), e);
+    const willkommen = mails(brevo.calls)[1];
+    const html = willkommen.body.htmlContent;
+    assert.match(html, /background:#000000/);
+    assert.match(willkommen.body.subject, /10-%-Code/);
+    // Neueste zuerst (6241, 6240, 6100, 6050), verkaufte und ohne Preis fehlen.
+    const links = [...html.matchAll(/https:\/\/disorder119\.com\/artikel\/(\d+)\//g)].map(m => m[1]);
+    assert.deepEqual([...new Set(links)], ["6241", "6240", "6100", "6050"]);
+    assert.ok(!html.includes("Verkaufter Parka") && !html.includes("Ohne Preis"));
+    assert.ok(html.includes("https://disorder119.com/assets/img/e/thumbs/0.webp"), "absolute Bild-URL");
+    assert.ok(html.includes("https://disorder119.com/assets/img/f/0.webp"), "ohne Vorschaubild das große Foto");
+    assert.match(html, /90\s€/);
+    assert.match(html, /350,50\s€/);
+    assert.match(html, /Nelseestraße 25/, "Absender im Fuß");
+    assert.match(html, /\?abmelden=[0-9a-f]{64}/);
+    assert.match(willkommen.body.textContent, /Jean Paul Gaultier – Marbled Denim – 90\s€/);
+  } finally {
+    brevo.restore();
+  }
+});
+
+test("Faellt der Katalog aus, kommen die Mails trotzdem - nur ohne Bilder", async () => {
+  const brevo = brevoStub();
+  katalogKaputt = true;
+  try {
+    const e = env();
+    await call(post("/newsletter/subscribe", { email: "i@example.com", consent: true }), e);
+    const bestaetigung = mails(brevo.calls)[0];
+    assert.ok(bestaetigung, "Bestätigung verschickt");
+    assert.ok(!/<img /.test(bestaetigung.body.htmlContent));
+    const r = await call(post("/newsletter/confirm", { token: tokenFrom(bestaetigung, "bestaetigen") }), e);
+    assert.match(r.data.couponCode, /^D119-10-/);
+    assert.ok(mails(brevo.calls)[1].body.htmlContent.includes(r.data.couponCode));
+  } finally {
+    katalogKaputt = false;
+    brevo.restore();
+  }
+});
+
+test("Admin-Liste zeigt alle Anmeldungen mit Status", async () => {
+  const brevo = brevoStub();
+  try {
+    const e = env({ ADMIN_TOKEN: "sitzung-3" });
+    await call(post("/newsletter/subscribe", { email: "offen@example.com", consent: true }), e);
+    await call(post("/newsletter/subscribe", { email: "dabei@example.com", consent: true }), e);
+    const bestaetigung = mails(brevo.calls).find(m => m.body.to[0].email === "dabei@example.com");
+    await call(post("/newsletter/confirm", { token: tokenFrom(bestaetigung, "bestaetigen") }), e);
+    const r = await call(new Request("https://api.disorder119.com/admin/newsletter", {
+      headers: { Origin: ADMIN, Authorization: "Bearer sitzung-3" },
+    }), e);
+    const status = Object.fromEntries(r.data.subscribers.map(s => [s.email, s.status]));
+    assert.deepEqual(status, { "offen@example.com": "PENDING", "dabei@example.com": "CONFIRMED" });
+    assert.equal(r.data.confirmed, 1);
+    assert.equal(r.data.pending, 1);
+    assert.ok(r.data.subscribers.every(s => s.requestedAt));
+  } finally {
+    brevo.restore();
+  }
+});
+
+test("Newsletter-Entwurf landet als Kampagne in Brevo", async () => {
+  const brevo = brevoStub();
+  try {
+    const e = env({ ADMIN_TOKEN: "sitzung-4", MAIL_FROM_NAME: "DISORDER119" });
+    const r = await call(new Request("https://api.disorder119.com/admin/newsletter/entwurf", {
+      method: "POST",
+      headers: { Origin: ADMIN, Authorization: "Bearer sitzung-4", "Content-Type": "application/json" },
+      body: JSON.stringify({ anzahl: 4 }),
+    }), e);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.campaignId, 77);
+    assert.equal(r.data.artikel, 4);
+    assert.match(r.data.link, /\/marketing-campaign\/edit\/77$/);
+    const kampagne = brevo.calls.find(c => c.url === "https://api.brevo.com/v3/emailCampaigns");
+    assert.deepEqual(kampagne.body.recipients, { listIds: [12] });
+    assert.equal(kampagne.body.sender.email, "kontakt@disorder119.com");
+    assert.match(kampagne.body.subject, /Neu im Archiv/);
+    assert.ok(kampagne.body.htmlContent.includes("{{ unsubscribe }}"), "Brevo-Abmeldelink");
+    assert.ok(kampagne.body.htmlContent.includes("https://disorder119.com/artikel/6241/"));
+    assert.match(kampagne.body.htmlContent, /background:#000000/);
+
+    const ohne = await call(new Request("https://api.disorder119.com/admin/newsletter/entwurf", {
+      method: "POST", headers: { Origin: ADMIN, "Content-Type": "application/json" }, body: "{}",
+    }), e);
+    assert.equal(ohne.status, 401);
   } finally {
     brevo.restore();
   }

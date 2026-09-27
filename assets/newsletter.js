@@ -53,6 +53,7 @@
       kopieren: "Code kopieren",
       kopiert: "Kopiert",
       zumShop: "Zum Archiv",
+      neu: "Neu im Archiv",
       keinNeuerCode: "Deine Anmeldung ist bestätigt. Den Willkommensrabatt gibt es pro E-Mail-Adresse nur einmal – für diese Adresse wurde er schon vergeben.",
       begrenzt: "Deine Anmeldung ist bestätigt. Über diesen Internetanschluss wurden in letzter Zeit schon Willkommenscodes vergeben, deshalb gibt es diesmal keinen weiteren.",
       schonBestaetigt: "Deine Anmeldung war schon bestätigt. Deinen Code findest du in der Willkommensmail.",
@@ -84,6 +85,7 @@
       kopieren: "Copy code",
       kopiert: "Copied",
       zumShop: "Back to the archive",
+      neu: "New in the archive",
       keinNeuerCode: "Your subscription is confirmed. The welcome discount is limited to one per email address – this address already received it.",
       begrenzt: "Your subscription is confirmed. Welcome codes were recently issued via this internet connection, so there isn't another one this time.",
       schonBestaetigt: "Your subscription was already confirmed. You'll find your code in the welcome email.",
@@ -115,6 +117,7 @@
       kopieren: "Copier le code",
       kopiert: "Copié",
       zumShop: "Retour à l'archive",
+      neu: "Nouveau dans l'archive",
       keinNeuerCode: "Ton inscription est confirmée. La remise de bienvenue est limitée à une par adresse e-mail – cette adresse l'a déjà reçue.",
       begrenzt: "Ton inscription est confirmée. Des codes de bienvenue ont déjà été émis récemment via cette connexion internet, il n'y en a donc pas d'autre cette fois.",
       schonBestaetigt: "Ton inscription était déjà confirmée. Tu trouveras ton code dans l'e-mail de bienvenue.",
@@ -174,6 +177,63 @@
 
   // ------------------------------------------------------------------ Formular
 
+  // Die neuesten Stuecke als Bilderstreifen ueber dem Formular. Geladen wird
+  // erst, wenn das Feld in die Naehe des Bildschirms kommt - die Seite selbst
+  // wird dadurch nicht langsamer. Gleiche Auswahl wie in den Mails:
+  // verfuegbar, mit Preis, hoechste Artikelnummer zuerst.
+  var katalogVersprechen = null;
+  function neuesteStuecke() {
+    if (!katalogVersprechen) {
+      katalogVersprechen = fetch("/data/catalog.json", { credentials: "omit" })
+        .then(function (res) { return res.ok ? res.json() : []; })
+        .then(function (daten) {
+          var liste = Array.isArray(daten) ? daten : [];
+          return liste.filter(function (it) {
+            return it && it.public_status === "AVAILABLE" && Number(it.price) > 0 && (it.grid_image || it.look);
+          }).sort(function (a, b) { return Number(b.id) - Number(a.id); }).slice(0, 4);
+        })
+        .catch(function () { return []; });
+    }
+    return katalogVersprechen;
+  }
+
+  function stueckeRahmen() {
+    var streifen = el("div", "d119-nl__stuecke");
+    streifen.setAttribute("aria-label", t.neu);
+    for (var i = 0; i < 4; i++) streifen.appendChild(el("span", "d119-nl__stueck d119-nl__stueck--leer"));
+    return streifen;
+  }
+
+  function stueckeZeigen(streifen, stuecke) {
+    if (!stuecke.length) { streifen.parentNode && streifen.parentNode.removeChild(streifen); return; }
+    streifen.textContent = "";
+    stuecke.forEach(function (it) {
+      var link = el("a", "d119-nl__stueck");
+      link.href = HOME + "artikel/" + encodeURIComponent(it.id) + "/";
+      var bild = el("img");
+      bild.src = "/" + String(it.grid_image || it.look).replace(/^\/+/, "");
+      bild.alt = String((it.brand || "") + " " + (it.title || "")).trim();
+      bild.loading = "lazy";
+      bild.decoding = "async";
+      bild.width = 220;
+      bild.height = 293;
+      link.appendChild(bild);
+      streifen.appendChild(link);
+    });
+  }
+
+  function stueckeLadenWennSichtbar(platz, streifen) {
+    var los = function () { neuesteStuecke().then(function (s) { stueckeZeigen(streifen, s); }); };
+    if (!("IntersectionObserver" in window)) { los(); return; }
+    var beobachter = new IntersectionObserver(function (eintraege) {
+      if (!eintraege.some(function (e) { return e.isIntersecting; })) return;
+      beobachter.disconnect();
+      los();
+    }, { rootMargin: "400px 0px" });
+    beobachter.observe(platz);
+  }
+
+
   function formularBauen(platz) {
     var quelle = String(platz.getAttribute("data-quelle") || "website").replace(/[^a-z0-9_-]/gi, "").slice(0, 40);
     var form = el("form", "d119-nl__form");
@@ -184,6 +244,9 @@
     kopf.appendChild(el("p", "d119-nl__title", t.titel));
     kopf.appendChild(el("p", "d119-nl__intro", t.intro));
     form.appendChild(kopf);
+    var streifen = stueckeRahmen();
+    form.appendChild(streifen);
+    stueckeLadenWennSichtbar(platz, streifen);
 
     var zeile = el("div", "d119-nl__row");
     var feld = el("label", "d119-nl__field");
@@ -329,6 +392,10 @@
           var weiter = el("a", "d119-nl__btn", t.zumShop);
           weiter.href = HOME;
           ziel.appendChild(weiter);
+          ziel.appendChild(el("p", "d119-nl__stuecke-titel", t.neu));
+          var stuecke = stueckeRahmen();
+          ziel.appendChild(stuecke);
+          neuesteStuecke().then(function (s) { stueckeZeigen(stuecke, s); });
         } else {
           text.textContent = data.alreadyConfirmed ? t.schonBestaetigt : data.couponLimited ? t.begrenzt : t.keinNeuerCode;
         }
