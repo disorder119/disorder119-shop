@@ -318,6 +318,11 @@ test("a tracking link is only built for a carrier we actually know", () => {
   assert.match(trackingUrlFor("DHL", "00340434161234567890"), /dhl\.de.*00340434161234567890/);
   assert.match(trackingUrlFor("deutsche post", "123"), /dhl\.de/);
   assert.equal(trackingUrlFor("Hermes", "123"), "");
+  assert.match(trackingUrlFor("DPD", "01234567890123"), /tracking\.dpd\.de\/status\/de_DE\/parcel\/01234567890123$/);
+  assert.match(trackingUrlFor("UPS", "1Z999AA10123456784"), /ups\.com\/track\?loc=de_DE&tracknum=1Z999AA10123456784$/);
+  assert.match(trackingUrlFor("GLS", "12345678901"), /gls-group\.com\/DE\/de\/paketverfolgung\?match=12345678901$/);
+  assert.match(trackingUrlFor("DHL Express", "1234567890"), /dhl\.com\/.*tracking-express.*1234567890$/);
+  assert.equal(trackingUrlFor("TNT", "123"), "");
   assert.equal(trackingUrlFor("DHL", ""), "");
 });
 

@@ -178,6 +178,8 @@ Schreibende Requests werden zentral auf maximal `MAX_REQUEST_BYTES` (aktuell 32 
 
 Bestellbestaetigung mit Rechnung und Widerrufsbelehrung sowie Versandbestaetigung mit Sendungsnummer laufen ueber Brevo (`customer-mail.js`, Secret `MAIL_API_KEY`). Versandscheine erzeugt `dhl.js`, sobald DHL-Geschaeftskundenzugang hinterlegt ist; ohne ihn wird das Label im DHL-Portal erstellt und die Sendungsnummer im Admin eingetragen. Einrichtung: `SHOP_LAUNCH_CHECKLIST.md`.
 
+**Packlink PRO** (`packlink.js`, Secret `PACKLINK_API_KEY` aus Packlink PRO > Einstellungen): In der Admin-App zeigt die Bestellung die Angebote von DPD, UPS, GLS und anderen fuer drei Paketgroessen (Bruttopreise; Angebote gehen auch ohne Schluessel). Ein Klick legt in Packlink PRO einen Entwurf mit Lieferadresse und Massen an; bezahlt wird dort per Direktlink. Danach holt die App Sendungsnummer und Etikett (PDF) ab und haengt die Nummer an den Auftrag. An Packlink gehen nur Name und Lieferadresse der Kundin, keine E-Mail-Adresse oder Telefonnummer. Die Versandmail verlinkt die Sendungsverfolgung von DHL, DHL Express, DPD, UPS und GLS.
+
 Noch nicht automatisiert sind Retouren-, Erstattungs- und Miet-Mails.
 
 ## Health, Logs und Fehler

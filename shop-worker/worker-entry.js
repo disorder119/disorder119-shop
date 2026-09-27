@@ -19,6 +19,7 @@ import { handleAccountRequest, isAccountRoute } from "./customer-account.js";
 import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
 import { handleVersand, istVersandRoute } from "./dhl.js";
 import { handleDhlQr, isDhlQrRoute } from "./dhl-qr.js";
+import { handlePacklink, isPacklinkRoute } from "./packlink.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
 import { handleIncomingEmail, handlePostfach, isPostfachRoute } from "./postfach.js";
@@ -241,6 +242,11 @@ export default {
       // /admin/newsletter fuer die Liste in der Admin-App.
       if (isNewsletterRoute(url)) {
         return finish(await handleNewsletter(request, runtimeEnv, url, reqId, origin));
+      }
+
+      // Packlink PRO (DPD, UPS, GLS ...): Angebote, Entwurf, Sendungsnummer.
+      if (isPacklinkRoute(url)) {
+        return finish(await handlePacklink(request, runtimeEnv, url, reqId, origin));
       }
 
       // QR-Versandmarke (DHL Online Frankierung) vor dem Geschaeftskunden-Versand:

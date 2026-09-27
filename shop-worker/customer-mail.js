@@ -265,6 +265,13 @@ export function formatOrderConfirmation(order = {}, options = {}) {
 export const DHL_TRACKING_BASE =
   "https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=";
 
+const CARRIER_TRACKING = [
+  [/^DHL\s*EXPRESS\b/, "https://www.dhl.com/de-de/home/tracking/tracking-express.html?submit=1&tracking-id="],
+  [/^DPD\b/, "https://tracking.dpd.de/status/de_DE/parcel/"],
+  [/^UPS\b/, "https://www.ups.com/track?loc=de_DE&tracknum="],
+  [/^GLS\b/, "https://gls-group.com/DE/de/paketverfolgung?match="],
+];
+
 export function trackingUrlFor(carrier, trackingNumber) {
   const nummer = safeText(trackingNumber || "", 60).trim();
   if (!nummer) return "";
@@ -273,6 +280,9 @@ export function trackingUrlFor(carrier, trackingNumber) {
   // Dienst steht die Nummer ohne Link in der Mail, statt auf eine geratene
   // Adresse zu zeigen.
   if (dienst === "DHL" || dienst === "DEUTSCHE POST") return DHL_TRACKING_BASE + encodeURIComponent(nummer);
+  // Packlink PRO bucht bei DPD, UPS, GLS und DHL Express.
+  const weitere = CARRIER_TRACKING.find(([muster]) => muster.test(dienst));
+  if (weitere) return weitere[1] + encodeURIComponent(nummer);
   return "";
 }
 
