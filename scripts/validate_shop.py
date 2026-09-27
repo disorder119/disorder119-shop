@@ -166,23 +166,42 @@ def validate_and_report() -> None:
         if not cfg.get("paypalClientId") or not cfg.get("shopWorkerUrl"):
             fail("paypalCheckout=true, aber paypalClientId oder shopWorkerUrl fehlt.")
 
-    # Die Versandpauschale steht an zwei Stellen: im Worker (berechnet den
-    # Betrag, den der Kunde zahlt) und in der oeffentlichen Konfiguration
-    # (zeigt ihn in Warenkorb, AGB und Produktseite). Laufen die beiden
-    # auseinander, zahlt der Kunde etwas anderes als angezeigt - genau das
-    # faengt diese Pruefung ab.
-    shipping_cfg = cfg.get("shippingFlatCents", 0)
-    if not isinstance(shipping_cfg, int) or isinstance(shipping_cfg, bool) or shipping_cfg < 0:
-        fail("config/shop-config.json: shippingFlatCents muss eine ganze Zahl in Cent sein.")
-    core = (BASE / "shop-worker" / "commerce-core.js").read_text(encoding="utf-8")
-    match = re.search(r"export const SHIPPING_FLAT_CENTS\s*=\s*(\d+)\s*;", core)
-    if not match:
-        fail("shop-worker/commerce-core.js: SHIPPING_FLAT_CENTS nicht gefunden.")
-    elif int(match.group(1)) != shipping_cfg:
-        fail(
-            "Versandpauschale laeuft auseinander: shop-worker/commerce-core.js "
-            f"sagt {match.group(1)} Cent, config/shop-config.json sagt {shipping_cfg} Cent."
-        )
+    # Versand: Paketgroessen, Masse und Ersatzpreise stehen genau einmal in
+    # config/shop-config.json ("versand"). Der Worker liest die Datei selbst
+    # (shop-worker/versand-config.js) und rechnet Preis und Paketgroesse beim
+    # Bestellen serverseitig - eine zweite Zahl im Code oder eine Pauschale
+    # im Browser wuerde auseinanderlaufen. Genau das faengt diese Pruefung ab.
+    versand = cfg.get("versand")
+    if not isinstance(versand, dict) or not isinstance(versand.get("pakete"), dict):
+        fail("config/shop-config.json: Feld 'versand' mit 'pakete' fehlt.")
+    else:
+        for key in ("S", "M", "L"):
+            paket = versand["pakete"].get(key)
+            if not isinstance(paket, dict):
+                fail(f"config/shop-config.json: versand.pakete.{key} fehlt.")
+                continue
+            for feld in ("laenge", "breite", "hoehe", "ersatzCents"):
+                wert = paket.get(feld)
+                if not isinstance(wert, int) or isinstance(wert, bool) or wert <= 0:
+                    fail(f"config/shop-config.json: versand.pakete.{key}.{feld} muss eine positive ganze Zahl sein.")
+            gewicht = paket.get("gewichtKg")
+            if not isinstance(gewicht, (int, float)) or isinstance(gewicht, bool) or not 0 < gewicht <= 31.5:
+                fail(f"config/shop-config.json: versand.pakete.{key}.gewichtKg muss zwischen 0 und 31,5 kg liegen.")
+        for zuordnung in ("groesseNachProdukttyp", "groesseNachKategorie"):
+            for art, groesse in (versand.get(zuordnung) or {}).items():
+                if groesse not in ("S", "M", "L"):
+                    fail(f"config/shop-config.json: versand.{zuordnung}.{art} muss S, M oder L sein.")
+        if versand.get("standardGroesse") not in ("S", "M", "L"):
+            fail("config/shop-config.json: versand.standardGroesse muss S, M oder L sein.")
+    versand_js = (BASE / "shop-worker" / "versand-config.js").read_text(encoding="utf-8")
+    if 'from "../config/shop-config.json"' not in versand_js:
+        fail("shop-worker/versand-config.js liest config/shop-config.json nicht mehr - Paketdaten doppelt?")
+    for quelle in ("assets/app.js", "assets/article.js", "build_site.py", "shop-worker/commerce-core.js", "shop-worker/worker.js"):
+        text_quelle = (BASE / quelle).read_text(encoding="utf-8")
+        if "shippingFlatCents" in text_quelle or "SHIPPING_FLAT_CENTS" in text_quelle:
+            fail(f"{quelle}: alte Versandpauschale (shippingFlatCents/SHIPPING_FLAT_CENTS) ist zurueck.")
+    if "shippingFlatCents" in cfg:
+        fail("config/shop-config.json: shippingFlatCents ist ersetzt durch 'versand'.")
     # Die Bestellbestaetigung ist eine Pflichtmail mit Anbieterkennung. Steht
     # dort eine andere Anschrift als im Impressum, ist das ein echter
     # Rechtsfehler - deshalb werden beide Stellen hier verglichen.

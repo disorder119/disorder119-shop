@@ -19,7 +19,8 @@ import { handleAccountRequest, isAccountRoute } from "./customer-account.js";
 import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
 import { handleVersand, istVersandRoute } from "./dhl.js";
 import { handleDhlQr, isDhlQrRoute } from "./dhl-qr.js";
-import { handlePacklink, isPacklinkRoute } from "./packlink.js";
+import { handlePacklink, handlePacklinkWebhook, isPacklinkRoute, isPacklinkWebhookRoute } from "./packlink.js";
+import { handleVersandOptionen, isVersandOptionenRoute } from "./versand.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
 import { handleIncomingEmail, handlePostfach, isPostfachRoute } from "./postfach.js";
@@ -186,6 +187,18 @@ export default {
       const runtimeEnv = routed.env;
       request = routed.request;
       await guardRuntimeRequest(request, runtimeEnv, url);
+
+      // Versandoptionen fuer Produktseite und Warenkorb: oeffentlich, nur lesen.
+      if (isVersandOptionenRoute(url)) {
+        return finish(await handleVersandOptionen(request, runtimeEnv, url, reqId, origin));
+      }
+
+      // Meldungen von Packlink kommen ohne Origin und ohne Anmeldung - der
+      // Schluessel steckt im Pfad. Deshalb vor worker.js, das Schreibzugriffe
+      // ohne erlaubte Herkunft ablehnt.
+      if (isPacklinkWebhookRoute(url)) {
+        return finish(await handlePacklinkWebhook(request, runtimeEnv, url, reqId));
+      }
 
       if (isGameRewardsRoute(url.pathname)) {
         return finish(await handleGameRewards(request, runtimeEnv, url, reqId, origin));

@@ -1,5 +1,7 @@
 import { safeText } from "./commerce-core.js";
 import { OPERATIONS_AUTOMATION_SCHEMA_COLUMNS, OPERATIONS_AUTOMATION_VERSION } from "./operations-monitor.js";
+import { versandStatus } from "./packlink.js";
+import { versandOptionen } from "./versand.js";
 
 export const SYSTEM_SCHEMA_TARGET = "0008_backend_hardening";
 
@@ -146,6 +148,21 @@ function configured(env) {
   };
 }
 
+// Versand unter "System": Packlink-Schluessel und Meldungen eingerichtet?
+// Liefert Packlink gerade Preise, oder rechnet der Checkout mit dem
+// Ersatzpreis? (Die Preisabfrage ist 10 Minuten zwischengespeichert.)
+async function versandUebersicht(env) {
+  const status = await versandStatus(env);
+  let preise = "unbekannt";
+  try {
+    const probe = await versandOptionen(env, "M");
+    preise = probe.quelle;
+  } catch {
+    preise = "fehler";
+  }
+  return { ...status, preise };
+}
+
 async function getSystem(env) {
   const [tablesResult, triggersResult] = await Promise.all([
     env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all(),
@@ -204,6 +221,7 @@ async function getSystem(env) {
     : [];
   const missingRequiredTriggers = REQUIRED_BACKEND_TRIGGERS.filter(name => !triggerSet.has(name));
   return {
+    versand: await versandUebersicht(env),
     generatedAt: new Date().toISOString(),
     schemaTarget: SYSTEM_SCHEMA_TARGET,
     schemaDetected: detectSchemaVersion(tables, operationsTaskColumns, triggerNames),

@@ -1152,9 +1152,40 @@
   .cart-total--line {
     font-size: 0.86rem;
     font-weight: 400;
-    color: var(--muted);
+    color: var(--text-muted);
     margin-bottom: 0;
   }
+
+  /* Versandart im Warenkorb: Standard oder Express mit Live-Preis. */
+  .cart-versand {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+    display: grid;
+    gap: 6px;
+    font-size: 0.86rem;
+  }
+  .cart-versand legend {
+    padding: 0;
+    margin-bottom: 4px;
+    color: var(--text-muted);
+  }
+  .cart-versand legend small { font-size: 0.74rem; }
+  .cart-versand__info { margin: 0; color: var(--text-muted); font-size: 0.8rem; }
+  .cart-versand__opt {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border: 1px solid var(--rule);
+    cursor: pointer;
+  }
+  .cart-versand__opt:has(input:checked) { border-color: var(--accent-text); }
+  .cart-versand__opt input { margin: 0; accent-color: var(--accent-text); }
+  .cart-versand__name small { color: var(--text-muted); font-size: 0.74rem; }
+  .cart-versand__preis { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   .cart-checkout-btn {
     display: block;

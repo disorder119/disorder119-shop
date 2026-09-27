@@ -2,14 +2,19 @@
 // ohne Grundgebuehr.
 //
 // Ablauf je Auftrag (Admin-App, Bestellung -> Versand):
-//   1. Paketgroesse waehlen -> Angebote der Paketdienste mit Bruttopreis.
-//   2. Angebot waehlen -> der Server legt in Packlink PRO einen Sendungsentwurf
-//      mit Lieferadresse und Paketmassen an.
+//   1. Die Kundschaft hat im Checkout Standard oder Express gewaehlt
+//      (versand.js, Tabelle order_versand). Die Admin-App schlaegt genau diese
+//      Leistung und Paketgroesse vor.
+//   2. Angebot bestaetigen -> der Server legt in Packlink PRO einen
+//      Sendungsentwurf mit Lieferadresse und Paketmassen an.
 //   3. Bezahlt wird in Packlink PRO (Direktlink). Per Schnittstelle geht das
 //      bewusst nicht - genauso arbeiten Packlinks eigene Shop-Plugins.
-//   4. Zurueck in der App: Status abrufen -> Sendungsnummer und Etikett (PDF).
-//      Die Sendungsnummer landet am Auftrag, "Versendet" setzt du nach der
-//      Abgabe; dann geht die Versandmail mit Tracking-Link raus.
+//   4. Danach meldet Packlink jeden Schritt an /packlink/webhook/<Schluessel>.
+//      Der Server holt dann Status, Sendungsnummer und Etikett selbst ab
+//      (dem Inhalt der Meldung wird nie geglaubt) und fuehrt die Bestellung
+//      weiter: Etikett da -> "Wird gepackt", Paket beim Paketdienst ->
+//      "Versendet" mit Versandmail, zugestellt -> "Zugestellt". Dasselbe
+//      passiert, wenn du in der Admin-App "Status holen" drueckst.
 //
 // Schnittstelle wie in Packlinks offenem Plugin-Kern (packlink-dev/
 // ecommerce_module_core, src/BusinessLogic/Http/Proxy.php): Basis
@@ -20,6 +25,10 @@
 // Datenschutz: An Packlink gehen nur Name und Lieferadresse, keine E-Mail-
 // Adresse oder Telefonnummer der Kundin - dafuer braeuchte es eine Einwilligung.
 import { safeText } from "./commerce-core.js";
+import { orderStatusAutomatisch } from "./admin-api.js";
+import { PAKETE, paketFuer } from "./versand-config.js";
+
+export { PAKETE };
 
 const API = "https://api.packlink.com/v1";
 const PRO_SHIPMENTS = "https://pro.packlink.de/private/shipments/";
@@ -29,13 +38,9 @@ const ADMIN_ORIGINS = Object.freeze([
   "http://127.0.0.1:8765",
 ]);
 
-// Paketgroessen fuer Kleidung aus dem Archiv. Masse und Gewicht lassen sich im
-// Entwurf in Packlink PRO noch anpassen.
-export const PAKETE = Object.freeze({
-  S: Object.freeze({ name: "Klein", beispiel: "Shirt, Top, Accessoire", laenge: 35, breite: 25, hoehe: 8, gewichtKg: 1 }),
-  M: Object.freeze({ name: "Mittel", beispiel: "Jacke, Hose, Schuhe", laenge: 40, breite: 30, hoehe: 15, gewichtKg: 2 }),
-  L: Object.freeze({ name: "Groß", beispiel: "Mantel, Stiefel, mehrere Teile", laenge: 50, breite: 40, hoehe: 20, gewichtKg: 5 }),
-});
+// Paketgroessen (Masse, Gewicht, Ersatzpreis) stehen einmal in
+// config/shop-config.json, siehe versand-config.js. Im Entwurf in Packlink PRO
+// lassen sie sich noch anpassen.
 const MAX_ANGEBOTE = 8;
 
 export class PacklinkError extends Error {
@@ -69,6 +74,30 @@ export function phase(state) {
   const s = String(state || "").toUpperCase();
   for (const [name, states] of PHASEN) if (states.includes(s)) return name;
   return "offen";
+}
+
+// Packlink-Zustand -> Status der Sendung in shipments (CHECK der Tabelle:
+// PENDING, LABEL_CREATED, SHIPPED, IN_TRANSIT, DELIVERED, EXCEPTION, RETURNED).
+// null = nichts aendern (Entwurf offen, storniert).
+export function sendungsStatusIntern(state) {
+  const s = String(state || "").toUpperCase();
+  if (s === "RETURNED_TO_SENDER") return "RETURNED";
+  if (s === "INCIDENT" || ["CARRIER_KO", "LABELS_KO", "INTEGRATION_KO"].includes(s)) return "EXCEPTION";
+  const ph = phase(s);
+  if (ph === "bezahlt") return "PENDING";
+  if (ph === "bereit") return "LABEL_CREATED";
+  if (ph === "unterwegs") return "IN_TRANSIT";
+  if (ph === "zugestellt") return "DELIVERED";
+  return null;
+}
+
+// Welchen Bestellstatus der Packlink-Zustand erreichen soll. Die Schritte
+// dazwischen laufen einzeln ueber die normale Statuspruefung der Admin-App.
+export function bestellZiel(state) {
+  const s = String(state || "").toUpperCase();
+  if (s === "DELIVERED") return "DELIVERED";
+  if (phase(s) === "unterwegs") return "SHIPPED";
+  return null;
 }
 
 // ------------------------------------------------------------------- Adressen
@@ -130,11 +159,6 @@ export function pruefeEmpfaenger(to) {
   if (!to.city) fehlend.push("Ort");
   if (to.country === "DE" && to.zip_code && !/^\d{5}$/.test(to.zip_code)) fehlend.push("PLZ (5 Ziffern)");
   if (fehlend.length) throw new PacklinkError("ADRESSE_UNVOLLSTAENDIG", 409, fehlend.join(", "));
-}
-
-function paketFuer(key) {
-  const k = String(key || "M").toUpperCase();
-  return PAKETE[k] ? { key: k, ...PAKETE[k] } : { key: "M", ...PAKETE.M };
 }
 
 // Nur https-Adressen aus Antworten uebernehmen - sie landen als Link in der App.
@@ -240,14 +264,38 @@ function requireDb(env) {
 
 async function loadOrder(env, orderId, erlaubt = ["PAID", "PREPARING"]) {
   const order = await requireDb(env).prepare(`SELECT o.id,o.order_number,o.status,o.subtotal_cents,o.total_cents,
-      c.recipient_name,c.given_name,c.surname,c.address_line1,c.address_line2,c.postal_code,c.city,c.country_code
+      c.recipient_name,c.given_name,c.surname,c.address_line1,c.address_line2,c.postal_code,c.city,c.country_code,
+      v.option_id AS wahl_option_id,v.art AS wahl_art,v.quelle AS wahl_quelle,v.packlink_service_id AS wahl_service_id,
+      v.carrier AS wahl_carrier,v.service_name AS wahl_service_name,v.paket AS wahl_paket,
+      v.preis_cents AS wahl_preis_cents,v.laufzeit AS wahl_laufzeit
     FROM commerce_orders o LEFT JOIN order_contact_snapshots c ON c.order_id=o.id
+    LEFT JOIN order_versand v ON v.order_id=o.id
     WHERE o.id=? LIMIT 1`).bind(safeText(orderId, 80)).first();
   if (!order) throw new PacklinkError("BESTELLUNG_NICHT_GEFUNDEN", 404);
   if (!erlaubt.includes(String(order.status))) {
     throw new PacklinkError("BESTELLUNG_NICHT_VERSANDBEREIT", 409, String(order.status));
   }
   return order;
+}
+
+// Was die Kundschaft im Checkout gewaehlt und bezahlt hat - die Admin-App
+// schlaegt genau diese Leistung vor.
+export function wahlView(order) {
+  if (!order || !order.wahl_option_id) return null;
+  const p = PAKETE[order.wahl_paket];
+  return {
+    optionId: order.wahl_option_id,
+    art: order.wahl_art,
+    quelle: order.wahl_quelle,
+    serviceId: order.wahl_service_id == null ? null : Number(order.wahl_service_id),
+    carrier: order.wahl_carrier || null,
+    service: order.wahl_service_name || null,
+    paket: order.wahl_paket,
+    paketName: p ? p.name : order.wahl_paket,
+    preisCents: Number(order.wahl_preis_cents),
+    laufzeit: order.wahl_laufzeit || null,
+    auslandsadresse: Boolean(order.country_code) && landCode(order.country_code) !== "DE",
+  };
 }
 
 async function letzteSendung(env, orderId) {
@@ -347,10 +395,17 @@ function ersteUrl(liste) {
   return "";
 }
 
-export async function statusAbrufen(env, orderId) {
-  const db = requireDb(env);
+export async function statusAbrufen(env, orderId, reqId = crypto.randomUUID()) {
   const row = await letzteSendung(env, safeText(orderId, 80));
   if (!row) return null;
+  return sendungAktualisieren(env, row, reqId);
+}
+
+// Stand einer Sendung bei Packlink abholen, speichern und die Bestellung
+// nachziehen. Gemeinsamer Weg fuer "Status holen" in der Admin-App und die
+// Meldungen von Packlink (Webhook).
+async function sendungAktualisieren(env, row, reqId) {
+  const db = requireDb(env);
   // Fertige Sendungen nicht bei jedem Oeffnen neu abfragen.
   if (!packlinkReady(env) || (["zugestellt", "storniert"].includes(phase(row.state)) && row.label_url)) {
     return sendungView(row);
@@ -375,10 +430,53 @@ export async function statusAbrufen(env, orderId) {
   if (sendungsnummer && sendungsnummer !== row.tracking_number) {
     await sendungsnummerAnhaengen(env, row.order_id, carrier || "Packlink", serviceName, sendungsnummer, now);
   }
+  if (row.state !== "ERSETZT") await verlaufUebernehmen(env, row.order_id, state, now, reqId);
   return sendungView({
     ...row, state, carrier, service_name: serviceName, tracking_number: sendungsnummer || null,
     tracking_url: trackingUrl || null, label_url: etikett || null,
   });
+}
+
+// Reihenfolge der Sendungszustaende in shipments. Nie rueckwaerts: eine
+// verspaetete "unterwegs"-Meldung macht aus "zugestellt" nichts anderes.
+const SENDUNG_RANG = Object.freeze({
+  PENDING: 0, LABEL_CREATED: 1, SHIPPED: 2, IN_TRANSIT: 3, EXCEPTION: 3, RETURNED: 5, DELIVERED: 5,
+});
+
+export function sendungsStatusFolgt(alt, neu) {
+  if (!neu || alt === neu) return false;
+  if (!(alt in SENDUNG_RANG)) return true;
+  if (alt === "EXCEPTION" && neu === "IN_TRANSIT") return true;
+  if (neu === "EXCEPTION") return SENDUNG_RANG[alt] <= SENDUNG_RANG.IN_TRANSIT;
+  return SENDUNG_RANG[neu] > SENDUNG_RANG[alt];
+}
+
+const BESTELL_REIHE = Object.freeze(["PAID", "PREPARING", "SHIPPED", "DELIVERED"]);
+
+// Bestellung und Sendung dem Packlink-Zustand nachfuehren. Jeder Schritt
+// laeuft ueber dieselbe Statuspruefung wie der Knopf in der Admin-App - bei
+// "Versendet" geht also die Versandmail mit Sendungsnummer raus (hoechstens
+// einmal je Sendungsnummer). Stornierte, erstattete oder zurueckgegebene
+// Bestellungen fasst das nie an.
+async function verlaufUebernehmen(env, orderId, state, now, reqId) {
+  const db = requireDb(env);
+  const ziel = bestellZiel(state);
+  if (ziel) {
+    const order = await db.prepare("SELECT status FROM commerce_orders WHERE id=?").bind(orderId).first();
+    let ist = BESTELL_REIHE.indexOf(String(order?.status || ""));
+    const soll = BESTELL_REIHE.indexOf(ziel);
+    while (ist >= 0 && ist < soll) {
+      ist += 1;
+      await orderStatusAutomatisch(env, orderId, BESTELL_REIHE[ist], reqId);
+    }
+  }
+  const intern = sendungsStatusIntern(state);
+  if (!intern) return;
+  const shipment = await db.prepare("SELECT id,status FROM shipments WHERE order_id=? ORDER BY created_at DESC LIMIT 1").bind(orderId).first();
+  if (!shipment || !sendungsStatusFolgt(String(shipment.status || ""), intern)) return;
+  await db.prepare(`UPDATE shipments SET status=?,
+      delivered_at=CASE WHEN ?='DELIVERED' THEN COALESCE(delivered_at,?) ELSE delivered_at END,updated_at=? WHERE id=?`)
+    .bind(intern, intern, now, now, shipment.id).run();
 }
 
 // Sendungsnummer an den Auftrag haengen, noch ohne "Versendet": abgegeben ist
@@ -465,13 +563,15 @@ export async function handlePacklink(request, env, url, reqId = crypto.randomUUI
     if (angebote) {
       if (request.method !== "GET") throw new PacklinkError("METHOD_NOT_ALLOWED", 405);
       const order = await loadOrder(env, orderId);
-      const ergebnis = await angeboteLaden(env, order, url.searchParams.get("paket"));
-      return antwort({ ok: true, eingerichtet: packlinkReady(env), ...ergebnis }, 200, origin);
+      const wahl = wahlView(order);
+      // Ohne ausdrueckliche Groesse: die Paketgroesse aus dem Checkout.
+      const ergebnis = await angeboteLaden(env, order, url.searchParams.get("paket") || wahl?.paket);
+      return antwort({ ok: true, eingerichtet: packlinkReady(env), wahl, ...ergebnis }, 200, origin);
     }
     if (request.method === "GET") {
-      await loadOrder(env, orderId, ["PAID", "PREPARING", "SHIPPED", "DELIVERED"]);
-      const sendung = await statusAbrufen(env, orderId);
-      return antwort({ ok: true, eingerichtet: packlinkReady(env), pakete: PAKETE, sendung }, 200, origin);
+      const order = await loadOrder(env, orderId, ["PAID", "PREPARING", "SHIPPED", "DELIVERED"]);
+      const sendung = await statusAbrufen(env, orderId, reqId);
+      return antwort({ ok: true, eingerichtet: packlinkReady(env), pakete: PAKETE, wahl: wahlView(order), sendung }, 200, origin);
     }
     if (request.method === "POST") {
       let body = {};
@@ -486,4 +586,119 @@ export async function handlePacklink(request, env, url, reqId = crypto.randomUUI
     console.error(JSON.stringify({ level: "error", event: "packlink_error", requestId: reqId, message: safeText(err?.message || "unknown", 180) }));
     return antwort({ error: "INTERNAL_PACKLINK_ERROR", requestId: reqId }, 500, origin);
   }
+}
+
+// ------------------------------------------------------------------- Webhook
+
+// Packlink meldet Zustandswechsel an https://api.disorder119.com/packlink/
+// webhook/<PACKLINK_WEBHOOK_TOKEN> (eingetragen von "7 - Packlink verbinden"
+// ueber POST /v1/shipments/callback). Packlink signiert die Meldungen nicht.
+// Deshalb gilt: Der Schluessel im Pfad haelt nur Fremde fern - geglaubt wird
+// der Meldung trotzdem nichts. Sie loest lediglich aus, dass der Server den
+// Stand der Sendung mit dem eigenen API-Schluessel bei Packlink abholt.
+const WEBHOOK_ROUTE = /^\/packlink\/webhook\/([^/]{1,200})$/;
+
+export function isPacklinkWebhookRoute(url) {
+  return WEBHOOK_ROUTE.test(url.pathname.replace(/\/+$/, ""));
+}
+
+async function sha256Hex(value) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(value)));
+  return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function webhookAntwort(daten, status) {
+  return new Response(JSON.stringify(daten), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
+export async function handlePacklinkWebhook(request, env, url, reqId = crypto.randomUUID()) {
+  try {
+    if (request.method !== "POST") return webhookAntwort({ error: "METHOD_NOT_ALLOWED", requestId: reqId }, 405);
+    const [, roh] = WEBHOOK_ROUTE.exec(url.pathname.replace(/\/+$/, ""));
+    let schluessel = "";
+    try { schluessel = decodeURIComponent(roh); } catch { schluessel = ""; }
+    // Falscher oder (noch) nicht eingerichteter Schluessel: wie jede
+    // unbekannte Adresse, ohne Hinweis, dass es diese Route gibt.
+    if (!env.PACKLINK_WEBHOOK_TOKEN || !(await tokenEquals(schluessel, env.PACKLINK_WEBHOOK_TOKEN))) {
+      return webhookAntwort({ error: "NOT_FOUND", requestId: reqId }, 404);
+    }
+    let body;
+    try { body = await request.json(); } catch { return webhookAntwort({ error: "INVALID_JSON", requestId: reqId }, 400); }
+    const event = safeText(body?.event, 60) || "unbekannt";
+    const reference = safeText(body?.data?.shipment_reference ?? body?.data?.reference ?? body?.shipment_reference, 60);
+    const zeitpunkt = safeText(body?.datetime, 40);
+    if (!/^[A-Za-z0-9-]{6,60}$/.test(reference)) return webhookAntwort({ ok: true, ignoriert: "OHNE_SENDUNG" }, 200);
+
+    const db = requireDb(env);
+    const id = await sha256Hex(`${event}|${reference}|${zeitpunkt}`);
+    const now = new Date().toISOString();
+    const eingetragen = await db.prepare(`INSERT OR IGNORE INTO packlink_webhook_events (id,event,reference,received_at)
+      VALUES (?,?,?,?)`).bind(id, event, reference, now).run();
+    if (!eingetragen?.meta?.changes) return webhookAntwort({ ok: true, duplicate: true }, 200);
+
+    const erledigt = ergebnis => db.prepare("UPDATE packlink_webhook_events SET processed_at=?,result=? WHERE id=?")
+      .bind(new Date().toISOString(), ergebnis, id).run();
+    try {
+      const row = await db.prepare("SELECT * FROM packlink_sendungen WHERE reference=? LIMIT 1").bind(reference).first();
+      if (!row) {
+        await erledigt("UNBEKANNTE_SENDUNG");
+        return webhookAntwort({ ok: true, ignoriert: "UNBEKANNTE_SENDUNG" }, 200);
+      }
+      if (!packlinkReady(env)) {
+        await erledigt("OHNE_API_SCHLUESSEL");
+        return webhookAntwort({ ok: true, ignoriert: "OHNE_API_SCHLUESSEL" }, 200);
+      }
+      const sendung = await sendungAktualisieren(env, row, reqId);
+      await erledigt(safeText(sendung?.state || "OK", 40));
+      return webhookAntwort({ ok: true, phase: sendung?.phase || null }, 200);
+    } catch (err) {
+      // Nicht als verarbeitet merken: Packlink darf dieselbe Meldung noch
+      // einmal schicken, dann wird sie normal verarbeitet.
+      await db.prepare("DELETE FROM packlink_webhook_events WHERE id=? AND processed_at IS NULL").bind(id).run();
+      throw err;
+    }
+  } catch (err) {
+    const code = err instanceof PacklinkError ? err.code : "INTERNAL_PACKLINK_ERROR";
+    console.error(JSON.stringify({ level: "error", event: "packlink_webhook_error", requestId: reqId, code, message: safeText(err?.message || "unknown", 180) }));
+    return webhookAntwort({ error: code, requestId: reqId }, err instanceof PacklinkError && err.status < 500 ? err.status : 502);
+  }
+}
+
+// -------------------------------------------------------------- Systemstatus
+
+// Fuer /admin/system: ist Packlink eingerichtet, kommen Meldungen an, wie
+// viele Sendungen laufen noch? Keine Schluessel, keine Adressen.
+export async function versandStatus(env) {
+  const out = {
+    packlinkSchluessel: packlinkReady(env),
+    webhookSchluessel: Boolean(env.PACKLINK_WEBHOOK_TOKEN),
+    meldungen: 0,
+    letzteMeldung: null,
+    offeneSendungen: 0,
+    bestellungenMitVersandwahl: 0,
+    tabellen: true,
+  };
+  if (!env?.DB) return { ...out, tabellen: false };
+  try {
+    const [meldungen, offen, wahl] = await Promise.all([
+      env.DB.prepare("SELECT COUNT(*) AS n, MAX(received_at) AS letzte FROM packlink_webhook_events").first(),
+      env.DB.prepare(`SELECT COUNT(*) AS n FROM packlink_sendungen
+        WHERE state NOT IN ('DELIVERED','RETURNED_TO_SENDER','CANCELED','CANCELLED','ERSETZT')`).first(),
+      env.DB.prepare("SELECT COUNT(*) AS n FROM order_versand").first(),
+    ]);
+    out.meldungen = Number(meldungen?.n || 0);
+    out.letzteMeldung = meldungen?.letzte || null;
+    out.offeneSendungen = Number(offen?.n || 0);
+    out.bestellungenMitVersandwahl = Number(wahl?.n || 0);
+  } catch {
+    out.tabellen = false;
+  }
+  return out;
 }
