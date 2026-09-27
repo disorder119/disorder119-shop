@@ -220,14 +220,29 @@ test("Admin sieht Live-Besucher und Statistik, ohne Anmeldung nicht", async () =
   }
 });
 
-test("Cron loescht alte Besuche und altes Salz", async () => {
+test("Erster Besuch eines neuen Tages raeumt ohne Cron auf", async () => {
   const db = d1();
   const n = netz();
   try {
     const env = envMit(db, { BESUCHER_TELEGRAM: "aus" });
     await senden(env, { t: "seite" }, undefined, T0 - 40 * 24 * 60 * 60 * 1000);
+    await senden(env, { t: "seite" }, undefined, T0 - 24 * 60 * 60 * 1000);
     await senden(env, { t: "seite" }, undefined, T0);
-    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM besucher_salz").get().n, 2);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM besucher_ereignisse").get().n, 2, "40 Tage alter Besuch geloescht");
+    assert.deepEqual(db.raw.prepare("SELECT tag FROM besucher_salz").all().map(r => r.tag), ["2026-09-27"]);
+  } finally {
+    n.zurueck();
+  }
+});
+
+test("Cron loescht alte Besuche und altes Salz", async () => {
+  const db = d1();
+  const n = netz();
+  try {
+    const env = envMit(db, { BESUCHER_TELEGRAM: "aus" });
+    await senden(env, { t: "seite" }, undefined, T0);
+    db.raw.prepare("INSERT INTO besucher_ereignisse (besucher, zeit, typ) VALUES ('alt', '2026-08-01T00:00:00.000Z', 'seite')").run();
+    db.raw.prepare("INSERT INTO besucher_salz (tag, salz) VALUES ('2026-09-26', 'x')").run();
     const ergebnis = await besucherAufraeumen(env, T0);
     assert.equal(ergebnis.geloescht, 1);
     assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM besucher_ereignisse").get().n, 1);

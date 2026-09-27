@@ -236,7 +236,14 @@ async function tagesSalz(env, now) {
   const tag = tagUtc(now);
   const vorhanden = await env.DB.prepare("SELECT salz FROM besucher_salz WHERE tag=?").bind(tag).first();
   if (vorhanden?.salz) return vorhanden.salz;
-  await env.DB.prepare("INSERT OR IGNORE INTO besucher_salz (tag, salz) VALUES (?, ?)").bind(tag, zufall()).run();
+  const angelegt = await env.DB.prepare("INSERT OR IGNORE INTO besucher_salz (tag, salz) VALUES (?, ?)").bind(tag, zufall()).run();
+  // Erster Besuch des Tages raeumt auf: altes Salz und Ereignisse ueber der
+  // Aufbewahrungsfrist verschwinden, auch wenn kein Cron-Trigger laeuft.
+  if (Number(angelegt?.meta?.changes || 0) > 0) {
+    await besucherAufraeumen(env, now).catch(err => console.error(JSON.stringify({
+      level: "error", event: "besucher_cleanup_failed", message: String(err?.message || err).slice(0, 160),
+    })));
+  }
   const neu = await env.DB.prepare("SELECT salz FROM besucher_salz WHERE tag=?").bind(tag).first();
   return neu.salz;
 }
