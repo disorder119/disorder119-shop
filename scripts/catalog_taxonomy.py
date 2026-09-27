@@ -29,11 +29,11 @@ DEPARTMENT_OVERRIDES = {
     6235: "Men",    # Dior Homme high-tops
     6233: "Men",    # Dior Homme high-tops
     6204: "Men",    # Raf Simons Kinetic Youth vest
-    9534: "Men",    # title: Prada Herren Schuhe
-    9524: "Women",  # title: Prada Frauenbomber
+    9534: "Men",    # title: Prada Sneaker Herren
+    9524: "Women",  # title: Prada Bomberjacke Damen Schwarz
     9520: "Women",  # description explicitly describes feminine tailoring
-    9538: "Men",    # title: Gucci Blazer Herren
-    9496: "Men",    # title: Dior Herrenpolo
+    9538: "Men",    # title: Gucci Nadelstreifen-Blazer Herren Schwarz
+    9496: "Men",    # title: Dior Langarm-Poloshirt Herren Schwarz
     9495: "Men",    # companion Dior polo, label size 46
     9463: "Women",  # Prada Heels
     9432: "Women",  # JPG underwear shorts, S/36/8
@@ -280,6 +280,28 @@ def extract_title_size(item: dict[str, Any]) -> str:
     return ""
 
 
+# Deutsche Zusammensetzungen im Titel: das letzte Wortglied bestimmt die Art
+# ("Lederjacke", "Seidenkleid", "Jeansrock", "Strohhut"). Greift nur, wenn
+# keine der Hauptregeln im Titel passt, und nur fuer den Titel - in den
+# Beschreibungen stehen Woerter wie "Brusttasche" oder "Fellkragen", die sonst
+# eine Jacke zur Tasche machen wuerden.
+TITLE_COMPOUND_RULES = (
+    (r"\wkleid\b", "Dress"),
+    (r"\wrock\b", "Skirt"),
+    (r"\whose\b", "Trousers"),
+    (r"\wmantel\b", "Coat"),
+    (r"\wblazer\b", "Blazer"),
+    (r"\wweste\b", "Vest"),
+    (r"\wjacke\b", "Jacket"),
+    (r"\whemd\b", "Shirt"),
+    (r"\wbluse\b", "Blouse"),
+    (r"\whut\b", "Hat"),
+    (r"\w(?:schal|stola)\b", "Scarf"),
+    (r"\wtasche\b", "Bag"),
+    (r"\wtop\b", "Top"),
+)
+
+
 def classify_product_type(item: dict[str, Any]) -> str:
     item_id = int(item.get("id") or 0)
     if item_id in PRODUCT_TYPE_OVERRIDES:
@@ -295,17 +317,17 @@ def classify_product_type(item: dict[str, Any]) -> str:
         (r"\bwallet\b|geldb[oö]rse", "Wallet"),
         (r"\btasche\b|\bbag\b", "Bag"),
         (r"g[üu]rtel|\bbelt\b", "Belt"),
-        (r"\bschal\b|\bscarf\b", "Scarf"),
+        (r"\bschal\b|\bscarf\b|\bstola\b", "Scarf"),
         (r"\bbeanie\b|m[üu]tze", "Beanie"),
         (r"\bcap\b", "Cap"),
         (r"\bhat\b|\bhut\b", "Hat"),
-        (r"\bheel", "Heels"),
+        (r"\bheel|\bpumps\b", "Heels"),
         (r"\bloafer", "Loafers"),
         (r"\bsneaker", "Sneakers"),
         (r"\bchelsea\b|\bboots?\b|stiefel", "Boots"),
         (r"\bsandal|\bslides?\b|\bflops?\b", "Sandals"),
         (r"\bshoes?\b|schuhe", "Shoes"),
-        (r"swim shorts|badeshorts", "Swim Shorts"),
+        (r"swim shorts|badeshorts|badehose", "Swim Shorts"),
         (r"underwear|unterhose", "Underwear Shorts"),
         (r"\bshorts?\b", "Shorts"),
         (r"jogginghose|\bjogger", "Joggers"),
@@ -315,15 +337,15 @@ def classify_product_type(item: dict[str, Any]) -> str:
         (r"\btrench", "Trench Coat"),
         (r"\bcoat\b|\bmantel\b", "Coat"),
         (r"bomber", "Bomber Jacket"),
-        (r"\bbiker\b|\bmoto\b", "Biker Jacket"),
+        (r"\bbiker|\bmoto\b", "Biker Jacket"),
         (r"\bblazer\b", "Blazer"),
         (r"\bvest\b|\bweste\b", "Vest"),
-        (r"\bjacket\b|\bjacke\b", "Jacket"),
-        (r"\bcardigan\b", "Cardigan"),
-        (r"\bsweatshirt\b|sweatjacke", "Sweatshirt"),
-        (r"\bsweater\b|\bpulli\b|kaschmir", "Sweater"),
+        (r"\bjacket\b|\bjacke\b|\bparka\b|zip[\s-]?hoodie", "Jacket"),
+        (r"\bcardigan\b|strickjacke", "Cardigan"),
+        (r"\bsweatshirt\b|sweatjacke|\bhoodie\b", "Sweatshirt"),
+        (r"\bsweater\b|\bpulli\b|pullover|kaschmir", "Sweater"),
         (r"\bknit\b|strick", "Knit Top"),
-        (r"\bpolo\b", "Polo Shirt"),
+        (r"\bpolo", "Polo Shirt"),
         (r"tank\s*top|tanktop", "Tank Top"),
         (r"t-?shirt|tshirt", "T-Shirt"),
         (r"long\s*sleeve|longsleeve|\bls\b", "Long Sleeve"),
@@ -334,10 +356,21 @@ def classify_product_type(item: dict[str, Any]) -> str:
         (r"\bset\b", "Set"),
         (r"schlafanzug|sleepwear|pyjama|pajama", "Sleepwear"),
         (r"\btop\b|oberteil", "Top"),
+        # Erst ganz am Ende: "Jean Paul Gaultier Jeans" ist auch eine Linie,
+        # "Jeans Mesh-Top" oder "Jeansrock" bleiben Top bzw. Rock.
+        (r"\bjeans\b", "Trousers"),
     )
-    for pattern, product_type in rules:
-        if re.search(pattern, title):
-            return product_type
+    # "Jacke mit Gürtel", "Top aus Wolle", "Jacke in Felloptik": die Art steht
+    # vor dem Zusatz. Deshalb zuerst nur der Teil davor, dann der ganze Titel -
+    # sonst wird aus "Kunstfelljacke mit Gürtel" ein Gürtel.
+    kopf = re.split(r"\s(?:mit|aus|in)\s", title, maxsplit=1)[0]
+    for teil in dict.fromkeys((kopf, title)):
+        for pattern, product_type in rules:
+            if re.search(pattern, teil):
+                return product_type
+        for pattern, product_type in TITLE_COMPOUND_RULES:
+            if re.search(pattern, teil):
+                return product_type
     # Vague titles may use the description only inside the existing broad
     # category. This prevents incidental words in prose from turning a jacket
     # into Shorts/Dress, while explicit title rules and reviewed overrides can

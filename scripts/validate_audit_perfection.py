@@ -62,11 +62,14 @@ def _catalog_by_id() -> dict[int, dict]:
 
 def validate_taxonomy_categories() -> None:
     by_id = _catalog_by_id()
+    # Titel-Durchgang 27.09.2026: 9527/9401 sind Longsleeves, 9508 ist ein
+    # T-Shirt (Hemden/Shirts wie 9456, 9423, 9383); 9462 ist laut
+    # Beschreibung ein Blazer, kein Rock.
     expected_categories = {
-        9519: "Tops", 9527: "Tops", 9512: "Jackets", 9511: "Jackets",
-        9508: "Tops", 9500: "Jackets", 9496: "Shirts", 9499: "Jackets",
-        9462: "Skirts", 9442: "Jackets", 9454: "Jackets", 9443: "Jackets",
-        9401: "Tops",
+        9519: "Tops", 9527: "Shirts", 9512: "Jackets", 9511: "Jackets",
+        9508: "Shirts", 9500: "Jackets", 9496: "Shirts", 9499: "Jackets",
+        9462: "Jackets", 9442: "Jackets", 9454: "Jackets", 9443: "Jackets",
+        9401: "Shirts",
     }
     for item_id, category in expected_categories.items():
         item = by_id.get(item_id)
@@ -88,6 +91,16 @@ def validate_taxonomy_mismatches() -> None:
         6240, 6201, 6199, 6194, 9496, 9477, 9463, 9456,
         9449, 9423, 9435, 9434, 9383, 9386,
         9385,  # Rundholz Jacke, Altkategorie "Objects" (geprueft 17.09.2026)
+        # Titel-Durchgang 27.09.2026, jeweils gegen Fotos bzw. Beschreibung
+        # geprueft; die Altkategorie bleibt fuer Match/Chaos/Baukasten stehen.
+        9393, 9448, 9503,  # Sweatshirts, Altkategorie "Tops"
+        9399, 9487,        # Cardigans, Altkategorie "Tops"
+        9400,              # Isabel Marant Kleid, Altkategorie "Tops"
+        9401, 9527,        # Longsleeves, Altkategorie "Tops"
+        9406, 9468,        # Tanktops, Altkategorie "Tops"
+        9411, 9508,        # T-Shirts, Altkategorie "Tops"
+        9462,              # Margiela x H&M Blazer, Altkategorie "Skirts"
+        9515, 9516,        # Gaultier Soleil Oberteile, Altkategorie "Dresses"
     }
     unexpected = sorted(mismatch_ids - intentional)
     require(not unexpected, "unerwartete Broad-Category-Abweichungen: " + ", ".join(map(str, unexpected)))

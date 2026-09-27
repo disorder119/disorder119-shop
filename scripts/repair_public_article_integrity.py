@@ -86,7 +86,11 @@ def tr(table: dict, value: str, lang: str) -> str:
 def display_name(item: dict) -> str:
     brand = item.get("brand") or ""
     title = item.get("title") or ""
-    return title if brand and title.lower().startswith(brand.lower()) else (brand + " " + title).strip()
+    # Wie build_site.display_name: steht die Marke schon im Titel ("MM6 Maison
+    # Margiela", "Pierre Balmain"), wird sie nicht noch einmal vorangestellt.
+    if brand and re.search(r"(?<!\w)" + re.escape(brand) + r"(?!\w)", title, re.I):
+        return title
+    return (brand + " " + title).strip()
 
 
 def meta_description(item: dict, lang: str) -> str:

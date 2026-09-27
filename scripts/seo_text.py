@@ -77,7 +77,7 @@ TYPE_TR = {
 TYPE_SYNONYMS = {
     "Trousers": ("Jeans", "Pants", "Hose", "Chino", "Denim"),
     "Joggers": ("Jogger", "Trackpants", "Sweatpants"),
-    "Jacket": ("Blouson", "Parka", "Windbreaker", "Anorak", "Bomber"),
+    "Jacket": ("Blouson", "Parka", "Windbreaker", "Anorak", "Bomber", "Hoodie"),
     "Biker Jacket": ("Biker", "Lederjacke", "Leather Jacket"),
     "Bomber Jacket": ("Bomber",),
     "Coat": ("Mantel", "Parka"),
@@ -90,6 +90,14 @@ TYPE_SYNONYMS = {
     "Sweater": ("Pulli", "Knit", "Strick"),
     "Vest": ("Weste", "Gilet"),
     "Bag": ("Bag", "Tasche", "Clutch", "Tote"),
+    # Deutsche Titel nach dem Katalog-Schema ("Prada Luna Rossa Sweatjacke",
+    # "Prada Fellstola", "Prada Plateau-Sandaletten") - sonst haengt der
+    # Seitentitel die Produktart noch einmal an.
+    "Sweatshirt": ("Sweatjacke", "Hoodie"),
+    "Scarf": ("Stola",),
+    "Sandals": ("Sandal", "Flip-Flop", "Zehentrenner", "Pantolette"),
+    "Sleepwear": ("Schlafanzug", "Pyjama", "Lounge"),
+    "Heels": ("Heel",),
 }
 _LANG_INDEX = {"de": 0, "en": 1, "fr": 2}
 SIZE_WORD = {"de": "Gr.", "en": "Size", "fr": "Taille"}
