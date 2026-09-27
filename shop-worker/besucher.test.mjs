@@ -6,6 +6,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import workerEntry from "./worker-entry.js";
 import {
+  artikelName,
   besucherAufraeumen,
   geraetUndBrowser,
   handleBesucher,
@@ -77,6 +78,13 @@ function besuch(body, { origin = SHOP, ua = IPHONE, ip = "203.0.113.7", cf = { c
 
 const senden = (env, body, opts, now = T0) =>
   handleBesucher(besuch(body, opts), env, new URL("https://api.disorder119.com/besuch"), "req", null, now);
+
+test("Artikelname ohne doppelte Marke", () => {
+  assert.equal(artikelName({ brand: "Prada", title: "Nylonjacke" }), "Prada – Nylonjacke");
+  assert.equal(artikelName({ brand: "Prada", title: "Prada Walking-Sneaker Herren" }), "Prada Walking-Sneaker Herren");
+  assert.equal(artikelName({ brand: "", title: "Vintage Hemd" }), "Vintage Hemd");
+  assert.equal(artikelName({ brand: "Dior" }), "Dior");
+});
 
 test("Einordnung von Geraet, Browser, Bots und Herkunft", () => {
   assert.deepEqual(geraetUndBrowser(IPHONE), { geraet: "iPhone", browser: "Safari" });

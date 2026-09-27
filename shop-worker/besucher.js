@@ -222,10 +222,21 @@ function euro(preis) {
   return Number.isFinite(n) && n > 0 ? `${n.toLocaleString("de-DE")} €` : "";
 }
 
+// Seit dem festen Namensschema beginnt der Titel meist schon mit der Marke;
+// dann nicht noch einmal davorsetzen.
+export function artikelName(it) {
+  const titel = String(it?.title || "").trim();
+  const marke = String(it?.brand || "").trim();
+  const name = marke && !titel.toLowerCase().startsWith(marke.toLowerCase())
+    ? [marke, titel].filter(Boolean).join(" – ")
+    : titel || marke;
+  return safeText(name, 160);
+}
+
 export function artikelText(artikelId, it) {
   if (!artikelId) return "";
   if (!it) return `Artikel ${artikelId}`;
-  const name = [it.brand, it.title].filter(Boolean).join(" – ");
+  const name = artikelName(it);
   const preis = euro(it.price);
   return `Artikel ${artikelId} – ${safeText(name, 120)}${preis ? ` (${preis})` : ""}`;
 }
@@ -394,7 +405,7 @@ export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
     ...daten,
     besucher,
     zeit: new Date(now).toISOString(),
-    titel: eintrag ? safeText([eintrag.brand, eintrag.title].filter(Boolean).join(" – "), 160) : null,
+    titel: eintrag ? artikelName(eintrag) || null : null,
     land: kurz(cf.country, 2),
     region: kurz(cf.region, 80),
     stadt: kurz(cf.city, 80),
