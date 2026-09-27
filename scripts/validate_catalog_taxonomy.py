@@ -84,10 +84,12 @@ def main() -> None:
         6227: ("Men", "Sneakers", "Shoes"),
         6225: ("Men", "Boots", "Shoes"),
         6222: ("Men", "Sneakers", "Shoes"),
-        9446: ("Men", "Shoes", "Shoes"),
-        6235: ("Men", "Shoes", "Shoes"),
+        # Seit dem Titel-Durchgang vom 27.09.2026 nennen die Titel das Modell
+        # (America's Cup, High-Top-Sneaker); die Fotos zeigen Sneaker.
+        9446: ("Men", "Sneakers", "Shoes"),
+        6235: ("Men", "Sneakers", "Shoes"),
         9524: ("Women", "Bomber Jacket", "Jackets"),
-        9534: ("Men", "Shoes", "Shoes"),
+        9534: ("Men", "Sneakers", "Shoes"),
         9432: ("Women", "Underwear Shorts", "Pants"),
         # Der Rock lief unter Herren, weil Walter Van Beirendonck als
         # Herrenlabel gefuehrt wird. Die Groesse auf dem Etikett (M / 38 / 10)

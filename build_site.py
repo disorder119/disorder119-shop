@@ -381,7 +381,11 @@ def fmt_price_de(v):
 def display_name(it):
     brand = it.get("brand") or ""
     title = it.get("title") or ""
-    if brand and title.lower().startswith(brand.lower()):
+    # Steht die Marke schon irgendwo im Titel - etwa hinter einer Linie wie
+    # "MM6 Maison Margiela" oder "Pierre Balmain" -, wird sie nicht noch
+    # einmal vorangestellt. Sonst entstand "Maison Margiela MM6 Maison
+    # Margiela Top".
+    if brand and re.search(r"(?<!\w)" + re.escape(brand) + r"(?!\w)", title, re.I):
         return title
     return (brand + " " + title).strip()
 
