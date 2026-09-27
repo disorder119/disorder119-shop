@@ -7,6 +7,9 @@
    kurz ungeschützt als dauerhaft ausgesperrt. */
 (function () {
   "use strict";
+  // Gesperrt wird nur der echte Shop; lokale Vorschau und CI-Tests fragen
+  // den Server nicht (er antwortet nur disorder119.com).
+  if (!/^(www\.)?disorder119\.com$/i.test(location.hostname)) return;
   var API = "https://api.disorder119.com";
   var PASS = "d119_site_pass";
   var ZULETZT = "d119_site_lock_last";

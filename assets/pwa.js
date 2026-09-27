@@ -1,10 +1,20 @@
 (function () {
   "use strict";
 
+  // Nur disorder119.com spricht mit dem Live-Server (api.disorder119.com
+  // erlaubt keine anderen Herkuenfte). Lokale Vorschau und die Browser-Tests
+  // der CI (127.0.0.1) laufen wie bisher ohne Server - sonst meldet jede
+  // Seite CORS-Fehler in der Konsole. Laeuft vor app.js/article.js.
+  if (!/^(www\.)?disorder119\.com$/i.test(location.hostname)) {
+    ["SHOP_CONFIG", "ARTICLE_SHOP_CONFIG"].forEach(function (name) {
+      if (window[name] && typeof window[name] === "object") window[name].shopWorkerUrl = "";
+    });
+  }
+
   var EXPIRES_AT = Date.parse("2026-09-26T13:53:00+02:00");
   var AUTH_KEY = "d119_temp_private_until";
   var EXPECTED_HASH = "a65bd46ba7f83f1b2a7b54c9ee00f0be4e7fd90aafa39699704be1781a2f9d0e";
-  var RUNTIME = "/assets/pwa-runtime.js?v=20260926-1";
+  var RUNTIME = "/assets/pwa-runtime.js?v=20260926-2";
 
   function loadRuntime() {
     if (document.querySelector('script[data-d119-pwa-runtime]')) return;
