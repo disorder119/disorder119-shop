@@ -177,7 +177,7 @@ test("address suggestions: town for a postcode, streets for a prefix, strict inp
     OPENPLZ_LADEN: async url => {
       anfragen.push(url);
       if (url.includes("/Localities?postalCode=63739")) return [{ postalCode: "63739", name: "Aschaffenburg" }];
-      if (url.includes("/Streets?name=Nel")) return [{ name: "Nelseestr." }, { name: "Nelkenweg" }, { name: "Nelseestr." }];
+      if (url.includes("/Streets?name=Nel")) return [{ name: "City-Tunnel" }, { name: "Nelseestr." }, { name: "Nelkenweg" }, { name: "Nelseestr." }];
       return [];
     },
   };
@@ -191,7 +191,7 @@ test("address suggestions: town for a postcode, streets for a prefix, strict inp
   assert.equal(ort.cors, SHOP);
   assert.deepEqual(ort.data.orte, ["Aschaffenburg"]);
   const strassen = await frage("?plz=63739&strasse=Nel");
-  assert.deepEqual(strassen.data.strassen, ["Nelkenweg", "Nelseestraße"]);
+  assert.deepEqual(strassen.data.strassen, ["Nelkenweg", "Nelseestraße", "City-Tunnel"]);
   await frage("?plz=63739");
   assert.equal(anfragen.length, 2); // zweite Ortsabfrage aus dem Zwischenspeicher
   assert.equal((await frage("?plz=6373")).status, 400);

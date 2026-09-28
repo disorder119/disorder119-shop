@@ -110,6 +110,13 @@ SPECIAL_PAGES = {
     "mieten": {"de": "Mieten & Ausleihen", "en": "Rent & Borrow", "fr": "Location"},
 }
 
+# Impressum, AGB und Datenschutz muessen Name und ladungsfaehige Anschrift
+# nennen (§ 5 DDG, Widerrufsbelehrung, Art. 13 DSGVO). Sie bleiben vollstaendig
+# und von jeder Seite verlinkt, stehen aber nicht im Suchindex und nicht in der
+# Sitemap - wer den Namen des Inhabers googelt, soll nicht bei seiner
+# Wohnadresse landen (Wunsch des Inhabers, 27.09.2026).
+PRIVATE_LEGAL_PAGES = {"impressum", "agb", "datenschutz"}
+
 # Diese drei zeigen exakt denselben Katalog wie die Archiv-Startseite, nur
 # in einer anderen Ansicht/Interaktionsform - fuer Suchmaschinen ist die
 # Startseite die kanonische Quelle dieser Produktdaten (dieselbe Logik wie
@@ -264,9 +271,9 @@ LEGAL_CONTENT_HTML = {
 
 INFO_CONTENT_HTML = {
     "aboutHtml": {
-        "de": '<h2>Über Disorder119</h2><p>DISORDER119 ist ein unabhängig geführtes, kuratiertes Archiv für ausgewählte Designer-, Vintage- und Contemporary-Pieces mit Fokus auf Qualität, Authentizität und Zeitlosigkeit.</p><h3>Auswahl &amp; Dokumentation</h3><p>Jedes angebotene Stück wird einzeln ausgewählt, fotografiert und beschrieben. Da es sich überwiegend um gebrauchte Einzelstücke handelt, werden Zustand und erkennbare Besonderheiten nach bestem Wissen dokumentiert. Wenn zu einem Artikel Angaben fehlen oder du zusätzliche Detailfotos oder Maße brauchst, klären wir das vor dem Kauf.</p><h3>Transparent einkaufen</h3><p>Hinter Disorder119 steht Joel Bittner als Einzelunternehmer in Aschaffenburg. Anbieterangaben, Widerrufsbelehrung, Gewährleistungsinformationen und Datenschutz findest du jederzeit in Impressum, AGB und Datenschutz.</p>',
-        "en": '<h2>About Disorder119</h2><p>DISORDER119 is an independently run, curated archive of selected designer, vintage and contemporary pieces with a focus on quality, authenticity and timelessness.</p><h3>Selection &amp; documentation</h3><p>Every listed piece is individually selected, photographed and described. As most pieces are pre-owned one-offs, condition and visible characteristics are documented to the best of our knowledge. If information is missing or you need additional detail photos or measurements, we clarify this before purchase.</p><h3>Transparent shopping</h3><p>Disorder119 is operated by Joel Bittner as a sole proprietor in Aschaffenburg, Germany. Seller information, withdrawal instructions, statutory warranty information and privacy details are available at all times in the legal notice, terms and privacy policy.</p>',
-        "fr": '<h2>À propos de Disorder119</h2><p>DISORDER119 est une archive indépendante et sélectionnée de pièces de créateurs, vintage et contemporaines, axée sur la qualité, l’authenticité et l’intemporalité.</p><h3>Sélection &amp; documentation</h3><p>Chaque pièce proposée est sélectionnée, photographiée et décrite individuellement. La plupart étant des pièces uniques d’occasion, leur état et leurs particularités visibles sont documentés au mieux de notre connaissance. Si une information manque ou si tu souhaites des photos de détail ou des mesures supplémentaires, nous clarifions cela avant l’achat.</p><h3>Achat transparent</h3><p>Disorder119 est exploité par Joel Bittner en tant qu’entreprise individuelle à Aschaffenburg, en Allemagne. Les informations vendeur, le droit de rétractation, les droits de garantie légaux et les informations de confidentialité sont disponibles à tout moment dans les mentions légales, les CGV et la politique de confidentialité.</p>',
+        "de": '<h2>Über Disorder119</h2><p>DISORDER119 ist ein unabhängig geführtes, kuratiertes Archiv für ausgewählte Designer-, Vintage- und Contemporary-Pieces mit Fokus auf Qualität, Authentizität und Zeitlosigkeit.</p><h3>Auswahl &amp; Dokumentation</h3><p>Jedes angebotene Stück wird einzeln ausgewählt, fotografiert und beschrieben. Da es sich überwiegend um gebrauchte Einzelstücke handelt, werden Zustand und erkennbare Besonderheiten nach bestem Wissen dokumentiert. Wenn zu einem Artikel Angaben fehlen oder du zusätzliche Detailfotos oder Maße brauchst, klären wir das vor dem Kauf.</p><h3>Transparent einkaufen</h3><p>Disorder119 ist ein Einzelunternehmen aus Deutschland. Anbieterangaben, Widerrufsbelehrung, Gewährleistungsinformationen und Datenschutz findest du jederzeit in Impressum, AGB und Datenschutz.</p>',
+        "en": '<h2>About Disorder119</h2><p>DISORDER119 is an independently run, curated archive of selected designer, vintage and contemporary pieces with a focus on quality, authenticity and timelessness.</p><h3>Selection &amp; documentation</h3><p>Every listed piece is individually selected, photographed and described. As most pieces are pre-owned one-offs, condition and visible characteristics are documented to the best of our knowledge. If information is missing or you need additional detail photos or measurements, we clarify this before purchase.</p><h3>Transparent shopping</h3><p>Disorder119 is a sole proprietorship based in Germany. Seller information, withdrawal instructions, statutory warranty information and privacy details are available at all times in the legal notice, terms and privacy policy.</p>',
+        "fr": '<h2>À propos de Disorder119</h2><p>DISORDER119 est une archive indépendante et sélectionnée de pièces de créateurs, vintage et contemporaines, axée sur la qualité, l’authenticité et l’intemporalité.</p><h3>Sélection &amp; documentation</h3><p>Chaque pièce proposée est sélectionnée, photographiée et décrite individuellement. La plupart étant des pièces uniques d’occasion, leur état et leurs particularités visibles sont documentés au mieux de notre connaissance. Si une information manque ou si tu souhaites des photos de détail ou des mesures supplémentaires, nous clarifions cela avant l’achat.</p><h3>Achat transparent</h3><p>Disorder119 est une entreprise individuelle basée en Allemagne. Les informations vendeur, le droit de rétractation, les droits de garantie légaux et les informations de confidentialité sont disponibles à tout moment dans les mentions légales, les CGV et la politique de confidentialité.</p>',
     },
     "faqHtml": {
         "de": '<h2>FAQ</h2><h3>Sind alle Artikel Einzelstücke?</h3><p>Ja. Alle verfügbaren Artikel sind kuratierte Einzelstücke. Deshalb kann ein Artikel nach Verkauf nicht erneut bestellt werden.</p><h3>Wie funktioniert eine Bestellung?</h3><p>Lege verfügbare Artikel in den Warenkorb und sende die Bestellanfrage über die angebotene Kontaktmöglichkeit. Die Anfrage ist zunächst unverbindlich. Verfügbarkeit, Gesamtpreis, Zahlungsart und Versand werden bestätigt; erst mit dieser Bestätigung kommt der Kaufvertrag zustande.</p><h3>Was kostet der Versand?</h3><p>Das hängt von Paketgröße und Versandart ab: Standard ist der günstigste Paketdienst mit Lieferung an die Haustür (meist 2 Werktage), Express kommt in der Regel am nächsten Werktag, soweit angeboten. Shirts, Tops und Accessoires gehen im kleinen Paket, Jacken, Hosen, Kleider und Schuhe im mittleren, Mäntel, Stiefel oder mehrere Teile im großen. Den genauen Betrag siehst du im Warenkorb und vor dem Kaufknopf. Versand ins Ausland und Abholung klären wir individuell.</p><h3>Sind die Artikel neu?</h3><p>In der Regel nicht. Disorder119 ist ein Designer-, Vintage- und Second-Hand-Archiv. Zustand und erkennbare Besonderheiten werden nach bestem Wissen in den Produktangaben beschrieben.</p><h3>Was ist, wenn Angaben wie Größe, Zustand oder Maße fehlen?</h3><p>Dann solltest du vor dem Kauf nachfragen. Zusätzliche Maße, Detailfotos und produktbezogene Informationen können vor Vertragsabschluss geklärt werden.</p><h3>Wie wird mit Authentizität umgegangen?</h3><p>Authentizität ist Teil des Auswahlfokus von Disorder119. Eine Prüfung oder Zertifizierung durch den jeweiligen Markenhersteller oder einen externen Authentifizierungsdienst wird jedoch nur dann zugesichert, wenn dies beim konkreten Artikel ausdrücklich angegeben ist. Bei Fragen können zusätzliche Detailfotos angefragt werden.</p><h3>Kann ich widerrufen und welche Gewährleistung gilt?</h3><p>Für Verbraucher:innen gilt das gesetzliche 14-tägige Widerrufsrecht. Außerdem gelten die gesetzlichen Gewährleistungsrechte. Die vollständigen Bedingungen und die Widerrufsbelehrung findest du in den AGB.</p><h3>Wie werden meine Daten behandelt?</h3><p>Die Website verwendet keine Analyse-, Marketing- oder Tracking-Cookies. Warenkorb und Outfit-Baukasten werden lokal im Browser gespeichert. Details findest du in der Datenschutzerklärung.</p><h3>Warum bleiben verkaufte Artikel sichtbar?</h3><p>Verkaufte Pieces bleiben als Teil des DISORDER119-Archivs sichtbar und sind eindeutig als verkauft gekennzeichnet.</p>',
@@ -1013,13 +1020,9 @@ def site_entities_jsonld(shop_config):
         "logo": SITE_URL + "assets/favicon.png",
         "image": SITE_URL + "assets/og-image.png",
         "currenciesAccepted": "EUR",
-        "address": {
-            "@type": "PostalAddress",
-            "streetAddress": "Nelseestraße 25",
-            "postalCode": "63739",
-            "addressLocality": "Aschaffenburg",
-            "addressCountry": "DE",
-        },
+        # Nur das Land: die Anschrift steht im Impressum, aber nicht in den
+        # Google-Daten jeder Seite (sonst taucht sie zu Namenssuchen auf).
+        "address": {"@type": "PostalAddress", "addressCountry": "DE"},
     }
     if shop_config.get("email"):
         store["email"] = shop_config["email"]
@@ -1317,7 +1320,7 @@ def build_special_pages():
             label = labels[lang]
             title_tag = ("Disorder119 — " + label) if slug != "cart" else (label + " | Disorder119")
             desc_text = SPECIAL_META_DESCRIPTIONS.get(slug, {}).get(lang, ph["home_desc"])
-            robots = "noindex,follow" if slug == "cart" or slug in duplicate_variants else None
+            robots = "noindex,follow" if slug == "cart" or slug in duplicate_variants or slug in PRIVATE_LEGAL_PAGES else None
             canonical_segment = "" if slug in duplicate_variants else None
             static_content = static_page_content_html(slug, lang, shop_config)
             out = render_bundle_page(
@@ -1532,7 +1535,7 @@ def build_sitemap():
     neu_stand = {}
     indexable_specials = [
         slug for slug in SPECIAL_PAGES
-        if slug not in {"cart", "match", "chaos", "baukasten"}
+        if slug not in {"cart", "match", "chaos", "baukasten"} and slug not in PRIVATE_LEGAL_PAGES
     ]
     page_specs = (
         [("", None)]

@@ -83,7 +83,13 @@ export async function strassenZurPlz(env, plz, anfang) {
   const namen = (Array.isArray(liste) ? liste : [])
     .map(s => strassennameAus(safeText(s?.name, 100)))
     .filter(Boolean);
-  return [...new Set(namen)].sort((a, b) => a.localeCompare(b, "de")).slice(0, MAX_STRASSEN);
+  // OpenPLZ sucht auch mitten im Namen ("Nel" findet "City-Tunnel"). Wer
+  // tippt, meint den Anfang: diese Treffer zuerst, dann der Rest.
+  const klein = anfang.toLocaleLowerCase("de");
+  const rang = name => (name.toLocaleLowerCase("de").startsWith(klein) ? 0 : 1);
+  return [...new Set(namen)]
+    .sort((a, b) => rang(a) - rang(b) || a.localeCompare(b, "de"))
+    .slice(0, MAX_STRASSEN);
 }
 
 export function isAdresseRoute(url) {
