@@ -67,7 +67,9 @@ jobs:
           node --check shop-worker/packlink.js
           node --check shop-worker/versand.js
           node --check shop-worker/versand-config.js
-          node --test shop-worker/packlink.test.mjs shop-worker/versand.test.mjs
+          node --check shop-worker/adresse.js
+          node --check assets/kasse.js
+          node --test shop-worker/packlink.test.mjs shop-worker/versand.test.mjs shop-worker/kasse.test.mjs
 
       - name: Live-Besucher (Statistik und Telegram) pruefen
         run: |

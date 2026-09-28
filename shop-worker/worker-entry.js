@@ -21,6 +21,7 @@ import { handleVersand, istVersandRoute } from "./dhl.js";
 import { handleDhlQr, isDhlQrRoute } from "./dhl-qr.js";
 import { handlePacklink, handlePacklinkWebhook, isPacklinkRoute, isPacklinkWebhookRoute } from "./packlink.js";
 import { handleVersandOptionen, isVersandOptionenRoute } from "./versand.js";
+import { handleAdresse, isAdresseRoute } from "./adresse.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
 import { handleIncomingEmail, handlePostfach, isPostfachRoute } from "./postfach.js";
@@ -191,6 +192,11 @@ export default {
       // Versandoptionen fuer Produktseite und Warenkorb: oeffentlich, nur lesen.
       if (isVersandOptionenRoute(url)) {
         return finish(await handleVersandOptionen(request, runtimeEnv, url, reqId, origin));
+      }
+
+      // Adressvorschlaege fuer die Kasse (PLZ -> Ort, Strassenanfang -> Strassen).
+      if (isAdresseRoute(url)) {
+        return finish(await handleAdresse(request, runtimeEnv, url, reqId, origin));
       }
 
       // Meldungen von Packlink kommen ohne Origin und ohne Anmeldung - der

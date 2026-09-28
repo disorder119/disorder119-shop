@@ -308,6 +308,10 @@ a { color: inherit; }
 .btn.active { background: var(--ink); color: var(--paper); border-color: var(--rule-strong); }
 
 .btn--outline { background: transparent; color: var(--paper); }
+/* "Jetzt kaufen" fuehrt in die Kasse und ist der Hauptweg - der Warenkorb-
+   Knopf tritt daneben zurueck. */
+.btn--buy { display: block; text-align: center; text-decoration: none; }
+.info__cta:has(.btn--buy) #addToCartBtn { background: transparent; color: var(--paper); }
 .btn--outline:hover { border-color: var(--accent); color: var(--accent-text); background: transparent; }
 
 .btn[disabled] { opacity: 0.4; cursor: not-allowed; }

@@ -1156,36 +1156,47 @@
     margin-bottom: 0;
   }
 
-  /* Versandart im Warenkorb: Standard oder Express mit Live-Preis. */
-  .cart-versand {
-    margin: 0;
-    padding: 0;
-    border: 0;
-    min-width: 0;
-    display: grid;
-    gap: 6px;
-    font-size: 0.86rem;
-  }
-  .cart-versand legend {
-    padding: 0;
-    margin-bottom: 4px;
-    color: var(--text-muted);
-  }
-  .cart-versand legend small { font-size: 0.74rem; }
-  .cart-versand__info { margin: 0; color: var(--text-muted); font-size: 0.8rem; }
-  .cart-versand__opt {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
+  /* Warenkorb: die ganze Schublade scrollt, damit alle Stuecke sauber
+     untereinander stehen. Kopf oben und Kassen-Leiste unten bleiben stehen. */
+  .cart-drawer { overflow-y: auto; overscroll-behavior: contain; }
+  .cart-drawer__head { position: sticky; top: 0; z-index: 2; background: var(--surface); }
+  .cart-drawer__body { flex: 0 0 auto; overflow: visible; }
+  .cart-drawer__foot { flex: 0 0 auto; }
+  /* Die grosse Gesamtzeile steht in der Kassen-Leiste - hier nicht doppelt. */
+  .cart-drawer__foot > .cart-total:not(.cart-total--line) { display: none; }
+  .cart-drawer__kasse {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-top: auto;
+    display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 7px 10px;
-    border: 1px solid var(--rule);
-    cursor: pointer;
+    gap: 14px;
+    padding: 14px clamp(18px, 3vw, 28px) calc(14px + env(safe-area-inset-bottom, 0px));
+    background: var(--surface);
+    border-top: 1px solid var(--rule-strong);
   }
-  .cart-versand__opt:has(input:checked) { border-color: var(--accent-text); }
-  .cart-versand__opt input { margin: 0; accent-color: var(--accent-text); }
-  .cart-versand__name small { color: var(--text-muted); font-size: 0.74rem; }
-  .cart-versand__preis { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cart-drawer__kasse[hidden] { display: none; }
+  .cart-kasse__summe { flex: 1; display: grid; gap: 2px; min-width: 0; }
+  .cart-kasse__summe span { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+  .cart-kasse__summe small { font-size: 0.68rem; letter-spacing: normal; text-transform: none; }
+  .cart-kasse__summe strong { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+  .cart-kasse__btn {
+    flex: 0 0 auto;
+    padding: 14px 22px;
+    background: var(--text);
+    color: var(--ink);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 1px solid var(--text);
+  }
+  .cart-kasse__btn:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+  /* Anfrage per Mail ist jetzt der zweite Weg: schlichter Rahmen statt Flaeche. */
+  .cart-drawer__foot .cart-checkout-btn { background: transparent; color: var(--text); border: 1px solid var(--rule-strong); }
+
 
   .cart-checkout-btn {
     display: block;

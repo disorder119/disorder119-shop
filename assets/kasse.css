@@ -1,0 +1,428 @@
+/* Kasse. Baut auf den Farb- und Schrifttokens aus app.css auf (--ink ist der
+   schwarze Seitengrund, --text die helle Schrift) und ueberschreibt keine
+   einzige Regel des Archivs. Handy zuerst: eine Spalte, Uebersicht unten;
+   ab 900 px Schritte links, Uebersicht rechts mitlaufend. */
+
+.kasse-seite {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+  color: var(--text);
+}
+
+.kasse-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px max(16px, calc((100% - 1080px) / 2));
+  border-bottom: 1px solid var(--rule);
+}
+
+.kasse-marke,
+.kasse-zurueck {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.kasse-marke {
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.22em;
+}
+
+.kasse-zurueck {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.kasse-zurueck:hover,
+.kasse-zurueck:focus-visible { color: var(--text); }
+
+.kasse-inhalt {
+  flex: 1;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px 16px 72px;
+}
+
+.kasse-inhalt h1 {
+  margin: 0 0 22px;
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.kasse-meldung {
+  margin: 0 0 22px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule-strong);
+  background: var(--surface);
+  font-size: 0.92rem;
+}
+
+.kasse-raster {
+  display: grid;
+  gap: 32px;
+}
+
+.kasse-raster[hidden] { display: none; }
+
+@media (min-width: 900px) {
+  .kasse-raster {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+    gap: 48px;
+  }
+  .kasse-summe {
+    position: sticky;
+    top: 24px;
+  }
+}
+
+/* ------------------------------------------------------------------ Schritte */
+
+.kasse-block { margin: 0 0 36px; }
+.kasse-block:last-child { margin-bottom: 0; }
+
+.kasse-block h2,
+.kasse-summe h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 14px;
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.kasse-nr {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--rule-strong);
+  font-size: 0.68rem;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+/* Stuecke */
+.kasse-artikel {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--rule);
+}
+
+.kasse-stueck {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.kasse-stueck__bild {
+  width: 64px;
+  aspect-ratio: 3 / 4;
+  background: var(--mount);
+  overflow: hidden;
+}
+
+.kasse-stueck__bild img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.kasse-stueck__text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.kasse-stueck__marke {
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.kasse-stueck__titel {
+  font-size: 0.92rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.kasse-stueck__meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.kasse-stueck__preis {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.kasse-weg {
+  padding: 12px 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--rule);
+}
+
+/* Lieferadresse */
+.kasse-form {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px 12px;
+}
+
+.kasse-feld {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  grid-column: span 3;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.kasse-feld > label { cursor: pointer; }
+.kasse-feld--plz { grid-column: span 2; }
+.kasse-feld--ort { grid-column: span 4; }
+.kasse-feld--strasse { grid-column: span 4; }
+.kasse-feld--nr { grid-column: span 2; }
+.kasse-feld--breit { grid-column: 1 / -1; }
+
+.kasse-feld input {
+  font-family: inherit;
+  font-size: 1rem;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  border-radius: 0;
+  padding: 11px 12px;
+  width: 100%;
+}
+
+.kasse-feld input:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
+}
+
+.kasse-feld input[aria-invalid="true"] { border-color: #c86a5a; }
+.kasse-feld input:read-only { opacity: 0.7; }
+
+.kasse-fehler {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  letter-spacing: normal;
+  text-transform: none;
+  color: #e39a8e;
+}
+
+.kasse-hinweis {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-muted);
+}
+
+/* Vorschlaege fuer die Strasse */
+.kasse-vorschlaege {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  margin: 2px 0 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.kasse-vorschlag {
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.kasse-vorschlag:hover,
+.kasse-vorschlag[aria-selected="true"] { background: var(--ink); color: var(--accent-text); }
+
+/* Mehrere Orte zu einer PLZ */
+.kasse-orte {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.kasse-orte[hidden] { display: none; }
+.kasse-orte__titel { width: 100%; font-size: 0.78rem; }
+
+.kasse-chip {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.kasse-chip:hover,
+.kasse-chip:focus-visible { border-color: var(--accent-text); }
+
+/* Versand */
+.kasse-optionen { display: grid; gap: 8px; margin-bottom: 8px; }
+
+.kasse-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule-strong);
+  cursor: pointer;
+}
+
+.kasse-option:has(input:checked) { border-color: var(--accent-text); }
+.kasse-option input { margin: 0; accent-color: var(--accent-text); }
+.kasse-option__name small { margin-left: 8px; font-size: 0.78rem; color: var(--text-muted); }
+.kasse-option__preis { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 700; }
+
+/* ---------------------------------------------------------------- Uebersicht */
+
+.kasse-summe {
+  padding: 20px;
+  border: 1px solid var(--rule-strong);
+  background: var(--surface);
+}
+
+.kasse-summe__liste {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.kasse-summe__liste > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 0.9rem;
+}
+
+.kasse-summe__liste dt { margin: 0; color: var(--text-muted); }
+.kasse-summe__liste dd { margin: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.kasse-summe__gesamt {
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+  font-weight: 700;
+  font-size: 1.05rem !important;
+}
+
+.kasse-summe__gesamt dt { color: var(--text) !important; }
+
+.kasse-gutschein,
+.kasse-recht,
+.kasse-status {
+  margin: 0 0 14px;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.kasse-recht a { color: var(--accent-text); }
+.kasse-status { color: var(--text); font-size: 0.82rem; }
+.kasse-zahlen { display: grid; gap: 12px; }
+.kasse-paypal { min-height: 48px; }
+
+/* ------------------------------------------------------------------- Knoepfe */
+
+.kasse-knopf {
+  display: inline-block;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  text-align: center;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  padding: 13px 18px;
+  cursor: pointer;
+}
+
+.kasse-knopf--hell {
+  color: var(--ink);
+  background: var(--text);
+  border-color: var(--text);
+}
+
+.kasse-knopf--breit { width: 100%; }
+.kasse-knopf:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+
+.kasse-leer,
+.kasse-danke {
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+  max-width: 560px;
+}
+
+.kasse-danke h2 { margin: 0; font-size: 1.4rem; }
+.kasse-danke p { margin: 0; line-height: 1.55; }
+.kasse-danke__knoepfe { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.kasse-fuss {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  justify-content: center;
+  padding: 22px 16px;
+  border-top: 1px solid var(--rule);
+}
+
+.kasse-fuss a {
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kasse-vorschlaege { scroll-behavior: auto; }
+}

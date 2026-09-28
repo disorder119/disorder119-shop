@@ -23,6 +23,7 @@ const EXACT_METHODS = Object.freeze({
   "/paypal-webhook": "POST",
   "/rental-requests": "GET",
   "/versand/optionen": "GET",
+  "/adresse/vorschlag": "GET",
   "/newsletter/subscribe": "POST",
   "/newsletter/confirm": "POST",
   "/newsletter/unsubscribe": "POST",

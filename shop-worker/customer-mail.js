@@ -27,6 +27,92 @@ export const SELLER = {
 
 export const SHOP_URL = "https://disorder119.com";
 
+// Schwarzes DISORDER119-Mail-Design - dieselben Farben wie die Website und die
+// Newsletter (mail-design.js nimmt sie von hier).
+export const MAIL_FARBE = Object.freeze({
+  grund: "#000000",
+  flaeche: "#0d0d0d",
+  text: "#f2efe7",
+  leise: "#9c978d",
+  linie: "#2b2a27",
+});
+const MAIL_SCHRIFT = "'Helvetica Neue',Helvetica,Arial,sans-serif";
+
+// Rahmen der Kundenmails: Tabellen und Inline-Styles, weil Outlook und Gmail
+// kein modernes CSS koennen. `vorschau` ist die Zeile, die das Postfach neben
+// dem Betreff zeigt.
+function kundenmailRahmen({ titel, eyebrow, kopf, inhalt, vorschau }) {
+  const F = MAIL_FARBE;
+  return `<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">
+<title>${escapeHtml(titel)}</title></head>
+<body style="margin:0;padding:0;background:${F.grund};">
+${vorschau ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${F.grund};">${escapeHtml(vorschau)}</div>` : ""}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${F.grund};">
+<tr><td align="center" style="padding:0 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;font-family:${MAIL_SCHRIFT};color:${F.text};font-size:15px;line-height:1.55;">
+  <tr><td align="center" style="padding:36px 0 26px;border-bottom:1px solid ${F.linie};">
+    <a href="${SHOP_URL}/" style="font-size:15px;font-weight:700;letter-spacing:0.34em;color:${F.text};text-decoration:none;">DISORDER119</a>
+  </td></tr>
+  <tr><td style="padding:40px 4px 6px;text-align:center;">
+    <p style="margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:${F.leise};">${escapeHtml(eyebrow)}</p>
+    <h1 style="margin:0 0 16px;font-size:28px;line-height:1.15;font-weight:700;letter-spacing:-0.01em;text-transform:uppercase;color:${F.text};">${escapeHtml(titel)}</h1>
+    ${kopf}
+  </td></tr>
+  ${inhalt}
+  <tr><td style="padding:30px 4px 44px;border-top:1px solid ${F.linie};text-align:center;font-size:11px;line-height:1.6;color:${F.leise};">
+    Kuratiertes Archiv für Designer-, Vintage- und Contemporary-Mode.<br>
+    ${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}, ${escapeHtml(SELLER.street)}, ${escapeHtml(SELLER.city)}
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+}
+
+function mailAbschnitt(ueberschrift, inhalt, rand = true) {
+  const F = MAIL_FARBE;
+  return `<tr><td style="padding:26px 4px 0;">
+    <p style="margin:0 0 10px;padding-top:${rand ? "22px" : "0"};${rand ? `border-top:1px solid ${F.linie};` : ""}font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${F.leise};">${escapeHtml(ueberschrift)}</p>
+    ${inhalt}
+  </td></tr>`;
+}
+
+function mailKnopf(href, label) {
+  const F = MAIL_FARBE;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr><td style="background:${F.text};">` +
+    `<a href="${escapeHtml(href)}" style="display:inline-block;padding:15px 28px;font-family:${MAIL_SCHRIFT};font-size:13px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${F.grund};text-decoration:none;">${escapeHtml(label)}</a>` +
+    "</td></tr></table>";
+}
+
+// Ein Stueck als Zeile: Foto (falls gespeichert), Titel, Art.-Nr., Preis.
+function stueckZeile(item, preis) {
+  const F = MAIL_FARBE;
+  const titel = escapeHtml(safeText(item.title_snapshot || item.title || "Artikel", 180));
+  const nr = escapeHtml(safeText(item.article_no || item.articleNo || "", 40));
+  const pfad = safeText(item.bild || "", 200).replace(/^\/+/, "");
+  const bild = /^assets\/img\/[A-Za-z0-9_\/.-]+$/.test(pfad)
+    ? `<img src="${SHOP_URL}/${escapeHtml(pfad)}" width="64" alt="" style="display:block;width:64px;height:auto;border:0;background:${F.flaeche};">`
+    : `<div style="width:64px;height:85px;background:${F.flaeche};"></div>`;
+  return `<tr>
+    <td width="78" valign="top" style="padding:14px 14px 14px 0;border-bottom:1px solid ${F.linie};">${bild}</td>
+    <td valign="middle" style="padding:14px 0;border-bottom:1px solid ${F.linie};">
+      <span style="display:block;font-size:15px;line-height:1.4;color:${F.text};">${titel}</span>
+      ${nr ? `<span style="display:block;margin-top:4px;font-size:12px;color:${F.leise};">Art.-Nr. ${nr}</span>` : ""}
+    </td>
+    ${preis === null ? "" : `<td valign="middle" align="right" style="padding:14px 0 14px 12px;border-bottom:1px solid ${F.linie};white-space:nowrap;font-weight:700;">${escapeHtml(preis)}</td>`}
+  </tr>`;
+}
+
+// "Versand · Standard (DPD)", solange die Kasse die Wahl gespeichert hat.
+function versandBezeichnung(order) {
+  const v = order.versand || {};
+  const art = v.art === "express" ? "Express" : v.art === "standard" ? "Standard" : "";
+  const carrier = safeText(v.carrier || "", 40);
+  if (!art) return "Versand (Deutschland)";
+  return `Versand · ${art}${carrier ? ` (${carrier})` : ""}`;
+}
+
 export function mailTransportReady(env = {}) {
   return Boolean(env.MAIL_API_KEY && env.MAIL_FROM);
 }
@@ -174,15 +260,17 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     ...itemTextLines,
     "",
     `Zwischensumme: ${euroAmount(subtotal, currency)}`,
-    `Versand (Deutschland): ${euroAmount(shipping, currency)}`,
+    `${versandBezeichnung(order)}: ${euroAmount(shipping, currency)}`,
     `Gesamt: ${euroAmount(total, currency)}`,
     "Zahlungsart: PayPal",
     "Kleinunternehmer gemäß § 19 UStG — es wird keine Umsatzsteuer ausgewiesen.",
     "",
     ...(delivery.length ? ["LIEFERADRESSE", ...delivery, ""] : []),
     "WIE ES WEITERGEHT",
-    "Dein Teil wird von Hand verpackt und in der Regel innerhalb von zwei Werktagen "
+    (items.length > 1 ? "Deine Stücke werden" : "Dein Teil wird") + " von Hand verpackt und in der Regel innerhalb von zwei Werktagen "
       + "versendet. Sobald das Paket unterwegs ist, bekommst du eine Mail mit der Sendungsnummer.",
+    "",
+    `Deine Bestellung im Konto: ${SHOP_URL}/konto/`,
     "",
     "VERKÄUFER",
     sellerBlockText(),
@@ -193,65 +281,40 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     `Alle Bedingungen: ${SHOP_URL}/agb/`,
   ].join("\n");
 
-  const itemRows = items.map(item => {
-    const title = escapeHtml(safeText(item.title_snapshot || item.title || "Artikel", 180));
-    const articleNo = escapeHtml(safeText(item.article_no || item.articleNo || "", 40));
-    const price = escapeHtml(euroAmount(item.unit_price_cents ?? item.unitPriceCents ?? 0, currency));
-    return `<tr>
-      <td style="padding:12px 0;border-bottom:1px solid #e3e0da;">
-        <strong style="font-weight:700;">${title}</strong>
-        ${articleNo ? `<br><span style="color:#6f6a60;font-size:13px;">Art.-Nr. ${articleNo}</span>` : ""}
-      </td>
-      <td style="padding:12px 0;border-bottom:1px solid #e3e0da;text-align:right;white-space:nowrap;">${price}</td>
-    </tr>`;
-  }).join("");
-
-  const sumRow = (label, value, strong) => `<tr>
-    <td style="padding:${strong ? "12px 0 0" : "6px 0 0"};${strong ? "font-weight:700;" : "color:#6f6a60;"}">${escapeHtml(label)}</td>
-    <td style="padding:${strong ? "12px 0 0" : "6px 0 0"};text-align:right;white-space:nowrap;${strong ? "font-weight:700;" : "color:#6f6a60;"}">${escapeHtml(value)}</td>
+  const F = MAIL_FARBE;
+  const summenZeile = (label, wert, stark) => `<tr>
+    <td style="padding:${stark ? "14px 0 0" : "8px 0 0"};${stark ? `font-size:17px;font-weight:700;color:${F.text};` : `color:${F.leise};`}">${escapeHtml(label)}</td>
+    <td align="right" style="padding:${stark ? "14px 0 0" : "8px 0 0"};white-space:nowrap;${stark ? `font-size:17px;font-weight:700;color:${F.text};` : `color:${F.leise};`}">${escapeHtml(wert)}</td>
   </tr>`;
-
-  const html = `<!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escapeHtml(subject)}</title></head>
-<body style="margin:0;padding:0;background:#f2efe7;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2efe7;padding:24px 12px;">
-<tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#141310;font-size:15px;line-height:1.55;">
-  <tr><td style="background:#0b0b0b;color:#f2efe7;padding:22px 28px;letter-spacing:0.22em;font-size:13px;font-weight:700;">DISORDER119</td></tr>
-  <tr><td style="padding:28px 28px 8px;">
-    <h1 style="margin:0 0 10px;font-size:21px;line-height:1.25;">Danke für deine Bestellung</h1>
-    <p style="margin:0 0 4px;">Bestellung <strong>${escapeHtml(number)}</strong> vom ${escapeHtml(ordered)}</p>
-    <p style="margin:0;color:#6f6a60;font-size:13px;">Die Zahlung ist eingegangen — damit ist der Kaufvertrag geschlossen. Diese E-Mail ist zugleich deine Rechnung und deine Vertragsbestätigung.</p>
-  </td></tr>
-  <tr><td style="padding:20px 28px 0;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:15px;">
-      ${itemRows}
-      ${sumRow("Zwischensumme", euroAmount(subtotal, currency), false)}
-      ${sumRow("Versand (Deutschland)", euroAmount(shipping, currency), false)}
-      ${sumRow("Gesamt", euroAmount(total, currency), true)}
+  const kopf = `<p style="margin:0 auto 8px;max-width:440px;color:${F.leise};">Bestellung <strong style="color:${F.text};">${escapeHtml(number)}</strong> vom ${escapeHtml(ordered)}</p>
+    <p style="margin:0 auto;max-width:440px;font-size:13px;color:${F.leise};">Die Zahlung ist eingegangen — damit ist der Kaufvertrag geschlossen. Diese E-Mail ist zugleich deine Rechnung und deine Vertragsbestätigung.</p>`;
+  const stuecke = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">
+      ${items.map(item => stueckZeile(item, euroAmount(item.unit_price_cents ?? item.unitPriceCents ?? 0, currency))).join("")}
     </table>
-    <p style="margin:14px 0 0;color:#6f6a60;font-size:13px;">Zahlungsart: PayPal · Kleinunternehmer gemäß § 19 UStG — es wird keine Umsatzsteuer ausgewiesen.</p>
-  </td></tr>
-  ${delivery.length ? `<tr><td style="padding:22px 28px 0;">
-    <h2 style="margin:0 0 6px;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:#6f6a60;">Lieferadresse</h2>
-    <p style="margin:0;">${delivery.map(escapeHtml).join("<br>")}</p>
-  </td></tr>` : ""}
-  <tr><td style="padding:22px 28px 0;">
-    <h2 style="margin:0 0 6px;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:#6f6a60;">Wie es weitergeht</h2>
-    <p style="margin:0;">Dein Teil wird von Hand verpackt und in der Regel innerhalb von zwei Werktagen versendet. Sobald das Paket unterwegs ist, bekommst du eine Mail mit der Sendungsnummer.</p>
-  </td></tr>
-  <tr><td style="padding:22px 28px 0;">
-    <h2 style="margin:0 0 6px;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:#6f6a60;">Verkäufer</h2>
-    <p style="margin:0;">${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}<br>${escapeHtml(SELLER.street)}<br>${escapeHtml(SELLER.city)}<br>${escapeHtml(SELLER.country)}<br>E-Mail: <a href="mailto:${escapeHtml(contactEmail)}" style="color:#141310;">${escapeHtml(contactEmail)}</a></p>
-  </td></tr>
-  <tr><td style="padding:22px 28px 28px;">
-    <div style="border-top:1px solid #e3e0da;padding-top:16px;font-size:12px;line-height:1.5;color:#4a463f;white-space:pre-wrap;">${escapeHtml(widerrufsbelehrungText(contactEmail))}</div>
-    <p style="margin:14px 0 0;font-size:12px;color:#6f6a60;">Alle Bedingungen: <a href="${SHOP_URL}/agb/" style="color:#141310;">${SHOP_URL}/agb/</a></p>
-  </td></tr>
-</table>
-</td></tr></table>
-</body></html>`;
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">
+      ${summenZeile("Zwischensumme", euroAmount(subtotal, currency), false)}
+      ${summenZeile(versandBezeichnung(order), euroAmount(shipping, currency), false)}
+      ${summenZeile("Gesamt", euroAmount(total, currency), true)}
+    </table>
+    <p style="margin:14px 0 0;font-size:12px;color:${F.leise};">Zahlungsart: PayPal · Kleinunternehmer gemäß § 19 UStG — es wird keine Umsatzsteuer ausgewiesen.</p>`;
+  const inhalt = [
+    mailAbschnitt(items.length > 1 ? `Deine ${items.length} Stücke` : "Dein Stück", stuecke, false),
+    delivery.length ? mailAbschnitt("Lieferadresse", `<p style="margin:0;">${delivery.map(escapeHtml).join("<br>")}</p>`) : "",
+    mailAbschnitt("Wie es weitergeht", `<p style="margin:0 0 22px;color:${F.leise};">${items.length > 1 ? "Deine Stücke werden" : "Dein Teil wird"} von Hand verpackt und in der Regel innerhalb von zwei Werktagen versendet. Sobald das Paket unterwegs ist, bekommst du eine Mail mit der Sendungsnummer und dem Link zur Sendungsverfolgung.</p>
+      ${mailKnopf(`${SHOP_URL}/konto/`, "Bestellung im Konto ansehen")}`),
+    mailAbschnitt("Verkäufer", `<p style="margin:0;color:${F.leise};">${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}<br>${escapeHtml(SELLER.street)}<br>${escapeHtml(SELLER.city)}<br>${escapeHtml(SELLER.country)}<br>E-Mail: <a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a></p>`),
+    `<tr><td style="padding:26px 4px 30px;">
+      <div style="border-top:1px solid ${F.linie};padding-top:18px;font-size:12px;line-height:1.55;color:${F.leise};white-space:pre-wrap;">${escapeHtml(widerrufsbelehrungText(contactEmail))}</div>
+      <p style="margin:14px 0 0;font-size:12px;color:${F.leise};">Alle Bedingungen: <a href="${SHOP_URL}/agb/" style="color:${F.text};">${SHOP_URL}/agb/</a></p>
+    </td></tr>`,
+  ].join("");
+  const html = kundenmailRahmen({
+    titel: "Danke für deine Bestellung",
+    eyebrow: "Bestellbestätigung",
+    kopf,
+    inhalt,
+    vorschau: `Bestellung ${number} · ${items.length} ${items.length === 1 ? "Stück" : "Stücke"} · ${euroAmount(total, currency)}`,
+  });
 
   return { subject, text, html };
 }
@@ -311,34 +374,29 @@ export function formatShippingConfirmation(order = {}, options = {}) {
     ...(contactEmail ? [`Fragen? Antworte einfach auf diese Mail oder schreib an ${contactEmail}.`] : []),
   ].join("\n");
 
-  const html = `<!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><title>${escapeHtml(subject)}</title></head>
-<body style="margin:0;padding:0;background:#f2efe7;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2efe7;padding:24px 12px;">
-<tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#141310;font-size:15px;line-height:1.55;">
-  <tr><td style="background:#0b0b0b;color:#f2efe7;padding:22px 28px;letter-spacing:0.22em;font-size:13px;font-weight:700;">DISORDER119</td></tr>
-  <tr><td style="padding:28px 28px 0;">
-    <h1 style="margin:0 0 10px;font-size:21px;line-height:1.25;">Dein Paket ist unterwegs</h1>
-    <p style="margin:0;">Bestellung <strong>${escapeHtml(number)}</strong></p>
-  </td></tr>
-  ${titles.length ? `<tr><td style="padding:20px 28px 0;">
-    <h2 style="margin:0 0 6px;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:#6f6a60;">Im Paket</h2>
-    <p style="margin:0;">${titles.map(escapeHtml).join("<br>")}</p>
-  </td></tr>` : ""}
-  <tr><td style="padding:20px 28px 0;">
-    ${tracking
-      ? `<p style="margin:0 0 4px;color:#6f6a60;font-size:13px;">Sendungsnummer (${escapeHtml(carrier)})</p>
-         <p style="margin:0 0 16px;font-size:17px;font-weight:700;letter-spacing:0.02em;">${escapeHtml(tracking)}</p>`
-      : `<p style="margin:0 0 16px;">Versand mit ${escapeHtml(carrier)}.</p>`}
-    ${url ? `<p style="margin:0;"><a href="${escapeHtml(url)}" style="display:inline-block;background:#0b0b0b;color:#f2efe7;text-decoration:none;padding:13px 22px;font-weight:700;letter-spacing:0.06em;">Sendung verfolgen</a></p>` : ""}
-  </td></tr>
-  <tr><td style="padding:20px 28px 28px;">
-    <p style="margin:0;color:#6f6a60;font-size:13px;">Bis die Sendung beim Dienstleister erfasst ist, kann es ein paar Stunden dauern.${contactEmail ? ` Fragen? Antworte einfach auf diese Mail oder schreib an <a href="mailto:${escapeHtml(contactEmail)}" style="color:#141310;">${escapeHtml(contactEmail)}</a>.` : ""}</p>
-  </td></tr>
-</table>
-</td></tr></table>
-</body></html>`;
+  const F = MAIL_FARBE;
+  const nummerBox = tracking
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:6px 0 22px;">
+        <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${F.leise};">Sendungsnummer · ${escapeHtml(carrier)}</p>
+        <div style="display:inline-block;border:1px solid ${F.text};padding:14px 20px;font-family:'Courier New',Courier,monospace;font-size:19px;font-weight:700;letter-spacing:0.08em;color:${F.text};">${escapeHtml(tracking)}</div>
+      </td></tr></table>
+      ${url ? mailKnopf(url, "Sendung verfolgen") : ""}`
+    : `<p style="margin:0;text-align:center;color:${F.leise};">Versand mit ${escapeHtml(carrier)}.</p>`;
+  const kopf = `<p style="margin:0 auto;max-width:440px;color:${F.leise};">Bestellung <strong style="color:${F.text};">${escapeHtml(number)}</strong> hat unser Lager verlassen.</p>`;
+  const inhalt = [
+    `<tr><td style="padding:26px 4px 0;">${nummerBox}</td></tr>`,
+    items.length ? mailAbschnitt("Im Paket", `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">${items.map(item => stueckZeile(item, null)).join("")}</table>`) : "",
+    `<tr><td style="padding:24px 4px 30px;">
+      <p style="margin:0;font-size:13px;color:${F.leise};">Bis die Sendung beim Paketdienst erfasst ist, kann es ein paar Stunden dauern.${contactEmail ? ` Fragen? Antworte einfach auf diese Mail oder schreib an <a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a>.` : ""}</p>
+    </td></tr>`,
+  ].join("");
+  const html = kundenmailRahmen({
+    titel: "Dein Paket ist unterwegs",
+    eyebrow: "Versandbestätigung",
+    kopf,
+    inhalt,
+    vorschau: tracking ? `Sendungsnummer ${tracking} · ${carrier}` : `Bestellung ${number} ist unterwegs`,
+  });
 
   return { subject, text, html };
 }
@@ -455,12 +513,16 @@ export async function loadOrderForConfirmation(env, orderId) {
       o.subtotal_cents,o.shipping_cents,o.total_cents,o.created_at
     FROM commerce_orders o WHERE o.id=? LIMIT 1`).bind(String(orderId)).first();
   if (!order) return null;
-  const items = await env.DB.prepare(`SELECT article_no,title_snapshot,unit_price_cents
+  const items = await env.DB.prepare(`SELECT article_no,title_snapshot,unit_price_cents,bild
     FROM order_items WHERE order_id=? ORDER BY id`).bind(String(orderId)).all();
+  let versand = null;
+  try {
+    versand = await env.DB.prepare("SELECT art,carrier FROM order_versand WHERE order_id=? LIMIT 1").bind(String(orderId)).first();
+  } catch { versand = null; }
   const contact = await env.DB.prepare(`SELECT email,recipient_name,given_name,surname,
       address_line1,address_line2,postal_code,city,region,country_code
     FROM order_contact_snapshots WHERE order_id=? LIMIT 1`).bind(String(orderId)).first();
-  return { ...order, items: items?.results || [], contact: contact || {} };
+  return { ...order, items: items?.results || [], contact: contact || {}, versand: versand || null };
 }
 
 export async function sendOrderConfirmation(env, orderId, reqId = crypto.randomUUID()) {
@@ -568,7 +630,7 @@ async function loadShippedOrder(env, orderId) {
     LEFT JOIN shipments s ON s.order_id=o.id
     WHERE o.id=? ORDER BY s.created_at DESC LIMIT 1`).bind(String(orderId)).first();
   if (!order) return null;
-  const items = await env.DB.prepare(`SELECT title_snapshot FROM order_items
+  const items = await env.DB.prepare(`SELECT title_snapshot,article_no,bild FROM order_items
     WHERE order_id=? ORDER BY id`).bind(String(orderId)).all();
   const contact = await env.DB.prepare(`SELECT email,recipient_name FROM order_contact_snapshots
     WHERE order_id=? LIMIT 1`).bind(String(orderId)).first();
