@@ -67,12 +67,12 @@
       "Objects": "L"
     }
   },
-  "paypalClientId": "",
+  "paypalClientId": "BAAcvD8X1aHIk42UUDAMZkYZ2i5gKLPCXZDBzbWjsh-axJ_6551l-FXgDdboqGtmZSidZbGWon2cQ_SuaI",
   "shopWorkerUrl": "https://api.disorder119.com",
-  "turnstileSiteKey": "",
-  "environment": "sandbox",
+  "turnstileSiteKey": "0x4AAAAAAFHqI2j_AitAYIKF",
+  "environment": "live",
   "features": {
-    "paypalCheckout": false,
+    "paypalCheckout": true,
     "customerAccounts": true
   }
 }
