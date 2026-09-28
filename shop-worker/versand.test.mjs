@@ -25,10 +25,13 @@ const SHOP = "https://disorder119.com";
 
 // Packlink-Antwort fuer /v1/services (wie in packlink.test.mjs).
 const SERVICES = [
+  { id: 20425, name: "Paketshop S Paket", carrier_name: "DPD", price: { total_price: 5.59, base_price: 4.7 }, dropoff: true, delivery_to_parcelshop: false, transit_time: "2 DAYS", category: "standard" },
   { id: 20955, name: "Classic", carrier_name: "DPD", price: { total_price: 7.85, base_price: 6.6 }, dropoff: false, delivery_to_parcelshop: false, transit_time: "2 DAYS", category: "standard" },
-  { id: 23655, name: "Standard Access Point™", carrier_name: "UPS", price: { total_price: 5.71, base_price: 4.8 }, dropoff: true, delivery_to_parcelshop: false, transit_time: "2 DAYS", category: "standard" },
+  { id: 23655, name: "Standard Access Point™", carrier_name: "UPS", price: { total_price: 5.49, base_price: 4.6 }, dropoff: true, delivery_to_parcelshop: false, transit_time: "2 DAYS", category: "standard" },
   { id: 11111, name: "Zustellung an Paketshop", carrier_name: "GLS", price: { total_price: 3.69, base_price: 3.1 }, dropoff: true, delivery_to_parcelshop: true, transit_time: "1 DAYS" },
   { id: 33333, name: "Express®", carrier_name: "UPS", price: { total_price: 14.28, base_price: 12 }, dropoff: false, delivery_to_parcelshop: false, transit_time: "1 DAYS", category: "express" },
+  { id: 44444, name: "Domestic Express", carrier_name: "DHL Express", price: { total_price: 32.65, base_price: 27.44 }, dropoff: false, delivery_to_parcelshop: false, transit_time: "1 DAYS", category: "express" },
+  { id: 55555, name: "Express 12", carrier_name: "DPD", price: { total_price: 19.9, base_price: 16.72 }, dropoff: false, delivery_to_parcelshop: false, transit_time: "1 DAYS", category: "express" },
 ];
 
 const ITEMS = [
@@ -98,11 +101,30 @@ test("options: cheapest home delivery as Standard, Express only when it costs mo
     { id: 4, preisCents: 1900, express: true },
     { id: 5, preisCents: 0, express: false },
   ];
-  const optionen = optionenAus(angebote, "M");
+  const alle = { dienste: { erlaubt: null, expressMaxCents: null } };
+  const optionen = optionenAus(angebote, "M", alle);
   assert.deepEqual(optionen.map(o => [o.id, o.art, o.preisCents]), [["pl-M-2", "standard", 571], ["pl-M-3", "express", 1428]]);
   // Express billiger als Standard: dann gibt es nur eine Wahl.
-  assert.deepEqual(optionenAus([{ id: 7, preisCents: 500, express: true }, { id: 8, preisCents: 600, express: false }], "S").map(o => o.id), ["pl-S-8"]);
-  assert.deepEqual(optionenAus(null, "S"), []);
+  assert.deepEqual(optionenAus([{ id: 7, preisCents: 500, express: true }, { id: 8, preisCents: 600, express: false }], "S", alle).map(o => o.id), ["pl-S-8"]);
+  assert.deepEqual(optionenAus(null, "S", alle), []);
+});
+
+test("only the owner's carriers reach the checkout; express only up to the price cap", () => {
+  const angebote = [
+    { id: 1, carrier: "UPS", preisCents: 549, express: false },
+    { id: 2, carrier: "DPD", preisCents: 785, express: false },
+    { id: 3, carrier: "DHL Express", preisCents: 3265, express: true },
+    { id: 4, carrier: "DPD", preisCents: 1990, express: true },
+    { id: 5, carrier: "UPS", preisCents: 1428, express: true },
+  ];
+  const konfig = { dienste: { erlaubt: ["DPD", "DHL", "HERMES"], expressMaxCents: 2500 } };
+  assert.deepEqual(optionenAus(angebote, "M", konfig).map(o => [o.id, o.carrier]), [["pl-M-2", "DPD"], ["pl-M-4", "DPD"]]);
+  // "DHL" ist nicht "DHL Express"; ueber der Grenze gibt es kein Express.
+  const teuer = { dienste: { erlaubt: ["DPD", "DHL", "HERMES"], expressMaxCents: 1500 } };
+  assert.deepEqual(optionenAus(angebote, "M", teuer).map(o => o.id), ["pl-M-2"]);
+  // Die echte Konfiguration: UPS ist raus.
+  assert.equal(VERSAND.dienste.erlaubt.includes("UPS"), false);
+  assert.ok(VERSAND.dienste.erlaubt.includes("DPD"));
 });
 
 test("live Packlink prices are cached; without Packlink the fallback price applies", async () => {
@@ -111,7 +133,7 @@ test("live Packlink prices are cached; without Packlink the fallback price appli
   try {
     const erste = await versandOptionen({}, "S");
     assert.equal(erste.quelle, "packlink");
-    assert.deepEqual(erste.optionen.map(o => [o.id, o.preisCents, o.carrier]), [["pl-S-23655", 571, "UPS"], ["pl-S-33333", 1428, "UPS"]]);
+    assert.deepEqual(erste.optionen.map(o => [o.id, o.preisCents, o.carrier]), [["pl-S-20425", 559, "DPD"], ["pl-S-55555", 1990, "DPD"]]);
     await versandOptionen({}, "S");
     assert.equal(netz.calls.filter(c => c.host === "api.packlink.com").length, 1);
     const anfrage = netz.calls[0];
@@ -135,13 +157,15 @@ test("the server checks option and price at checkout", async () => {
   const netz = fakeNetz();
   try {
     const standard = await versandFuerBestellung({}, [ITEMS[0]]);
-    assert.equal(standard.id, "pl-S-23655");
-    const express = await versandFuerBestellung({}, [ITEMS[0]], "pl-S-33333", 1428);
+    assert.equal(standard.id, "pl-S-20425");
+    const express = await versandFuerBestellung({}, [ITEMS[0]], "pl-S-55555", 1990);
     assert.equal(express.art, "express");
-    assert.equal(express.preisCents, 1428);
+    assert.equal(express.preisCents, 1990);
+    // UPS steht nicht zur Wahl, auch nicht per manipulierter Anfrage.
+    await assert.rejects(versandFuerBestellung({}, [ITEMS[0]], "pl-S-23655", 549), err => err.code === "VERSAND_OPTION_UNGUELTIG");
 
     // Andere Paketgroesse als beim Artikel (Stiefel = Groß): Kennung passt nicht.
-    await assert.rejects(versandFuerBestellung({}, [ITEMS[1]], "pl-S-23655", 571), err => {
+    await assert.rejects(versandFuerBestellung({}, [ITEMS[1]], "pl-S-20425", 559), err => {
       assert.ok(err instanceof VersandError);
       assert.equal(err.code, "VERSAND_OPTION_UNGUELTIG");
       assert.equal(err.status, 409);
@@ -150,7 +174,7 @@ test("the server checks option and price at checkout", async () => {
       return true;
     });
     // Preis im Browser manipuliert oder bei Packlink geaendert.
-    await assert.rejects(versandFuerBestellung({}, [ITEMS[0]], "pl-S-23655", 1), err => err.code === "VERSAND_PREIS_GEAENDERT");
+    await assert.rejects(versandFuerBestellung({}, [ITEMS[0]], "pl-S-20425", 1), err => err.code === "VERSAND_PREIS_GEAENDERT");
   } finally {
     netz.restore();
   }
@@ -171,7 +195,7 @@ test("GET /versand/optionen: size from the catalog, CORS only for the shop, stri
     assert.equal(eins.cors, SHOP);
     assert.equal(eins.data.paket, "S");
     assert.equal(eins.data.paketName, "Klein");
-    assert.deepEqual(eins.data.optionen.map(o => [o.id, o.titel, o.preis]), [["pl-S-23655", "Standard", "5.71"], ["pl-S-33333", "Express", "14.28"]]);
+    assert.deepEqual(eins.data.optionen.map(o => [o.id, o.titel, o.preis, o.carrier]), [["pl-S-20425", "Standard", "5.59", "DPD"], ["pl-S-55555", "Express", "19.90", "DPD"]]);
     // Keine internen Felder nach draussen.
     assert.equal("packlinkServiceId" in eins.data.optionen[0], false);
 
@@ -207,42 +231,43 @@ test("create-order: chosen shipping goes into PayPal and the order, tampering is
   };
   try {
     // Preis stimmt nicht: 409 mit aktueller Liste, nichts reserviert.
-    const falsch = await bestellen({ itemId: 9428, versand: "pl-S-33333", versandPreisCents: 999 }, "k-falsch-0000000001");
+    const falsch = await bestellen({ itemId: 9428, versand: "pl-S-55555", versandPreisCents: 999 }, "k-falsch-0000000001");
     assert.equal(falsch.status, 409);
     assert.equal(falsch.data.error, "VERSAND_PREIS_GEAENDERT");
-    assert.equal(falsch.data.versand.optionen[1].preisCents, 1428);
+    assert.equal(falsch.data.versand.optionen[1].preisCents, 1990);
     assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations").get().n, 0);
     assert.equal(netz.calls.filter(c => c.host === "api-m.sandbox.paypal.com").length, 0);
 
-    const ok = await bestellen({ itemId: 9428, versand: "pl-S-33333", versandPreisCents: 1428 }, "k-richtig-000000001");
+    const ok = await bestellen({ itemId: 9428, versand: "pl-S-55555", versandPreisCents: 1990 }, "k-richtig-000000001");
     assert.equal(ok.status, 200, JSON.stringify(ok.data));
     assert.equal(ok.data.itemPrice, "150.00");
-    assert.equal(ok.data.shipping, "14.28");
-    assert.equal(ok.data.total, "164.28");
+    assert.equal(ok.data.shipping, "19.90");
+    assert.equal(ok.data.total, "169.90");
     assert.equal(ok.data.versand.art, "express");
 
     const paypal = netz.calls.find(c => c.host === "api-m.sandbox.paypal.com" && c.path === "/v2/checkout/orders");
     assert.deepEqual(paypal.body.purchase_units[0].amount, {
       currency_code: "EUR",
-      value: "164.28",
+      value: "169.90",
       breakdown: {
         item_total: { currency_code: "EUR", value: "150.00" },
-        shipping: { currency_code: "EUR", value: "14.28" },
+        shipping: { currency_code: "EUR", value: "19.90" },
       },
     });
     const order = DB.raw.prepare("SELECT id,shipping_cents,total_cents FROM commerce_orders").get();
-    assert.equal(order.shipping_cents, 1428);
-    assert.equal(order.total_cents, 16428);
+    assert.equal(order.shipping_cents, 1990);
+    assert.equal(order.total_cents, 16990);
     const wahl = DB.raw.prepare("SELECT * FROM order_versand WHERE order_id=?").get(order.id);
-    assert.equal(wahl.option_id, "pl-S-33333");
+    assert.equal(wahl.option_id, "pl-S-55555");
     assert.equal(wahl.art, "express");
     assert.equal(wahl.quelle, "packlink");
-    assert.equal(wahl.packlink_service_id, 33333);
+    assert.equal(wahl.packlink_service_id, 55555);
+    assert.equal(wahl.carrier, "DPD");
     assert.equal(wahl.paket, "S");
-    assert.equal(wahl.preis_cents, 1428);
+    assert.equal(wahl.preis_cents, 1990);
 
     // Derselbe Schluessel noch einmal: dieselbe Antwort, keine zweite Bestellung.
-    const nochmal = await bestellen({ itemId: 9428, versand: "pl-S-33333", versandPreisCents: 1428 }, "k-richtig-000000001");
+    const nochmal = await bestellen({ itemId: 9428, versand: "pl-S-55555", versandPreisCents: 1990 }, "k-richtig-000000001");
     assert.equal(nochmal.data.id, ok.data.id);
     assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM commerce_orders").get().n, 1);
   } finally {
