@@ -228,6 +228,15 @@ export function lieferadresseAus(roh) {
   return adresse;
 }
 
+// Vorschaubild des Titelfotos ("assets/img/<ordner>/thumbs/<n>.webp") fuer die
+// Mails - dieselbe Ableitung wie thumbUrl() in assets/app.js.
+export function vorschaubild(item) {
+  const pfad = String((item?.gallery || [])[0] || "").replace(/^\/+/, "");
+  const i = pfad.lastIndexOf("/");
+  if (!/^assets\/img\/[A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+\.(?:webp|jpe?g|png)$/.test(pfad) || i < 0) return null;
+  return `${pfad.slice(0, i)}/thumbs/${pfad.slice(i + 1)}`;
+}
+
 // custom_id der PayPal-Bestellung: die Artikelnummern. Bei einem Stueck wie
 // bisher nur dessen Nummer.
 function paypalCustomId(itemIds) {
@@ -582,8 +591,8 @@ async function createOrderRecords(env, items, centsList, versand, reservations, 
       (id,order_number,reservation_id,status,currency,subtotal_cents,shipping_cents,total_cents,idempotency_key,created_at)
       VALUES (?,?,?,'PAYMENT_PENDING',?,?,?,?,?,?)`).bind(orderId, orderNumber, reservations[0].reservationId, CURRENCY, cents, shippingCents, totalCents, key, now),
     ...items.map((item, i) => db.prepare(`INSERT INTO order_items
-      (id,order_id,inventory_id,item_id,article_no,title_snapshot,unit_price_cents,quantity,currency)
-      VALUES (?,?,?,?,?,?,?,1,?)`).bind(crypto.randomUUID(), orderId, reservations[i].inventoryId, Number(item.id), String(item.article || item.id), `${item.brand || ""} ${item.title || ""}`.trim(), centsList[i], CURRENCY)),
+      (id,order_id,inventory_id,item_id,article_no,title_snapshot,unit_price_cents,quantity,currency,bild)
+      VALUES (?,?,?,?,?,?,?,1,?,?)`).bind(crypto.randomUUID(), orderId, reservations[i].inventoryId, Number(item.id), String(item.article || item.id), `${item.brand || ""} ${item.title || ""}`.trim(), centsList[i], CURRENCY, vorschaubild(item))),
     db.prepare(`INSERT INTO payments
       (id,order_id,provider,provider_order_id,status,amount_cents,currency,idempotency_key,created_at)
       VALUES (?,?,'PAYPAL',?,'CREATED',?,?,?,?)`).bind(paymentId, orderId, providerOrder.id, totalCents, CURRENCY, `paypal-create:${key}`, now),

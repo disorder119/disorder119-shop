@@ -5,15 +5,11 @@
 // Tabellen und Inline-Styles. Die Artikel kommen aus dem oeffentlichen
 // catalog.json der Website, die Bilder direkt von disorder119.com - die
 // freigestellten Fotos stehen auf Schwarz wie im Shop.
-import { SELLER, SHOP_URL, escapeHtml } from "./customer-mail.js";
+import { MAIL_FARBE, SELLER, SHOP_URL, escapeHtml } from "./customer-mail.js";
 
-export const FARBE = Object.freeze({
-  grund: "#000000",
-  flaeche: "#0d0d0d",
-  text: "#f2efe7",
-  leise: "#9c978d",
-  linie: "#2b2a27",
-});
+// Eine Quelle fuer die Mailfarben: customer-mail.js (Bestellbestaetigung,
+// Versandmail) und die Newsletter sehen gleich aus.
+export const FARBE = MAIL_FARBE;
 
 const SCHRIFT = "'Helvetica Neue',Helvetica,Arial,sans-serif";
 

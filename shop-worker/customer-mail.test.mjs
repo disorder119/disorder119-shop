@@ -397,3 +397,20 @@ test("a failed send releases the claim so a retry can still reach the customer",
     stub.restore();
   }
 });
+
+test("the confirmation shows each piece with its photo and the chosen shipping", () => {
+  const mail = formatOrderConfirmation({
+    ...ORDER,
+    items: [
+      { title_snapshot: "Jean Paul Gaultier T-Shirt", article_no: "9428", unit_price_cents: 15000, bild: "assets/img/9428/thumbs/0.webp" },
+      { title_snapshot: "Jean Paul Gaultier Jeans", article_no: "9427", unit_price_cents: 9000, bild: "javascript:alert(1)" },
+    ],
+    versand: { art: "standard", carrier: "DPD" },
+  }, { contactEmail: "bestellung@disorder119.com" });
+  assert.match(mail.html, /src="https:\/\/disorder119\.com\/assets\/img\/9428\/thumbs\/0\.webp"/);
+  assert.doesNotMatch(mail.html, /javascript:/);
+  assert.match(mail.html, /Versand · Standard \(DPD\)/);
+  assert.match(mail.text, /Versand · Standard \(DPD\)/);
+  assert.match(mail.html, /Deine 2 Stücke/);
+  assert.match(mail.html, /disorder119\.com\/konto\//);
+});
