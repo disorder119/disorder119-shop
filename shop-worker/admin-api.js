@@ -6,6 +6,7 @@ import {
   safeText,
 } from "./commerce-core.js";
 import { sendShippingConfirmation } from "./customer-mail.js";
+import { ErstattungsFehler, bestellungErstatten, erstattungAusWebhook } from "./erstattung.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -446,6 +447,12 @@ export async function orderStatusAutomatisch(env, orderId, status, reqId = crypt
   return updateOrder(env, orderId, { status }, reqId, "SYSTEM");
 }
 
+// PayPal meldet eine Erstattung (auch direkt in PayPal ausgeloest).
+export async function erstattungAusPaypal(env, event, reqId = crypto.randomUUID()) {
+  if (!env.DB) return null;
+  return erstattungAusWebhook(env, event, reqId, (orderId, status) => updateOrder(env, orderId, { status }, reqId, "PAYMENT_PROVIDER"));
+}
+
 async function getRentals(env, url) {
   const db = requireDb(env);
   const limit = clampAdminLimit(url.searchParams.get("limit"));
@@ -752,6 +759,21 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
     if (path === "/admin/activity" && request.method === "GET") return adminJson(await getActivity(env, url), 200, origin);
     if (path === "/admin/system" && request.method === "GET") return adminJson(await getSystem(env), 200, origin);
     if (path === "/admin/notes" && request.method === "POST") return adminJson(await createNote(env, await readJson(request), reqId), 201, origin);
+
+    const erstattenMatch = /^\/admin\/orders\/([^/]+)\/erstatten$/.exec(path);
+    if (erstattenMatch && request.method === "POST") {
+      const id = decodeURIComponent(erstattenMatch[1]);
+      try {
+        const ergebnis = await bestellungErstatten(env, id, await readJson(request), reqId,
+          (orderId, status) => updateOrder(env, orderId, { status }, reqId, "ADMIN"));
+        return adminJson({ ...(await getOrderDetail(env, id)), erstattung: ergebnis }, 200, origin);
+      } catch (err) {
+        if (err instanceof ErstattungsFehler) {
+          return adminJson({ error: err.code, detail: err.detail, requestId: reqId }, err.status, origin);
+        }
+        throw err;
+      }
+    }
 
     const orderMatch = /^\/admin\/orders\/([^/]+)$/.exec(path);
     if (orderMatch) {
