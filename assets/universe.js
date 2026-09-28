@@ -243,12 +243,9 @@
       ctx.globalAlpha = o.a;
       if (ready(im)) ctx.drawImage(im, -o.w / 2, -o.h / 2, o.w, o.h);
       else { ctx.fillStyle = "#e8e4db"; ctx.fillRect(-1.5, -1.5, 3, 3); }
-      if (o === best) {
-        ctx.globalAlpha = Math.min(1, o.a * 0.7);
-        ctx.strokeStyle = "rgba(242,239,231,.55)";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(-o.w / 2 - 4, -o.h / 2 - 4, o.w + 8, o.h + 8);
-      }
+      // Kein Rahmen um das Teil in der Mitte: welches Teil gemeint ist, zeigt
+      // die Leiste unten (#uFocus). Der duenne Rahmen wirkte am Handy wie ein
+      // Darstellungsfehler (Wunsch des Inhabers, 27.09.2026).
     }
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.globalAlpha = 1;
