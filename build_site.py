@@ -862,7 +862,8 @@ def build_page(it, shop_config, lang):
 <script type="application/ld+json">{json_ld(it, lang)}</script>
 <script type="application/ld+json">{breadcrumb_json_ld(it, lang)}</script>
 <link rel="stylesheet" href="/assets/theme.css">
-<script>try{{var a=localStorage.getItem("d119_ansicht");if(a==="hell"||a==="grau")document.documentElement.setAttribute("data-theme",a)}}catch(e){{}}</script>
+<script src="/assets/ansicht.js" defer></script>
+<script>try{{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}}catch(e){{}}</script>
 </head>
 <body>
 <div class="page-head">

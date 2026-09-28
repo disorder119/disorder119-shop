@@ -113,7 +113,7 @@
       categoryAll: "Alle Kategorien",
       sortBrightness: "Hell → Dunkel", sortNew: "Neueste zuerst", sortPriceAsc: "Preis aufsteigend",
       sortPriceDesc: "Preis absteigend", sortBrand: "Marke A–Z",
-      mountBlack: "Fotomontage: Schwarz", mountWhite: "Fotomontage: Weiß", viewDark: "Ansicht: Dunkel", viewLight: "Ansicht: Weiß", viewGray: "Ansicht: Grau",
+      mountBlack: "Fotomontage: Schwarz", mountWhite: "Fotomontage: Weiß", viewDark: "Ansicht: Schwarz", viewLight: "Ansicht: Weiß",
       moreFilters: "Weitere Filter",
       filterDepartmentLabel: "Bereich", filterAllDepartments: "Alle Bereiche",
       filterProductTypeLabel: "Produkttyp", filterAllProductTypes: "Alle Produkttypen",
@@ -315,7 +315,7 @@
       categoryAll: "All categories",
       sortBrightness: "Light → dark", sortNew: "Newest first", sortPriceAsc: "Price ascending",
       sortPriceDesc: "Price descending", sortBrand: "Brand A–Z",
-      mountBlack: "Photo backdrop: black", mountWhite: "Photo backdrop: white", viewDark: "View: dark", viewLight: "View: white", viewGray: "View: grey",
+      mountBlack: "Photo backdrop: black", mountWhite: "Photo backdrop: white", viewDark: "View: black", viewLight: "View: white",
       moreFilters: "More filters",
       filterDepartmentLabel: "Department", filterAllDepartments: "All departments",
       filterProductTypeLabel: "Product type", filterAllProductTypes: "All product types",
@@ -516,7 +516,7 @@
       categoryAll: "Toutes les catégories",
       sortBrightness: "Clair → foncé", sortNew: "Plus récent d'abord", sortPriceAsc: "Prix croissant",
       sortPriceDesc: "Prix décroissant", sortBrand: "Marque A–Z",
-      mountBlack: "Fond photo : noir", mountWhite: "Fond photo : blanc", viewDark: "Affichage : sombre", viewLight: "Affichage : blanc", viewGray: "Affichage : gris",
+      mountBlack: "Fond photo : noir", mountWhite: "Fond photo : blanc", viewDark: "Affichage : noir", viewLight: "Affichage : blanc",
       moreFilters: "Plus de filtres",
       filterDepartmentLabel: "Rayon", filterAllDepartments: "Tous les rayons",
       filterProductTypeLabel: "Type de produit", filterAllProductTypes: "Tous les types",
@@ -2235,13 +2235,12 @@
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
 
-  var ANSICHT_KEY = "d119_ansicht";
   function ansichtAktuell() {
     var a = document.documentElement.getAttribute("data-theme");
-    return a === "hell" || a === "grau" ? a : "dunkel";
+    return a === "hell" ? "hell" : "dunkel";
   }
   function ansichtText(a) {
-    return t(a === "hell" ? "viewLight" : a === "grau" ? "viewGray" : "viewDark");
+    return t(a === "hell" ? "viewLight" : "viewDark");
   }
 
   // ---- Ansicht: dunkel (Standard) / weiss / grau fuer die ganze Seite ----
@@ -2250,16 +2249,13 @@
   var root = document.documentElement;
   var mountBtn = document.getElementById("mountToggle");
   mountBtn.textContent = ansichtText(ansichtAktuell());
+  // Umschalten macht ansicht.js (auch der runde Knopf unten links);
+  // dieser Knopf in der Filterleiste zeigt nur den Stand und schaltet mit.
   mountBtn.addEventListener("click", function () {
-    var reihe = ["dunkel", "hell", "grau"];
-    var next = reihe[(reihe.indexOf(ansichtAktuell()) + 1) % reihe.length];
-    if (next === "dunkel") root.removeAttribute("data-theme");
-    else root.setAttribute("data-theme", next);
-    try {
-      if (next === "dunkel") window.localStorage.removeItem(ANSICHT_KEY);
-      else window.localStorage.setItem(ANSICHT_KEY, next);
-    } catch (e) {}
-    mountBtn.textContent = ansichtText(next);
+    if (window.D119Ansicht) window.D119Ansicht.umschalten();
+  });
+  document.addEventListener("d119:ansicht", function () {
+    mountBtn.textContent = ansichtText(ansichtAktuell());
   });
 
   // ---- Ansicht-Auswahl (Archiv / Match / Chaos / Outfit-Baukasten) ----

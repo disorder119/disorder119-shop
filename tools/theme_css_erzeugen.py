@@ -1,4 +1,4 @@
-"""Erzeugt assets/theme.css: die helle (weiss) und graue Ansicht des Shops.
+"""Erzeugt assets/theme.css: die helle (weisse) Ansicht des Shops.
 
 Die dunkle Ansicht bleibt der Standard und wird nicht angefasst. Fuer die
 hellen Ansichten gibt es zwei Teile:
@@ -88,8 +88,8 @@ def regeln(knoten, quelle):
 
 
 VARIABLEN = """/* Erzeugt von tools/theme_css_erzeugen.py - nicht von Hand aendern.
-   Ansicht "hell" (weiss) und "grau"; Standard bleibt dunkel.
-   Gesetzt wird sie per <html data-theme="hell|grau"> (siehe theme.js). */
+   Ansicht "hell" (weiss); Standard bleibt dunkel.
+   Gesetzt wird sie per <html data-theme="hell"> (Kopf-Skript und ansicht.js). */
 
 :root[data-theme="hell"] {
   --d119-schrift: #151514;
@@ -117,39 +117,27 @@ VARIABLEN = """/* Erzeugt von tools/theme_css_erzeugen.py - nicht von Hand aende
   color-scheme: light;
 }
 
-:root[data-theme="grau"] {
-  --d119-schrift: #1f1e1c;
-  --d119-schrift-rgb: 31, 30, 28;
-  --d119-grund-rgb: 229, 227, 222;
-  --d119-flaeche: #dcd9d3;
-  --ink: #e5e3de;
-  --ink-lift: #dcd9d3;
-  --ink-lift-2: #d2cec7;
-  --surface: #dcd9d3;
-  --surface-2: #d2cec7;
-  --paper: #1f1e1c;
-  --text: #1f1e1c;
-  --text-muted: rgba(31, 30, 28, 0.66);
-  --text-faint: rgba(31, 30, 28, 0.46);
-  --rule: rgba(31, 30, 28, 0.14);
-  --rule-strong: rgba(31, 30, 28, 0.28);
-  --accent: #6a6457;
-  --accent-soft: rgba(106, 100, 87, 0.16);
-  --accent-text: #4a453c;
-  --focus: #4a453c;
-  --mount: #e5e3de;
-  --mount-text: #1f1e1c;
-  --mount-rule: rgba(31, 30, 28, 0.14);
-  color-scheme: light;
-}
-
-/* Produktfotos sind freigestellt: in Weiss auf reinem Weiss, in Grau
-   nahtlos auf dem Seitengrau. */
+/* Produktfotos sind freigestellt: in Weiss auf reinem Weiss. */
 :root[data-theme] .gallery__stage, :root[data-theme] .gallery__stage img,
 :root[data-theme] .gallery-thumb, :root[data-theme] .related-card__frame { background: var(--mount); }
 
 /* Mieten-Datumsfelder: Kalender in hell */
 :root[data-theme] #d119RentalStart, :root[data-theme] #d119RentalEnd { color-scheme: light; }
+
+/* Runder Umschalter unten links auf jeder Seite (ansicht.js) */
+.d119-ansicht {
+  position: fixed; left: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 60;
+  width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; padding: 0;
+  border: 1px solid rgba(242, 239, 231, 0.34); background: rgba(10, 10, 9, 0.78); color: #f2efe7;
+  cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  transition: transform .15s ease, border-color .15s ease;
+}
+.d119-ansicht:hover { border-color: #f2efe7; transform: scale(1.05); }
+.d119-ansicht:focus-visible { outline: 2px solid #8f897c; outline-offset: 3px; }
+.d119-ansicht svg { width: 20px; height: 20px; }
+:root[data-theme="hell"] .d119-ansicht { border-color: rgba(21, 21, 20, 0.28); background: rgba(255, 255, 255, 0.86); color: #151514; }
+:root[data-theme="hell"] .d119-ansicht:hover { border-color: #151514; }
+@media print { .d119-ansicht { display: none; } }
 
 /* ---- Feste Farben aus den Stylesheets, fuer die helle Ansicht nachgebaut ---- */
 """
