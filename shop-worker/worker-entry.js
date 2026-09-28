@@ -3,6 +3,7 @@ import {
   handleAdminRequest,
   enrichRentalReservation,
   snapshotPaypalOrder,
+  erstattungAusPaypal,
 } from "./admin-api.js";
 import { handleAdminInsights } from "./admin-insights.js";
 import { handleAdminCommerceMetrics } from "./admin-commerce-metrics.js";
@@ -393,6 +394,9 @@ export default {
               );
               await runBackground(ctx, notifyPaidOrderByProviderOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_sale_notification_failed", reqId);
             }
+          }
+          if (event?.event_type === "PAYMENT.CAPTURE.REFUNDED") {
+            await runBackground(ctx, erstattungAusPaypal(runtimeEnv, event, reqId), "webhook_refund_status_failed", reqId);
           }
         } catch (err) {
           logBackgroundFailure("webhook_observer_failed", reqId, err);
