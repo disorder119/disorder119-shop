@@ -184,6 +184,56 @@ async function findItem(env, itemId) {
   return items.find(item => String(item.id) === String(itemId));
 }
 
+// Kasse: bis zu zehn Einzelstuecke in einer Bestellung, jede Nummer hoechstens
+// einmal. Die Produktseite schickt weiter nur itemId.
+const MAX_CHECKOUT_ITEMS = 10;
+function checkoutItemIds(body) {
+  const roh = Array.isArray(body?.itemIds) ? body.itemIds : [body?.itemId];
+  const ids = [...new Set(roh.map(v => String(v ?? "").trim()))];
+  if (!ids.length || ids.length > MAX_CHECKOUT_ITEMS || ids.some(id => !/^\d{1,9}$/.test(id))) {
+    throw new PublicError("INVALID_ITEM_ID", 400);
+  }
+  return ids;
+}
+
+async function findItems(env, ids) {
+  const { items } = await loadItems(env);
+  return ids.map(id => items.find(item => String(item.id) === id));
+}
+
+// Lieferadresse aus der Kasse (assets/kasse.js). Versendet wird nur innerhalb
+// Deutschlands, und an Packstationen erst, wenn DHL angebunden ist - DPD und
+// UPS stellen dort nicht zu.
+export function lieferadresseAus(roh) {
+  if (roh === undefined || roh === null) return null;
+  if (typeof roh !== "object" || Array.isArray(roh)) throw new PublicError("ADRESSE_UNVOLLSTAENDIG", 422);
+  const zeile = (wert, max) => safeText(wert, max).replace(/\s+/g, " ").trim();
+  const adresse = {
+    name: zeile(roh.name, 120),
+    strasse: zeile(roh.strasse, 100),
+    hausnummer: zeile(roh.hausnummer, 12).replace(/\s+/g, ""),
+    zusatz: zeile(roh.zusatz, 100),
+    plz: zeile(roh.plz, 5),
+    ort: zeile(roh.ort, 80),
+    land: zeile(roh.land || "DE", 2).toUpperCase(),
+  };
+  if (/packstation|postfiliale|postfach|paketshop/i.test(`${adresse.strasse} ${adresse.zusatz}`)) {
+    throw new PublicError("PACKSTATION_NICHT_MOEGLICH", 422);
+  }
+  if (adresse.land !== "DE") throw new PublicError("NUR_DEUTSCHLAND", 422);
+  const vollstaendig = adresse.name.length >= 3 && /\s/.test(adresse.name)
+    && adresse.strasse.length >= 2 && /^\d{1,5}[a-zA-Z]?(?:[-/]\d{1,5}[a-zA-Z]?)?$/.test(adresse.hausnummer)
+    && /^\d{5}$/.test(adresse.plz) && adresse.ort.length >= 2;
+  if (!vollstaendig) throw new PublicError("ADRESSE_UNVOLLSTAENDIG", 422);
+  return adresse;
+}
+
+// custom_id der PayPal-Bestellung: die Artikelnummern. Bei einem Stueck wie
+// bisher nur dessen Nummer.
+function paypalCustomId(itemIds) {
+  return itemIds.map(String).join(",");
+}
+
 function assertCatalogItemForSale(item) {
   if (!item) throw new PublicError("ITEM_NOT_FOUND", 404);
   if (String(item.public_status || "").toUpperCase() === "SOLD") throw new PublicError("ITEM_UNAVAILABLE", 409);
@@ -300,6 +350,31 @@ async function releasePurchaseReservation(env, reservationId, reason, reqId) {
   await audit(env, "reservation", reservationId, "RESERVATION_RELEASED", reqId, { reason });
 }
 
+// Jedes Stueck bekommt eine eigene Reservierung mit dem Schluessel
+// "<Bestellschluessel>#<Artikelnummer>" - daran erkennen Bezahlung und
+// Abschluss spaeter genau die Reservierungen dieser Bestellung. Ist ein Stueck
+// schon weg, werden die davor reservierten sofort wieder frei.
+async function reserveAll(env, items, key, reqId) {
+  const reservations = [];
+  try {
+    for (const item of items) reservations.push(await reserveForPurchase(env, item, `${key}#${item.id}`, reqId));
+  } catch (err) {
+    await releaseAll(env, reservations, "checkout_item_unavailable", reqId);
+    throw err;
+  }
+  return reservations;
+}
+
+async function releaseAll(env, reservations, reason, reqId) {
+  for (const r of reservations) {
+    try {
+      await releasePurchaseReservation(env, r.reservationId, reason, reqId);
+    } catch (err) {
+      console.error(JSON.stringify({ level: "error", event: "reservation_release_failed", requestId: reqId, message: safeText(err?.message || "unknown", 120) }));
+    }
+  }
+}
+
 async function createRentalReservation(env, item, quote, body, key, reqId) {
   const db = requireDb(env);
   const inv = await ensureInventory(env, item);
@@ -355,8 +430,40 @@ async function paypalAccessToken(env) {
   return (await res.json()).access_token;
 }
 
-async function createPaypalOrder(env, item, itemCents, shippingCents, idempotency) {
+// Eine PayPal-Bestellung fuer ein oder mehrere Stuecke. Kommt die Adresse aus
+// der Kasse, zeigt PayPal genau diese an und laesst sie nicht mehr aendern
+// (SET_PROVIDED_ADDRESS) - Versandpreis und Adresse passen so immer zusammen.
+async function createPaypalOrder(env, items, itemCents, shippingCents, idempotency, adresse = null) {
   const token = await paypalAccessToken(env);
+  const titel = items.map(item => `${item.brand || ""} ${item.title || ""}`.trim());
+  const unit = {
+    custom_id: paypalCustomId(items.map(item => item.id)),
+    description: (items.length === 1 ? titel[0] : `${items.length} Teile: ${titel.join(", ")}`).slice(0, 127),
+    // Versand getrennt ausweisen: PayPal zeigt dem Kunden damit Warenwert
+    // und Versandkosten einzeln an, und die Gutschein-Korrektur kann spaeter
+    // genau den Warenwert ersetzen, ohne den Versand zu verschieben.
+    amount: {
+      currency_code: CURRENCY,
+      value: money(itemCents + shippingCents),
+      breakdown: {
+        item_total: { currency_code: CURRENCY, value: money(itemCents) },
+        shipping: { currency_code: CURRENCY, value: money(shippingCents) },
+      },
+    },
+  };
+  if (adresse) {
+    unit.shipping = {
+      type: "SHIPPING",
+      name: { full_name: adresse.name.slice(0, 300) },
+      address: {
+        address_line_1: `${adresse.strasse} ${adresse.hausnummer}`.slice(0, 300),
+        ...(adresse.zusatz ? { address_line_2: adresse.zusatz.slice(0, 300) } : {}),
+        admin_area_2: adresse.ort.slice(0, 120),
+        postal_code: adresse.plz,
+        country_code: "DE",
+      },
+    };
+  }
   const res = await fetch(`${paypalApiBase(env)}/v2/checkout/orders`, {
     method: "POST",
     headers: {
@@ -366,22 +473,12 @@ async function createPaypalOrder(env, item, itemCents, shippingCents, idempotenc
     },
     body: JSON.stringify({
       intent: "CAPTURE",
-      purchase_units: [{
-        custom_id: String(item.id),
-        description: `${item.brand || ""} ${item.title || ""}`.trim().slice(0,127),
-        // Versand getrennt ausweisen: PayPal zeigt dem Kunden damit Warenwert
-        // und Versandkosten einzeln an, und die Gutschein-Korrektur kann spaeter
-        // genau den Warenwert ersetzen, ohne die Pauschale zu verschieben.
-        amount: {
-          currency_code: CURRENCY,
-          value: money(itemCents + shippingCents),
-          breakdown: {
-            item_total: { currency_code: CURRENCY, value: money(itemCents) },
-            shipping: { currency_code: CURRENCY, value: money(shippingCents) },
-          },
-        },
-      }],
-      application_context: { shipping_preference: "GET_FROM_FILE", brand_name: "Disorder119" },
+      purchase_units: [unit],
+      application_context: {
+        shipping_preference: adresse ? "SET_PROVIDED_ADDRESS" : "GET_FROM_FILE",
+        brand_name: "Disorder119",
+        user_action: "PAY_NOW",
+      },
     }),
   });
   if (!res.ok) throw new Error(`paypal_create_${res.status}`);
@@ -402,10 +499,10 @@ function capturePayment(capture) {
   return capture?.purchase_units?.[0]?.payments?.captures?.[0] || null;
 }
 
-function captureMatches(capture, itemId, cents) {
+function captureMatches(capture, customId, cents) {
   const unit = capture?.purchase_units?.[0];
   const payment = capturePayment(capture);
-  return capture?.status === "COMPLETED" && String(unit?.custom_id || "") === String(itemId) &&
+  return capture?.status === "COMPLETED" && String(unit?.custom_id || "") === String(customId) &&
     payment?.status === "COMPLETED" && payment?.amount?.currency_code === CURRENCY &&
     Math.round(Number(payment.amount.value) * 100) === cents;
 }
@@ -471,30 +568,42 @@ export async function markCatalogSold(env, itemId) {
   throw new Error("catalog_mark_sold_conflict");
 }
 
-async function createOrderRecords(env, item, cents, versand, reservation, providerOrder, key, reqId) {
+async function createOrderRecords(env, items, centsList, versand, reservations, providerOrder, key, reqId, adresse = null) {
   const db = requireDb(env);
   const orderId = crypto.randomUUID();
   const paymentId = crypto.randomUUID();
   const now = new Date().toISOString();
   const orderNumber = publicOrderNumber(orderId, new Date());
+  const cents = centsList.reduce((summe, c) => summe + c, 0);
   const shippingCents = versand.preisCents;
   const totalCents = cents + shippingCents;
-  await db.batch([
+  const statements = [
     db.prepare(`INSERT INTO commerce_orders
       (id,order_number,reservation_id,status,currency,subtotal_cents,shipping_cents,total_cents,idempotency_key,created_at)
-      VALUES (?,?,?,'PAYMENT_PENDING',?,?,?,?,?,?)`).bind(orderId, orderNumber, reservation.reservationId, CURRENCY, cents, shippingCents, totalCents, key, now),
-    db.prepare(`INSERT INTO order_items
+      VALUES (?,?,?,'PAYMENT_PENDING',?,?,?,?,?,?)`).bind(orderId, orderNumber, reservations[0].reservationId, CURRENCY, cents, shippingCents, totalCents, key, now),
+    ...items.map((item, i) => db.prepare(`INSERT INTO order_items
       (id,order_id,inventory_id,item_id,article_no,title_snapshot,unit_price_cents,quantity,currency)
-      VALUES (?,?,?,?,?,?,?,1,?)`).bind(crypto.randomUUID(), orderId, reservation.inventoryId, Number(item.id), String(item.article || item.id), `${item.brand || ""} ${item.title || ""}`.trim(), cents, CURRENCY),
+      VALUES (?,?,?,?,?,?,?,1,?)`).bind(crypto.randomUUID(), orderId, reservations[i].inventoryId, Number(item.id), String(item.article || item.id), `${item.brand || ""} ${item.title || ""}`.trim(), centsList[i], CURRENCY)),
     db.prepare(`INSERT INTO payments
       (id,order_id,provider,provider_order_id,status,amount_cents,currency,idempotency_key,created_at)
       VALUES (?,?,'PAYPAL',?,'CREATED',?,?,?,?)`).bind(paymentId, orderId, providerOrder.id, totalCents, CURRENCY, `paypal-create:${key}`, now),
-    db.prepare("UPDATE reservations SET status='RESERVED',updated_at=? WHERE id=?").bind(now, reservation.reservationId),
-    db.prepare("UPDATE inventory SET status='PAYMENT_PENDING',updated_at=?,version=version+1 WHERE id=? AND status='RESERVED'").bind(now, reservation.inventoryId),
+    ...reservations.map(r => db.prepare("UPDATE reservations SET status='RESERVED',updated_at=? WHERE id=?").bind(now, r.reservationId)),
+    ...reservations.map(r => db.prepare("UPDATE inventory SET status='PAYMENT_PENDING',updated_at=?,version=version+1 WHERE id=? AND status='RESERVED'").bind(now, r.inventoryId)),
     // Gewaehlte Versandart gehoert zur Bestellung (Admin-App, Etikett).
     versandWahlStatement(db, orderId, versand, now),
-  ]);
-  await audit(env, "order", orderId, "PAYMENT_STARTED", reqId, { orderNumber, itemId: item.id, provider: "PAYPAL", versand: versand.id });
+  ];
+  if (adresse) {
+    // Adresse aus der Kasse sofort sichern - PayPal ueberschreibt sie nach dem
+    // Bezahlen mit denselben Angaben plus E-Mail (snapshotPaypalOrder).
+    statements.push(db.prepare(`INSERT INTO order_contact_snapshots
+      (order_id,source_provider,recipient_name,address_line1,address_line2,postal_code,city,country_code,captured_at,updated_at)
+      VALUES (?,'CHECKOUT',?,?,?,?,?,'DE',?,?)`).bind(orderId, adresse.name, `${adresse.strasse} ${adresse.hausnummer}`,
+      adresse.zusatz || null, adresse.plz, adresse.ort, now, now));
+  }
+  await db.batch(statements);
+  await audit(env, "order", orderId, "PAYMENT_STARTED", reqId, {
+    orderNumber, itemId: items[0].id, itemIds: items.map(item => item.id), provider: "PAYPAL", versand: versand.id,
+  });
   return { orderId, orderNumber, paymentId };
 }
 
@@ -503,12 +612,16 @@ async function completePayment(env, providerOrderId, capture, reqId) {
   // Verglichen wird gegen den Zahlbetrag der Bestellung (Ware + Versand, nach
   // einem eingeloesten Gutschein der reduzierte Betrag) - nicht mehr gegen den
   // reinen Artikelpreis.
-  const payment = await db.prepare(`SELECT p.*,o.id AS commerce_order_id,o.order_number,o.reservation_id,o.total_cents,oi.inventory_id,oi.item_id,oi.unit_price_cents
-    FROM payments p JOIN commerce_orders o ON o.id=p.order_id JOIN order_items oi ON oi.order_id=o.id
+  const payment = await db.prepare(`SELECT p.*,o.id AS commerce_order_id,o.order_number,o.reservation_id,o.total_cents
+    FROM payments p JOIN commerce_orders o ON o.id=p.order_id
     WHERE p.provider='PAYPAL' AND p.provider_order_id=?`).bind(providerOrderId).first();
   if (!payment) throw new PublicError("ORDER_NOT_FOUND", 404);
-  if (payment.status === "COMPLETED") return payment;
-  if (!captureMatches(capture, payment.item_id, Number(payment.amount_cents ?? payment.total_cents))) throw new PublicError("PAYMENT_MISMATCH", 409);
+  const rows = (await db.prepare("SELECT item_id FROM order_items WHERE order_id=? ORDER BY rowid")
+    .bind(payment.commerce_order_id).all()).results || [];
+  const itemIds = rows.map(row => row.item_id);
+  const result = { ...payment, item_ids: itemIds, item_id: itemIds[0] };
+  if (payment.status === "COMPLETED") return result;
+  if (!captureMatches(capture, paypalCustomId(itemIds), Number(payment.amount_cents ?? payment.total_cents))) throw new PublicError("PAYMENT_MISMATCH", 409);
   const providerPayment = capturePayment(capture);
   const now = new Date().toISOString();
   await db.batch([
@@ -516,12 +629,29 @@ async function completePayment(env, providerOrderId, capture, reqId) {
       .bind(providerPayment.id, now, payment.id),
     db.prepare("UPDATE commerce_orders SET status='PAID',updated_at=? WHERE id=? AND status IN ('PAYMENT_PENDING','RESERVED')")
       .bind(now, payment.commerce_order_id),
-    db.prepare("UPDATE reservations SET status='CONSUMED',updated_at=? WHERE id=? AND status='RESERVED'").bind(now, payment.reservation_id),
-    db.prepare("UPDATE inventory SET status='PAID',updated_at=?,version=version+1 WHERE id=? AND status IN ('RESERVED','PAYMENT_PENDING')")
-      .bind(now, payment.inventory_id),
+    // Genau die Reservierungen dieser Bestellung: Schluessel "<Bestellung>#<Artikel>".
+    db.prepare(`UPDATE reservations SET status='CONSUMED',updated_at=? WHERE status='RESERVED' AND (id=? OR idempotency_key IN
+      (SELECT o.idempotency_key || '#' || oi.item_id FROM order_items oi JOIN commerce_orders o ON o.id=oi.order_id WHERE oi.order_id=?))`)
+      .bind(now, payment.reservation_id, payment.commerce_order_id),
+    db.prepare(`UPDATE inventory SET status='PAID',updated_at=?,version=version+1
+      WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status IN ('RESERVED','PAYMENT_PENDING')`)
+      .bind(now, payment.commerce_order_id),
   ]);
-  await audit(env, "payment", payment.id, "PAYMENT_COMPLETED", reqId, { orderId: payment.commerce_order_id, itemId: payment.item_id, provider: "PAYPAL" }, "PAYMENT_PROVIDER");
-  return payment;
+  await audit(env, "payment", payment.id, "PAYMENT_COMPLETED", reqId, { orderId: payment.commerce_order_id, itemId: itemIds[0], itemIds, provider: "PAYPAL" }, "PAYMENT_PROVIDER");
+  return result;
+}
+
+// Nach dem Bezahlen jedes Stueck im Katalog als verkauft markieren - je Stueck
+// ein eigener Commit, genau so, wie der Main-Waechter ihn stehen laesst.
+async function markAllSold(env, completed, reqId) {
+  for (const itemId of completed.item_ids?.length ? completed.item_ids : [completed.item_id]) {
+    try {
+      await markCatalogSold(env, itemId);
+    } catch (catalogErr) {
+      await audit(env, "order", completed.commerce_order_id, "CATALOG_SYNC_FAILED", reqId, { itemId, code: safeText(catalogErr.message, 80) });
+      console.error(JSON.stringify({ level: "error", event: "catalog_sync_failed", requestId: reqId, orderId: completed.commerce_order_id, itemId }));
+    }
+  }
 }
 
 async function recordWebhookEvent(env, event, verified) {
@@ -636,25 +766,28 @@ export default {
         const fingerprint = await requestHash("create-order", body);
         const claimed = await claimIdempotency(env, "create-order", key, reqId, fingerprint);
         if (claimed.replay) return json(claimed.data, claimed.status, origin);
-        if (!/^\d+$/.test(String(body.itemId || ""))) throw new PublicError("INVALID_ITEM_ID", 400);
-        const item = await findItem(env, body.itemId);
-        const cents = assertCatalogItemForSale(item);
+        const ids = checkoutItemIds(body);
+        const items = await findItems(env, ids);
+        const centsList = items.map(assertCatalogItemForSale);
+        const cents = centsList.reduce((summe, c) => summe + c, 0);
+        const adresse = lieferadresseAus(body.adresse);
         // Versandart und -preis prueft der Server selbst (versand.js). Weicht
         // der Preis von dem ab, den die Kundschaft gesehen hat, gibt es 409
         // mit der aktuellen Liste - noch bevor etwas reserviert wird.
-        const versand = await versandFuerBestellung(env, [item], body.versand, body.versandPreisCents);
+        const versand = await versandFuerBestellung(env, items, body.versand, body.versandPreisCents);
         const shippingCents = versand.preisCents;
-        const reservation = await reserveForPurchase(env, item, key, reqId);
+        const reservations = await reserveAll(env, items, key, reqId);
         let providerOrder;
         try {
-          providerOrder = await createPaypalOrder(env, item, cents, shippingCents, key);
+          providerOrder = await createPaypalOrder(env, items, cents, shippingCents, key, adresse);
         } catch (err) {
-          await releasePurchaseReservation(env, reservation.reservationId, "provider_create_failed", reqId);
+          await releaseAll(env, reservations, "provider_create_failed", reqId);
           throw err;
         }
-        const local = await createOrderRecords(env, item, cents, versand, reservation, providerOrder, key, reqId);
-        const response = { id: providerOrder.id, orderId: local.orderId, orderNumber: local.orderNumber, expiresAt: reservation.expiresAt,
-          currency: CURRENCY, itemPrice: money(cents), shipping: money(shippingCents), total: money(cents + shippingCents),
+        const local = await createOrderRecords(env, items, centsList, versand, reservations, providerOrder, key, reqId, adresse);
+        const expiresAt = reservations.map(r => r.expiresAt).sort()[0];
+        const response = { id: providerOrder.id, orderId: local.orderId, orderNumber: local.orderNumber, expiresAt,
+          currency: CURRENCY, itemIds: items.map(item => item.id), itemPrice: money(cents), shipping: money(shippingCents), total: money(cents + shippingCents),
           versand: { id: versand.id, art: versand.art, titel: versand.titel, preisCents: versand.preisCents, carrier: versand.carrier, laufzeit: versand.laufzeit } };
         await finishIdempotency(env, "create-order", key, 200, response, local.orderId);
         return json(response, 200, origin);
@@ -670,8 +803,8 @@ export default {
         const providerOrderId = safeText(body.orderId, 128);
         if (!providerOrderId) throw new PublicError("ORDER_ID_REQUIRED", 400);
         const db = requireDb(env);
-        const payment = await db.prepare(`SELECT p.*,o.reservation_id,oi.inventory_id FROM payments p
-          JOIN commerce_orders o ON o.id=p.order_id JOIN order_items oi ON oi.order_id=o.id
+        const payment = await db.prepare(`SELECT p.*,o.reservation_id FROM payments p
+          JOIN commerce_orders o ON o.id=p.order_id
           WHERE p.provider='PAYPAL' AND p.provider_order_id=?`).bind(providerOrderId).first();
         if (!payment) throw new PublicError("ORDER_NOT_FOUND", 404);
         if (payment.status === "COMPLETED") {
@@ -679,15 +812,20 @@ export default {
           await finishIdempotency(env, "capture-order", key, 200, response, payment.order_id);
           return json(response, 200, origin);
         }
-        const reservation = await db.prepare("SELECT * FROM reservations WHERE id=?").bind(payment.reservation_id).first();
-        if (!reservation || reservation.status !== "RESERVED" || reservation.expires_at <= new Date().toISOString()) throw new PublicError("RESERVATION_EXPIRED", 409);
+        // Jedes Stueck muss noch fuer genau diese Bestellung reserviert sein -
+        // sonst koennte ein inzwischen anders verkauftes Teil bezahlt werden.
+        const reservierungen = (await db.prepare(`SELECT oi.item_id,r.status,r.expires_at FROM order_items oi
+            JOIN commerce_orders o ON o.id=oi.order_id
+            LEFT JOIN reservations r ON r.idempotency_key=o.idempotency_key || '#' || oi.item_id
+              OR (r.id=o.reservation_id AND r.inventory_id=oi.inventory_id)
+            WHERE oi.order_id=?`).bind(payment.order_id).all()).results || [];
+        const jetzt = new Date().toISOString();
+        if (!reservierungen.length || reservierungen.some(r => r.status !== "RESERVED" || !r.expires_at || r.expires_at <= jetzt)) {
+          throw new PublicError("RESERVATION_EXPIRED", 409);
+        }
         const capture = await capturePaypalOrder(env, providerOrderId, key);
         const completed = await completePayment(env, providerOrderId, capture, reqId);
-        try { await markCatalogSold(env, completed.item_id); }
-        catch (catalogErr) {
-          await audit(env, "order", completed.commerce_order_id, "CATALOG_SYNC_FAILED", reqId, { code: safeText(catalogErr.message, 80) });
-          console.error(JSON.stringify({ level: "error", event: "catalog_sync_failed", requestId: reqId, orderId: completed.commerce_order_id }));
-        }
+        await markAllSold(env, completed, reqId);
         const response = { ok: true, orderId: completed.commerce_order_id, orderNumber: completed.order_number };
         await finishIdempotency(env, "capture-order", key, 200, response, completed.commerce_order_id);
         return json(response, 200, origin);
@@ -708,9 +846,7 @@ export default {
             if (res.ok) {
               const order = await res.json();
               const completed = await completePayment(env, providerOrderId, order, reqId);
-              try { await markCatalogSold(env, completed.item_id); } catch (err) {
-                await audit(env, "order", completed.commerce_order_id, "CATALOG_SYNC_FAILED", reqId, { code: safeText(err.message, 80) });
-              }
+              await markAllSold(env, completed, reqId);
             }
           }
         }

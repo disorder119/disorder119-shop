@@ -158,7 +158,8 @@
       cartItemsRemovedSold: "Inzwischen verkauft und aus dem Warenkorb entfernt: {items}.",
       cartRemove: "Entfernen", cartTotal: "Gesamt", cartSubtotal: "Zwischensumme", cartShipping: "Versand (DE)",
       shipTitle: "Versand innerhalb Deutschlands", shipLine: "Versand", shipParcel: "Paket", shipLoading: "wird berechnet …",
-      shipLater: "je nach Paketgröße, nennen wir dir mit der Bestätigung", shipDays1: "1 Werktag", shipDaysN: "{n} Werktage",
+      shipLater: "wird an der Kasse berechnet", shipFrom: "ab", shipDays1: "1 Werktag", shipDaysN: "{n} Werktage",
+      cartCheckout: "Zur Kasse", cartPlusShipping: "zzgl. Versand",
       shipParcelS: "klein", shipParcelM: "mittel", shipParcelL: "groß",
       cartWhatsapp: "Anfrage per WhatsApp senden", cartEmail: "Anfrage per E-Mail senden",
       paypalSoon: "Bald verfügbar", paypalSoonAria: "Bezahlen mit PayPal – bald verfügbar",
@@ -291,7 +292,7 @@
         "<h3>Newsletter</h3><p>Für den Newsletter meldest du dich mit deiner E-Mail-Adresse und einer ausdrücklichen Einwilligung an. Danach bekommst du eine Bestätigungsmail; erst wenn du den Link darin anklickst, bist du angemeldet (Double-Opt-in). Als Dankeschön erhältst du einmalig einen Code über 10 % für eine Bestellung – pro Person nur ein Code. Wir speichern deine E-Mail-Adresse, die Sprache, Zeitpunkt und Wortlaut deiner Einwilligung sowie nicht umkehrbare Prüfsummen (Hashes) der IP-Adressen bei Anmeldung und Bestätigung, um die Einwilligung nachweisen und Missbrauch des Rabatts verhindern zu können. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 7 Abs. 2 UWG), für den Schutz vor Missbrauch unser berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO). Wir messen, ob Newsletter geöffnet und Links angeklickt werden, um sie zu verbessern – auch das umfasst deine Einwilligung. Deinen Code speichern wir zusätzlich lokal in deinem Browser, damit er im Warenkorb schon eingetragen ist. Du kannst die Einwilligung jederzeit widerrufen, zum Beispiel über den Abmeldelink in jeder Mail; danach schicken wir dir keinen Newsletter mehr. Den Nachweis der Einwilligung bewahren wir bis zu drei Jahre nach deiner Abmeldung auf.</p>" +
         "<h3>E-Mail-Versand (Brevo)</h3><p>Bestellbestätigungen, Anmeldelinks und den Newsletter verschicken wir über Brevo (Sendinblue SAS, Paris, Frankreich) mit Servern in der EU. Brevo verarbeitet dafür deine E-Mail-Adresse und den Inhalt der Mail in unserem Auftrag (Auftragsverarbeitung nach Art. 28 DSGVO).</p>" +
         "<h3>Shop-Server und E-Mail-Empfang (Cloudflare)</h3><p>Kundenkonto, Newsletter, Mietanfragen und Rabattcodes laufen über unseren Server bei Cloudflare (Cloudflare, Inc., San Francisco, USA); die Datenbank liegt in Westeuropa. Auch E-Mails an Adressen von disorder119.com laufen über Cloudflare zu uns. Cloudflare verarbeitet dabei technisch notwendige Verbindungsdaten wie deine IP-Adresse in unserem Auftrag (Art. 28 DSGVO). Soweit dabei Daten in die USA gelangen, ist Cloudflare nach dem EU-US Data Privacy Framework zertifiziert (Art. 45 DSGVO).</p>" +
-        "<h3>Versand (Paketdienste und Packlink)</h3><p>Damit dein Paket ankommt, geben wir deinen Namen und deine Lieferadresse an den Paketdienst weiter, mit dem wir versenden (z. B. DHL, DPD, UPS oder GLS). Buchen wir das Versandetikett über Packlink PRO (Auctane, S.L.U., Madrid, Spanien), erhält auch Packlink diese Angaben, um die Sendung beim Paketdienst anzumelden. Deine E-Mail-Adresse und Telefonnummer geben wir dafür nicht weiter. Rechtsgrundlage ist die Erfüllung des Kaufvertrags (Art. 6 Abs. 1 lit. b DSGVO).</p>" +
+        "<h3>Versand (Paketdienste und Packlink)</h3><p>Damit dein Paket ankommt, geben wir deinen Namen und deine Lieferadresse an den Paketdienst weiter, mit dem wir versenden (z. B. DHL, DPD, UPS oder GLS). Buchen wir das Versandetikett über Packlink PRO (Auctane, S.L.U., Madrid, Spanien), erhält auch Packlink diese Angaben, um die Sendung beim Paketdienst anzumelden. Deine E-Mail-Adresse und Telefonnummer geben wir dafür nicht weiter. Rechtsgrundlage ist die Erfüllung des Kaufvertrags (Art. 6 Abs. 1 lit. b DSGVO).</p><h3>Adressvorschläge an der Kasse</h3><p>Damit sich bei der Lieferadresse niemand vertippt, schlägt die Kasse zur Postleitzahl den Ort und zum Straßenanfang passende Straßen vor. Dafür fragt unser Server mit Postleitzahl und Straßenanfang die OpenPLZ API ab (offene Daten aus amtlichen Verzeichnissen). Namen, Hausnummern oder deine IP-Adresse werden dabei nicht übermittelt. Rechtsgrundlage ist unser berechtigtes Interesse an korrekten Lieferadressen (Art. 6 Abs. 1 lit. f DSGVO).</p>" +
         "<h3>Keine Tracking-Cookies</h3><p>Diese Seite verwendet keine Analyse-, Marketing- oder Tracking-Cookies.</p>" +
         "<h3>Besucherstatistik ohne Cookies</h3><p>Damit wir sehen, welche Stücke gefragt sind, meldet die Seite an unseren Server bei Cloudflare " +
         "(Cloudflare Inc., Auftragsverarbeitung): aufgerufene Seite bzw. Artikel und wie lange sie geöffnet war, Warenkorb-Änderungen, das Öffnen einer Bestellanfrage, " +
@@ -359,7 +360,8 @@
       cartItemsRemovedSold: "Sold in the meantime and removed from your cart: {items}.",
       cartRemove: "Remove", cartTotal: "Total", cartSubtotal: "Subtotal", cartShipping: "Shipping (DE)",
       shipTitle: "Shipping within Germany", shipLine: "Shipping", shipParcel: "parcel", shipLoading: "calculating …",
-      shipLater: "depends on parcel size, confirmed with your order", shipDays1: "1 working day", shipDaysN: "{n} working days",
+      shipLater: "calculated at checkout", shipFrom: "from", shipDays1: "1 working day", shipDaysN: "{n} working days",
+      cartCheckout: "Checkout", cartPlusShipping: "plus shipping",
       shipParcelS: "small", shipParcelM: "medium", shipParcelL: "large",
       cartWhatsapp: "Send request via WhatsApp", cartEmail: "Send request via e-mail",
       paypalSoon: "Coming soon", paypalSoonAria: "Pay with PayPal – coming soon",
@@ -493,7 +495,7 @@
         "<h3>Newsletter</h3><p>You subscribe to the newsletter with your email address and your explicit consent. We then send you a confirmation email; you are only subscribed once you click the link in it (double opt-in). As a thank-you you receive a one-time code for 10% off one order – one code per person. We store your email address, language, the time and wording of your consent and non-reversible checksums (hashes) of the IP addresses used to subscribe and confirm, so we can prove your consent and prevent misuse of the discount. The legal basis is your consent (Art. 6(1)(a) GDPR, § 7(2) UWG) and our legitimate interest in preventing misuse (Art. 6(1)(f) GDPR). We measure whether newsletters are opened and links are clicked in order to improve them – this is covered by your consent as well. We also save your code locally in your browser so it is already filled in in the cart. You can withdraw your consent at any time, e.g. via the unsubscribe link in every email; after that we won't send you any more newsletters. We keep proof of your consent for up to three years after you unsubscribe.</p>" +
         "<h3>Email delivery (Brevo)</h3><p>Order confirmations, sign-in links and the newsletter are sent via Brevo (Sendinblue SAS, Paris, France) using servers in the EU. Brevo processes your email address and the content of the email on our behalf (data processing under Art. 28 GDPR).</p>" +
         "<h3>Shop server and incoming email (Cloudflare)</h3><p>The customer account, newsletter, rental requests and discount codes run on our server at Cloudflare (Cloudflare, Inc., San Francisco, USA); the database is located in Western Europe. Emails to disorder119.com addresses also reach us via Cloudflare. Cloudflare processes technically necessary connection data such as your IP address on our behalf (Art. 28 GDPR). Where data reaches the USA, Cloudflare is certified under the EU-US Data Privacy Framework (Art. 45 GDPR).</p>" +
-        "<h3>Shipping (parcel services and Packlink)</h3><p>To deliver your parcel we pass your name and delivery address to the parcel service we ship with (e.g. DHL, DPD, UPS or GLS). If we book the shipping label via Packlink PRO (Auctane, S.L.U., Madrid, Spain), Packlink also receives these details to register the shipment with the parcel service. We do not pass on your email address or phone number for this. The legal basis is the performance of the purchase contract (Art. 6(1)(b) GDPR).</p>" +
+        "<h3>Shipping (parcel services and Packlink)</h3><p>To deliver your parcel we pass your name and delivery address to the parcel service we ship with (e.g. DHL, DPD, UPS or GLS). If we book the shipping label via Packlink PRO (Auctane, S.L.U., Madrid, Spain), Packlink also receives these details to register the shipment with the parcel service. We do not pass on your email address or phone number for this. The legal basis is the performance of the purchase contract (Art. 6(1)(b) GDPR).</p><h3>Address suggestions at checkout</h3><p>To avoid typos in the delivery address, the checkout suggests the town for your postcode and matching streets for what you type. Our server looks these up with the postcode and the beginning of the street name at the OpenPLZ API (open data from official directories). Names, house numbers or your IP address are not transmitted. The legal basis is our legitimate interest in correct delivery addresses (Art. 6(1)(f) GDPR).</p>" +
         "<h3>No tracking cookies</h3><p>This site does not use analytics, marketing or tracking cookies.</p>" +
         "<h3>Cookieless visitor statistics</h3><p>So we can see which pieces are in demand, the site reports to our server at Cloudflare " +
         "(Cloudflare Inc., data processor): the page or item viewed and how long it stayed open, cart changes, opening an order request, the referring website, " +
@@ -559,7 +561,8 @@
       cartItemsRemovedSold: "Entre-temps vendu(s) et retiré(s) du panier : {items}.",
       cartRemove: "Retirer", cartTotal: "Total", cartSubtotal: "Sous-total", cartShipping: "Livraison (DE)",
       shipTitle: "Livraison en Allemagne", shipLine: "Livraison", shipParcel: "colis", shipLoading: "calcul en cours …",
-      shipLater: "selon la taille du colis, confirmé avec la commande", shipDays1: "1 jour ouvré", shipDaysN: "{n} jours ouvrés",
+      shipLater: "calculé à la commande", shipFrom: "dès", shipDays1: "1 jour ouvré", shipDaysN: "{n} jours ouvrés",
+      cartCheckout: "Commander", cartPlusShipping: "hors livraison",
       shipParcelS: "petit", shipParcelM: "moyen", shipParcelL: "grand",
       cartWhatsapp: "Envoyer la demande par WhatsApp", cartEmail: "Envoyer la demande par e-mail",
       paypalSoon: "Bientôt disponible", paypalSoonAria: "Payer avec PayPal – bientôt disponible",
@@ -695,7 +698,7 @@
         "<h3>Newsletter</h3><p>Tu t'inscris à la newsletter avec ton adresse e-mail et ton consentement explicite. Nous t'envoyons ensuite un e-mail de confirmation ; tu n'es inscrit·e qu'après avoir cliqué sur le lien (double opt-in). En remerciement, tu reçois une seule fois un code de 10 % pour une commande – un code par personne. Nous enregistrons ton adresse e-mail, ta langue, la date et le texte de ton consentement ainsi que des empreintes non réversibles (hashes) des adresses IP utilisées pour l'inscription et la confirmation, afin de pouvoir prouver ton consentement et d'empêcher l'abus de la remise. Base légale : ton consentement (art. 6, par. 1, point a) du RGPD, § 7 al. 2 UWG) et notre intérêt légitime à prévenir les abus (art. 6, par. 1, point f) du RGPD). Nous mesurons si les newsletters sont ouvertes et si les liens sont cliqués afin de les améliorer – ton consentement couvre également cela. Nous enregistrons aussi ton code localement dans ton navigateur pour qu'il soit déjà saisi dans le panier. Tu peux retirer ton consentement à tout moment, p. ex. via le lien de désinscription présent dans chaque e-mail ; ensuite, nous ne t'enverrons plus de newsletter. Nous conservons la preuve de ton consentement jusqu'à trois ans après ta désinscription.</p>" +
         "<h3>Envoi d'e-mails (Brevo)</h3><p>Les confirmations de commande, les liens de connexion et la newsletter sont envoyés via Brevo (Sendinblue SAS, Paris, France) avec des serveurs dans l'UE. Brevo traite ton adresse e-mail et le contenu de l'e-mail pour notre compte (sous-traitance selon l'art. 28 du RGPD).</p>" +
         "<h3>Serveur de la boutique et réception d'e-mails (Cloudflare)</h3><p>Le compte client, la newsletter, les demandes de location et les codes de réduction passent par notre serveur chez Cloudflare (Cloudflare, Inc., San Francisco, États-Unis) ; la base de données se trouve en Europe de l'Ouest. Les e-mails adressés à disorder119.com nous parviennent également via Cloudflare. Cloudflare traite les données de connexion techniquement nécessaires, comme ton adresse IP, pour notre compte (art. 28 du RGPD). Dans la mesure où des données parviennent aux États-Unis, Cloudflare est certifié selon le EU-US Data Privacy Framework (art. 45 du RGPD).</p>" +
-        "<h3>Expédition (transporteurs et Packlink)</h3><p>Pour livrer ton colis, nous transmettons ton nom et ton adresse de livraison au transporteur avec lequel nous expédions (p. ex. DHL, DPD, UPS ou GLS). Si nous réservons l'étiquette d'expédition via Packlink PRO (Auctane, S.L.U., Madrid, Espagne), Packlink reçoit également ces informations afin d'enregistrer l'envoi auprès du transporteur. Nous ne transmettons pas ton adresse e-mail ni ton numéro de téléphone à cette fin. La base juridique est l'exécution du contrat de vente (art. 6, par. 1, point b du RGPD).</p>" +
+        "<h3>Expédition (transporteurs et Packlink)</h3><p>Pour livrer ton colis, nous transmettons ton nom et ton adresse de livraison au transporteur avec lequel nous expédions (p. ex. DHL, DPD, UPS ou GLS). Si nous réservons l'étiquette d'expédition via Packlink PRO (Auctane, S.L.U., Madrid, Espagne), Packlink reçoit également ces informations afin d'enregistrer l'envoi auprès du transporteur. Nous ne transmettons pas ton adresse e-mail ni ton numéro de téléphone à cette fin. La base juridique est l'exécution du contrat de vente (art. 6, par. 1, point b du RGPD).</p><h3>Suggestions d'adresse à la commande</h3><p>Pour éviter les fautes de frappe dans l'adresse de livraison, la page de commande propose la ville correspondant au code postal et les rues correspondant à ta saisie. Notre serveur les interroge auprès de l'API OpenPLZ (données ouvertes issues de registres officiels) avec le code postal et le début du nom de rue. Aucun nom, numéro ni ton adresse IP n'est transmis. La base juridique est notre intérêt légitime à des adresses de livraison exactes (art. 6, par. 1, point f du RGPD).</p>" +
         "<h3>Aucun cookie de suivi</h3><p>Ce site n'utilise aucun cookie d'analyse, marketing ou de suivi.</p>" +
         "<h3>Statistiques de visite sans cookies</h3><p>Pour savoir quelles pièces intéressent, le site transmet à notre serveur chez Cloudflare " +
         "(Cloudflare Inc., sous-traitant) : la page ou l'article consulté et la durée d'affichage, les modifications du panier, l'ouverture d'une demande de commande, " +
@@ -1097,23 +1100,29 @@
     var o = cartVersandOption();
     return o ? o.preisCents / 100 : 0;
   }
+  // Im Warenkorb nur eine Zeile: der guenstigste Versand ("ab", wenn es
+  // mehrere Arten gibt). Gewaehlt wird an der Kasse.
   function cartVersandHtml() {
     var d = cartVersand.daten;
-    var html = '<fieldset class="cart-versand"><legend>' + escapeHtml(t("shipTitle")) +
-      (d ? ' <small>· ' + escapeHtml(t("shipParcel")) + " " + escapeHtml(versandPaketName(d)) + "</small>" : "") + "</legend>";
-    if (!d) {
-      html += '<p class="cart-versand__info">' + escapeHtml(cartVersand.laedt ? t("shipLoading") : t("shipLater")) + "</p>";
-      return html + "</fieldset>";
-    }
-    var gewaehlt = cartVersandOption();
-    d.optionen.forEach(function (o) {
-      var meta = [o.carrier, versandTage(o)].filter(Boolean).join(" · ");
-      html += '<label class="cart-versand__opt"><input type="radio" name="cartVersand" value="' + escapeHtml(o.art) + '"' +
-        (gewaehlt && gewaehlt.id === o.id ? " checked" : "") + (d.optionen.length === 1 ? " disabled" : "") + ">" +
-        '<span class="cart-versand__name">' + escapeHtml(o.titel) + (meta ? " <small>" + escapeHtml(meta) + "</small>" : "") + "</span>" +
-        '<span class="cart-versand__preis">' + fmtPrice(o.preisCents / 100) + "</span></label>";
-    });
-    return html + "</fieldset>";
+    var o = cartVersandOption();
+    var label = t("shipLine") + (d ? " (" + [o && o.carrier, t("shipParcel") + " " + versandPaketName(d)].filter(Boolean).join(", ") + ")" : "");
+    var wert = o
+      ? (d.optionen.length > 1 ? t("shipFrom") + " " : "") + fmtPrice(o.preisCents / 100)
+      : (cartVersand.laedt ? t("shipLoading") : t("shipLater"));
+    return '<div class="cart-total cart-total--line cart-versand"><span>' + escapeHtml(label) + "</span><span>" + escapeHtml(wert) + "</span></div>";
+  }
+
+  // Feste Leiste unten in der Schublade: Gesamtsumme und "Zur Kasse" - immer
+  // sichtbar, egal wie viele Stuecke darueber liegen.
+  function cartKasseZeichnen(total, shipping, hasUnknownPrice) {
+    var bar = document.getElementById("cartKasse");
+    if (!bar) return;
+    if (!cart.length) { bar.hidden = true; bar.innerHTML = ""; return; }
+    var betrag = cartTotalDisplay(total + shipping, hasUnknownPrice);
+    bar.innerHTML = '<div class="cart-kasse__summe"><span>' + escapeHtml(t("cartTotal")) +
+      (shipping > 0 ? "" : ' <small>' + escapeHtml(t("cartPlusShipping")) + "</small>") + "</span><strong>" + escapeHtml(betrag) + "</strong></div>" +
+      '<a class="cart-kasse__btn" href="' + langHome(LANG) + 'kasse/">' + escapeHtml(t("cartCheckout")) + "</a>";
+    bar.hidden = false;
   }
 
   function cartTotalDisplay(total, hasUnknownPrice) { // AUDIT_PERFECT_CART_TOTAL
@@ -1172,6 +1181,7 @@
     if (!cart.length) {
       body.innerHTML = noticeHtml + '<p class="cart-empty">' + t("cartEmpty") + '</p>';
       foot.innerHTML = "";
+      cartKasseZeichnen(0, 0, false);
       return;
     }
 
@@ -1216,12 +1226,7 @@
       '<div class="cart-total"><span>' + t("cartTotal") + '</span><span>' + cartTotalDisplay(total + shipping, hasUnknownPrice) + "</span></div>" +
       '<label class="cart-order-message"><span>' + purchaseMessageLabel() + ' <small>(' + (LANG === "de" ? "optional" : LANG === "fr" ? "facultatif" : "optional") + ')</small></span>' +
       '<textarea id="cartOrderMessage" maxlength="500" placeholder="' + escapeHtml(purchaseMessagePlaceholder()) + '">' + escapeHtml(cartOrderMessage) + '</textarea></label>';
-    // PAYPAL_VORSCHAU: PayPal schon sichtbar, bis features.paypalCheckout aktiv ist.
-    if (!(SHOP_CONFIG.features && SHOP_CONFIG.features.paypalCheckout && SHOP_CONFIG.paypalClientId)) {
-      footHtml += '<div class="paypal-soon" role="note" aria-label="' + escapeHtml(t("paypalSoonAria")) + '">' +
-        '<span class="paypal-soon__mark" aria-hidden="true"><i>Pay</i><i>Pal</i></span>' +
-        '<span class="paypal-soon__tag">' + escapeHtml(t("paypalSoon")) + '</span></div>';
-    }
+    // Bezahlt wird an der Kasse (/kasse/) - hier nur die unverbindliche Anfrage.
     if (hasWhatsapp) {
       footHtml += '<a class="cart-checkout-btn cart-checkout-btn--whatsapp" data-cart-inquiry="whatsapp" target="_blank" rel="noopener" href="#">' + t("cartWhatsapp") + '</a>';
     }
@@ -1233,6 +1238,7 @@
     }
     footHtml += '<p class="cart-note">' + t("cartNote") + '</p>';
     foot.innerHTML = footHtml;
+    cartKasseZeichnen(total, shipping, hasUnknownPrice);
 
     function refreshCartInquiryLinks() {
       var encoded = encodeURIComponent(buildOrderText());
@@ -1241,12 +1247,6 @@
       if (wa) wa.href = "https://wa.me/" + SHOP_CONFIG.whatsappNumber + "?text=" + encoded;
       if (email) email.href = "mailto:" + SHOP_CONFIG.email + "?subject=" + encodeURIComponent(t("orderSubject")) + "&body=" + encoded;
     }
-    Array.prototype.forEach.call(foot.querySelectorAll('input[name="cartVersand"]'), function (radio) {
-      radio.addEventListener("change", function () {
-        cartVersandArt = radio.value;
-        renderCartDrawer();
-      });
-    });
     var messageInput = foot.querySelector("#cartOrderMessage");
     if (messageInput) messageInput.addEventListener("input", function () {
       cartOrderMessage = messageInput.value.slice(0, 500);

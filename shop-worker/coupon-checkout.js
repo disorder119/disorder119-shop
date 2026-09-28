@@ -147,15 +147,33 @@ async function cancelCreatedOrder(env, row, requestId, reason) {
         .bind(now, row.payment_id),
       db.prepare("UPDATE commerce_orders SET status='CANCELLED',updated_at=? WHERE id=? AND status IN ('RESERVED','PAYMENT_PENDING')")
         .bind(now, row.order_id),
-      db.prepare("UPDATE reservations SET status='CANCELLED',updated_at=? WHERE id=? AND status='RESERVED'")
-        .bind(now, row.reservation_id),
-      db.prepare("UPDATE inventory SET status='CANCELLED',updated_at=?,version=version+1 WHERE id=? AND status IN ('RESERVED','PAYMENT_PENDING')")
-        .bind(now, row.inventory_id),
-      db.prepare("UPDATE inventory SET status='AVAILABLE',updated_at=?,version=version+1 WHERE id=? AND status='CANCELLED'")
-        .bind(now, row.inventory_id),
+      // Alle Stuecke der Bestellung freigeben - die Kasse kann mehrere haben.
+      db.prepare(`UPDATE reservations SET status='CANCELLED',updated_at=? WHERE status='RESERVED' AND (id=? OR idempotency_key IN
+        (SELECT o.idempotency_key || '#' || oi.item_id FROM order_items oi JOIN commerce_orders o ON o.id=oi.order_id WHERE oi.order_id=?))`)
+        .bind(now, row.reservation_id, row.order_id),
+      db.prepare(`UPDATE inventory SET status='CANCELLED',updated_at=?,version=version+1
+        WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status IN ('RESERVED','PAYMENT_PENDING')`)
+        .bind(now, row.order_id),
+      db.prepare(`UPDATE inventory SET status='AVAILABLE',updated_at=?,version=version+1
+        WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status='CANCELLED'`)
+        .bind(now, row.order_id),
     ]);
     await audit(env, row.order_id, requestId, "COUPON_CHECKOUT_CANCELLED", { reason: String(reason || "coupon_apply_failed").slice(0, 80) });
   } catch {}
+}
+
+// Rabatt anteilig auf die Stuecke verteilen: jede Zeile behaelt ihren Anteil,
+// die Summe ist auf den Cent genau der rabattierte Warenwert. Rundungsreste
+// gehen an die Zeilen mit dem groessten abgeschnittenen Anteil.
+export function rabattVerteilen(preiseCents, zielCents) {
+  const summe = preiseCents.reduce((a, b) => a + b, 0);
+  if (!preiseCents.length || summe <= 0) return preiseCents.slice();
+  const roh = preiseCents.map(preis => (preis * zielCents) / summe);
+  const out = roh.map(Math.floor);
+  let rest = zielCents - out.reduce((a, b) => a + b, 0);
+  const reihenfolge = roh.map((wert, i) => [wert - Math.floor(wert), i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]);
+  for (let k = 0; rest > 0 && k < reihenfolge.length; k++, rest--) out[reihenfolge[k][1]] += 1;
+  return out;
 }
 
 export async function applyCouponToCreatedOrder(env, code, createResult, requestId = "") {
@@ -213,11 +231,14 @@ export async function applyCouponToCreatedOrder(env, code, createResult, request
     providerPatched = true;
 
     const now = new Date().toISOString();
+    const zeilen = (await env.DB.prepare("SELECT id,unit_price_cents FROM order_items WHERE order_id=? ORDER BY rowid")
+      .bind(orderId).all()).results || [];
+    const neuePreise = rabattVerteilen(zeilen.map(z => Number(z.unit_price_cents || 0)), discountedSubtotal);
     const updates = await env.DB.batch([
       env.DB.prepare("UPDATE commerce_orders SET subtotal_cents=?,total_cents=?,updated_at=? WHERE id=? AND status='PAYMENT_PENDING'")
         .bind(discountedSubtotal, finalTotal, now, orderId),
-      env.DB.prepare("UPDATE order_items SET unit_price_cents=? WHERE order_id=?")
-        .bind(discountedSubtotal, orderId),
+      ...zeilen.map((zeile, i) => env.DB.prepare("UPDATE order_items SET unit_price_cents=? WHERE id=?")
+        .bind(neuePreise[i], zeile.id)),
       env.DB.prepare("UPDATE payments SET amount_cents=?,updated_at=? WHERE id=? AND status='CREATED'")
         .bind(finalTotal, now, row.payment_id),
     ]);

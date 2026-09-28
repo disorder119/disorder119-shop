@@ -29,11 +29,14 @@ export function formatSaleMessage(order = {}) {
   const article = safeText(order.article_no || order.articleNo || "", 80);
   const title = safeText(order.title_snapshot || order.title || "Verkauf", 180) || "Verkauf";
   const amount = euroAmount(order.total_cents ?? order.totalCents, order.currency || "EUR");
+  // Kasse mit mehreren Stuecken: jedes Teil eine Zeile.
+  const teile = Array.isArray(order.items) && order.items.length > 1
+    ? order.items.map(it => `• ${safeText(it.article_no || "", 20)} ${safeText(it.title_snapshot || "", 120)}`.trim())
+    : null;
   return [
     "DISORDER119 — SALE",
     `Order: ${number}`,
-    article ? `Artikel: ${article}` : null,
-    `Piece: ${title}`,
+    ...(teile ? [`Teile: ${teile.length}`, ...teile] : [article ? `Artikel: ${article}` : null, `Piece: ${title}`]),
     `Betrag: ${amount}`,
     "Zahlung: PayPal bestätigt",
   ].filter(Boolean).join("\n");
@@ -203,6 +206,8 @@ export async function notifyPaidOrder(env, orderId, reqId = crypto.randomUUID())
   if (!telegramNotificationReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
   const row = await loadPaidOrder(env, orderId);
   if (!row) return { sent: false, reason: "ORDER_NOT_FOUND" };
+  row.items = (await env.DB.prepare("SELECT article_no,title_snapshot FROM order_items WHERE order_id=? ORDER BY rowid")
+    .bind(String(orderId)).all()).results || [];
   if (!["PAID", "PREPARING", "SHIPPED", "DELIVERED", "RETURN_REQUESTED", "RETURNED"].includes(String(row.status || "").toUpperCase())) {
     return { sent: false, reason: "ORDER_NOT_PAID" };
   }
