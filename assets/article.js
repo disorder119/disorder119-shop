@@ -495,6 +495,9 @@
     hinweis.id = "versandHinweis";
     hinweis.hidden = true;
     preis.parentNode.insertBefore(hinweis, preis.nextSibling);
+    // .info ordnet seine Kinder per CSS "order" - der Hinweis gehoert direkt
+    // unter den Preis, also dieselbe Stelle wie der Preisblock.
+    try { hinweis.style.order = window.getComputedStyle(preis).order; } catch (e) { /* alte Browser */ }
     versandZustand.anzeigen.push(function () {
       var d = versandZustand.daten;
       hinweis.hidden = !d;

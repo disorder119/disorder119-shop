@@ -157,7 +157,7 @@
       cartHeading: "Warenkorb", cartAria: "Warenkorb", cartEmpty: "Dein Warenkorb ist leer.",
       cartItemsRemovedSold: "Inzwischen verkauft und aus dem Warenkorb entfernt: {items}.",
       cartRemove: "Entfernen", cartTotal: "Gesamt", cartSubtotal: "Zwischensumme", cartShipping: "Versand (DE)",
-      shipTitle: "Versand innerhalb Deutschlands", shipParcel: "Paket", shipLoading: "wird berechnet …",
+      shipTitle: "Versand innerhalb Deutschlands", shipLine: "Versand", shipParcel: "Paket", shipLoading: "wird berechnet …",
       shipLater: "je nach Paketgröße, nennen wir dir mit der Bestätigung", shipDays1: "1 Werktag", shipDaysN: "{n} Werktage",
       shipParcelS: "klein", shipParcelM: "mittel", shipParcelL: "groß",
       cartWhatsapp: "Anfrage per WhatsApp senden", cartEmail: "Anfrage per E-Mail senden",
@@ -358,7 +358,7 @@
       cartHeading: "Cart", cartAria: "Cart", cartEmpty: "Your cart is empty.",
       cartItemsRemovedSold: "Sold in the meantime and removed from your cart: {items}.",
       cartRemove: "Remove", cartTotal: "Total", cartSubtotal: "Subtotal", cartShipping: "Shipping (DE)",
-      shipTitle: "Shipping within Germany", shipParcel: "parcel", shipLoading: "calculating …",
+      shipTitle: "Shipping within Germany", shipLine: "Shipping", shipParcel: "parcel", shipLoading: "calculating …",
       shipLater: "depends on parcel size, confirmed with your order", shipDays1: "1 working day", shipDaysN: "{n} working days",
       shipParcelS: "small", shipParcelM: "medium", shipParcelL: "large",
       cartWhatsapp: "Send request via WhatsApp", cartEmail: "Send request via e-mail",
@@ -558,7 +558,7 @@
       cartHeading: "Panier", cartAria: "Panier", cartEmpty: "Ton panier est vide.",
       cartItemsRemovedSold: "Entre-temps vendu(s) et retiré(s) du panier : {items}.",
       cartRemove: "Retirer", cartTotal: "Total", cartSubtotal: "Sous-total", cartShipping: "Livraison (DE)",
-      shipTitle: "Livraison en Allemagne", shipParcel: "colis", shipLoading: "calcul en cours …",
+      shipTitle: "Livraison en Allemagne", shipLine: "Livraison", shipParcel: "colis", shipLoading: "calcul en cours …",
       shipLater: "selon la taille du colis, confirmé avec la commande", shipDays1: "1 jour ouvré", shipDaysN: "{n} jours ouvrés",
       shipParcelS: "petit", shipParcelM: "moyen", shipParcelL: "grand",
       cartWhatsapp: "Envoyer la demande par WhatsApp", cartEmail: "Envoyer la demande par e-mail",
@@ -1100,7 +1100,7 @@
   function cartVersandHtml() {
     var d = cartVersand.daten;
     var html = '<fieldset class="cart-versand"><legend>' + escapeHtml(t("shipTitle")) +
-      (d ? ' <small>' + escapeHtml(t("shipParcel")) + " " + escapeHtml(versandPaketName(d)) + "</small>" : "") + "</legend>";
+      (d ? ' <small>· ' + escapeHtml(t("shipParcel")) + " " + escapeHtml(versandPaketName(d)) + "</small>" : "") + "</legend>";
     if (!d) {
       html += '<p class="cart-versand__info">' + escapeHtml(cartVersand.laedt ? t("shipLoading") : t("shipLater")) + "</p>";
       return html + "</fieldset>";
@@ -1147,7 +1147,7 @@
     var shipping = versandOption ? shippingFlat() : 0;
     return t("orderGreeting") + "\n\n" +
       lines.join("\n\n") +
-      (shipping > 0 ? "\n\n" + t("cartShipping") + " (" + versandOption.titel + ", " + t("shipParcel") + " " +
+      (shipping > 0 ? "\n\n" + t("shipLine") + " (" + versandOption.titel + ", " + t("shipParcel") + " " +
         versandPaketName(cartVersand.daten) + "): " + fmtPrice(shipping) : "") +
       "\n\n" + t("cartTotal") + ": " + cartTotalDisplay(total + shipping, hasUnknownPrice) +
       (cartOrderMessage.trim() ? "\n" + purchaseMessageLabel() + ": " + cartOrderMessage.trim() : "") +
