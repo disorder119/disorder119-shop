@@ -3,10 +3,6 @@
   "fp": "d0c293e8cea76031fd4954bc7a7acbe5e9d393f1",
   "lastmod": "2026-09-18"
  },
- "https://disorder119.com/agb/": {
-  "fp": "11f80696c4d647eeba30f28c6233008568d43260",
-  "lastmod": "2026-09-28"
- },
  "https://disorder119.com/artikel/6042/": {
   "fp": "33f3dec6f1b8ac5fd973d27fb8936b84abe1a220",
   "lastmod": "2026-09-27"
@@ -947,17 +943,9 @@
   "fp": "4eef875671f7a226c15c3652dfc3bb043a17de59",
   "lastmod": "2026-09-27"
  },
- "https://disorder119.com/datenschutz/": {
-  "fp": "fb49fc53f105594024acf11d354fdfbece48715a",
-  "lastmod": "2026-09-28"
- },
  "https://disorder119.com/en/": {
   "fp": "d0c293e8cea76031fd4954bc7a7acbe5e9d393f1",
   "lastmod": "2026-09-18"
- },
- "https://disorder119.com/en/agb/": {
-  "fp": "fa123d0820e3efaed260fdb3aa4ab9ec3b180327",
-  "lastmod": "2026-09-28"
  },
  "https://disorder119.com/en/artikel/6042/": {
   "fp": "33f3dec6f1b8ac5fd973d27fb8936b84abe1a220",
@@ -1899,16 +1887,8 @@
   "fp": "4eef875671f7a226c15c3652dfc3bb043a17de59",
   "lastmod": "2026-09-27"
  },
- "https://disorder119.com/en/datenschutz/": {
-  "fp": "bb3c7911c92a33b52f32c70174d032a8ebcc7a92",
-  "lastmod": "2026-09-28"
- },
  "https://disorder119.com/en/faq/": {
   "fp": "68db5afc9e6f5ebf7f2f9f21a7ba0f049bd93dcb",
-  "lastmod": "2026-09-28"
- },
- "https://disorder119.com/en/impressum/": {
-  "fp": "b53d7755b1023d505c7d993b24e5d96a0ceb91f0",
   "lastmod": "2026-09-28"
  },
  "https://disorder119.com/en/mieten/": {
@@ -1916,7 +1896,7 @@
   "lastmod": "2026-09-28"
  },
  "https://disorder119.com/en/ueber-uns/": {
-  "fp": "981c68c9caf58c4edd169be7da12bf34a78d7fd1",
+  "fp": "6c9598cf93c3f28a3598c38fc1732f05e674a0f4",
   "lastmod": "2026-09-28"
  },
  "https://disorder119.com/faq/": {
@@ -1926,10 +1906,6 @@
  "https://disorder119.com/fr/": {
   "fp": "d0c293e8cea76031fd4954bc7a7acbe5e9d393f1",
   "lastmod": "2026-09-18"
- },
- "https://disorder119.com/fr/agb/": {
-  "fp": "466c477623b732fd41ab14c0f15dc61c2819ad1c",
-  "lastmod": "2026-09-28"
  },
  "https://disorder119.com/fr/artikel/6042/": {
   "fp": "33f3dec6f1b8ac5fd973d27fb8936b84abe1a220",
@@ -2871,16 +2847,8 @@
   "fp": "4eef875671f7a226c15c3652dfc3bb043a17de59",
   "lastmod": "2026-09-27"
  },
- "https://disorder119.com/fr/datenschutz/": {
-  "fp": "a925f498c5c6ae54d1d7c33cca75785bb76601b1",
-  "lastmod": "2026-09-28"
- },
  "https://disorder119.com/fr/faq/": {
   "fp": "0d1295c3b69b4113bbfb33e07a10e6008517de0d",
-  "lastmod": "2026-09-28"
- },
- "https://disorder119.com/fr/impressum/": {
-  "fp": "d212e91975a0f7cf9fc2f9a1ebbd94bb880dcbc4",
   "lastmod": "2026-09-28"
  },
  "https://disorder119.com/fr/mieten/": {
@@ -2888,11 +2856,7 @@
   "lastmod": "2026-09-28"
  },
  "https://disorder119.com/fr/ueber-uns/": {
-  "fp": "5bc555468831729b09a2aa3d99f4cc420d7f0a40",
-  "lastmod": "2026-09-28"
- },
- "https://disorder119.com/impressum/": {
-  "fp": "9547729df2a3581e16065f2052215a8e22374a25",
+  "fp": "d97777abd48934b94d664f5f96660c6b980abdf3",
   "lastmod": "2026-09-28"
  },
  "https://disorder119.com/mieten/": {
@@ -2900,7 +2864,7 @@
   "lastmod": "2026-09-28"
  },
  "https://disorder119.com/ueber-uns/": {
-  "fp": "f90de32355e3ed5e0c6481d474e591c0c37931af",
+  "fp": "bf2f750a581e14718e2ad3afd58c263a08b2d80d",
   "lastmod": "2026-09-28"
  }
 }
