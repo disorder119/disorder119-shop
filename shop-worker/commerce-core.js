@@ -91,16 +91,8 @@ export function rentalDailyPriceCents(salePriceCents) {
   return Math.round((salePriceCents * RENTAL_RATE_BPS) / 10000);
 }
 
-// Versandpauschale fuer den Online-Kauf (eine Sendung je Bestellung).
-// Einzige Quelle im Serverpfad: Worker, Gutscheinlogik und Tests lesen diesen
-// Wert. config/shop-config.json spiegelt ihn nur fuer die Anzeige im Browser,
-// scripts/validate_shop.py haelt beide Werte gleich.
-export const SHIPPING_FLAT_CENTS = 590;
-
-export function shippingCentsFor(subtotalCents) {
-  const subtotal = Number(subtotalCents || 0);
-  return subtotal > 0 ? SHIPPING_FLAT_CENTS : 0;
-}
+// Versandkosten: keine Pauschale mehr. Der Betrag haengt an Paketgroesse und
+// gewaehlter Versandart und kommt aus shop-worker/versand.js.
 
 export function money(cents) {
   if (!Number.isSafeInteger(cents) || cents < 0) return null;

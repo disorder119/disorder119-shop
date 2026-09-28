@@ -214,7 +214,8 @@ verdient wurde.
 - `PAYPAL_ENVIRONMENT=live` setzen.
 - Live Client ID in `config/shop-config.json` setzen; Client Secret bleibt ausschliesslich Worker-Secret.
 - Datenschutztext um die dann tatsaechlich aktiv verwendeten Zahlungs-/Versanddienstleister ergaenzen und rechtlich pruefen.
-- Versandkosten/Versandgebiet verbindlich festlegen.
+- Versand: Packlink verbinden ("7 - Packlink verbinden" setzt `PACKLINK_API_KEY` und `PACKLINK_WEBHOOK_TOKEN` und traegt die Meldeadresse bei Packlink ein), in der Admin-App unter *System* pruefen: Schluessel und Sendungsmeldungen "Eingerichtet", Preise "Live von Packlink". Versandgebiet ist Deutschland; Paketgroessen und Ersatzpreise stehen in `config/shop-config.json` unter `versand`.
+- D1-Migration `0022_versand` vor dem Worker-Deploy anwenden (`order_versand`, `packlink_webhook_events`).
 - Testbestellung mit kleinem realen Betrag und anschliessendem Refund.
 - Backup-/Export-Routine fuer private D1-Betriebsdaten festlegen.
 

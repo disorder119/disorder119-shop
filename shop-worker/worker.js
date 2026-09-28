@@ -11,6 +11,7 @@ import {
   safeText,
 } from "./commerce-core.js";
 import { branchHead, createCommit, fastForward, readRepoFile } from "./github-datei.js";
+import { VersandError, versandFuerBestellung, versandWahlStatement } from "./versand.js";
 
 const CONFIG = Object.freeze({
   githubOwner: "disorder119",
@@ -470,12 +471,13 @@ export async function markCatalogSold(env, itemId) {
   throw new Error("catalog_mark_sold_conflict");
 }
 
-async function createOrderRecords(env, item, cents, shippingCents, reservation, providerOrder, key, reqId) {
+async function createOrderRecords(env, item, cents, versand, reservation, providerOrder, key, reqId) {
   const db = requireDb(env);
   const orderId = crypto.randomUUID();
   const paymentId = crypto.randomUUID();
   const now = new Date().toISOString();
   const orderNumber = publicOrderNumber(orderId, new Date());
+  const shippingCents = versand.preisCents;
   const totalCents = cents + shippingCents;
   await db.batch([
     db.prepare(`INSERT INTO commerce_orders
@@ -489,8 +491,10 @@ async function createOrderRecords(env, item, cents, shippingCents, reservation, 
       VALUES (?,?,'PAYPAL',?,'CREATED',?,?,?,?)`).bind(paymentId, orderId, providerOrder.id, totalCents, CURRENCY, `paypal-create:${key}`, now),
     db.prepare("UPDATE reservations SET status='RESERVED',updated_at=? WHERE id=?").bind(now, reservation.reservationId),
     db.prepare("UPDATE inventory SET status='PAYMENT_PENDING',updated_at=?,version=version+1 WHERE id=? AND status='RESERVED'").bind(now, reservation.inventoryId),
+    // Gewaehlte Versandart gehoert zur Bestellung (Admin-App, Etikett).
+    versandWahlStatement(db, orderId, versand, now),
   ]);
-  await audit(env, "order", orderId, "PAYMENT_STARTED", reqId, { orderNumber, itemId: item.id, provider: "PAYPAL" });
+  await audit(env, "order", orderId, "PAYMENT_STARTED", reqId, { orderNumber, itemId: item.id, provider: "PAYPAL", versand: versand.id });
   return { orderId, orderNumber, paymentId };
 }
 
@@ -635,7 +639,11 @@ export default {
         if (!/^\d+$/.test(String(body.itemId || ""))) throw new PublicError("INVALID_ITEM_ID", 400);
         const item = await findItem(env, body.itemId);
         const cents = assertCatalogItemForSale(item);
-        const shippingCents = shippingCentsFor(cents);
+        // Versandart und -preis prueft der Server selbst (versand.js). Weicht
+        // der Preis von dem ab, den die Kundschaft gesehen hat, gibt es 409
+        // mit der aktuellen Liste - noch bevor etwas reserviert wird.
+        const versand = await versandFuerBestellung(env, [item], body.versand, body.versandPreisCents);
+        const shippingCents = versand.preisCents;
         const reservation = await reserveForPurchase(env, item, key, reqId);
         let providerOrder;
         try {
@@ -644,9 +652,10 @@ export default {
           await releasePurchaseReservation(env, reservation.reservationId, "provider_create_failed", reqId);
           throw err;
         }
-        const local = await createOrderRecords(env, item, cents, shippingCents, reservation, providerOrder, key, reqId);
+        const local = await createOrderRecords(env, item, cents, versand, reservation, providerOrder, key, reqId);
         const response = { id: providerOrder.id, orderId: local.orderId, orderNumber: local.orderNumber, expiresAt: reservation.expiresAt,
-          currency: CURRENCY, itemPrice: money(cents), shipping: money(shippingCents), total: money(cents + shippingCents) };
+          currency: CURRENCY, itemPrice: money(cents), shipping: money(shippingCents), total: money(cents + shippingCents),
+          versand: { id: versand.id, art: versand.art, titel: versand.titel, preisCents: versand.preisCents, carrier: versand.carrier, laufzeit: versand.laufzeit } };
         await finishIdempotency(env, "create-order", key, 200, response, local.orderId);
         return json(response, 200, origin);
       }
@@ -730,6 +739,7 @@ export default {
       throw new PublicError("NOT_FOUND", 404);
     } catch (err) {
       if (err instanceof PublicError) return json({ error: err.code, requestId: reqId }, err.status, origin);
+      if (err instanceof VersandError) return json({ error: err.code, versand: err.versand || undefined, requestId: reqId }, err.status, origin);
       console.error(JSON.stringify({ level: "error", event: "unhandled_worker_error", requestId: reqId, message: safeText(err?.message || "unknown", 160) }));
       return json({ error: "INTERNAL_SHOP_ERROR", requestId: reqId }, 500, origin);
     }

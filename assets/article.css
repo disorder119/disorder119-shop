@@ -359,6 +359,43 @@ a { color: inherit; }
 }
 .checkout-summary__legal a { color: var(--accent-text); }
 
+/* ---------- Versandart (Standard/Express) ueber der Summe ---------- */
+.checkout-versand {
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.checkout-versand legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.checkout-versand__optionen { display: grid; gap: 6px; }
+.checkout-versand__opt {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  cursor: pointer;
+}
+.checkout-versand__opt:has(input:checked) { border-color: var(--accent-text); }
+.checkout-versand__opt:has(input:disabled) { cursor: default; }
+.checkout-versand__opt input { margin: 0; accent-color: var(--accent-text); }
+.checkout-versand__name small { color: var(--text-muted); font-size: 0.7rem; }
+.checkout-versand__preis { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.checkout-versand__sperre { margin: 6px 0 0; font-size: 0.7rem; color: var(--text-muted); }
+.info__versand {
+  margin: 4px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .checkout-status {
   margin: 0;
   padding: 10px 12px;

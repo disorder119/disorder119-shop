@@ -131,12 +131,12 @@ function parseMetadata(value) {
   try { return JSON.parse(value); } catch { return null; }
 }
 
-async function auditAdmin(env, entityType, entityId, eventType, reqId, metadata = null) {
+async function auditAdmin(env, entityType, entityId, eventType, reqId, metadata = null, actorType = "ADMIN") {
   if (!env.DB) return;
   await env.DB.prepare(`INSERT INTO audit_events
     (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
     VALUES (?,?,?,?,?,?,?,?)`).bind(
-      crypto.randomUUID(), "ADMIN", entityType, String(entityId), eventType, reqId,
+      crypto.randomUUID(), actorType, entityType, String(entityId), eventType, reqId,
       metadata ? JSON.stringify(metadata) : null, new Date().toISOString()
     ).run();
 }
@@ -325,7 +325,7 @@ async function getOrderDetail(env, id) {
   const db = requireDb(env);
   const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
   if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
-  const [items, payments, shipments, returns, refunds, events, notes, contact] = await db.batch([
+  const [items, payments, shipments, returns, refunds, events, notes, contact, versand] = await db.batch([
     db.prepare("SELECT * FROM order_items WHERE order_id=? ORDER BY rowid").bind(order.id),
     db.prepare("SELECT * FROM payments WHERE order_id=? ORDER BY created_at DESC").bind(order.id),
     db.prepare("SELECT * FROM shipments WHERE order_id=? ORDER BY created_at DESC").bind(order.id),
@@ -334,6 +334,7 @@ async function getOrderDetail(env, id) {
     db.prepare("SELECT * FROM audit_events WHERE entity_id=? OR (entity_type='order' AND entity_id=?) ORDER BY created_at DESC LIMIT 200").bind(order.id, order.id),
     db.prepare("SELECT * FROM admin_notes WHERE entity_type='ORDER' AND entity_id=? ORDER BY created_at DESC").bind(order.id),
     db.prepare("SELECT * FROM order_contact_snapshots WHERE order_id=?").bind(order.id),
+    db.prepare("SELECT * FROM order_versand WHERE order_id=?").bind(order.id),
   ]);
   let customer = null;
   let addresses = [];
@@ -351,6 +352,8 @@ async function getOrderDetail(env, id) {
     returns: returns.results || [],
     refunds: refunds.results || [],
     contact: (contact.results || [])[0] || null,
+    // Im Checkout gewaehlte Versandart (Standard/Express, Paketgroesse, Preis).
+    versand: (versand.results || [])[0] || null,
     customer,
     addresses,
     notes: notes.results || [],
@@ -358,7 +361,7 @@ async function getOrderDetail(env, id) {
   };
 }
 
-async function updateOrder(env, id, body, reqId) {
+async function updateOrder(env, id, body, reqId, actorType = "ADMIN") {
   const db = requireDb(env);
   const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
   if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
@@ -387,7 +390,7 @@ async function updateOrder(env, id, body, reqId) {
         WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?)`).bind(newStatus, now, order.id));
     }
     await db.batch(statements);
-    await auditAdmin(env, "order", order.id, `ORDER_${newStatus}`, reqId, { from: order.status, to: newStatus });
+    await auditAdmin(env, "order", order.id, `ORDER_${newStatus}`, reqId, { from: order.status, to: newStatus }, actorType);
   }
 
   const effectiveStatus = newStatus || order.status;
@@ -405,7 +408,7 @@ async function updateOrder(env, id, body, reqId) {
       status=COALESCE(?,status), shipped_at=CASE WHEN ?='SHIPPED' THEN COALESCE(shipped_at,?) ELSE shipped_at END,
       delivered_at=CASE WHEN ?='DELIVERED' THEN COALESCE(delivered_at,?) ELSE delivered_at END, updated_at=? WHERE id=?`)
       .bind(carrier, service, trackingNumber, shipmentStatus, shipmentStatus, now, shipmentStatus, now, now, shipment.id).run();
-    await auditAdmin(env, "shipment", shipment.id, "SHIPMENT_UPDATED", reqId, { orderId: order.id, status: shipmentStatus || undefined, carrier: carrier || undefined, tracking: Boolean(trackingNumber) });
+    await auditAdmin(env, "shipment", shipment.id, "SHIPMENT_UPDATED", reqId, { orderId: order.id, status: shipmentStatus || undefined, carrier: carrier || undefined, tracking: Boolean(trackingNumber) }, actorType);
   } else if (effectiveStatus === "DELIVERED") {
     await db.prepare("UPDATE shipments SET status='DELIVERED',delivered_at=COALESCE(delivered_at,?),updated_at=? WHERE order_id=?")
       .bind(now, now, order.id).run();
@@ -434,6 +437,13 @@ async function updateOrder(env, id, body, reqId) {
   }
 
   return getOrderDetail(env, order.id);
+}
+
+// Fuer automatische Schritte aus der Sendungsverfolgung (packlink.js): derselbe
+// Weg wie der Statusknopf in der Admin-App - Statuspruefung, Lagerstueck,
+// Versandmail -, nur im Protokoll als SYSTEM statt ADMIN vermerkt.
+export async function orderStatusAutomatisch(env, orderId, status, reqId = crypto.randomUUID()) {
+  return updateOrder(env, orderId, { status }, reqId, "SYSTEM");
 }
 
 async function getRentals(env, url) {

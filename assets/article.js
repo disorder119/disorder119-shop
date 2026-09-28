@@ -45,7 +45,12 @@
       orderSubjectPrefix: "Anfrage Disorder119 – ",
       noBrand: "Ohne Marke", noDesc: "Keine Beschreibung hinterlegt.",
       autoDescTemplate: "{name}{facts}. Aus dem kuratierten Archiv von Disorder119.",
-      checkoutTitle: "Deine Bestellung", checkoutShipping: "Versand (DHL, Deutschland)", checkoutTotal: "Gesamt",
+      checkoutTitle: "Deine Bestellung", checkoutShipping: "Versand", checkoutTotal: "Gesamt",
+      shipTitle: "Versandart", shipParcel: "Paket", shipLoading: "wird berechnet …", shipDays1: "1 Werktag", shipDaysN: "{n} Werktage",
+      shipParcelS: "klein", shipParcelM: "mittel", shipParcelL: "groß", shipHint: "Versand innerhalb Deutschlands",
+      shipInquiry: "Versand (Standard)", shipLocked: "Die Versandart ist bis {zeit} Uhr für diese Reservierung festgelegt.",
+      checkoutShippingChanged: "Der Versandpreis hat sich gerade geändert. Bitte prüf die Versandart und klick noch einmal auf Kaufen.",
+      checkoutShippingMissing: "Der Versand wird noch berechnet. Bitte versuch es gleich noch einmal.",
       checkoutLegal: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Versand in der Regel innerhalb von 2 Werktagen. Mit dem PayPal-Knopf und deiner Bestätigung bei PayPal bestellst du zahlungspflichtig.",
       checkoutTerms: "AGB und Widerrufsbelehrung", checkoutPrivacy: "Datenschutz",
       checkoutCapturing: "Zahlung wird abgeschlossen …",
@@ -82,7 +87,12 @@
       orderSubjectPrefix: "Disorder119 enquiry – ",
       noBrand: "No brand", noDesc: "No description available.",
       autoDescTemplate: "{name}{facts}. From the curated archive of Disorder119.",
-      checkoutTitle: "Your order", checkoutShipping: "Shipping (DHL, Germany)", checkoutTotal: "Total",
+      checkoutTitle: "Your order", checkoutShipping: "Shipping", checkoutTotal: "Total",
+      shipTitle: "Shipping method", shipParcel: "parcel", shipLoading: "calculating …", shipDays1: "1 working day", shipDaysN: "{n} working days",
+      shipParcelS: "small", shipParcelM: "medium", shipParcelL: "large", shipHint: "Shipping within Germany",
+      shipInquiry: "Shipping (standard)", shipLocked: "The shipping method is fixed for this reservation until {zeit}.",
+      checkoutShippingChanged: "The shipping price has just changed. Please check the shipping method and click buy again.",
+      checkoutShippingMissing: "Shipping is still being calculated. Please try again in a moment.",
       checkoutLegal: "Small business under § 19 UStG, so no VAT is charged. Usually ships within 2 working days. By using the PayPal button and confirming in PayPal, you place an order with an obligation to pay.",
       checkoutTerms: "Terms and cancellation policy", checkoutPrivacy: "Privacy",
       checkoutCapturing: "Completing payment …",
@@ -119,7 +129,12 @@
       orderSubjectPrefix: "Demande Disorder119 – ",
       noBrand: "Sans marque", noDesc: "Aucune description disponible.",
       autoDescTemplate: "{name}{facts}. Issu de l'archive sélectionnée de Disorder119.",
-      checkoutTitle: "Votre commande", checkoutShipping: "Livraison (DHL, Allemagne)", checkoutTotal: "Total",
+      checkoutTitle: "Votre commande", checkoutShipping: "Livraison", checkoutTotal: "Total",
+      shipTitle: "Mode d'envoi", shipParcel: "colis", shipLoading: "calcul en cours …", shipDays1: "1 jour ouvré", shipDaysN: "{n} jours ouvrés",
+      shipParcelS: "petit", shipParcelM: "moyen", shipParcelL: "grand", shipHint: "Livraison en Allemagne",
+      shipInquiry: "Livraison (standard)", shipLocked: "Le mode d'envoi est fixé pour cette réservation jusqu'à {zeit}.",
+      checkoutShippingChanged: "Le prix de livraison vient de changer. Vérifie le mode d'envoi et clique à nouveau sur Acheter.",
+      checkoutShippingMissing: "La livraison est encore en cours de calcul. Réessaie dans un instant.",
       checkoutLegal: "Micro-entreprise selon le § 19 UStG, TVA non applicable. Expédition en général sous 2 jours ouvrés. En utilisant le bouton PayPal et en confirmant dans PayPal, vous passez une commande avec obligation de paiement.",
       checkoutTerms: "CGV et droit de rétractation", checkoutPrivacy: "Confidentialité",
       checkoutCapturing: "Finalisation du paiement …",
@@ -429,6 +444,72 @@
     });
   }
 
+  // ---- Versand: Standard oder Express mit Live-Preis (shop-worker/versand.js) ----
+  // Die Paketgroesse bestimmt der Server aus Produktart und Kategorie; beim
+  // Kauf prueft er Option und Preis noch einmal selbst. Ohne Verbindung
+  // bleibt es beim allgemeinen Hinweis unter dem Preis.
+  var versandZustand = { laden: null, daten: null, gewaehlt: null, gesperrtBis: 0, anzeigen: [] };
+  function versandWorker() {
+    var url = String(SHOP_CONFIG.shopWorkerUrl || "").replace(/\/$/, "");
+    return /^https:\/\//.test(url) ? url : "";
+  }
+  function versandTage(o) {
+    if (!o || !o.tage) return "";
+    return o.tage === 1 ? t("shipDays1") : tFormat("shipDaysN", { n: o.tage });
+  }
+  function versandPaket(d) {
+    return d ? t("shipParcel") + " " + (t("shipParcel" + d.paket) || d.paketName) : "";
+  }
+  function versandSetzen(daten) {
+    var gueltig = daten && daten.optionen && daten.optionen.length ? daten : null;
+    var vorher = versandZustand.gewaehlt;
+    versandZustand.daten = gueltig;
+    versandZustand.gewaehlt = gueltig
+      ? (gueltig.optionen.filter(function (o) { return vorher && o.art === vorher.art; })[0] || gueltig.optionen[0])
+      : null;
+    versandZustand.anzeigen.forEach(function (fn) { fn(); });
+  }
+  function versandLaden() {
+    if (versandZustand.laden) return versandZustand.laden;
+    var worker = versandWorker();
+    if (!worker || IT.sold || !(IT.price > 0)) {
+      versandZustand.laden = Promise.resolve(null);
+      return versandZustand.laden;
+    }
+    versandZustand.laden = fetch(worker + "/versand/optionen?artikel=" + encodeURIComponent(IT.id))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; })
+      .then(function (daten) {
+        versandSetzen(daten);
+        return versandZustand.daten;
+      });
+    return versandZustand.laden;
+  }
+
+  // Unter dem Preis: was der Versand kostet, fuer Kauf und Anfrage.
+  (function versandHinweis() {
+    var preis = document.getElementById("priceBlock");
+    if (!preis || IT.sold || !(IT.price > 0) || !versandWorker()) return;
+    var hinweis = document.createElement("p");
+    hinweis.className = "info__versand";
+    hinweis.id = "versandHinweis";
+    hinweis.hidden = true;
+    preis.parentNode.insertBefore(hinweis, preis.nextSibling);
+    // .info ordnet seine Kinder per CSS "order" - der Hinweis gehoert direkt
+    // unter den Preis, also dieselbe Stelle wie der Preisblock.
+    try { hinweis.style.order = window.getComputedStyle(preis).order; } catch (e) { /* alte Browser */ }
+    versandZustand.anzeigen.push(function () {
+      var d = versandZustand.daten;
+      hinweis.hidden = !d;
+      if (!d) return;
+      hinweis.textContent = t("shipHint") + ": " + d.optionen.map(function (o) {
+        return o.titel + " " + fmtPrice(o.preisCents / 100);
+      }).join(" · ") + " (" + versandPaket(d) + ")";
+      if (typeof updateOrderLinks === "function") updateOrderLinks();
+    });
+    versandLaden();
+  })();
+
   // ---- PayPal "Jetzt kaufen" (nur gerendert, wenn CONFIG.paypalClientId +
   // shopWorkerUrl gesetzt sind - build_site.py laesst den Container sonst
   // ganz weg, siehe shop-worker/README.md fuer die Einrichtung) ----
@@ -459,6 +540,7 @@
         var fehler = new Error(daten.error || "HTTP_" + r.status);
         fehler.code = daten.error || "";
         fehler.status = r.status;
+        fehler.daten = daten;
         throw fehler;
       }
       return daten;
@@ -468,6 +550,8 @@
   function kaufFehlerText(fehler) {
     var code = (fehler && (fehler.code || fehler.message)) || "";
     if (code === "RESERVATION_EXPIRED") return t("checkoutExpired");
+    if (code === "VERSAND_PREIS_GEAENDERT" || code === "VERSAND_OPTION_UNGUELTIG") return t("checkoutShippingChanged");
+    if (code === "VERSAND_NICHT_VERFUEGBAR") return t("checkoutShippingMissing");
     if (/^TURNSTILE_|^turnstile_|^schutz_/.test(code)) return t("checkoutBotCheck");
     if (code === "RATE_LIMITED") return t("checkoutTooFast");
     if (fehler && fehler.status === 409) return t("checkoutUnavailable");
@@ -484,7 +568,6 @@
   // weiter oben auf der Seite oder in den AGB.
   function kaufUebersicht(container) {
     var home = LANG === "de" ? "/" : "/" + LANG + "/";
-    var versand = (Number(SHOP_CONFIG.shippingFlatCents) || 0) / 100;
     var name = displayName() + (IT.size ? " · " + t("factSize") + " " + trSize(IT.size) : "");
     var box = document.createElement("div");
     box.className = "checkout-summary";
@@ -493,21 +576,91 @@
     titel.className = "checkout-summary__title";
     titel.textContent = t("checkoutTitle");
     box.appendChild(titel);
+
+    // Versandart waehlen - Standard und, wenn Packlink einen anbietet, Express.
+    var wahl = document.createElement("fieldset");
+    wahl.className = "checkout-versand";
+    var legende = document.createElement("legend");
+    wahl.appendChild(legende);
+    var optionenEl = document.createElement("div");
+    optionenEl.className = "checkout-versand__optionen";
+    wahl.appendChild(optionenEl);
+    var sperrHinweis = document.createElement("p");
+    sperrHinweis.className = "checkout-versand__sperre";
+    sperrHinweis.hidden = true;
+    wahl.appendChild(sperrHinweis);
+    box.appendChild(wahl);
+
     var liste = document.createElement("dl");
-    [[name, fmtPrice(IT.price), ""],
-     [t("checkoutShipping"), fmtPrice(versand), ""],
-     [t("checkoutTotal"), fmtPrice(IT.price + versand), "checkout-summary__total"]].forEach(function (zeile) {
+    function zeile(text, wert, klasse) {
       var reihe = document.createElement("div");
-      if (zeile[2]) reihe.className = zeile[2];
+      if (klasse) reihe.className = klasse;
       var dt = document.createElement("dt");
-      dt.textContent = zeile[0];
+      dt.textContent = text;
       var dd = document.createElement("dd");
-      dd.textContent = zeile[1];
+      dd.textContent = wert;
       reihe.appendChild(dt);
       reihe.appendChild(dd);
       liste.appendChild(reihe);
-    });
+      return { dt: dt, dd: dd };
+    }
+    zeile(name, fmtPrice(IT.price), "");
+    var versandZeile = zeile(t("checkoutShipping"), t("shipLoading"), "");
+    var gesamtZeile = zeile(t("checkoutTotal"), "…", "checkout-summary__total");
     box.appendChild(liste);
+
+    function zeichnen() {
+      var d = versandZustand.daten;
+      var o = versandZustand.gewaehlt;
+      legende.textContent = t("shipTitle") + (d ? " · " + versandPaket(d) : "");
+      optionenEl.textContent = "";
+      var gesperrt = versandZustand.gesperrtBis > Date.now();
+      (d ? d.optionen : []).forEach(function (opt) {
+        var label = document.createElement("label");
+        label.className = "checkout-versand__opt";
+        var radio = document.createElement("input");
+        radio.type = "radio";
+        radio.name = "kaufVersand";
+        radio.value = opt.id;
+        radio.checked = !!o && o.id === opt.id;
+        radio.disabled = gesperrt || d.optionen.length === 1;
+        radio.addEventListener("change", function () {
+          versandZustand.gewaehlt = opt;
+          zeichnen();
+        });
+        var nameEl = document.createElement("span");
+        nameEl.className = "checkout-versand__name";
+        nameEl.textContent = opt.titel;
+        var meta = [opt.carrier, versandTage(opt)].filter(Boolean).join(" · ");
+        if (meta) {
+          var klein = document.createElement("small");
+          klein.textContent = " " + meta;
+          nameEl.appendChild(klein);
+        }
+        var preisEl = document.createElement("span");
+        preisEl.className = "checkout-versand__preis";
+        preisEl.textContent = fmtPrice(opt.preisCents / 100);
+        label.appendChild(radio);
+        label.appendChild(nameEl);
+        label.appendChild(preisEl);
+        optionenEl.appendChild(label);
+      });
+      wahl.hidden = !d;
+      sperrHinweis.hidden = !gesperrt;
+      sperrHinweis.textContent = gesperrt ? tFormat("shipLocked", { zeit: uhrzeit(versandZustand.gesperrtBis) }) : "";
+      if (o) {
+        versandZeile.dt.textContent = t("checkoutShipping") + " · " + o.titel;
+        versandZeile.dd.textContent = fmtPrice(o.preisCents / 100);
+        gesamtZeile.dd.textContent = fmtPrice(IT.price + o.preisCents / 100);
+      } else {
+        versandZeile.dt.textContent = t("checkoutShipping");
+        versandZeile.dd.textContent = t("shipLoading");
+        gesamtZeile.dd.textContent = "…";
+      }
+    }
+    versandZustand.anzeigen.push(zeichnen);
+    zeichnen();
+    versandLaden();
     var recht = document.createElement("p");
     recht.className = "checkout-summary__legal";
     recht.appendChild(document.createTextNode(t("checkoutLegal") + " "));
@@ -573,6 +726,18 @@
     box.focus();
   }
 
+  // Solange die Reservierung laeuft, gehoert die Versandart zu dieser
+  // PayPal-Bestellung - danach ist sie wieder frei waehlbar.
+  var versandSperrUhr = 0;
+  function versandSperren(bis) {
+    versandZustand.gesperrtBis = bis || 0;
+    versandZustand.anzeigen.forEach(function (fn) { fn(); });
+    clearTimeout(versandSperrUhr);
+    if (bis > Date.now()) {
+      versandSperrUhr = setTimeout(function () { versandSperren(0); }, Math.min(bis - Date.now() + 500, 2147483000));
+    }
+  }
+
   function paypalKaufEinrichten(container, workerUrl) {
     var melden = kaufUebersicht(container);
     var schutz = schutzLaden();
@@ -603,9 +768,21 @@
       createOrder: function () {
         letzterFehler = "";
         melden("", "");
-        return schutz.then(function (S) {
-          if (!versuch || (versuch.ablauf && Date.now() > versuch.ablauf - 60000)) {
-            versuch = { schluessel: S.schluessel("create-order"), ablauf: 0, bestellNr: "" };
+        var gewaehlt = null;
+        return versandLaden().then(function () {
+          gewaehlt = versandZustand.gewaehlt;
+          if (!gewaehlt) {
+            var ohne = new Error("VERSAND_NICHT_VERFUEGBAR");
+            ohne.code = "VERSAND_NICHT_VERFUEGBAR";
+            throw ohne;
+          }
+          return schutz;
+        }).then(function (S) {
+          // Neuer Schluessel auch, wenn eine andere Versandart gewaehlt ist:
+          // derselbe Schluessel mit anderem Inhalt waere eine andere Bestellung.
+          if (!versuch || (versuch.ablauf && Date.now() > versuch.ablauf - 60000) ||
+              (!versuch.ablauf && versuch.versandId !== gewaehlt.id)) {
+            versuch = { schluessel: S.schluessel("create-order"), ablauf: 0, bestellNr: "", versandId: gewaehlt.id };
           }
           return S.waechter().token();
         })
@@ -615,16 +792,23 @@
             return fetch(workerUrl + "/create-order", {
               method: "POST",
               headers: kopf,
-              body: JSON.stringify({ itemId: IT.id }),
+              body: JSON.stringify({ itemId: IT.id, versand: gewaehlt.id, versandPreisCents: gewaehlt.preisCents }),
             });
           })
           .then(antwortLesen)
           .then(function (daten) {
             versuch.ablauf = Date.parse(daten.expiresAt) || 0;
             versuch.bestellNr = daten.orderNumber || "";
+            versandSperren(versuch.ablauf);
             return daten.id;
           })
           .catch(function (fehler) {
+            var code = (fehler && fehler.code) || "";
+            if (/^VERSAND_/.test(code)) {
+              // Der Server schickt die aktuelle Liste gleich mit.
+              if (!versuch || !versuch.ablauf) versuch = null;
+              if (fehler.daten && fehler.daten.versand) versandSetzen(fehler.daten.versand);
+            }
             letzterFehler = kaufFehlerText(fehler);
             throw fehler;
           });
@@ -682,6 +866,8 @@
     var rows = [name, t("orderArticleAbbrev") + (IT.article || IT.id)];
     if (IT.size) rows.push(t("factSize") + ": " + trSize(IT.size));
     rows.push(IT.price > 0 ? fmtPrice(IT.price) : t("priceOnRequest")); // AUDIT_PERFECT_ARTICLE_PRICE_REQUEST
+    var versandStandard = versandZustand.daten && versandZustand.daten.optionen[0];
+    if (versandStandard) rows.push(t("shipInquiry") + ": " + fmtPrice(versandStandard.preisCents / 100) + " (" + versandPaket(versandZustand.daten) + ")");
     rows.push("URL: " + window.location.href.split("?")[0].split("#")[0]);
     if (articleOrderMessage.trim()) rows.push(articleMessageLabel() + ": " + articleOrderMessage.trim());
     rows.push((LANG === "de" ? "Zeitpunkt" : LANG === "fr" ? "Horodatage" : "Timestamp") + ": " + new Date().toLocaleString());

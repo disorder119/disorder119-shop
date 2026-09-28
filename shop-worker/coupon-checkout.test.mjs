@@ -7,7 +7,6 @@ import {
   formatEuros,
   paypalAmountPatch,
 } from "./coupon-checkout.js";
-import { SHIPPING_FLAT_CENTS, shippingCentsFor } from "./commerce-core.js";
 
 test("PayPal coupon amount is serialized in exact EUR cents", () => {
   assert.equal(formatEuros(9000), "90.00");
@@ -19,8 +18,10 @@ test("PayPal coupon amount is serialized in exact EUR cents", () => {
   }]);
 });
 
-test("Coupon patch keeps the flat shipping fee next to the discounted goods", () => {
-  assert.deepEqual(paypalAmountPatch(8999, SHIPPING_FLAT_CENTS), [{
+test("Coupon patch keeps the chosen shipping price next to the discounted goods", () => {
+  // Versand kommt aus der Bestellung (order_versand/shipping_cents), z. B.
+  // 5,90 EUR fuer ein mittleres Paket.
+  assert.deepEqual(paypalAmountPatch(8999, 590), [{
     op: "replace",
     path: "/purchase_units/@reference_id=='default'/amount",
     value: {
@@ -32,13 +33,6 @@ test("Coupon patch keeps the flat shipping fee next to the discounted goods", ()
       },
     },
   }]);
-});
-
-test("Flat shipping is charged once per order, never on an empty basket", () => {
-  assert.equal(SHIPPING_FLAT_CENTS, 590);
-  assert.equal(shippingCentsFor(8999), 590);
-  assert.equal(shippingCentsFor(1), 590);
-  assert.equal(shippingCentsFor(0), 0);
 });
 
 test("create-order accepts only server reward code format", async () => {
