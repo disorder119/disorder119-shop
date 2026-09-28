@@ -216,6 +216,11 @@ verdient wurde.
 - Datenschutztext um die dann tatsaechlich aktiv verwendeten Zahlungs-/Versanddienstleister ergaenzen und rechtlich pruefen.
 - Versand: Packlink verbinden ("7 - Packlink verbinden" setzt `PACKLINK_API_KEY` und `PACKLINK_WEBHOOK_TOKEN` und traegt die Meldeadresse bei Packlink ein), in der Admin-App unter *System* pruefen: Schluessel und Sendungsmeldungen "Eingerichtet", Preise "Live von Packlink". Versandgebiet ist Deutschland; Paketgroessen und Ersatzpreise stehen in `config/shop-config.json` unter `versand`.
 - D1-Migration `0022_versand` vor dem Worker-Deploy anwenden (`order_versand`, `packlink_webhook_events`).
+- PayPal scharf schalten - **genau in dieser Reihenfolge**, sonst blockieren Newsletter, Miete und Konto-Anmeldung (sie verlangen ein Turnstile-Token, sobald `TURNSTILE_SECRET` gesetzt ist, und im Livebetrieb ist Turnstile Pflicht):
+  1. "8 - PayPal verbinden" starten: legt das Turnstile-Widget an (Dashboard) und merkt den Site-Key in `_skripte/paypal-oeffentlich.txt`.
+  2. `turnstileSiteKey` in `config/shop-config.json` eintragen, Rebuild abwarten.
+  3. "8 - PayPal verbinden" noch einmal: prueft, dass die Seite den Site-Key ausliefert, setzt erst dann `TURNSTILE_SECRET`, danach `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` und `PAYPAL_WEBHOOK_ID` (Webhook per API).
+  4. `PAYPAL_ENVIRONMENT = "live"` (wrangler.toml `[vars]`), `paypalClientId`, `features.paypalCheckout: true` und `environment: "live"` setzen, Worker deployen, Rebuild abwarten.
 - Testbestellung mit kleinem realen Betrag und anschliessendem Refund.
 - Backup-/Export-Routine fuer private D1-Betriebsdaten festlegen.
 
