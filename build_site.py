@@ -1410,7 +1410,8 @@ def build_checkout_pages():
     if paypal_ready:
         paypal_sdk = (
             '<script src="https://www.paypal.com/sdk/js?client-id=' + esc(shop_config["paypalClientId"])
-            + '&currency=EUR&intent=capture&commit=true"></script>\n'
+            # Nur PayPal selbst: keine Karten- oder Lastschrift-Knoepfe.
+            + '&currency=EUR&intent=capture&commit=true&disable-funding=card,sepa"></script>\n'
         )
     count = 0
     for lang in LANGS:

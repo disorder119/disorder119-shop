@@ -5,9 +5,10 @@
 //   1. Produktseite und Warenkorb fragen GET /versand/optionen?artikel=<IDs>.
 //      Die Paketgroesse bestimmt der Server selbst aus Produktart und
 //      Kategorie (versand-config.js) - der Browser rechnet nichts.
-//   2. Gezeigt werden hoechstens zwei Optionen: "Standard" (guenstigster
-//      Dienst mit Zustellung an die Haustuer) und "Express" (guenstigster
-//      Express-Dienst, falls Packlink einen anbietet und er teurer ist).
+//   2. Gezeigt wird je erlaubtem Paketdienst (DPD, DHL ...) der guenstigste
+//      "Standard" mit Zustellung an die Haustuer, der billigste zuerst, dazu
+//      "Express" (guenstigster Express-Dienst, falls Packlink einen anbietet
+//      und er teurer ist als der billigste Standard).
 //   3. Beim Bestellen rechnet der Server die Optionen neu. Er nimmt den Preis
 //      aus seiner eigenen Liste und vergleicht ihn mit dem, den die Kundschaft
 //      gesehen hat: Weicht er ab (neuer Packlink-Preis, andere Paketgroesse,
@@ -91,8 +92,8 @@ export function ersatzOption(paket) {
 }
 
 // Aus der Packlink-Liste (schon auf Haustuer-Zustellung gefiltert) die
-// hoechstens zwei Optionen, die eine Kundin wirklich unterscheiden kann -
-// nur mit den Paketdiensten aus config/shop-config.json (versand.dienste).
+// Optionen, die eine Kundin wirklich unterscheiden kann: je Paketdienst aus
+// config/shop-config.json (versand.dienste) der guenstigste Standard.
 // Express nur, wenn ein erlaubter Dienst ihn bis zur Preisgrenze anbietet.
 export function optionenAus(angebote, paket, konfig = VERSAND) {
   const nachPreis = (a, b) => a.preisCents - b.preisCents || a.id - b.id;
@@ -100,11 +101,18 @@ export function optionenAus(angebote, paket, konfig = VERSAND) {
   const liste = (Array.isArray(angebote) ? angebote : [])
     .filter(a => a && Number.isInteger(a.id) && a.id > 0 && Number.isSafeInteger(a.preisCents) && a.preisCents > 0)
     .filter(a => dienstErlaubt(a.carrier, konfig));
-  const standard = liste.filter(a => !a.express).sort(nachPreis)[0];
+  const standards = [];
+  const dienste = new Set();
+  for (const a of liste.filter(a => !a.express).sort(nachPreis)) {
+    const dienst = String(a.carrier || "").trim().toUpperCase();
+    if (dienste.has(dienst)) continue;
+    dienste.add(dienst);
+    standards.push(a);
+  }
   const express = liste.filter(a => a.express && (!maxExpress || a.preisCents <= maxExpress)).sort(nachPreis)[0];
-  const out = [];
-  if (standard) out.push(option("standard", standard, paket));
-  if (express && (!standard || express.preisCents > standard.preisCents)) out.push(option("express", express, paket));
+  const out = standards.map(a => option("standard", a, paket));
+  const guenstigster = standards[0];
+  if (express && (!guenstigster || express.preisCents > guenstigster.preisCents)) out.push(option("express", express, paket));
   return out;
 }
 
