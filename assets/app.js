@@ -113,7 +113,7 @@
       categoryAll: "Alle Kategorien",
       sortBrightness: "Hell → Dunkel", sortNew: "Neueste zuerst", sortPriceAsc: "Preis aufsteigend",
       sortPriceDesc: "Preis absteigend", sortBrand: "Marke A–Z",
-      mountBlack: "Fotomontage: Schwarz", mountWhite: "Fotomontage: Weiß",
+      mountBlack: "Fotomontage: Schwarz", mountWhite: "Fotomontage: Weiß", viewDark: "Ansicht: Schwarz", viewLight: "Ansicht: Weiß",
       moreFilters: "Weitere Filter",
       filterDepartmentLabel: "Bereich", filterAllDepartments: "Alle Bereiche",
       filterProductTypeLabel: "Produkttyp", filterAllProductTypes: "Alle Produkttypen",
@@ -315,7 +315,7 @@
       categoryAll: "All categories",
       sortBrightness: "Light → dark", sortNew: "Newest first", sortPriceAsc: "Price ascending",
       sortPriceDesc: "Price descending", sortBrand: "Brand A–Z",
-      mountBlack: "Photo backdrop: black", mountWhite: "Photo backdrop: white",
+      mountBlack: "Photo backdrop: black", mountWhite: "Photo backdrop: white", viewDark: "View: black", viewLight: "View: white",
       moreFilters: "More filters",
       filterDepartmentLabel: "Department", filterAllDepartments: "All departments",
       filterProductTypeLabel: "Product type", filterAllProductTypes: "All product types",
@@ -516,7 +516,7 @@
       categoryAll: "Toutes les catégories",
       sortBrightness: "Clair → foncé", sortNew: "Plus récent d'abord", sortPriceAsc: "Prix croissant",
       sortPriceDesc: "Prix décroissant", sortBrand: "Marque A–Z",
-      mountBlack: "Fond photo : noir", mountWhite: "Fond photo : blanc",
+      mountBlack: "Fond photo : noir", mountWhite: "Fond photo : blanc", viewDark: "Affichage : noir", viewLight: "Affichage : blanc",
       moreFilters: "Plus de filtres",
       filterDepartmentLabel: "Rayon", filterAllDepartments: "Tous les rayons",
       filterProductTypeLabel: "Type de produit", filterAllProductTypes: "Tous les types",
@@ -868,10 +868,7 @@
     if (brandMore) brandMore.textContent = t("brandLineMore");
 
     var mountBtn = document.getElementById("mountToggle");
-    if (mountBtn) {
-      var isWhite = document.documentElement.getAttribute("data-mount") === "white";
-      mountBtn.textContent = isWhite ? t("mountWhite") : t("mountBlack");
-    }
+    if (mountBtn) mountBtn.textContent = ansichtText(ansichtAktuell());
 
     if (typeof render === "function") render();
     if (typeof renderCartDrawer === "function") renderCartDrawer();
@@ -2238,14 +2235,27 @@
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
 
-  // ---- Photo mount toggle (black / white ground behind the cut-out photos) ----
+  function ansichtAktuell() {
+    var a = document.documentElement.getAttribute("data-theme");
+    return a === "hell" ? "hell" : "dunkel";
+  }
+  function ansichtText(a) {
+    return t(a === "hell" ? "viewLight" : "viewDark");
+  }
+
+  // ---- Ansicht: dunkel (Standard) / weiss / grau fuer die ganze Seite ----
+  // theme.css traegt die Farben, das Skript im <head> jeder Seite setzt die
+  // gemerkte Ansicht vor dem ersten Bild (kein Aufblitzen in Schwarz).
   var root = document.documentElement;
   var mountBtn = document.getElementById("mountToggle");
+  mountBtn.textContent = ansichtText(ansichtAktuell());
+  // Umschalten macht ansicht.js (auch der runde Knopf unten links);
+  // dieser Knopf in der Filterleiste zeigt nur den Stand und schaltet mit.
   mountBtn.addEventListener("click", function () {
-    var next = root.getAttribute("data-mount") === "white" ? "black" : "white";
-    if (next === "black") root.removeAttribute("data-mount");
-    else root.setAttribute("data-mount", "white");
-    mountBtn.textContent = next === "white" ? t("mountWhite") : t("mountBlack");
+    if (window.D119Ansicht) window.D119Ansicht.umschalten();
+  });
+  document.addEventListener("d119:ansicht", function () {
+    mountBtn.textContent = ansichtText(ansichtAktuell());
   });
 
   // ---- Ansicht-Auswahl (Archiv / Match / Chaos / Outfit-Baukasten) ----
