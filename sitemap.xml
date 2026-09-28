@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://disorder119.com/</loc>
-    <lastmod>2026-09-18</lastmod>
+    <lastmod>2026-09-28</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/"/>
     <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/"/>
@@ -10,7 +10,7 @@
   </url>
   <url>
     <loc>https://disorder119.com/en/</loc>
-    <lastmod>2026-09-18</lastmod>
+    <lastmod>2026-09-28</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/"/>
     <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/"/>
@@ -18,7 +18,7 @@
   </url>
   <url>
     <loc>https://disorder119.com/fr/</loc>
-    <lastmod>2026-09-18</lastmod>
+    <lastmod>2026-09-28</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/"/>
     <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/"/>
@@ -10106,6 +10106,33 @@
     <image:image><image:loc>https://disorder119.com/assets/img/9372/0.webp</image:loc></image:image>
     <image:image><image:loc>https://disorder119.com/assets/img/9372/1.webp</image:loc></image:image>
     <image:image><image:loc>https://disorder119.com/assets/img/9372/2.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://disorder119.com/artikel/9999/</loc>
+    <lastmod>2026-09-28</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/artikel/9999/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/artikel/9999/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/artikel/9999/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://disorder119.com/artikel/9999/"/>
+    <image:image><image:loc>https://disorder119.com/assets/img/test-9999/0.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://disorder119.com/en/artikel/9999/</loc>
+    <lastmod>2026-09-28</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/artikel/9999/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/artikel/9999/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/artikel/9999/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://disorder119.com/artikel/9999/"/>
+    <image:image><image:loc>https://disorder119.com/assets/img/test-9999/0.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://disorder119.com/fr/artikel/9999/</loc>
+    <lastmod>2026-09-28</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://disorder119.com/artikel/9999/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://disorder119.com/en/artikel/9999/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/artikel/9999/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://disorder119.com/artikel/9999/"/>
+    <image:image><image:loc>https://disorder119.com/assets/img/test-9999/0.webp</image:loc></image:image>
   </url>
   <url>
     <loc>https://disorder119.com/ueber-uns/</loc>

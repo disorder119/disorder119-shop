@@ -1,7 +1,7 @@
 {
  "https://disorder119.com/": {
-  "fp": "d0c293e8cea76031fd4954bc7a7acbe5e9d393f1",
-  "lastmod": "2026-09-18"
+  "fp": "2aab0c7fad48af9a8e0ac6cd63c4e908c3bd9198",
+  "lastmod": "2026-09-28"
  },
  "https://disorder119.com/artikel/6042/": {
   "fp": "33f3dec6f1b8ac5fd973d27fb8936b84abe1a220",
@@ -943,9 +943,13 @@
   "fp": "4eef875671f7a226c15c3652dfc3bb043a17de59",
   "lastmod": "2026-09-27"
  },
+ "https://disorder119.com/artikel/9999/": {
+  "fp": "a26a852f96e7fa415156f64d594e23260a01b66a",
+  "lastmod": "2026-09-28"
+ },
  "https://disorder119.com/en/": {
-  "fp": "d0c293e8cea76031fd4954bc7a7acbe5e9d393f1",
-  "lastmod": "2026-09-18"
+  "fp": "2aab0c7fad48af9a8e0ac6cd63c4e908c3bd9198",
+  "lastmod": "2026-09-28"
  },
  "https://disorder119.com/en/artikel/6042/": {
   "fp": "33f3dec6f1b8ac5fd973d27fb8936b84abe1a220",
@@ -1887,6 +1891,10 @@
   "fp": "4eef875671f7a226c15c3652dfc3bb043a17de59",
   "lastmod": "2026-09-27"
  },
+ "https://disorder119.com/en/artikel/9999/": {
+  "fp": "a26a852f96e7fa415156f64d594e23260a01b66a",
+  "lastmod": "2026-09-28"
+ },
  "https://disorder119.com/en/faq/": {
   "fp": "844ac00cef4afcd991696642c50820ae3e0a2694",
   "lastmod": "2026-09-28"
@@ -1904,8 +1912,8 @@
   "lastmod": "2026-09-28"
  },
  "https://disorder119.com/fr/": {
-  "fp": "d0c293e8cea76031fd4954bc7a7acbe5e9d393f1",
-  "lastmod": "2026-09-18"
+  "fp": "2aab0c7fad48af9a8e0ac6cd63c4e908c3bd9198",
+  "lastmod": "2026-09-28"
  },
  "https://disorder119.com/fr/artikel/6042/": {
   "fp": "33f3dec6f1b8ac5fd973d27fb8936b84abe1a220",
@@ -2846,6 +2854,10 @@
  "https://disorder119.com/fr/artikel/9538/": {
   "fp": "4eef875671f7a226c15c3652dfc3bb043a17de59",
   "lastmod": "2026-09-27"
+ },
+ "https://disorder119.com/fr/artikel/9999/": {
+  "fp": "a26a852f96e7fa415156f64d594e23260a01b66a",
+  "lastmod": "2026-09-28"
  },
  "https://disorder119.com/fr/faq/": {
   "fp": "75f156ee3a8b364af957affa6af1f03365c58dc0",

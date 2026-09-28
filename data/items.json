@@ -9264,11 +9264,11 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "department": "Unisex",
-    "product_type": "Beanie",
+    "product_type": "Accessory",
     "taxonomy_category": "Accessories",
     "size_normalized": "One Size",
     "size_source": "structured",
-    "taxonomy_confidence": "explicit",
+    "taxonomy_confidence": "high",
     "taxonomy_reviewed": true
   }
 ]
