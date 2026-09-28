@@ -17,6 +17,9 @@ preview_urls = false
 # Hello) haelt 7 Tage - das Maximum, das admin-passkeys.js zulaesst.
 [vars]
 ADMIN_SESSION_HOURS = "168"
+# Echte Zahlungen: PayPal-Live-API, Turnstile und Ratenbegrenzer sind damit
+# Pflicht (backend-runtime.js). Zurueck in den Testmodus: "sandbox".
+PAYPAL_ENVIRONMENT = "live"
 
 # Produktionsfehler muessen nachtraeglich ueber Request-ID und strukturierte Logs
 # untersuchbar bleiben. Bei wachsendem Traffic kann die Sampling-Rate bewusst
