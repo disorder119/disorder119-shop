@@ -113,7 +113,7 @@
       categoryAll: "Alle Kategorien",
       sortBrightness: "Hell → Dunkel", sortNew: "Neueste zuerst", sortPriceAsc: "Preis aufsteigend",
       sortPriceDesc: "Preis absteigend", sortBrand: "Marke A–Z",
-      mountBlack: "Fotomontage: Schwarz", mountWhite: "Fotomontage: Weiß",
+      mountBlack: "Fotomontage: Schwarz", mountWhite: "Fotomontage: Weiß", viewDark: "Ansicht: Dunkel", viewLight: "Ansicht: Weiß", viewGray: "Ansicht: Grau",
       moreFilters: "Weitere Filter",
       filterDepartmentLabel: "Bereich", filterAllDepartments: "Alle Bereiche",
       filterProductTypeLabel: "Produkttyp", filterAllProductTypes: "Alle Produkttypen",
@@ -315,7 +315,7 @@
       categoryAll: "All categories",
       sortBrightness: "Light → dark", sortNew: "Newest first", sortPriceAsc: "Price ascending",
       sortPriceDesc: "Price descending", sortBrand: "Brand A–Z",
-      mountBlack: "Photo backdrop: black", mountWhite: "Photo backdrop: white",
+      mountBlack: "Photo backdrop: black", mountWhite: "Photo backdrop: white", viewDark: "View: dark", viewLight: "View: white", viewGray: "View: grey",
       moreFilters: "More filters",
       filterDepartmentLabel: "Department", filterAllDepartments: "All departments",
       filterProductTypeLabel: "Product type", filterAllProductTypes: "All product types",
@@ -516,7 +516,7 @@
       categoryAll: "Toutes les catégories",
       sortBrightness: "Clair → foncé", sortNew: "Plus récent d'abord", sortPriceAsc: "Prix croissant",
       sortPriceDesc: "Prix décroissant", sortBrand: "Marque A–Z",
-      mountBlack: "Fond photo : noir", mountWhite: "Fond photo : blanc",
+      mountBlack: "Fond photo : noir", mountWhite: "Fond photo : blanc", viewDark: "Affichage : sombre", viewLight: "Affichage : blanc", viewGray: "Affichage : gris",
       moreFilters: "Plus de filtres",
       filterDepartmentLabel: "Rayon", filterAllDepartments: "Tous les rayons",
       filterProductTypeLabel: "Type de produit", filterAllProductTypes: "Tous les types",
@@ -868,10 +868,7 @@
     if (brandMore) brandMore.textContent = t("brandLineMore");
 
     var mountBtn = document.getElementById("mountToggle");
-    if (mountBtn) {
-      var isWhite = document.documentElement.getAttribute("data-mount") === "white";
-      mountBtn.textContent = isWhite ? t("mountWhite") : t("mountBlack");
-    }
+    if (mountBtn) mountBtn.textContent = ansichtText(ansichtAktuell());
 
     if (typeof render === "function") render();
     if (typeof renderCartDrawer === "function") renderCartDrawer();
@@ -2238,14 +2235,31 @@
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
 
-  // ---- Photo mount toggle (black / white ground behind the cut-out photos) ----
+  var ANSICHT_KEY = "d119_ansicht";
+  function ansichtAktuell() {
+    var a = document.documentElement.getAttribute("data-theme");
+    return a === "hell" || a === "grau" ? a : "dunkel";
+  }
+  function ansichtText(a) {
+    return t(a === "hell" ? "viewLight" : a === "grau" ? "viewGray" : "viewDark");
+  }
+
+  // ---- Ansicht: dunkel (Standard) / weiss / grau fuer die ganze Seite ----
+  // theme.css traegt die Farben, das Skript im <head> jeder Seite setzt die
+  // gemerkte Ansicht vor dem ersten Bild (kein Aufblitzen in Schwarz).
   var root = document.documentElement;
   var mountBtn = document.getElementById("mountToggle");
+  mountBtn.textContent = ansichtText(ansichtAktuell());
   mountBtn.addEventListener("click", function () {
-    var next = root.getAttribute("data-mount") === "white" ? "black" : "white";
-    if (next === "black") root.removeAttribute("data-mount");
-    else root.setAttribute("data-mount", "white");
-    mountBtn.textContent = next === "white" ? t("mountWhite") : t("mountBlack");
+    var reihe = ["dunkel", "hell", "grau"];
+    var next = reihe[(reihe.indexOf(ansichtAktuell()) + 1) % reihe.length];
+    if (next === "dunkel") root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", next);
+    try {
+      if (next === "dunkel") window.localStorage.removeItem(ANSICHT_KEY);
+      else window.localStorage.setItem(ANSICHT_KEY, next);
+    } catch (e) {}
+    mountBtn.textContent = ansichtText(next);
   });
 
   // ---- Ansicht-Auswahl (Archiv / Match / Chaos / Outfit-Baukasten) ----

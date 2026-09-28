@@ -1,0 +1,312 @@
+/* Erzeugt von tools/theme_css_erzeugen.py - nicht von Hand aendern.
+   Ansicht "hell" (weiss) und "grau"; Standard bleibt dunkel.
+   Gesetzt wird sie per <html data-theme="hell|grau"> (siehe theme.js). */
+
+:root[data-theme="hell"] {
+  --d119-schrift: #151514;
+  --d119-schrift-rgb: 21, 21, 20;
+  --d119-grund-rgb: 255, 255, 255;
+  --d119-flaeche: #f3f2ef;
+  --ink: #ffffff;
+  --ink-lift: #f3f2ef;
+  --ink-lift-2: #e9e7e2;
+  --surface: #f3f2ef;
+  --surface-2: #e9e7e2;
+  --paper: #151514;
+  --text: #151514;
+  --text-muted: rgba(21, 21, 20, 0.64);
+  --text-faint: rgba(21, 21, 20, 0.44);
+  --rule: rgba(21, 21, 20, 0.12);
+  --rule-strong: rgba(21, 21, 20, 0.26);
+  --accent: #6f695d;
+  --accent-soft: rgba(111, 105, 93, 0.14);
+  --accent-text: #4b463d;
+  --focus: #4b463d;
+  --mount: #ffffff;
+  --mount-text: #151514;
+  --mount-rule: rgba(21, 21, 20, 0.12);
+  color-scheme: light;
+}
+
+:root[data-theme="grau"] {
+  --d119-schrift: #1f1e1c;
+  --d119-schrift-rgb: 31, 30, 28;
+  --d119-grund-rgb: 229, 227, 222;
+  --d119-flaeche: #dcd9d3;
+  --ink: #e5e3de;
+  --ink-lift: #dcd9d3;
+  --ink-lift-2: #d2cec7;
+  --surface: #dcd9d3;
+  --surface-2: #d2cec7;
+  --paper: #1f1e1c;
+  --text: #1f1e1c;
+  --text-muted: rgba(31, 30, 28, 0.66);
+  --text-faint: rgba(31, 30, 28, 0.46);
+  --rule: rgba(31, 30, 28, 0.14);
+  --rule-strong: rgba(31, 30, 28, 0.28);
+  --accent: #6a6457;
+  --accent-soft: rgba(106, 100, 87, 0.16);
+  --accent-text: #4a453c;
+  --focus: #4a453c;
+  --mount: #e5e3de;
+  --mount-text: #1f1e1c;
+  --mount-rule: rgba(31, 30, 28, 0.14);
+  color-scheme: light;
+}
+
+/* Produktfotos sind freigestellt: in Weiss auf reinem Weiss, in Grau
+   nahtlos auf dem Seitengrau. */
+:root[data-theme] .gallery__stage, :root[data-theme] .gallery__stage img,
+:root[data-theme] .gallery-thumb, :root[data-theme] .related-card__frame { background: var(--mount); }
+
+/* Mieten-Datumsfelder: Kalender in hell */
+:root[data-theme] #d119RentalStart, :root[data-theme] #d119RentalEnd { color-scheme: light; }
+
+/* ---- Feste Farben aus den Stylesheets, fuer die helle Ansicht nachgebaut ---- */
+
+/* aus app.css */
+:root[data-theme] {
+  --paper: var(--d119-schrift);
+  --rule: rgba(var(--d119-schrift-rgb), 0.14);
+  --rule-strong: rgba(var(--d119-schrift-rgb), 0.28);
+  --text: var(--d119-schrift);
+  --text-muted: rgba(var(--d119-schrift-rgb), 0.58);
+  --text-faint: rgba(var(--d119-schrift-rgb), 0.36);
+  --mount-text: var(--d119-schrift);
+  --mount-rule: rgba(var(--d119-schrift-rgb), 0.16);
+}
+:root[data-theme] .eyebrow {
+  color: rgba(var(--d119-schrift-rgb), 0.6);
+}
+:root[data-theme] .masthead__index {
+  color: rgba(var(--d119-schrift-rgb), 0.5);
+}
+:root[data-theme] .wordmark-kicker {
+  color: rgba(var(--d119-schrift-rgb), 0.5);
+}
+:root[data-theme] .masthead__bottom {
+  border-top: 1px solid rgba(var(--d119-schrift-rgb), 0.18);
+}
+:root[data-theme] .meta-figure__label {
+  color: rgba(var(--d119-schrift-rgb), 0.5);
+}
+:root[data-theme] .theme-toggle {
+  border: 1px solid rgba(var(--d119-schrift-rgb), 0.3);
+  color: rgba(var(--d119-schrift-rgb), 0.85);
+}
+:root[data-theme] .theme-toggle:hover {
+  border-color: rgba(var(--d119-schrift-rgb), 0.6);
+}
+:root[data-theme] .lang-switch {
+  border: 1px solid rgba(var(--d119-schrift-rgb), 0.3);
+}
+:root[data-theme] .lang-switch__btn {
+  color: rgba(var(--d119-schrift-rgb), 0.6);
+}
+:root[data-theme] .modal-backdrop {
+  background: rgba(var(--d119-grund-rgb), 0.72);
+}
+:root[data-theme] .cart-backdrop {
+  background: rgba(var(--d119-grund-rgb), 0.72);
+}
+:root[data-theme] .legal-backdrop {
+  background: rgba(var(--d119-grund-rgb), 0.78);
+}
+:root[data-theme] .swipe-view__progress {
+  color: rgba(var(--d119-schrift-rgb), 0.5);
+}
+:root[data-theme] .swipe-btn {
+  border: 1px solid rgba(var(--d119-schrift-rgb), 0.3);
+}
+:root[data-theme] .swipe-view__hint {
+  color: rgba(var(--d119-schrift-rgb), 0.4);
+}
+:root[data-theme] .view-enter-btn {
+  border: 1px solid rgba(var(--d119-schrift-rgb), 0.3);
+}
+:root[data-theme] .chaos-view__actions {
+  background: linear-gradient(rgba(var(--d119-grund-rgb), 0), var(--ink) 42%);
+}
+:root[data-theme] .chaos-focus {
+  background: var(--ink-lift, var(--d119-flaeche));
+}
+:root[data-theme] .chaos-game__stat {
+  background: rgba(var(--d119-grund-rgb), 0.72);
+}
+:root[data-theme] .chaos-game__result {
+  background: var(--ink-lift, var(--d119-flaeche));
+}
+:root[data-theme] .outfit-view__eyebrow {
+  color: rgba(var(--d119-schrift-rgb), 0.5);
+}
+:root[data-theme] .outfit-picker {
+  background: rgba(var(--d119-grund-rgb), 0.94);
+}
+:root[data-theme] .outfit-picker__search::placeholder {
+  color: rgba(var(--d119-schrift-rgb), 0.4);
+}
+:root[data-theme] .outfit-picker__filters input::placeholder {
+  color: rgba(var(--d119-schrift-rgb), 0.4);
+}
+:root[data-theme] .rental-modal-backdrop {
+  background: rgba(var(--d119-grund-rgb), 0.86);
+}
+@media (max-width: 720px) {
+:root[data-theme] .outfit-slot__remove {
+  background: rgba(var(--d119-grund-rgb), 0.72);
+}
+}
+:root[data-theme] .mode-rail {
+  border-bottom-color: rgba(var(--d119-schrift-rgb), 0.2);
+}
+:root[data-theme] .menu-backdrop {
+  background: rgba(var(--d119-grund-rgb), 0.74);
+}
+:root[data-theme] .rail__search input {
+  border-bottom-color: rgba(var(--d119-schrift-rgb), 0.42);
+}
+:root[data-theme] #appShell .eyebrow, :root[data-theme] #appShell .wordmark-kicker, :root[data-theme] #appShell .meta-figure__label, :root[data-theme] #appShell .catalog-heading .rail__count, :root[data-theme] #appShell .filter-field label, :root[data-theme] #appShell .footer__stamp, :root[data-theme] #appShell .footer__legal a, :root[data-theme] #appShell .plate__title {
+  color: rgba(var(--d119-schrift-rgb), 0.72);
+}
+:root[data-theme] #d119RentalV2Title, :root[data-theme] .d119-rental-set-copy strong, :root[data-theme] .d119-rental-set-copy span, :root[data-theme] .d119-rental-set-add__label, :root[data-theme] .d119-rental-process-details > summary, :root[data-theme] .d119-rental-v2__section h3, :root[data-theme] .d119-rental-item__meta strong, :root[data-theme] .d119-rental-item__meta span, :root[data-theme] .d119-rental-item__remove, :root[data-theme] .d119-rental-add-inline__copy > strong, :root[data-theme] .d119-rental-add-inline__copy > span, :root[data-theme] .d119-rental-note, :root[data-theme] label[for="d119RentalStart"], :root[data-theme] label[for="d119RentalEnd"], :root[data-theme] #d119RentalStart, :root[data-theme] #d119RentalEnd {
+  color: var(--d119-schrift) !important;
+}
+:root[data-theme] #d119RentalStart, :root[data-theme] #d119RentalEnd {
+  background-color: var(--d119-flaeche) !important;
+  border-color: rgba(var(--d119-schrift-rgb), .45) !important;
+}
+:root[data-theme] .paypal-soon {
+  border: 1px solid var(--rule-strong,rgba(var(--d119-schrift-rgb), .28));
+  color: var(--paper,var(--d119-schrift));
+}
+:root[data-theme] .paypal-soon__mark i:first-child {
+  color: var(--d119-schrift);
+}
+:root[data-theme] .paypal-soon__tag {
+  color: var(--text-muted,rgba(var(--d119-schrift-rgb), .58));
+  border: 1px solid var(--rule-strong,rgba(var(--d119-schrift-rgb), .28));
+}
+
+/* aus article.css */
+:root[data-theme] {
+  --paper: var(--d119-schrift);
+  --rule: rgba(var(--d119-schrift-rgb), 0.14);
+  --rule-strong: rgba(var(--d119-schrift-rgb), 0.28);
+  --text-muted: rgba(var(--d119-schrift-rgb), 0.58);
+  --text-faint: rgba(var(--d119-schrift-rgb), 0.36);
+}
+:root[data-theme] .lang-switch__btn {
+  color: rgba(var(--d119-schrift-rgb), 0.6);
+}
+:root[data-theme] .gallery__nav {
+  background: rgba(var(--d119-grund-rgb), 0.55);
+}
+:root[data-theme] .gallery__nav:hover {
+  background: rgba(var(--d119-grund-rgb), 0.8);
+}
+:root[data-theme] .gallery__counter {
+  background: rgba(var(--d119-grund-rgb), 0.55);
+}
+:root[data-theme] .info__desc {
+  color: rgba(var(--d119-schrift-rgb), 0.85);
+}
+:root[data-theme] .checkout-summary dt {
+  color: rgba(var(--d119-schrift-rgb), 0.85);
+}
+:root[data-theme] .lightbox {
+  background: rgba(var(--d119-grund-rgb), 0.94);
+}
+:root[data-theme] .fact__label, :root[data-theme] .info__note {
+  color: rgba(var(--d119-schrift-rgb), 0.68);
+}
+:root[data-theme] p[data-i18n="footerNote"] {
+  color: rgba(var(--d119-schrift-rgb), 0.82) !important;
+}
+:root[data-theme] .paypal-soon {
+  border: 1px solid var(--rule-strong,rgba(var(--d119-schrift-rgb), .28));
+  color: var(--paper,var(--d119-schrift));
+}
+:root[data-theme] .paypal-soon__mark i:first-child {
+  color: var(--d119-schrift);
+}
+:root[data-theme] .paypal-soon__tag {
+  color: var(--text-muted,rgba(var(--d119-schrift-rgb), .58));
+  border: 1px solid var(--rule-strong,rgba(var(--d119-schrift-rgb), .28));
+}
+
+/* aus product-page-v4.css */
+:root[data-theme] .article-sequence-nav__link {
+  color: rgba(var(--d119-schrift-rgb), .72);
+}
+:root[data-theme] .article-sequence-nav__link:hover, :root[data-theme] .article-sequence-nav__link:focus-visible {
+  color: var(--d119-schrift);
+}
+@media (max-width: 860px) {
+:root[data-theme] .page-head {
+  border-bottom: 1px solid rgba(var(--d119-schrift-rgb), .18);
+}
+:root[data-theme] .page-head__menu {
+  color: var(--d119-schrift);
+}
+:root[data-theme] .lang-switch {
+  border: 1px solid rgba(var(--d119-schrift-rgb), .28);
+}
+:root[data-theme] .lang-switch__btn[aria-current="true"] {
+  color: var(--d119-flaeche);
+}
+:root[data-theme] .page-head__cart {
+  color: var(--d119-schrift);
+}
+:root[data-theme] .page-head__cart:hover {
+  color: var(--d119-schrift);
+}
+:root[data-theme] .page-head__cart-count {
+  color: var(--d119-flaeche);
+}
+:root[data-theme] .article-sequence-nav {
+  border-bottom: 1px solid rgba(var(--d119-schrift-rgb), .18);
+}
+:root[data-theme] .article-sequence-nav__link {
+  color: rgba(var(--d119-schrift-rgb), .62);
+}
+:root[data-theme] .article-sequence-nav__link--archive {
+  border-left: 1px solid rgba(var(--d119-schrift-rgb), .16);
+  border-right: 1px solid rgba(var(--d119-schrift-rgb), .16);
+}
+:root[data-theme] .gallery__nav {
+  background: rgba(var(--d119-grund-rgb), .5);
+  border-color: rgba(var(--d119-schrift-rgb), .28);
+}
+}
+
+/* aus newsletter.css */
+:root[data-theme] .d119-nl {
+  --nl-text: var(--text, var(--paper, var(--d119-schrift)));
+  --nl-muted: var(--text-muted, rgba(var(--d119-schrift-rgb), 0.58));
+  --nl-faint: var(--text-faint, rgba(var(--d119-schrift-rgb), 0.36));
+  --nl-rule: var(--rule-strong, rgba(var(--d119-schrift-rgb), 0.28));
+}
+:root[data-theme] .d119-nl__stueck {
+  background: var(--d119-flaeche);
+}
+
+/* aus product-lightbox-v2.css */
+:root[data-theme] .lightbox__photo-nav {
+  border: 1px solid rgba(var(--d119-schrift-rgb), .38);
+  background: rgba(var(--d119-grund-rgb), .52);
+  color: var(--d119-schrift);
+}
+:root[data-theme] .lightbox__photo-nav:hover, :root[data-theme] .lightbox__photo-nav:focus-visible {
+  background: rgba(var(--d119-grund-rgb), .82);
+  border-color: var(--d119-schrift);
+}
+:root[data-theme] .lightbox__photo-counter {
+  border: 1px solid rgba(var(--d119-schrift-rgb), .24);
+  background: rgba(var(--d119-grund-rgb), .62);
+  color: var(--d119-schrift);
+}
+@media (max-width: 600px) {
+:root[data-theme] .lightbox__photo-nav {
+  background: rgba(var(--d119-grund-rgb), .48);
+}
+}
