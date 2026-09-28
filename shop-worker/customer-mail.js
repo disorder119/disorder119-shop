@@ -10,6 +10,7 @@
 // eine bewusste Wahl gegen die US-Anbieter: so muss in der
 // Datenschutzerklaerung keine Datenuebermittlung in die USA stehen.
 import { safeText } from "./commerce-core.js";
+import { invoiceProfile, renderInvoice } from './tax-invoice.js';
 
 const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
 
@@ -230,6 +231,8 @@ function deliveryLines(contact = {}) {
 }
 
 export function formatOrderConfirmation(order = {}, options = {}) {
+  const invoice=renderInvoice(order,options.taxProfile||invoiceProfile({},SELLER),options.issuedAt);
+  const documentNote=invoice.ready?'Die folgende Rechnung gehört zu deiner Vertragsbestätigung.':'Dies ist deine Vertragsbestätigung. Eine Rechnung wird nach Klärung der Rechnungsangaben separat bereitgestellt.';
   const contactEmail = safeText(options.contactEmail || "", 200) || "kontakt@disorder119.com";
   const number = safeText(order.order_number || order.orderNumber || "", 80) || "—";
   const items = Array.isArray(order.items) ? order.items : [];
@@ -254,7 +257,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     "",
     `Danke für deine Bestellung ${number} vom ${ordered}.`,
     "Die Zahlung ist bei uns eingegangen. Damit ist der Kaufvertrag geschlossen.",
-    "Diese E-Mail ist zugleich deine Rechnung und deine Vertragsbestätigung.",
+    documentNote,
     "",
     "BESTELLUNG",
     ...itemTextLines,
@@ -263,7 +266,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     `${versandBezeichnung(order)}: ${euroAmount(shipping, currency)}`,
     `Gesamt: ${euroAmount(total, currency)}`,
     "Zahlungsart: PayPal",
-    "Kleinunternehmer gemäß § 19 UStG — es wird keine Umsatzsteuer ausgewiesen.",
+    ...(invoice.ready?[invoice.text]:[]),
     "",
     ...(delivery.length ? ["LIEFERADRESSE", ...delivery, ""] : []),
     "WIE ES WEITERGEHT",
@@ -287,7 +290,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     <td align="right" style="padding:${stark ? "14px 0 0" : "8px 0 0"};white-space:nowrap;${stark ? `font-size:17px;font-weight:700;color:${F.text};` : `color:${F.leise};`}">${escapeHtml(wert)}</td>
   </tr>`;
   const kopf = `<p style="margin:0 auto 8px;max-width:440px;color:${F.leise};">Bestellung <strong style="color:${F.text};">${escapeHtml(number)}</strong> vom ${escapeHtml(ordered)}</p>
-    <p style="margin:0 auto;max-width:440px;font-size:13px;color:${F.leise};">Die Zahlung ist eingegangen — damit ist der Kaufvertrag geschlossen. Diese E-Mail ist zugleich deine Rechnung und deine Vertragsbestätigung.</p>`;
+    <p style="margin:0 auto;max-width:440px;font-size:13px;color:${F.leise};">Die Zahlung ist eingegangen — damit ist der Kaufvertrag geschlossen. ${escapeHtml(documentNote)}</p>`;
   const stuecke = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">
       ${items.map(item => stueckZeile(item, euroAmount(item.unit_price_cents ?? item.unitPriceCents ?? 0, currency))).join("")}
     </table>
@@ -296,8 +299,9 @@ export function formatOrderConfirmation(order = {}, options = {}) {
       ${summenZeile(versandBezeichnung(order), euroAmount(shipping, currency), false)}
       ${summenZeile("Gesamt", euroAmount(total, currency), true)}
     </table>
-    <p style="margin:14px 0 0;font-size:12px;color:${F.leise};">Zahlungsart: PayPal · Kleinunternehmer gemäß § 19 UStG — es wird keine Umsatzsteuer ausgewiesen.</p>`;
+    <p style="margin:14px 0 0;font-size:12px;color:${F.leise};">Zahlungsart: PayPal</p>`;
   const inhalt = [
+    ...(invoice.ready?[`<tr><td>${invoice.fragment}</td></tr>`]:[]),
     mailAbschnitt(items.length > 1 ? `Deine ${items.length} Stücke` : "Dein Stück", stuecke, false),
     delivery.length ? mailAbschnitt("Lieferadresse", `<p style="margin:0;">${delivery.map(escapeHtml).join("<br>")}</p>`) : "",
     mailAbschnitt("Wie es weitergeht", `<p style="margin:0 0 22px;color:${F.leise};">${items.length > 1 ? "Deine Stücke werden" : "Dein Teil wird"} von Hand verpackt und in der Regel innerhalb von zwei Werktagen versendet. Sobald das Paket unterwegs ist, bekommst du eine Mail mit der Sendungsnummer und dem Link zur Sendungsverfolgung.</p>
@@ -316,7 +320,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     vorschau: `Bestellung ${number} · ${items.length} ${items.length === 1 ? "Stück" : "Stücke"} · ${euroAmount(total, currency)}`,
   });
 
-  return { subject, text, html };
+  return { subject, text, html, invoice };
 }
 
 // ---------------------------------------------------------------------------
@@ -538,10 +542,21 @@ export async function sendOrderConfirmation(env, orderId, reqId = crypto.randomU
   const claim = await claimConfirmation(env, order.id, reqId);
   if (!claim.claimed) return { sent: false, duplicate: true };
 
-  const message = formatOrderConfirmation(order, {
-    contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200),
-  });
+  let message;let archiviert=false;
   try {
+    const saved=await env.DB.prepare('SELECT * FROM order_confirmation_archive WHERE order_id=?').bind(order.id).first();
+    if(saved) {
+      if(await pruefsumme(saved.html)!==saved.html_sha256||await pruefsumme(saved.text)!==saved.text_sha256)throw new Error('confirmation_archive_hash_mismatch');
+      message={subject:saved.subject,html:saved.html,text:saved.text,invoice:JSON.parse(saved.invoice_json)};
+    } else {
+      message=formatOrderConfirmation(order,{contactEmail:mailSenderIdentity(env).email||safeText(env.MAIL_REPLY_TO||'',200),taxProfile:invoiceProfile(env,SELLER)});
+      await env.DB.prepare(`INSERT INTO order_confirmation_archive(order_id,subject,html,text,html_sha256,text_sha256,invoice_json,created_at) VALUES(?,?,?,?,?,?,?,?)`)
+        .bind(order.id,message.subject,message.html,message.text,await pruefsumme(message.html),await pruefsumme(message.text),JSON.stringify(message.invoice),new Date().toISOString()).run();
+    }
+    if(message.invoice.ready) {
+      archiviert=await archiviereRechnung(env,order,message,recipient);
+      if(!archiviert)throw new Error('invoice_archive_failed');
+    }
     const delivery = await sendMail(env, {
       to: recipient,
       toName: safeText(order.contact?.recipient_name || "", 120),
@@ -559,11 +574,8 @@ export async function sendOrderConfirmation(env, orderId, reqId = crypto.randomU
     throw new Error(`order_confirmation_failed:${safeText(err?.message || "unknown", 120)}`);
   }
 
-  // Erst nach erfolgreichem Versand ins Archiv: eine Rechnung gilt als
-  // ausgestellt, wenn sie beim Kunden ist. Scheitert das Schreiben, hat die
-  // Kundin ihre Rechnung trotzdem - deshalb wird das nur gemeldet, nicht
-  // geworfen, und die Buchhaltung faellt auf die erzeugte Fassung zurueck.
-  const archiviert = await archiviereRechnung(env, order, message, recipient);
+  // The exact mail and invoice bytes were archived before delivery. The
+  // existing sent event separately records successful provider acceptance.
 
   try {
     await markConfirmationSent(env, claim.claimId);
@@ -585,27 +597,32 @@ export async function pruefsumme(text) {
 
 async function archiviereRechnung(env, order, message, recipient) {
   try {
+    const invoice=message.invoice;
+    if(!invoice?.ready)return false;
+    const existing=await env.DB.prepare('SELECT html,text,html_sha256,pruefsumme FROM rechnungen WHERE order_id=?').bind(String(order.id)).first();
+    if(existing)return existing.html===invoice.html&&existing.text===invoice.text&&await pruefsumme(existing.html)===existing.html_sha256&&await pruefsumme(existing.text)===existing.pruefsumme;
     const jetzt = new Date().toISOString();
     const warenwert = Number(order.subtotal_cents ?? 0);
     const versand = Number(order.shipping_cents ?? 0);
     const ergebnis = await env.DB.prepare(`INSERT OR IGNORE INTO rechnungen
       (id,order_id,rechnungsnummer,ausgestellt_am,waehrung,warenwert_cents,versand_cents,
-       gesamt_cents,empfaenger_email,html,text,pruefsumme,erstellt_am)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+       gesamt_cents,empfaenger_email,html,text,pruefsumme,erstellt_am,document_type,html_sha256,tax_profile_json)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(
         crypto.randomUUID(),
         String(order.id),
         safeText(order.order_number || "", 80),
-        String(order.created_at || jetzt),
+        invoice.issued_at,
         order.currency || "EUR",
         warenwert,
         versand,
         Number(order.total_cents ?? warenwert + versand),
         recipient,
-        message.html,
-        message.text,
-        await pruefsumme(message.text),
+        invoice.html,
+        invoice.text,
+        await pruefsumme(invoice.text),
         jetzt,
+        'invoice',await pruefsumme(invoice.html),JSON.stringify(invoice.profile),
       ).run();
     return Boolean(ergebnis?.meta?.changes);
   } catch (err) {

@@ -10,6 +10,7 @@ import {
   jahresZusammenfassung,
 } from "./buchhaltung.js";
 
+import { sqliteD1, allMigrations } from "./test-d1.mjs";
 const ORIGIN = "https://admin.disorder119.com";
 const TOKEN = "owner-test-token";
 
@@ -52,7 +53,7 @@ test("the order list carries every column the tax advisor needs", () => {
   const csv = bestellungenAlsCsv([zeile()]);
   const zeilen = csv.trim().split("\r\n");
   assert.equal(zeilen.length, 2);
-  assert.match(zeilen[0], /"Datum";"Rechnungsnummer";"Artikel";"Artikelnummer";"Warenwert";"Versand";"Gesamt"/);
+  assert.match(zeilen[0], /"Bestelldatum";"Bestellnummer";"Artikel";"Artikelnummer";"Warenwert";"Versand";"Gesamt"/);
   // Deutsche Dezimaltrennung, damit die Betraege als Zahl ankommen.
   assert.match(zeilen[1], /"380,00";"5,90";"385,90"/);
   assert.match(zeilen[1], /"2026-01-15"/);
@@ -149,16 +150,14 @@ test("a foreign origin is refused", async () => {
   assert.equal(antwort.status, 403);
 });
 
-test("the yearly overview adds up and names the previous year", async () => {
-  const zeilen = [zeile(), zeile({ id: "alt", created_at: "2025-06-01T10:00:00.000Z", total_cents: 999 })];
+test("an empty real database reports evidence totals without approving the tax year", async () => {
   const { request, url } = anfrage("/admin/buchhaltung/jahr/2026");
-  const antwort = await handleBuchhaltung(request, { ADMIN_TOKEN: TOKEN, DB: db(zeilen) }, url, "r3", ORIGIN);
-  const daten = await antwort.json();
-  assert.equal(antwort.status, 200);
-  assert.equal(daten.jahr, 2026);
-  assert.equal(daten.bestellungen, 1);
-  assert.equal(daten.gesamtCents, 38590);
-  assert.equal(daten.kleinunternehmer.vorjahrCents, 999);
+  const antwort = await handleBuchhaltung(request, { ADMIN_TOKEN: TOKEN, DB: sqliteD1(allMigrations()) }, url, "r3", ORIGIN);
+  const daten=await antwort.json();
+  assert.equal(antwort.status,200);
+  assert.equal(daten.einnahmenCents,0);
+  assert.equal(daten.reviewRequired,true);
+  assert.equal(daten.basis,"provider_cash_events");
 });
 
 test("the CSV download is delivered as a file with a BOM", async () => {

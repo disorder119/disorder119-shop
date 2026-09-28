@@ -230,6 +230,13 @@ async function getSystem(env) {
     missingRequiredColumns,
     missingRequiredTriggers,
     configured: configured(env),
+    taxExport: {
+      schemaTarget: '0024_tax_evidence',
+      schemaReady: ['tax_cash_events','order_confirmation_archive','rechnungen'].every(t=>present.has(t)) &&
+        ['tax_cash_events_no_update','tax_cash_events_no_delete','tax_cash_events_conflict','order_confirmation_no_update','order_confirmation_no_delete'].every(t=>triggerSet.has(t)),
+      invoiceProfileConfirmed: env.TAX_MODE==='small_business' && env.TAX_CONFIRMED==='true' && Boolean(String(env.TAX_NUMBER||'').trim()),
+      directElster: false,
+    },
     operationsAutomation: {
       version: OPERATIONS_AUTOMATION_VERSION,
       schemaReady: missingRequiredColumns.length === 0 && present.has("operations_tasks"),

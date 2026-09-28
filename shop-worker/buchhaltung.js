@@ -10,6 +10,7 @@
 // Rechnung in den Buechern gar nicht von der beim Kunden abweichen.
 import { safeText } from "./commerce-core.js";
 import { euroAmount, formatOrderConfirmation, loadOrderForConfirmation, mailSenderIdentity } from "./customer-mail.js";
+import { createDataset, zipDataset } from './tax-dataset.js';
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -98,7 +99,8 @@ async function requireAdmin(request, env) {
 }
 
 export function jahrAusText(wert) {
-  const jahr = Number.parseInt(String(wert || "").trim(), 10);
+  const text=String(wert??'').trim();
+  const jahr = /^\d{4}$/.test(text)?Number(text):NaN;
   // Vor 2020 gab es den Shop nicht, mehr als ein Jahr im Voraus ergibt keinen
   // Sinn - eine krumme Zahl waere hier ein Tippfehler, kein Auswertungswunsch.
   if (!Number.isInteger(jahr) || jahr < 2020 || jahr > new Date().getUTCFullYear() + 1) {
@@ -116,8 +118,11 @@ export function csvFeld(wert) {
 }
 
 export function bestellungenAlsCsv(zeilen = []) {
+  const grouped=new Map();
+  for(const row of zeilen){const key=String(row.id||row.order_number);if(!grouped.has(key))grouped.set(key,{...row});else{const target=grouped.get(key);target.title_snapshot+=' / '+(row.title_snapshot||'');target.article_no+=' / '+(row.article_no||'');}}
+  zeilen=[...grouped.values()];
   const kopf = [
-    "Datum", "Rechnungsnummer", "Artikel", "Artikelnummer",
+    "Bestelldatum", "Bestellnummer", "Artikel", "Artikelnummer",
     "Warenwert", "Versand", "Gesamt", "Waehrung",
     "Zahlungsart", "Status", "Land",
   ];
@@ -150,8 +155,8 @@ async function umsatzZeilen(env, jahr) {
     FROM commerce_orders o
     LEFT JOIN order_items oi ON oi.order_id=o.id
     LEFT JOIN order_contact_snapshots k ON k.order_id=o.id
-    WHERE o.created_at>=? AND o.created_at<? AND o.status IN (${platzhalter})
-    ORDER BY o.created_at`).bind(von, bis, ...UMSATZ_STATUS).all();
+    WHERE o.created_at>=? AND o.created_at<?
+    ORDER BY o.created_at`).bind(von, bis).all();
   return ergebnis?.results || [];
 }
 
@@ -205,7 +210,7 @@ export function jahresZusammenfassung(zeilen = [], jahr, vorjahrCents = 0) {
           ? "Der Vorjahresumsatz liegt ueber 25.000 EUR. Die Kleinunternehmerregelung entfaellt damit fuer dieses Jahr - bitte mit dem Steuerberater klaeren."
           : nahAnGrenze
             ? "Der Umsatz naehert sich der Grenze von 100.000 EUR. Gute Gelegenheit, die Umstellung mit dem Steuerberater vorzubereiten."
-            : "Innerhalb der Kleinunternehmergrenzen nach § 19 UStG. Diese Auswertung ersetzt keine Steuerberatung.",
+            : "Keine Freigabe nach § 19 UStG: Bestellwerte sind keine geprüften Gesamtumsätze. Weitere Konten und die Gründungsjahresgrenze gesondert prüfen.",
     },
   };
 }
@@ -248,10 +253,10 @@ function druckfassung(html, erzeugt = false) {
   const hinweis = erzeugt
     ? '<p style="margin:0;padding:10px 14px;background:#fdf3d8;border-left:3px solid #c9a227;'
       + 'font:13px/1.5 \'Helvetica Neue\',Helvetica,Arial,sans-serif;color:#4a463f;">'
-      + 'Aus den Bestelldaten erzeugte Fassung — zu dieser Bestellung liegt keine archivierte Rechnung vor.</p>'
+      + 'ENTWURF: Aus den Bestelldaten erzeugte Fassung — zu dieser Bestellung liegt keine archivierte Rechnung vor.</p>'
     : "";
   return html
-    .replace("</head>", "<style>@media print{body{background:#fff}.hinweis{display:none}}</style></head>")
+    .replace("</head>", "<style>@media print{body{background:#fff}.hinweis{display:block!important}}</style></head>")
     .replace("<body", hinweis ? `<body data-erzeugt="1"` : "<body")
     .replace(/(<body[^>]*>)/, `$1${hinweis ? `<div class="hinweis">${hinweis}</div>` : ""}`);
 }
@@ -274,15 +279,21 @@ export async function handleBuchhaltung(request, env, url, reqId = crypto.random
     if (!env.DB) throw new BuchhaltungError("COMMERCE_DATABASE_NOT_CONFIGURED", 503);
 
     const pfad = url.pathname.replace(/\/+$/, "");
+    if (pfad === '/admin/buchhaltung/datensatz.zip' || pfad === '/admin/buchhaltung/datensatz') {
+      const jahr=jahrAusText(url.searchParams.get('jahr')||new Date().getUTCFullYear());
+      const dataset=await createDataset(env,jahr);
+      if (pfad.endsWith('.zip'))return antwort(zipDataset(dataset.files),'application/zip',200,origin,{'Content-Disposition':`attachment; filename="disorder119-shop-${jahr}.zip"`});
+      return json({ok:true,...dataset.summary,year:jahr,format:dataset.manifest.format,issues:JSON.parse(dataset.files['issues.json'])},200,origin);
+    }
 
     const jahrTreffer = /^\/admin\/buchhaltung\/jahr\/(\d{4})$/.exec(pfad);
     if (jahrTreffer) {
       const jahr = jahrAusText(jahrTreffer[1]);
-      const [zeilen, vorjahr] = await Promise.all([
-        umsatzZeilen(env, jahr),
-        jahresUmsatzCents(env, jahr - 1),
-      ]);
-      return json({ ok: true, ...jahresZusammenfassung(zeilen, jahr, vorjahr) }, 200, origin);
+      const dataset=await createDataset(env,jahr);
+      const ledger=JSON.parse(dataset.files['ledger.json']);
+      const rows=ledger.filter(e=>e.book_date.startsWith(String(jahr))&&!e.blocks.length);
+      const sum=kind=>rows.filter(e=>e.kind===kind).reduce((s,e)=>s+e.amount_cents,0);
+      return json({ok:true,jahr,basis:'provider_cash_events',einnahmenCents:sum('capture'),erstattungenCents:sum('refund'),gebuehrenCents:sum('fee'),saldoCents:sum('capture')-sum('refund')-sum('fee'),ungeklaert:ledger.filter(e=>e.blocks.length).length,issues:JSON.parse(dataset.files['issues.json']),reviewRequired:true,hinweis:'Nur belegte Shop-Zahlungsereignisse; kein endgültiger Gewinn und keine Prüfung der Kleinunternehmergrenzen über alle Geschäftskonten.'},200,origin);
     }
 
     if (pfad === "/admin/buchhaltung/bestellungen.csv") {
@@ -343,6 +354,7 @@ export async function handleBuchhaltung(request, env, url, reqId = crypto.random
     throw new BuchhaltungError("NOT_FOUND", 404);
   } catch (err) {
     if (err instanceof BuchhaltungError) return json({ error: err.code, requestId: reqId }, err.status, origin);
+    if(err?.message==='EXPORT_TOO_LARGE_USE_PARTITIONED_EXPORT')return json({error:err.message,requestId:reqId},413,origin);
     console.error(JSON.stringify({
       level: "error",
       event: "admin_buchhaltung_error",
