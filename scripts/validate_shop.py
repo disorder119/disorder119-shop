@@ -193,6 +193,14 @@ def validate_and_report() -> None:
                     fail(f"config/shop-config.json: versand.{zuordnung}.{art} muss S, M oder L sein.")
         if versand.get("standardGroesse") not in ("S", "M", "L"):
             fail("config/shop-config.json: versand.standardGroesse muss S, M oder L sein.")
+        dienste = versand.get("dienste")
+        if dienste is not None:
+            erlaubt = dienste.get("erlaubt") if isinstance(dienste, dict) else None
+            if not isinstance(erlaubt, list) or not erlaubt or not all(isinstance(n, str) and n.strip() for n in erlaubt):
+                fail("config/shop-config.json: versand.dienste.erlaubt muss eine Liste von Paketdienst-Namen sein.")
+            grenze = dienste.get("expressMaxCents") if isinstance(dienste, dict) else None
+            if grenze is not None and (not isinstance(grenze, int) or isinstance(grenze, bool) or grenze <= 0):
+                fail("config/shop-config.json: versand.dienste.expressMaxCents muss eine positive ganze Zahl in Cent sein.")
     versand_js = (BASE / "shop-worker" / "versand-config.js").read_text(encoding="utf-8")
     if 'from "../config/shop-config.json"' not in versand_js:
         fail("shop-worker/versand-config.js liest config/shop-config.json nicht mehr - Paketdaten doppelt?")

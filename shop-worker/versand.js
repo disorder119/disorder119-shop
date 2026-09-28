@@ -19,7 +19,7 @@
 // Das Etikett wird nie automatisch gekauft: das macht die Admin-App.
 import { safeText } from "./commerce-core.js";
 import { angeboteLaden } from "./packlink.js";
-import { PAKETE, VERSAND, paketFuer, paketFuerArtikel } from "./versand-config.js";
+import { PAKETE, VERSAND, dienstErlaubt, paketFuer, paketFuerArtikel } from "./versand-config.js";
 
 const CACHE_MS = 10 * 60 * 1000;
 const KATALOG_CACHE_MS = 5 * 60 * 1000;
@@ -91,13 +91,17 @@ export function ersatzOption(paket) {
 }
 
 // Aus der Packlink-Liste (schon auf Haustuer-Zustellung gefiltert) die
-// hoechstens zwei Optionen, die eine Kundin wirklich unterscheiden kann.
-export function optionenAus(angebote, paket) {
+// hoechstens zwei Optionen, die eine Kundin wirklich unterscheiden kann -
+// nur mit den Paketdiensten aus config/shop-config.json (versand.dienste).
+// Express nur, wenn ein erlaubter Dienst ihn bis zur Preisgrenze anbietet.
+export function optionenAus(angebote, paket, konfig = VERSAND) {
   const nachPreis = (a, b) => a.preisCents - b.preisCents || a.id - b.id;
+  const maxExpress = konfig.dienste && konfig.dienste.expressMaxCents;
   const liste = (Array.isArray(angebote) ? angebote : [])
-    .filter(a => a && Number.isInteger(a.id) && a.id > 0 && Number.isSafeInteger(a.preisCents) && a.preisCents > 0);
+    .filter(a => a && Number.isInteger(a.id) && a.id > 0 && Number.isSafeInteger(a.preisCents) && a.preisCents > 0)
+    .filter(a => dienstErlaubt(a.carrier, konfig));
   const standard = liste.filter(a => !a.express).sort(nachPreis)[0];
-  const express = liste.filter(a => a.express).sort(nachPreis)[0];
+  const express = liste.filter(a => a.express && (!maxExpress || a.preisCents <= maxExpress)).sort(nachPreis)[0];
   const out = [];
   if (standard) out.push(option("standard", standard, paket));
   if (express && (!standard || express.preisCents > standard.preisCents)) out.push(option("express", express, paket));

@@ -7,6 +7,15 @@
     "zielLand": "DE",
     "referenzPlz": "10115",
     "standardGroesse": "M",
+    "dienste": {
+      "_comment": "Welche Paketdienste die Kundschaft im Checkout sieht (Name wie bei Packlink). UPS ist auf Wunsch des Inhabers raus (27.09.2026). Express nur, wenn ein erlaubter Dienst ihn bis expressMaxCents anbietet. In der Admin-App stehen beim Etikett trotzdem alle Angebote.",
+      "erlaubt": [
+        "DPD",
+        "DHL",
+        "Hermes"
+      ],
+      "expressMaxCents": 2500
+    },
     "pakete": {
       "S": {
         "name": "Klein",
@@ -24,7 +33,7 @@
         "breite": 30,
         "hoehe": 15,
         "gewichtKg": 2,
-        "ersatzCents": 590
+        "ersatzCents": 850
       },
       "L": {
         "name": "Groß",
@@ -33,7 +42,7 @@
         "breite": 40,
         "hoehe": 20,
         "gewichtKg": 5,
-        "ersatzCents": 790
+        "ersatzCents": 990
       }
     },
     "groesseNachProdukttyp": {

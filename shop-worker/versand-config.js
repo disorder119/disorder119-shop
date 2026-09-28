@@ -40,6 +40,12 @@ export function versandKonfigurationPruefen(roh) {
   ));
   const land = /^[A-Z]{2}$/.test(String(v.zielLand || "")) ? v.zielLand : "DE";
   const plz = /^\d{5}$/.test(String(v.referenzPlz || "")) ? v.referenzPlz : "10115";
+  // Paketdienste fuer den Checkout. Fehlt die Liste, sind alle erlaubt.
+  const d = v.dienste && typeof v.dienste === "object" ? v.dienste : {};
+  const erlaubt = Array.isArray(d.erlaubt)
+    ? Object.freeze(d.erlaubt.map(n => String(n || "").trim().toUpperCase()).filter(Boolean))
+    : null;
+  const expressMaxCents = ganzzahl(d.expressMaxCents, 1, 100000) ? d.expressMaxCents : null;
   return Object.freeze({
     pakete: Object.freeze(pakete),
     standardGroesse: standard,
@@ -47,7 +53,16 @@ export function versandKonfigurationPruefen(roh) {
     nachKategorie: nurGroessen(v.groesseNachKategorie),
     zielLand: land,
     referenzPlz: plz,
+    dienste: Object.freeze({ erlaubt, expressMaxCents }),
   });
+}
+
+// Darf die Kundschaft diesen Paketdienst im Checkout sehen? Der Name muss
+// genau passen ("DHL" ist nicht "DHL Express").
+export function dienstErlaubt(carrier, konfig = VERSAND) {
+  const liste = konfig.dienste && konfig.dienste.erlaubt;
+  if (!liste) return true;
+  return liste.includes(String(carrier || "").trim().toUpperCase());
 }
 
 export const VERSAND = versandKonfigurationPruefen(shopConfig);
