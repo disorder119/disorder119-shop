@@ -861,6 +861,9 @@ def build_page(it, shop_config, lang):
 <script type="application/ld+json">{site_entities_jsonld(shop_config)}</script>
 <script type="application/ld+json">{json_ld(it, lang)}</script>
 <script type="application/ld+json">{breadcrumb_json_ld(it, lang)}</script>
+<link rel="stylesheet" href="/assets/theme.css">
+<script src="/assets/ansicht.js" defer></script>
+<script>try{{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}}catch(e){{}}</script>
 </head>
 <body>
 <div class="page-head">
@@ -1410,7 +1413,8 @@ def build_checkout_pages():
     if paypal_ready:
         paypal_sdk = (
             '<script src="https://www.paypal.com/sdk/js?client-id=' + esc(shop_config["paypalClientId"])
-            + '&currency=EUR&intent=capture&commit=true"></script>\n'
+            # Nur PayPal selbst: keine Karten- oder Lastschrift-Knoepfe.
+            + '&currency=EUR&intent=capture&commit=true&disable-funding=card,sepa"></script>\n'
         )
     count = 0
     for lang in LANGS:

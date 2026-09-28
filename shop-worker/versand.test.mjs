@@ -109,6 +109,23 @@ test("options: cheapest home delivery as Standard, Express only when it costs mo
   assert.deepEqual(optionenAus(null, "S", alle), []);
 });
 
+test("jeder erlaubte Paketdienst bekommt seinen guenstigsten Standard, billigster zuerst", () => {
+  const angebote = [
+    { id: 1, carrier: "DHL", preisCents: 699, express: false },
+    { id: 2, carrier: "DPD", preisCents: 785, express: false },
+    { id: 3, carrier: "DPD", preisCents: 620, express: false },
+    { id: 4, carrier: "DHL", preisCents: 899, express: false },
+    { id: 5, carrier: "UPS", preisCents: 400, express: false },
+    { id: 6, carrier: "DPD", preisCents: 1990, express: true },
+  ];
+  const konfig = { dienste: { erlaubt: ["DPD", "DHL"], expressMaxCents: 2500 } };
+  assert.deepEqual(optionenAus(angebote, "S", konfig).map(o => [o.id, o.art, o.carrier, o.preisCents]), [
+    ["pl-S-3", "standard", "DPD", 620],
+    ["pl-S-1", "standard", "DHL", 699],
+    ["pl-S-6", "express", "DPD", 1990],
+  ]);
+});
+
 test("only the owner's carriers reach the checkout; express only up to the price cap", () => {
   const angebote = [
     { id: 1, carrier: "UPS", preisCents: 549, express: false },

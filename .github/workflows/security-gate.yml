@@ -80,6 +80,11 @@ jobs:
           node --check assets/besucher.js
           node --test shop-worker/besucher.test.mjs
 
+      - name: Erstattung ueber PayPal pruefen
+        run: |
+          node --check shop-worker/erstattung.js
+          node --test shop-worker/erstattung.test.mjs
+
       - name: Gutschein-Migration pruefen
         run: |
           {
