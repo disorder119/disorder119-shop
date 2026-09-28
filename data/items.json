@@ -9239,5 +9239,36 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
+  },
+  {
+    "id": 9999,
+    "article": "TEST",
+    "title": "Disorder119 Testartikel Unisex",
+    "brand": "Disorder119",
+    "price": 0.01,
+    "status": "Verfügbar",
+    "category": "Accessories",
+    "size": "One Size",
+    "color": "Schwarz",
+    "condition": "Neu",
+    "desc": "Interner Testartikel von Disorder119 zum Pruefen der Kasse. Bitte nicht kaufen – Bestellungen werden storniert und erstattet.",
+    "desc_de": "Interner Testartikel von Disorder119 zum Pruefen der Kasse. Bitte nicht kaufen – Bestellungen werden storniert und erstattet.",
+    "desc_en": "Internal Disorder119 test item for checking the checkout. Please do not buy – orders will be cancelled and refunded.",
+    "desc_fr": "Article test interne de Disorder119 pour vérifier le paiement. Merci de ne pas l'acheter – les commandes seront annulées et remboursées.",
+    "gallery": [
+      "assets/img/test-9999/0.webp"
+    ],
+    "look": "assets/img/test-9999/0.webp",
+    "price_estimated": false,
+    "brightness": 0.1,
+    "public_status": "AVAILABLE",
+    "data_quality_open": [],
+    "department": "Unisex",
+    "product_type": "Beanie",
+    "taxonomy_category": "Accessories",
+    "size_normalized": "One Size",
+    "size_source": "structured",
+    "taxonomy_confidence": "explicit",
+    "taxonomy_reviewed": true
   }
 ]
