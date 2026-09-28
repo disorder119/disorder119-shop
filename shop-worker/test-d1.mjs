@@ -34,7 +34,7 @@ export function sqliteD1(files = []) {
       const result = db.prepare(sql).run(...clean(args));
       return { meta: { changes: Number(result.changes) } };
     },
-    execute() { return db.prepare(sql).run(...clean(args)); },
+    execute() { return /^\s*SELECT\b/i.test(sql)?{results:db.prepare(sql).all(...clean(args))}:db.prepare(sql).run(...clean(args)); },
   });
   return {
     prepare(sql) {
@@ -43,7 +43,7 @@ export function sqliteD1(files = []) {
     async batch(list) {
       db.exec("BEGIN");
       try {
-        const results = list.map(item => ({ meta: { changes: Number(item.execute().changes) } }));
+        const results = list.map(item => {const r=item.execute();return r.results?{results:r.results,meta:{changes:0}}:{meta:{changes:Number(r.changes)}};});
         db.exec("COMMIT");
         return results;
       } catch (err) {

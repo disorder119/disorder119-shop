@@ -48,7 +48,7 @@ function stubFetch(handler) {
   };
 }
 
-function confirmationDb({ claimed = true, order = ORDER } = {}) {
+function confirmationDb({ claimed = true, order = ORDER, failArchive = false } = {}) {
   const writes = [];
   return {
     writes,
@@ -70,6 +70,7 @@ function confirmationDb({ claimed = true, order = ORDER } = {}) {
               return { results: [] };
             },
             async run() {
+              if (failArchive && text.includes('INSERT INTO order_confirmation_archive')) throw new Error('archive unavailable');
               writes.push({ text, args });
               if (text.includes("INSERT OR IGNORE INTO audit_events")) {
                 return { meta: { changes: claimed ? 1 : 0 } };
@@ -84,6 +85,7 @@ function confirmationDb({ claimed = true, order = ORDER } = {}) {
 }
 
 const READY_ENV = {
+  TAX_MODE: "small_business", TAX_CONFIRMED: "true", TAX_NUMBER: "TEST-ONLY-123",
   MAIL_API_KEY: "test-key",
   MAIL_FROM: "bestellung@disorder119.com",
   MAIL_FROM_NAME: "DISORDER119",
@@ -105,7 +107,7 @@ test("addresses are validated before anything is sent", () => {
 });
 
 test("order confirmation carries every legally required part", () => {
-  const mail = formatOrderConfirmation(ORDER, { contactEmail: "bestellung@disorder119.com" });
+  const mail = formatOrderConfirmation(ORDER, { contactEmail: "bestellung@disorder119.com", taxProfile: {mode:"small_business",confirmed:true,tax_number:"TEST-ONLY-123",seller:SELLER} });
   for (const part of [mail.text, mail.html]) {
     assert.match(part, /D119-20260923-ABC12345/);
     assert.match(part, /Prada Reversible Jacket/);
@@ -128,7 +130,7 @@ test("hostile item titles cannot inject markup into the mail", () => {
   const mail = formatOrderConfirmation({
     ...ORDER,
     items: [{ title_snapshot: '<script>alert("x")</script>', unit_price_cents: 100 }],
-  }, { contactEmail: "bestellung@disorder119.com" });
+  }, { contactEmail: "bestellung@disorder119.com", taxProfile: {mode:"small_business",confirmed:true,tax_number:"TEST-ONLY-123",seller:SELLER} });
   assert.doesNotMatch(mail.html, /<script>/);
   assert.match(mail.html, /&lt;script&gt;/);
 });
@@ -215,6 +217,15 @@ test("order confirmation is sent once and claimed in the audit trail", async () 
   } finally {
     stub.restore();
   }
+});
+
+test("archive failure prevents customer delivery", async () => {
+  const db=confirmationDb({failArchive:true});
+  const stub=stubFetch(async()=>new Response('{"messageId":"unexpected"}',{status:201}));
+  try {
+    await assert.rejects(()=>sendOrderConfirmation({...READY_ENV,DB:db},"order-1","test"),/archive unavailable/);
+    assert.equal(stub.calls.length,0);
+  } finally {stub.restore();}
 });
 
 test("the shop copy goes out only for the invoice, never for a login link", async () => {
@@ -332,7 +343,7 @@ test("the shipping notice names the parcel, the number and the link", () => {
     carrier: "DHL",
     tracking_number: "00340434161234567890",
     items: [{ title_snapshot: "Prada Reversible Jacket" }],
-  }, { contactEmail: "bestellung@disorder119.com" });
+  }, { contactEmail: "bestellung@disorder119.com", taxProfile: {mode:"small_business",confirmed:true,tax_number:"TEST-ONLY-123",seller:SELLER} });
   for (const part of [mail.text, mail.html]) {
     assert.match(part, /D119-20260923-ABC12345/);
     assert.match(part, /00340434161234567890/);
@@ -406,7 +417,7 @@ test("the confirmation shows each piece with its photo and the chosen shipping",
       { title_snapshot: "Jean Paul Gaultier Jeans", article_no: "9427", unit_price_cents: 9000, bild: "javascript:alert(1)" },
     ],
     versand: { art: "standard", carrier: "DPD" },
-  }, { contactEmail: "bestellung@disorder119.com" });
+  }, { contactEmail: "bestellung@disorder119.com", taxProfile: {mode:"small_business",confirmed:true,tax_number:"TEST-ONLY-123",seller:SELLER} });
   assert.match(mail.html, /src="https:\/\/disorder119\.com\/assets\/img\/9428\/thumbs\/0\.webp"/);
   assert.doesNotMatch(mail.html, /javascript:/);
   assert.match(mail.html, /Versand · Standard \(DPD\)/);

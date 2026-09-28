@@ -12,6 +12,7 @@ import {
 } from "./commerce-core.js";
 import { branchHead, createCommit, fastForward, readRepoFile } from "./github-datei.js";
 import { VersandError, versandFuerBestellung, versandWahlStatement } from "./versand.js";
+import { captureStatements, recordVerifiedRefund } from './tax-evidence.js';
 
 const CONFIG = Object.freeze({
   githubOwner: "disorder119",
@@ -629,11 +630,13 @@ async function completePayment(env, providerOrderId, capture, reqId) {
     .bind(payment.commerce_order_id).all()).results || [];
   const itemIds = rows.map(row => row.item_id);
   const result = { ...payment, item_ids: itemIds, item_id: itemIds[0] };
-  if (payment.status === "COMPLETED") return result;
   if (!captureMatches(capture, paypalCustomId(itemIds), Number(payment.amount_cents ?? payment.total_cents))) throw new PublicError("PAYMENT_MISMATCH", 409);
   const providerPayment = capturePayment(capture);
   const now = new Date().toISOString();
+  const evidence=await captureStatements(db,payment,providerPayment,now);
+  if (['COMPLETED','REFUNDED','PARTIALLY_REFUNDED'].includes(payment.status)) { await db.batch(evidence); return result; }
   await db.batch([
+    ...evidence,
     db.prepare("UPDATE payments SET provider_payment_id=?,status='COMPLETED',updated_at=? WHERE id=? AND status!='COMPLETED'")
       .bind(providerPayment.id, now, payment.id),
     db.prepare("UPDATE commerce_orders SET status='PAID',updated_at=? WHERE id=? AND status IN ('PAYMENT_PENDING','RESERVED')")
@@ -653,6 +656,7 @@ async function completePayment(env, providerOrderId, capture, reqId) {
 // Nach dem Bezahlen jedes Stueck im Katalog als verkauft markieren - je Stueck
 // ein eigener Commit, genau so, wie der Main-Waechter ihn stehen laesst.
 async function markAllSold(env, completed, reqId) {
+  if (['REFUNDED','PARTIALLY_REFUNDED'].includes(completed.status)) return;
   for (const itemId of completed.item_ids?.length ? completed.item_ids : [completed.item_id]) {
     try {
       await markCatalogSold(env, itemId);
@@ -673,7 +677,10 @@ async function recordWebhookEvent(env, event, verified) {
   const result = await db.prepare(`INSERT OR IGNORE INTO payment_events
     (id,provider,provider_event_id,event_type,verified,received_at,payload_hash) VALUES (?,'PAYPAL',?,?,?,?,?)`)
     .bind(id, providerEventId, safeText(event.event_type, 100), verified ? 1 : 0, now, payloadHash).run();
-  return Boolean(result.meta?.changes);
+  if (result.meta?.changes) return true;
+  const existing=await db.prepare("SELECT processed_at,payload_hash FROM payment_events WHERE provider='PAYPAL' AND provider_event_id=?").bind(providerEventId).first();
+  if (existing?.payload_hash!==payloadHash) throw new PublicError('WEBHOOK_REPLAY_CONFLICT',409);
+  return !existing?.processed_at;
 }
 
 async function listRentalRequests(env) {
@@ -856,9 +863,10 @@ export default {
               const order = await res.json();
               const completed = await completePayment(env, providerOrderId, order, reqId);
               await markAllSold(env, completed, reqId);
-            }
-          }
+            } else throw new PublicError('PROVIDER_ORDER_UNAVAILABLE',502);
+          } else throw new PublicError('PROVIDER_ORDER_REFERENCE_MISSING',400);
         }
+        if (body.event_type === 'PAYMENT.CAPTURE.REFUNDED') await recordVerifiedRefund(env,body);
         await requireDb(env).prepare("UPDATE payment_events SET processed_at=? WHERE provider='PAYPAL' AND provider_event_id=?")
           .bind(new Date().toISOString(), safeText(body.id, 200)).run();
         return json({ ok: true }, 200, origin);
