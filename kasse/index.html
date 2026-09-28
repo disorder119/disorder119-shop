@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-title" content="Disorder119">
+<meta name="description" content="Lieferadresse, Versand und Bezahlung für deine Stücke bei Disorder119.">
+<!-- Kasse: persoenlicher Schritt, gehoert in keinen Suchindex. -->
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="same-origin">
+<link rel="canonical" href="https://disorder119.com/kasse/">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/favicon.png">
+<title>Kasse | Disorder119</title>
+<link rel="stylesheet" href="/assets/app.css?v=a04c773dd4">
+<link rel="stylesheet" href="/assets/kasse.css?v=c97750fcc0">
+</head>
+<body class="kasse-seite">
+<header class="kasse-kopf">
+  <a class="kasse-marke" href="/">DISORDER119</a>
+  <a class="kasse-zurueck" id="kasseZurueck" href="/cart/">Warenkorb</a>
+</header>
+
+<main class="kasse-inhalt">
+  <h1 id="kasseTitel">Kasse</h1>
+  <p class="kasse-meldung" id="kasseMeldung" tabindex="-1" role="status" hidden></p>
+  <noscript><p class="kasse-meldung">Für die Kasse braucht diese Seite JavaScript.</p></noscript>
+
+  <div class="kasse-raster" id="kasseRaster">
+    <div class="kasse-schritte">
+      <section class="kasse-block" aria-labelledby="kasseArtikelTitel">
+        <h2 id="kasseArtikelTitel"><span class="kasse-nr">1</span><span data-t="stuecke">Deine Stücke</span></h2>
+        <ul class="kasse-artikel" id="kasseArtikel" aria-busy="true"></ul>
+      </section>
+
+      <section class="kasse-block" aria-labelledby="kasseAdresseTitel">
+        <h2 id="kasseAdresseTitel"><span class="kasse-nr">2</span><span data-t="adresse">Lieferadresse</span></h2>
+        <form class="kasse-form" id="kasseForm" novalidate autocomplete="on">
+          <label class="kasse-feld"><span data-t="vorname">Vorname</span>
+            <input type="text" id="kVorname" name="given-name" autocomplete="shipping given-name" maxlength="60" required></label>
+          <label class="kasse-feld"><span data-t="nachname">Nachname</span>
+            <input type="text" id="kNachname" name="family-name" autocomplete="shipping family-name" maxlength="60" required></label>
+          <label class="kasse-feld kasse-feld--plz"><span data-t="plz">PLZ</span>
+            <input type="text" id="kPlz" name="postal-code" autocomplete="shipping postal-code" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" required></label>
+          <div class="kasse-feld kasse-feld--ort">
+            <label for="kOrt" data-t="ort">Ort</label>
+            <input type="text" id="kOrt" name="address-level2" autocomplete="shipping address-level2" maxlength="80" required>
+            <div class="kasse-orte" id="kOrte" hidden></div>
+          </div>
+          <div class="kasse-feld kasse-feld--strasse">
+            <label for="kStrasse" data-t="strasse">Straße</label>
+            <input type="text" id="kStrasse" name="address-line1" autocomplete="shipping address-line1" maxlength="100" required
+              role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="kStrassen">
+            <ul class="kasse-vorschlaege" id="kStrassen" role="listbox" hidden></ul>
+          </div>
+          <label class="kasse-feld kasse-feld--nr"><span data-t="hausnummer">Nr.</span>
+            <input type="text" id="kNummer" name="house-number" autocomplete="off" maxlength="12" required></label>
+          <label class="kasse-feld kasse-feld--breit"><span data-t="zusatz">Adresszusatz (optional)</span>
+            <input type="text" id="kZusatz" name="address-line2" autocomplete="shipping address-line2" maxlength="100"></label>
+          <p class="kasse-hinweis kasse-feld--breit" id="kLand" data-t="landHinweis">Wir liefern innerhalb Deutschlands. Lieferung an eine Packstation ist bald mit DHL möglich.</p>
+        </form>
+      </section>
+
+      <section class="kasse-block" aria-labelledby="kasseVersandTitel">
+        <h2 id="kasseVersandTitel"><span class="kasse-nr">3</span><span data-t="versand">Versand</span></h2>
+        <div class="kasse-versand" id="kasseVersand" aria-busy="true"></div>
+      </section>
+    </div>
+
+    <aside class="kasse-summe" aria-labelledby="kasseSummeTitel">
+      <h2 id="kasseSummeTitel" data-t="uebersicht">Übersicht</h2>
+      <dl class="kasse-summe__liste" id="kasseSumme"></dl>
+      <p class="kasse-gutschein" id="kasseGutschein" hidden></p>
+      <p class="kasse-recht" id="kasseRecht"></p>
+      <div class="kasse-zahlen" id="kasseZahlen"></div>
+      <p class="kasse-status" id="kasseStatus" role="status" aria-live="polite" hidden></p>
+    </aside>
+  </div>
+</main>
+
+<footer class="kasse-fuss">
+  <a href="/agb/" data-t="agb">AGB &amp; Widerruf</a>
+  <a href="/datenschutz/" data-t="datenschutz">Datenschutz</a>
+  <a href="/impressum/" data-t="impressum">Impressum</a>
+</footer>
+
+<script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "paypalClientId": "", "shopWorkerUrl": "https://api.disorder119.com", "turnstileSiteKey": "", "environment": "sandbox", "features": {"paypalCheckout": false, "customerAccounts": true}}; window.KASSE_LANG = "de";</script>
+<script src="/assets/pwa.js?v=690a705938"></script>
+<script src="/assets/shop-promos.js?v=ef99d45c44"></script>
+<script src="/assets/kasse.js?v=c97750fcc0" defer></script>
+</body>
+</html>
