@@ -126,6 +126,18 @@ test("overview never counts an open order as a paid order or top product", async
   } finally { globalThis.fetch = original; }
 });
 
+test("admin overview cleans an expired unpaid checkout even without a cron trigger", async () => {
+  const { DB, env } = fixture({ expired: true });
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => Response.json([]);
+  try {
+    const result = await admin(env, "/admin/overview");
+    assert.equal(result.status, 200);
+    assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders").get().status, "CANCELLED");
+    assert.equal(DB.raw.prepare("SELECT status FROM inventory LIMIT 1").get().status, "AVAILABLE");
+  } finally { globalThis.fetch = original; }
+});
+
 test("capture claim prevents an admin cancellation while PayPal responds", async () => {
   const { DB, env } = fixture();
   const original = globalThis.fetch;
