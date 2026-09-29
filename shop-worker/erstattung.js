@@ -140,7 +140,11 @@ export async function bestellungErstatten(env, id, body, reqId, statusSetzen) {
         const debugId = safeText(antwort?.debug_id || res.headers.get("paypal-debug-id"), 120);
         await db.prepare("UPDATE refunds SET status='FAILED',updated_at=? WHERE id=?").bind(new Date().toISOString(), zeile.id).run();
         await protokoll(db, order.id, "ORDER_REFUND_FAILED", reqId, { grund, debugId, paypalStatus: res.status, betragCents: zeile.amount_cents });
-        throw new ErstattungsFehler("PAYPAL_ERSTATTUNG_FEHLGESCHLAGEN", 502, { grund, debugId, paypalStatus: res.status });
+        // Auch eine noch nicht aktualisierte Admin-App soll den konkreten
+        // Deckungsfehler erkennen, statt nur die allgemeine Ablehnung zu zeigen.
+        const code = grund === "REFUND_FAILED_INSUFFICIENT_FUNDS"
+          ? "PAYPAL_GUTHABEN_NICHT_AUSREICHEND" : "PAYPAL_ERSTATTUNG_FEHLGESCHLAGEN";
+        throw new ErstattungsFehler(code, 502, { grund, debugId, paypalStatus: res.status });
       }
       const status = String(antwort.status || "").toUpperCase() === "COMPLETED" ? "COMPLETED" : "PENDING";
       await db.prepare("UPDATE refunds SET status=?,provider_refund_id=?,updated_at=? WHERE id=?")
