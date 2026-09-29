@@ -4,7 +4,6 @@ import {
   enrichRentalReservation,
   snapshotPaypalOrder,
   erstattungAusPaypal,
-  paypalErstattungenAbgleichen,
 } from "./admin-api.js";
 import { handleAdminInsights } from "./admin-insights.js";
 import { handleAdminCommerceMetrics } from "./admin-commerce-metrics.js";
@@ -381,9 +380,8 @@ export default {
       }
 
       if (shouldInspectWebhook) {
-        let event = null;
         try {
-          event = await requestCopy.json();
+          const event = await requestCopy.json();
           if (event?.event_type === "PAYMENT.CAPTURE.COMPLETED") {
             const providerOrderId = event?.resource?.supplementary_data?.related_ids?.order_id;
             if (providerOrderId) {
@@ -400,14 +398,10 @@ export default {
             }
           }
           if (event?.event_type === "PAYMENT.CAPTURE.REFUNDED") {
-            // Erst dann 2xx an PayPal senden, wenn Refund, Zahlungsstatus und
-            // Bestellstatus dauerhaft geschrieben wurden. Bei einem Fehler
-            // bekommt PayPal non-2xx und stellt das Ereignis erneut zu.
-            await erstattungAusPaypal(runtimeEnv, event, reqId);
+            await runBackground(ctx, erstattungAusPaypal(runtimeEnv, event, reqId), "webhook_refund_status_failed", reqId);
           }
         } catch (err) {
           logBackgroundFailure("webhook_observer_failed", reqId, err);
-          if (event?.event_type === "PAYMENT.CAPTURE.REFUNDED") throw err;
         }
       }
 
@@ -424,7 +418,6 @@ export default {
     const scheduledTime = Number(event?.scheduledTime || Date.now());
     const reqId = `cron-${scheduledTime}`;
     await runBackground(ctx, reconcilePurchasePayments(env, reqId), "purchase_reconciliation_failed", reqId);
-    await runBackground(ctx, paypalErstattungenAbgleichen(env, reqId, true), "paypal_refund_reconciliation_failed", reqId);
     await runBackground(
       ctx,
       syncOperationsAlerts(env, {

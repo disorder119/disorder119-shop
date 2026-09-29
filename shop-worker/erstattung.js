@@ -13,12 +13,6 @@
 // "Bezahlt", "In Vorbereitung" und "Zurueckgeschickt". Ist ein Paket schon
 // unterwegs, erst die Ruecksendung erfassen.
 import { canTransitionOrder, safeText } from "./commerce-core.js";
-import { recordVerifiedRefund } from "./tax-evidence.js";
-
-const REFUND_SYNC_CACHE_MS = 5 * 60 * 1000;
-const REFUND_SYNC_DAYS = 31;
-const REFUND_SYNC_MAX_PAGES = 50;
-const refundSyncByDatabase = new WeakMap();
 
 export class ErstattungsFehler extends Error {
   constructor(code, status = 409, detail = null) {
@@ -47,23 +41,6 @@ async function paypalToken(env) {
   });
   if (!res.ok) throw new ErstattungsFehler("PAYPAL_ANMELDUNG_FEHLGESCHLAGEN", 502);
   return (await res.json()).access_token;
-}
-
-function captureIdAusErstattung(resource) {
-  return resource?.supplementary_data?.related_ids?.capture_id
-    || (resource?.links || []).map(x => /\/v2\/payments\/captures\/([^/?]+)/.exec(String(x.href || ""))?.[1]).find(Boolean)
-    || null;
-}
-
-function paypalEventNextUrl(base, links) {
-  const href = (links || []).find(link => String(link?.rel || "").toLowerCase() === "next")?.href;
-  if (!href) return null;
-  const next = new URL(String(href), base);
-  const allowed = new URL(base);
-  if (next.origin !== allowed.origin || next.pathname !== "/v1/notifications/webhooks-events") {
-    throw new ErstattungsFehler("PAYPAL_EVENT_PAGINATION_INVALID", 502);
-  }
-  return next.toString();
 }
 
 function euro(cents) {
@@ -224,7 +201,8 @@ export async function erstattungAusWebhook(env, event, reqId, statusSetzen) {
   const r = event?.resource || {};
   if (String(r.status || "").toUpperCase() !== "COMPLETED" || !r.id) return { uebersprungen: true };
   const db = env.DB;
-  const captureId = captureIdAusErstattung(r);
+  const captureId = r.supplementary_data?.related_ids?.capture_id
+    || (r.links || []).map(x => /\/v2\/payments\/captures\/([^/?]+)/.exec(String(x.href || ""))?.[1]).find(Boolean);
   if (!captureId) return { uebersprungen: true };
   const payment = await db.prepare("SELECT * FROM payments WHERE provider='PAYPAL' AND provider_payment_id=?").bind(captureId).first();
   if (!payment) return { uebersprungen: true };
@@ -243,131 +221,8 @@ export async function erstattungAusWebhook(env, event, reqId, statusSetzen) {
     await protokoll(db, order.id, "ORDER_REFUND_FROM_PAYPAL", reqId, { betragCents: betrag, refundId: String(r.id) }, "PAYMENT_PROVIDER");
   }
   const erstattet = await zahlungsstatusNachziehen(db, payment, order);
-  let bestellstatusAktualisiert = false;
   if (erstattet >= Number(order.total_cents) && order.status !== "REFUNDED" && canTransitionOrder(order.status, "REFUNDED")) {
     await statusSetzen(order.id, "REFUNDED");
-    bestellstatusAktualisiert = true;
   }
-  return {
-    erstattetCents: erstattet,
-    vollstaendig: erstattet >= Number(order.total_cents),
-    bestellstatusAktualisiert,
-    bestellstatusPruefen: erstattet >= Number(order.total_cents)
-      && order.status !== "REFUNDED" && !bestellstatusAktualisiert,
-  };
-}
-
-// Zweite Sicherung neben dem Webhook: PayPal fuehrt auch Rueckzahlungen auf,
-// die direkt im Geschaeftskonto angestossen wurden. Der Abgleich liest diese
-// Provider-Ereignisse nach und verarbeitet sie ueber denselben idempotenten
-// Weg wie ein live zugestellter Webhook. So geht bei einem voruebergehenden
-// Worker-/D1-Fehler kein Admin-Status dauerhaft verloren.
-export async function paypalErstattungenAbgleichen(env, reqId, statusSetzen, options = {}) {
-  if (!env?.DB) throw new ErstattungsFehler("COMMERCE_DATABASE_NOT_CONFIGURED", 503);
-  if (!env.PAYPAL_CLIENT_ID || !env.PAYPAL_CLIENT_SECRET) {
-    return { ok: false, configured: false, code: "PAYPAL_NOT_CONFIGURED" };
-  }
-
-  const force = options.force === true;
-  const now = options.now instanceof Date ? options.now : new Date();
-  const existing = refundSyncByDatabase.get(env.DB);
-  if (!force && existing?.result && now.getTime() - existing.checkedAt < REFUND_SYNC_CACHE_MS) {
-    return { ...existing.result, cached: true };
-  }
-  if (!force && existing?.promise) return existing.promise;
-
-  const promise = (async () => {
-    const token = await paypalToken(env);
-    const base = paypalApiBase(env);
-    let webhookSubscribed = null;
-    let webhookCheckCode = null;
-    if (env.PAYPAL_WEBHOOK_ID) {
-      const webhookRes = await fetch(`${base}/v1/notifications/webhooks/${encodeURIComponent(env.PAYPAL_WEBHOOK_ID)}`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
-      const webhook = await webhookRes.json().catch(() => ({}));
-      if (webhookRes.ok) {
-        const types = (webhook.event_types || []).map(entry => String(entry?.name || ""));
-        webhookSubscribed = types.includes("*") || types.includes("PAYMENT.CAPTURE.REFUNDED");
-        if (!webhookSubscribed) webhookCheckCode = "PAYPAL_REFUND_WEBHOOK_NOT_SUBSCRIBED";
-      } else {
-        webhookCheckCode = "PAYPAL_WEBHOOK_STATUS_UNAVAILABLE";
-      }
-    }
-    const start = new Date(now.getTime() - REFUND_SYNC_DAYS * 24 * 60 * 60 * 1000).toISOString();
-    const end = now.toISOString();
-    let next = `${base}/v1/notifications/webhooks-events?${new URLSearchParams({
-      start_time: start,
-      end_time: end,
-      event_type: "PAYMENT.CAPTURE.REFUNDED",
-      page_size: "20",
-    })}`;
-    let pages = 0;
-    let gesehen = 0;
-    let zugeordnet = 0;
-    let aktualisiert = 0;
-    let bestellstatusPruefen = 0;
-    const fehler = [];
-
-    while (next && pages < REFUND_SYNC_MAX_PAGES) {
-      const res = await fetch(next, {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new ErstattungsFehler("PAYPAL_REFUND_EVENT_LIST_FAILED", 502, {
-          paypalStatus: res.status,
-          debugId: safeText(body?.debug_id || res.headers.get("paypal-debug-id"), 120),
-        });
-      }
-      pages += 1;
-      for (const event of body.events || []) {
-        if (event?.event_type !== "PAYMENT.CAPTURE.REFUNDED") continue;
-        gesehen += 1;
-        const captureId = captureIdAusErstattung(event.resource);
-        if (!captureId) continue;
-        const payment = await env.DB.prepare("SELECT id FROM payments WHERE provider='PAYPAL' AND provider_payment_id=?")
-          .bind(captureId).first();
-        if (!payment) continue;
-        zugeordnet += 1;
-        try {
-          const result = await erstattungAusWebhook(env, event, reqId, statusSetzen);
-          if (result?.uebersprungen) continue;
-          await recordVerifiedRefund(env, event);
-          aktualisiert += 1;
-          if (result?.bestellstatusPruefen) bestellstatusPruefen += 1;
-        } catch (err) {
-          fehler.push(safeText(err?.code || err?.message || "REFUND_SYNC_FAILED", 80));
-        }
-      }
-      next = paypalEventNextUrl(base, body.links);
-    }
-    if (next) throw new ErstattungsFehler("PAYPAL_REFUND_EVENT_PAGE_LIMIT", 502);
-
-    const result = {
-      ok: fehler.length === 0 && webhookSubscribed !== false,
-      configured: true,
-      webhookSubscribed,
-      webhookCheckCode,
-      checkedAt: now.toISOString(),
-      windowStart: start,
-      pages,
-      seen: gesehen,
-      matched: zugeordnet,
-      updated: aktualisiert,
-      orderStatusReview: bestellstatusPruefen,
-      errors: [...new Set(fehler)].slice(0, 5),
-      cached: false,
-    };
-    if (result.ok) refundSyncByDatabase.set(env.DB, { checkedAt: now.getTime(), result, promise: null });
-    return result;
-  })();
-
-  refundSyncByDatabase.set(env.DB, { checkedAt: existing?.checkedAt || 0, result: existing?.result || null, promise });
-  try {
-    return await promise;
-  } finally {
-    const current = refundSyncByDatabase.get(env.DB);
-    if (current?.promise === promise) refundSyncByDatabase.set(env.DB, { ...current, promise: null });
-  }
+  return { erstattetCents: erstattet };
 }
