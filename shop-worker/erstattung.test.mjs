@@ -145,8 +145,9 @@ test("PayPal lehnt ab: Fehler sichtbar, erneuter Versuch mit derselben Request-I
 test("Zu wenig PayPal-Deckung liefert auch an alte Admin-Versionen einen klaren Fehlercode", async () => {
   const db = d1();
   bestellungAnlegen(db, { total: 560 });
-  const pp = paypal({ fehler: { status: 422, body: { name: "UNPROCESSABLE_ENTITY",
+  let pp = paypal({ fehler: { status: 422, body: { name: "UNPROCESSABLE_ENTITY",
     debug_id: "funding-debug", details: [{ issue: "REFUND_FAILED_INSUFFICIENT_FUNDS" }] } } });
+  let ersterSchluessel;
   try {
     const res = await erstatten(env(db));
     const data = await res.json();
@@ -156,6 +157,40 @@ test("Zu wenig PayPal-Deckung liefert auch an alte Admin-Versionen einen klaren 
     assert.equal(data.detail.debugId, "funding-debug");
     assert.equal(db.raw.prepare("SELECT status FROM commerce_orders").get().status, "PAID");
     assert.equal(db.raw.prepare("SELECT status FROM refunds").get().status, "FAILED");
+    ersterSchluessel = pp.aufrufe[0].headers["PayPal-Request-Id"];
+  } finally { pp.zurueck(); }
+  pp = paypal();
+  try {
+    const tooSoon = await erstatten(env(db));
+    assert.equal(tooSoon.status, 409);
+    assert.equal(pp.aufrufe.length, 0);
+  } finally { pp.zurueck(); }
+  // Erst nach einem neuen, explizit bestaetigten Admin-Aufruf und behobener
+  // Deckung wird eine frische Id genutzt; die alte 422-Ablehnung wird nicht
+  // als bereits erfolgreicher Versuch wiederholt.
+  db.raw.prepare("UPDATE audit_events SET created_at='2026-09-01T00:00:00.000Z' WHERE event_type='ORDER_REFUND_FAILED'").run();
+  pp = paypal();
+  try {
+    const res = await erstatten(env(db));
+    assert.equal(res.status, 200);
+    assert.notEqual(pp.aufrufe[0].headers["PayPal-Request-Id"], ersterSchluessel);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM refunds").get().n, 1);
+    assert.equal(db.raw.prepare("SELECT status FROM commerce_orders").get().status, "REFUNDED");
+  } finally { pp.zurueck(); }
+});
+
+test("Zwei gleichzeitige Admin-Retries benutzen nach Deckungsfehler dieselbe neue PayPal-ID", async () => {
+  const db = d1();
+  bestellungAnlegen(db, { total: 560 });
+  let pp = paypal({ fehler: { status: 422, body: { details: [{ issue: "REFUND_FAILED_INSUFFICIENT_FUNDS" }] } } });
+  try { await erstatten(env(db)); } finally { pp.zurueck(); }
+  db.raw.prepare("UPDATE audit_events SET created_at='2026-09-01T00:00:00.000Z' WHERE event_type='ORDER_REFUND_FAILED'").run();
+  pp = paypal({ fehler: { status: 422, body: { details: [{ issue: "REFUND_FAILED_INSUFFICIENT_FUNDS" }] } } });
+  try {
+    await Promise.all([erstatten(env(db)), erstatten(env(db))]);
+    assert.ok(pp.aufrufe.length >= 1 && pp.aufrufe.length <= 2);
+    assert.equal(new Set(pp.aufrufe.map(x => x.headers["PayPal-Request-Id"])).size, 1);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM refunds").get().n, 1);
   } finally { pp.zurueck(); }
 });
 
