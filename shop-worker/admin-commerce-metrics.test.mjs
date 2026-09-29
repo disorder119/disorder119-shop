@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
+import { allMigrations } from "./test-d1.mjs";
 import {
   enrichTopProducts,
   handleAdminCommerceMetrics,
@@ -44,15 +45,7 @@ class D1Adapter {
 function database() {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys=ON");
-  for (const relative of [
-    "schema.sql",
-    "migrations/0002_commerce_foundation.sql",
-    "migrations/0003_state_integrity.sql",
-    "migrations/0004_admin_operations.sql",
-    "migrations/0005_rental_groups.sql",
-    "migrations/0006_operations_cases.sql",
-    "migrations/0007_operations_automation.sql",
-  ]) db.exec(readFileSync(join(HERE, relative), "utf8"));
+  for (const relative of allMigrations()) db.exec(readFileSync(join(HERE, relative), "utf8"));
   return db;
 }
 
@@ -79,8 +72,8 @@ function seed(db) {
     (order_id,source_provider,email,captured_at)
     VALUES ('order-1','PAYPAL','buyer@example.com',?)`).run(now);
   db.prepare(`INSERT INTO payments
-    (id,order_id,provider,provider_order_id,status,amount_cents,currency,idempotency_key,created_at,updated_at)
-    VALUES ('pay-1','order-1','PAYPAL','PO-1','COMPLETED',10500,'EUR','metric-pay-key',?,?)`).run(now, now);
+    (id,order_id,provider,provider_order_id,provider_payment_id,status,amount_cents,currency,idempotency_key,created_at,updated_at)
+    VALUES ('pay-1','order-1','PAYPAL','PO-1','CAP-1','COMPLETED',10500,'EUR','metric-pay-key',?,?)`).run(now, now);
   db.prepare(`INSERT INTO refunds
     (id,order_id,payment_id,provider_refund_id,amount_cents,currency,status,idempotency_key,created_at,updated_at)
     VALUES ('refund-sale','order-1','pay-1','RF-1',1000,'EUR','COMPLETED','metric-refund-sale',?,?)`).run(now, now);
@@ -168,6 +161,13 @@ test("commerce metrics keep sales refunds separate from rental refunds", async (
     assert.equal(data.topProducts.rentals[0].title, "Rental Test Piece");
     assert.equal(data.conversion.available, false);
     assert.equal(data.conversion.reason, "NO_FUNNEL_EVENTS");
+    db.prepare("UPDATE payments SET status='PARTIALLY_REFUNDED' WHERE id='pay-1'").run();
+    const again = await handleAdminCommerceMetrics(req, { ADMIN_TOKEN: "secret", DB: new D1Adapter(db) }, new URL(req.url), "req-refunded", "https://admin.disorder119.com");
+    assert.equal(again.status, 200);
+    const afterRefund = await again.json();
+    assert.equal(afterRefund.salesQuality.capturedSalesCents, 10500);
+    assert.equal(afterRefund.salesQuality.salesRefundsCents, 1000);
+    assert.equal(afterRefund.salesQuality.netCapturedSalesCents, 9500);
   } finally {
     globalThis.fetch = originalFetch;
     db.close();

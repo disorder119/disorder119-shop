@@ -139,7 +139,9 @@ async function buildInsights(env, url) {
       COUNT(DISTINCT order_id) AS paidOrders,
       COALESCE(SUM(amount_cents),0) AS capturedCents
       FROM payments
-      WHERE status='COMPLETED' AND COALESCE(updated_at,created_at)>=?`).bind(cutoffIso),
+      WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND provider_payment_id IS NOT NULL
+        AND COALESCE((SELECT COALESCE(e.occurred_at,e.observed_at) FROM tax_cash_events e
+          WHERE e.payment_id=payments.id AND e.kind='capture' ORDER BY e.rowid LIMIT 1),updated_at,created_at)>=?`).bind(cutoffIso),
     db.prepare(`SELECT COALESCE(SUM(amount_cents),0) AS refundedCents, COUNT(*) AS refunds
       FROM refunds WHERE status='COMPLETED' AND COALESCE(updated_at,created_at)>=?`).bind(cutoffIso),
     db.prepare(`SELECT
@@ -185,7 +187,9 @@ async function buildInsights(env, url) {
       MAX(o.created_at) AS lastOrderAt
     FROM commerce_orders o
     LEFT JOIN order_contact_snapshots cs ON cs.order_id=o.id
-    WHERE o.status NOT IN ('CANCELLED') AND COALESCE(NULLIF(cs.email,''),NULLIF(o.guest_email,'')) IS NOT NULL
+    WHERE EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id
+      AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND p.provider_payment_id IS NOT NULL)
+      AND COALESCE(NULLIF(cs.email,''),NULLIF(o.guest_email,'')) IS NOT NULL
     GROUP BY LOWER(COALESCE(NULLIF(cs.email,''),NULLIF(o.guest_email,'')))
     ORDER BY orderValueCents DESC`).all();
   const customerList = customerRows.results || [];
@@ -193,14 +197,18 @@ async function buildInsights(env, url) {
   const countryRows = await db.prepare(`SELECT COALESCE(NULLIF(country_code,''),'UNBEKANNT') AS countryCode,
       COUNT(*) AS orders, COALESCE(SUM(o.total_cents),0) AS orderValueCents
     FROM commerce_orders o JOIN order_contact_snapshots cs ON cs.order_id=o.id
-    WHERE o.status NOT IN ('CANCELLED')
+    WHERE EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id
+      AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND p.provider_payment_id IS NOT NULL)
     GROUP BY COALESCE(NULLIF(country_code,''),'UNBEKANNT')
     ORDER BY orderValueCents DESC, orders DESC LIMIT 20`).all();
 
-  const monthlySales = await db.prepare(`SELECT substr(COALESCE(updated_at,created_at),1,7) AS month,
+  const monthlySales = await db.prepare(`SELECT substr(COALESCE((SELECT COALESCE(e.occurred_at,e.observed_at)
+      FROM tax_cash_events e WHERE e.payment_id=payments.id AND e.kind='capture' ORDER BY e.rowid LIMIT 1),updated_at,created_at),1,7) AS month,
       COUNT(DISTINCT order_id) AS orders, COALESCE(SUM(amount_cents),0) AS capturedCents
-    FROM payments WHERE status='COMPLETED' AND COALESCE(updated_at,created_at)>=datetime('now','-12 months')
-    GROUP BY substr(COALESCE(updated_at,created_at),1,7) ORDER BY month`).all();
+    FROM payments WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND provider_payment_id IS NOT NULL
+      AND COALESCE((SELECT COALESCE(e.occurred_at,e.observed_at) FROM tax_cash_events e
+        WHERE e.payment_id=payments.id AND e.kind='capture' ORDER BY e.rowid LIMIT 1),updated_at,created_at)>=datetime('now','-12 months')
+    GROUP BY month ORDER BY month`).all();
   const monthlyRentals = await db.prepare(`SELECT substr(created_at,1,7) AS month,
       COUNT(*) AS rentals, COALESCE(SUM(total_price_cents),0) AS rentalValueCents, COALESCE(SUM(days),0) AS rentalDays
     FROM rental_reservations
@@ -210,7 +218,8 @@ async function buildInsights(env, url) {
   const soldItems = await db.prepare(`SELECT oi.item_id AS itemId, COUNT(*) AS count,
       COALESCE(SUM(oi.unit_price_cents),0) AS valueCents
     FROM order_items oi JOIN commerce_orders o ON o.id=oi.order_id
-    WHERE o.status NOT IN ('CANCELLED')
+    WHERE EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id
+      AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND p.provider_payment_id IS NOT NULL)
     GROUP BY oi.item_id ORDER BY valueCents DESC LIMIT 100`).all();
   const rentedItems = await db.prepare(`SELECT i.item_id AS itemId, COUNT(*) AS count,
       COALESCE(SUM(rr.total_price_cents),0) AS valueCents
@@ -234,7 +243,7 @@ async function buildInsights(env, url) {
     money: {
       capturedSalesCents: captured,
       completedRefundsCents: refunded,
-      netCapturedSalesCents: Math.max(0, captured - refunded),
+      netCapturedSalesCents: captured - refunded,
       averageCapturedOrderCents: paidOrders ? Math.round(captured / paidOrders) : 0,
       paidOrders,
       confirmedRentalValueCents: number(rentals.confirmedRentalValueCents),
