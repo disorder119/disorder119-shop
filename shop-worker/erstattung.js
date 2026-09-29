@@ -77,6 +77,15 @@ async function protokoll(db, orderId, eventType, reqId, metadata, actor = "ADMIN
     .bind(crypto.randomUUID(), actor, orderId, eventType, safeText(reqId, 120), JSON.stringify(metadata), new Date().toISOString()).run();
 }
 
+async function letzterDeckungsfehler(db, orderId) {
+  const row = await db.prepare(`SELECT metadata_json,created_at FROM audit_events WHERE entity_type='order' AND entity_id=?
+    AND event_type='ORDER_REFUND_FAILED' ORDER BY created_at DESC LIMIT 1`).bind(orderId).first();
+  try {
+    return { ungedeckt: JSON.parse(row?.metadata_json || "{}").grund === "REFUND_FAILED_INSUFFICIENT_FUNDS",
+      zeit: Date.parse(row?.created_at || "") };
+  } catch { return { ungedeckt: false, zeit: NaN }; }
+}
+
 async function zahlungsstatusNachziehen(db, payment, order) {
   const erstattet = await schonErstattet(db, order.id);
   const status = erstattet >= Number(order.total_cents) ? "REFUNDED" : erstattet > 0 ? "PARTIALLY_REFUNDED" : null;
@@ -113,14 +122,34 @@ export async function bestellungErstatten(env, id, body, reqId, statusSetzen) {
     // Zeile und schickt PayPal dieselbe Request-Id - PayPal zahlt nur einmal.
     const schluessel = `erstattung:${order.id}:${schon}`;
     const jetzt = new Date().toISOString();
-    await db.prepare(`INSERT OR IGNORE INTO refunds (id,order_id,payment_id,amount_cents,currency,status,idempotency_key,created_at,updated_at)
-      VALUES (?,?,?,?,'EUR','PENDING',?,?,?)`).bind(crypto.randomUUID(), order.id, payment.id, offen, schluessel, jetzt, jetzt).run();
-    const zeile = await db.prepare("SELECT * FROM refunds WHERE idempotency_key=?").bind(schluessel).first();
+    let zeile = await db.prepare(`SELECT * FROM refunds WHERE order_id=? AND payment_id=? AND amount_cents=?
+      AND status IN ('PENDING','FAILED') ORDER BY created_at DESC LIMIT 1`).bind(order.id, payment.id, offen).first();
+    if (!zeile) {
+      await db.prepare(`INSERT OR IGNORE INTO refunds (id,order_id,payment_id,amount_cents,currency,status,idempotency_key,created_at,updated_at)
+        VALUES (?,?,?,?,'EUR','PENDING',?,?,?)`).bind(crypto.randomUUID(), order.id, payment.id, offen, schluessel, jetzt, jetzt).run();
+      zeile = await db.prepare("SELECT * FROM refunds WHERE idempotency_key=?").bind(schluessel).first();
+    }
 
     if (zeile.status !== "COMPLETED") {
-      // Ein fehlgeschlagener Versuch darf wiederholt werden (gleiche Request-Id).
+      // Nur die eindeutig abgelehnte 422-Deckung darf nach einem bewussten
+      // neuen Klick eine neue PayPal-Request-Id erhalten. Bei unklaren
+      // Fehlern bleibt die alte Id erhalten, damit nie doppelt ausgezahlt wird.
       if (zeile.status === "FAILED") {
-        await db.prepare("UPDATE refunds SET status='PENDING',updated_at=? WHERE id=?").bind(new Date().toISOString(), zeile.id).run();
+        const letzter = await letzterDeckungsfehler(db, order.id);
+        // Nach einer Ablehnung laufen parallele Admin-Anfragen moeglicherweise
+        // noch. In dieser kurzen Frist darf kein weiterer Retry-Schluessel
+        // entstehen, selbst wenn PayPal sofort erneut 422 antwortet.
+        if (letzter.ungedeckt && Date.now() - letzter.zeit < 30_000) {
+          throw new ErstattungsFehler("PAYPAL_GUTHABEN_NICHT_AUSREICHEND", 409,
+            { grund: "REFUND_FAILED_INSUFFICIENT_FUNDS" });
+        }
+        const neueId = !zeile.provider_refund_id && letzter.ungedeckt
+          ? `${schluessel}:retry:${crypto.randomUUID()}` : zeile.idempotency_key;
+        const result = await db.prepare(`UPDATE refunds SET status='PENDING',idempotency_key=?,updated_at=?
+          WHERE id=? AND status='FAILED' AND idempotency_key=?`)
+          .bind(neueId, new Date().toISOString(), zeile.id, zeile.idempotency_key).run();
+        zeile = result.meta?.changes ? { ...zeile, status: "PENDING", idempotency_key: neueId }
+          : await db.prepare("SELECT * FROM refunds WHERE id=?").bind(zeile.id).first();
       }
       const token = await paypalToken(env);
       const notiz = safeText(body?.notiz || `Erstattung Bestellung ${order.order_number}`, 250);
@@ -129,7 +158,7 @@ export async function bestellungErstatten(env, id, body, reqId, statusSetzen) {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
-          "PayPal-Request-Id": schluessel,
+          "PayPal-Request-Id": zeile.idempotency_key,
           Prefer: "return=representation",
         },
         body: JSON.stringify({ amount: { value: euro(zeile.amount_cents), currency_code: "EUR" }, note_to_payer: notiz }),
