@@ -74,119 +74,36 @@ def test_match(driver) -> None:
 def test_chaos(driver) -> None:
     driver.set_window_size(390, 844)
     driver.get(urljoin(BASE_URL, "chaos/"))
-    wait(driver, lambda d: d.find_element(By.ID, "chaosView").is_displayed(), "Universum sichtbar")
-    wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#chaosItems > *")) >= 8, "Universum-Objekte")
-    dismiss_cookie_note(driver)
-
-    if driver.find_element(By.ID, "appShell").is_displayed():
-        fail("Universum: Archiv-Shell ist gleichzeitig sichtbar")
-    assert_active_mode(driver, "chaos")
-    assert_mode_links(driver)
-
-    universe_button = driver.find_element(By.CSS_SELECTOR, '#modeRail [data-mode-view="chaos"]')
-    universe_label = (universe_button.find_element(By.CSS_SELECTOR, ".mode-rail__label").get_attribute("textContent") or "").strip()
-    if universe_label != "Universum-Modus":
-        fail(f"Universum: Moduslabel ist {universe_label!r} statt 'Universum-Modus'")
-    if not universe_button.find_elements(By.CSS_SELECTOR, ".mode-rail__icon svg"):
-        fail("Universum: Planet-/Orbit-Icon fehlt")
-
-    before = len(driver.find_elements(By.CSS_SELECTOR, "#chaosItems > *"))
-    driver.find_element(By.ID, "chaosShuffle").click()
-    wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#chaosItems > *")) >= 8, "Universum nach Neu mischen")
-    after = len(driver.find_elements(By.CSS_SELECTOR, "#chaosItems > *"))
-    if before < 8 or after < 8:
-        fail(f"Universum: zu wenige Objekte vor/nach Shuffle ({before}/{after})")
-
-    wait(driver, lambda d: d.execute_script("return !!window.D119SecretGames"), "Zero-G-Runway-System geladen")
-    version = driver.execute_script("return window.D119SecretGames && window.D119SecretGames.version")
-    if version != "zero-g-runway-v1":
-        fail(f"Universum: falsche Game-Version {version!r}")
-
-    if driver.find_elements(By.CSS_SELECTOR, ".universe-shooting-star, .d119-warp-control, #universeTurbo, .d119-secret-relic"):
-        fail("Universum: alter sichtbarer Game-Einstieg ist wieder vorhanden")
-    if not driver.find_elements(By.CSS_SELECTOR, "[data-d119-game-launch]"):
-        fail("Universum: sichtbarer GAME-Launcher fehlt")
-    if not driver.find_element(By.ID, "d119SecretGames").get_attribute("hidden"):
-        fail("Universum: Game-Overlay ist ohne Start sichtbar")
-
-    user_select = driver.find_element(By.ID, "chaosScreen").value_of_css_property("user-select")
-    if user_select != "none":
-        fail(f"Universum: user-select ist {user_select!r} statt none")
-    selection_blocked = driver.execute_script(
-        "var n=document.querySelector('#chaosItems')||document.querySelector('#chaosScreen');"
-        "var e=new Event('selectstart',{bubbles:true,cancelable:true});"
-        "n.dispatchEvent(e); return e.defaultPrevented;"
-    )
-    if not selection_blocked:
-        fail("Universum: selectstart wird nicht blockiert")
+    wait(driver, lambda d: urlparse(d.current_url).path == "/universe/", "Chaos-Weiterleitung")
+    wait(driver, lambda d: "Universum bereit" in d.find_element(By.ID, "uStatus").text, "Universum bereit")
+    canvas = driver.find_element(By.ID, "uCanvas")
+    if not canvas.is_displayed() or canvas.size["width"] < 1 or canvas.size["height"] < 1:
+        fail("Universum: Canvas ist nicht sichtbar")
+    if not driver.find_elements(By.CSS_SELECTOR, '.u-mode[aria-current="page"][href="/universe/"]'):
+        fail("Universum: aktive Navigation fehlt")
+    if driver.find_elements(By.CSS_SELECTOR, "[data-d119-game-launch], #d119SecretGames"):
+        fail("Universum: alter Game-Einstieg ist noch sichtbar")
+    driver.find_element(By.ID, "uShuffle").click()
+    if urlparse(driver.current_url).path != "/universe/":
+        fail("Universum: Mischen veraendert unerwartet die Route")
+    assert_no_horizontal_overflow(driver, "Universum mobile")
+    assert_no_js_exceptions(driver, "Universum mobile")
 
     driver.set_window_size(1280, 800)
-    driver.get(urljoin(BASE_URL, "chaos/"))
-    wait(driver, lambda d: d.find_element(By.ID, "chaosView").is_displayed(), "Universum Desktop sichtbar")
-    dismiss_cookie_note(driver)
-    sky_label = driver.find_element(By.ID, "chaosSky").get_attribute("aria-label") or ""
+    driver.get(urljoin(BASE_URL, "universe/"))
+    wait(driver, lambda d: "Universum bereit" in d.find_element(By.ID, "uStatus").text, "Universum Desktop bereit")
+    canvas = driver.find_element(By.ID, "uCanvas")
+    sky_label = canvas.get_attribute("aria-label") or ""
     if "Maus bewegen" not in sky_label or "Doppelklick" not in sky_label:
         fail(f"Universum Desktop: neue Steuerungsbeschreibung fehlt: {sky_label!r}")
-    driver.execute_script(
-        "var c=document.getElementById('chaosSky'); var r=c.getBoundingClientRect();"
-        "c.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,cancelable:true,clientX:r.left+r.width*.82,clientY:r.top+r.height*.38,pointerId:41,pointerType:'mouse',buttons:0}));"
-        "c.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,clientX:r.left+r.width*.5,clientY:r.top+r.height*.5,pointerId:42,pointerType:'mouse',button:2,buttons:2}));"
-        "c.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,cancelable:true,clientX:r.left+r.width*.5,clientY:r.top+r.height*.5,pointerId:42,pointerType:'mouse',button:2,buttons:0}));"
-    )
-    if driver.find_elements(By.CSS_SELECTOR, ".modal-backdrop.open"):
-        fail("Universum Desktop: Rechtsklick hat einen Artikel geöffnet")
-    assert_no_js_exceptions(driver, "Universum Desktop Mouse-Look")
+    canvas.send_keys(Keys.ARROW_RIGHT)
+    assert_no_horizontal_overflow(driver, "Universum Desktop")
+    assert_no_js_exceptions(driver, "Universum Desktop")
 
     driver.get(urljoin(BASE_URL, "chaos/?game=zero"))
-    wait(driver, lambda d: d.execute_script("return !!window.D119SecretGames"), "Zero-G Runway am Direktlink geladen")
-    wait(
-        driver,
-        lambda d: d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-view='gate']").is_displayed(),
-        "Zero-G-Startscreen sichtbar",
-    )
-    username = driver.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-player-name]")
-    username.clear()
-    username.send_keys("CI_PLAYER")
-    driver.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-action='start']").click()
-    wait(
-        driver,
-        lambda d: d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-view='stage']").is_displayed(),
-        "Zero-G Runway startet",
-    )
-    wait(
-        driver,
-        lambda d: bool(d.find_elements(By.CSS_SELECTOR, ".d119-runway-canvas"))
-        and d.find_element(By.CSS_SELECTOR, ".d119-runway-canvas").is_displayed(),
-        "Zero-G Runway Canvas bereit",
-    )
-    canvas = driver.find_element(By.CSS_SELECTOR, ".d119-runway-canvas")
-    if canvas.value_of_css_property("touch-action") != "none":
-        fail("Universum: Zero-G-Canvas besitzt touch-action:none nicht")
-    if driver.find_element(By.CSS_SELECTOR, "[data-target]").text.strip() != "TOP":
-        fail("Zero-G Runway: erster Fashion-Slot ist nicht TOP")
-    if len(driver.find_elements(By.CSS_SELECTOR, ".d119-dock-slot")) != 4:
-        fail("Zero-G Runway: Look-Dock besitzt nicht vier Slots")
-
-    rect = canvas.rect
-    cx = rect["x"] + rect["width"] * 0.26
-    cy = rect["y"] + rect["height"] * 0.74
-    driver.execute_script(
-        "var c=document.querySelector('.d119-runway-canvas');"
-        "c.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,cancelable:true,clientX:arguments[0],clientY:arguments[1],pointerId:71,pointerType:'mouse',buttons:0}));"
-        "c.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,clientX:arguments[0]+30,clientY:arguments[1]-30,pointerId:72,pointerType:'touch'}));"
-        "c.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,cancelable:true,clientX:arguments[0]+50,clientY:arguments[1]-50,pointerId:72,pointerType:'touch'}));",
-        cx,
-        cy,
-    )
-    wait(
-        driver,
-        lambda d: int(d.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-hud='time']").text or "52") < 52,
-        "Zero-G Runway laeuft",
-    )
-    if driver.find_element(By.CSS_SELECTOR, "#d119SecretGames [data-hud='score']").text.strip() == "":
-        fail("Zero-G Runway: Score-HUD fehlt")
-    assert_no_horizontal_overflow(driver, "Universum Zero-G Runway")
-    assert_no_js_exceptions(driver, "Universum Zero-G Runway")
+    wait(driver, lambda d: urlparse(d.current_url).path == "/universe/", "Alter Game-Link leitet ins Universum")
+    if driver.find_elements(By.CSS_SELECTOR, "#d119SecretGames"):
+        fail("Universum: alter Game-Overlay ist wieder vorhanden")
 
 
 def test_baukasten(driver) -> None:
@@ -227,12 +144,24 @@ def test_baukasten(driver) -> None:
 def test_localized_direct_routes(driver) -> None:
     checks = [
         ("en/match/", "en", "swipe", "/en/"),
-        ("fr/chaos/", "fr", "chaos", "/fr/"),
+        ("fr/chaos/", "fr", "universe", "/fr/"),
         ("en/baukasten/", "en", "outfit", "/en/"),
     ]
     driver.set_window_size(1024, 768)
     for path, lang, mode, prefix in checks:
         driver.get(urljoin(BASE_URL, path))
+        if mode == "universe":
+            wait(driver, lambda d: urlparse(d.current_url).path == "/fr/universe/", "FR-Universum-Weiterleitung")
+            wait(driver, lambda d: "Univers prêt" in d.find_element(By.ID, "uStatus").text, "FR-Universum bereit")
+            if not driver.find_element(By.ID, "uCanvas").is_displayed():
+                fail("FR-Universum: Canvas ist nicht sichtbar")
+            if not driver.find_elements(By.CSS_SELECTOR, '.u-mode[aria-current="page"][href="/fr/universe/"]'):
+                fail("FR-Universum: aktive Navigation fehlt")
+            if driver.find_element(By.TAG_NAME, "html").get_attribute("lang") != lang:
+                fail("FR-Universum: HTML-Sprache ist nicht fr")
+            assert_no_horizontal_overflow(driver, f"/{path}")
+            assert_no_js_exceptions(driver, f"/{path}")
+            continue
         target_id = {"swipe": "swipeView", "chaos": "chaosView", "outfit": "outfitView"}[mode]
         wait(driver, lambda d, target_id=target_id: d.find_element(By.ID, target_id).is_displayed(), f"/{path} Modus sichtbar")
         dismiss_cookie_note(driver)
@@ -255,7 +184,7 @@ def run_case(test_fn) -> None:
 def main() -> None:
     for test_fn in (test_match, test_chaos, test_baukasten, test_localized_direct_routes):
         run_case(test_fn)
-    print("Protected-Mode Browser-Smoke: OK — Match, Universe Desktop-Mouse-Look, Zero-G Runway + iOS selection guard und Baukasten in echtem Chromium getestet.")
+    print("Protected-Mode Browser-Smoke: OK — Match, Universum inklusive alter Weiterleitungen und Baukasten in echtem Chromium getestet.")
 
 
 if __name__ == "__main__":
