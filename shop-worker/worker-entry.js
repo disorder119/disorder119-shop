@@ -1,4 +1,4 @@
-import shopWorker from "./worker.js";
+import shopWorker, { reconcilePurchasePayments } from "./worker.js";
 import {
   handleAdminRequest,
   enrichRentalReservation,
@@ -415,6 +415,7 @@ export default {
   async scheduled(event, env, ctx) {
     const scheduledTime = Number(event?.scheduledTime || Date.now());
     const reqId = `cron-${scheduledTime}`;
+    await runBackground(ctx, reconcilePurchasePayments(env, reqId), "purchase_reconciliation_failed", reqId);
     await runBackground(
       ctx,
       syncOperationsAlerts(env, {

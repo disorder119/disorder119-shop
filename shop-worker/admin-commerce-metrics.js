@@ -154,7 +154,7 @@ export function mergeCustomerValue(salesRows = [], rentalRows = []) {
     includeDate(row, source.lastCommerceAt);
   }
   for (const row of customers.values()) {
-    row.netCapturedSalesCents = Math.max(0, row.capturedSalesCents - row.salesRefundsCents);
+    row.netCapturedSalesCents = row.capturedSalesCents - row.salesRefundsCents;
     row.recordedCommerceValueCents = row.netCapturedSalesCents + row.rentalContractValueCents;
   }
   return Array.from(customers.values()).sort((a, b) =>
@@ -190,7 +190,9 @@ async function buildCommerceMetrics(env, url) {
     db.prepare(`WITH period_paid AS (
         SELECT order_id, SUM(amount_cents) AS captured_cents
         FROM payments
-        WHERE status='COMPLETED' AND COALESCE(updated_at,created_at)>=?
+        WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND provider_payment_id IS NOT NULL
+          AND COALESCE((SELECT COALESCE(e.occurred_at,e.observed_at) FROM tax_cash_events e
+            WHERE e.payment_id=payments.id AND e.kind='capture' ORDER BY e.rowid LIMIT 1),updated_at,created_at)>=?
         GROUP BY order_id
       ), period_refunds AS (
         SELECT order_id, SUM(amount_cents) AS refunded_cents
@@ -208,7 +210,9 @@ async function buildCommerceMetrics(env, url) {
       WHERE status='COMPLETED' AND rental_id IS NOT NULL AND COALESCE(updated_at,created_at)>=?`).bind(cutoffIso),
     db.prepare(`WITH paid_orders AS (
         SELECT DISTINCT order_id FROM payments
-        WHERE status='COMPLETED' AND COALESCE(updated_at,created_at)>=?
+        WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND provider_payment_id IS NOT NULL
+          AND COALESCE((SELECT COALESCE(e.occurred_at,e.observed_at) FROM tax_cash_events e
+            WHERE e.payment_id=payments.id AND e.kind='capture' ORDER BY e.rowid LIMIT 1),updated_at,created_at)>=?
       )
       SELECT COUNT(*) AS paidOrders,
         SUM(CASE WHEN EXISTS (SELECT 1 FROM returns r WHERE r.order_id=paid_orders.order_id) THEN 1 ELSE 0 END) AS ordersWithReturn
@@ -228,7 +232,9 @@ async function buildCommerceMetrics(env, url) {
 
   const salesTopRows = await db.prepare(`WITH paid_orders AS (
       SELECT DISTINCT order_id FROM payments
-      WHERE status='COMPLETED' AND COALESCE(updated_at,created_at)>=?
+      WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND provider_payment_id IS NOT NULL
+        AND COALESCE((SELECT COALESCE(e.occurred_at,e.observed_at) FROM tax_cash_events e
+          WHERE e.payment_id=payments.id AND e.kind='capture' ORDER BY e.rowid LIMIT 1),updated_at,created_at)>=?
     )
     SELECT oi.item_id AS itemId,MAX(oi.article_no) AS articleNo,MAX(oi.title_snapshot) AS title,
       COUNT(*) AS count,COALESCE(SUM(oi.unit_price_cents),0) AS valueCents
@@ -243,7 +249,7 @@ async function buildCommerceMetrics(env, url) {
 
   const salesCustomerRows = await db.prepare(`WITH paid AS (
       SELECT order_id,SUM(amount_cents) AS captured_cents
-      FROM payments WHERE status='COMPLETED' GROUP BY order_id
+      FROM payments WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND provider_payment_id IS NOT NULL GROUP BY order_id
     ), refunded AS (
       SELECT order_id,SUM(amount_cents) AS refunded_cents
       FROM refunds WHERE status='COMPLETED' AND order_id IS NOT NULL GROUP BY order_id
@@ -286,7 +292,7 @@ async function buildCommerceMetrics(env, url) {
       paidOrders: number(period.paidOrders),
       capturedSalesCents,
       salesRefundsCents,
-      netCapturedSalesCents: Math.max(0, capturedSalesCents - salesRefundsCents),
+      netCapturedSalesCents: capturedSalesCents - salesRefundsCents,
       refundToCapturedRatio: ratio(salesRefundsCents, capturedSalesCents),
       ordersWithReturn: number(returns.ordersWithReturn),
       paidOrderReturnCaseRate: ratio(returns.ordersWithReturn, returns.paidOrders),

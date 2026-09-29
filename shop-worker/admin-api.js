@@ -14,6 +14,10 @@ const ADMIN_ORIGINS = Object.freeze([
   "http://127.0.0.1:8765",
 ]);
 
+const CAPTURE_TIME_SQL = `COALESCE((SELECT COALESCE(e.occurred_at,e.observed_at)
+  FROM tax_cash_events e WHERE e.payment_id=payments.id AND e.kind='capture'
+  ORDER BY e.rowid LIMIT 1),payments.updated_at,payments.created_at)`;
+
 class AdminError extends Error {
   constructor(code, status = 400) {
     super(code);
@@ -119,6 +123,8 @@ export function clampAnalyticsDays(value) {
 
 export function orderNextStatuses(status) {
   const current = String(status || "").toUpperCase();
+  // PAID darf ausschliesslich ein verifizierter Zahlungsabschluss setzen.
+  if (current === "PAYMENT_PENDING" || current === "RESERVED") return ["CANCELLED"];
   return ORDER_STATUSES.filter(next => next !== current && canTransitionOrder(current, next));
 }
 
@@ -198,7 +204,7 @@ async function getOverview(env, url) {
       SUM(CASE WHEN status IN ('CREATED','PENDING','AUTHORIZED') THEN 1 ELSE 0 END) AS open,
       SUM(CASE WHEN status='FAILED' THEN 1 ELSE 0 END) AS failed,
       SUM(CASE WHEN status IN ('REFUNDED','PARTIALLY_REFUNDED') THEN 1 ELSE 0 END) AS refunded,
-      COALESCE(SUM(CASE WHEN status='COMPLETED' THEN amount_cents ELSE 0 END),0) AS capturedCents
+      COALESCE(SUM(CASE WHEN status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND provider_payment_id IS NOT NULL THEN amount_cents ELSE 0 END),0) AS capturedCents
       FROM payments`),
     db.prepare(`SELECT COUNT(*) AS total,
       SUM(CASE WHEN status='RESERVED' THEN 1 ELSE 0 END) AS reserved,
@@ -234,13 +240,16 @@ async function getOverview(env, url) {
       (SELECT COUNT(*) FROM idempotency_keys WHERE expires_at <= datetime('now')) AS expiredIdempotencyKeys`),
   ]);
 
-  const ordersDaily = await db.prepare(`SELECT substr(created_at,1,10) AS day, COUNT(*) AS orders,
-    COALESCE(SUM(total_cents),0) AS orderValueCents
-    FROM commerce_orders WHERE created_at>=? GROUP BY substr(created_at,1,10) ORDER BY day`).bind(cutoffIso).all();
-  const paymentsDaily = await db.prepare(`SELECT substr(COALESCE(updated_at,created_at),1,10) AS day,
+  const ordersDaily = await db.prepare(`SELECT substr(o.created_at,1,10) AS day, COUNT(*) AS orders,
+    COALESCE(SUM(o.total_cents),0) AS orderValueCents
+    FROM commerce_orders o WHERE o.created_at>=? AND EXISTS (SELECT 1 FROM payments p
+      WHERE p.order_id=o.id AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED')
+        AND p.provider_payment_id IS NOT NULL)
+    GROUP BY substr(o.created_at,1,10) ORDER BY day`).bind(cutoffIso).all();
+  const paymentsDaily = await db.prepare(`SELECT substr(${CAPTURE_TIME_SQL},1,10) AS day,
     COUNT(*) AS payments, COALESCE(SUM(amount_cents),0) AS capturedCents
-    FROM payments WHERE status='COMPLETED' AND COALESCE(updated_at,created_at)>=?
-    GROUP BY substr(COALESCE(updated_at,created_at),1,10) ORDER BY day`).bind(cutoffIso).all();
+    FROM payments WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND provider_payment_id IS NOT NULL AND ${CAPTURE_TIME_SQL}>=?
+    GROUP BY substr(${CAPTURE_TIME_SQL},1,10) ORDER BY day`).bind(cutoffIso).all();
   const rentalsDaily = await db.prepare(`SELECT substr(created_at,1,10) AS day, COUNT(*) AS rentals,
     COALESCE(SUM(total_price_cents),0) AS quotedRentalCents
     FROM rental_reservations WHERE created_at>=? GROUP BY substr(created_at,1,10) ORDER BY day`).bind(cutoffIso).all();
@@ -257,7 +266,9 @@ async function getOverview(env, url) {
   const topPurchased = await db.prepare(`SELECT oi.item_id AS itemId, oi.article_no AS articleNo,
     MAX(oi.title_snapshot) AS title, COUNT(*) AS orders, COALESCE(SUM(oi.unit_price_cents),0) AS valueCents
     FROM order_items oi JOIN commerce_orders o ON o.id=oi.order_id
-    WHERE o.status NOT IN ('CANCELLED') GROUP BY oi.item_id,oi.article_no ORDER BY valueCents DESC LIMIT 8`).all();
+    WHERE EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id
+      AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND p.provider_payment_id IS NOT NULL)
+    GROUP BY oi.item_id,oi.article_no ORDER BY valueCents DESC LIMIT 8`).all();
   const topRentedRows = await db.prepare(`SELECT i.item_id AS itemId, i.article_no AS articleNo,
     COUNT(*) AS requests, COALESCE(SUM(rr.total_price_cents),0) AS quotedRentalCents
     FROM rental_reservations rr JOIN inventory i ON i.id=rr.inventory_id
@@ -374,23 +385,41 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN") {
 
   if (newStatus) {
     if (!ORDER_STATUSES.includes(newStatus) || !canTransitionOrder(order.status, newStatus)) throw new AdminError("INVALID_ORDER_STATUS_TRANSITION", 409);
+    if (newStatus === "PAID") throw new AdminError("PAYMENT_PROVIDER_REQUIRED", 409);
     if (newStatus === "REFUNDED") {
       const refunded = await db.prepare("SELECT COALESCE(SUM(amount_cents),0) AS cents FROM refunds WHERE order_id=? AND status='COMPLETED'").bind(order.id).first();
       if (Number(refunded?.cents || 0) < Number(order.total_cents || 0)) throw new AdminError("REFUND_NOT_COMPLETED", 409);
     }
     const statements = [
-      db.prepare("UPDATE commerce_orders SET status=?,updated_at=? WHERE id=? AND status=?").bind(newStatus, now, order.id, order.status),
+      db.prepare(`UPDATE commerce_orders SET status=?,updated_at=? WHERE id=? AND status=?
+        AND (? != 'CANCELLED' OR NOT EXISTS (SELECT 1 FROM payments p WHERE p.order_id=commerce_orders.id
+          AND p.status IN ('PENDING','AUTHORIZED','COMPLETED','REFUNDED','PARTIALLY_REFUNDED')))`)
+        .bind(newStatus, now, order.id, order.status, newStatus),
     ];
     if (newStatus === "CANCELLED") {
+      statements.push(db.prepare(`UPDATE reservations SET status='CANCELLED',updated_at=?
+        WHERE status='RESERVED' AND id IN (SELECT r.id FROM reservations r
+          JOIN order_items oi ON oi.inventory_id=r.inventory_id
+          JOIN commerce_orders o ON o.id=oi.order_id
+          WHERE o.id=? AND o.status='CANCELLED'
+            AND (r.id=o.reservation_id OR r.idempotency_key=o.idempotency_key || '#' || oi.item_id))`)
+        .bind(now, order.id));
+      statements.push(db.prepare(`UPDATE payments SET status='CANCELLED',updated_at=?
+        WHERE order_id=? AND status='CREATED'
+        AND EXISTS (SELECT 1 FROM commerce_orders o WHERE o.id=payments.order_id AND o.status='CANCELLED')`)
+        .bind(now, order.id));
       statements.push(db.prepare(`UPDATE inventory SET status='CANCELLED',updated_at=?,version=version+1
-        WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status IN ('RESERVED','PAYMENT_PENDING')`).bind(now, order.id));
+        WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status IN ('RESERVED','PAYMENT_PENDING')
+        AND EXISTS (SELECT 1 FROM commerce_orders WHERE id=? AND status='CANCELLED')`).bind(now, order.id, order.id));
       statements.push(db.prepare(`UPDATE inventory SET status='AVAILABLE',updated_at=?,version=version+1
-        WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status='CANCELLED'`).bind(now, order.id));
+        WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status='CANCELLED'
+        AND catalog_status!='SOLD' AND EXISTS (SELECT 1 FROM commerce_orders WHERE id=? AND status='CANCELLED')`).bind(now, order.id, order.id));
     } else {
       statements.push(db.prepare(`UPDATE inventory SET status=?,updated_at=?,version=version+1
         WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?)`).bind(newStatus, now, order.id));
     }
-    await db.batch(statements);
+    const changed = await db.batch(statements);
+    if (!changed[0]?.meta?.changes) throw new AdminError("ORDER_STATE_CHANGED", 409);
     await auditAdmin(env, "order", order.id, `ORDER_${newStatus}`, reqId, { from: order.status, to: newStatus }, actorType);
   }
 
@@ -564,7 +593,9 @@ async function getCustomers(env, url) {
   const count = await db.prepare(`SELECT COUNT(*) AS total FROM customers c ${where}`).bind(...binds).first();
   const rows = await db.prepare(`SELECT c.id,c.email_normalized,c.email_verified,c.status,c.created_at,c.updated_at,
       (SELECT COUNT(*) FROM commerce_orders o WHERE o.customer_id=c.id) AS orderCount,
-      (SELECT COALESCE(SUM(total_cents),0) FROM commerce_orders o WHERE o.customer_id=c.id AND o.status NOT IN ('CANCELLED')) AS orderValueCents,
+      (SELECT COALESCE(SUM(total_cents),0) FROM commerce_orders o WHERE o.customer_id=c.id
+        AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id
+          AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND p.provider_payment_id IS NOT NULL)) AS orderValueCents,
       (SELECT COUNT(*) FROM rental_reservations rr WHERE rr.customer_id=c.id) AS rentalCount
     FROM customers c ${where} ORDER BY c.created_at DESC LIMIT ? OFFSET ?`).bind(...binds, limit, offset).all();
   return { total: Number(count?.total || 0), limit, offset, customers: rows.results || [] };

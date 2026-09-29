@@ -271,12 +271,46 @@ async function ensureInventory(env, item) {
   return db.prepare("SELECT * FROM inventory WHERE item_id=?").bind(Number(item.id)).first();
 }
 
+export async function expirePurchaseReservations(env, now = new Date().toISOString()) {
+  const db = requireDb(env);
+  await db.batch([
+    db.prepare(`UPDATE commerce_orders SET status='CANCELLED',updated_at=?
+      WHERE status='PAYMENT_PENDING' AND id IN (
+        SELECT oi.order_id FROM order_items oi JOIN commerce_orders o ON o.id=oi.order_id
+        JOIN reservations r ON r.inventory_id=oi.inventory_id
+          AND (r.id=o.reservation_id OR r.idempotency_key=o.idempotency_key || '#' || oi.item_id)
+        WHERE r.status='RESERVED' AND r.expires_at<=?
+      ) AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.order_id=commerce_orders.id AND p.status IN ('PENDING','AUTHORIZED','COMPLETED','REFUNDED','PARTIALLY_REFUNDED'))`)
+      .bind(now, now),
+    db.prepare(`UPDATE reservations SET status='EXPIRED',updated_at=? WHERE status='RESERVED'
+      AND (expires_at<=? OR EXISTS (SELECT 1 FROM order_items oi JOIN commerce_orders o ON o.id=oi.order_id
+        WHERE oi.inventory_id=reservations.inventory_id AND o.status='CANCELLED'
+          AND (reservations.id=o.reservation_id OR reservations.idempotency_key=o.idempotency_key || '#' || oi.item_id)))
+      AND NOT EXISTS (SELECT 1 FROM payments p JOIN commerce_orders o ON o.id=p.order_id
+        JOIN order_items oi ON oi.order_id=o.id WHERE oi.inventory_id=reservations.inventory_id
+        AND (reservations.id=o.reservation_id OR reservations.idempotency_key=o.idempotency_key || '#' || oi.item_id)
+        AND p.status IN ('PENDING','AUTHORIZED','COMPLETED','REFUNDED','PARTIALLY_REFUNDED'))`)
+      .bind(now, now),
+    db.prepare(`UPDATE payments SET status='CANCELLED',updated_at=? WHERE status='CREATED'
+      AND order_id IN (SELECT id FROM commerce_orders WHERE status='CANCELLED')`).bind(now),
+    db.prepare(`UPDATE inventory SET status='CANCELLED',updated_at=?,version=version+1
+      WHERE status='PAYMENT_PENDING' AND catalog_status!='SOLD'
+      AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.inventory_id=inventory.id AND r.status='RESERVED')
+      AND NOT EXISTS (SELECT 1 FROM rental_reservations rr WHERE rr.inventory_id=inventory.id AND rr.status IN ('RESERVED','PAYMENT_PENDING','CONFIRMED','ACTIVE','RETURN_DUE'))`)
+      .bind(now),
+    db.prepare(`UPDATE inventory SET status='AVAILABLE',updated_at=?,version=version+1
+      WHERE status IN ('RESERVED','CANCELLED') AND catalog_status!='SOLD'
+      AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.inventory_id=inventory.id AND r.status='RESERVED')
+      AND NOT EXISTS (SELECT 1 FROM rental_reservations rr WHERE rr.inventory_id=inventory.id AND rr.status IN ('RESERVED','PAYMENT_PENDING','CONFIRMED','ACTIVE','RETURN_DUE'))`)
+      .bind(now),
+  ]);
+}
+
 async function cleanupExpired(env, inventoryId) {
   const db = requireDb(env);
   const now = new Date().toISOString();
+  await expirePurchaseReservations(env, now);
   await db.batch([
-    db.prepare("UPDATE reservations SET status='EXPIRED', updated_at=? WHERE inventory_id=? AND status='RESERVED' AND expires_at<=?")
-      .bind(now, inventoryId, now),
     db.prepare("UPDATE rental_reservations SET status='CANCELLED', updated_at=? WHERE inventory_id=? AND status='RESERVED' AND expires_at IS NOT NULL AND expires_at<=?")
       .bind(now, inventoryId, now),
     db.prepare(`DELETE FROM rental_days WHERE rental_reservation_id IN
@@ -617,12 +651,12 @@ async function createOrderRecords(env, items, centsList, versand, reservations, 
   return { orderId, orderNumber, paymentId };
 }
 
-async function completePayment(env, providerOrderId, capture, reqId) {
+export async function completePayment(env, providerOrderId, capture, reqId) {
   const db = requireDb(env);
   // Verglichen wird gegen den Zahlbetrag der Bestellung (Ware + Versand, nach
   // einem eingeloesten Gutschein der reduzierte Betrag) - nicht mehr gegen den
   // reinen Artikelpreis.
-  const payment = await db.prepare(`SELECT p.*,o.id AS commerce_order_id,o.order_number,o.reservation_id,o.total_cents
+  const payment = await db.prepare(`SELECT p.*,o.id AS commerce_order_id,o.order_number,o.reservation_id,o.total_cents,o.status AS order_status
     FROM payments p JOIN commerce_orders o ON o.id=p.order_id
     WHERE p.provider='PAYPAL' AND p.provider_order_id=?`).bind(providerOrderId).first();
   if (!payment) throw new PublicError("ORDER_NOT_FOUND", 404);
@@ -634,21 +668,39 @@ async function completePayment(env, providerOrderId, capture, reqId) {
   const providerPayment = capturePayment(capture);
   const now = new Date().toISOString();
   const evidence=await captureStatements(db,payment,providerPayment,now);
-  if (['COMPLETED','REFUNDED','PARTIALLY_REFUNDED'].includes(payment.status)) { await db.batch(evidence); return result; }
-  await db.batch([
+  if (['COMPLETED','REFUNDED','PARTIALLY_REFUNDED'].includes(payment.status)) {
+    await db.batch(evidence);
+    if (payment.order_status === 'CANCELLED') throw new PublicError('PAYMENT_RECONCILIATION_REQUIRED', 409);
+    return result;
+  }
+  const committed = await db.batch([
     ...evidence,
-    db.prepare("UPDATE payments SET provider_payment_id=?,status='COMPLETED',updated_at=? WHERE id=? AND status!='COMPLETED'")
-      .bind(providerPayment.id, now, payment.id),
-    db.prepare("UPDATE commerce_orders SET status='PAID',updated_at=? WHERE id=? AND status IN ('PAYMENT_PENDING','RESERVED')")
+    db.prepare(`UPDATE payments SET provider_payment_id=?,status='COMPLETED',updated_at=?
+      WHERE id=? AND status IN ('CREATED','PENDING')
+      AND EXISTS (SELECT 1 FROM commerce_orders o WHERE o.id=payments.order_id AND o.status='PAYMENT_PENDING')
+      AND (SELECT COUNT(*) FROM order_items WHERE order_id=payments.order_id)>0
+      AND (SELECT COUNT(*) FROM order_items oi JOIN inventory i ON i.id=oi.inventory_id
+        JOIN commerce_orders o ON o.id=oi.order_id
+        JOIN reservations r ON r.inventory_id=oi.inventory_id AND
+          (r.id=o.reservation_id OR r.idempotency_key=o.idempotency_key || '#' || oi.item_id)
+        WHERE oi.order_id=payments.order_id AND i.status='PAYMENT_PENDING' AND r.status='RESERVED'
+          AND (payments.status='PENDING' OR r.expires_at>?)) =
+        (SELECT COUNT(*) FROM order_items WHERE order_id=payments.order_id)`)
+      .bind(providerPayment.id, now, payment.id, now),
+    db.prepare(`UPDATE commerce_orders SET status='PAID',updated_at=? WHERE id=? AND status='PAYMENT_PENDING'
+      AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id=commerce_orders.id AND p.status='COMPLETED')`)
       .bind(now, payment.commerce_order_id),
     // Genau die Reservierungen dieser Bestellung: Schluessel "<Bestellung>#<Artikel>".
     db.prepare(`UPDATE reservations SET status='CONSUMED',updated_at=? WHERE status='RESERVED' AND (id=? OR idempotency_key IN
-      (SELECT o.idempotency_key || '#' || oi.item_id FROM order_items oi JOIN commerce_orders o ON o.id=oi.order_id WHERE oi.order_id=?))`)
-      .bind(now, payment.reservation_id, payment.commerce_order_id),
+      (SELECT o.idempotency_key || '#' || oi.item_id FROM order_items oi JOIN commerce_orders o ON o.id=oi.order_id WHERE oi.order_id=?))
+      AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id=? AND p.status='COMPLETED')`)
+      .bind(now, payment.reservation_id, payment.commerce_order_id, payment.commerce_order_id),
     db.prepare(`UPDATE inventory SET status='PAID',updated_at=?,version=version+1
-      WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status IN ('RESERVED','PAYMENT_PENDING')`)
-      .bind(now, payment.commerce_order_id),
+      WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status='PAYMENT_PENDING'
+      AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id=? AND p.status='COMPLETED')`)
+      .bind(now, payment.commerce_order_id, payment.commerce_order_id),
   ]);
+  if (!committed[evidence.length]?.meta?.changes) throw new PublicError("PAYMENT_RECONCILIATION_REQUIRED", 409);
   await audit(env, "payment", payment.id, "PAYMENT_COMPLETED", reqId, { orderId: payment.commerce_order_id, itemId: itemIds[0], itemIds, provider: "PAYPAL" }, "PAYMENT_PROVIDER");
   return result;
 }
@@ -665,6 +717,41 @@ async function markAllSold(env, completed, reqId) {
       console.error(JSON.stringify({ level: "error", event: "catalog_sync_failed", requestId: reqId, orderId: completed.commerce_order_id, itemId }));
     }
   }
+}
+
+// Ein unterbrochener Capture-Request bleibt zunaechst gesperrt. Erst die
+// PayPal-Abfrage entscheidet, ob er bezahlt wurde oder nach mehreren Stunden
+// wirklich unbezahlt ist. Ein Providerfehler gibt nie Bestand frei.
+export async function reconcilePurchasePayments(env, reqId = "purchase-reconcile") {
+  const db = requireDb(env);
+  const now = Date.now();
+  const candidates = (await db.prepare(`SELECT provider_order_id,COALESCE(updated_at,created_at) AS started_at FROM payments
+    WHERE provider='PAYPAL' AND status='PENDING' AND COALESCE(updated_at,created_at)<?
+    ORDER BY COALESCE(updated_at,created_at) LIMIT 20`).bind(new Date(now - 2 * 60 * 1000).toISOString()).all()).results || [];
+  if (!candidates.length) { await expirePurchaseReservations(env); return; }
+  const token = await paypalAccessToken(env);
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(`${paypalApiBase(env)}/v2/checkout/orders/${encodeURIComponent(candidate.provider_order_id)}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+      if (!response.ok) throw new Error(`paypal_reconcile_${response.status}`);
+      const providerOrder = await response.json();
+      if (providerOrder.status === "COMPLETED") {
+        const completed = await completePayment(env, candidate.provider_order_id, providerOrder, reqId);
+        await markAllSold(env, completed, reqId);
+      } else if (["CREATED", "APPROVED", "VOIDED"].includes(providerOrder.status)
+          && Date.parse(candidate.started_at) <= now - 4 * 60 * 60 * 1000) {
+        await db.prepare(`UPDATE payments SET status='FAILED',updated_at=?
+          WHERE provider='PAYPAL' AND provider_order_id=? AND status='PENDING' AND COALESCE(updated_at,created_at)=?`)
+          .bind(new Date().toISOString(), candidate.provider_order_id, candidate.started_at).run();
+      }
+    } catch (error) {
+      console.error(JSON.stringify({ level: "error", event: "purchase_reconciliation_failed", requestId: reqId,
+        code: safeText(error?.message, 80) }));
+    }
+  }
+  await expirePurchaseReservations(env);
 }
 
 async function recordWebhookEvent(env, event, verified) {
@@ -819,27 +906,35 @@ export default {
         const providerOrderId = safeText(body.orderId, 128);
         if (!providerOrderId) throw new PublicError("ORDER_ID_REQUIRED", 400);
         const db = requireDb(env);
-        const payment = await db.prepare(`SELECT p.*,o.reservation_id FROM payments p
+        const payment = await db.prepare(`SELECT p.*,o.reservation_id,o.status AS order_status FROM payments p
           JOIN commerce_orders o ON o.id=p.order_id
           WHERE p.provider='PAYPAL' AND p.provider_order_id=?`).bind(providerOrderId).first();
         if (!payment) throw new PublicError("ORDER_NOT_FOUND", 404);
-        if (payment.status === "COMPLETED") {
+        if (payment.status === "COMPLETED" && payment.order_status !== "CANCELLED") {
           const response = { ok: true, orderId: payment.order_id };
           await finishIdempotency(env, "capture-order", key, 200, response, payment.order_id);
           return json(response, 200, origin);
         }
-        // Jedes Stueck muss noch fuer genau diese Bestellung reserviert sein -
-        // sonst koennte ein inzwischen anders verkauftes Teil bezahlt werden.
-        const reservierungen = (await db.prepare(`SELECT oi.item_id,r.status,r.expires_at FROM order_items oi
+        if (payment.status === "PENDING") throw new PublicError("PAYMENT_CONFIRMATION_PENDING", 409);
+        // Der atomare Claim sperrt Ablauf und Admin-Storno vor dem externen
+        // PayPal-Call. Nur alle noch gueltigen, eigenen Reservierungen zaehlen.
+        const now = new Date().toISOString();
+        const claim = await db.prepare(`UPDATE payments SET status='PENDING',updated_at=?
+          WHERE id=? AND status='CREATED' AND EXISTS (
+            SELECT 1 FROM commerce_orders o WHERE o.id=payments.order_id AND o.status='PAYMENT_PENDING')
+          AND (SELECT COUNT(*) FROM order_items WHERE order_id=payments.order_id)>0
+          AND (SELECT COUNT(*) FROM order_items oi JOIN inventory i ON i.id=oi.inventory_id
             JOIN commerce_orders o ON o.id=oi.order_id
-            LEFT JOIN reservations r ON r.idempotency_key=o.idempotency_key || '#' || oi.item_id
-              OR (r.id=o.reservation_id AND r.inventory_id=oi.inventory_id)
-            WHERE oi.order_id=?`).bind(payment.order_id).all()).results || [];
-        const jetzt = new Date().toISOString();
-        if (!reservierungen.length || reservierungen.some(r => r.status !== "RESERVED" || !r.expires_at || r.expires_at <= jetzt)) {
-          throw new PublicError("RESERVATION_EXPIRED", 409);
-        }
-        const capture = await capturePaypalOrder(env, providerOrderId, key);
+            JOIN reservations r ON r.inventory_id=oi.inventory_id AND
+              (r.id=o.reservation_id OR r.idempotency_key=o.idempotency_key || '#' || oi.item_id)
+            WHERE oi.order_id=payments.order_id AND i.status='PAYMENT_PENDING'
+              AND r.status='RESERVED' AND r.expires_at>?) =
+            (SELECT COUNT(*) FROM order_items WHERE order_id=payments.order_id)`)
+          .bind(now, payment.id, now).run();
+        if (!claim.meta?.changes) throw new PublicError("RESERVATION_EXPIRED", 409);
+        // Dieser Schluessel gehoert zur PayPal-Bestellung, nicht zum Browser-
+        // Retry. Auch nach einem Timeout kann PayPal nur einmal abbuchen.
+        const capture = await capturePaypalOrder(env, providerOrderId, `capture:${payment.id}`);
         const completed = await completePayment(env, providerOrderId, capture, reqId);
         await markAllSold(env, completed, reqId);
         const response = { ok: true, orderId: completed.commerce_order_id, orderNumber: completed.order_number };

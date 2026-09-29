@@ -27,7 +27,7 @@ test("analytics period stays within dashboard limits", () => {
 });
 
 test("order next statuses use the same commerce state machine", () => {
-  assert.deepEqual(orderNextStatuses("PAYMENT_PENDING").sort(), ["CANCELLED", "PAID"].sort());
+  assert.deepEqual(orderNextStatuses("PAYMENT_PENDING"), ["CANCELLED"]);
   assert.deepEqual(orderNextStatuses("PAID").sort(), ["PREPARING", "REFUNDED"].sort());
   assert.deepEqual(orderNextStatuses("SHIPPED").sort(), ["DELIVERED", "RETURN_REQUESTED"].sort());
   assert.deepEqual(orderNextStatuses("CANCELLED"), []);

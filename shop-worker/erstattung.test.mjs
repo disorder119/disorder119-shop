@@ -19,6 +19,7 @@ function d1() {
   for (const file of files) raw.exec(fs.readFileSync(file, "utf8"));
   const arg = v => (v === undefined ? null : typeof v === "boolean" ? Number(v) : v);
   const statement = (sql, args = []) => ({
+    sql,
     bind: (...next) => statement(sql, next.map(arg)),
     first: async () => { const row = raw.prepare(sql).get(...args); return row ? { ...row } : null; },
     all: async () => ({ results: raw.prepare(sql).all(...args).map(row => ({ ...row })) }),
@@ -30,7 +31,7 @@ function d1() {
     prepare: sql => statement(sql),
     batch: async statements => {
       raw.exec("BEGIN");
-      try { const out = []; for (const s of statements) out.push(s.all ? await s.all() : s.runSync()); raw.exec("COMMIT"); return out; }
+      try { const out = []; for (const s of statements) out.push(/^\s*(SELECT|WITH|PRAGMA)\b/i.test(s.sql) ? await s.all() : await s.run()); raw.exec("COMMIT"); return out; }
       catch (err) { raw.exec("ROLLBACK"); throw err; }
     },
   };
