@@ -142,6 +142,23 @@ test("PayPal lehnt ab: Fehler sichtbar, erneuter Versuch mit derselben Request-I
   }
 });
 
+test("Zu wenig PayPal-Deckung liefert auch an alte Admin-Versionen einen klaren Fehlercode", async () => {
+  const db = d1();
+  bestellungAnlegen(db, { total: 560 });
+  const pp = paypal({ fehler: { status: 422, body: { name: "UNPROCESSABLE_ENTITY",
+    debug_id: "funding-debug", details: [{ issue: "REFUND_FAILED_INSUFFICIENT_FUNDS" }] } } });
+  try {
+    const res = await erstatten(env(db));
+    const data = await res.json();
+    assert.equal(res.status, 502);
+    assert.equal(data.error, "PAYPAL_GUTHABEN_NICHT_AUSREICHEND");
+    assert.equal(data.detail.grund, "REFUND_FAILED_INSUFFICIENT_FUNDS");
+    assert.equal(data.detail.debugId, "funding-debug");
+    assert.equal(db.raw.prepare("SELECT status FROM commerce_orders").get().status, "PAID");
+    assert.equal(db.raw.prepare("SELECT status FROM refunds").get().status, "FAILED");
+  } finally { pp.zurueck(); }
+});
+
 test("Abweichender Capture-Betrag blockiert Erstattung vor dem PayPal-Aufruf", async () => {
   const db = d1();
   bestellungAnlegen(db);
