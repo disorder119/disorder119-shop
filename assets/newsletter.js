@@ -199,6 +199,7 @@
 
   function stueckeRahmen() {
     var streifen = el("div", "d119-nl__stuecke");
+    streifen.setAttribute("role", "group");
     streifen.setAttribute("aria-label", t.neu);
     for (var i = 0; i < 4; i++) streifen.appendChild(el("span", "d119-nl__stueck d119-nl__stueck--leer"));
     return streifen;
