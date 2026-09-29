@@ -241,7 +241,7 @@ test("create-order: chosen shipping goes into PayPal and the order, tampering is
     const req = new Request("https://api.disorder119.com/create-order", {
       method: "POST",
       headers: { Origin: SHOP, "Content-Type": "application/json", "Idempotency-Key": key },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ email: "kundin@example.com", ...body }),
     });
     const res = await shopWorker.fetch(req, env);
     return { status: res.status, data: await res.json() };
@@ -301,7 +301,7 @@ test("create-order falls back to the configured price when Packlink is down", as
     const req = new Request("https://api.disorder119.com/create-order", {
       method: "POST",
       headers: { Origin: SHOP, "Content-Type": "application/json", "Idempotency-Key": "k-ersatz-0000000001" },
-      body: JSON.stringify({ itemId: 9401, versand: "ersatz-L", versandPreisCents: PAKETE.L.ersatzCents }),
+      body: JSON.stringify({ itemId: 9401, email: "kundin@example.com", versand: "ersatz-L", versandPreisCents: PAKETE.L.ersatzCents }),
     });
     const res = await shopWorker.fetch(req, env);
     const data = await res.json();

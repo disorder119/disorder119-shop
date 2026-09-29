@@ -209,6 +209,24 @@
 .kasse-feld--nr { grid-column: span 2; }
 .kasse-feld--breit { grid-column: 1 / -1; }
 
+.kasse-konto {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 13px 14px;
+  border: 1px solid var(--rule-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: .82rem;
+  line-height: 1.45;
+  letter-spacing: normal;
+  text-transform: none;
+  cursor: pointer;
+}
+.kasse-konto input { width: 18px; height: 18px; flex: 0 0 auto; margin: 1px 0 0; accent-color: var(--text); }
+.kasse-applepay { margin-bottom: 10px; }
+.kasse-applepay apple-pay-button { display: block; width: 100%; height: 48px; }
+
 .kasse-feld input {
   font-family: inherit;
   font-size: 1rem;

@@ -13,6 +13,7 @@ import {
 import { branchHead, createCommit, fastForward, readRepoFile } from "./github-datei.js";
 import { VersandError, versandFuerBestellung, versandWahlStatement } from "./versand.js";
 import { captureStatements, recordVerifiedRefund } from './tax-evidence.js';
+import { normalizeEmail } from './customer-mail.js';
 
 const CONFIG = Object.freeze({
   githubOwner: "disorder119",
@@ -227,6 +228,18 @@ export function lieferadresseAus(roh) {
     && /^\d{5}$/.test(adresse.plz) && adresse.ort.length >= 2;
   if (!vollstaendig) throw new PublicError("ADRESSE_UNVOLLSTAENDIG", 422);
   return adresse;
+}
+
+export function checkoutKontaktAus(body) {
+  if (typeof body?.email !== "string" || body.email.length > 200 || /[\u0000-\u001f\u007f]/.test(body.email)) {
+    throw new PublicError("EMAIL_REQUIRED", 422);
+  }
+  const email = normalizeEmail(body?.email);
+  if (!email) throw new PublicError("EMAIL_REQUIRED", 422);
+  if (body?.createAccount !== undefined && typeof body.createAccount !== "boolean") {
+    throw new PublicError("ACCOUNT_CHOICE_INVALID", 422);
+  }
+  return { email, createAccount: body.createAccount === true };
 }
 
 // Vorschaubild des Titelfotos ("assets/img/<ordner>/thumbs/<n>.webp") fuer die
@@ -620,7 +633,7 @@ export async function markCatalogSold(env, itemId) {
   throw new Error("catalog_mark_sold_conflict");
 }
 
-async function createOrderRecords(env, items, centsList, versand, reservations, providerOrder, key, reqId, adresse = null) {
+async function createOrderRecords(env, items, centsList, versand, reservations, providerOrder, key, reqId, adresse = null, kontakt = null) {
   const db = requireDb(env);
   const orderId = crypto.randomUUID();
   const paymentId = crypto.randomUUID();
@@ -648,9 +661,9 @@ async function createOrderRecords(env, items, centsList, versand, reservations, 
     // Adresse aus der Kasse sofort sichern - PayPal ueberschreibt sie nach dem
     // Bezahlen mit denselben Angaben plus E-Mail (snapshotPaypalOrder).
     statements.push(db.prepare(`INSERT INTO order_contact_snapshots
-      (order_id,source_provider,recipient_name,address_line1,address_line2,postal_code,city,country_code,captured_at,updated_at)
-      VALUES (?,'CHECKOUT',?,?,?,?,?,'DE',?,?)`).bind(orderId, adresse.name, `${adresse.strasse} ${adresse.hausnummer}`,
-      adresse.zusatz || null, adresse.plz, adresse.ort, now, now));
+      (order_id,source_provider,email,account_requested,recipient_name,address_line1,address_line2,postal_code,city,country_code,captured_at,updated_at)
+      VALUES (?,'CHECKOUT',?,?,?,?,?,?,?,'DE',?,?)`).bind(orderId, kontakt.email, kontakt.createAccount ? 1 : 0,
+      adresse.name, `${adresse.strasse} ${adresse.hausnummer}`, adresse.zusatz || null, adresse.plz, adresse.ort, now, now));
   }
   await db.batch(statements);
   await audit(env, "order", orderId, "PAYMENT_STARTED", reqId, {
@@ -874,6 +887,7 @@ export default {
         await rateLimit(request, env, "create-order");
         if (isLive(env) && !env.DB) throw new PublicError("COMMERCE_DATABASE_NOT_CONFIGURED", 503);
         const body = await readJson(request);
+        const kontakt = checkoutKontaktAus(body);
         await verifyTurnstile(env, request, body);
         const key = idempotencyKey(request, body);
         const fingerprint = await requestHash("create-order", body);
@@ -897,7 +911,7 @@ export default {
           await releaseAll(env, reservations, "provider_create_failed", reqId);
           throw err;
         }
-        const local = await createOrderRecords(env, items, centsList, versand, reservations, providerOrder, key, reqId, adresse);
+        const local = await createOrderRecords(env, items, centsList, versand, reservations, providerOrder, key, reqId, adresse, kontakt);
         const expiresAt = reservations.map(r => r.expiresAt).sort()[0];
         const response = { id: providerOrder.id, orderId: local.orderId, orderNumber: local.orderNumber, expiresAt,
           currency: CURRENCY, itemIds: items.map(item => item.id), itemPrice: money(cents), shipping: money(shippingCents), total: money(cents + shippingCents),

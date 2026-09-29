@@ -216,6 +216,41 @@ export async function requestLoginLink(env, rawEmail, reqId = crypto.randomUUID(
   return { queued: true, requestId: safeText(reqId, 120) };
 }
 
+// Ein Konto entsteht erst, wenn der Empfaenger den Link bestaetigt. Die
+// Bestellung merkt nur die ausdrueckliche Wahl aus der Kasse.
+export async function sendRequestedAccountLink(env, orderId, reqId = crypto.randomUUID()) {
+  if (!env?.DB || !orderId) return false;
+  const row = await env.DB.prepare(`SELECT c.email FROM order_contact_snapshots c
+    JOIN commerce_orders o ON o.id=c.order_id
+    WHERE c.order_id=? AND c.account_requested=1 AND c.account_link_queued_at IS NULL AND o.status='PAID'`)
+    .bind(String(orderId)).first();
+  const email = normalizeEmail(row?.email);
+  if (!email) return false;
+  const stamp = new Date().toISOString();
+  const claim = await env.DB.prepare(`UPDATE order_contact_snapshots SET account_link_queued_at=?
+    WHERE order_id=? AND account_requested=1 AND account_link_queued_at IS NULL`)
+    .bind(stamp, String(orderId)).run();
+  if (!claim.meta?.changes) return false;
+  try {
+    const result = await requestLoginLink(env, email, reqId);
+    if (result.queued) return true;
+  } catch (err) {
+    await env.DB.prepare(`UPDATE order_contact_snapshots SET account_link_queued_at=NULL
+      WHERE order_id=? AND account_link_queued_at=?`).bind(String(orderId), stamp).run();
+    throw err;
+  }
+  await env.DB.prepare(`UPDATE order_contact_snapshots SET account_link_queued_at=NULL
+    WHERE order_id=? AND account_link_queued_at=?`).bind(String(orderId), stamp).run();
+  return false;
+}
+
+export async function sendRequestedAccountLinkByProviderOrder(env, providerOrderId, reqId = crypto.randomUUID()) {
+  if (!env?.DB || !providerOrderId) return false;
+  const payment = await env.DB.prepare(`SELECT order_id FROM payments WHERE provider='PAYPAL' AND provider_order_id=?`)
+    .bind(String(providerOrderId)).first();
+  return payment?.order_id ? sendRequestedAccountLink(env, payment.order_id, reqId) : false;
+}
+
 // ------------------------------------------------------------------- Sitzungen
 
 async function upsertCustomer(env, email) {

@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import shopWorker, { lieferadresseAus } from "./worker.js";
+import shopWorker, { checkoutKontaktAus, lieferadresseAus } from "./worker.js";
 import { rabattVerteilen } from "./coupon-checkout.js";
 import { formatSaleMessage } from "./notifications.js";
 import { adresseCacheLeeren, handleAdresse, strassennameAus } from "./adresse.js";
 import { versandCacheLeeren } from "./versand.js";
+import { snapshotPaypalOrder } from "./admin-api.js";
+import { sendRequestedAccountLink } from "./customer-account.js";
 import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 
 const SHOP = "https://disorder119.com";
@@ -35,6 +37,9 @@ function fakeNetz() {
     if (u.host === "api-m.sandbox.paypal.com") {
       if (u.pathname === "/v1/oauth2/token") return Response.json({ access_token: "paypal-test-token" });
       if (u.pathname === "/v2/checkout/orders") return Response.json({ id: "PAYPAL-MULTI-1", status: "CREATED" }, { status: 201 });
+      if (u.pathname === "/v2/checkout/orders/PAYPAL-MULTI-1" && !u.pathname.endsWith("/capture")) {
+        return Response.json({ payer: {}, purchase_units: [{ shipping: {} }] });
+      }
       if (u.pathname === "/v2/checkout/orders/PAYPAL-MULTI-1/capture") {
         return Response.json({
           id: "PAYPAL-MULTI-1", status: "COMPLETED",
@@ -48,6 +53,7 @@ function fakeNetz() {
 }
 
 async function post(env, path, body, key) {
+  if (path === "/create-order" && !Object.hasOwn(body, "email")) body = { ...body, email: "kundin@example.com" };
   const req = new Request(`https://api.disorder119.com${path}`, {
     method: "POST",
     headers: { Origin: SHOP, "Content-Type": "application/json", "Idempotency-Key": key },
@@ -71,12 +77,64 @@ test("delivery address: complete German addresses only, no Packstation yet", () 
   assert.equal(fehler("Nelseestraße 25"), "ADRESSE_UNVOLLSTAENDIG");
 });
 
+test("opted-in paid order keeps checkout email and sends one verified-account link", async () => {
+  versandCacheLeeren();
+  const netz = fakeNetz();
+  const original = globalThis.fetch;
+  let loginMails = 0;
+  globalThis.fetch = (url, init) => {
+    if (new URL(String(url)).host === "api.brevo.com") {
+      loginMails++;
+      return Promise.resolve(Response.json({ messageId: "test-mail" }, { status: 201 }));
+    }
+    return original(url, init);
+  };
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret",
+    MAIL_API_KEY: "test-key", MAIL_FROM: "shop@example.com" };
+  try {
+    const created = await post(env, "/create-order", { itemIds: [9428, 9427], adresse: ADRESSE,
+      email: "Kundin@Example.com", createAccount: true, versand: "pl-M-20425", versandPreisCents: 559 }, "k-konto-0000000001");
+    assert.equal(created.status, 200, JSON.stringify(created.data));
+    const paid = await post({ ...env, GITHUB_TOKEN: "" }, "/capture-order", { orderId: created.data.id }, "k-konto-zahlung-001");
+    assert.equal(paid.status, 200, JSON.stringify(paid.data));
+    assert.equal(await snapshotPaypalOrder(env, created.data.id), true);
+    const contact = DB.raw.prepare("SELECT email,account_requested,address_line1 FROM order_contact_snapshots WHERE order_id=?")
+      .get(paid.data.orderId);
+    assert.equal(contact.email, "kundin@example.com");
+    assert.equal(contact.account_requested, 1);
+    assert.equal(contact.address_line1, "Nelseestraße 25a");
+    assert.equal(await sendRequestedAccountLink(env, paid.data.orderId), true);
+    assert.equal(await sendRequestedAccountLink(env, paid.data.orderId), false);
+    assert.equal(loginMails, 1);
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM customer_login_tokens").get().n, 1);
+  } finally {
+    netz.restore();
+  }
+});
+
+test("checkout contact requires a valid email and explicit account choice", () => {
+  assert.deepEqual(checkoutKontaktAus({ email: " Kundin@Example.com ", createAccount: true }),
+    { email: "kundin@example.com", createAccount: true });
+  assert.deepEqual(checkoutKontaktAus({ email: "kundin@example.com" }),
+    { email: "kundin@example.com", createAccount: false });
+  for (const email of [undefined, "", "kein-postfach", "a@b", "x@y.de\nBcc:z@y.de", "a".repeat(200) + "@b.de"]) {
+    assert.throws(() => checkoutKontaktAus({ email }), { code: "EMAIL_REQUIRED" });
+  }
+  assert.throws(() => checkoutKontaktAus({ email: "a@b.de", createAccount: "true" }),
+    { code: "ACCOUNT_CHOICE_INVALID" });
+});
+
 test("checkout with two pieces: one PayPal order with the checkout address, both reserved, both sold after payment", async () => {
   versandCacheLeeren();
   const netz = fakeNetz();
   const DB = sqliteD1(allMigrations());
   const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
   try {
+    const ohneEmail = await post(env, "/create-order", { itemIds: [9428], adresse: ADRESSE, email: null }, "k-email-fehlt-000001");
+    assert.equal(ohneEmail.status, 422);
+    assert.equal(ohneEmail.data.error, "EMAIL_REQUIRED");
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations").get().n, 0);
     // Zwei Teile brauchen mindestens das mittlere Paket (Nachbau: DPD 5,59 EUR).
     const angelegt = await post(env, "/create-order",
       { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 559 }, "k-kasse-00000000001");
@@ -104,8 +162,9 @@ test("checkout with two pieces: one PayPal order with the checkout address, both
     assert.deepEqual(zeilen.map(z => [z.item_id, z.unit_price_cents]), [[9428, 15000], [9427, 9000]]);
     const reservierungen = DB.raw.prepare("SELECT idempotency_key,status FROM reservations ORDER BY idempotency_key").all();
     assert.deepEqual(reservierungen.map(r => [r.idempotency_key, r.status]), [["k-kasse-00000000001#9427", "RESERVED"], ["k-kasse-00000000001#9428", "RESERVED"]]);
-    const kontakt = DB.raw.prepare("SELECT source_provider,recipient_name,address_line1,postal_code,city FROM order_contact_snapshots").get();
-    assert.deepEqual({ ...kontakt }, { source_provider: "CHECKOUT", recipient_name: "Maria Müller", address_line1: "Nelseestraße 25a", postal_code: "63739", city: "Aschaffenburg" });
+    const kontakt = DB.raw.prepare("SELECT source_provider,email,account_requested,recipient_name,address_line1,postal_code,city FROM order_contact_snapshots").get();
+    assert.deepEqual({ ...kontakt }, { source_provider: "CHECKOUT", email: "kundin@example.com", account_requested: 0,
+      recipient_name: "Maria Müller", address_line1: "Nelseestraße 25a", postal_code: "63739", city: "Aschaffenburg" });
     assert.equal(DB.raw.prepare("SELECT paket FROM order_versand").get().paket, "M");
 
     // Bezahlt: beide Stuecke PAID, beide Reservierungen verbraucht. Ohne

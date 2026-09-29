@@ -51,6 +51,7 @@ def _asset_version(rel_path):
 
 
 APP_CSS_VERSION = _asset_version("assets/app.css")
+THEME_CSS_VERSION = _asset_version("assets/theme.css")
 APP_JS_VERSION = _asset_version("assets/app.js")
 ARTICLE_CSS_VERSION = _asset_version("assets/article.css")
 ARTICLE_JS_VERSION = _asset_version("assets/article.js")
@@ -861,7 +862,7 @@ def build_page(it, shop_config, lang):
 <script type="application/ld+json">{site_entities_jsonld(shop_config)}</script>
 <script type="application/ld+json">{json_ld(it, lang)}</script>
 <script type="application/ld+json">{breadcrumb_json_ld(it, lang)}</script>
-<link rel="stylesheet" href="/assets/theme.css">
+<link rel="stylesheet" href="/assets/theme.css?v={THEME_CSS_VERSION}">
 <script src="/assets/ansicht.js" defer></script>
 <script>try{{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}}catch(e){{}}</script>
 </head>
@@ -1297,6 +1298,7 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__SSR_INITIAL_GRID__", initial_archive_grid_html(lang) if initial_ssr_home else "")
     out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
     out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
+    out = out.replace("__THEME_VERSION__", THEME_CSS_VERSION)
     out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)
     out = out.replace("__PWA_JS_VERSION__", PWA_JS_VERSION)
     return out
@@ -1364,6 +1366,7 @@ def build_account_pages():
         out = out.replace("__CANONICAL_URL__", SITE_URL.rstrip("/") + home + "konto/")
         out = out.replace("__HOME__", home)
         out = out.replace("__APP_CSS_VERSION__", KONTO_ASSET_VERSION)
+        out = out.replace("__THEME_VERSION__", THEME_CSS_VERSION)
         out = out.replace("__NEWSLETTER_VERSION__", NEWSLETTER_ASSET_VERSION)
         out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
         for token in ("__HTML_LANG__", "__META_TITLE__", "__META_DESC__", "__CANONICAL_URL__",
@@ -1414,7 +1417,8 @@ def build_checkout_pages():
         paypal_sdk = (
             '<script src="https://www.paypal.com/sdk/js?client-id=' + esc(shop_config["paypalClientId"])
             # Nur PayPal selbst: keine Karten- oder Lastschrift-Knoepfe.
-            + '&currency=EUR&intent=capture&commit=true&disable-funding=card,sepa"></script>\n'
+            + '&currency=EUR&intent=capture&commit=true&components=buttons,applepay&disable-funding=card,sepa"></script>\n'
+            + '<script src="https://applepay.cdn-apple.com/jsapi/1.latest/apple-pay-sdk.js"></script>\n'
         )
     count = 0
     for lang in LANGS:
@@ -1428,6 +1432,7 @@ def build_checkout_pages():
         out = out.replace("__HOME__", home)
         out = out.replace("__NOSCRIPT__", esc(noscript))
         out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
+        out = out.replace("__THEME_VERSION__", THEME_CSS_VERSION)
         out = out.replace("__KASSE_VERSION__", KASSE_ASSET_VERSION)
         out = out.replace("__PWA_VERSION__", PWA_JS_VERSION)
         out = out.replace("__PROMOS_VERSION__", PROMOS_ASSET_VERSION)
@@ -1461,6 +1466,7 @@ def build_newsletter_pages():
         out = out.replace("__HOME__", home)
         out = out.replace("__NOSCRIPT__", esc(noscript))
         out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
+        out = out.replace("__THEME_VERSION__", THEME_CSS_VERSION)
         out = out.replace("__KONTO_VERSION__", KONTO_ASSET_VERSION)
         out = out.replace("__NEWSLETTER_VERSION__", NEWSLETTER_ASSET_VERSION)
         out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))

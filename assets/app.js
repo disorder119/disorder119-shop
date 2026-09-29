@@ -1171,7 +1171,7 @@
     // aufruft) verschwinden, bevor der Nutzer den Warenkorb je geoeffnet hat -
     // er wird deshalb erst beim tatsaechlichen Oeffnen (openCart) konsumiert.
     var noticeHtml = cartRemovedNotice
-      ? '<p class="cart-removed-notice">' + tFormat("cartItemsRemovedSold", { items: cartRemovedNotice.join(", ") }) + "</p>"
+      ? '<p class="cart-removed-notice">' + escapeHtml(tFormat("cartItemsRemovedSold", { items: cartRemovedNotice.join(", ") })) + "</p>"
       : "";
     if (consumeNotice) cartRemovedNotice = null;
 
@@ -1190,10 +1190,12 @@
       if (it.price > 0) total += it.price; else hasUnknownPrice = true;
       var hero = thumbUrl(it.gallery && it.gallery[0] ? it.gallery[0] : "");
       return '<div class="cart-line">' +
-        '<div class="cart-line__frame">' + (hero ? '<img src="' + hero + '" alt="" loading="lazy" />' : "") + "</div>" +
+        '<div class="cart-line__frame">' + (hero ? '<img src="' + escapeHtml(hero) + '" alt="" loading="lazy" />' : "") + "</div>" +
         '<div class="cart-line__body">' +
+          '<span class="cart-line__brand">' + escapeHtml(it.brand || "DISORDER119") + "</span>" +
           '<span class="cart-line__title">' + escapeHtml(it.title) + "</span>" +
-          '<span class="cart-line__meta">' + escapeHtml(trSize(it.size) || "") + "</span>" +
+          '<span class="cart-line__meta">#' + escapeHtml(String(it.article || it.id)) +
+            (it.size ? ' · ' + escapeHtml(trSize(it.size)) : "") + "</span>" +
           '<div class="cart-line__row">' +
             '<span class="cart-line__price">' + fmtPriceDisplay(it.price) + "</span>" +
             '<button type="button" class="cart-line__remove" data-remove="' + it.id + '">' + t("cartRemove") + '</button>' +
