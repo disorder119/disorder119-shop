@@ -75,7 +75,7 @@ def test_chaos(driver) -> None:
     driver.set_window_size(390, 844)
     driver.get(urljoin(BASE_URL, "chaos/"))
     wait(driver, lambda d: urlparse(d.current_url).path == "/universe/", "Chaos-Weiterleitung")
-    wait(driver, lambda d: "Universum bereit" in d.find_element(By.ID, "uStatus").text, "Universum bereit")
+    wait(driver, lambda d: "Universum bereit" in (d.find_element(By.ID, "uStatus").get_attribute("textContent") or ""), "Universum bereit")
     canvas = driver.find_element(By.ID, "uCanvas")
     if not canvas.is_displayed() or canvas.size["width"] < 1 or canvas.size["height"] < 1:
         fail("Universum: Canvas ist nicht sichtbar")
@@ -91,7 +91,7 @@ def test_chaos(driver) -> None:
 
     driver.set_window_size(1280, 800)
     driver.get(urljoin(BASE_URL, "universe/"))
-    wait(driver, lambda d: "Universum bereit" in d.find_element(By.ID, "uStatus").text, "Universum Desktop bereit")
+    wait(driver, lambda d: "Universum bereit" in (d.find_element(By.ID, "uStatus").get_attribute("textContent") or ""), "Universum Desktop bereit")
     canvas = driver.find_element(By.ID, "uCanvas")
     sky_label = canvas.get_attribute("aria-label") or ""
     if "Maus bewegen" not in sky_label or "Doppelklick" not in sky_label:
@@ -152,7 +152,7 @@ def test_localized_direct_routes(driver) -> None:
         driver.get(urljoin(BASE_URL, path))
         if mode == "universe":
             wait(driver, lambda d: urlparse(d.current_url).path == "/fr/universe/", "FR-Universum-Weiterleitung")
-            wait(driver, lambda d: "Univers prêt" in d.find_element(By.ID, "uStatus").text, "FR-Universum bereit")
+            wait(driver, lambda d: "Univers prêt" in (d.find_element(By.ID, "uStatus").get_attribute("textContent") or ""), "FR-Universum bereit")
             if not driver.find_element(By.ID, "uCanvas").is_displayed():
                 fail("FR-Universum: Canvas ist nicht sichtbar")
             if not driver.find_elements(By.CSS_SELECTOR, '.u-mode[aria-current="page"][href="/fr/universe/"]'):
