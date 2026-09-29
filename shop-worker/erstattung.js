@@ -101,6 +101,13 @@ export async function bestellungErstatten(env, id, body, reqId, statusSetzen) {
 
   const schon = await schonErstattet(db, order.id);
   const offen = Number(order.total_cents) - schon;
+  // Eine Bestellung darf nie mehr aus einer einzelnen Capture erstatten, als
+  // PayPal fuer diese Zahlung urspruenglich verbucht hat.
+  if (offen > Number(payment.amount_cents) - schon || payment.currency !== order.currency) {
+    throw new ErstattungsFehler("ERSTATTUNG_BETRAG_ABWEICHUNG", 409, {
+      bestellungCents: Number(order.total_cents), zahlungCents: Number(payment.amount_cents), erstattetCents: schon,
+    });
+  }
   if (offen > 0) {
     // Ein Schluessel je offenem Restbetrag: ein zweiter Klick findet dieselbe
     // Zeile und schickt PayPal dieselbe Request-Id - PayPal zahlt nur einmal.
@@ -130,9 +137,10 @@ export async function bestellungErstatten(env, id, body, reqId, statusSetzen) {
       const antwort = await res.json().catch(() => ({}));
       if (!res.ok) {
         const grund = safeText(antwort?.details?.[0]?.issue || antwort?.name || `HTTP ${res.status}`, 80);
+        const debugId = safeText(antwort?.debug_id || res.headers.get("paypal-debug-id"), 120);
         await db.prepare("UPDATE refunds SET status='FAILED',updated_at=? WHERE id=?").bind(new Date().toISOString(), zeile.id).run();
-        await protokoll(db, order.id, "ORDER_REFUND_FAILED", reqId, { grund, betragCents: zeile.amount_cents });
-        throw new ErstattungsFehler("PAYPAL_ERSTATTUNG_FEHLGESCHLAGEN", 502, { grund });
+        await protokoll(db, order.id, "ORDER_REFUND_FAILED", reqId, { grund, debugId, paypalStatus: res.status, betragCents: zeile.amount_cents });
+        throw new ErstattungsFehler("PAYPAL_ERSTATTUNG_FEHLGESCHLAGEN", 502, { grund, debugId, paypalStatus: res.status });
       }
       const status = String(antwort.status || "").toUpperCase() === "COMPLETED" ? "COMPLETED" : "PENDING";
       await db.prepare("UPDATE refunds SET status=?,provider_refund_id=?,updated_at=? WHERE id=?")

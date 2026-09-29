@@ -117,13 +117,15 @@ test("Erstatten zahlt den ganzen Betrag ueber PayPal zurueck und setzt Erstattet
 test("PayPal lehnt ab: Fehler sichtbar, erneuter Versuch mit derselben Request-Id", async () => {
   const db = d1();
   bestellungAnlegen(db);
-  let pp = paypal({ fehler: { status: 422, body: { name: "UNPROCESSABLE_ENTITY", details: [{ issue: "REFUND_TIME_LIMIT_EXCEEDED" }] } } });
+  let pp = paypal({ fehler: { status: 422, body: { name: "UNPROCESSABLE_ENTITY", debug_id: "debug-123", details: [{ issue: "REFUND_TIME_LIMIT_EXCEEDED" }] } } });
   try {
     const res = await erstatten(env(db));
     const data = await res.json();
     assert.equal(res.status, 502);
     assert.equal(data.error, "PAYPAL_ERSTATTUNG_FEHLGESCHLAGEN");
     assert.equal(data.detail.grund, "REFUND_TIME_LIMIT_EXCEEDED");
+    assert.equal(data.detail.debugId, "debug-123");
+    assert.equal(data.detail.paypalStatus, 422);
     assert.equal(db.raw.prepare("SELECT status FROM commerce_orders").get().status, "PAID");
   } finally {
     pp.zurueck();
@@ -138,6 +140,46 @@ test("PayPal lehnt ab: Fehler sichtbar, erneuter Versuch mit derselben Request-I
   } finally {
     pp.zurueck();
   }
+});
+
+test("Abweichender Capture-Betrag blockiert Erstattung vor dem PayPal-Aufruf", async () => {
+  const db = d1();
+  bestellungAnlegen(db);
+  db.raw.prepare("UPDATE payments SET amount_cents=560 WHERE id='p1'").run();
+  const pp = paypal();
+  try {
+    const res = await erstatten(env(db));
+    const data = await res.json();
+    assert.equal(res.status, 409);
+    assert.equal(data.error, "ERSTATTUNG_BETRAG_ABWEICHUNG");
+    assert.equal(pp.aufrufe.length, 0);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM refunds").get().n, 0);
+  } finally { pp.zurueck(); }
+});
+
+test("Gastkaeufer erscheinen im Kundenbereich und oeffnen ihre Bestellungen", async () => {
+  const db = d1();
+  bestellungAnlegen(db);
+  db.raw.prepare("UPDATE commerce_orders SET guest_email='gast@example.test' WHERE id='o1'").run();
+  db.raw.prepare(`INSERT INTO commerce_orders (id,order_number,status,currency,subtotal_cents,shipping_cents,total_cents,
+    guest_email,idempotency_key,created_at) VALUES ('a2','D119-20260929-BBBB','PAID','EUR',100,0,100,
+    'GAST@EXAMPLE.TEST','k2','2026-09-29T10:00:00.000Z')`).run();
+  const e = env(db);
+  const headers = { Origin: ADMIN, Authorization: "Bearer geheim" };
+  const listRequest = new Request("https://api.disorder119.com/admin/customers", { headers });
+  const listResponse = await handleAdminRequest(listRequest, e, new URL(listRequest.url), "req-1", ADMIN);
+  assert.equal(listResponse.status, 200);
+  const list = await listResponse.json();
+  assert.equal(list.total, 1);
+  assert.equal(list.customers[0].status, "GUEST");
+  assert.equal(list.customers[0].id, "guest-order:o1");
+  assert.equal(list.customers[0].orderCount, 2);
+  const detailRequest = new Request("https://api.disorder119.com/admin/customers/guest-order%3Ao1", { headers });
+  const detailResponse = await handleAdminRequest(detailRequest, e, new URL(detailRequest.url), "req-2", ADMIN);
+  assert.equal(detailResponse.status, 200);
+  const detail = await detailResponse.json();
+  assert.equal(detail.orders.length, 2);
+  assert.equal(detail.orders[0].order_number, "D119-20260929-BBBB");
 });
 
 test("Verschickte Bestellung: erst Ruecksendung, keine Auszahlung", async () => {

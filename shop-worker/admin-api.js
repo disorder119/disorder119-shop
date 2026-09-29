@@ -588,22 +588,53 @@ async function getCustomers(env, url) {
   const db = requireDb(env);
   const limit = clampAdminLimit(url.searchParams.get("limit"));
   const offset = clampAdminOffset(url.searchParams.get("offset"));
-  const q = safeText(url.searchParams.get("q"), 120);
-  const where = q ? "WHERE c.email_normalized LIKE ? OR c.id LIKE ?" : "";
-  const binds = q ? [`%${q}%`, `%${q}%`] : [];
-  const count = await db.prepare(`SELECT COUNT(*) AS total FROM customers c ${where}`).bind(...binds).first();
-  const rows = await db.prepare(`SELECT c.id,c.email_normalized,c.email_verified,c.status,c.created_at,c.updated_at,
+  const q = safeText(url.searchParams.get("q"), 120).toLowerCase();
+  const sql = `WITH raw_guests AS (
+      SELECT o.*, LOWER(TRIM(COALESCE(NULLIF(o.guest_email,''),
+        (SELECT s.email FROM order_contact_snapshots s WHERE s.order_id=o.id LIMIT 1)))) AS buyer_email
+      FROM commerce_orders o WHERE o.customer_id IS NULL
+    ), guest_orders AS (
+      SELECT raw_guests.*,ROW_NUMBER() OVER (PARTITION BY buyer_email ORDER BY created_at,id) AS first_rank
+      FROM raw_guests
+    ), buyers AS (
+      SELECT c.id,c.email_normalized,c.email_verified,c.status,c.created_at,c.updated_at,
       (SELECT COUNT(*) FROM commerce_orders o WHERE o.customer_id=c.id) AS orderCount,
       (SELECT COALESCE(SUM(total_cents),0) FROM commerce_orders o WHERE o.customer_id=c.id
         AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id
           AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND p.provider_payment_id IS NOT NULL)) AS orderValueCents,
       (SELECT COUNT(*) FROM rental_reservations rr WHERE rr.customer_id=c.id) AS rentalCount
-    FROM customers c ${where} ORDER BY c.created_at DESC LIMIT ? OFFSET ?`).bind(...binds, limit, offset).all();
+      FROM customers c
+      UNION ALL
+      SELECT 'guest-order:' || MAX(CASE WHEN g.first_rank=1 THEN g.id END),g.buyer_email,0,'GUEST',MIN(g.created_at),MAX(g.created_at),
+        COUNT(*),COALESCE(SUM(CASE WHEN EXISTS (SELECT 1 FROM payments p WHERE p.order_id=g.id
+          AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND p.provider_payment_id IS NOT NULL)
+          THEN g.total_cents ELSE 0 END),0),0
+      FROM guest_orders g WHERE g.buyer_email IS NOT NULL AND g.buyer_email != '' GROUP BY g.buyer_email
+    )`;
+  const where = q ? "WHERE email_normalized LIKE ? OR id LIKE ?" : "";
+  const binds = q ? [`%${q}%`, `%${q}%`] : [];
+  const count = await db.prepare(`${sql} SELECT COUNT(*) AS total FROM buyers ${where}`).bind(...binds).first();
+  const rows = await db.prepare(`${sql} SELECT * FROM buyers ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(...binds, limit, offset).all();
   return { total: Number(count?.total || 0), limit, offset, customers: rows.results || [] };
 }
 
 async function getCustomerDetail(env, id) {
   const db = requireDb(env);
+  if (id.startsWith("guest-order:")) {
+    const orderId = id.slice("guest-order:".length);
+    const first = await db.prepare(`SELECT LOWER(TRIM(COALESCE(NULLIF(o.guest_email,''),
+      (SELECT s.email FROM order_contact_snapshots s WHERE s.order_id=o.id LIMIT 1)))) AS email
+      FROM commerce_orders o WHERE o.id=? AND o.customer_id IS NULL`).bind(orderId).first();
+    if (!first?.email) throw new AdminError("CUSTOMER_NOT_FOUND", 404);
+    const orders = await db.prepare(`SELECT o.id,o.order_number,o.status,o.total_cents,o.currency,o.created_at,o.updated_at
+      FROM commerce_orders o WHERE o.customer_id IS NULL AND LOWER(TRIM(COALESCE(NULLIF(o.guest_email,''),
+      (SELECT s.email FROM order_contact_snapshots s WHERE s.order_id=o.id LIMIT 1))))=?
+      ORDER BY o.created_at DESC LIMIT 100`).bind(first.email).all();
+    const notes = await db.prepare("SELECT * FROM admin_notes WHERE entity_type='CUSTOMER' AND entity_id=? ORDER BY created_at DESC")
+      .bind(id).all();
+    return { customer: { id, email_normalized: first.email, email_verified: 0, status: "GUEST",
+      created_at: orders.results?.at(-1)?.created_at }, addresses: [], orders: orders.results || [], rentals: [], notes: notes.results || [] };
+  }
   const customer = await db.prepare("SELECT id,email_normalized,email_verified,status,created_at,updated_at,deleted_at FROM customers WHERE id=?").bind(id).first();
   if (!customer) throw new AdminError("CUSTOMER_NOT_FOUND", 404);
   const [addresses, orders, rentals, notes] = await db.batch([
