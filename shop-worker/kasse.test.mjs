@@ -135,6 +135,10 @@ test("checkout with two pieces: one PayPal order with the checkout address, both
     assert.equal(ohneEmail.status, 422);
     assert.equal(ohneEmail.data.error, "EMAIL_REQUIRED");
     assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations").get().n, 0);
+    const ohneAdresse = await post(env, "/create-order", { itemIds: [9428], adresse: null }, "k-adresse-fehlt-0001");
+    assert.equal(ohneAdresse.status, 422);
+    assert.equal(ohneAdresse.data.error, "ADRESSE_UNVOLLSTAENDIG");
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations").get().n, 0);
     // Zwei Teile brauchen mindestens das mittlere Paket (Nachbau: DPD 5,59 EUR).
     const angelegt = await post(env, "/create-order",
       { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 559 }, "k-kasse-00000000001");

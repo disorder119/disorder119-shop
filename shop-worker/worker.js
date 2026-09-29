@@ -898,6 +898,7 @@ export default {
         const centsList = items.map(assertCatalogItemForSale);
         const cents = centsList.reduce((summe, c) => summe + c, 0);
         const adresse = lieferadresseAus(body.adresse);
+        if (!adresse) throw new PublicError("ADRESSE_UNVOLLSTAENDIG", 422);
         // Versandart und -preis prueft der Server selbst (versand.js). Weicht
         // der Preis von dem ab, den die Kundschaft gesehen hat, gibt es 409
         // mit der aktuellen Liste - noch bevor etwas reserviert wird.
