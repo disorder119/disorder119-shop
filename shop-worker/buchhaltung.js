@@ -10,7 +10,7 @@
 // Rechnung in den Buechern gar nicht von der beim Kunden abweichen.
 import { safeText } from "./commerce-core.js";
 import { euroAmount, formatOrderConfirmation, loadOrderForConfirmation, mailSenderIdentity } from "./customer-mail.js";
-import { createDataset, zipDataset } from './tax-dataset.js';
+import { prepareDataset } from './tax-dataset-stream.js';
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -281,15 +281,15 @@ export async function handleBuchhaltung(request, env, url, reqId = crypto.random
     const pfad = url.pathname.replace(/\/+$/, "");
     if (pfad === '/admin/buchhaltung/datensatz.zip' || pfad === '/admin/buchhaltung/datensatz') {
       const jahr=jahrAusText(url.searchParams.get('jahr')||new Date().getUTCFullYear());
-      const dataset=await createDataset(env,jahr);
-      if (pfad.endsWith('.zip'))return antwort(zipDataset(dataset.files),'application/zip',200,origin,{'Content-Disposition':`attachment; filename="disorder119-shop-${jahr}.zip"`});
+      const dataset=await prepareDataset(env,jahr);
+      if (pfad.endsWith('.zip'))return antwort(dataset.stream(),'application/zip',200,origin,{'Content-Disposition':`attachment; filename="disorder119-shop-${jahr}.zip"`});
       return json({ok:true,...dataset.summary,year:jahr,format:dataset.manifest.format,issues:JSON.parse(dataset.files['issues.json'])},200,origin);
     }
 
     const jahrTreffer = /^\/admin\/buchhaltung\/jahr\/(\d{4})$/.exec(pfad);
     if (jahrTreffer) {
       const jahr = jahrAusText(jahrTreffer[1]);
-      const dataset=await createDataset(env,jahr);
+      const dataset=await prepareDataset(env,jahr);
       const ledger=JSON.parse(dataset.files['ledger.json']);
       const rows=ledger.filter(e=>e.book_date.startsWith(String(jahr))&&!e.blocks.length);
       const sum=kind=>rows.filter(e=>e.kind===kind).reduce((s,e)=>s+e.amount_cents,0);
