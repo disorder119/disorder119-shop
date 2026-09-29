@@ -30,6 +30,7 @@
       nichtMehr: "Nicht mehr verfügbar – wird nicht mitbestellt:", groesse: "Größe", paket: "Paket",
       paketS: "klein", paketM: "mittel", paketL: "groß", tag1: "1 Werktag", tageN: "{n} Werktage",
       versandLaedt: "Versand wird berechnet …", versandFehlt: "Der Versandpreis ist gerade nicht abrufbar. Bitte lade die Seite gleich neu.",
+      versandWahlFehlt: "Dein gewählter Versanddienst ist nicht mehr verfügbar. Bitte wähle eine neue Versandart.",
       zwischensumme: "Stücke", versandZeile: "Versand", gesamt: "Gesamt",
       gutschein: "Gutschein {code} wird beim Bezahlen verrechnet.",
       recht: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Versand in der Regel innerhalb von 2 Werktagen. Mit dem PayPal-Knopf und deiner Bestätigung bei PayPal bestellst du zahlungspflichtig.",
@@ -67,6 +68,7 @@
       nichtMehr: "No longer available – not included:", groesse: "Size", paket: "parcel",
       paketS: "small", paketM: "medium", paketL: "large", tag1: "1 working day", tageN: "{n} working days",
       versandLaedt: "Calculating shipping …", versandFehlt: "The shipping price is not available right now. Please reload the page in a moment.",
+      versandWahlFehlt: "Your selected carrier is no longer available. Please choose another shipping option.",
       zwischensumme: "Pieces", versandZeile: "Shipping", gesamt: "Total",
       gutschein: "Coupon {code} is applied when you pay.",
       recht: "Small business under § 19 UStG, so no VAT is charged. Usually shipped within 2 working days. With the PayPal button and your confirmation at PayPal you place a binding order.",
@@ -104,6 +106,7 @@
       nichtMehr: "Plus disponible – non inclus :", groesse: "Taille", paket: "colis",
       paketS: "petit", paketM: "moyen", paketL: "grand", tag1: "1 jour ouvré", tageN: "{n} jours ouvrés",
       versandLaedt: "Calcul de la livraison …", versandFehlt: "Le prix de livraison n'est pas disponible pour le moment. Recharge la page dans un instant.",
+      versandWahlFehlt: "Le transporteur choisi n'est plus disponible. Choisis un autre mode de livraison.",
       zwischensumme: "Pièces", versandZeile: "Livraison", gesamt: "Total",
       gutschein: "Le bon {code} est déduit au paiement.",
       recht: "Micro-entreprise selon le § 19 UStG, pas de TVA. Expédition en général sous 2 jours ouvrés. Avec le bouton PayPal et ta confirmation chez PayPal, tu passes une commande ferme.",
@@ -259,7 +262,9 @@
     var gueltig = daten && daten.optionen && daten.optionen.length ? daten : null;
     var vorher = zustand.wahl;
     zustand.versand = gueltig;
-    zustand.wahl = gueltig ? (gueltig.optionen.filter(function (o) { return vorher && o.art === vorher.art; })[0] || gueltig.optionen[0]) : null;
+    zustand.wahl = !gueltig ? null : !vorher ? gueltig.optionen[0] :
+      gueltig.optionen.filter(function (o) { return o.id === vorher.id; })[0] ||
+      gueltig.optionen.filter(function (o) { return o.carrier && o.carrier === vorher.carrier && o.art === vorher.art; })[0] || null;
     versandZeichnen();
   }
   function tage(o) { return !o || !o.tage ? "" : (o.tage === 1 ? t("tag1") : tf("tageN", { n: o.tage })); }
@@ -291,6 +296,7 @@
       gruppe.appendChild(label);
     });
     box.appendChild(gruppe);
+    if (!zustand.wahl) box.appendChild(el("p", "kasse-hinweis", t("versandWahlFehlt")));
     box.appendChild(el("p", "kasse-hinweis", paketName(d)));
     summeZeichnen();
   }
@@ -310,7 +316,7 @@
     }
     var ware = stueckeCents();
     zeile(t("zwischensumme") + " (" + zustand.stuecke.length + ")", geld(ware));
-    zeile(t("versandZeile") + (zustand.wahl ? " · " + zustand.wahl.titel : ""), zustand.wahl ? geld(zustand.wahl.preisCents) : "…");
+    zeile(t("versandZeile") + (zustand.wahl ? " · " + [zustand.wahl.carrier, zustand.wahl.titel].filter(Boolean).join(" ") : ""), zustand.wahl ? geld(zustand.wahl.preisCents) : "…");
     zeile(t("gesamt"), zustand.wahl ? geld(ware + zustand.wahl.preisCents) : "…", "kasse-summe__gesamt");
     var code = "";
     try { code = String(localStorage.getItem(CODE_KEY) || "").trim().toUpperCase(); } catch (e) { code = ""; }
@@ -551,7 +557,7 @@
     var zahlung = {
       style: { shape: "rect", color: "black", layout: "vertical", label: "pay" },
       onClick: function (daten, actions) {
-        if (!zustand.stuecke.length || !zustand.wahl) { melden(t("versandFehlt"), status); return actions.reject(); }
+        if (!zustand.stuecke.length || !zustand.wahl) { melden(t(zustand.versand ? "versandWahlFehlt" : "versandFehlt"), status); return actions.reject(); }
         return pruefen() ? actions.resolve() : actions.reject();
       },
       createOrder: function () {

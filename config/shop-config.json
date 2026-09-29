@@ -8,10 +8,12 @@
     "referenzPlz": "10115",
     "standardGroesse": "M",
     "dienste": {
-      "_comment": "Welche Paketdienste die Kundschaft im Checkout sieht (Name wie bei Packlink). Nur DPD und DHL - Wunsch des Inhabers (28.09.2026); UPS ist raus, Hermes gibt es ueber Packlink nicht. Express nur, wenn ein erlaubter Dienst ihn bis expressMaxCents anbietet. In der Admin-App stehen beim Etikett trotzdem alle Angebote.",
+      "_comment": "Welche Paketdienste die Kundschaft im Checkout sieht (Name wie bei Packlink). DPD, DHL, UPS und GLS erscheinen nur mit einem aktuellen Packlink-Angebot fuer Haustuerzustellung. Express nur, wenn ein erlaubter Dienst ihn bis expressMaxCents anbietet. In der Admin-App stehen beim Etikett weiterhin alle Angebote.",
       "erlaubt": [
         "DPD",
-        "DHL"
+        "DHL",
+        "UPS",
+        "GLS"
       ],
       "expressMaxCents": 2500
     },

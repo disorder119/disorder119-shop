@@ -5,7 +5,7 @@
 //   1. Produktseite und Warenkorb fragen GET /versand/optionen?artikel=<IDs>.
 //      Die Paketgroesse bestimmt der Server selbst aus Produktart und
 //      Kategorie (versand-config.js) - der Browser rechnet nichts.
-//   2. Gezeigt wird je erlaubtem Paketdienst (DPD, DHL ...) der guenstigste
+//   2. Gezeigt wird je erlaubtem Paketdienst (DPD, DHL, UPS, GLS) der guenstigste
 //      "Standard" mit Zustellung an die Haustuer, der billigste zuerst, dazu
 //      "Express" (guenstigster Express-Dienst, falls Packlink einen anbietet
 //      und er teurer ist als der billigste Standard).
