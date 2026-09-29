@@ -591,8 +591,9 @@ export async function handlePacklink(request, env, url, reqId = crypto.randomUUI
 // ------------------------------------------------------------------- Webhook
 
 // Packlink meldet Zustandswechsel an https://api.disorder119.com/packlink/
-// webhook/<PACKLINK_WEBHOOK_TOKEN> (eingetragen von "7 - Packlink verbinden"
-// ueber POST /v1/shipments/callback). Packlink signiert die Meldungen nicht.
+// webhook/<PACKLINK_WEBHOOK_TOKEN> (als Worker-Secret gesetzt und bei
+// Packlink ueber POST /v1/shipments/callback registriert). Packlink signiert
+// die Meldungen nicht.
 // Deshalb gilt: Der Schluessel im Pfad haelt nur Fremde fern - geglaubt wird
 // der Meldung trotzdem nichts. Sie loest lediglich aus, dass der Server den
 // Stand der Sendung mit dem eigenen API-Schluessel bei Packlink abholt.

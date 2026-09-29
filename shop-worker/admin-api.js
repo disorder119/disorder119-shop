@@ -40,7 +40,7 @@ function securityHeaders() {
 
 function corsHeaders(origin) {
   const headers = {
-    "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Max-Age": "600",
     "Vary": "Origin",
@@ -373,7 +373,125 @@ async function getOrderDetail(env, id) {
     addresses,
     notes: notes.results || [],
     activity: (events.results || []).map(row => ({ ...row, metadata: parseMetadata(row.metadata_json) })),
+    deletion: await orderDeletionState(db, order),
   };
+}
+
+const DELETION_BLOCKER_TEXT = Object.freeze({
+  ORDER_NOT_CANCELLED: "Bestellung zuerst stornieren.",
+  PAYMENT_EVIDENCE: "Zahlungsnachweis vorhanden.",
+  PAYMENT_EVENT: "PayPal-Ereignis vorhanden.",
+  SHIPMENT: "Versandvorgang vorhanden.",
+  RETURN_OR_REFUND: "Rückgabe oder Erstattung vorhanden.",
+  TAX_EVIDENCE: "Steuerlicher Zahlungsnachweis vorhanden.",
+  FISCAL_DOCUMENT: "Rechnung oder Bestellbestätigung archiviert.",
+  SHIPPING_LABEL: "Versandlabel oder Packlink-Entwurf vorhanden.",
+});
+
+async function orderDeletionState(db, order) {
+  const checks = await db.batch([
+    db.prepare(`SELECT COUNT(*) AS n FROM payments WHERE order_id=?
+      AND (status NOT IN ('CREATED','FAILED','CANCELLED') OR provider_payment_id IS NOT NULL)`).bind(order.id),
+    db.prepare(`SELECT COUNT(*) AS n FROM payment_events e JOIN payments p ON p.id=e.payment_id
+      WHERE p.order_id=?`).bind(order.id),
+    db.prepare("SELECT COUNT(*) AS n FROM shipments WHERE order_id=?").bind(order.id),
+    db.prepare(`SELECT (SELECT COUNT(*) FROM returns WHERE order_id=?) +
+      (SELECT COUNT(*) FROM refunds WHERE order_id=?) AS n`).bind(order.id, order.id),
+    db.prepare("SELECT COUNT(*) AS n FROM tax_cash_events WHERE order_id=?").bind(order.id),
+    db.prepare(`SELECT (SELECT COUNT(*) FROM rechnungen WHERE order_id=?) +
+      (SELECT COUNT(*) FROM order_confirmation_archive WHERE order_id=?) AS n`).bind(order.id, order.id),
+    db.prepare(`SELECT (SELECT COUNT(*) FROM dhl_qr_marken WHERE order_id=?) +
+      (SELECT COUNT(*) FROM packlink_sendungen WHERE order_id=?) AS n`).bind(order.id, order.id),
+  ]);
+  const count = index => Number(checks[index]?.results?.[0]?.n || 0);
+  const blockers = [];
+  if (order.status !== "CANCELLED") blockers.push("ORDER_NOT_CANCELLED");
+  if (count(0)) blockers.push("PAYMENT_EVIDENCE");
+  if (count(1)) blockers.push("PAYMENT_EVENT");
+  if (count(2)) blockers.push("SHIPMENT");
+  if (count(3)) blockers.push("RETURN_OR_REFUND");
+  if (count(4)) blockers.push("TAX_EVIDENCE");
+  if (count(5)) blockers.push("FISCAL_DOCUMENT");
+  if (count(6)) blockers.push("SHIPPING_LABEL");
+  return {
+    allowed: blockers.length === 0,
+    blockers,
+    messages: blockers.map(code => DELETION_BLOCKER_TEXT[code]),
+  };
+}
+
+async function updateOrderContact(env, id, body, reqId) {
+  const db = requireDb(env);
+  const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
+  if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
+  if (["SHIPPED", "DELIVERED", "RETURN_REQUESTED", "RETURNED", "REFUNDED"].includes(order.status)) {
+    throw new AdminError("ORDER_ADDRESS_LOCKED", 409);
+  }
+  const existing = await db.prepare("SELECT * FROM order_contact_snapshots WHERE order_id=?").bind(order.id).first();
+  if (!existing) throw new AdminError("ORDER_CONTACT_NOT_FOUND", 404);
+  const contact = {
+    email: safeText(body.email, 254).toLowerCase(),
+    recipientName: safeText(body.recipientName, 160),
+    addressLine1: safeText(body.addressLine1, 180),
+    addressLine2: safeText(body.addressLine2, 180),
+    postalCode: safeText(body.postalCode, 24).toUpperCase(),
+    city: safeText(body.city, 120),
+    region: safeText(body.region, 120),
+    countryCode: safeText(body.countryCode, 2).toUpperCase(),
+  };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email)) throw new AdminError("INVALID_EMAIL", 400);
+  if (!contact.recipientName || !contact.addressLine1 || !contact.postalCode || !contact.city || !/^[A-Z]{2}$/.test(contact.countryCode)) {
+    throw new AdminError("ORDER_ADDRESS_INCOMPLETE", 400);
+  }
+  const now = new Date().toISOString();
+  await db.batch([
+    db.prepare(`UPDATE order_contact_snapshots SET email=?,recipient_name=?,address_line1=?,address_line2=?,
+      postal_code=?,city=?,region=?,country_code=?,updated_at=? WHERE order_id=?`)
+      .bind(contact.email, contact.recipientName, contact.addressLine1, contact.addressLine2 || null,
+        contact.postalCode, contact.city, contact.region || null, contact.countryCode, now, order.id),
+    db.prepare("UPDATE commerce_orders SET guest_email=?,updated_at=? WHERE id=?")
+      .bind(contact.email, now, order.id),
+  ]);
+  await auditAdmin(env, "order", order.id, "ORDER_CONTACT_UPDATED", reqId, {
+    fields: ["email", "recipientName", "addressLine1", "addressLine2", "postalCode", "city", "region", "countryCode"],
+  });
+  return getOrderDetail(env, order.id);
+}
+
+async function deleteTestOrder(env, id, body, reqId) {
+  const db = requireDb(env);
+  const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
+  if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
+  if (safeText(body.orderNumber, 80) !== order.order_number) throw new AdminError("ORDER_NUMBER_CONFIRMATION_REQUIRED", 400);
+  const deletion = await orderDeletionState(db, order);
+  if (!deletion.allowed) throw new AdminError("ORDER_DELETE_BLOCKED", 409);
+
+  const now = new Date().toISOString();
+  // D1 fuehrt batch atomar aus. Erst abhaengige, nicht aufbewahrungspflichtige
+  // Testdaten entfernen; der abschliessende DELETE prueft die Schutzregeln
+  // erneut und verhindert einen Wettlauf mit Zahlungs-/Versandereignissen.
+  const result = await db.batch([
+    db.prepare("DELETE FROM admin_notes WHERE entity_type='ORDER' AND entity_id=?").bind(order.id),
+    db.prepare("DELETE FROM order_versand WHERE order_id=?").bind(order.id),
+    db.prepare("DELETE FROM payments WHERE order_id=? AND status IN ('CREATED','FAILED','CANCELLED') AND provider_payment_id IS NULL").bind(order.id),
+    db.prepare("DELETE FROM idempotency_keys WHERE resource_id=?").bind(order.id),
+    db.prepare(`DELETE FROM commerce_orders WHERE id=? AND status='CANCELLED'
+      AND NOT EXISTS (SELECT 1 FROM payments WHERE order_id=commerce_orders.id)
+      AND NOT EXISTS (SELECT 1 FROM shipments WHERE order_id=commerce_orders.id)
+      AND NOT EXISTS (SELECT 1 FROM returns WHERE order_id=commerce_orders.id)
+      AND NOT EXISTS (SELECT 1 FROM refunds WHERE order_id=commerce_orders.id)
+      AND NOT EXISTS (SELECT 1 FROM tax_cash_events WHERE order_id=commerce_orders.id)
+      AND NOT EXISTS (SELECT 1 FROM rechnungen WHERE order_id=commerce_orders.id)
+      AND NOT EXISTS (SELECT 1 FROM order_confirmation_archive WHERE order_id=commerce_orders.id)
+      AND NOT EXISTS (SELECT 1 FROM dhl_qr_marken WHERE order_id=commerce_orders.id)
+      AND NOT EXISTS (SELECT 1 FROM packlink_sendungen WHERE order_id=commerce_orders.id)`).bind(order.id),
+  ]);
+  if (!result[result.length - 1]?.meta?.changes) throw new AdminError("ORDER_DELETE_STATE_CHANGED", 409);
+  await auditAdmin(env, "order", order.id, "UNPAID_TEST_ORDER_DELETED", reqId, {
+    orderNumber: order.order_number,
+    deletedAt: now,
+  });
+  return { ok: true, deleted: true, orderNumber: order.order_number };
 }
 
 async function updateOrder(env, id, body, reqId, actorType = "ADMIN") {
@@ -854,11 +972,17 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
       }
     }
 
+    const contactMatch = /^\/admin\/orders\/([^/]+)\/contact$/.exec(path);
+    if (contactMatch && request.method === "PATCH") {
+      return adminJson(await updateOrderContact(env, decodeURIComponent(contactMatch[1]), await readJson(request), reqId), 200, origin);
+    }
+
     const orderMatch = /^\/admin\/orders\/([^/]+)$/.exec(path);
     if (orderMatch) {
       const id = decodeURIComponent(orderMatch[1]);
       if (request.method === "GET") return adminJson(await getOrderDetail(env, id), 200, origin);
       if (request.method === "PATCH") return adminJson(await updateOrder(env, id, await readJson(request), reqId), 200, origin);
+      if (request.method === "DELETE") return adminJson(await deleteTestOrder(env, id, await readJson(request), reqId), 200, origin);
     }
     const rentalMatch = /^\/admin\/rentals\/([^/]+)$/.exec(path);
     if (rentalMatch) {
