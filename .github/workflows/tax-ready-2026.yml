@@ -1,0 +1,54 @@
+name: Tax Ready 2026 Guard
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "shop-worker/tax-ready-2026.js"
+      - "shop-worker/tax-ready-dataset-v3.js"
+      - "shop-worker/tax-ready-2026.test.mjs"
+      - "shop-worker/migrations/0026_tax_ready_2026.sql"
+      - "shop-worker/buchhaltung.js"
+      - "shop-worker/TAX_DATASET_V3.md"
+      - "data/items.json"
+      - ".github/workflows/tax-ready-2026.yml"
+  push:
+    branches: [main]
+    paths:
+      - "shop-worker/tax-ready-2026.js"
+      - "shop-worker/tax-ready-dataset-v3.js"
+      - "shop-worker/tax-ready-2026.test.mjs"
+      - "shop-worker/migrations/0026_tax_ready_2026.sql"
+      - "shop-worker/buchhaltung.js"
+      - "shop-worker/TAX_DATASET_V3.md"
+      - "data/items.json"
+      - ".github/workflows/tax-ready-2026.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  tax-ready:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Node einrichten
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+
+      - name: Neue Tax-Module syntaktisch prüfen
+        run: |
+          set -euo pipefail
+          node --check shop-worker/tax-ready-2026.js
+          node --check shop-worker/tax-ready-dataset-v3.js
+          node --check shop-worker/buchhaltung.js
+
+      - name: Tax-Ready-Regressionen ausführen
+        run: node --test shop-worker/tax-ready-2026.test.mjs
+
+      - name: Vollständige D1-Migrationskette prüfen
+        run: python3 scripts/test_d1_migrations.py
