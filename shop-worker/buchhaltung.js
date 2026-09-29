@@ -11,6 +11,7 @@
 import { safeText } from "./commerce-core.js";
 import { euroAmount, formatOrderConfirmation, loadOrderForConfirmation, mailSenderIdentity } from "./customer-mail.js";
 import { prepareDataset } from './tax-dataset-stream.js';
+import { handleTaxReady2026, isTaxReadyRoute } from './tax-ready-2026.js';
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -267,6 +268,10 @@ export function istBuchhaltungsRoute(url) {
 
 export async function handleBuchhaltung(request, env, url, reqId = crypto.randomUUID(), origin = null) {
   try {
+    // Tax Ready 2026 lives under the same private /admin/buchhaltung namespace,
+    // but keeps the established v2 endpoints untouched.
+    if (isTaxReadyRoute(url)) return handleTaxReady2026(request, env, url, reqId, origin);
+
     if (request.method === "OPTIONS") {
       if (origin && !ADMIN_ORIGINS.includes(origin)) {
         return new Response(null, { status: 403, headers: securityHeaders() });
