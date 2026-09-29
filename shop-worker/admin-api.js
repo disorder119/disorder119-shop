@@ -7,6 +7,7 @@ import {
 } from "./commerce-core.js";
 import { sendShippingConfirmation } from "./customer-mail.js";
 import { ErstattungsFehler, bestellungErstatten, erstattungAusWebhook } from "./erstattung.js";
+import { reconcilePurchasePayments } from "./worker.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -782,8 +783,14 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
     if (path === "/admin/ping" && request.method === "GET") {
       return adminJson({ ok: true, role: "OWNER", database: Boolean(env.DB), now: new Date().toISOString() }, 200, origin);
     }
-    if (path === "/admin/overview" && request.method === "GET") return adminJson(await getOverview(env, url), 200, origin);
-    if (path === "/admin/orders" && request.method === "GET") return adminJson(await getOrders(env, url), 200, origin);
+    if (path === "/admin/overview" && request.method === "GET") {
+      await reconcilePurchasePayments(env, reqId);
+      return adminJson(await getOverview(env, url), 200, origin);
+    }
+    if (path === "/admin/orders" && request.method === "GET") {
+      await reconcilePurchasePayments(env, reqId);
+      return adminJson(await getOrders(env, url), 200, origin);
+    }
     if (path === "/admin/rentals" && request.method === "GET") return adminJson(await getRentals(env, url), 200, origin);
     if (path === "/admin/inventory" && request.method === "GET") return adminJson(await getInventory(env, url), 200, origin);
     if (path === "/admin/customers" && request.method === "GET") return adminJson(await getCustomers(env, url), 200, origin);

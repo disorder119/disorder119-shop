@@ -361,6 +361,14 @@ async function audit(env, entityType, entityId, eventType, reqId, metadata = nul
 async function reserveForPurchase(env, item, key, reqId) {
   const db = requireDb(env);
   const inv = await ensureInventory(env, item);
+  if (inv.status === "PAYMENT_PENDING") {
+    const interrupted = await db.prepare(`SELECT p.provider_order_id FROM payments p
+      JOIN order_items oi ON oi.order_id=p.order_id
+      WHERE oi.inventory_id=? AND p.provider='PAYPAL' AND p.status='PENDING' LIMIT 1`).bind(inv.id).first();
+    if (interrupted?.provider_order_id) {
+      await reconcilePurchasePayments(env, reqId, interrupted.provider_order_id);
+    }
+  }
   await cleanupExpired(env, inv.id);
   const reservationId = crypto.randomUUID();
   const now = new Date();
@@ -722,12 +730,14 @@ async function markAllSold(env, completed, reqId) {
 // Ein unterbrochener Capture-Request bleibt zunaechst gesperrt. Erst die
 // PayPal-Abfrage entscheidet, ob er bezahlt wurde oder nach mehreren Stunden
 // wirklich unbezahlt ist. Ein Providerfehler gibt nie Bestand frei.
-export async function reconcilePurchasePayments(env, reqId = "purchase-reconcile") {
+export async function reconcilePurchasePayments(env, reqId = "purchase-reconcile", providerOrderId = null) {
   const db = requireDb(env);
   const now = Date.now();
   const candidates = (await db.prepare(`SELECT provider_order_id,COALESCE(updated_at,created_at) AS started_at FROM payments
     WHERE provider='PAYPAL' AND status='PENDING' AND COALESCE(updated_at,created_at)<?
-    ORDER BY COALESCE(updated_at,created_at) LIMIT 20`).bind(new Date(now - 2 * 60 * 1000).toISOString()).all()).results || [];
+      AND (? IS NULL OR provider_order_id=?)
+    ORDER BY COALESCE(updated_at,created_at) LIMIT 20`)
+    .bind(new Date(now - 2 * 60 * 1000).toISOString(), providerOrderId, providerOrderId).all()).results || [];
   if (!candidates.length) { await expirePurchaseReservations(env); return; }
   const token = await paypalAccessToken(env);
   for (const candidate of candidates) {
