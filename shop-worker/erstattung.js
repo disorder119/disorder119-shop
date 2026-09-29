@@ -153,6 +153,13 @@ export async function bestellungErstatten(env, id, body, reqId, statusSetzen) {
       }
       const token = await paypalToken(env);
       const notiz = safeText(body?.notiz || `Erstattung Bestellung ${order.order_number}`, 250);
+      // Die volle Capture direkt mit leerem Body erstatten; nur beim offenen
+      // Teilbetrag braucht PayPal ein amount-Objekt. Keine neue Geldsendung.
+      const volleCapture = schon === 0 && zeile.amount_cents === Number(payment.amount_cents);
+      const paypalBody = volleCapture ? {} : {
+        amount: { value: euro(zeile.amount_cents), currency_code: "EUR" },
+        note_to_payer: notiz,
+      };
       const res = await fetch(`${paypalApiBase(env)}/v2/payments/captures/${encodeURIComponent(payment.provider_payment_id)}/refund`, {
         method: "POST",
         headers: {
@@ -161,7 +168,7 @@ export async function bestellungErstatten(env, id, body, reqId, statusSetzen) {
           "PayPal-Request-Id": zeile.idempotency_key,
           Prefer: "return=representation",
         },
-        body: JSON.stringify({ amount: { value: euro(zeile.amount_cents), currency_code: "EUR" }, note_to_payer: notiz }),
+        body: JSON.stringify(paypalBody),
       });
       const antwort = await res.json().catch(() => ({}));
       if (!res.ok) {

@@ -340,7 +340,9 @@ async function getOrderDetail(env, id) {
   if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
   const [items, payments, shipments, returns, refunds, events, notes, contact, versand] = await db.batch([
     db.prepare("SELECT * FROM order_items WHERE order_id=? ORDER BY rowid").bind(order.id),
-    db.prepare("SELECT * FROM payments WHERE order_id=? ORDER BY created_at DESC").bind(order.id),
+    db.prepare(`SELECT p.*,
+      (SELECT e.amount_cents FROM tax_cash_events e WHERE e.payment_id=p.id AND e.kind='fee' LIMIT 1) AS paypal_fee_cents
+      FROM payments p WHERE p.order_id=? ORDER BY p.created_at DESC`).bind(order.id),
     db.prepare("SELECT * FROM shipments WHERE order_id=? ORDER BY created_at DESC").bind(order.id),
     db.prepare("SELECT * FROM returns WHERE order_id=? ORDER BY created_at DESC").bind(order.id),
     db.prepare("SELECT * FROM refunds WHERE order_id=? ORDER BY created_at DESC").bind(order.id),

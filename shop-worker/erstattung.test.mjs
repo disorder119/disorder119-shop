@@ -89,7 +89,7 @@ test("Erstatten zahlt den ganzen Betrag ueber PayPal zurueck und setzt Erstattet
     assert.equal(res.status, 200, JSON.stringify(data));
     assert.equal(pp.aufrufe.length, 1);
     assert.match(pp.aufrufe[0].url, /^https:\/\/api-m\.paypal\.com\/v2\/payments\/captures\/CAPTURE1\/refund$/);
-    assert.deepEqual(pp.aufrufe[0].body.amount, { value: "7.86", currency_code: "EUR" });
+    assert.deepEqual(pp.aufrufe[0].body, {});
     assert.equal(pp.aufrufe[0].headers["PayPal-Request-Id"], "erstattung:o1:0");
     assert.equal(data.order.status, "REFUNDED");
     assert.equal(data.erstattung.betragCents, 786);
@@ -112,6 +112,25 @@ test("Erstatten zahlt den ganzen Betrag ueber PayPal zurueck und setzt Erstattet
   } finally {
     pp.zurueck();
   }
+});
+
+test("Admin zeigt die belegte PayPal-Gebuehr getrennt vom Bruttobetrag", async () => {
+  const db = d1();
+  bestellungAnlegen(db, { total: 560 });
+  db.raw.prepare(`INSERT INTO tax_cash_events
+    (id,payment_id,order_id,kind,provider,provider_reference,amount_cents,currency,occurred_at,observed_at,evidence_hash,evidence_json)
+    VALUES ('paypal:fee:CAPTURE1','p1','o1','fee','PAYPAL','CAPTURE1',56,'EUR',NULL,'2026-09-28T20:00:00Z','hash','{}')`).run();
+  const pp = paypal();
+  try {
+    const req = new Request("https://api.disorder119.com/admin/orders/o1", {
+      headers: { Origin: ADMIN, Authorization: "Bearer geheim" },
+    });
+    const res = await handleAdminRequest(req, env(db), new URL(req.url), "req-fee", ADMIN);
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.payments[0].amount_cents, 560);
+    assert.equal(data.payments[0].paypal_fee_cents, 56);
+  } finally { pp.zurueck(); }
 });
 
 test("PayPal lehnt ab: Fehler sichtbar, erneuter Versuch mit derselben Request-Id", async () => {
@@ -282,6 +301,8 @@ test("Erstattung direkt in PayPal: Webhook traegt sie ein und setzt Erstattet", 
       supplementary_data: { related_ids: { capture_id: "CAPTURE1" } } } }, "wh");
     assert.equal(db2.raw.prepare("SELECT status FROM commerce_orders").get().status, "PAID");
     assert.equal(db2.raw.prepare("SELECT status FROM payments").get().status, "PARTIALLY_REFUNDED");
+    await erstatten(env(db2));
+    assert.deepEqual(pp.aufrufe.at(-1).body.amount, { value: "6.86", currency_code: "EUR" });
   } finally {
     pp.zurueck();
   }
