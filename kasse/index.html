@@ -13,9 +13,9 @@
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <link rel="apple-touch-icon" href="/assets/favicon.png">
 <title>Kasse | Disorder119</title>
-<link rel="stylesheet" href="/assets/app.css?v=a04c773dd4">
-<link rel="stylesheet" href="/assets/kasse.css?v=c97750fcc0">
-<link rel="stylesheet" href="/assets/theme.css">
+<link rel="stylesheet" href="/assets/app.css?v=282223db1f">
+<link rel="stylesheet" href="/assets/kasse.css?v=b0b46b3c44">
+<link rel="stylesheet" href="/assets/theme.css?v=4d83dd48fb">
 <script src="/assets/ansicht.js" defer></script>
 <script>try{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}catch(e){}</script>
 </head>
@@ -40,6 +40,8 @@
       <section class="kasse-block" aria-labelledby="kasseAdresseTitel">
         <h2 id="kasseAdresseTitel"><span class="kasse-nr">2</span><span data-t="adresse">Lieferadresse</span></h2>
         <form class="kasse-form" id="kasseForm" novalidate autocomplete="on">
+          <label class="kasse-feld kasse-feld--breit"><span data-t="email">E-Mail-Adresse für Bestellung und Rechnung</span>
+            <input type="email" id="kEmail" name="email" autocomplete="email" inputmode="email" maxlength="200" required></label>
           <label class="kasse-feld"><span data-t="vorname">Vorname</span>
             <input type="text" id="kVorname" name="given-name" autocomplete="shipping given-name" maxlength="60" required></label>
           <label class="kasse-feld"><span data-t="nachname">Nachname</span>
@@ -62,6 +64,10 @@
           <label class="kasse-feld kasse-feld--breit"><span data-t="zusatz">Adresszusatz (optional)</span>
             <input type="text" id="kZusatz" name="address-line2" autocomplete="shipping address-line2" maxlength="100"></label>
           <p class="kasse-hinweis kasse-feld--breit" id="kLand" data-t="landHinweis">Wir liefern innerhalb Deutschlands. Lieferung an eine Packstation ist bald mit DHL möglich.</p>
+          <label class="kasse-konto kasse-feld--breit" for="kKonto">
+            <input type="checkbox" id="kKonto" name="create-account">
+            <span data-t="kontoAnlegen">Kostenloses Kundenkonto mit dieser E-Mail-Adresse erstellen (optional). Nach der Zahlung erhältst du einen Anmeldelink.</span>
+          </label>
         </form>
       </section>
 
@@ -89,9 +95,10 @@
 </footer>
 
 <script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "paypalClientId": "BAAcvD8X1aHIk42UUDAMZkYZ2i5gKLPCXZDBzbWjsh-axJ_6551l-FXgDdboqGtmZSidZbGWon2cQ_SuaI", "shopWorkerUrl": "https://api.disorder119.com", "turnstileSiteKey": "0x4AAAAAAFHqI2j_AitAYIKF", "environment": "live", "features": {"paypalCheckout": true, "customerAccounts": true}}; window.KASSE_LANG = "de";</script>
-<script src="https://www.paypal.com/sdk/js?client-id=BAAcvD8X1aHIk42UUDAMZkYZ2i5gKLPCXZDBzbWjsh-axJ_6551l-FXgDdboqGtmZSidZbGWon2cQ_SuaI&currency=EUR&intent=capture&commit=true&disable-funding=card,sepa"></script>
-<script src="/assets/pwa.js?v=690a705938"></script>
-<script src="/assets/shop-promos.js?v=ef99d45c44"></script>
-<script src="/assets/kasse.js?v=c97750fcc0" defer></script>
+<script src="https://www.paypal.com/sdk/js?client-id=BAAcvD8X1aHIk42UUDAMZkYZ2i5gKLPCXZDBzbWjsh-axJ_6551l-FXgDdboqGtmZSidZbGWon2cQ_SuaI&currency=EUR&intent=capture&commit=true&components=buttons,applepay&disable-funding=card,sepa"></script>
+<script src="https://applepay.cdn-apple.com/jsapi/1.latest/apple-pay-sdk.js"></script>
+<script src="/assets/pwa.js?v=d2b3a6cf1c"></script>
+<script src="/assets/shop-promos.js?v=809a172c29"></script>
+<script src="/assets/kasse.js?v=b0b46b3c44" defer></script>
 </body>
 </html>

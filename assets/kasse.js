@@ -20,7 +20,9 @@
   var TEXTE = {
     de: {
       titel: "Kasse", zurueck: "Warenkorb", stuecke: "Deine Stücke", adresse: "Lieferadresse", versand: "Versand",
-      uebersicht: "Übersicht", vorname: "Vorname", nachname: "Nachname", plz: "PLZ", ort: "Ort", strasse: "Straße",
+      uebersicht: "Übersicht", email: "E-Mail-Adresse für Bestellung und Rechnung", kontoAnlegen: "Kostenloses Kundenkonto erstellen (optional). Nach der Zahlung erhältst du einen Anmeldelink.",
+      fehltEmail: "Bitte gib eine gültige E-Mail-Adresse an.", appleCoupon: "Mit Gutschein bitte PayPal wählen; der Rabatt wird dort vor der Zahlung geprüft.",
+      vorname: "Vorname", nachname: "Nachname", plz: "PLZ", ort: "Ort", strasse: "Straße",
       hausnummer: "Nr.", zusatz: "Adresszusatz (optional)",
       landHinweis: "Wir liefern innerhalb Deutschlands. Lieferung an eine Packstation ist bald mit DHL möglich.",
       agb: "AGB & Widerruf", datenschutz: "Datenschutz", impressum: "Impressum",
@@ -48,14 +50,16 @@
       fehler: "Da ist leider etwas schiefgelaufen. Bitte versuch es gleich noch einmal oder schreib uns.",
       abschliessen: "Zahlung wird abgeschlossen …", abgebrochen: "Bezahlung abgebrochen – es wurde nichts abgebucht.",
       danke: "Danke für deine Bestellung!", bestellnr: "Bestellnummer:",
-      dankeText: "Die Bestätigung mit Rechnung kommt gleich per E-Mail an die Adresse deines PayPal-Kontos. Wir packen deine Stücke von Hand und verschicken sie in der Regel innerhalb von 2 Werktagen.",
+      dankeText: "Die Bestätigung mit Rechnung kommt an deine angegebene E-Mail-Adresse. Wir packen deine Stücke von Hand und verschicken sie in der Regel innerhalb von 2 Werktagen.",
       konto: "Bestellung im Konto ansehen", weiter: "Weiter stöbern",
       mailAdresse: "Lieferadresse", mailVersand: "Versand", mailGesamt: "Gesamt", mailGruss: "Hallo! Ich möchte folgende Stücke bestellen:",
       mailFrage: "Bitte bestätigt mir Verfügbarkeit und Zahlungsweg. Danke!"
     },
     en: {
       titel: "Checkout", zurueck: "Cart", stuecke: "Your pieces", adresse: "Delivery address", versand: "Shipping",
-      uebersicht: "Summary", vorname: "First name", nachname: "Last name", plz: "Postcode", ort: "Town", strasse: "Street",
+      uebersicht: "Summary", email: "Email address for order and invoice", kontoAnlegen: "Create a free customer account (optional). We will email a sign-in link after payment.",
+      fehltEmail: "Please enter a valid email address.", appleCoupon: "For coupons, please choose PayPal; the discount is checked before payment.",
+      vorname: "First name", nachname: "Last name", plz: "Postcode", ort: "Town", strasse: "Street",
       hausnummer: "No.", zusatz: "Address line 2 (optional)",
       landHinweis: "We deliver within Germany. Delivery to a DHL Packstation is coming soon.",
       agb: "Terms & withdrawal", datenschutz: "Privacy", impressum: "Legal notice",
@@ -83,14 +87,16 @@
       fehler: "Something went wrong. Please try again in a moment or write to us.",
       abschliessen: "Completing payment …", abgebrochen: "Payment cancelled – nothing was charged.",
       danke: "Thank you for your order!", bestellnr: "Order number:",
-      dankeText: "The confirmation with invoice is on its way to your PayPal e-mail address. We pack your pieces by hand and usually ship within 2 working days.",
+      dankeText: "The confirmation and invoice will be sent to the email address you entered. We pack your pieces by hand and usually ship within 2 working days.",
       konto: "View order in your account", weiter: "Keep browsing",
       mailAdresse: "Delivery address", mailVersand: "Shipping", mailGesamt: "Total", mailGruss: "Hello! I would like to order these pieces:",
       mailFrage: "Please confirm availability and payment. Thank you!"
     },
     fr: {
       titel: "Commande", zurueck: "Panier", stuecke: "Tes pièces", adresse: "Adresse de livraison", versand: "Livraison",
-      uebersicht: "Récapitulatif", vorname: "Prénom", nachname: "Nom", plz: "Code postal", ort: "Ville", strasse: "Rue",
+      uebersicht: "Récapitulatif", email: "Adresse e-mail pour la commande et la facture", kontoAnlegen: "Créer un compte client gratuit (facultatif). Un lien de connexion sera envoyé après le paiement.",
+      fehltEmail: "Saisis une adresse e-mail valide.", appleCoupon: "Pour utiliser un bon, choisis PayPal ; la réduction est vérifiée avant le paiement.",
+      vorname: "Prénom", nachname: "Nom", plz: "Code postal", ort: "Ville", strasse: "Rue",
       hausnummer: "N°", zusatz: "Complément d'adresse (facultatif)",
       landHinweis: "Nous livrons en Allemagne. La livraison en Packstation DHL arrive bientôt.",
       agb: "CGV & rétractation", datenschutz: "Confidentialité", impressum: "Mentions légales",
@@ -118,7 +124,7 @@
       fehler: "Une erreur s'est produite. Réessaie dans un instant ou écris-nous.",
       abschliessen: "Finalisation du paiement …", abgebrochen: "Paiement annulé – rien n'a été débité.",
       danke: "Merci pour ta commande !", bestellnr: "Numéro de commande :",
-      dankeText: "La confirmation avec facture arrive par e-mail à l'adresse de ton compte PayPal. Nous emballons tes pièces à la main et expédions en général sous 2 jours ouvrés.",
+      dankeText: "La confirmation et la facture seront envoyées à l'adresse e-mail indiquée. Nous emballons tes pièces à la main et expédions en général sous 2 jours ouvrés.",
       konto: "Voir la commande dans ton compte", weiter: "Continuer",
       mailAdresse: "Adresse de livraison", mailVersand: "Livraison", mailGesamt: "Total", mailGruss: "Bonjour ! Je souhaite commander ces pièces :",
       mailFrage: "Merci de me confirmer disponibilité et paiement !"
@@ -321,7 +327,7 @@
   }
 
   // ---- Lieferadresse: Ort zur PLZ, Strassen zum Anfang
-  var f = { vorname: $("kVorname"), nachname: $("kNachname"), plz: $("kPlz"), ort: $("kOrt"), strasse: $("kStrasse"), nummer: $("kNummer"), zusatz: $("kZusatz") };
+  var f = { email: $("kEmail"), vorname: $("kVorname"), nachname: $("kNachname"), plz: $("kPlz"), ort: $("kOrt"), strasse: $("kStrasse"), nummer: $("kNummer"), zusatz: $("kZusatz") };
   var orteBox = $("kOrte");
   var vorschlagListe = $("kStrassen");
   var ortAutomatisch = "";
@@ -451,6 +457,7 @@
   function pruefen() {
     var fehler = [];
     function pruef(feld, ok, text) { feldFehler(feld, ok ? "" : text); if (!ok) fehler.push(feld); }
+    pruef(f.email, f.email.validity.valid && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email.value.trim()), t("fehltEmail"));
     pruef(f.vorname, f.vorname.value.trim().length >= 1, t("fehltVorname"));
     pruef(f.nachname, f.nachname.value.trim().length >= 2, t("fehltNachname"));
     pruef(f.plz, /^\d{5}$/.test(f.plz.value), t("fehltPlz"));
@@ -492,6 +499,7 @@
     if (code === "PACKSTATION_NICHT_MOEGLICH") return t("packstation");
     if (code === "NUR_DEUTSCHLAND") return t("nurDe");
     if (code === "ADRESSE_UNVOLLSTAENDIG") return t("pruefen");
+    if (code === "EMAIL_REQUIRED") return t("fehltEmail");
     if (/^TURNSTILE_|^schutz_/.test(code)) return t("botCheck");
     if (code === "RATE_LIMITED") return t("zuSchnell");
     if (code === "ITEM_UNAVAILABLE" || code === "ITEM_NOT_FOUND" || code === "PRICE_ON_REQUEST") return t("schonWeg");
@@ -501,6 +509,7 @@
     if (zustand.versuch) zustand.versuch.ablauf = bis;
     versandZeichnen();
     Array.prototype.forEach.call($("kasseForm").elements, function (feld) { feld.readOnly = bis > Date.now(); });
+    $("kKonto").disabled = bis > Date.now();
     if (bis > Date.now()) setTimeout(function () { sperren(0); }, Math.min(bis - Date.now() + 500, 2147483000));
   }
 
@@ -539,7 +548,7 @@
     var bezahlSchluessel = {};
     var letzterFehler = "";
 
-    window.paypal.Buttons({
+    var zahlung = {
       style: { shape: "rect", color: "black", layout: "vertical", label: "pay" },
       onClick: function (daten, actions) {
         if (!zustand.stuecke.length || !zustand.wahl) { melden(t("versandFehlt"), status); return actions.reject(); }
@@ -550,7 +559,8 @@
         melden("", status);
         var wahl = zustand.wahl;
         var ids = zustand.stuecke.map(function (it) { return it.id; });
-        var inhalt = { itemIds: ids, adresse: adresse(), versand: wahl.id, versandPreisCents: wahl.preisCents };
+        var inhalt = { itemIds: ids, adresse: adresse(), email: f.email.value.trim(), createAccount: $("kKonto").checked,
+          versand: wahl.id, versandPreisCents: wahl.preisCents };
         var fingerabdruck = JSON.stringify(inhalt);
         return schutz.then(function (S) {
           // Neuer Schluessel, sobald sich der Inhalt aendert - derselbe
@@ -598,7 +608,67 @@
       },
       onCancel: function () { melden(t("abgebrochen"), status); },
       onError: function () { melden(letzterFehler || t("fehler"), status); }
-    }).render("#kassePaypal");
+    };
+    window.paypal.Buttons(zahlung).render("#kassePaypal");
+    appleEinrichten(ziel, zahlung);
+  }
+
+  function appleEinrichten(ziel, zahlung) {
+    // Ein Gutschein wird erst serverseitig beim Anlegen der PayPal-Bestellung
+    // bewertet. Apple Pay darf davor keinen hoeheren Endbetrag anzeigen.
+    try {
+      if (localStorage.getItem(CODE_KEY)) {
+        ziel.appendChild(el("p", "kasse-hinweis kasse-apple-coupon", t("appleCoupon")));
+        return;
+      }
+    } catch (e) { /* ohne Gutschein fortfahren */ }
+    if (!window.paypal || typeof window.paypal.Applepay !== "function" ||
+        !window.ApplePaySession || !window.ApplePaySession.canMakePayments()) return;
+    var apple = window.paypal.Applepay();
+    apple.config().then(function (cfg) {
+      if (!cfg.isEligible) return;
+      var host = el("div", "kasse-applepay");
+      var button = document.createElement("apple-pay-button");
+      button.setAttribute("buttonstyle", "black");
+      button.setAttribute("type", "buy");
+      button.setAttribute("locale", LANG === "de" ? "de-DE" : LANG === "fr" ? "fr-FR" : "en-US");
+      host.appendChild(button);
+      ziel.insertBefore(host, ziel.firstChild);
+      button.addEventListener("click", function () {
+        if (!zustand.stuecke.length || !zustand.wahl || !pruefen()) return;
+        var total = (stueckeCents() + zustand.wahl.preisCents) / 100;
+        var session;
+        try {
+          session = new window.ApplePaySession(4, {
+            countryCode: cfg.countryCode,
+            merchantCapabilities: cfg.merchantCapabilities,
+            supportedNetworks: cfg.supportedNetworks,
+            currencyCode: "EUR",
+            requiredBillingContactFields: ["postalAddress"],
+            total: { label: "DISORDER119", type: "final", amount: total.toFixed(2) }
+          });
+        } catch (e) { melden(t("fehler"), status); return; }
+        session.onvalidatemerchant = function (event) {
+          apple.validateMerchant({ validationUrl: event.validationURL, displayName: "DISORDER119" })
+            .then(function (result) { session.completeMerchantValidation(result.merchantSession); })
+            .catch(function () { session.abort(); melden(t("fehler"), status); });
+        };
+        session.onpaymentauthorized = function (event) {
+          zahlung.createOrder().then(function (orderId) {
+            return apple.confirmOrder({ orderId: orderId, token: event.payment.token,
+              billingContact: event.payment.billingContact }).then(function () { return orderId; });
+          }).then(function (orderId) {
+            return zahlung.onApprove({ orderID: orderId });
+          }).then(function () {
+            session.completePayment(window.ApplePaySession.STATUS_SUCCESS);
+          }).catch(function (err) {
+            session.completePayment(window.ApplePaySession.STATUS_FAILURE);
+            melden(fehlerText(err), status);
+          });
+        };
+        session.begin();
+      });
+    }).catch(function () { /* Nicht berechtigter Haendler oder Geraet: PayPal bleibt verfuegbar. */ });
   }
 
   function anfrageEinrichten() {
@@ -618,7 +688,7 @@
       zeilen.push("");
       if (zustand.wahl) zeilen.push(t("mailVersand") + ": " + zustand.wahl.titel + (zustand.wahl.carrier ? " (" + zustand.wahl.carrier + ")" : "") + ", " + paketName(zustand.versand) + " – " + geld(zustand.wahl.preisCents));
       zeilen.push(t("mailGesamt") + ": " + geld(stueckeCents() + (zustand.wahl ? zustand.wahl.preisCents : 0)));
-      zeilen.push("", t("mailAdresse") + ":", a.name, a.strasse + " " + a.hausnummer);
+      zeilen.push("", t("email") + ": " + f.email.value.trim(), t("mailAdresse") + ":", a.name, a.strasse + " " + a.hausnummer);
       if (a.zusatz) zeilen.push(a.zusatz);
       zeilen.push(a.plz + " " + a.ort, "Deutschland", "", t("mailFrage"));
       location.href = "mailto:" + CFG.email + "?subject=" + encodeURIComponent(t("betreff")) + "&body=" + encodeURIComponent(zeilen.join("\n"));

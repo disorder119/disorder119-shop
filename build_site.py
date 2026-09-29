@@ -51,6 +51,7 @@ def _asset_version(rel_path):
 
 
 APP_CSS_VERSION = _asset_version("assets/app.css")
+THEME_CSS_VERSION = _asset_version("assets/theme.css")
 APP_JS_VERSION = _asset_version("assets/app.js")
 ARTICLE_CSS_VERSION = _asset_version("assets/article.css")
 ARTICLE_JS_VERSION = _asset_version("assets/article.js")
@@ -73,6 +74,7 @@ PWA_JS_VERSION = _asset_version("assets/pwa.js")
 # applied immediately afterwards.
 PRODUCT_CRITICAL_CSS = """:root{--ink:#000;--paper:#f2efe7;--rule:rgba(242,239,231,.14);--rule-strong:rgba(242,239,231,.28);--text-muted:rgba(242,239,231,.58);--surface:#121212;color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;padding:0;overflow-x:hidden}body{background:#000;color:#f2efe7;font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}a{color:inherit}.page-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--rule)}.page-head__brand{font-family:"Helvetica Neue Condensed","Arial Narrow",Helvetica,Arial,sans-serif;font-weight:800;text-transform:uppercase;font-size:1.3rem;letter-spacing:-.01em;text-decoration:none}.page-head__right,.lang-switch{display:flex;align-items:center}.page-head__right{gap:12px}.lang-switch{gap:2px;border:1px solid var(--rule-strong)}.lang-switch__btn{display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;text-decoration:none}.page-head__back{display:none!important}.page-head__menu{display:none}.article-sequence-nav{max-width:1240px;margin:16px auto 0;padding:0 clamp(20px,5vw,48px);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px}.article-sequence-nav__link{min-height:38px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap}.article-sequence-nav__link--prev{justify-self:start}.article-sequence-nav__link--archive{justify-self:center}.article-sequence-nav__link--next{justify-self:end}.product{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:clamp(24px,4vw,56px);max-width:1240px;margin:0 auto;padding:clamp(20px,3vw,40px) clamp(20px,5vw,48px) 60px}.gallery,.info{min-width:0}.gallery{position:sticky;top:16px;align-self:start}.gallery__stage{position:relative;background:#121212;aspect-ratio:3/4;overflow:hidden}.gallery__stage img{width:100%;height:100%;object-fit:contain;display:block;background:#121212}.gallery__nav{position:absolute;top:50%;transform:translateY(-50%)}.gallery__nav--prev{left:10px}.gallery__nav--next{right:10px}.gallery__counter{position:absolute;right:10px;bottom:10px}.gallery__badge{position:absolute;left:10px;top:10px}.gallery__thumbs{display:flex;gap:8px;margin-top:10px;overflow-x:auto}.gallery__thumbs--reserved{min-height:84px}@media(max-width:860px){.page-head{position:relative;min-height:74px;padding:14px 16px;gap:8px}.page-head__menu{width:38px;height:38px;flex:0 0 38px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-decoration:none}.page-head__menu span{display:block;width:22px;height:1px;background:currentColor}.page-head__brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;font-size:.7rem;line-height:1;letter-spacing:.01em;white-space:nowrap}.page-head__right{margin-left:auto;justify-content:flex-end;flex-wrap:nowrap!important;gap:7px}.lang-switch{gap:2px}.lang-switch__btn{width:32px;height:32px;flex:0 0 32px;padding:0;font-size:.59rem}.page-head__cart{position:relative;width:34px;height:34px;flex:0 0 34px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:0}.page-head__cart>span:first-child{display:none}.article-sequence-nav{max-width:none;width:auto;margin:0;padding:0 16px;min-height:58px;grid-template-columns:1fr auto 1fr;gap:0;border-bottom:1px solid rgba(242,239,231,.18)}.article-sequence-nav__link{min-width:0;min-height:58px;padding:0 10px}.article-sequence-nav__link--archive{padding-left:22px;padding-right:22px;border-left:1px solid rgba(242,239,231,.16);border-right:1px solid rgba(242,239,231,.16)}.product{grid-template-columns:1fr;gap:22px;padding:12px 16px 48px}.gallery{position:static}.gallery__stage{border:0}.gallery__thumbs--reserved{min-height:100px}}@media(max-width:380px){.page-head{padding-left:12px;padding-right:12px}.page-head__menu{width:34px;flex-basis:34px}.page-head__brand{font-size:.68rem}.page-head__right{gap:5px}.lang-switch__btn{width:30px;height:30px;flex-basis:30px}.page-head__cart{width:31px;height:31px;flex-basis:31px}.article-sequence-nav{padding:0 12px}.article-sequence-nav__link{padding:0 6px}.article-sequence-nav__link--archive{padding-left:12px;padding-right:12px}.product{padding-left:12px;padding-right:12px}}"""
 PRODUCT_CRITICAL_CSS += "@media(max-width:860px){.lang-switch__btn{width:26px;flex-basis:26px}}"
+PRODUCT_CRITICAL_CSS += ":root[data-theme=hell]{--ink:#fff;--paper:#151514;--rule:rgba(21,21,20,.12);--rule-strong:rgba(21,21,20,.26);--surface:#f3f2ef;color-scheme:light}:root[data-theme=hell] body{background:#fff;color:#151514}:root[data-theme=hell] .gallery__stage,:root[data-theme=hell] .gallery__stage img{background:#fff}"
 
 # Jede dieser Seiten ist inhaltlich die Startseite (gleiches HTML/JS/CSS-Bundle),
 # oeffnet beim Laden aber automatisch das passende Panel anhand von
@@ -843,7 +845,7 @@ def build_page(it, shop_config, lang):
 <style>{PRODUCT_CRITICAL_CSS}</style>
 <link rel="preload" as="style" href="/assets/article.css?v={ARTICLE_CSS_VERSION}" onload="this.onload=null;this.rel='stylesheet'">
 <link id="d119-product-page-v4" rel="preload" as="style" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/assets/article.css?v={ARTICLE_CSS_VERSION}"><link rel="stylesheet" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}"></noscript>
+<noscript><link rel="stylesheet" href="/assets/article.css?v={ARTICLE_CSS_VERSION}"><link rel="stylesheet" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}"><link rel="stylesheet" href="/assets/theme.css?v={THEME_CSS_VERSION}"></noscript>
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="Disorder119">
 <meta property="og:locale" content="{OG_LOCALES[lang]}">
@@ -861,7 +863,7 @@ def build_page(it, shop_config, lang):
 <script type="application/ld+json">{site_entities_jsonld(shop_config)}</script>
 <script type="application/ld+json">{json_ld(it, lang)}</script>
 <script type="application/ld+json">{breadcrumb_json_ld(it, lang)}</script>
-<link rel="stylesheet" href="/assets/theme.css">
+<link rel="preload" as="style" href="/assets/theme.css?v={THEME_CSS_VERSION}" onload="this.onload=null;this.rel='stylesheet'">
 <script src="/assets/ansicht.js" defer></script>
 <script>try{{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}}catch(e){{}}</script>
 </head>
@@ -1297,6 +1299,7 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__SSR_INITIAL_GRID__", initial_archive_grid_html(lang) if initial_ssr_home else "")
     out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
     out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
+    out = out.replace("__THEME_VERSION__", THEME_CSS_VERSION)
     out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)
     out = out.replace("__PWA_JS_VERSION__", PWA_JS_VERSION)
     return out
@@ -1364,6 +1367,7 @@ def build_account_pages():
         out = out.replace("__CANONICAL_URL__", SITE_URL.rstrip("/") + home + "konto/")
         out = out.replace("__HOME__", home)
         out = out.replace("__APP_CSS_VERSION__", KONTO_ASSET_VERSION)
+        out = out.replace("__THEME_VERSION__", THEME_CSS_VERSION)
         out = out.replace("__NEWSLETTER_VERSION__", NEWSLETTER_ASSET_VERSION)
         out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
         for token in ("__HTML_LANG__", "__META_TITLE__", "__META_DESC__", "__CANONICAL_URL__",
@@ -1414,7 +1418,8 @@ def build_checkout_pages():
         paypal_sdk = (
             '<script src="https://www.paypal.com/sdk/js?client-id=' + esc(shop_config["paypalClientId"])
             # Nur PayPal selbst: keine Karten- oder Lastschrift-Knoepfe.
-            + '&currency=EUR&intent=capture&commit=true&disable-funding=card,sepa"></script>\n'
+            + '&currency=EUR&intent=capture&commit=true&components=buttons,applepay&disable-funding=card,sepa"></script>\n'
+            + '<script src="https://applepay.cdn-apple.com/jsapi/1.latest/apple-pay-sdk.js"></script>\n'
         )
     count = 0
     for lang in LANGS:
@@ -1428,6 +1433,7 @@ def build_checkout_pages():
         out = out.replace("__HOME__", home)
         out = out.replace("__NOSCRIPT__", esc(noscript))
         out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
+        out = out.replace("__THEME_VERSION__", THEME_CSS_VERSION)
         out = out.replace("__KASSE_VERSION__", KASSE_ASSET_VERSION)
         out = out.replace("__PWA_VERSION__", PWA_JS_VERSION)
         out = out.replace("__PROMOS_VERSION__", PROMOS_ASSET_VERSION)
@@ -1461,6 +1467,7 @@ def build_newsletter_pages():
         out = out.replace("__HOME__", home)
         out = out.replace("__NOSCRIPT__", esc(noscript))
         out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
+        out = out.replace("__THEME_VERSION__", THEME_CSS_VERSION)
         out = out.replace("__KONTO_VERSION__", KONTO_ASSET_VERSION)
         out = out.replace("__NEWSLETTER_VERSION__", NEWSLETTER_ASSET_VERSION)
         out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))

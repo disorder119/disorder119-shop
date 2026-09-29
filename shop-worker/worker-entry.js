@@ -16,7 +16,7 @@ import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
 import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications.js";
 import { sendOrderConfirmation, sendOrderConfirmationByProviderOrder } from "./customer-mail.js";
-import { handleAccountRequest, isAccountRoute } from "./customer-account.js";
+import { handleAccountRequest, isAccountRoute, sendRequestedAccountLink, sendRequestedAccountLinkByProviderOrder } from "./customer-account.js";
 import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
 import { handleVersand, istVersandRoute } from "./dhl.js";
 import { handleDhlQr, isDhlQrRoute } from "./dhl-qr.js";
@@ -372,6 +372,7 @@ export default {
           if (result?.orderId) {
             await runBackground(ctx, redeemCouponAfterPayment(runtimeEnv, String(result.orderId), reqId), "coupon_redeem_failed", reqId);
             await runBackground(ctx, notifyPaidOrder(runtimeEnv, String(result.orderId), reqId), "sale_notification_failed", reqId);
+            await runBackground(ctx, sendRequestedAccountLink(runtimeEnv, String(result.orderId), reqId), "account_link_failed", reqId);
           }
         } catch (err) {
           logBackgroundFailure("capture_observer_failed", reqId, err);
@@ -393,6 +394,7 @@ export default {
                 reqId,
               );
               await runBackground(ctx, notifyPaidOrderByProviderOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_sale_notification_failed", reqId);
+              await runBackground(ctx, sendRequestedAccountLinkByProviderOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_account_link_failed", reqId);
             }
           }
           if (event?.event_type === "PAYMENT.CAPTURE.REFUNDED") {

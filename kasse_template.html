@@ -15,7 +15,7 @@
 <title>__META_TITLE__</title>
 <link rel="stylesheet" href="/assets/app.css?v=__APP_CSS_VERSION__">
 <link rel="stylesheet" href="/assets/kasse.css?v=__KASSE_VERSION__">
-<link rel="stylesheet" href="/assets/theme.css">
+<link rel="stylesheet" href="/assets/theme.css?v=__THEME_VERSION__">
 <script src="/assets/ansicht.js" defer></script>
 <script>try{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}catch(e){}</script>
 </head>
@@ -40,6 +40,8 @@
       <section class="kasse-block" aria-labelledby="kasseAdresseTitel">
         <h2 id="kasseAdresseTitel"><span class="kasse-nr">2</span><span data-t="adresse">Lieferadresse</span></h2>
         <form class="kasse-form" id="kasseForm" novalidate autocomplete="on">
+          <label class="kasse-feld kasse-feld--breit"><span data-t="email">E-Mail-Adresse für Bestellung und Rechnung</span>
+            <input type="email" id="kEmail" name="email" autocomplete="email" inputmode="email" maxlength="200" required></label>
           <label class="kasse-feld"><span data-t="vorname">Vorname</span>
             <input type="text" id="kVorname" name="given-name" autocomplete="shipping given-name" maxlength="60" required></label>
           <label class="kasse-feld"><span data-t="nachname">Nachname</span>
@@ -62,6 +64,10 @@
           <label class="kasse-feld kasse-feld--breit"><span data-t="zusatz">Adresszusatz (optional)</span>
             <input type="text" id="kZusatz" name="address-line2" autocomplete="shipping address-line2" maxlength="100"></label>
           <p class="kasse-hinweis kasse-feld--breit" id="kLand" data-t="landHinweis">Wir liefern innerhalb Deutschlands. Lieferung an eine Packstation ist bald mit DHL möglich.</p>
+          <label class="kasse-konto kasse-feld--breit" for="kKonto">
+            <input type="checkbox" id="kKonto" name="create-account">
+            <span data-t="kontoAnlegen">Kostenloses Kundenkonto mit dieser E-Mail-Adresse erstellen (optional). Nach der Zahlung erhältst du einen Anmeldelink.</span>
+          </label>
         </form>
       </section>
 

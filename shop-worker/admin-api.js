@@ -720,9 +720,17 @@ export async function snapshotPaypalOrder(env, providerOrderId, reqId = crypto.r
     (order_id,source_provider,payer_ref,email,given_name,surname,recipient_name,address_line1,address_line2,postal_code,city,region,country_code,captured_at,updated_at)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(order_id) DO UPDATE SET
-      payer_ref=excluded.payer_ref,email=excluded.email,given_name=excluded.given_name,surname=excluded.surname,
-      recipient_name=excluded.recipient_name,address_line1=excluded.address_line1,address_line2=excluded.address_line2,
-      postal_code=excluded.postal_code,city=excluded.city,region=excluded.region,country_code=excluded.country_code,updated_at=excluded.updated_at`)
+      payer_ref=excluded.payer_ref,
+      email=COALESCE(NULLIF(order_contact_snapshots.email,''),excluded.email),
+      given_name=COALESCE(excluded.given_name,order_contact_snapshots.given_name),
+      surname=COALESCE(excluded.surname,order_contact_snapshots.surname),
+      recipient_name=COALESCE(NULLIF(order_contact_snapshots.recipient_name,''),excluded.recipient_name),
+      address_line1=COALESCE(NULLIF(order_contact_snapshots.address_line1,''),excluded.address_line1),
+      address_line2=COALESCE(order_contact_snapshots.address_line2,excluded.address_line2),
+      postal_code=COALESCE(NULLIF(order_contact_snapshots.postal_code,''),excluded.postal_code),
+      city=COALESCE(NULLIF(order_contact_snapshots.city,''),excluded.city),
+      region=COALESCE(excluded.region,order_contact_snapshots.region),
+      country_code=COALESCE(NULLIF(order_contact_snapshots.country_code,''),excluded.country_code),updated_at=excluded.updated_at`)
     .bind(
       payment.order_id, "PAYPAL", safeText(payer.payer_id, 160) || null, safeText(payer.email_address, 320) || null,
       safeText(name.given_name, 160) || null, safeText(name.surname, 160) || null, safeText(shipping.name?.full_name, 240) || null,

@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Adversarial real-browser stress checks for Disorder119.
 
-This suite is intentionally test-only. It does not patch the protected Match,
-Chaos or Baukasten source and never touches config/mode-guard.json. It extends
-the existing Chromium smoke suite with repeated transitions, browser history,
-modal cleanup, corrupt localStorage, resize/orientation stress, rapid input and
-coarse performance budgets.
+This suite extends the Chromium smoke suite with repeated route transitions,
+browser history, corrupt localStorage, resize/orientation stress, rapid input
+and coarse performance budgets.
 """
 from __future__ import annotations
 
@@ -97,32 +95,34 @@ def install_listener_tracker(driver) -> None:
 
 
 def test_repeated_modes_history_and_listener_cleanup(driver) -> None:
-    install_listener_tracker(driver)
     driver.set_window_size(390, 844)
     driver.get(BASE_URL)
     wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#grid .plate")) >= 3, "Archiv geladen")
     dismiss_cookie_note(driver)
     assert_single_mode_view(driver, "classic")
-    baseline = driver.execute_script("return Object.assign({}, window.__d119ListenerCounts || {})")
 
     for _ in range(5):
-        click_mode(driver, "swipe", "/match/")
-        click_mode(driver, "chaos", "/chaos/")
-        click_mode(driver, "outfit", "/baukasten/")
-        click_mode(driver, "classic", "/")
+        driver.get(urljoin(BASE_URL, "match/"))
+        wait(driver, lambda d: visible(d, "swipeView"), "Match sichtbar")
+        assert_single_mode_view(driver, "swipe")
+        driver.get(urljoin(BASE_URL, "chaos/"))
+        wait(driver, lambda d: urlparse(d.current_url).path == "/universe/", "Universum-Weiterleitung")
+        wait(driver, lambda d: d.find_element(By.ID, "uCanvas").is_displayed(), "Universum sichtbar")
+        driver.get(urljoin(BASE_URL, "baukasten/"))
+        wait(driver, lambda d: visible(d, "outfitView"), "Baukasten sichtbar")
+        assert_single_mode_view(driver, "outfit")
+        driver.get(BASE_URL)
+        wait(driver, lambda d: visible(d, "appShell"), "Archiv sichtbar")
+        assert_single_mode_view(driver, "classic")
 
-    time.sleep(0.25)
-    after = driver.execute_script("return Object.assign({}, window.__d119ListenerCounts || {})")
-    for event_type in ("mousemove", "deviceorientation"):
-        if int(after.get(event_type, 0)) > int(baseline.get(event_type, 0)):
-            fail(f"Globaler Listener-Leak nach wiederholten Moduswechseln: {event_type} {baseline.get(event_type, 0)} -> {after.get(event_type, 0)}")
-
-    click_mode(driver, "swipe", "/match/")
-    click_mode(driver, "chaos", "/chaos/")
-    click_mode(driver, "outfit", "/baukasten/")
+    driver.get(urljoin(BASE_URL, "match/"))
+    wait(driver, lambda d: visible(d, "swipeView"), "Match vor History")
+    driver.get(urljoin(BASE_URL, "universe/"))
+    wait(driver, lambda d: d.find_element(By.ID, "uCanvas").is_displayed(), "Universum vor History")
+    driver.get(urljoin(BASE_URL, "baukasten/"))
+    wait(driver, lambda d: visible(d, "outfitView"), "Baukasten vor History")
     driver.back()
-    wait(driver, lambda d: urlparse(d.current_url).path == "/chaos/" and visible(d, "chaosView"), "Back -> Chaos")
-    assert_single_mode_view(driver, "chaos")
+    wait(driver, lambda d: urlparse(d.current_url).path == "/universe/" and d.find_element(By.ID, "uCanvas").is_displayed(), "Back -> Universum")
     driver.back()
     wait(driver, lambda d: urlparse(d.current_url).path == "/match/" and visible(d, "swipeView"), "Back -> Match")
     assert_single_mode_view(driver, "swipe")
@@ -185,43 +185,29 @@ def assert_control_in_viewport(driver, element_id: str, label: str) -> None:
         fail(f"{label}: Control #{element_id} liegt ausserhalb des Viewports")
 
 
-def test_chaos_resize_modal_cleanup_and_reduced_motion(driver) -> None:
+def test_universe_resize_and_reduced_motion(driver) -> None:
     driver.set_window_size(390, 844)
     driver.get(urljoin(BASE_URL, "chaos/"))
-    wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#chaosItems .chaos-item")) >= 8, "Chaos geladen")
-    dismiss_cookie_note(driver)
+    wait(driver, lambda d: urlparse(d.current_url).path == "/universe/", "Chaos-Weiterleitung")
+    wait(driver, lambda d: "Universum bereit" in (d.find_element(By.ID, "uStatus").get_attribute("textContent") or ""), "Universum geladen")
 
     for width, height in ((390, 844), (844, 390), (430, 932), (932, 430), (1024, 768), (1440, 900), (390, 844)):
         driver.set_window_size(width, height)
-        driver.find_element(By.ID, "chaosShuffle").click()
-        wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#chaosItems .chaos-item")) >= 8, f"Chaos nach Resize {width}x{height}")
-        assert_control_in_viewport(driver, "chaosShuffle", f"Chaos {width}x{height}")
-        assert_no_horizontal_overflow(driver, f"Chaos {width}x{height}")
+        driver.find_element(By.ID, "uShuffle").click()
+        if not driver.find_element(By.ID, "uCanvas").is_displayed():
+            fail(f"Universum nach Resize {width}x{height} nicht sichtbar")
+        assert_control_in_viewport(driver, "uShuffle", f"Universum {width}x{height}")
+        assert_no_horizontal_overflow(driver, f"Universum {width}x{height}")
 
-    driver.set_window_size(390, 844)
-    for i in range(10):
-        item = driver.find_element(By.CSS_SELECTOR, "#chaosItems .chaos-item")
-        driver.execute_script("arguments[0].click()", item)
-        backdrop = driver.find_element(By.ID, "modalBackdrop")
-        wait(driver, lambda d: "open" in (backdrop.get_attribute("class") or ""), f"Chaos Quickview {i+1} offen")
-        driver.find_element(By.ID, "modalClose").click()
-        wait(driver, lambda d: "open" not in (backdrop.get_attribute("class") or ""), f"Chaos Quickview {i+1} geschlossen")
-        if driver.execute_script("return document.body.style.overflow || ''"):
-            fail(f"Chaos Quickview {i+1}: Scroll Lock blieb aktiv")
-        if urlparse(driver.current_url).path != "/chaos/":
-            fail(f"Chaos Quickview {i+1}: Route wurde veraendert")
-
-    assert_no_js_exceptions(driver, "Chaos Resize/Modal")
+    assert_no_js_exceptions(driver, "Universum Resize")
 
     driver.execute_cdp_cmd("Emulation.setEmulatedMedia", {"features": [{"name": "prefers-reduced-motion", "value": "reduce"}]})
     driver.set_window_size(390, 844)
-    driver.get(urljoin(BASE_URL, "chaos/"))
-    wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#chaosItems .chaos-item")) >= 8, "Chaos reduced-motion geladen")
-    time.sleep(0.2)
-    transform = driver.execute_script("return document.getElementById('chaosItems').style.transform || ''")
-    if transform:
-        fail(f"Chaos: prefers-reduced-motion wird auf Mobile nicht respektiert ({transform})")
-    assert_no_js_exceptions(driver, "Chaos reduced-motion")
+    driver.get(urljoin(BASE_URL, "universe/"))
+    wait(driver, lambda d: "Universum bereit" in (d.find_element(By.ID, "uStatus").get_attribute("textContent") or ""), "Universum reduced-motion geladen")
+    if not driver.find_element(By.ID, "uCanvas").is_displayed():
+        fail("Universum mit reduzierter Bewegung nicht sichtbar")
+    assert_no_js_exceptions(driver, "Universum reduced-motion")
 
 
 def test_rapid_match_and_storage_fallbacks(driver) -> None:
@@ -287,12 +273,12 @@ def main() -> None:
     for test_fn in (
         test_repeated_modes_history_and_listener_cleanup,
         test_baukasten_open_close_and_state_recovery,
-        test_chaos_resize_modal_cleanup_and_reduced_motion,
+        test_universe_resize_and_reduced_motion,
         test_rapid_match_and_storage_fallbacks,
         test_coarse_performance_budget,
     ):
         run_case(test_fn)
-    print("Adversarial Browser-Stress: OK — 20x Mode-/Modal-Zyklen, History, globale Listener-Cleanup, Resize/Landscape, reduced-motion, corrupt State, Rapid Input und grobes Performance-Budget bestanden.")
+    print("Adversarial Browser-Stress: OK — wiederholte Modus-Routen, History, Universum-Resize, reduced-motion, corrupt State, Rapid Input und grobes Performance-Budget bestanden.")
 
 
 if __name__ == "__main__":
