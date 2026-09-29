@@ -4,7 +4,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { erstattungAusPaypal, handleAdminRequest } from "./admin-api.js";
+import { erstattungAusPaypal, handleAdminRequest, paypalErstattungenAbgleichen } from "./admin-api.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ADMIN = "https://admin.disorder119.com";
@@ -305,5 +305,86 @@ test("Erstattung direkt in PayPal: Webhook traegt sie ein und setzt Erstattet", 
     assert.deepEqual(pp.aufrufe.at(-1).body.amount, { value: "6.86", currency_code: "EUR" });
   } finally {
     pp.zurueck();
+  }
+});
+
+test("PayPal-Abgleich holt eine im PayPal-Konto gestartete Erstattung paginiert und idempotent nach", async () => {
+  const db = d1();
+  bestellungAnlegen(db);
+  const original = globalThis.fetch;
+  const aufrufe = [];
+  const testEnv = { ...env(db), PAYPAL_WEBHOOK_ID: "WH-TEST" };
+  const event = {
+    id: "WH-REFUND-1",
+    event_type: "PAYMENT.CAPTURE.REFUNDED",
+    resource: {
+      id: "REFUND-DIREKT-1",
+      status: "COMPLETED",
+      amount: { value: "7.86", currency_code: "EUR" },
+      create_time: "2026-09-29T18:00:00.000Z",
+      supplementary_data: { related_ids: { capture_id: "CAPTURE1" } },
+    },
+  };
+  globalThis.fetch = async input => {
+    const url = String(input?.url || input);
+    if (url.endsWith("/v1/oauth2/token")) return new Response(JSON.stringify({ access_token: "tok" }), { status: 200 });
+    if (url.endsWith("/v1/notifications/webhooks/WH-TEST")) {
+      return new Response(JSON.stringify({ event_types: [{ name: "PAYMENT.CAPTURE.REFUNDED" }] }), { status: 200 });
+    }
+    aufrufe.push(url);
+    if (url.includes("page=2")) return new Response(JSON.stringify({ events: [], links: [] }), { status: 200 });
+    return new Response(JSON.stringify({
+      events: [event],
+      links: [{ rel: "next", href: "https://api-m.paypal.com/v1/notifications/webhooks-events?page=2" }],
+    }), { status: 200 });
+  };
+  try {
+    const result = await paypalErstattungenAbgleichen(testEnv, "sync-1", true);
+    assert.equal(result.ok, true);
+    assert.equal(result.pages, 2);
+    assert.equal(result.seen, 1);
+    assert.equal(result.matched, 1);
+    assert.equal(result.updated, 1);
+    assert.equal(result.webhookSubscribed, true);
+    assert.equal(db.raw.prepare("SELECT status FROM commerce_orders").get().status, "REFUNDED");
+    assert.equal(db.raw.prepare("SELECT status FROM payments").get().status, "REFUNDED");
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM refunds").get().n, 1);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM tax_cash_events WHERE kind='refund'").get().n, 1);
+    assert.equal(aufrufe.length, 2);
+
+    const nochmal = await paypalErstattungenAbgleichen(testEnv, "sync-2", true);
+    assert.equal(nochmal.ok, true);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM refunds").get().n, 1);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM tax_cash_events WHERE kind='refund'").get().n, 1);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("PayPal-Abgleichfehler blockiert die Bestellliste nicht und wird sichtbar gemeldet", async () => {
+  const db = d1();
+  bestellungAnlegen(db);
+  const original = globalThis.fetch;
+  globalThis.fetch = async input => {
+    const url = String(input?.url || input);
+    if (url.endsWith("/v1/oauth2/token")) return new Response(JSON.stringify({ access_token: "tok" }), { status: 200 });
+    if (url.includes("/v1/notifications/webhooks-events")) {
+      return new Response(JSON.stringify({ name: "SERVICE_UNAVAILABLE", debug_id: "paypal-debug" }), { status: 503 });
+    }
+    if (url.includes("catalog.json") || url.includes("api.github.com")) return new Response("[]", { status: 200 });
+    throw new Error(`unerwarteter fetch: ${url}`);
+  };
+  try {
+    const req = new Request("https://api.disorder119.com/admin/orders", {
+      headers: { Origin: ADMIN, Authorization: "Bearer geheim" },
+    });
+    const res = await handleAdminRequest(req, env(db), new URL(req.url), "sync-fail", ADMIN);
+    const data = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(data.orders.length, 1);
+    assert.equal(data.paypalRefundSync.ok, false);
+    assert.equal(data.paypalRefundSync.code, "PAYPAL_REFUND_EVENT_LIST_FAILED");
+  } finally {
+    globalThis.fetch = original;
   }
 });

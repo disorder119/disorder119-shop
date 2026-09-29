@@ -6,7 +6,12 @@ import {
   safeText,
 } from "./commerce-core.js";
 import { sendShippingConfirmation } from "./customer-mail.js";
-import { ErstattungsFehler, bestellungErstatten, erstattungAusWebhook } from "./erstattung.js";
+import {
+  ErstattungsFehler,
+  bestellungErstatten,
+  erstattungAusWebhook,
+  paypalErstattungenAbgleichen as paypalErstattungenAbgleichenMitStatus,
+} from "./erstattung.js";
 import { reconcilePurchasePayments } from "./worker.js";
 
 const ADMIN_ORIGINS = Object.freeze([
@@ -485,6 +490,34 @@ export async function erstattungAusPaypal(env, event, reqId = crypto.randomUUID(
   return erstattungAusWebhook(env, event, reqId, (orderId, status) => updateOrder(env, orderId, { status }, reqId, "PAYMENT_PROVIDER"));
 }
 
+export async function paypalErstattungenAbgleichen(env, reqId = crypto.randomUUID(), force = false) {
+  return paypalErstattungenAbgleichenMitStatus(
+    env,
+    reqId,
+    (orderId, status) => updateOrder(env, orderId, { status }, reqId, "PAYMENT_PROVIDER"),
+    { force },
+  );
+}
+
+async function paypalErstattungenSicherAbgleichen(env, reqId, force = false) {
+  try {
+    return await paypalErstattungenAbgleichen(env, reqId, force);
+  } catch (err) {
+    console.error(JSON.stringify({
+      level: "error",
+      event: "paypal_refund_reconciliation_failed",
+      requestId: reqId,
+      code: safeText(err?.code || "PAYPAL_REFUND_SYNC_FAILED", 80),
+    }));
+    return {
+      ok: false,
+      configured: Boolean(env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET),
+      code: safeText(err?.code || "PAYPAL_REFUND_SYNC_FAILED", 80),
+      checkedAt: new Date().toISOString(),
+    };
+  }
+}
+
 async function getRentals(env, url) {
   const db = requireDb(env);
   const limit = clampAdminLimit(url.searchParams.get("limit"));
@@ -825,12 +858,21 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
       return adminJson({ ok: true, role: "OWNER", database: Boolean(env.DB), now: new Date().toISOString() }, 200, origin);
     }
     if (path === "/admin/overview" && request.method === "GET") {
-      await reconcilePurchasePayments(env, reqId);
-      return adminJson(await getOverview(env, url), 200, origin);
+      const [, paypalRefundSync] = await Promise.all([
+        reconcilePurchasePayments(env, reqId),
+        paypalErstattungenSicherAbgleichen(env, reqId),
+      ]);
+      return adminJson({ ...(await getOverview(env, url)), paypalRefundSync }, 200, origin);
     }
     if (path === "/admin/orders" && request.method === "GET") {
-      await reconcilePurchasePayments(env, reqId);
-      return adminJson(await getOrders(env, url), 200, origin);
+      const [, paypalRefundSync] = await Promise.all([
+        reconcilePurchasePayments(env, reqId),
+        paypalErstattungenSicherAbgleichen(env, reqId),
+      ]);
+      return adminJson({ ...(await getOrders(env, url)), paypalRefundSync }, 200, origin);
+    }
+    if (path === "/admin/paypal/refunds/sync" && request.method === "POST") {
+      return adminJson(await paypalErstattungenSicherAbgleichen(env, reqId, true), 200, origin);
     }
     if (path === "/admin/rentals" && request.method === "GET") return adminJson(await getRentals(env, url), 200, origin);
     if (path === "/admin/inventory" && request.method === "GET") return adminJson(await getInventory(env, url), 200, origin);
