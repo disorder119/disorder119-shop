@@ -1,14 +1,18 @@
-// Packlink PRO - Versandlabels von DPD, UPS, GLS und weiteren ueber ein Konto,
-// ohne Grundgebuehr.
+// Packlink PRO - Versandlabels von DPD und DHL ueber ein Konto, ohne
+// Grundgebuehr.
 //
 // Ablauf je Auftrag (Admin-App, Bestellung -> Versand):
 //   1. Die Kundschaft hat im Checkout Standard oder Express gewaehlt
 //      (versand.js, Tabelle order_versand). Die Admin-App schlaegt genau diese
-//      Leistung und Paketgroesse vor.
-//   2. Angebot bestaetigen -> der Server legt in Packlink PRO einen
-//      Sendungsentwurf mit Lieferadresse und Paketmassen an.
-//   3. Bezahlt wird in Packlink PRO (Direktlink). Per Schnittstelle geht das
-//      bewusst nicht - genauso arbeiten Packlinks eigene Shop-Plugins.
+//      Leistung und Paketgroesse vor und zeigt nur die Paketdienste, die auch
+//      die Kasse anbietet (config/shop-config.json -> versand.dienste).
+//   2. "Etikett kaufen" -> der Server bucht die Sendung direkt ueber
+//      POST /v1/orders. Packlink rechnet sie ueber die in Packlink PRO
+//      hinterlegte Zahlungsart ab (Sammelrechnung alle 15 Tage), das Etikett
+//      entsteht von allein.
+//   3. Ohne hinterlegte Zahlungsart lehnt Packlink den Kauf ab. Dann bleibt der
+//      Entwurf: POST /v1/shipments legt ihn an, bezahlt wird in Packlink PRO
+//      per Direktlink - so arbeiten auch Packlinks eigene Shop-Plugins.
 //   4. Danach meldet Packlink jeden Schritt an /packlink/webhook/<Schluessel>.
 //      Der Server holt dann Status, Sendungsnummer und Etikett selbst ab
 //      (dem Inhalt der Meldung wird nie geglaubt) und fuehrt die Bestellung
@@ -19,19 +23,23 @@
 // Schnittstelle wie in Packlinks offenem Plugin-Kern (packlink-dev/
 // ecommerce_module_core, src/BusinessLogic/Http/Proxy.php): Basis
 // https://api.packlink.com/v1/, Header "Authorization: <API-Schluessel>".
-// Angebote liefert Packlink auch ohne Schluessel; Entwurf, Status und Etikett
-// brauchen das Secret PACKLINK_API_KEY aus Packlink PRO (Einstellungen).
+// Angebote liefert Packlink auch ohne Schluessel; Kauf, Entwurf, Status und
+// Etikett brauchen das Secret PACKLINK_API_KEY aus Packlink PRO (Einstellungen).
 //
 // Datenschutz: An Packlink gehen nur Name und Lieferadresse, keine E-Mail-
 // Adresse oder Telefonnummer der Kundin - dafuer braeuchte es eine Einwilligung.
 import { safeText } from "./commerce-core.js";
 import { orderStatusAutomatisch } from "./admin-api.js";
-import { PAKETE, paketFuer } from "./versand-config.js";
+import { PAKETE, dienstErlaubt, paketFuer } from "./versand-config.js";
 
 export { PAKETE };
 
 const API = "https://api.packlink.com/v1";
 const PRO_SHIPMENTS = "https://pro.packlink.de/private/shipments/";
+// Sperrzeile waehrend eines Kaufs: Platzhalter statt Packlink-Referenz.
+const KAUF_PRAEFIX = "kauf-";
+// Zeilen, die einem neuen Kauf oder Entwurf nicht im Weg stehen.
+const RUHEND = "'ERSETZT','KAUF_ABGELEHNT','CANCELED','CANCELLED'";
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
   "http://localhost:8765",
@@ -44,11 +52,13 @@ const ADMIN_ORIGINS = Object.freeze([
 const MAX_ANGEBOTE = 8;
 
 export class PacklinkError extends Error {
-  constructor(code, status = 400, detail = "") {
+  constructor(code, status = 400, detail = "", httpStatus = null) {
     super(code);
     this.code = code;
     this.status = status;
     this.detail = detail;
+    // Was Packlink selbst geantwortet hat (null: keine Antwort bekommen).
+    this.httpStatus = httpStatus;
   }
 }
 
@@ -68,6 +78,12 @@ const PHASEN = [
   ["zugestellt", ["DELIVERED", "RETURNED_TO_SENDER"]],
   ["storniert", ["CANCELED", "CANCELLED"]],
   ["problem", ["INCIDENT"]],
+  // Eigene Zustaende beim Direktkauf: "kauf" = Anfrage laeuft (KAUF_LAEUFT)
+  // oder blieb ohne klare Antwort (KAUF_UNKLAR) - erst in Packlink PRO
+  // nachsehen, nie blind zweimal kaufen. "abgelehnt" = Packlink hat eindeutig
+  // nein gesagt, nichts gekauft.
+  ["kauf", ["KAUF_LAEUFT", "KAUF_UNKLAR"]],
+  ["abgelehnt", ["KAUF_ABGELEHNT"]],
 ];
 
 export function phase(state) {
@@ -191,9 +207,9 @@ async function packlink(env, path, { method = "GET", body, auth = true } = {}) {
       const meldungen = Array.isArray(fehler?.messages) ? fehler.messages.map(m => m?.message).filter(Boolean) : [];
       detail = text(meldungen.join(" ") || fehler?.messages?.message || fehler?.message || "", 240);
     } catch { /* keine lesbare Fehlerantwort */ }
-    if (res.status === 401 || res.status === 403) throw new PacklinkError("PACKLINK_ZUGANG_ABGELEHNT", 502, detail);
-    if (res.status === 404) throw new PacklinkError("PACKLINK_SENDUNG_UNBEKANNT", 404, detail);
-    throw new PacklinkError("PACKLINK_FEHLER", 502, detail || `HTTP ${res.status}`);
+    if (res.status === 401 || res.status === 403) throw new PacklinkError("PACKLINK_ZUGANG_ABGELEHNT", 502, detail, res.status);
+    if (res.status === 404) throw new PacklinkError("PACKLINK_SENDUNG_UNBEKANNT", 404, detail, res.status);
+    throw new PacklinkError("PACKLINK_FEHLER", 502, detail || `HTTP ${res.status}`, res.status);
   }
   return res;
 }
@@ -224,7 +240,10 @@ export function angebotAus(service = {}) {
   };
 }
 
-export async function angeboteLaden(env, ziel, paketKey) {
+// behalten: Packlink-Leistung, die eine Kundin im Checkout schon bezahlt hat -
+// sie bleibt buchbar, auch wenn ihr Paketdienst inzwischen nicht mehr
+// angeboten wird.
+export async function angeboteLaden(env, ziel, paketKey, { behalten = null } = {}) {
   const paket = paketFuer(paketKey);
   const von = absender(env);
   const query = new URLSearchParams({
@@ -250,6 +269,8 @@ export async function angeboteLaden(env, ziel, paketKey) {
       .filter(s => s && !s.delivery_to_parcelshop && !/nicht rechteckig|non.?rectang/i.test(String(s.name || "")))
       .map(angebotAus)
       .filter(a => Number.isInteger(a.id) && a.id > 0 && a.preisCents)
+      // Dieselben Paketdienste wie in der Kasse (Wunsch des Inhabers: kein UPS).
+      .filter(a => dienstErlaubt(a.carrier) || (behalten !== null && a.id === behalten))
       .sort((a, b) => a.preisCents - b.preisCents)
       .slice(0, MAX_ANGEBOTE),
   };
@@ -299,14 +320,29 @@ export function wahlView(order) {
 }
 
 async function letzteSendung(env, orderId) {
-  return requireDb(env).prepare(`SELECT * FROM packlink_sendungen WHERE order_id=? AND state<>'ERSETZT'
-    ORDER BY created_at DESC LIMIT 1`).bind(orderId).first();
+  return requireDb(env).prepare(`SELECT * FROM packlink_sendungen WHERE order_id=?
+    AND state NOT IN ('ERSETZT','KAUF_ABGELEHNT') ORDER BY created_at DESC LIMIT 1`).bind(orderId).first();
+}
+
+// Warum ein Kauf gerade gesperrt ist: ein zweiter Klick waehrend der Anfrage
+// (KAUF_LAEUFT_SCHON) oder ein Kauf ohne klare Antwort (KAUF_UNKLAR). Eine
+// Anfrage, die nach zwei Minuten noch "laeuft", ist abgebrochen - unklar.
+function kaufGesperrt(row) {
+  const alter = Date.now() - Date.parse(row.updated_at || row.created_at || "");
+  return row.state === "KAUF_LAEUFT" && alter < 120_000 ? "KAUF_LAEUFT_SCHON" : "KAUF_UNKLAR";
+}
+
+function protokoll(db, orderId, eventType, reqId, metadata) {
+  return db.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+      VALUES (?,'ADMIN','order',?,?,?,?,?)`)
+    .bind(crypto.randomUUID(), orderId, eventType, reqId ? safeText(reqId, 120) : null, JSON.stringify(metadata), new Date().toISOString());
 }
 
 export function sendungView(row) {
   if (!row) return null;
   const ph = phase(row.state);
-  const reference = String(row.reference);
+  const platzhalter = String(row.reference).startsWith(KAUF_PRAEFIX);
+  const reference = platzhalter ? null : String(row.reference);
   return {
     reference,
     phase: ph,
@@ -315,8 +351,9 @@ export function sendungView(row) {
     service: row.service_name || null,
     paket: row.paket || null,
     preisCents: row.price_cents == null ? null : Number(row.price_cents),
-    bezahlLink: ph === "offen" ? `${PRO_SHIPMENTS}${encodeURIComponent(reference)}/create/address` : null,
-    packlinkLink: `${PRO_SHIPMENTS}${encodeURIComponent(reference)}`,
+    bezahlLink: ph === "offen" && reference ? `${PRO_SHIPMENTS}${encodeURIComponent(reference)}/create/address` : null,
+    // Ohne Referenz (Kauf unklar): die Sendungsliste in Packlink PRO.
+    packlinkLink: reference ? `${PRO_SHIPMENTS}${encodeURIComponent(reference)}` : `${PRO_SHIPMENTS}all`,
     sendungsnummer: row.tracking_number || null,
     trackingUrl: row.tracking_url || null,
     etikettUrl: row.label_url || null,
@@ -330,8 +367,11 @@ export async function entwurfAnlegen(env, orderId, body = {}) {
   const order = await loadOrder(env, orderId);
   const vorhanden = await letzteSendung(env, order.id);
   // Ein Entwurf je Auftrag. Ein zweiter nur ausdruecklich ("neu") und nie,
-  // wenn der erste schon bezahlt ist.
-  if (vorhanden && !["storniert"].includes(phase(vorhanden.state))) {
+  // wenn der erste schon bezahlt ist. Nach einem unklaren Kauf erst, wenn in
+  // Packlink PRO nachgesehen wurde ("trotzdem").
+  if (vorhanden && phase(vorhanden.state) === "kauf") {
+    if (!body.trotzdem) throw new PacklinkError(kaufGesperrt(vorhanden), 409);
+  } else if (vorhanden && !["storniert"].includes(phase(vorhanden.state))) {
     if (!body.neu) return sendungView(vorhanden);
     if (phase(vorhanden.state) !== "offen") throw new PacklinkError("SENDUNG_SCHON_BEZAHLT", 409);
   }
@@ -366,16 +406,133 @@ export async function entwurfAnlegen(env, orderId, body = {}) {
   if (vorhanden) {
     statements.push(db.prepare("UPDATE packlink_sendungen SET state='ERSETZT',updated_at=? WHERE id=?").bind(now, vorhanden.id));
   }
+  // Nie neben einem laufenden Kauf: dann bliebe der Entwurf liegen.
   statements.push(db.prepare(`INSERT INTO packlink_sendungen
       (id,order_id,reference,service_id,carrier,service_name,paket,price_cents,state,created_at,updated_at)
-      VALUES (?,?,?,?,?,?,?,?,'AWAITING_COMPLETION',?,?)`)
+      SELECT ?,?,?,?,?,?,?,?,'AWAITING_COMPLETION',?,?
+      WHERE NOT EXISTS (SELECT 1 FROM packlink_sendungen WHERE order_id=? AND state IN ('KAUF_LAEUFT','KAUF_UNKLAR'))`)
     .bind(crypto.randomUUID(), order.id, reference, serviceId, text(body.carrier, 40) || null,
-      text(body.name, 80) || null, paket.key, cents(Number(body.preisCents) / 100), now, now));
+      text(body.name, 80) || null, paket.key, cents(Number(body.preisCents) / 100), now, now, order.id));
   statements.push(db.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
-      VALUES (?,'ADMIN','order',?,'PACKLINK_ENTWURF_ANGELEGT',NULL,?,?)`)
-    .bind(crypto.randomUUID(), order.id, JSON.stringify({ reference, serviceId, paket: paket.key }), now));
-  await db.batch(statements);
+      SELECT ?,'ADMIN','order',?,'PACKLINK_ENTWURF_ANGELEGT',NULL,?,?
+      WHERE EXISTS (SELECT 1 FROM packlink_sendungen WHERE reference=?)`)
+    .bind(crypto.randomUUID(), order.id, JSON.stringify({ reference, serviceId, paket: paket.key }), now, reference));
+  const ergebnis = await db.batch(statements);
+  if (!ergebnis[ergebnis.length - 2]?.meta?.changes) throw new PacklinkError("KAUF_LAEUFT_SCHON", 409);
   return sendungView(await letzteSendung(env, order.id));
+}
+
+// Direktkauf ueber POST /v1/orders: Packlink bucht die Sendung sofort und
+// rechnet sie ueber die in Packlink PRO hinterlegte Zahlungsart ab
+// (Einstellungen -> Abrechnung und Rechnungen -> Zahlungsinformationen).
+//
+// Doppelt kaufen darf nie passieren. Deshalb steht vor der Anfrage eine
+// Sperrzeile KAUF_LAEUFT in der Datenbank - ein zweiter Klick oder ein
+// zweites Geraet findet sie und bekommt KAUF_LAEUFT_SCHON. Lehnt Packlink
+// eindeutig ab (4xx), ist nichts gekauft: die Zeile wird KAUF_ABGELEHNT und
+// die Angebote stehen wieder da. Kommt keine klare Antwort (Netz, 5xx, Antwort
+// ohne Sendung), wird sie KAUF_UNKLAR und sperrt weiter: erst in Packlink PRO
+// nachsehen, dann ausdruecklich "trotzdem" neu kaufen.
+export async function etikettKaufen(env, orderId, body = {}, reqId = crypto.randomUUID()) {
+  if (!packlinkReady(env)) throw new PacklinkError("PACKLINK_NICHT_EINGERICHTET", 503);
+  const db = requireDb(env);
+  const order = await loadOrder(env, orderId);
+  const vorhanden = await letzteSendung(env, order.id);
+  if (vorhanden) {
+    const ph = phase(vorhanden.state);
+    if (ph === "kauf" && !body.trotzdem) throw new PacklinkError(kaufGesperrt(vorhanden), 409);
+    if (ph === "offen" && !body.neu) throw new PacklinkError("ENTWURF_VORHANDEN", 409);
+    if (!["kauf", "offen", "storniert"].includes(ph)) throw new PacklinkError("SENDUNG_SCHON_BEZAHLT", 409);
+  }
+
+  const serviceId = Number(body.serviceId);
+  if (!Number.isInteger(serviceId) || serviceId <= 0) throw new PacklinkError("ANGEBOT_FEHLT", 400);
+  const paket = paketFuer(body.paket);
+  const to = empfaenger(order);
+  pruefeEmpfaenger(to);
+
+  const now = new Date().toISOString();
+  const zeileId = crypto.randomUUID();
+  const statements = [];
+  if (vorhanden) {
+    // Entwurf, stornierte Sendung oder ein in Packlink geprueft nicht
+    // zustande gekommener Kauf: der neue Kauf ersetzt ihn.
+    statements.push(db.prepare("UPDATE packlink_sendungen SET state='ERSETZT',updated_at=? WHERE id=? AND state=?")
+      .bind(now, vorhanden.id, vorhanden.state));
+  }
+  statements.push(db.prepare(`INSERT INTO packlink_sendungen
+      (id,order_id,reference,service_id,carrier,service_name,paket,price_cents,state,created_at,updated_at)
+      SELECT ?,?,?,?,?,?,?,?,'KAUF_LAEUFT',?,?
+      WHERE NOT EXISTS (SELECT 1 FROM packlink_sendungen WHERE order_id=? AND state NOT IN (${RUHEND}))`)
+    .bind(zeileId, order.id, `${KAUF_PRAEFIX}${zeileId}`, serviceId, text(body.carrier, 40) || null,
+      text(body.name, 80) || null, paket.key, cents(Number(body.preisCents) / 100), now, now, order.id));
+  const gesperrt = await db.batch(statements);
+  if (!gesperrt[gesperrt.length - 1]?.meta?.changes) throw new PacklinkError("KAUF_LAEUFT_SCHON", 409);
+
+  const kennung = safeText(order.order_number, 60);
+  const warenwert = Number(order.subtotal_cents || order.total_cents || 0) / 100;
+  const auftrag = {
+    order_custom_reference: kennung,
+    shipments: [{
+      service_id: serviceId,
+      source: "PRO",
+      platform: "PRO",
+      platform_country: "DE",
+      from: absender(env),
+      to,
+      packages: [{ width: paket.breite, height: paket.hoehe, length: paket.laenge, weight: paket.gewichtKg }],
+      content: "Bekleidung",
+      contentvalue: Math.round(warenwert * 100) / 100,
+      contentValue_currency: "EUR",
+      content_second_hand: true,
+      shipment_custom_reference: kennung,
+    }],
+  };
+
+  let antwort;
+  try {
+    antwort = await (await packlink(env, "/orders", { method: "POST", body: auftrag })).json();
+  } catch (err) {
+    const abgelehnt = err instanceof PacklinkError && err.httpStatus >= 400 && err.httpStatus < 500;
+    const detail = text(err?.detail || "", 240);
+    await db.batch([
+      db.prepare("UPDATE packlink_sendungen SET state=?,updated_at=? WHERE id=?")
+        .bind(abgelehnt ? "KAUF_ABGELEHNT" : "KAUF_UNKLAR", new Date().toISOString(), zeileId),
+      protokoll(db, order.id, abgelehnt ? "PACKLINK_KAUF_ABGELEHNT" : "PACKLINK_KAUF_UNKLAR", reqId,
+        { serviceId, paket: paket.key, http: err?.httpStatus ?? null, detail }),
+    ]);
+    if (abgelehnt) {
+      throw new PacklinkError(err.code === "PACKLINK_ZUGANG_ABGELEHNT" ? err.code : "KAUF_ABGELEHNT", 409, detail, err.httpStatus);
+    }
+    throw new PacklinkError("KAUF_UNKLAR", 502, detail);
+  }
+
+  const zeile = (Array.isArray(antwort?.shipments) ? antwort.shipments : [])[0] || {};
+  const reference = safeText(zeile.shipment_reference || zeile.reference || "", 60);
+  if (!/^[A-Za-z0-9-]{6,60}$/.test(reference) || reference.startsWith(KAUF_PRAEFIX)) {
+    await db.batch([
+      db.prepare("UPDATE packlink_sendungen SET state='KAUF_UNKLAR',updated_at=? WHERE id=?").bind(new Date().toISOString(), zeileId),
+      protokoll(db, order.id, "PACKLINK_KAUF_UNKLAR", reqId, { serviceId, paket: paket.key, detail: "Antwort ohne Sendung" }),
+    ]);
+    throw new PacklinkError("KAUF_UNKLAR", 502, "Packlink hat keine Sendungsnummer zurückgegeben.");
+  }
+  const preis = cents(zeile.total_price) ?? cents(antwort?.total_amount) ?? cents(Number(body.preisCents) / 100);
+  const jetzt = new Date().toISOString();
+  await db.batch([
+    db.prepare("UPDATE packlink_sendungen SET reference=?,state='PURCHASE_SUCCESS',price_cents=?,updated_at=? WHERE id=?")
+      .bind(reference, preis, jetzt, zeileId),
+    protokoll(db, order.id, "PACKLINK_ETIKETT_GEKAUFT", reqId, {
+      reference, serviceId, paket: paket.key, preisCents: preis, packlinkAuftrag: safeText(antwort?.order_reference, 60) || null,
+    }),
+  ]);
+  const row = await db.prepare("SELECT * FROM packlink_sendungen WHERE id=?").bind(zeileId).first();
+  // Oft ist das Etikett schon fertig. Sonst meldet Packlink es gleich per
+  // Webhook - ein Fehler beim Nachsehen aendert nichts am Kauf.
+  try {
+    return await sendungAktualisieren(env, row, reqId);
+  } catch {
+    return sendungView(row);
+  }
 }
 
 function ersteSendungsnummer(trackings) {
@@ -406,8 +563,10 @@ export async function statusAbrufen(env, orderId, reqId = crypto.randomUUID()) {
 // Meldungen von Packlink (Webhook).
 async function sendungAktualisieren(env, row, reqId) {
   const db = requireDb(env);
-  // Fertige Sendungen nicht bei jedem Oeffnen neu abfragen.
-  if (!packlinkReady(env) || (["zugestellt", "storniert"].includes(phase(row.state)) && row.label_url)) {
+  // Fertige Sendungen nicht bei jedem Oeffnen neu abfragen. Eine Sperrzeile
+  // (Kauf laeuft oder unklar) hat noch keine Packlink-Referenz.
+  if (!packlinkReady(env) || phase(row.state) === "kauf"
+      || (["zugestellt", "storniert"].includes(phase(row.state)) && row.label_url)) {
     return sendungView(row);
   }
 
@@ -535,7 +694,7 @@ async function tokenEquals(left, right) {
   return diff === 0;
 }
 
-const ROUTE = /^\/admin\/versand\/([^/]+)\/packlink(\/angebote)?$/;
+const ROUTE = /^\/admin\/versand\/([^/]+)\/packlink(\/angebote|\/kaufen)?$/;
 
 export function isPacklinkRoute(url) {
   return ROUTE.test(url.pathname.replace(/\/+$/, ""));
@@ -557,16 +716,23 @@ export async function handlePacklink(request, env, url, reqId = crypto.randomUUI
     const supplied = String(request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
     if (!env.ADMIN_TOKEN || !(await tokenEquals(supplied, env.ADMIN_TOKEN))) throw new PacklinkError("UNAUTHORIZED", 401);
 
-    const [, rohId, angebote] = ROUTE.exec(url.pathname.replace(/\/+$/, ""));
+    const [, rohId, zusatz] = ROUTE.exec(url.pathname.replace(/\/+$/, ""));
     const orderId = safeText(decodeURIComponent(rohId), 80);
 
-    if (angebote) {
+    if (zusatz === "/angebote") {
       if (request.method !== "GET") throw new PacklinkError("METHOD_NOT_ALLOWED", 405);
       const order = await loadOrder(env, orderId);
       const wahl = wahlView(order);
       // Ohne ausdrueckliche Groesse: die Paketgroesse aus dem Checkout.
-      const ergebnis = await angeboteLaden(env, order, url.searchParams.get("paket") || wahl?.paket);
+      const ergebnis = await angeboteLaden(env, order, url.searchParams.get("paket") || wahl?.paket,
+        { behalten: wahl?.serviceId ?? null });
       return antwort({ ok: true, eingerichtet: packlinkReady(env), wahl, ...ergebnis }, 200, origin);
+    }
+    if (zusatz === "/kaufen") {
+      if (request.method !== "POST") throw new PacklinkError("METHOD_NOT_ALLOWED", 405);
+      let body = {};
+      try { body = (await request.json()) || {}; } catch { body = {}; }
+      return antwort({ ok: true, sendung: await etikettKaufen(env, orderId, body, reqId) }, 200, origin);
     }
     if (request.method === "GET") {
       const order = await loadOrder(env, orderId, ["PAID", "PREPARING", "SHIPPED", "DELIVERED"]);

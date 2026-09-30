@@ -265,7 +265,7 @@ export default {
         return finish(await handleNewsletter(request, runtimeEnv, url, reqId, origin));
       }
 
-      // Packlink PRO (DPD, UPS, GLS ...): Angebote, Entwurf, Sendungsnummer.
+      // Packlink PRO (DPD, DHL): Angebote, Etikett kaufen, Entwurf, Sendungsnummer.
       if (isPacklinkRoute(url)) {
         return finish(await handlePacklink(request, runtimeEnv, url, reqId, origin));
       }

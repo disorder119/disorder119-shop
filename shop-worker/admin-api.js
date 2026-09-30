@@ -11,8 +11,10 @@ import {
   bestellungErstatten,
   erstattungAusWebhook,
   paypalErstattungenAbgleichen as paypalErstattungenAbgleichenMitStatus,
+  paypalWebhookErstattungenAbonnieren,
 } from "./erstattung.js";
 import { reconcilePurchasePayments } from "./worker.js";
+import { artikelWiederVerfuegbar } from "./admin-katalog.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -344,7 +346,8 @@ async function getOrderDetail(env, id) {
   const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
   if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
   const [items, payments, shipments, returns, refunds, events, notes, contact, versand] = await db.batch([
-    db.prepare("SELECT * FROM order_items WHERE order_id=? ORDER BY rowid").bind(order.id),
+    db.prepare(`SELECT oi.*,i.status AS inventory_status FROM order_items oi
+      LEFT JOIN inventory i ON i.id=oi.inventory_id WHERE oi.order_id=? ORDER BY oi.rowid`).bind(order.id),
     db.prepare(`SELECT p.*,
       (SELECT e.amount_cents FROM tax_cash_events e WHERE e.payment_id=p.id AND e.kind='fee' LIMIT 1) AS paypal_fee_cents
       FROM payments p WHERE p.order_id=? ORDER BY p.created_at DESC`).bind(order.id),
@@ -363,10 +366,15 @@ async function getOrderDetail(env, id) {
     const addr = await db.prepare("SELECT * FROM customer_addresses WHERE customer_id=? ORDER BY is_default DESC,created_at DESC").bind(order.customer_id).all();
     addresses = addr.results || [];
   }
+  const activity = (events.results || []).map(row => ({ ...row, metadata: parseMetadata(row.metadata_json) }));
+  const itemRows = items.results || [];
   return {
     order,
     nextStatuses: orderNextStatuses(order.status),
-    items: items.results || [],
+    // Was die Admin-App zum Stornieren anbietet (siehe orderStornieren).
+    storno: stornoAngebot(order),
+    wiederVerfuegbar: wiederVerfuegbarStand(order, itemRows, activity),
+    items: itemRows,
     payments: payments.results || [],
     shipments: shipments.results || [],
     returns: returns.results || [],
@@ -377,14 +385,14 @@ async function getOrderDetail(env, id) {
     customer,
     addresses,
     notes: notes.results || [],
-    activity: (events.results || []).map(row => ({ ...row, metadata: parseMetadata(row.metadata_json) })),
+    activity,
     deletion: await orderDeletionState(db, order),
   };
 }
 
 const DELETION_BLOCKER_TEXT = Object.freeze({
   ORDER_NOT_CANCELLED: "Bestellung zuerst stornieren.",
-  PAYMENT_EVIDENCE: "Zahlungsnachweis vorhanden.",
+  PAYMENT_EVIDENCE: "Bezahlt – als Buchungsbeleg bleibt die Bestellung 10 Jahre im Archiv (§ 147 AO). Stornieren & erstatten genügt.",
   PAYMENT_EVENT: "PayPal-Ereignis vorhanden.",
   SHIPMENT: "Versandvorgang vorhanden.",
   RETURN_OR_REFUND: "Rückgabe oder Erstattung vorhanden.",
@@ -541,8 +549,12 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN") {
         WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status='CANCELLED'
         AND catalog_status!='SOLD' AND EXISTS (SELECT 1 FROM commerce_orders WHERE id=? AND status='CANCELLED')`).bind(now, order.id, order.id));
     } else {
+      // Ein Stueck, das nach einem Storno wieder im Shop steht (verfuegbar,
+      // reserviert, in einer neuen Zahlung), gehoert nicht mehr zu dieser
+      // Bestellung - ihr Statuswechsel darf es nicht mitziehen.
       statements.push(db.prepare(`UPDATE inventory SET status=?,updated_at=?,version=version+1
-        WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?)`).bind(newStatus, now, order.id));
+        WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?)
+          AND status NOT IN ('AVAILABLE','RESERVED','PAYMENT_PENDING')`).bind(newStatus, now, order.id));
     }
     const changed = await db.batch(statements);
     if (!changed[0]?.meta?.changes) throw new AdminError("ORDER_STATE_CHANGED", 409);
@@ -593,6 +605,121 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN") {
   }
 
   return getOrderDetail(env, order.id);
+}
+
+// ----------------------------------------------------------------- Stornieren
+//
+// Ein Knopf fuer jede Lage (Admin-App, Bestellung -> "Stornieren"):
+//   * unbezahlt (Zahlung offen, reserviert): Status "Storniert", die Stuecke
+//     sind sofort wieder frei.
+//   * bezahlt und noch nicht beim Paketdienst (Bezahlt, Wird gepackt): das
+//     Geld geht ueber die urspruengliche PayPal-Zahlung zurueck
+//     (erstattung.js, keine neue Geldsendung), die Bestellung wird
+//     "Erstattet" und - wenn gewuenscht - stehen die Stuecke wieder im Shop.
+//   * schon versendet: nicht hier - erst Ruecksendung, dann erstatten.
+// Bezahlte Bestellungen verschwinden nie: Sie sind Buchungsbelege.
+const STORNO_UNBEZAHLT = Object.freeze(["PAYMENT_PENDING", "RESERVED"]);
+const STORNO_BEZAHLT = Object.freeze(["PAID", "PREPARING"]);
+
+function stornoAngebot(order) {
+  const status = String(order?.status || "").toUpperCase();
+  if (STORNO_UNBEZAHLT.includes(status)) return { moeglich: true, art: "STORNIEREN" };
+  if (STORNO_BEZAHLT.includes(status)) return { moeglich: true, art: "ERSTATTEN" };
+  return { moeglich: false, art: null };
+}
+
+// "Wieder in den Shop": nur aus den Endzustaenden Storniert und Erstattet -
+// danach aendert sich an der Bestellung nichts mehr, das das Stueck zurueck
+// an sie binden koennte.
+function wiederVerfuegbarStand(order, items, activity) {
+  const status = String(order?.status || "").toUpperCase();
+  const letzte = activity.find(e => e.event_type === "ORDER_ITEMS_RELISTED");
+  const erledigt = Boolean(letzte?.metadata?.katalog);
+  const lager = it => String(it.inventory_status || "");
+  // Offen: das Lagerstueck haengt noch an dieser Bestellung - oder es ist frei,
+  // aber der Katalog-Schritt hat noch nie geklappt. Gehoert es inzwischen einer
+  // anderen Bestellung (reserviert, bezahlt ...), gibt es nichts zu tun.
+  const offen = items.some(it => ["REFUNDED", "CANCELLED"].includes(lager(it)))
+    || (status === "REFUNDED" && !erledigt && items.some(it => lager(it) === "AVAILABLE"));
+  return {
+    moeglich: ["REFUNDED", "CANCELLED"].includes(status) && offen,
+    erledigtAm: erledigt ? letzte.created_at : null,
+    pullRequest: letzte?.metadata?.pullRequest ?? null,
+  };
+}
+
+async function packlinkEtikettOffen(db, orderId) {
+  const row = await db.prepare(`SELECT reference,state FROM packlink_sendungen WHERE order_id=?
+    AND state NOT IN ('ERSETZT','KAUF_ABGELEHNT','AWAITING_COMPLETION','READY_TO_PURCHASE','CANCELED','CANCELLED')
+    ORDER BY created_at DESC LIMIT 1`).bind(orderId).first();
+  if (!row || String(row.reference).startsWith("kauf-")) return row ? { reference: null, state: row.state } : null;
+  return { reference: row.reference, state: row.state };
+}
+
+export async function stueckeWiederVerfuegbar(env, id, reqId) {
+  const db = requireDb(env);
+  const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
+  if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
+  if (!["REFUNDED", "CANCELLED"].includes(order.status)) throw new AdminError("WIEDER_VERFUEGBAR_NICHT_MOEGLICH", 409);
+  const items = (await db.prepare("SELECT item_id,inventory_id FROM order_items WHERE order_id=? ORDER BY rowid")
+    .bind(order.id).all()).results || [];
+  const now = new Date().toISOString();
+  // Lager zuerst: steht das Stueck im Katalog noch auf "verkauft", kann es
+  // trotzdem niemand kaufen - wird es dort (auch von Hand) freigegeben, ist
+  // das Lager schon bereit.
+  if (items.length) {
+    await db.batch(items.map(it => db.prepare(`UPDATE inventory SET status='AVAILABLE',updated_at=?,version=version+1
+      WHERE id=? AND status IN ('REFUNDED','CANCELLED')`).bind(now, it.inventory_id)));
+  }
+  // Im Katalog nur, was im Lager jetzt frei ist: ein Stueck, das inzwischen
+  // eine andere Bestellung reserviert oder gekauft hat, bleibt verkauft.
+  const frei = ((await db.prepare(`SELECT oi.item_id FROM order_items oi JOIN inventory i ON i.id=oi.inventory_id
+      WHERE oi.order_id=? AND i.status='AVAILABLE' ORDER BY oi.rowid`).bind(order.id).all()).results || [])
+    .map(row => row.item_id);
+  let katalog;
+  try {
+    katalog = frei.length
+      ? await artikelWiederVerfuegbar(env, frei, `Storno ${order.order_number}`)
+      : { ok: true, geaendert: [] };
+  } catch (err) {
+    console.error(JSON.stringify({ level: "error", event: "catalog_relist_failed", requestId: reqId, orderId: String(order.id), code: safeText(err?.code || err?.message || "unknown", 80) }));
+    katalog = { ok: false, code: safeText(err?.code || "KATALOG_FEHLER", 80) };
+  }
+  await auditAdmin(env, "order", order.id, "ORDER_ITEMS_RELISTED", reqId, {
+    itemIds: items.map(it => Number(it.item_id)),
+    katalog: Boolean(katalog.ok),
+    geaendert: katalog.geaendert || [],
+    pullRequest: katalog.pullRequest ?? null,
+    code: katalog.code || undefined,
+  });
+  return { ok: Boolean(katalog.ok), itemIds: items.map(it => Number(it.item_id)), geaendert: katalog.geaendert || [], pullRequest: katalog.pullRequest ?? null, code: katalog.code || null };
+}
+
+async function orderStornieren(env, id, body, reqId) {
+  const db = requireDb(env);
+  const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
+  if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
+  const angebot = stornoAngebot(order);
+  if (!angebot.moeglich) throw new AdminError("STORNO_NICHT_MOEGLICH", 409);
+  if (angebot.art === "STORNIEREN") {
+    await updateOrder(env, order.id, { status: "CANCELLED" }, reqId);
+    return { ...(await getOrderDetail(env, order.id)), storniert: { art: "STORNIERT" } };
+  }
+  // Ein schon gekauftes Etikett bleibt gueltig - Packlink erstattet das Porto
+  // nur, wenn man es dort storniert. Darauf weist die Admin-App hin.
+  const etikett = await packlinkEtikettOffen(db, order.id);
+  const erstattung = await bestellungErstatten(env, order.id, body || {}, reqId,
+    (orderId, status) => updateOrder(env, orderId, { status }, reqId, "ADMIN"));
+  const jetzt = await db.prepare("SELECT status FROM commerce_orders WHERE id=?").bind(order.id).first();
+  let wiederVerfuegbar = null;
+  if (body?.wiederVerfuegbar !== false && jetzt?.status === "REFUNDED") {
+    wiederVerfuegbar = await stueckeWiederVerfuegbar(env, order.id, reqId);
+  }
+  return {
+    ...(await getOrderDetail(env, order.id)),
+    erstattung,
+    storniert: { art: "ERSTATTET", wiederVerfuegbar, etikett },
+  };
 }
 
 // Fuer automatische Schritte aus der Sendungsverfolgung (packlink.js): derselbe
@@ -992,6 +1119,19 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
     if (path === "/admin/paypal/refunds/sync" && request.method === "POST") {
       return adminJson(await paypalErstattungenSicherAbgleichen(env, reqId, true), 200, origin);
     }
+    if (path === "/admin/paypal/webhook/erstattungen" && request.method === "POST") {
+      try {
+        const ergebnis = await paypalWebhookErstattungenAbonnieren(env);
+        await auditAdmin(env, "paypal_webhook", env.PAYPAL_WEBHOOK_ID || "-", "PAYPAL_WEBHOOK_REFUNDS_SUBSCRIBED", reqId,
+          { bereits: ergebnis.bereits, eventTypes: ergebnis.eventTypes });
+        return adminJson({ ...ergebnis, paypalRefundSync: await paypalErstattungenSicherAbgleichen(env, reqId, true) }, 200, origin);
+      } catch (err) {
+        if (err instanceof ErstattungsFehler) {
+          return adminJson({ error: err.code, detail: err.detail, requestId: reqId }, err.status, origin);
+        }
+        throw err;
+      }
+    }
     if (path === "/admin/rentals" && request.method === "GET") return adminJson(await getRentals(env, url), 200, origin);
     if (path === "/admin/inventory" && request.method === "GET") return adminJson(await getInventory(env, url), 200, origin);
     if (path === "/admin/customers" && request.method === "GET") return adminJson(await getCustomers(env, url), 200, origin);
@@ -1012,6 +1152,25 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
         }
         throw err;
       }
+    }
+
+    const stornoMatch = /^\/admin\/orders\/([^/]+)\/stornieren$/.exec(path);
+    if (stornoMatch && request.method === "POST") {
+      try {
+        return adminJson(await orderStornieren(env, decodeURIComponent(stornoMatch[1]), await readJson(request), reqId), 200, origin);
+      } catch (err) {
+        if (err instanceof ErstattungsFehler) {
+          return adminJson({ error: err.code, detail: err.detail, requestId: reqId }, err.status, origin);
+        }
+        throw err;
+      }
+    }
+
+    const wiederMatch = /^\/admin\/orders\/([^/]+)\/wieder-verfuegbar$/.exec(path);
+    if (wiederMatch && request.method === "POST") {
+      const id = decodeURIComponent(wiederMatch[1]);
+      const ergebnis = await stueckeWiederVerfuegbar(env, id, reqId);
+      return adminJson({ ...(await getOrderDetail(env, id)), wiederVerfuegbarErgebnis: ergebnis }, 200, origin);
     }
 
     const contactMatch = /^\/admin\/orders\/([^/]+)\/contact$/.exec(path);

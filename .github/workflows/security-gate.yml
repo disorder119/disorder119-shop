@@ -80,10 +80,10 @@ jobs:
           node --check assets/besucher.js
           node --test shop-worker/besucher.test.mjs
 
-      - name: Erstattung ueber PayPal pruefen
+      - name: Erstattung ueber PayPal und Stornieren pruefen
         run: |
           node --check shop-worker/erstattung.js
-          node --test shop-worker/erstattung.test.mjs
+          node --test shop-worker/erstattung.test.mjs shop-worker/admin-storno.test.mjs shop-worker/admin-order-management.test.mjs
 
       - name: Gutschein-Migration pruefen
         run: |
