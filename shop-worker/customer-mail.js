@@ -367,6 +367,9 @@ export function formatShippingConfirmation(order = {}, options = {}) {
   const contactEmail = safeText(options.contactEmail || "", 200);
   const items = Array.isArray(order.items) ? order.items : [];
   const titles = items.map(item => safeText(item.title_snapshot || item.title || "", 180)).filter(Boolean);
+  // Wer zurueckschicken will, findet den Weg direkt hier - die Bestellnummer
+  // ist auf der Widerrufsseite schon eingetragen.
+  const widerrufLink = number !== "—" ? `${WIDERRUF_URL}?bestellung=${encodeURIComponent(number)}` : WIDERRUF_URL;
 
   const subject = `Deine Bestellung ${number} ist unterwegs`;
 
@@ -380,6 +383,8 @@ export function formatShippingConfirmation(order = {}, options = {}) {
     ...(url ? [`Verfolgen: ${url}`] : []),
     "",
     "Bis die Sendung beim Dienstleister erfasst ist, kann es ein paar Stunden dauern.",
+    "",
+    `Passt etwas nicht? Innerhalb von 14 Tagen nach Erhalt kannst du hier widerrufen: ${widerrufLink}`,
     "",
     ...(contactEmail ? [`Fragen? Antworte einfach auf diese Mail oder schreib an ${contactEmail}.`] : []),
   ].join("\n");
@@ -398,6 +403,7 @@ export function formatShippingConfirmation(order = {}, options = {}) {
     items.length ? mailAbschnitt("Im Paket", `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">${items.map(item => stueckZeile(item, null)).join("")}</table>`) : "",
     `<tr><td style="padding:24px 4px 30px;">
       <p style="margin:0;font-size:13px;color:${F.leise};">Bis die Sendung beim Paketdienst erfasst ist, kann es ein paar Stunden dauern.${contactEmail ? ` Fragen? Antworte einfach auf diese Mail oder schreib an <a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a>.` : ""}</p>
+      <p style="margin:12px 0 0;font-size:13px;color:${F.leise};">Passt etwas nicht? Innerhalb von 14 Tagen nach Erhalt kannst du <a href="${escapeHtml(widerrufLink)}" style="color:${F.text};">den Vertrag hier widerrufen</a>.</p>
     </td></tr>`,
   ].join("");
   const html = kundenmailRahmen({
