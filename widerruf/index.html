@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-title" content="Disorder119">
+<meta name="description" content="Widerrufsfunktion von Disorder119: Kaufvertrag online widerrufen, mit sofortiger Eingangsbestätigung per E-Mail.">
+<meta name="robots" content="noindex,follow">
+<meta name="referrer" content="same-origin">
+<link rel="canonical" href="https://disorder119.com/widerruf/">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/favicon.png">
+<title>Vertrag widerrufen | Disorder119</title>
+<link rel="stylesheet" href="/assets/app.css?v=8b6ca37518">
+<link rel="stylesheet" href="/assets/konto.css?v=73feff1d43">
+<link rel="stylesheet" href="/assets/widerruf.css?v=0607345900">
+<link rel="stylesheet" href="/assets/theme.css?v=7e4063e1b4">
+<script src="/assets/ansicht.js" defer></script>
+<script>try{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}catch(e){}</script>
+</head>
+<!-- Widerrufsfunktion nach § 356a BGB. Bewusst ohne pwa.js: die
+     Passwort-Sperre des Shops darf diese Seite nie verdecken - der Widerruf
+     muss waehrend der ganzen Widerrufsfrist erreichbar sein. -->
+<body class="konto-seite widerruf-seite">
+<header class="konto-kopf">
+  <a class="konto-marke" href="/">DISORDER119</a>
+</header>
+
+<main class="konto-inhalt widerruf">
+  <h1>Vertrag widerrufen</h1>
+  <p class="widerruf__intro">Du kannst deinen Kauf innerhalb von 14 Tagen, nachdem du die Ware erhalten hast, ohne Angabe von Gründen widerrufen – auch schon vor dem Versand. Gib hier deine Angaben ein; im nächsten Schritt bestätigst du den Widerruf.</p>
+  <p class="konto-meldung" id="wdMeldung" tabindex="-1" role="status" hidden></p>
+  <form id="wdForm" class="konto-form widerruf__form" novalidate>
+    <p class="widerruf__schritt">Schritt 1 von 2 · Angaben</p>
+    <label class="konto-feld konto-feld--breit"><span>Dein Name</span>
+      <input type="text" id="wdName" name="name" autocomplete="name" maxlength="120" required></label>
+    <label class="konto-feld konto-feld--breit"><span>E-Mail-Adresse</span>
+      <input type="email" id="wdEmail" name="email" autocomplete="email" maxlength="200" required>
+      <small>Hierhin schicken wir die Eingangsbestätigung.</small></label>
+    <label class="konto-feld konto-feld--breit"><span>Bestellung</span>
+      <input type="text" id="wdBestellung" name="bestellnummer" autocomplete="off" maxlength="120" placeholder="D119-20260930-…" required>
+      <small>Die Bestellnummer steht in deiner Bestellbestätigung. Findest du sie nicht, schreib Bestelldatum und Artikel hinein.</small></label>
+    <fieldset class="widerruf__umfang">
+      <legend>Was widerrufst du?</legend>
+      <label><input type="radio" name="umfang" value="GANZ" checked> Die ganze Bestellung</label>
+      <label><input type="radio" name="umfang" value="TEIL"> Nur einzelne Stücke</label>
+    </fieldset>
+    <label class="konto-feld konto-feld--breit" id="wdTeileFeld" hidden><span>Welche Stücke?</span>
+      <textarea id="wdTeile" name="teile" maxlength="600" rows="3"></textarea></label>
+    <label class="konto-feld konto-feld--breit"><span>Nachricht an uns (freiwillig)</span>
+      <textarea id="wdNachricht" name="nachricht" maxlength="1000" rows="3"></textarea>
+      <small>Einen Grund musst du nicht angeben.</small></label>
+    <div class="widerruf__knoepfe"><button type="submit" class="konto-btn">Weiter zur Bestätigung</button></div>
+  </form>
+  <section class="widerruf__pruefen" id="wdPruefen" hidden>
+    <p class="widerruf__schritt">Schritt 2 von 2 · Bestätigen</p>
+    <h2 id="wdPruefenTitel" tabindex="-1">Stimmen deine Angaben?</h2>
+    <dl class="widerruf__angaben" id="wdZusammenfassung"></dl>
+    <p class="widerruf__intro">Mit „Widerruf bestätigen“ schickst du uns deine Widerrufserklärung. Du bekommst sofort eine Eingangsbestätigung per E-Mail.</p>
+    <div class="widerruf__knoepfe">
+      <button type="button" class="konto-btn widerruf__bestaetigen" id="wdBestaetigen">Widerruf bestätigen</button>
+      <button type="button" class="konto-btn konto-btn--schlicht" id="wdAendern">Angaben ändern</button>
+    </div>
+  </section>
+  <section class="widerruf__fertig" id="wdFertig" hidden>
+    <h2 id="wdFertigTitel" tabindex="-1">Dein Widerruf ist eingegangen</h2>
+    <p class="widerruf__intro" id="wdEingang"></p>
+    <dl class="widerruf__angaben" id="wdBeleg"></dl>
+    <p class="widerruf__intro" id="wdMailHinweis"></p>
+    <div class="widerruf__knoepfe"><button type="button" class="konto-btn konto-btn--schlicht" id="wdDrucken">Beleg drucken oder speichern</button></div>
+  </section>
+  <noscript><p class="konto-meldung konto-meldung--fehler">Das Formular braucht JavaScript. Du kannst deinen Widerruf genauso gültig per E-Mail an <a href="mailto:disorder119shop@gmail.com">disorder119shop@gmail.com</a> schicken.</p></noscript>
+  <section class="widerruf__info">
+    <div class="konto-block"><h2>So geht es weiter</h2>
+      <ol>
+        <li>Du bekommst sofort eine Eingangsbestätigung per E-Mail – mit deinen Angaben, Datum und Uhrzeit.</li>
+        <li>Ist deine Bestellung noch nicht verschickt, halten wir sie an und erstatten dir den vollen Betrag.</li>
+        <li>Ist sie schon unterwegs oder bei dir: Schick die Ware innerhalb von 14 Tagen an die Adresse unten zurück, am besten mit Sendungsnummer. Die unmittelbaren Kosten der Rücksendung trägst du.</li>
+        <li>Das Geld kommt über PayPal zurück, sobald die Ware bei uns ist oder du uns den Versand nachweist – spätestens 14 Tage nach Eingang deines Widerrufs. Beim Widerruf der ganzen Bestellung auch die Standard-Versandkosten.</li>
+      </ol></div>
+    <div class="konto-block"><h2>Rücksendeadresse</h2>
+      <address class="widerruf__adresse">Joel Bittner — Disorder119<br>Nelseestraße 25<br>63739 Aschaffenburg<br>Deutschland</address></div>
+    <div class="konto-block"><h2>Lieber per E-Mail oder Brief?</h2>
+      <p>Das geht genauso: Schreib uns an <a href="mailto:disorder119shop@gmail.com">disorder119shop@gmail.com</a> oder per Post an die Adresse oben. Die vollständige Widerrufsbelehrung steht in den <a href="/agb/">AGB</a>.</p></div>
+  </section>
+</main>
+
+<footer class="konto-fuss">
+  <a class="fuss-widerruf" href="/widerruf/" aria-current="page">Vertrag widerrufen</a>
+  <a href="/agb/">AGB</a>
+  <a href="/datenschutz/">Datenschutz</a>
+  <a href="/impressum/">Impressum</a>
+</footer>
+
+<script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "paypalClientId": "BAAcvD8X1aHIk42UUDAMZkYZ2i5gKLPCXZDBzbWjsh-axJ_6551l-FXgDdboqGtmZSidZbGWon2cQ_SuaI", "shopWorkerUrl": "https://api.disorder119.com", "turnstileSiteKey": "0x4AAAAAAFHqI2j_AitAYIKF", "environment": "live", "features": {"paypalCheckout": true, "customerAccounts": true}}; window.WIDERRUF_TEXT = {"name": "Name", "email": "E-Mail", "bestellung": "Bestellung", "umfang": "Erklärung", "umfangGanz": "Widerruf der ganzen Bestellung", "umfangTeil": "Widerruf für folgende Stücke", "nachricht": "Nachricht", "eingegangen": "Eingegangen", "vorgang": "Vorgang", "pflicht": "Bitte gib deinen Namen, deine E-Mail-Adresse und die Bestellung an – beim Teilwiderruf auch die Stücke.", "emailFalsch": "Diese E-Mail-Adresse sieht nicht vollständig aus. Bitte prüf sie noch einmal.", "sende": "Einen Moment …", "fehlerPruefung": "Die automatische Sicherheitsprüfung hat nicht geklappt. Lade die Seite neu oder schick uns deinen Widerruf per E-Mail an disorder119shop@gmail.com – das ist genauso gültig.", "fehlerZuOft": "Zu viele Versuche in kurzer Zeit. Bitte warte kurz oder schick uns deinen Widerruf per E-Mail an disorder119shop@gmail.com.", "fehlerAllgemein": "Das hat gerade nicht geklappt. Versuch es bitte gleich noch einmal oder schick uns deinen Widerruf per E-Mail an disorder119shop@gmail.com – das ist genauso gültig.", "eingangText": "Deine Widerrufserklärung ist am {zeit} bei uns eingegangen.", "mailGesendet": "Die Eingangsbestätigung mit allen Angaben ist an {email} unterwegs. Bewahre sie gut auf.", "mailFolgt": "Deine Erklärung ist sicher bei uns gespeichert. Die Eingangsbestätigung an {email} folgt in Kürze."};</script>
+<script src="/assets/widerruf.js?v=0607345900" defer></script>
+</body>
+</html>

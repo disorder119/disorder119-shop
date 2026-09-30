@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-title" content="Disorder119">
+<meta name="description" content="Fonction de rétractation Disorder119 : rétracte-toi de ton achat en ligne et reçois immédiatement un accusé de réception par e-mail.">
+<meta name="robots" content="noindex,follow">
+<meta name="referrer" content="same-origin">
+<link rel="canonical" href="https://disorder119.com/fr/widerruf/">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/favicon.png">
+<title>Se rétracter du contrat | Disorder119</title>
+<link rel="stylesheet" href="/assets/app.css?v=8b6ca37518">
+<link rel="stylesheet" href="/assets/konto.css?v=73feff1d43">
+<link rel="stylesheet" href="/assets/widerruf.css?v=0607345900">
+<link rel="stylesheet" href="/assets/theme.css?v=7e4063e1b4">
+<script src="/assets/ansicht.js" defer></script>
+<script>try{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}catch(e){}</script>
+</head>
+<!-- Widerrufsfunktion nach § 356a BGB. Bewusst ohne pwa.js: die
+     Passwort-Sperre des Shops darf diese Seite nie verdecken - der Widerruf
+     muss waehrend der ganzen Widerrufsfrist erreichbar sein. -->
+<body class="konto-seite widerruf-seite">
+<header class="konto-kopf">
+  <a class="konto-marke" href="/fr/">DISORDER119</a>
+</header>
+
+<main class="konto-inhalt widerruf">
+  <h1>Se rétracter du contrat</h1>
+  <p class="widerruf__intro">Tu peux te rétracter de ton achat dans les 14 jours suivant la réception des biens, sans avoir à te justifier – même avant l’expédition. Saisis tes informations ici ; à l’étape suivante, tu confirmes la rétractation.</p>
+  <p class="konto-meldung" id="wdMeldung" tabindex="-1" role="status" hidden></p>
+  <form id="wdForm" class="konto-form widerruf__form" novalidate>
+    <p class="widerruf__schritt">Étape 1 sur 2 · Informations</p>
+    <label class="konto-feld konto-feld--breit"><span>Ton nom</span>
+      <input type="text" id="wdName" name="name" autocomplete="name" maxlength="120" required></label>
+    <label class="konto-feld konto-feld--breit"><span>Adresse e-mail</span>
+      <input type="email" id="wdEmail" name="email" autocomplete="email" maxlength="200" required>
+      <small>Nous envoyons l’accusé de réception à cette adresse.</small></label>
+    <label class="konto-feld konto-feld--breit"><span>Commande</span>
+      <input type="text" id="wdBestellung" name="bestellnummer" autocomplete="off" maxlength="120" placeholder="D119-20260930-…" required>
+      <small>Le numéro de commande figure dans ta confirmation de commande. Si tu ne le trouves pas, indique la date de commande et l’article.</small></label>
+    <fieldset class="widerruf__umfang">
+      <legend>De quoi te rétractes-tu ?</legend>
+      <label><input type="radio" name="umfang" value="GANZ" checked> De toute la commande</label>
+      <label><input type="radio" name="umfang" value="TEIL"> De certaines pièces seulement</label>
+    </fieldset>
+    <label class="konto-feld konto-feld--breit" id="wdTeileFeld" hidden><span>Quelles pièces ?</span>
+      <textarea id="wdTeile" name="teile" maxlength="600" rows="3"></textarea></label>
+    <label class="konto-feld konto-feld--breit"><span>Message (facultatif)</span>
+      <textarea id="wdNachricht" name="nachricht" maxlength="1000" rows="3"></textarea>
+      <small>Tu n’as pas à donner de motif.</small></label>
+    <div class="widerruf__knoepfe"><button type="submit" class="konto-btn">Continuer vers la confirmation</button></div>
+  </form>
+  <section class="widerruf__pruefen" id="wdPruefen" hidden>
+    <p class="widerruf__schritt">Étape 2 sur 2 · Confirmer</p>
+    <h2 id="wdPruefenTitel" tabindex="-1">Tes informations sont-elles correctes ?</h2>
+    <dl class="widerruf__angaben" id="wdZusammenfassung"></dl>
+    <p class="widerruf__intro">« Confirmer la rétractation » nous envoie ta déclaration de rétractation. Tu reçois immédiatement un accusé de réception par e-mail.</p>
+    <div class="widerruf__knoepfe">
+      <button type="button" class="konto-btn widerruf__bestaetigen" id="wdBestaetigen">Confirmer la rétractation</button>
+      <button type="button" class="konto-btn konto-btn--schlicht" id="wdAendern">Modifier</button>
+    </div>
+  </section>
+  <section class="widerruf__fertig" id="wdFertig" hidden>
+    <h2 id="wdFertigTitel" tabindex="-1">Ta rétractation a bien été reçue</h2>
+    <p class="widerruf__intro" id="wdEingang"></p>
+    <dl class="widerruf__angaben" id="wdBeleg"></dl>
+    <p class="widerruf__intro" id="wdMailHinweis"></p>
+    <div class="widerruf__knoepfe"><button type="button" class="konto-btn konto-btn--schlicht" id="wdDrucken">Imprimer ou enregistrer le justificatif</button></div>
+  </section>
+  <noscript><p class="konto-meldung konto-meldung--fehler">Ce formulaire nécessite JavaScript. Tu peux tout aussi valablement nous envoyer ta rétractation par e-mail à <a href="mailto:disorder119shop@gmail.com">disorder119shop@gmail.com</a>.</p></noscript>
+  <section class="widerruf__info">
+    <div class="konto-block"><h2>La suite</h2>
+      <ol>
+        <li>Tu reçois immédiatement un accusé de réception par e-mail – avec tes informations, la date et l’heure.</li>
+        <li>Si ta commande n’est pas encore expédiée, nous l’arrêtons et te remboursons l’intégralité du montant.</li>
+        <li>Si elle est en route ou déjà chez toi : renvoie les biens à l’adresse ci-dessous dans les 14 jours, de préférence avec un numéro de suivi. Les frais directs de renvoi sont à ta charge.</li>
+        <li>L’argent te revient via PayPal dès que les biens sont chez nous ou que tu nous prouves l’envoi – au plus tard 14 jours après réception de ta rétractation. En cas de rétractation de toute la commande, les frais de livraison standard sont inclus.</li>
+      </ol></div>
+    <div class="konto-block"><h2>Adresse de retour</h2>
+      <address class="widerruf__adresse">Joel Bittner — Disorder119<br>Nelseestraße 25<br>63739 Aschaffenburg<br>Allemagne</address></div>
+    <div class="konto-block"><h2>Plutôt par e-mail ou par courrier ?</h2>
+      <p>C’est tout aussi valable : écris-nous à <a href="mailto:disorder119shop@gmail.com">disorder119shop@gmail.com</a> ou envoie une lettre à l’adresse ci-dessus. Les informations complètes sur la rétractation figurent dans les <a href="/fr/agb/">CGV</a>.</p></div>
+  </section>
+</main>
+
+<footer class="konto-fuss">
+  <a class="fuss-widerruf" href="/fr/widerruf/" aria-current="page">Se rétracter du contrat ici</a>
+  <a href="/fr/agb/">CGV</a>
+  <a href="/fr/datenschutz/">Confidentialité</a>
+  <a href="/fr/impressum/">Mentions légales</a>
+</footer>
+
+<script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "paypalClientId": "BAAcvD8X1aHIk42UUDAMZkYZ2i5gKLPCXZDBzbWjsh-axJ_6551l-FXgDdboqGtmZSidZbGWon2cQ_SuaI", "shopWorkerUrl": "https://api.disorder119.com", "turnstileSiteKey": "0x4AAAAAAFHqI2j_AitAYIKF", "environment": "live", "features": {"paypalCheckout": true, "customerAccounts": true}}; window.WIDERRUF_TEXT = {"name": "Nom", "email": "E-mail", "bestellung": "Commande", "umfang": "Déclaration", "umfangGanz": "Rétractation de toute la commande", "umfangTeil": "Rétractation pour ces pièces", "nachricht": "Message", "eingegangen": "Reçue le", "vorgang": "Référence", "pflicht": "Indique ton nom, ton adresse e-mail et la commande – ainsi que les pièces en cas de rétractation partielle.", "emailFalsch": "Cette adresse e-mail ne semble pas complète. Vérifie-la encore une fois.", "sende": "Un instant …", "fehlerPruefung": "La vérification de sécurité automatique n’a pas fonctionné. Recharge la page ou envoie-nous ta rétractation par e-mail à disorder119shop@gmail.com – c’est tout aussi valable.", "fehlerZuOft": "Trop de tentatives en peu de temps. Attends un instant ou envoie-nous ta rétractation par e-mail à disorder119shop@gmail.com.", "fehlerAllgemein": "Cela n’a pas fonctionné. Réessaie dans un instant ou envoie-nous ta rétractation par e-mail à disorder119shop@gmail.com – c’est tout aussi valable.", "eingangText": "Nous avons reçu ta déclaration de rétractation le {zeit} (heure allemande).", "mailGesendet": "L’accusé de réception avec toutes les informations est en route vers {email}. Conserve-le bien.", "mailFolgt": "Ta déclaration est enregistrée en toute sécurité. L’accusé de réception vers {email} suit sous peu."};</script>
+<script src="/assets/widerruf.js?v=0607345900" defer></script>
+</body>
+</html>

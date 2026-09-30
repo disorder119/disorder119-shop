@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-title" content="Disorder119">
+<meta name="description" content="Disorder119 withdrawal function: withdraw from your purchase online and receive an immediate acknowledgement of receipt by email.">
+<meta name="robots" content="noindex,follow">
+<meta name="referrer" content="same-origin">
+<link rel="canonical" href="https://disorder119.com/en/widerruf/">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/favicon.png">
+<title>Withdraw from contract | Disorder119</title>
+<link rel="stylesheet" href="/assets/app.css?v=8b6ca37518">
+<link rel="stylesheet" href="/assets/konto.css?v=73feff1d43">
+<link rel="stylesheet" href="/assets/widerruf.css?v=0607345900">
+<link rel="stylesheet" href="/assets/theme.css?v=7e4063e1b4">
+<script src="/assets/ansicht.js" defer></script>
+<script>try{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}catch(e){}</script>
+</head>
+<!-- Widerrufsfunktion nach § 356a BGB. Bewusst ohne pwa.js: die
+     Passwort-Sperre des Shops darf diese Seite nie verdecken - der Widerruf
+     muss waehrend der ganzen Widerrufsfrist erreichbar sein. -->
+<body class="konto-seite widerruf-seite">
+<header class="konto-kopf">
+  <a class="konto-marke" href="/en/">DISORDER119</a>
+</header>
+
+<main class="konto-inhalt widerruf">
+  <h1>Withdraw from contract</h1>
+  <p class="widerruf__intro">You can withdraw from your purchase within 14 days of receiving the goods without giving any reason – even before they ship. Enter your details here; in the next step you confirm the withdrawal.</p>
+  <p class="konto-meldung" id="wdMeldung" tabindex="-1" role="status" hidden></p>
+  <form id="wdForm" class="konto-form widerruf__form" novalidate>
+    <p class="widerruf__schritt">Step 1 of 2 · Details</p>
+    <label class="konto-feld konto-feld--breit"><span>Your name</span>
+      <input type="text" id="wdName" name="name" autocomplete="name" maxlength="120" required></label>
+    <label class="konto-feld konto-feld--breit"><span>Email address</span>
+      <input type="email" id="wdEmail" name="email" autocomplete="email" maxlength="200" required>
+      <small>We send the acknowledgement of receipt to this address.</small></label>
+    <label class="konto-feld konto-feld--breit"><span>Order</span>
+      <input type="text" id="wdBestellung" name="bestellnummer" autocomplete="off" maxlength="120" placeholder="D119-20260930-…" required>
+      <small>Your order number is in your order confirmation. If you cannot find it, enter the order date and the item instead.</small></label>
+    <fieldset class="widerruf__umfang">
+      <legend>What are you withdrawing from?</legend>
+      <label><input type="radio" name="umfang" value="GANZ" checked> The whole order</label>
+      <label><input type="radio" name="umfang" value="TEIL"> Only some pieces</label>
+    </fieldset>
+    <label class="konto-feld konto-feld--breit" id="wdTeileFeld" hidden><span>Which pieces?</span>
+      <textarea id="wdTeile" name="teile" maxlength="600" rows="3"></textarea></label>
+    <label class="konto-feld konto-feld--breit"><span>Message to us (optional)</span>
+      <textarea id="wdNachricht" name="nachricht" maxlength="1000" rows="3"></textarea>
+      <small>You do not have to give a reason.</small></label>
+    <div class="widerruf__knoepfe"><button type="submit" class="konto-btn">Continue to confirmation</button></div>
+  </form>
+  <section class="widerruf__pruefen" id="wdPruefen" hidden>
+    <p class="widerruf__schritt">Step 2 of 2 · Confirm</p>
+    <h2 id="wdPruefenTitel" tabindex="-1">Are your details correct?</h2>
+    <dl class="widerruf__angaben" id="wdZusammenfassung"></dl>
+    <p class="widerruf__intro">“Confirm withdrawal” sends us your notice of withdrawal. You will immediately receive an acknowledgement of receipt by email.</p>
+    <div class="widerruf__knoepfe">
+      <button type="button" class="konto-btn widerruf__bestaetigen" id="wdBestaetigen">Confirm withdrawal</button>
+      <button type="button" class="konto-btn konto-btn--schlicht" id="wdAendern">Change details</button>
+    </div>
+  </section>
+  <section class="widerruf__fertig" id="wdFertig" hidden>
+    <h2 id="wdFertigTitel" tabindex="-1">Your withdrawal has been received</h2>
+    <p class="widerruf__intro" id="wdEingang"></p>
+    <dl class="widerruf__angaben" id="wdBeleg"></dl>
+    <p class="widerruf__intro" id="wdMailHinweis"></p>
+    <div class="widerruf__knoepfe"><button type="button" class="konto-btn konto-btn--schlicht" id="wdDrucken">Print or save receipt</button></div>
+  </section>
+  <noscript><p class="konto-meldung konto-meldung--fehler">This form needs JavaScript. You can just as validly send us your withdrawal by email to <a href="mailto:disorder119shop@gmail.com">disorder119shop@gmail.com</a>.</p></noscript>
+  <section class="widerruf__info">
+    <div class="konto-block"><h2>What happens next</h2>
+      <ol>
+        <li>You immediately receive an acknowledgement of receipt by email – with your details and the date and time.</li>
+        <li>If your order has not shipped yet, we stop it and refund the full amount.</li>
+        <li>If it is on its way or already with you: send the goods back to the address below within 14 days, ideally with a tracking number. You bear the direct cost of returning the goods.</li>
+        <li>The money comes back via PayPal as soon as the goods are with us or you show us proof of dispatch – no later than 14 days after we receive your withdrawal. If you withdraw from the whole order, this includes the standard shipping costs.</li>
+      </ol></div>
+    <div class="konto-block"><h2>Return address</h2>
+      <address class="widerruf__adresse">Joel Bittner — Disorder119<br>Nelseestraße 25<br>63739 Aschaffenburg<br>Germany</address></div>
+    <div class="konto-block"><h2>Prefer email or post?</h2>
+      <p>That works just as well: write to <a href="mailto:disorder119shop@gmail.com">disorder119shop@gmail.com</a> or send a letter to the address above. The full withdrawal instructions are in the <a href="/en/agb/">terms and conditions</a>.</p></div>
+  </section>
+</main>
+
+<footer class="konto-fuss">
+  <a class="fuss-widerruf" href="/en/widerruf/" aria-current="page">Withdraw from contract here</a>
+  <a href="/en/agb/">Terms</a>
+  <a href="/en/datenschutz/">Privacy</a>
+  <a href="/en/impressum/">Legal notice</a>
+</footer>
+
+<script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "paypalClientId": "BAAcvD8X1aHIk42UUDAMZkYZ2i5gKLPCXZDBzbWjsh-axJ_6551l-FXgDdboqGtmZSidZbGWon2cQ_SuaI", "shopWorkerUrl": "https://api.disorder119.com", "turnstileSiteKey": "0x4AAAAAAFHqI2j_AitAYIKF", "environment": "live", "features": {"paypalCheckout": true, "customerAccounts": true}}; window.WIDERRUF_TEXT = {"name": "Name", "email": "Email", "bestellung": "Order", "umfang": "Notice", "umfangGanz": "Withdrawal from the whole order", "umfangTeil": "Withdrawal for these pieces", "nachricht": "Message", "eingegangen": "Received", "vorgang": "Reference", "pflicht": "Please enter your name, your email address and the order – and the pieces for a partial withdrawal.", "emailFalsch": "This email address does not look complete. Please check it again.", "sende": "One moment …", "fehlerPruefung": "The automatic security check did not work. Reload the page or send us your withdrawal by email to disorder119shop@gmail.com – that is just as valid.", "fehlerZuOft": "Too many attempts in a short time. Please wait a moment or send us your withdrawal by email to disorder119shop@gmail.com.", "fehlerAllgemein": "That did not work just now. Please try again in a moment or send us your withdrawal by email to disorder119shop@gmail.com – that is just as valid.", "eingangText": "We received your notice of withdrawal on {zeit} (German time).", "mailGesendet": "The acknowledgement of receipt with all details is on its way to {email}. Please keep it.", "mailFolgt": "Your notice is safely stored. The acknowledgement of receipt to {email} will follow shortly."};</script>
+<script src="/assets/widerruf.js?v=0607345900" defer></script>
+</body>
+</html>
