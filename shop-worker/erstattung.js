@@ -29,13 +29,13 @@ export class ErstattungsFehler extends Error {
   }
 }
 
-function paypalApiBase(env) {
+export function paypalApiBase(env) {
   return String(env.PAYPAL_ENVIRONMENT || "sandbox").toLowerCase() === "live"
     ? "https://api-m.paypal.com"
     : "https://api-m.sandbox.paypal.com";
 }
 
-async function paypalToken(env) {
+export async function paypalToken(env) {
   if (!env.PAYPAL_CLIENT_ID || !env.PAYPAL_CLIENT_SECRET) throw new ErstattungsFehler("PAYPAL_NOT_CONFIGURED", 503);
   const res = await fetch(`${paypalApiBase(env)}/v1/oauth2/token`, {
     method: "POST",
@@ -262,7 +262,7 @@ export async function erstattungAusWebhook(env, event, reqId, statusSetzen) {
 // "8 - PayPal verbinden" legte ihn anfangs nur mit PAYMENT.CAPTURE.COMPLETED
 // an. Die Admin-App bietet dafuer einen Knopf, sobald der Abgleich das Fehlen
 // bemerkt; der Server ergaenzt das Ereignis und behaelt alle anderen.
-export async function paypalWebhookErstattungenAbonnieren(env) {
+export async function paypalWebhookErstattungenAbonnieren(env, { cacheLeeren = true } = {}) {
   if (!env.PAYPAL_WEBHOOK_ID) throw new ErstattungsFehler("PAYPAL_WEBHOOK_FEHLT", 409);
   const token = await paypalToken(env);
   const url = `${paypalApiBase(env)}/v1/notifications/webhooks/${encodeURIComponent(env.PAYPAL_WEBHOOK_ID)}`;
@@ -284,8 +284,15 @@ export async function paypalWebhookErstattungenAbonnieren(env) {
     });
   }
   // Der naechste Abgleich soll den neuen Stand zeigen, nicht den gemerkten.
-  if (env.DB) refundSyncByDatabase.delete(env.DB);
+  if (cacheLeeren && env.DB) refundSyncByDatabase.delete(env.DB);
   return { ok: true, bereits: false, eventTypes };
+}
+
+async function webhookProtokoll(db, eventType, reqId, metadata) {
+  if (!db) return;
+  await db.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'SYSTEM','paypal_webhook','refunds',?,?,?,?)`)
+    .bind(crypto.randomUUID(), eventType, safeText(reqId, 120), JSON.stringify(metadata), new Date().toISOString()).run();
 }
 
 // Zweite Sicherung neben dem Webhook: PayPal fuehrt auch Rueckzahlungen auf,
@@ -320,7 +327,20 @@ export async function paypalErstattungenAbgleichen(env, reqId, statusSetzen, opt
       if (webhookRes.ok) {
         const types = (webhook.event_types || []).map(entry => String(entry?.name || ""));
         webhookSubscribed = types.includes("*") || types.includes("PAYMENT.CAPTURE.REFUNDED");
-        if (!webhookSubscribed) webhookCheckCode = "PAYPAL_REFUND_WEBHOOK_NOT_SUBSCRIBED";
+        if (!webhookSubscribed) {
+          // Selbstheilung: Fehlt das Ereignis (so legte "8 - PayPal verbinden"
+          // den Webhook anfangs an), ergaenzt der Server es einmal - alle
+          // anderen Ereignisse bleiben. Klappt das nicht, bleibt der Hinweis
+          // samt Knopf in der Admin-App.
+          try {
+            const ergebnis = await paypalWebhookErstattungenAbonnieren(env, { cacheLeeren: false });
+            webhookSubscribed = true;
+            await webhookProtokoll(env.DB, "PAYPAL_WEBHOOK_REFUNDS_SUBSCRIBED", reqId, { automatisch: true, eventTypes: ergebnis.eventTypes });
+          } catch (err) {
+            webhookCheckCode = "PAYPAL_REFUND_WEBHOOK_NOT_SUBSCRIBED";
+            console.warn(JSON.stringify({ level: "warn", event: "paypal_webhook_refund_subscribe_failed", requestId: safeText(reqId, 120), code: safeText(err?.code || err?.message || "unknown", 80) }));
+          }
+        }
       } else {
         webhookCheckCode = "PAYPAL_WEBHOOK_STATUS_UNAVAILABLE";
       }

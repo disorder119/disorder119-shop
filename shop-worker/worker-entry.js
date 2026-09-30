@@ -28,6 +28,7 @@ import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
 import { handleIncomingEmail, handlePostfach, isPostfachRoute } from "./postfach.js";
 import { besucherAufraeumen, handleBesucher, istBesucherRoute } from "./besucher.js";
+import { applePayDomainSicherstellen } from "./paypal-einrichtung.js";
 import { handleNewsletter, isNewsletterRoute } from "./newsletter.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
 import { handleAdminAuth, isAdminAuthRoute } from "./admin-passkeys.js";
@@ -436,6 +437,7 @@ export default {
       reqId,
     );
     await runBackground(ctx, besucherAufraeumen(env, scheduledTime), "besucher_cleanup_failed", reqId);
+    await runBackground(ctx, applePayDomainSicherstellen(env, scheduledTime), "apple_pay_domain_failed", reqId);
   },
 
   // Cloudflare Email Routing: kontakt@disorder119.com -> Postfach + Kopie ins Gmail.
