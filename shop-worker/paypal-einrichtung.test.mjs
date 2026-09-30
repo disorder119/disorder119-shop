@@ -14,7 +14,7 @@ function fakePaypal({ domains = [], registrieren = { status: 201, body: { provid
     const method = init.method || "GET";
     let body = null;
     try { body = init.body ? JSON.parse(init.body) : null; } catch { body = String(init.body); }
-    aufrufe.push({ method, path: url.pathname, body });
+    aufrufe.push({ method, path: url.pathname, search: url.searchParams, body });
     if (url.pathname === "/v1/oauth2/token") return Response.json({ access_token: "tok" });
     if (url.pathname === "/v1/customer/wallet-domains" && method === "GET") {
       return Response.json({ wallet_domains: zustand.domains.map(name => ({ provider_type: "APPLE_PAY", domain: { name } })) });
@@ -116,6 +116,23 @@ test("the refund sync adds the missing refund event to the PayPal webhook by its
     // Beim naechsten Abgleich ist das Ereignis da - kein zweiter PATCH.
     await paypalErstattungenAbgleichen(LIVE(DB), "cron-2", true);
     assert.equal(pp.aufrufe.filter(a => a.method === "PATCH").length, 1);
+  } finally {
+    pp.restore();
+  }
+});
+
+test("the refund event list asks PayPal for at most 29 days, in PayPal's time format", async () => {
+  const DB = sqliteD1(allMigrations());
+  const pp = fakePaypal({ eventTypes: [{ name: "PAYMENT.CAPTURE.COMPLETED" }, { name: "PAYMENT.CAPTURE.REFUNDED" }] });
+  try {
+    await paypalErstattungenAbgleichen(LIVE(DB), "cron-zeit", true);
+    const liste = pp.aufrufe.find(a => a.path === "/v1/notifications/webhooks-events");
+    const start = liste.search.get("start_time"), ende = liste.search.get("end_time");
+    assert.match(start, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+    assert.match(ende, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+    const tage = (Date.parse(ende) - Date.parse(start)) / 86400000;
+    assert.ok(tage <= 29.001 && tage >= 28.999, String(tage));
+    assert.equal(liste.search.get("event_type"), "PAYMENT.CAPTURE.REFUNDED");
   } finally {
     pp.restore();
   }

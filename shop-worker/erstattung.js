@@ -16,7 +16,9 @@ import { canTransitionOrder, safeText } from "./commerce-core.js";
 import { recordVerifiedRefund } from "./tax-evidence.js";
 
 const REFUND_SYNC_CACHE_MS = 5 * 60 * 1000;
-const REFUND_SYNC_DAYS = 31;
+// PayPal haelt Webhook-Ereignisse rund 30 Tage vor; ein aelterer Beginn laesst
+// die ganze Liste scheitern. Der Cron laeuft alle 15 Minuten, 29 Tage reichen.
+const REFUND_SYNC_DAYS = 29;
 const REFUND_SYNC_MAX_PAGES = 50;
 const refundSyncByDatabase = new WeakMap();
 
@@ -53,6 +55,11 @@ function captureIdAusErstattung(resource) {
   return resource?.supplementary_data?.related_ids?.capture_id
     || (resource?.links || []).map(x => /\/v2\/payments\/captures\/([^/?]+)/.exec(String(x.href || ""))?.[1]).find(Boolean)
     || null;
+}
+
+// PayPal erwartet Zeitpunkte ohne Millisekunden (2026-09-30T09:15:00Z).
+export function paypalZeit(date) {
+  return new Date(date).toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
 function paypalEventNextUrl(base, links) {
@@ -345,8 +352,8 @@ export async function paypalErstattungenAbgleichen(env, reqId, statusSetzen, opt
         webhookCheckCode = "PAYPAL_WEBHOOK_STATUS_UNAVAILABLE";
       }
     }
-    const start = new Date(now.getTime() - REFUND_SYNC_DAYS * 24 * 60 * 60 * 1000).toISOString();
-    const end = now.toISOString();
+    const start = paypalZeit(now.getTime() - REFUND_SYNC_DAYS * 24 * 60 * 60 * 1000);
+    const end = paypalZeit(now);
     let next = `${base}/v1/notifications/webhooks-events?${new URLSearchParams({
       start_time: start,
       end_time: end,
@@ -369,6 +376,9 @@ export async function paypalErstattungenAbgleichen(env, reqId, statusSetzen, opt
         throw new ErstattungsFehler("PAYPAL_REFUND_EVENT_LIST_FAILED", 502, {
           paypalStatus: res.status,
           debugId: safeText(body?.debug_id || res.headers.get("paypal-debug-id"), 120),
+          // PayPals eigener Grund - ohne ihn laesst sich ein Fehler nur raten.
+          grund: safeText(body?.details?.[0]?.issue || body?.name || "", 80),
+          feld: safeText(body?.details?.[0]?.field || "", 80),
         });
       }
       pages += 1;
