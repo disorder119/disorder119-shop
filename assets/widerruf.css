@@ -1,0 +1,194 @@
+/* Widerrufsfunktion ("Vertrag widerrufen"). Baut auf konto.css auf: gleiche
+   Kopfzeile, Felder und Knoepfe wie das Kundenkonto - nur was die zwei
+   Schritte und der Beleg zusaetzlich brauchen. */
+
+.widerruf__intro {
+  margin: 0 0 26px;
+  max-width: 62ch;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.widerruf__form { max-width: 560px; }
+
+.konto-feld small {
+  font-size: 0.8rem;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-faint, var(--text-muted));
+  line-height: 1.45;
+}
+
+.konto-feld textarea {
+  font-family: inherit;
+  font-size: 1rem;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  padding: 11px 12px;
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+}
+
+.konto-feld textarea:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.widerruf__umfang {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.widerruf__umfang legend {
+  margin: 0 0 8px;
+  padding: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.widerruf__umfang label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid var(--rule-strong);
+  cursor: pointer;
+}
+
+.widerruf__umfang label:has(input:checked) {
+  border-color: var(--text);
+}
+
+.widerruf__umfang input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--text);
+}
+
+.widerruf__schritt {
+  margin: 0 0 12px;
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.widerruf__pruefen,
+.widerruf__fertig {
+  max-width: 560px;
+  margin: 0 0 40px;
+}
+
+.widerruf__pruefen h2,
+.widerruf__fertig h2 {
+  margin: 0 0 16px;
+  font-size: 1.3rem;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--text);
+}
+
+.widerruf__pruefen h2:focus,
+.widerruf__fertig h2:focus { outline: none; }
+
+.widerruf__angaben {
+  display: grid;
+  grid-template-columns: minmax(96px, max-content) 1fr;
+  gap: 10px 18px;
+  margin: 0 0 22px;
+  padding: 16px 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.widerruf__angaben dt {
+  margin: 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding-top: 2px;
+}
+
+.widerruf__angaben dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.widerruf__knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.widerruf__bestaetigen {
+  min-height: 52px;
+  padding: 14px 26px;
+  font-size: 0.86rem;
+}
+
+.widerruf__info {
+  max-width: 62ch;
+  padding-top: 26px;
+  border-top: 1px solid var(--rule);
+}
+
+.widerruf__info ol {
+  margin: 0 0 26px;
+  padding-left: 1.2em;
+  display: grid;
+  gap: 10px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.widerruf__info p {
+  margin: 0 0 18px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.widerruf__info a { color: var(--text); }
+
+.widerruf__adresse {
+  display: inline-block;
+  margin: 0 0 26px;
+  padding: 14px 18px;
+  border: 1px solid var(--rule-strong);
+  font-style: normal;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+@media (max-width: 520px) {
+  .widerruf__angaben { grid-template-columns: 1fr; gap: 2px 0; }
+  .widerruf__angaben dd { margin-bottom: 10px; }
+  .widerruf__knoepfe .konto-btn { flex: 1 1 100%; }
+}
+
+/* Beleg drucken oder als PDF sichern: nur der Eingang, schwarz auf weiss. */
+@media print {
+  body.widerruf-seite { background: #fff !important; color: #000 !important; }
+  .widerruf-seite .konto-kopf,
+  .widerruf-seite .konto-fuss,
+  .widerruf-seite .widerruf__intro,
+  .widerruf-seite .widerruf__form,
+  .widerruf-seite .widerruf__pruefen,
+  .widerruf-seite .widerruf__info,
+  .widerruf-seite #wdDrucken,
+  .widerruf-seite .konto-meldung { display: none !important; }
+  .widerruf-seite .widerruf__fertig * { color: #000 !important; border-color: #999 !important; }
+}
