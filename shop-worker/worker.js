@@ -14,6 +14,7 @@ import { branchHead, createCommit, fastForward, readRepoFile } from "./github-da
 import { VersandError, versandFuerBestellung, versandWahlStatement } from "./versand.js";
 import { captureStatements, recordVerifiedRefund } from './tax-evidence.js';
 import { normalizeEmail } from './customer-mail.js';
+import { autorisierungAus, autorisierungVerwerfen, reservierungFelder } from "./zahlung.js";
 
 const CONFIG = Object.freeze({
   githubOwner: "disorder119",
@@ -537,7 +538,9 @@ async function createPaypalOrder(env, items, itemCents, shippingCents, idempoten
       "PayPal-Request-Id": idempotency,
     },
     body: JSON.stringify({
-      intent: "CAPTURE",
+      // Nur reservieren: eingezogen wird erst beim Versand (zahlung.js). Ein
+      // Storno davor gibt die Reservierung frei - ohne PayPal-Gebuehr.
+      intent: "AUTHORIZE",
       purchase_units: [unit],
       application_context: {
         shipping_preference: adresse ? "SET_PROVIDED_ADDRESS" : "GET_FROM_FILE",
@@ -560,6 +563,40 @@ async function capturePaypalOrder(env, providerOrderId, idempotency) {
   return res.json();
 }
 
+async function readPaypalOrder(env, providerOrderId) {
+  const token = await paypalAccessToken(env);
+  const res = await fetch(`${paypalApiBase(env)}/v2/checkout/orders/${encodeURIComponent(providerOrderId)}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(`paypal_order_read_${res.status}`);
+  return res.json();
+}
+
+// Nach der Freigabe durch die Kundin: PayPal reserviert den Betrag, bucht aber
+// nichts ab. Bestellungen aus der Zeit vor der Umstellung (intent CAPTURE)
+// werden wie bisher sofort eingezogen.
+async function authorizePaypalOrder(env, providerOrderId, paymentId) {
+  const token = await paypalAccessToken(env);
+  const res = await fetch(`${paypalApiBase(env)}/v2/checkout/orders/${encodeURIComponent(providerOrderId)}/authorize`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "PayPal-Request-Id": `authorize:${paymentId}`,
+      Prefer: "return=representation",
+    },
+  });
+  if (res.ok) return res.json();
+  const body = await res.json().catch(() => ({}));
+  const issue = safeText(body?.details?.[0]?.issue || "", 80);
+  if (res.status === 422 && issue === "ACTION_DOES_NOT_MATCH_INTENT") {
+    return capturePaypalOrder(env, providerOrderId, `capture:${paymentId}`);
+  }
+  // Schon reserviert (Wiederholung nach einem Timeout): den Stand abholen.
+  if (res.status === 422 && issue === "ORDER_ALREADY_AUTHORIZED") return readPaypalOrder(env, providerOrderId);
+  throw new Error(`paypal_authorize_${res.status}${issue ? `_${issue}` : ""}`);
+}
+
 function capturePayment(capture) {
   return capture?.purchase_units?.[0]?.payments?.captures?.[0] || null;
 }
@@ -570,6 +607,15 @@ function captureMatches(capture, customId, cents) {
   return capture?.status === "COMPLETED" && String(unit?.custom_id || "") === String(customId) &&
     payment?.status === "COMPLETED" && payment?.amount?.currency_code === CURRENCY &&
     Math.round(Number(payment.amount.value) * 100) === cents;
+}
+
+// Eine frische, noch nicht eingezogene Reservierung ueber genau den Betrag.
+function authorizationMatches(providerOrder, customId, cents) {
+  const unit = providerOrder?.purchase_units?.[0];
+  const authorization = autorisierungAus(providerOrder);
+  return providerOrder?.status === "COMPLETED" && String(unit?.custom_id || "") === String(customId) &&
+    authorization?.status === "CREATED" && Boolean(authorization?.id) && authorization?.amount?.currency_code === CURRENCY &&
+    Math.round(Number(authorization.amount.value) * 100) === cents;
 }
 
 async function verifyPaypalWebhook(env, headers, body) {
@@ -672,7 +718,46 @@ async function createOrderRecords(env, items, centsList, versand, reservations, 
   return { orderId, orderNumber, paymentId };
 }
 
-export async function completePayment(env, providerOrderId, capture, reqId) {
+// Bestellung, Reservierungen und Lagerstuecke nach einer gesicherten Zahlung:
+// eingezogen (COMPLETED) oder nur reserviert (AUTHORIZED) - beides heisst
+// "Bezahlt", die Stuecke sind verkauft.
+function bezahltStatements(db, payment, now) {
+  return [
+    db.prepare(`UPDATE commerce_orders SET status='PAID',updated_at=? WHERE id=? AND status='PAYMENT_PENDING'
+      AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id=commerce_orders.id AND p.status IN ('AUTHORIZED','COMPLETED'))`)
+      .bind(now, payment.commerce_order_id),
+    // Genau die Reservierungen dieser Bestellung: Schluessel "<Bestellung>#<Artikel>".
+    db.prepare(`UPDATE reservations SET status='CONSUMED',updated_at=? WHERE status='RESERVED' AND (id=? OR idempotency_key IN
+      (SELECT o.idempotency_key || '#' || oi.item_id FROM order_items oi JOIN commerce_orders o ON o.id=oi.order_id WHERE oi.order_id=?))
+      AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id=? AND p.status IN ('AUTHORIZED','COMPLETED'))`)
+      .bind(now, payment.reservation_id, payment.commerce_order_id, payment.commerce_order_id),
+    db.prepare(`UPDATE inventory SET status='PAID',updated_at=?,version=version+1
+      WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status='PAYMENT_PENDING'
+      AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id=? AND p.status IN ('AUTHORIZED','COMPLETED'))`)
+      .bind(now, payment.commerce_order_id, payment.commerce_order_id),
+  ];
+}
+
+// Die Zahlung darf nur gesichert werden, solange alle eigenen Reservierungen
+// der Bestellung noch gelten (oder der Abschluss schon beansprucht ist).
+const RESERVIERUNGEN_GELTEN_SQL = `EXISTS (SELECT 1 FROM commerce_orders o WHERE o.id=payments.order_id AND o.status='PAYMENT_PENDING')
+      AND (SELECT COUNT(*) FROM order_items WHERE order_id=payments.order_id)>0
+      AND (SELECT COUNT(*) FROM order_items oi JOIN inventory i ON i.id=oi.inventory_id
+        JOIN commerce_orders o ON o.id=oi.order_id
+        JOIN reservations r ON r.inventory_id=oi.inventory_id AND
+          (r.id=o.reservation_id OR r.idempotency_key=o.idempotency_key || '#' || oi.item_id)
+        WHERE oi.order_id=payments.order_id AND i.status='PAYMENT_PENDING' AND r.status='RESERVED'
+          AND (payments.status='PENDING' OR r.expires_at>?)) =
+        (SELECT COUNT(*) FROM order_items WHERE order_id=payments.order_id)`;
+
+// providerOrder: PayPal-Bestellung (Antwort von /authorize oder /capture oder
+// GET /v2/checkout/orders/<id>). Drei Lagen:
+//   * eingezogen (Capture COMPLETED): wie bisher - oder die Reservierung einer
+//     schon verbuchten Bestellung wurde eingezogen (Webhook, Abgleich);
+//   * reserviert (Authorization CREATED): Bestellung "Bezahlt", Geld wird
+//     beim Versand eingezogen (zahlung.js);
+//   * sonst: PAYMENT_MISMATCH bzw. PAYMENT_CONFIRMATION_PENDING.
+export async function completePayment(env, providerOrderId, providerOrder, reqId) {
   const db = requireDb(env);
   // Verglichen wird gegen den Zahlbetrag der Bestellung (Ware + Versand, nach
   // einem eingeloesten Gutschein der reduzierte Betrag) - nicht mehr gegen den
@@ -685,45 +770,78 @@ export async function completePayment(env, providerOrderId, capture, reqId) {
     .bind(payment.commerce_order_id).all()).results || [];
   const itemIds = rows.map(row => row.item_id);
   const result = { ...payment, item_ids: itemIds, item_id: itemIds[0] };
-  if (!captureMatches(capture, paypalCustomId(itemIds), Number(payment.amount_cents ?? payment.total_cents))) throw new PublicError("PAYMENT_MISMATCH", 409);
-  const providerPayment = capturePayment(capture);
+  const customId = paypalCustomId(itemIds);
+  const cents = Number(payment.amount_cents ?? payment.total_cents);
   const now = new Date().toISOString();
-  const evidence=await captureStatements(db,payment,providerPayment,now);
-  if (['COMPLETED','REFUNDED','PARTIALLY_REFUNDED'].includes(payment.status)) {
-    await db.batch(evidence);
-    if (payment.order_status === 'CANCELLED') throw new PublicError('PAYMENT_RECONCILIATION_REQUIRED', 409);
-    return result;
+  const authorization = autorisierungAus(providerOrder);
+
+  if (captureMatches(providerOrder, customId, cents)) {
+    const providerPayment = capturePayment(providerOrder);
+    const evidence = await captureStatements(db, payment, providerPayment, now);
+    if (['COMPLETED','REFUNDED','PARTIALLY_REFUNDED'].includes(payment.status)) {
+      await db.batch(evidence);
+      if (payment.order_status === 'CANCELLED') throw new PublicError('PAYMENT_RECONCILIATION_REQUIRED', 409);
+      return result;
+    }
+    if (['AUTHORIZED','FAILED'].includes(payment.status) && payment.authorization_id) {
+      // Die Reservierung ist eingezogen, ohne dass der Shop die Antwort
+      // verbucht hat (Timeout beim Einziehen): jetzt nachtragen.
+      const committed = await db.batch([
+        ...evidence,
+        db.prepare(`UPDATE payments SET status='COMPLETED',provider_payment_id=?,capture_error=NULL,updated_at=?
+          WHERE id=? AND status IN ('AUTHORIZED','FAILED')`).bind(providerPayment.id, now, payment.id),
+      ]);
+      if (!committed[evidence.length]?.meta?.changes) return result;
+      await audit(env, "payment", payment.id, "PAYMENT_CAPTURED", reqId, {
+        orderId: payment.commerce_order_id, captureId: providerPayment.id, anlass: "ABGLEICH",
+      }, "PAYMENT_PROVIDER");
+      return { ...result, status: 'COMPLETED', eingezogen: true };
+    }
+    const committed = await db.batch([
+      ...evidence,
+      db.prepare(`UPDATE payments SET provider_payment_id=?,status='COMPLETED',authorization_id=COALESCE(authorization_id,?),updated_at=?
+        WHERE id=? AND status IN ('CREATED','PENDING')
+        AND ${RESERVIERUNGEN_GELTEN_SQL}`)
+        .bind(providerPayment.id, authorization?.id ? safeText(authorization.id, 64) : null, now, payment.id, now),
+      ...bezahltStatements(db, payment, now),
+    ]);
+    if (!committed[evidence.length]?.meta?.changes) throw new PublicError("PAYMENT_RECONCILIATION_REQUIRED", 409);
+    await audit(env, "payment", payment.id, "PAYMENT_COMPLETED", reqId, { orderId: payment.commerce_order_id, itemId: itemIds[0], itemIds, provider: "PAYPAL" }, "PAYMENT_PROVIDER");
+    return { ...result, status: 'COMPLETED' };
   }
-  const committed = await db.batch([
-    ...evidence,
-    db.prepare(`UPDATE payments SET provider_payment_id=?,status='COMPLETED',updated_at=?
-      WHERE id=? AND status IN ('CREATED','PENDING')
-      AND EXISTS (SELECT 1 FROM commerce_orders o WHERE o.id=payments.order_id AND o.status='PAYMENT_PENDING')
-      AND (SELECT COUNT(*) FROM order_items WHERE order_id=payments.order_id)>0
-      AND (SELECT COUNT(*) FROM order_items oi JOIN inventory i ON i.id=oi.inventory_id
-        JOIN commerce_orders o ON o.id=oi.order_id
-        JOIN reservations r ON r.inventory_id=oi.inventory_id AND
-          (r.id=o.reservation_id OR r.idempotency_key=o.idempotency_key || '#' || oi.item_id)
-        WHERE oi.order_id=payments.order_id AND i.status='PAYMENT_PENDING' AND r.status='RESERVED'
-          AND (payments.status='PENDING' OR r.expires_at>?)) =
-        (SELECT COUNT(*) FROM order_items WHERE order_id=payments.order_id)`)
-      .bind(providerPayment.id, now, payment.id, now),
-    db.prepare(`UPDATE commerce_orders SET status='PAID',updated_at=? WHERE id=? AND status='PAYMENT_PENDING'
-      AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id=commerce_orders.id AND p.status='COMPLETED')`)
-      .bind(now, payment.commerce_order_id),
-    // Genau die Reservierungen dieser Bestellung: Schluessel "<Bestellung>#<Artikel>".
-    db.prepare(`UPDATE reservations SET status='CONSUMED',updated_at=? WHERE status='RESERVED' AND (id=? OR idempotency_key IN
-      (SELECT o.idempotency_key || '#' || oi.item_id FROM order_items oi JOIN commerce_orders o ON o.id=oi.order_id WHERE oi.order_id=?))
-      AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id=? AND p.status='COMPLETED')`)
-      .bind(now, payment.reservation_id, payment.commerce_order_id, payment.commerce_order_id),
-    db.prepare(`UPDATE inventory SET status='PAID',updated_at=?,version=version+1
-      WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status='PAYMENT_PENDING'
-      AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id=? AND p.status='COMPLETED')`)
-      .bind(now, payment.commerce_order_id, payment.commerce_order_id),
-  ]);
-  if (!committed[evidence.length]?.meta?.changes) throw new PublicError("PAYMENT_RECONCILIATION_REQUIRED", 409);
-  await audit(env, "payment", payment.id, "PAYMENT_COMPLETED", reqId, { orderId: payment.commerce_order_id, itemId: itemIds[0], itemIds, provider: "PAYPAL" }, "PAYMENT_PROVIDER");
-  return result;
+
+  if (authorizationMatches(providerOrder, customId, cents)) {
+    if (payment.status === 'AUTHORIZED' || ['COMPLETED','REFUNDED','PARTIALLY_REFUNDED'].includes(payment.status)) return result;
+    if (!['CREATED','PENDING'].includes(payment.status)) {
+      // Keine gueltige Bestellung mehr zu dieser Reservierung: sofort
+      // freigeben, damit bei der Kundin nichts vorgemerkt bleibt.
+      const frei = await autorisierungVerwerfen(env, authorization.id, `verwaist:${payment.id}`);
+      await audit(env, "payment", payment.id, "PAYMENT_ORPHAN_AUTHORIZATION_VOIDED", reqId, {
+        orderId: payment.commerce_order_id, ok: frei.ok, grund: frei.grund || null,
+      }, "SYSTEM");
+      throw new PublicError('PAYMENT_RECONCILIATION_REQUIRED', 409);
+    }
+    const felder = reservierungFelder(authorization, new Date(now));
+    const committed = await db.batch([
+      db.prepare(`UPDATE payments SET status='AUTHORIZED',authorization_id=?,authorized_at=?,capture_due_at=?,
+          authorization_expires_at=?,updated_at=?
+        WHERE id=? AND status IN ('CREATED','PENDING')
+        AND ${RESERVIERUNGEN_GELTEN_SQL}`)
+        .bind(felder.authorizationId, felder.authorizedAt, felder.captureDueAt, felder.expiresAt, now, payment.id, now),
+      ...bezahltStatements(db, payment, now),
+    ]);
+    if (!committed[0]?.meta?.changes) throw new PublicError("PAYMENT_RECONCILIATION_REQUIRED", 409);
+    await audit(env, "payment", payment.id, "PAYMENT_AUTHORIZED", reqId, {
+      orderId: payment.commerce_order_id, itemId: itemIds[0], itemIds, provider: "PAYPAL",
+      authorizationId: felder.authorizationId, einziehenSpaetestens: felder.captureDueAt,
+    }, "PAYMENT_PROVIDER");
+    return { ...result, status: 'AUTHORIZED', reserviert: true, capture_due_at: felder.captureDueAt };
+  }
+
+  // PayPal prueft die Reservierung noch: nichts freigeben, der Abgleich
+  // (reconcilePurchasePayments) schliesst sie ab, sobald sie steht.
+  if (String(authorization?.status || "") === "PENDING") throw new PublicError("PAYMENT_CONFIRMATION_PENDING", 409);
+  throw new PublicError("PAYMENT_MISMATCH", 409);
 }
 
 // Nach dem Bezahlen jedes Stueck im Katalog als verkauft markieren - je Stueck
@@ -760,10 +878,14 @@ export async function reconcilePurchasePayments(env, reqId = "purchase-reconcile
       });
       if (!response.ok) throw new Error(`paypal_reconcile_${response.status}`);
       const providerOrder = await response.json();
-      if (providerOrder.status === "COMPLETED") {
+      // Reservierung abgelehnt oder verfallen und nichts eingezogen: bezahlt
+      // ist diese Bestellung nie - wie eine abgebrochene Zahlung behandeln.
+      const ohneGeld = providerOrder.status === "COMPLETED" && !capturePayment(providerOrder)
+        && ["DENIED", "VOIDED", "EXPIRED"].includes(String(autorisierungAus(providerOrder)?.status || ""));
+      if (providerOrder.status === "COMPLETED" && !ohneGeld) {
         const completed = await completePayment(env, candidate.provider_order_id, providerOrder, reqId);
         await markAllSold(env, completed, reqId);
-      } else if (["CREATED", "APPROVED", "VOIDED"].includes(providerOrder.status)
+      } else if ((ohneGeld || ["CREATED", "APPROVED", "VOIDED"].includes(providerOrder.status))
           && Date.parse(candidate.started_at) <= now - 4 * 60 * 60 * 1000) {
         await db.prepare(`UPDATE payments SET status='FAILED',updated_at=?
           WHERE provider='PAYPAL' AND provider_order_id=? AND status='PENDING' AND COALESCE(updated_at,created_at)=?`)
@@ -935,8 +1057,8 @@ export default {
           JOIN commerce_orders o ON o.id=p.order_id
           WHERE p.provider='PAYPAL' AND p.provider_order_id=?`).bind(providerOrderId).first();
         if (!payment) throw new PublicError("ORDER_NOT_FOUND", 404);
-        if (payment.status === "COMPLETED" && payment.order_status !== "CANCELLED") {
-          const response = { ok: true, orderId: payment.order_id };
+        if (["AUTHORIZED", "COMPLETED"].includes(payment.status) && payment.order_status !== "CANCELLED") {
+          const response = { ok: true, orderId: payment.order_id, zahlung: payment.status === "AUTHORIZED" ? "RESERVIERT" : "EINGEZOGEN" };
           await finishIdempotency(env, "capture-order", key, 200, response, payment.order_id);
           return json(response, 200, origin);
         }
@@ -958,11 +1080,13 @@ export default {
           .bind(now, payment.id, now).run();
         if (!claim.meta?.changes) throw new PublicError("RESERVATION_EXPIRED", 409);
         // Dieser Schluessel gehoert zur PayPal-Bestellung, nicht zum Browser-
-        // Retry. Auch nach einem Timeout kann PayPal nur einmal abbuchen.
-        const capture = await capturePaypalOrder(env, providerOrderId, `capture:${payment.id}`);
-        const completed = await completePayment(env, providerOrderId, capture, reqId);
+        // Retry. Auch nach einem Timeout reserviert PayPal nur einmal. Das
+        // Geld wird erst beim Versand eingezogen (zahlung.js).
+        const providerOrder = await authorizePaypalOrder(env, providerOrderId, payment.id);
+        const completed = await completePayment(env, providerOrderId, providerOrder, reqId);
         await markAllSold(env, completed, reqId);
-        const response = { ok: true, orderId: completed.commerce_order_id, orderNumber: completed.order_number };
+        const response = { ok: true, orderId: completed.commerce_order_id, orderNumber: completed.order_number,
+          zahlung: completed.status === "AUTHORIZED" ? "RESERVIERT" : "EINGEZOGEN" };
         await finishIdempotency(env, "capture-order", key, 200, response, completed.commerce_order_id);
         return json(response, 200, origin);
       }

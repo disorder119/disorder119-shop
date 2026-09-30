@@ -145,14 +145,19 @@ function conditionQueries(db, nowIso) {
         'PAYMENT' AS entityType,
         p.id AS entityId,
         p.id AS sourceId,
-        CASE WHEN p.status='FAILED' THEN 'Zahlung fehlgeschlagen' ELSE 'Zahlung seit über 24 h offen' END AS title,
+        CASE WHEN p.status='FAILED' THEN 'Zahlung fehlgeschlagen'
+          WHEN p.status='AUTHORIZED' THEN 'Reservierte Zahlung nicht eingezogen'
+          ELSE 'Zahlung seit über 24 h offen' END AS title,
         ('Payment ' || p.id || ' · ' || p.provider || ' · Status ' || p.status || '.') AS body,
         'HIGH' AS priority,
         NULL AS dueAt
       FROM payments p
       WHERE p.status='FAILED'
-         OR (p.status IN ('PENDING','AUTHORIZED') AND julianday(?) - julianday(COALESCE(p.updated_at,p.created_at)) >= 1)
-      ORDER BY CASE p.status WHEN 'FAILED' THEN 0 ELSE 1 END,p.created_at ASC LIMIT ${limit}`).bind(nowIso),
+         OR (p.status='PENDING' AND julianday(?) - julianday(COALESCE(p.updated_at,p.created_at)) >= 1)
+         -- Reserviert ist normal (Einziehen beim Versand, zahlung.js) - erst
+         -- zwei Stunden nach der spaetesten Einzugszeit ist es ein Problem.
+         OR (p.status='AUTHORIZED' AND julianday(?) - julianday(COALESCE(p.capture_due_at,p.created_at)) >= 2.0/24)
+      ORDER BY CASE p.status WHEN 'FAILED' THEN 0 ELSE 1 END,p.created_at ASC LIMIT ${limit}`).bind(nowIso, nowIso),
 
     db.prepare(`SELECT
         'SHIPMENT_EXCEPTION' AS kind,

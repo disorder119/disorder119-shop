@@ -79,6 +79,8 @@ function migratedDatabase() {
     "migrations/0007_operations_automation.sql",
   ];
   for (const relative of files) database.exec(readFileSync(join(HERE, relative), "utf8"));
+  // Spalte aus 0030 (Einziehen beim Versand), die der Monitor abfragt.
+  database.exec("ALTER TABLE payments ADD COLUMN capture_due_at TEXT");
   return database;
 }
 

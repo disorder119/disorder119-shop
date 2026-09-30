@@ -155,7 +155,7 @@ async function getCases(env, url) {
       (SELECT COUNT(*) FROM operations_tasks WHERE status='OPEN') AS openTasks,
       (SELECT COUNT(*) FROM operations_tasks WHERE status='OPEN' AND due_at IS NOT NULL AND julianday(due_at)<julianday('now')) AS overdueTasks,
       (SELECT COUNT(*) FROM payment_events WHERE processed_at IS NULL) AS unprocessedPaymentEvents,
-      (SELECT COUNT(*) FROM payments WHERE status IN ('CREATED','PENDING','AUTHORIZED','FAILED')) AS paymentAttention,
+      (SELECT COUNT(*) FROM payments WHERE status IN ('CREATED','PENDING','FAILED') OR (status='AUTHORIZED' AND julianday(COALESCE(capture_due_at,created_at))<julianday('now'))) AS paymentAttention,
       (SELECT COUNT(*) FROM refunds WHERE status IN ('PENDING','FAILED')) AS refundAttention`),
     db.prepare(`SELECT r.*,o.order_number AS orderNumber,rr.rental_reservation_id AS rentalReservationId,
         i.item_id AS itemId,i.article_no AS articleNo

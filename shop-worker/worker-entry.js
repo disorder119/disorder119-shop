@@ -8,6 +8,7 @@ import {
   ruecklaufPflegen,
   widerrufAusKonto,
   widerrufVonWebsite,
+  zahlungenPflegen,
 } from "./admin-api.js";
 import { isWiderrufRoute } from "./widerruf.js";
 import { handleAdminInsights } from "./admin-insights.js";
@@ -20,7 +21,7 @@ import { handleAdminNotifications } from "./admin-notifications.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
 import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications.js";
-import { sendOrderConfirmation, sendOrderConfirmationByProviderOrder } from "./customer-mail.js";
+import { sendInvoiceAfterCaptureByProviderOrder, sendOrderConfirmation, sendOrderConfirmationByProviderOrder } from "./customer-mail.js";
 import { handleAccountRequest, isAccountRoute, sendRequestedAccountLink, sendRequestedAccountLinkByProviderOrder } from "./customer-account.js";
 import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
 import { handleVersand, istVersandRoute } from "./dhl.js";
@@ -160,6 +161,51 @@ async function runBackground(ctx, task, event, reqId) {
     return;
   }
   await guarded;
+}
+
+// Alles nach einer gesicherten Zahlung (reserviert oder eingezogen): Adresse
+// von PayPal, Bestellbestaetigung, Gutschein, Telegram, Konto-Link. Jeder
+// Schritt ist fuer sich gegen Doppelungen gesichert - ein zweiter Lauf holt
+// nur nach, was fehlt.
+//
+// Reihenfolge ist wichtig: die Bestellbestaetigung braucht die Kundenadresse,
+// die erst der PayPal-Abzug in die Datenbank schreibt. Scheitert der Abzug,
+// wird das protokolliert und die Mail meldet sauber NO_CUSTOMER_EMAIL, statt
+// die Kette zu kippen.
+async function bestellungNachbereiten(env, ctx, orderId, providerOrderId, reqId) {
+  await runBackground(
+    ctx,
+    (providerOrderId ? snapshotPaypalOrder(env, String(providerOrderId), reqId) : Promise.resolve(false))
+      .catch(err => logBackgroundFailure("checkout_snapshot_failed", reqId, err))
+      .then(() => sendOrderConfirmation(env, String(orderId), reqId)),
+    "order_confirmation_failed",
+    reqId,
+  );
+  await runBackground(ctx, redeemCouponAfterPayment(env, String(orderId), reqId), "coupon_redeem_failed", reqId);
+  await runBackground(ctx, notifyPaidOrder(env, String(orderId), reqId), "sale_notification_failed", reqId);
+  await runBackground(ctx, sendRequestedAccountLink(env, String(orderId), reqId), "account_link_failed", reqId);
+}
+
+// Bestellungen, deren Abschluss nicht ueber die Kasse lief (Abbruch nach der
+// PayPal-Freigabe, Abgleich, Mail-Aussetzer): Bestaetigung & Co. nachholen.
+// Nur die letzten drei Tage und erst zwei Minuten nach der Zahlung, damit der
+// Lauf der Kasse selbst Vorrang hat.
+async function offeneBestellungenNachbereiten(env, reqId, now) {
+  if (!env?.DB) return;
+  const rows = (await env.DB.prepare(`SELECT o.id AS order_id,
+      (SELECT p.provider_order_id FROM payments p WHERE p.order_id=o.id AND p.provider='PAYPAL'
+        AND p.status IN ('AUTHORIZED','COMPLETED') ORDER BY p.created_at DESC LIMIT 1) AS provider_order_id
+    FROM commerce_orders o
+    WHERE o.status IN ('PAID','PREPARING','SHIPPED','DELIVERED') AND o.created_at>=?
+      AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id AND p.provider='PAYPAL'
+        AND p.status IN ('AUTHORIZED','COMPLETED') AND COALESCE(p.authorized_at,p.updated_at,p.created_at)<=?)
+      AND NOT EXISTS (SELECT 1 FROM audit_events a WHERE a.id='notify:email:confirmation:' || o.id)
+    ORDER BY o.created_at LIMIT 5`)
+    .bind(new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(), new Date(now.getTime() - 2 * 60 * 1000).toISOString())
+    .all()).results || [];
+  for (const row of rows) {
+    await bestellungNachbereiten(env, null, row.order_id, row.provider_order_id, reqId);
+  }
 }
 
 function replaceJsonResponse(response, payload) {
@@ -372,25 +418,10 @@ export default {
             requestCopy.json(),
             response.clone().json(),
           ]);
-          if (payload?.orderId) {
-            // Reihenfolge ist wichtig: die Bestellbestaetigung braucht die
-            // Kundenadresse, die erst der PayPal-Abzug in die Datenbank
-            // schreibt. Scheitert der Abzug, wird das protokolliert und die
-            // Mail meldet sauber NO_CUSTOMER_EMAIL, statt die Kette zu kippen.
-            const confirmFor = result?.orderId ? String(result.orderId) : "";
-            await runBackground(
-              ctx,
-              snapshotPaypalOrder(runtimeEnv, String(payload.orderId), reqId)
-                .catch(err => logBackgroundFailure("checkout_snapshot_failed", reqId, err))
-                .then(() => (confirmFor ? sendOrderConfirmation(runtimeEnv, confirmFor, reqId) : null)),
-              "order_confirmation_failed",
-              reqId,
-            );
-          }
           if (result?.orderId) {
-            await runBackground(ctx, redeemCouponAfterPayment(runtimeEnv, String(result.orderId), reqId), "coupon_redeem_failed", reqId);
-            await runBackground(ctx, notifyPaidOrder(runtimeEnv, String(result.orderId), reqId), "sale_notification_failed", reqId);
-            await runBackground(ctx, sendRequestedAccountLink(runtimeEnv, String(result.orderId), reqId), "account_link_failed", reqId);
+            await bestellungNachbereiten(runtimeEnv, ctx, String(result.orderId), payload?.orderId ? String(payload.orderId) : null, reqId);
+          } else if (payload?.orderId) {
+            await runBackground(ctx, snapshotPaypalOrder(runtimeEnv, String(payload.orderId), reqId), "checkout_snapshot_failed", reqId);
           }
         } catch (err) {
           logBackgroundFailure("capture_observer_failed", reqId, err);
@@ -414,6 +445,8 @@ export default {
               );
               await runBackground(ctx, notifyPaidOrderByProviderOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_sale_notification_failed", reqId);
               await runBackground(ctx, sendRequestedAccountLinkByProviderOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_account_link_failed", reqId);
+              // Eingezogene Reservierung: die Rechnung (hoechstens einmal).
+              await runBackground(ctx, sendInvoiceAfterCaptureByProviderOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_invoice_failed", reqId);
             }
           }
           if (event?.event_type === "PAYMENT.CAPTURE.REFUNDED") {
@@ -441,6 +474,10 @@ export default {
     const scheduledTime = Number(event?.scheduledTime || Date.now());
     const reqId = `cron-${scheduledTime}`;
     await runBackground(ctx, reconcilePurchasePayments(env, reqId), "purchase_reconciliation_failed", reqId);
+    await runBackground(ctx, offeneBestellungenNachbereiten(env, reqId, new Date(scheduledTime)), "order_followup_failed", reqId);
+    // Reservierte Zahlungen spaetestens am Ende der PayPal-Garantiezeit
+    // einziehen, gepruefte Abbuchungen nachfragen, Rechnungen nachholen.
+    await runBackground(ctx, zahlungenPflegen(env, reqId, new Date(scheduledTime)), "payment_capture_failed", reqId);
     await runBackground(ctx, paypalErstattungenAbgleichen(env, reqId, true), "paypal_refund_reconciliation_failed", reqId);
     // Nach dem Abgleich: wartende Erstattungen erneut versuchen, erledigte
     // abschliessen (Kundenmail, wieder im Shop), an Offenes erinnern.

@@ -9,6 +9,8 @@
 // Versand laeuft weiter ueber das DHL-Portal mit haendisch eingetragener
 // Sendungsnummer. Die Bestellung haengt also nie an dieser Anbindung.
 import { safeText } from "./commerce-core.js";
+import { versandSperre } from "./erstattung-auftrag.js";
+import { ZahlungFehler, zahlungSicherstellen } from "./zahlung.js";
 
 const SANDBOX_BASE = "https://api-sandbox.dhl.com/parcel/de/shipping/v2";
 const LIVE_BASE = "https://api-eu.dhl.com/parcel/de/shipping/v2";
@@ -195,6 +197,17 @@ export async function createLabelForOrder(env, orderId, optionen = {}) {
       carrier: String(vorhanden.carrier || "DHL"),
       shipmentId: String(vorhanden.id),
     };
+  }
+
+  // Kein Schein, solange ein Storno oder Widerruf vor dem Versand laeuft - und
+  // erst, wenn das Geld eingezogen ist (zahlung.js).
+  const sperre = await versandSperre(env.DB, bestellung.id);
+  if (sperre) throw new DhlError(sperre.code, 409, sperre.text);
+  try {
+    await zahlungSicherstellen(env, bestellung.id, crypto.randomUUID(), { anlass: "VERSAND" });
+  } catch (err) {
+    if (err instanceof ZahlungFehler) throw new DhlError(err.code, err.status, err.text);
+    throw err;
   }
 
   const kontakt = await env.DB.prepare(`SELECT recipient_name,given_name,surname,

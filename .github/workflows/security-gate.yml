@@ -92,6 +92,11 @@ jobs:
           node --check shop-worker/widerruf.js
           node --test shop-worker/ruecklauf.test.mjs
 
+      - name: Zahlung reservieren, beim Versand einziehen, Storno freigeben
+        run: |
+          node --check shop-worker/zahlung.js
+          node --test shop-worker/zahlung.test.mjs shop-worker/purchase-lifecycle.test.mjs
+
       - name: Gutschein-Migration pruefen
         run: |
           {

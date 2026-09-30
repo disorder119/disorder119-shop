@@ -38,8 +38,20 @@ export function formatSaleMessage(order = {}) {
     `Order: ${number}`,
     ...(teile ? [`Teile: ${teile.length}`, ...teile] : [article ? `Artikel: ${article}` : null, `Piece: ${title}`]),
     `Betrag: ${amount}`,
-    "Zahlung: PayPal bestätigt",
+    // Nur reserviert: eingezogen wird beim Etikett/Versand, spaetestens zum
+    // angegebenen Zeitpunkt (zahlung.js). Bis dahin kostet ein Storno nichts.
+    order.zahlung_status === "AUTHORIZED"
+      ? `Zahlung: PayPal reserviert – wird beim Versand eingezogen${order.capture_due_at ? ` (spätestens ${berlinZeitpunkt(order.capture_due_at)})` : ""}`
+      : "Zahlung: PayPal bestätigt",
   ].filter(Boolean).join("\n");
+}
+
+function berlinZeitpunkt(value) {
+  const date = new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+  }).format(date);
 }
 
 export function formatTelegramTestMessage(now = new Date()) {
@@ -208,6 +220,14 @@ export async function notifyPaidOrder(env, orderId, reqId = crypto.randomUUID())
   if (!row) return { sent: false, reason: "ORDER_NOT_FOUND" };
   row.items = (await env.DB.prepare("SELECT article_no,title_snapshot FROM order_items WHERE order_id=? ORDER BY rowid")
     .bind(String(orderId)).all()).results || [];
+  try {
+    const zahlung = await env.DB.prepare(`SELECT status,capture_due_at FROM payments WHERE order_id=? AND provider='PAYPAL'
+      ORDER BY created_at DESC LIMIT 1`).bind(String(orderId)).first();
+    row.zahlung_status = zahlung?.status || null;
+    row.capture_due_at = zahlung?.capture_due_at || null;
+  } catch {
+    // Ohne Zahlungsdetails bleibt es bei "PayPal bestaetigt".
+  }
   if (!["PAID", "PREPARING", "SHIPPED", "DELIVERED", "RETURN_REQUESTED", "RETURNED"].includes(String(row.status || "").toUpperCase())) {
     return { sent: false, reason: "ORDER_NOT_PAID" };
   }

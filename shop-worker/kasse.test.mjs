@@ -22,7 +22,9 @@ const ITEMS = [
 const ADRESSE = { name: "Maria Müller", strasse: "Nelseestraße", hausnummer: "25a", zusatz: "Hinterhaus", plz: "63739", ort: "Aschaffenburg", land: "DE" };
 
 // Nachbau von GitHub (data/items.json), PayPal und Packlink.
-function fakeNetz() {
+// intent: "AUTHORIZE" (heute: nur reservieren) oder "CAPTURE" (eine
+// PayPal-Bestellung aus der Zeit vor der Umstellung).
+function fakeNetz({ intent = "AUTHORIZE" } = {}) {
   const calls = [];
   const original = globalThis.fetch;
   globalThis.fetch = async (url, init = {}) => {
@@ -39,6 +41,18 @@ function fakeNetz() {
       if (u.pathname === "/v2/checkout/orders") return Response.json({ id: "PAYPAL-MULTI-1", status: "CREATED" }, { status: 201 });
       if (u.pathname === "/v2/checkout/orders/PAYPAL-MULTI-1" && !u.pathname.endsWith("/capture")) {
         return Response.json({ payer: {}, purchase_units: [{ shipping: {} }] });
+      }
+      if (u.pathname === "/v2/checkout/orders/PAYPAL-MULTI-1/authorize") {
+        if (intent !== "AUTHORIZE") {
+          return Response.json({ name: "UNPROCESSABLE_ENTITY", details: [{ issue: "ACTION_DOES_NOT_MATCH_INTENT" }] }, { status: 422 });
+        }
+        return Response.json({
+          id: "PAYPAL-MULTI-1", status: "COMPLETED",
+          purchase_units: [{ custom_id: "9428,9427", payments: { authorizations: [{
+            id: "AUTH-1", status: "CREATED", amount: { currency_code: "EUR", value: "245.59" },
+            create_time: "2026-09-30T10:00:00Z", expiration_time: "2026-10-29T10:00:00Z",
+          }] } }],
+        }, { status: 201 });
       }
       if (u.pathname === "/v2/checkout/orders/PAYPAL-MULTI-1/capture") {
         return Response.json({
@@ -159,6 +173,8 @@ test("checkout with two pieces: one PayPal order with the checkout address, both
       address: { address_line_1: "Nelseestraße 25a", address_line_2: "Hinterhaus", admin_area_2: "Aschaffenburg", postal_code: "63739", country_code: "DE" },
     });
     assert.equal(paypal.body.application_context.shipping_preference, "SET_PROVIDED_ADDRESS");
+    // Nur reservieren - eingezogen wird erst beim Versand.
+    assert.equal(paypal.body.intent, "AUTHORIZE");
 
     const order = DB.raw.prepare("SELECT id,subtotal_cents,shipping_cents,total_cents FROM commerce_orders").get();
     assert.deepEqual({ ...order, id: undefined }, { id: undefined, subtotal_cents: 24000, shipping_cents: 559, total_cents: 24559 });
@@ -175,11 +191,44 @@ test("checkout with two pieces: one PayPal order with the checkout address, both
     // GitHub-Schluessel scheitert nur der Katalog-Abgleich - je Stueck vermerkt.
     const bezahlt = await post({ ...env, GITHUB_TOKEN: "" }, "/capture-order", { orderId: "PAYPAL-MULTI-1" }, "k-zahlung-000000001");
     assert.equal(bezahlt.status, 200, JSON.stringify(bezahlt.data));
+    assert.equal(bezahlt.data.zahlung, "RESERVIERT");
     assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders").get().status, "PAID");
+    // PayPal hat reserviert, nichts eingezogen: keine Capture, kein Steuerbeleg,
+    // spaetestens 66 Stunden nach der Reservierung zieht der Shop ein.
+    const zahlung = DB.raw.prepare("SELECT status,authorization_id,provider_payment_id,capture_due_at,authorization_expires_at FROM payments").get();
+    assert.deepEqual({ ...zahlung }, {
+      status: "AUTHORIZED", authorization_id: "AUTH-1", provider_payment_id: null,
+      capture_due_at: "2026-10-03T04:00:00.000Z", authorization_expires_at: "2026-10-29T10:00:00.000Z",
+    });
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM tax_cash_events").get().n, 0);
+    assert.ok(netz.calls.some(c => c.path === "/v2/checkout/orders/PAYPAL-MULTI-1/authorize"));
+    assert.ok(!netz.calls.some(c => c.path === "/v2/checkout/orders/PAYPAL-MULTI-1/capture"));
     assert.deepEqual(DB.raw.prepare("SELECT status FROM inventory ORDER BY item_id").all().map(r => r.status), ["PAID", "PAID"]);
     assert.deepEqual(DB.raw.prepare("SELECT status FROM reservations").all().map(r => r.status), ["CONSUMED", "CONSUMED"]);
     const sync = DB.raw.prepare("SELECT metadata_json FROM audit_events WHERE event_type='CATALOG_SYNC_FAILED'").all();
     assert.deepEqual(sync.map(r => JSON.parse(r.metadata_json).itemId).sort(), [9427, 9428]);
+  } finally {
+    netz.restore();
+  }
+});
+
+test("a PayPal order created before the switch (intent CAPTURE) is still captured at once", async () => {
+  versandCacheLeeren();
+  const netz = fakeNetz({ intent: "CAPTURE" });
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  try {
+    const angelegt = await post(env, "/create-order",
+      { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 559 }, "k-kasse-alt-0000001");
+    assert.equal(angelegt.status, 200, JSON.stringify(angelegt.data));
+    const bezahlt = await post({ ...env, GITHUB_TOKEN: "" }, "/capture-order", { orderId: "PAYPAL-MULTI-1" }, "k-zahlung-alt-00001");
+    assert.equal(bezahlt.status, 200, JSON.stringify(bezahlt.data));
+    assert.equal(bezahlt.data.zahlung, "EINGEZOGEN");
+    const zahlung = DB.raw.prepare("SELECT status,provider_payment_id,authorization_id FROM payments").get();
+    assert.deepEqual({ ...zahlung }, { status: "COMPLETED", provider_payment_id: "CAP-1", authorization_id: null });
+    assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders").get().status, "PAID");
+    const capture = netz.calls.find(c => c.path === "/v2/checkout/orders/PAYPAL-MULTI-1/capture");
+    assert.ok(capture, "Fallback auf das sofortige Einziehen");
   } finally {
     netz.restore();
   }

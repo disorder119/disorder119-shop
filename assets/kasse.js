@@ -33,7 +33,7 @@
       versandWahlFehlt: "Dein gewählter Versanddienst ist nicht mehr verfügbar. Bitte wähle eine neue Versandart.",
       zwischensumme: "Stücke", versandZeile: "Versand", gesamt: "Gesamt",
       gutschein: "Gutschein {code} wird beim Bezahlen verrechnet.",
-      recht: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Versand in der Regel innerhalb von 2 Werktagen. Mit dem PayPal-Knopf und deiner Bestätigung bei PayPal bestellst du zahlungspflichtig.",
+      recht: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Versand in der Regel innerhalb von 2 Werktagen. Mit dem PayPal-Knopf und deiner Bestätigung bei PayPal bestellst du zahlungspflichtig. PayPal reserviert den Betrag – abgebucht wird erst mit dem Versand, spätestens drei Tage nach der Bestellung.",
       rechtAnfrage: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Die Anfrage ist unverbindlich – wir bestätigen Verfügbarkeit und Gesamtpreis per E-Mail.",
       agbLink: "AGB und Widerrufsbelehrung", dsLink: "Datenschutz",
       paypalBald: "Bezahlen mit PayPal kommt in Kürze. Bis dahin schickst du uns die Bestellung per E-Mail – mit Adresse und Versandart, wir bestätigen sie dir.",
@@ -45,13 +45,15 @@
       pruefen: "Bitte prüf die markierten Felder.", schonWeg: "Ein Stück ist gerade reserviert oder schon verkauft. Wir haben die Liste aktualisiert.",
       versandGeaendert: "Der Versandpreis hat sich gerade geändert. Bitte prüf die Übersicht und klick noch einmal auf PayPal.",
       abgelaufen: "Die Reservierung ist abgelaufen, es wurde nichts abgebucht. Bitte klick noch einmal auf PayPal.",
+      wirdGeprueft: "PayPal prüft deine Zahlung noch. Sobald sie bestätigt ist, bekommst du eine Mail – bitte nicht noch einmal bezahlen.",
       botCheck: "Die Sicherheitsprüfung hat nicht geklappt. Lade die Seite bitte neu und versuch es noch einmal.",
       zuSchnell: "Zu viele Versuche in kurzer Zeit. Warte bitte eine Minute.",
       nurDe: "Wir liefern bisher nur innerhalb Deutschlands.",
       fehler: "Da ist leider etwas schiefgelaufen. Bitte versuch es gleich noch einmal oder schreib uns.",
       abschliessen: "Zahlung wird abgeschlossen …", abgebrochen: "Bezahlung abgebrochen – es wurde nichts abgebucht.",
       danke: "Danke für deine Bestellung!", bestellnr: "Bestellnummer:",
-      dankeText: "Die Bestätigung mit Rechnung kommt an deine angegebene E-Mail-Adresse. Wir packen deine Stücke von Hand und verschicken sie in der Regel innerhalb von 2 Werktagen.",
+      dankeText: "Die Bestellbestätigung kommt an deine angegebene E-Mail-Adresse. PayPal hat den Betrag reserviert – abgebucht wird erst, wenn wir versenden (spätestens nach drei Tagen), dann kommt auch die Rechnung. Wir packen deine Stücke von Hand und verschicken sie in der Regel innerhalb von 2 Werktagen.",
+      dankeTextEingezogen: "Die Bestätigung mit Rechnung kommt an deine angegebene E-Mail-Adresse. Wir packen deine Stücke von Hand und verschicken sie in der Regel innerhalb von 2 Werktagen.",
       konto: "Bestellung im Konto ansehen", weiter: "Weiter stöbern",
       mailAdresse: "Lieferadresse", mailVersand: "Versand", mailGesamt: "Gesamt", mailGruss: "Hallo! Ich möchte folgende Stücke bestellen:",
       mailFrage: "Bitte bestätigt mir Verfügbarkeit und Zahlungsweg. Danke!"
@@ -71,7 +73,7 @@
       versandWahlFehlt: "Your selected carrier is no longer available. Please choose another shipping option.",
       zwischensumme: "Pieces", versandZeile: "Shipping", gesamt: "Total",
       gutschein: "Coupon {code} is applied when you pay.",
-      recht: "Small business under § 19 UStG, so no VAT is charged. Usually shipped within 2 working days. With the PayPal button and your confirmation at PayPal you place a binding order.",
+      recht: "Small business under § 19 UStG, so no VAT is charged. Usually shipped within 2 working days. With the PayPal button and your confirmation at PayPal you place a binding order. PayPal reserves the amount – it is only charged when we ship, at the latest three days after your order.",
       rechtAnfrage: "Small business under § 19 UStG, so no VAT is charged. The request is non-binding – we confirm availability and the total by e-mail.",
       agbLink: "Terms and withdrawal", dsLink: "Privacy",
       paypalBald: "Paying with PayPal is coming soon. Until then, send us your order by e-mail – with address and shipping, and we will confirm it.",
@@ -83,13 +85,15 @@
       pruefen: "Please check the highlighted fields.", schonWeg: "A piece has just been reserved or sold. We have updated the list.",
       versandGeaendert: "The shipping price has just changed. Please check the summary and click PayPal again.",
       abgelaufen: "The reservation has expired, nothing was charged. Please click PayPal again.",
+      wirdGeprueft: "PayPal is still reviewing your payment. You will get an email as soon as it is confirmed – please do not pay again.",
       botCheck: "The security check failed. Please reload the page and try again.",
       zuSchnell: "Too many attempts in a short time. Please wait a minute.",
       nurDe: "For now we only deliver within Germany.",
       fehler: "Something went wrong. Please try again in a moment or write to us.",
       abschliessen: "Completing payment …", abgebrochen: "Payment cancelled – nothing was charged.",
       danke: "Thank you for your order!", bestellnr: "Order number:",
-      dankeText: "The confirmation and invoice will be sent to the email address you entered. We pack your pieces by hand and usually ship within 2 working days.",
+      dankeText: "The order confirmation is on its way to the email address you entered. PayPal has reserved the amount – it is only charged when we ship (at the latest after three days), and then the invoice follows. We pack your pieces by hand and usually ship within 2 working days.",
+      dankeTextEingezogen: "The confirmation and invoice will be sent to the email address you entered. We pack your pieces by hand and usually ship within 2 working days.",
       konto: "View order in your account", weiter: "Keep browsing",
       mailAdresse: "Delivery address", mailVersand: "Shipping", mailGesamt: "Total", mailGruss: "Hello! I would like to order these pieces:",
       mailFrage: "Please confirm availability and payment. Thank you!"
@@ -109,7 +113,7 @@
       versandWahlFehlt: "Le transporteur choisi n'est plus disponible. Choisis un autre mode de livraison.",
       zwischensumme: "Pièces", versandZeile: "Livraison", gesamt: "Total",
       gutschein: "Le bon {code} est déduit au paiement.",
-      recht: "Micro-entreprise selon le § 19 UStG, pas de TVA. Expédition en général sous 2 jours ouvrés. Avec le bouton PayPal et ta confirmation chez PayPal, tu passes une commande ferme.",
+      recht: "Micro-entreprise selon le § 19 UStG, pas de TVA. Expédition en général sous 2 jours ouvrés. Avec le bouton PayPal et ta confirmation chez PayPal, tu passes une commande ferme. PayPal réserve le montant – il n'est débité qu'à l'expédition, au plus tard trois jours après la commande.",
       rechtAnfrage: "Micro-entreprise selon le § 19 UStG, pas de TVA. La demande est sans engagement – nous confirmons disponibilité et total par e-mail.",
       agbLink: "CGV et rétractation", dsLink: "Confidentialité",
       paypalBald: "Le paiement PayPal arrive bientôt. En attendant, envoie-nous ta commande par e-mail – avec adresse et livraison, nous la confirmons.",
@@ -121,13 +125,15 @@
       pruefen: "Vérifie les champs signalés.", schonWeg: "Une pièce vient d'être réservée ou vendue. Nous avons mis la liste à jour.",
       versandGeaendert: "Le prix de livraison vient de changer. Vérifie le récapitulatif et clique à nouveau sur PayPal.",
       abgelaufen: "La réservation a expiré, rien n'a été débité. Clique à nouveau sur PayPal.",
+      wirdGeprueft: "PayPal vérifie encore ton paiement. Tu recevras un e-mail dès qu'il sera confirmé – merci de ne pas payer une seconde fois.",
       botCheck: "La vérification de sécurité a échoué. Recharge la page et réessaie.",
       zuSchnell: "Trop de tentatives en peu de temps. Attends une minute.",
       nurDe: "Pour l'instant, nous ne livrons qu'en Allemagne.",
       fehler: "Une erreur s'est produite. Réessaie dans un instant ou écris-nous.",
       abschliessen: "Finalisation du paiement …", abgebrochen: "Paiement annulé – rien n'a été débité.",
       danke: "Merci pour ta commande !", bestellnr: "Numéro de commande :",
-      dankeText: "La confirmation et la facture seront envoyées à l'adresse e-mail indiquée. Nous emballons tes pièces à la main et expédions en général sous 2 jours ouvrés.",
+      dankeText: "La confirmation de commande arrive à l'adresse e-mail indiquée. PayPal a réservé le montant – il n'est débité qu'à l'expédition (au plus tard après trois jours), et la facture suit alors. Nous emballons tes pièces à la main et expédions en général sous 2 jours ouvrés.",
+      dankeTextEingezogen: "La confirmation et la facture seront envoyées à l'adresse e-mail indiquée. Nous emballons tes pièces à la main et expédions en général sous 2 jours ouvrés.",
       konto: "Voir la commande dans ton compte", weiter: "Continuer",
       mailAdresse: "Adresse de livraison", mailVersand: "Livraison", mailGesamt: "Total", mailGruss: "Bonjour ! Je souhaite commander ces pièces :",
       mailFrage: "Merci de me confirmer disponibilité et paiement !"
@@ -501,6 +507,7 @@
   function fehlerText(e) {
     var code = (e && (e.code || e.message)) || "";
     if (code === "RESERVATION_EXPIRED") return t("abgelaufen");
+    if (code === "PAYMENT_CONFIRMATION_PENDING") return t("wirdGeprueft");
     if (/^VERSAND_/.test(code)) return t("versandGeaendert");
     if (code === "PACKSTATION_NICHT_MOEGLICH") return t("packstation");
     if (code === "NUR_DEUTSCHLAND") return t("nurDe");
@@ -519,7 +526,9 @@
     if (bis > Date.now()) setTimeout(function () { sperren(0); }, Math.min(bis - Date.now() + 500, 2147483000));
   }
 
-  function danke(bestellNr, ids) {
+  // zahlung: "RESERVIERT" (heute: PayPal reserviert, Abbuchung beim Versand)
+  // oder "EINGEZOGEN" (Bestellung aus der Zeit vor der Umstellung).
+  function danke(bestellNr, ids, zahlung) {
     try {
       var liste = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
       localStorage.setItem(CART_KEY, JSON.stringify((Array.isArray(liste) ? liste : []).filter(function (id) { return ids.indexOf(Number(id)) < 0; })));
@@ -533,7 +542,7 @@
       p.appendChild(el("strong", "", bestellNr));
       box.appendChild(p);
     }
-    box.appendChild(el("p", "", t("dankeText")));
+    box.appendChild(el("p", "", t(zahlung === "EINGEZOGEN" ? "dankeTextEingezogen" : "dankeText")));
     var knoepfe = el("div", "kasse-danke__knoepfe");
     var konto = el("a", "kasse-knopf kasse-knopf--hell", t("konto")); konto.href = HOME + "konto/";
     var weiter = el("a", "kasse-knopf", t("weiter")); weiter.href = HOME;
@@ -604,7 +613,7 @@
           });
         }).then(antwortLesen).then(function (antwort) {
           melden("", status);
-          danke(antwort.orderNumber || (zustand.versuch && zustand.versuch.bestellNr) || "", zustand.stuecke.map(function (it) { return Number(it.id); }));
+          danke(antwort.orderNumber || (zustand.versuch && zustand.versuch.bestellNr) || "", zustand.stuecke.map(function (it) { return Number(it.id); }), antwort.zahlung);
           zustand.versuch = null;
         }).catch(function (e) {
           if ((e && e.code) === "RESERVATION_EXPIRED") { zustand.versuch = null; sperren(0); }

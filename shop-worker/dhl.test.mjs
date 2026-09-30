@@ -31,6 +31,9 @@ const KONTAKT = {
 };
 
 const BESTELLUNG = { id: "order-1", order_number: "D119-20260923-ABC12345", status: "PAID" };
+// Sofort eingezogen (wie vor der Umstellung auf Reservieren): vor dem Schein
+// ist nichts mehr einzuziehen.
+const ZAHLUNG = { id: "pay-1", order_id: "order-1", provider: "PAYPAL", status: "COMPLETED", provider_payment_id: "CAPTURE1", amount_cents: 9590 };
 
 function stubFetch(handler) {
   const original = globalThis.fetch;
@@ -42,7 +45,7 @@ function stubFetch(handler) {
   return { calls, restore() { globalThis.fetch = original; } };
 }
 
-function db({ shipment = null, order = BESTELLUNG, kontakt = KONTAKT } = {}) {
+function db({ shipment = null, order = BESTELLUNG, kontakt = KONTAKT, zahlung = ZAHLUNG } = {}) {
   const writes = [];
   return {
     writes,
@@ -53,6 +56,7 @@ function db({ shipment = null, order = BESTELLUNG, kontakt = KONTAKT } = {}) {
           return {
             async first() {
               if (text.includes("FROM commerce_orders")) return order;
+              if (text.includes("FROM payments")) return zahlung;
               if (text.includes("FROM shipments")) return shipment;
               if (text.includes("FROM order_contact_snapshots")) return kontakt;
               return null;
