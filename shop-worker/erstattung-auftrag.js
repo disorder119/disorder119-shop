@@ -265,8 +265,23 @@ export async function auftraegeFuerBestellung(db, orderId) {
 // Soll das Paket gerade NICHT raus? Fuer die Admin-App (Versandknopf) und
 // Packlink (Etikett kaufen). Die Sendungsverfolgung selbst wird nie
 // blockiert: Ist ein Paket wirklich unterwegs, gilt das.
-export async function versandSperre(db, orderId) {
+//   mitZahlung: auch sperren, wenn das Geld nicht eingezogen werden konnte
+//   oder PayPal das Einziehen noch prueft (zahlung.js). Der Einzugs-Cron
+//   fragt ohne, sonst wuerde er eine gepruefte Abbuchung nie nachfragen.
+export async function versandSperre(db, orderId, { mitZahlung = true } = {}) {
   try {
+    if (mitZahlung) {
+      const zahlung = await db.prepare(`SELECT p.status,p.provider_payment_id,p.authorization_id FROM payments p
+        JOIN commerce_orders o ON o.id=p.order_id
+        WHERE p.order_id=? AND p.provider='PAYPAL' AND o.status IN ('PAID','PREPARING')
+        ORDER BY p.created_at DESC LIMIT 1`).bind(orderId).first();
+      if (zahlung?.status === "FAILED" && zahlung.authorization_id) {
+        return { code: "ZAHLUNG_GESCHEITERT", text: "Das Geld konnte bei PayPal nicht eingezogen werden – bitte nicht versenden, sondern stornieren oder die Kundin um eine neue Zahlung bitten." };
+      }
+      if (zahlung?.status === "AUTHORIZED" && zahlung.provider_payment_id) {
+        return { code: "ZAHLUNG_WIRD_GEPRUEFT", text: "PayPal prüft das Einziehen noch – bitte erst versenden, wenn die Zahlung eingegangen ist." };
+      }
+    }
     const auftrag = await db.prepare(`SELECT id,anlass FROM erstattungsauftraege WHERE order_id=? AND vor_versand=1
       AND status IN (${LAUFEND_SQL}) LIMIT 1`).bind(orderId).first();
     if (auftrag) {

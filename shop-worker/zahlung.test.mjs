@@ -256,6 +256,7 @@ test("capture refused (reservation expired): nothing ships, owner warned, storno
 
     const detail = await call(DB, "/admin/orders/o1");
     assert.equal(detail.data.zahlung.gescheitert, true);
+    assert.equal(detail.data.versandSperre.code, "ZAHLUNG_GESCHEITERT");
     assert.equal(detail.data.storno.art, "STORNIEREN");
     assert.ok(detail.data.nextStatuses.includes("CANCELLED"));
 
@@ -337,6 +338,7 @@ test("PayPal still reviewing the capture: shipping stays blocked until the cron 
     assert.equal(einzug.data.einzug.ok, false);
     assert.equal(einzug.data.einzug.code, "ZAHLUNG_WIRD_GEPRUEFT");
     assert.equal(einzug.data.zahlung.wirdGeprueft, true);
+    assert.equal(einzug.data.versandSperre.code, "ZAHLUNG_WIRD_GEPRUEFT");
     assert.match(netz.telegram.at(-1).text, /WIRD GEPRÜFT/);
 
     await call(DB, "/admin/orders/o1", "PATCH", { status: "PREPARING" });

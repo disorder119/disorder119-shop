@@ -431,7 +431,7 @@ async function getOrderDetail(env, id) {
     laufenderAuftrag: laufend,
     widerrufe,
     versandSperre: sperre,
-    ruecklauf: ruecklaufAngebot(order, itemRows, shipmentRows, refunds.results || [], widerrufe, laufend),
+    ruecklauf: ruecklaufAngebot(order, itemRows, shipmentRows, refunds.results || [], widerrufe, laufend, zahlung),
     wiederVerfuegbar: wiederVerfuegbarStand(order, itemRows, activity, { warVerkauft }),
     items: itemRows,
     payments: paymentRows,
@@ -596,7 +596,7 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN", optionen =
     // unterwegs, gilt das - der Auftrag haelt dann selbst an.
     if (newStatus === "SHIPPED" && order.status !== "SHIPPED" && actorType === "ADMIN") {
       const sperre = await versandSperre(db, order.id);
-      if (sperre) throw new AdminError(sperre.code, 409);
+      if (sperre) throw /^ZAHLUNG_/.test(sperre.code) ? new ZahlungFehler(sperre.code, 409, sperre.text) : new AdminError(sperre.code, 409);
       // Erst das Geld, dann das Paket: eine nur reservierte Zahlung wird
       // jetzt eingezogen. Klappt das nicht, bleibt die Bestellung, wie sie ist.
       await zahlungSicherstellen(env, order.id, reqId, { anlass: "VERSENDET" });
@@ -790,7 +790,8 @@ function auftragDeps(env, reqId) {
 const TAG_MS = 24 * 60 * 60 * 1000;
 
 // Was die Admin-App fuer Ruecksendung, Widerruf und Kulanz anbietet.
-function ruecklaufAngebot(order, items, shipments, refunds, widerrufe, laufend) {
+// zahlung: zahlungView - Kulanz (Teilbetrag) geht nur aus eingezogenem Geld.
+function ruecklaufAngebot(order, items, shipments, refunds, widerrufe, laufend, zahlung = null) {
   const status = String(order?.status || "");
   const erstattet = refunds.filter(r => r.status === "COMPLETED").reduce((summe, r) => summe + Number(r.amount_cents || 0), 0);
   const offenCents = Math.max(0, Number(order?.total_cents || 0) - erstattet);
@@ -807,7 +808,7 @@ function ruecklaufAngebot(order, items, shipments, refunds, widerrufe, laufend) 
     offenerWiderruf: widerruf,
     ruecksendungAnlegen: !laufend && ["SHIPPED", "DELIVERED", "RETURN_REQUESTED"].includes(status),
     wareEingegangen: !laufend && offenCents > 0 && ["SHIPPED", "DELIVERED", "RETURN_REQUESTED", "RETURNED"].includes(status),
-    kulanz: !laufend && bezahlt && offenCents > 0,
+    kulanz: !laufend && bezahlt && offenCents > 0 && Boolean(zahlung?.eingezogen),
     stuecke: items.map(it => ({
       itemId: Number(it.item_id),
       titel: it.title_snapshot,
@@ -944,7 +945,7 @@ export async function ruecklaufPflegen(env, reqId = crypto.randomUUID(), now = n
 // Abbuchungen nachfragen, Rechnungsmails nachholen.
 export async function zahlungenPflegen(env, reqId = crypto.randomUUID(), now = new Date()) {
   if (!env?.DB) return { ok: false };
-  return faelligeZahlungenEinziehen(env, reqId, now, { sperre: orderId => versandSperre(env.DB, orderId) });
+  return faelligeZahlungenEinziehen(env, reqId, now, { sperre: orderId => versandSperre(env.DB, orderId, { mitZahlung: false }) });
 }
 
 // Oeffentliche Widerrufsfunktion (POST /widerruf von der Website).
@@ -1377,7 +1378,7 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
       const order = await db.prepare("SELECT id,status FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
       if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
       // Laeuft ein Storno oder Widerruf vor dem Versand, wird nicht mehr eingezogen.
-      const sperre = ["PAID", "PREPARING"].includes(String(order.status)) ? await versandSperre(db, order.id) : null;
+      const sperre = ["PAID", "PREPARING"].includes(String(order.status)) ? await versandSperre(db, order.id, { mitZahlung: false }) : null;
       if (sperre) throw new AdminError(sperre.code, 409);
       const einzug = await zahlungEinziehen(env, order.id, reqId, { anlass: "ADMIN" });
       return adminJson({
