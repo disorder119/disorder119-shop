@@ -180,6 +180,10 @@ test("waiting for PayPal balance: no customer mail yet, owner told what is missi
     assert.equal(netz.telegram.length, 1);
     assert.match(netz.telegram[0].text, /ERSTATTUNG WARTET/);
     assert.match(netz.telegram[0].text, /es fehlen 12,70\s€/);
+    // Direkt zur Original-Transaktion in PayPal - dort "Rueckzahlung".
+    assert.match(netz.telegram[0].text, /https:\/\/www\.paypal\.com\/activity\/payment\/CAPTURE1/);
+    assert.equal(res.data.auftrag.paypalLink, "https://www.paypal.com/activity/payment/CAPTURE1");
+    assert.match(res.data.auftrag.hinweis, /keine neue Zahlung/);
     // Die Uebersicht zeigt Guthaben und Fehlbetrag.
     const uebersicht = await call(DB, "/admin/erstattungen");
     assert.equal(uebersicht.status, 200, JSON.stringify(uebersicht.data));
@@ -187,6 +191,7 @@ test("waiting for PayPal balance: no customer mail yet, owner told what is missi
     assert.equal(uebersicht.data.offeneWiderrufe, 0);
     assert.equal(uebersicht.data.paypal.verfuegbarCents, 320);
     assert.equal(uebersicht.data.paypal.fehltCents, 1270);
+    assert.equal(uebersicht.data.auftraege[0].paypalLink, "https://www.paypal.com/activity/payment/CAPTURE1");
     // Kein zweites Telegram vor der naechsten Erinnerung.
     await ruecklaufPflegen(ENV(DB), "cron-1", spaeter(16));
     assert.equal(netz.telegram.length, 1);

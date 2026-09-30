@@ -139,14 +139,18 @@ async function ladeStuecke(db, orderId) {
     FROM order_items oi LEFT JOIN inventory i ON i.id=oi.inventory_id WHERE oi.order_id=? ORDER BY oi.rowid`).bind(orderId).all()).results || [];
 }
 
+// Mit der PayPal-Transaktion der Bestellung (capture_id) fuer den Link zur
+// Original-Zahlung in der Admin-App.
+const MIT_CAPTURE = "(SELECT p.provider_payment_id FROM payments p WHERE p.order_id=e.order_id AND p.provider='PAYPAL' AND p.provider_payment_id IS NOT NULL ORDER BY p.created_at DESC LIMIT 1) AS capture_id";
+
 async function zeile(db, auftragId) {
-  return db.prepare("SELECT * FROM erstattungsauftraege WHERE id=?").bind(auftragId).first();
+  return db.prepare(`SELECT e.*,${MIT_CAPTURE} FROM erstattungsauftraege e WHERE e.id=?`).bind(auftragId).first();
 }
 
 export async function laufenderAuftrag(db, orderId) {
   try {
-    return await db.prepare(`SELECT * FROM erstattungsauftraege WHERE order_id=? AND status IN (${LAUFEND_SQL})
-      ORDER BY created_at DESC LIMIT 1`).bind(orderId).first();
+    return await db.prepare(`SELECT e.*,${MIT_CAPTURE} FROM erstattungsauftraege e WHERE e.order_id=?
+      AND e.status IN (${LAUFEND_SQL}) ORDER BY e.created_at DESC LIMIT 1`).bind(orderId).first();
   } catch (err) {
     if (ohneTabelle(err)) return null;
     throw err;
@@ -188,7 +192,7 @@ export function auftragView(row, extra = {}) {
   const endgueltig = Number(row.fehler_endgueltig) === 1;
   let hinweis = null;
   if (row.status === "WARTET_AUF_DECKUNG") {
-    hinweis = `Lade mindestens ${euroAmount(row.betrag_cents)} auf dein PayPal-Konto oder bestätige ein Bankkonto in PayPal. Der Shop versucht es automatisch weiter; die Kundin bekommt ihre Mail erst, wenn das Geld wirklich zurück ist.`;
+    hinweis = `PayPal hat die Rückzahlung der Original-Zahlung abgelehnt – es ist keine neue Zahlung, aber in deinem PayPal-Konto sind keine ${euroAmount(row.betrag_cents)} verfügbar (PayPal behält seine Gebühr, zurück gehen die vollen ${euroAmount(row.betrag_cents)}). Am schnellsten: die Original-Zahlung in PayPal öffnen und dort „Rückzahlung“ wählen – PayPal kann dafür dein Bankkonto nutzen. Oder Guthaben aufladen bzw. ein Bankkonto in PayPal bestätigen, dann klappt es hier automatisch. Die Kundin bekommt ihre Mail erst, wenn das Geld wirklich zurück ist.`;
   } else if (row.status === "FEHLER") {
     hinweis = fehlerText(row.letzter_fehler) || "Der letzte Versuch ist gescheitert.";
     if (!endgueltig) hinweis += " Nächster automatischer Versuch ist geplant.";
@@ -217,6 +221,8 @@ export function auftragView(row, extra = {}) {
     fehler: row.letzter_fehler || null,
     fehlerText: row.status === "FEHLER" || row.status === "WARTET_AUF_DECKUNG" ? fehlerText(row.letzter_fehler) : null,
     fehlerEndgueltig: endgueltig,
+    // Original-Transaktion in PayPal: dort "Rueckzahlung" ist derselbe Weg.
+    paypalLink: laufend ? paypalTransaktionLink(extra.captureId || row.capture_id) : null,
     versuche: Number(row.versuche || 0),
     letzterVersuchAt: row.letzter_versuch_at || null,
     naechsterVersuchAt: laufend ? row.naechster_versuch_at || null : null,
@@ -234,7 +240,8 @@ export function auftragView(row, extra = {}) {
 
 export async function auftraegeFuerBestellung(db, orderId) {
   try {
-    const rows = await db.prepare("SELECT * FROM erstattungsauftraege WHERE order_id=? ORDER BY created_at DESC LIMIT 20")
+    const rows = await db.prepare(`SELECT e.*,${MIT_CAPTURE} FROM erstattungsauftraege e WHERE e.order_id=?
+      ORDER BY e.created_at DESC LIMIT 20`)
       .bind(orderId).all();
     return (rows.results || []).map(row => auftragView(row));
   } catch (err) {
@@ -810,8 +817,11 @@ function telegramText(art, auftrag, order, extra = {}) {
       "DISORDER119 — ERSTATTUNG WARTET",
       kopf,
       extra.fehltCents > 0 ? `PayPal-Guthaben reicht nicht – es fehlen ${euroAmount(extra.fehltCents)}.` : "PayPal-Guthaben reicht nicht.",
-      "Lade Guthaben auf oder bestätige ein Bankkonto in PayPal.",
-      "Der Shop versucht es automatisch weiter. Die Kundin bekommt ihre Mail erst, wenn das Geld zurück ist.",
+      ...(extra.paypalLink
+        ? ["Original-Zahlung direkt in PayPal zurückzahlen (dort kann PayPal dein Bankkonto nutzen):", extra.paypalLink]
+        : []),
+      "Oder Guthaben aufladen bzw. Bankkonto in PayPal bestätigen – der Shop versucht es automatisch weiter.",
+      "Die Kundin bekommt ihre Mail erst, wenn das Geld zurück ist.",
       ...(extra.frist ? [`Frist für die Rückzahlung: ${deutschesDatum(extra.frist)}`] : []),
     ].join("\n");
   }
@@ -822,6 +832,7 @@ function telegramText(art, auftrag, order, extra = {}) {
       fehlerText(auftrag.letzter_fehler) || "Der letzte Versuch ist gescheitert.",
       `Versuche bisher: ${auftrag.versuche}`,
       ...(extra.frist ? [`Frist für die Rückzahlung: ${deutschesDatum(extra.frist)}`] : []),
+      ...(extra.paypalLink ? ["Original-Zahlung in PayPal zurückzahlen:", extra.paypalLink] : []),
       "Admin-App → Bestellung → „Jetzt erneut versuchen“.",
     ].join("\n");
   }
@@ -841,6 +852,19 @@ function telegramText(art, auftrag, order, extra = {}) {
       ? [`Wieder im Shop: ${auftrag.wieder_im_shop_at ? "ja" : "noch nicht – wird nachgeholt"}`]
       : []),
   ].join("\n");
+}
+
+// Die Original-Transaktion im PayPal-Geschaeftskonto: dort "Rueckzahlung"
+// waehlen ist dieselbe Rueckzahlung wie ueber die API - nur kann PayPal dort
+// das Bankkonto nutzen, wenn das Guthaben nicht reicht.
+export function paypalTransaktionLink(captureId) {
+  const id = safeText(captureId || "", 64);
+  return /^[A-Z0-9]{6,32}$/.test(id) ? `https://www.paypal.com/activity/payment/${id}` : null;
+}
+
+async function paypalLinkFuer(db, orderId) {
+  const payment = await paypalZahlung(db, orderId);
+  return paypalTransaktionLink(payment?.provider_payment_id);
 }
 
 function deutschesDatum(wert) {
@@ -866,7 +890,7 @@ async function inhaberMelden(env, auftrag, order, art, reqId) {
   // Eine Meldung je Lage, danach hoechstens taeglich eine Erinnerung (Cron).
   if (row?.inhaber_gemeldet_at && Date.now() - Date.parse(row.inhaber_gemeldet_at) < ERINNERN_ALLE_MS
     && row.letzter_fehler === auftrag.letzter_fehler) return;
-  const extra = { frist: await widerrufsfrist(db, row) };
+  const extra = { frist: await widerrufsfrist(db, row), paypalLink: await paypalLinkFuer(db, row.order_id) };
   if (art === "deckung") {
     const guthaben = await paypalGuthaben(env);
     if (guthaben.bekannt) extra.fehltCents = Number(row.betrag_cents) - Number(guthaben.verfuegbarCents);
@@ -979,7 +1003,7 @@ export async function erstattungsauftraegePflegen(env, reqId = crypto.randomUUID
       // Wartet weiter: hoechstens taeglich erinnern.
       if (["WARTET_AUF_DECKUNG", "FEHLER"].includes(row.status)
         && (!row.inhaber_gemeldet_at || now.getTime() - Date.parse(row.inhaber_gemeldet_at) >= ERINNERN_ALLE_MS)) {
-        const extra = { frist: await widerrufsfrist(db, row) };
+        const extra = { frist: await widerrufsfrist(db, row), paypalLink: await paypalLinkFuer(db, row.order_id) };
         await sendTelegramMessage(env, telegramText("erinnerung", row, order, extra), reqId).catch(() => null);
         await statusSetzen(db, row.id, { inhaber_gemeldet_at: now.toISOString() });
         ergebnis.erinnert += 1;
@@ -1014,7 +1038,7 @@ export async function erstattungenUebersicht(env) {
   const db = env.DB;
   let rows = [];
   try {
-    rows = (await db.prepare(`SELECT e.*,o.order_number FROM erstattungsauftraege e JOIN commerce_orders o ON o.id=e.order_id
+    rows = (await db.prepare(`SELECT e.*,o.order_number,${MIT_CAPTURE} FROM erstattungsauftraege e JOIN commerce_orders o ON o.id=e.order_id
       WHERE e.status IN (${LAUFEND_SQL}) OR e.created_at>=?
       ORDER BY CASE WHEN e.status IN (${LAUFEND_SQL}) THEN 0 ELSE 1 END, e.created_at DESC LIMIT 100`)
       .bind(new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()).all()).results || [];
