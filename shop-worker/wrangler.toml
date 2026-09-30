@@ -24,6 +24,14 @@ PAYPAL_ENVIRONMENT = "live"
 # Produktionsfehler muessen nachtraeglich ueber Request-ID und strukturierte Logs
 # untersuchbar bleiben. Bei wachsendem Traffic kann die Sampling-Rate bewusst
 # reduziert werden, ohne die Observability komplett abzuschalten.
+# Hintergrundjobs (worker-entry.js, scheduled): Zahlungsabgleich und
+# Reservierungsablauf, PayPal-Erstattungen, Betriebswarnungen, Aufraeumen der
+# Besucherstatistik und die einmalige Apple-Pay-Domain bei PayPal. Sie laufen
+# zusaetzlich beim Oeffnen der Admin-App; der Cron sorgt dafuer, dass sie auch
+# ohne Admin-Besuch passieren.
+[triggers]
+crons = ["*/15 * * * *"]
+
 [observability]
 enabled = true
 head_sampling_rate = 1

@@ -83,7 +83,8 @@ jobs:
       - name: Erstattung ueber PayPal und Stornieren pruefen
         run: |
           node --check shop-worker/erstattung.js
-          node --test shop-worker/erstattung.test.mjs shop-worker/admin-storno.test.mjs shop-worker/admin-order-management.test.mjs
+          node --check shop-worker/paypal-einrichtung.js
+          node --test shop-worker/erstattung.test.mjs shop-worker/admin-storno.test.mjs shop-worker/admin-order-management.test.mjs shop-worker/paypal-einrichtung.test.mjs
 
       - name: Gutschein-Migration pruefen
         run: |
