@@ -388,3 +388,48 @@ test("PayPal-Abgleichfehler blockiert die Bestellliste nicht und wird sichtbar g
     globalThis.fetch = original;
   }
 });
+
+test("Knopf in der Admin-App abonniert Rueckzahlungen am PayPal-Webhook, ohne andere Ereignisse zu verlieren", async () => {
+  const db = d1();
+  bestellungAnlegen(db);
+  const original = globalThis.fetch;
+  let typen = [{ name: "PAYMENT.CAPTURE.COMPLETED" }];
+  const patches = [];
+  globalThis.fetch = async (input, init = {}) => {
+    const url = String(input?.url || input);
+    if (url.endsWith("/v1/oauth2/token")) return new Response(JSON.stringify({ access_token: "tok" }), { status: 200 });
+    if (url.endsWith("/v1/notifications/webhooks/WH-TEST")) {
+      if (init.method === "PATCH") {
+        const body = JSON.parse(init.body);
+        patches.push(body);
+        typen = body[0].value;
+        return new Response(JSON.stringify({ id: "WH-TEST", event_types: typen }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ id: "WH-TEST", event_types: typen }), { status: 200 });
+    }
+    if (url.includes("/v1/notifications/webhooks-events")) return new Response(JSON.stringify({ events: [], links: [] }), { status: 200 });
+    throw new Error(`unerwarteter fetch: ${url}`);
+  };
+  const abonnieren = async () => {
+    const req = new Request("https://api.disorder119.com/admin/paypal/webhook/erstattungen", {
+      method: "POST", headers: { Origin: ADMIN, Authorization: "Bearer geheim", "Content-Type": "application/json" }, body: "{}",
+    });
+    const res = await handleAdminRequest(req, { ...env(db), PAYPAL_WEBHOOK_ID: "WH-TEST" }, new URL(req.url), "req-wh", ADMIN);
+    return { status: res.status, data: await res.json() };
+  };
+  try {
+    const erst = await abonnieren();
+    assert.equal(erst.status, 200, JSON.stringify(erst.data));
+    assert.equal(erst.data.bereits, false);
+    assert.deepEqual(patches, [[{ op: "replace", path: "/event_types",
+      value: [{ name: "PAYMENT.CAPTURE.COMPLETED" }, { name: "PAYMENT.CAPTURE.REFUNDED" }] }]]);
+    assert.equal(erst.data.paypalRefundSync.webhookSubscribed, true);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM audit_events WHERE event_type='PAYPAL_WEBHOOK_REFUNDS_SUBSCRIBED'").get().n, 1);
+
+    const zweit = await abonnieren();
+    assert.equal(zweit.data.bereits, true);
+    assert.equal(patches.length, 1);
+  } finally {
+    globalThis.fetch = original;
+  }
+});

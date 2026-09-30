@@ -11,6 +11,7 @@ import {
   bestellungErstatten,
   erstattungAusWebhook,
   paypalErstattungenAbgleichen as paypalErstattungenAbgleichenMitStatus,
+  paypalWebhookErstattungenAbonnieren,
 } from "./erstattung.js";
 import { reconcilePurchasePayments } from "./worker.js";
 import { artikelWiederVerfuegbar } from "./admin-katalog.js";
@@ -1117,6 +1118,19 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
     }
     if (path === "/admin/paypal/refunds/sync" && request.method === "POST") {
       return adminJson(await paypalErstattungenSicherAbgleichen(env, reqId, true), 200, origin);
+    }
+    if (path === "/admin/paypal/webhook/erstattungen" && request.method === "POST") {
+      try {
+        const ergebnis = await paypalWebhookErstattungenAbonnieren(env);
+        await auditAdmin(env, "paypal_webhook", env.PAYPAL_WEBHOOK_ID || "-", "PAYPAL_WEBHOOK_REFUNDS_SUBSCRIBED", reqId,
+          { bereits: ergebnis.bereits, eventTypes: ergebnis.eventTypes });
+        return adminJson({ ...ergebnis, paypalRefundSync: await paypalErstattungenSicherAbgleichen(env, reqId, true) }, 200, origin);
+      } catch (err) {
+        if (err instanceof ErstattungsFehler) {
+          return adminJson({ error: err.code, detail: err.detail, requestId: reqId }, err.status, origin);
+        }
+        throw err;
+      }
     }
     if (path === "/admin/rentals" && request.method === "GET") return adminJson(await getRentals(env, url), 200, origin);
     if (path === "/admin/inventory" && request.method === "GET") return adminJson(await getInventory(env, url), 200, origin);

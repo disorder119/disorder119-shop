@@ -257,6 +257,37 @@ export async function erstattungAusWebhook(env, event, reqId, statusSetzen) {
   };
 }
 
+// Rueckzahlungen, die direkt im PayPal-Geschaeftskonto angestossen werden,
+// meldet PayPal nur, wenn der Webhook PAYMENT.CAPTURE.REFUNDED abonniert hat -
+// "8 - PayPal verbinden" legte ihn anfangs nur mit PAYMENT.CAPTURE.COMPLETED
+// an. Die Admin-App bietet dafuer einen Knopf, sobald der Abgleich das Fehlen
+// bemerkt; der Server ergaenzt das Ereignis und behaelt alle anderen.
+export async function paypalWebhookErstattungenAbonnieren(env) {
+  if (!env.PAYPAL_WEBHOOK_ID) throw new ErstattungsFehler("PAYPAL_WEBHOOK_FEHLT", 409);
+  const token = await paypalToken(env);
+  const url = `${paypalApiBase(env)}/v1/notifications/webhooks/${encodeURIComponent(env.PAYPAL_WEBHOOK_ID)}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } });
+  const webhook = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ErstattungsFehler("PAYPAL_WEBHOOK_STATUS_UNAVAILABLE", 502, { paypalStatus: res.status });
+  const vorher = (webhook.event_types || []).map(entry => String(entry?.name || "")).filter(Boolean);
+  if (vorher.includes("*") || vorher.includes("PAYMENT.CAPTURE.REFUNDED")) return { ok: true, bereits: true, eventTypes: vorher };
+  const eventTypes = [...new Set([...vorher, "PAYMENT.CAPTURE.COMPLETED", "PAYMENT.CAPTURE.REFUNDED"])];
+  const patch = await fetch(url, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify([{ op: "replace", path: "/event_types", value: eventTypes.map(name => ({ name })) }]),
+  });
+  const antwort = await patch.json().catch(() => ({}));
+  if (!patch.ok) {
+    throw new ErstattungsFehler("PAYPAL_WEBHOOK_AENDERUNG_FEHLGESCHLAGEN", 502, {
+      paypalStatus: patch.status, debugId: safeText(antwort?.debug_id || patch.headers.get("paypal-debug-id"), 120),
+    });
+  }
+  // Der naechste Abgleich soll den neuen Stand zeigen, nicht den gemerkten.
+  if (env.DB) refundSyncByDatabase.delete(env.DB);
+  return { ok: true, bereits: false, eventTypes };
+}
+
 // Zweite Sicherung neben dem Webhook: PayPal fuehrt auch Rueckzahlungen auf,
 // die direkt im Geschaeftskonto angestossen wurden. Der Abgleich liest diese
 // Provider-Ereignisse nach und verarbeitet sie ueber denselben idempotenten
