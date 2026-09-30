@@ -411,7 +411,7 @@ export async function handleTaxReady2026(request, env, url, reqId = crypto.rando
     const checkMatch=/^\/admin\/buchhaltung\/steuercheck\/(\d{4})$/.exec(p);
     if (checkMatch && request.method === 'GET') {
       const year=parseYear(checkMatch[1]),dataset=await prepareTaxDatasetV3(env,year);
-      return json({ok:true,year,summary:dataset.summary,issues:dataset.issues,reviewRequired:true,note:'Technischer Vollständigkeitscheck, keine steuerliche Freigabe.'},200,origin);
+      return json({ok:true,year,summary:dataset.summary,kleinunternehmer:dataset.smallBusiness,issues:dataset.issues,reviewRequired:true,note:'Technischer Vollständigkeitscheck, keine steuerliche Freigabe.'},200,origin);
     }
 
     throw new TaxReadyError('METHOD_NOT_ALLOWED_OR_ROUTE_NOT_FOUND', request.method === 'GET' ? 404 : 405);

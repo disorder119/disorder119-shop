@@ -1,5 +1,10 @@
 # Complete Shop dataset v2
 
+This v2 structure and its route `GET /admin/buchhaltung/datensatz.zip?jahr=YYYY`
+stay unchanged. Tax Dataset v3 (`TAX_DATASET_V3.md`) adds private accounting data
+and derived views in `v3/*` while carrying every v2 file. Its manifest declares
+`backwards_compatible_with: [2]`, so existing v2 imports keep working.
+
 Private dataset and annual summary routes use `prepareDataset`. Manager 1.27.0
 or later is required. The v1 helper remains for compatibility fixtures only.
 

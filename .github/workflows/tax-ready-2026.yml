@@ -7,6 +7,10 @@ on:
       - "shop-worker/tax-ready-2026.js"
       - "shop-worker/tax-ready-dataset-v3.js"
       - "shop-worker/tax-ready-2026.test.mjs"
+      - "shop-worker/tax-ready-vorgaenge.js"
+      - "shop-worker/tax-ready-vorgaenge.test.mjs"
+      - "shop-worker/packlink.js"
+      - "data/catalog.json"
       - "shop-worker/migrations/0026_tax_ready_2026.sql"
       - "shop-worker/migrations/0027_tax_ready_safety.sql"
       - "shop-worker/migrations/0028_tax_document_lifecycle.sql"
@@ -20,6 +24,10 @@ on:
       - "shop-worker/tax-ready-2026.js"
       - "shop-worker/tax-ready-dataset-v3.js"
       - "shop-worker/tax-ready-2026.test.mjs"
+      - "shop-worker/tax-ready-vorgaenge.js"
+      - "shop-worker/tax-ready-vorgaenge.test.mjs"
+      - "shop-worker/packlink.js"
+      - "data/catalog.json"
       - "shop-worker/migrations/0026_tax_ready_2026.sql"
       - "shop-worker/migrations/0027_tax_ready_safety.sql"
       - "shop-worker/migrations/0028_tax_document_lifecycle.sql"
@@ -49,10 +57,11 @@ jobs:
           set -euo pipefail
           node --check shop-worker/tax-ready-2026.js
           node --check shop-worker/tax-ready-dataset-v3.js
+          node --check shop-worker/tax-ready-vorgaenge.js
           node --check shop-worker/buchhaltung.js
 
       - name: Tax-Ready-Regressionen ausführen
-        run: node --test shop-worker/tax-ready-2026.test.mjs
+        run: node --test shop-worker/tax-ready-2026.test.mjs shop-worker/tax-ready-vorgaenge.test.mjs
 
       - name: Vollständige D1-Migrationskette prüfen
         run: python3 scripts/test_d1_migrations.py
