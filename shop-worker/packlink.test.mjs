@@ -310,10 +310,15 @@ test("buying a label: one /v1/orders call, no customer email or phone, label str
     assert.equal(ohneSchluessel.data.error, "PACKLINK_NICHT_EINGERICHTET");
     assert.equal(fake.calls.length, 0);
 
+    const vorher = await call(env, "/admin/versand/o1/packlink/angebote?paket=M");
+    assert.deepEqual(vorher.data.direktkauf, { bewaehrt: false, zuletztAbgelehntAm: null });
+
     const gekauft = await call(env, "/admin/versand/o1/packlink/kaufen", { method: "POST", body: KAUF });
     assert.equal(gekauft.status, 200, JSON.stringify(gekauft.data));
     assert.equal(gekauft.data.sendung.reference, KAUF_REFERENZ);
     assert.equal(gekauft.data.sendung.phase, "bereit");
+    const danach = await call(env, "/admin/versand/o1/packlink");
+    assert.equal(danach.data.direktkauf.bewaehrt, true);
     assert.equal(gekauft.data.sendung.etikettUrl, "https://labels.packlink.com/x.pdf");
     assert.equal(gekauft.data.sendung.preisCents, 785);
 
@@ -382,6 +387,9 @@ test("a purchase Packlink refuses leaves nothing behind; the offers come back", 
     assert.equal(DB.raw.prepare("SELECT state FROM packlink_sendungen").get().state, "KAUF_ABGELEHNT");
     const stand = await call(env, "/admin/versand/o1/packlink");
     assert.equal(stand.data.sendung, null);
+    // Die Admin-App schlaegt danach den Entwurf vor.
+    assert.equal(stand.data.direktkauf.bewaehrt, false);
+    assert.ok(stand.data.direktkauf.zuletztAbgelehntAm);
 
     // Zahlungsart in Packlink hinterlegt: der naechste Versuch klappt.
     fake.zustand.kauf = "ok";
