@@ -248,7 +248,10 @@ async function getOverview(env, url) {
       FROM commerce_orders`),
     db.prepare(`SELECT COUNT(*) AS total,
       SUM(CASE WHEN status='COMPLETED' THEN 1 ELSE 0 END) AS completed,
-      SUM(CASE WHEN status IN ('CREATED','PENDING','AUTHORIZED') THEN 1 ELSE 0 END) AS open,
+      SUM(CASE WHEN status IN ('CREATED','PENDING') THEN 1 ELSE 0 END) AS open,
+      -- Bei PayPal reserviert, eingezogen wird beim Versand (zahlung.js).
+      SUM(CASE WHEN status='AUTHORIZED' THEN 1 ELSE 0 END) AS reserved,
+      COALESCE(SUM(CASE WHEN status='AUTHORIZED' THEN amount_cents ELSE 0 END),0) AS reservedCents,
       SUM(CASE WHEN status='FAILED' THEN 1 ELSE 0 END) AS failed,
       SUM(CASE WHEN status IN ('REFUNDED','PARTIALLY_REFUNDED') THEN 1 ELSE 0 END) AS refunded,
       COALESCE(SUM(CASE WHEN status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND provider_payment_id IS NOT NULL THEN amount_cents ELSE 0 END),0) AS capturedCents
