@@ -4,6 +4,15 @@
 import { prepareDataset } from './tax-dataset-stream.js';
 import { bookDate } from './tax-dataset.js';
 import { digestBytes, zipStream } from './tax-zip-stream.js';
+import {
+  VORGANG_QUERIES,
+  buildInvoiceCorrections,
+  buildItemLinks,
+  buildSalesTransactions,
+  buildShipping,
+  smallBusinessCheck,
+  vorgangIssues,
+} from './tax-ready-vorgaenge.js';
 
 const encoder = new TextEncoder();
 const MAX_ROWS = 10000;
@@ -236,13 +245,57 @@ async function loadV3Tables(env) {
   return tables;
 }
 
+async function loadVorgangTables(env) {
+  const names = Object.keys(VORGANG_QUERIES);
+  const result = await env.DB.batch(names.map(name => env.DB.prepare(`${VORGANG_QUERIES[name]} LIMIT ${MAX_ROWS + 1}`)));
+  const tables = {};
+  names.forEach((name, index) => {
+    if (result[index]?.success === false || !Array.isArray(result[index]?.results)) throw new Error('TAX_V3_SNAPSHOT_FAILED');
+    if (result[index].results.length > MAX_ROWS) throw new Error('TAX_V3_ROW_LIMIT');
+    tables[name] = result[index].results;
+  });
+  return tables;
+}
+
+function v2Tabelle(base, name) {
+  const text = base.files?.[`data/${name}.json`];
+  return text ? JSON.parse(text) : [];
+}
+
+// Jahresueberblick fuer GET /admin/buchhaltung/jahr/:jahr - dieselbe Rechnung
+// wie im v3-Export, ohne den ganzen Datensatz zu bauen.
+export async function taxReadyYearOverview(env, year, providerLedger = []) {
+  const tables = await loadV3Tables(env);
+  const summary = buildAccountingYearSummary(tables, year, providerLedger);
+  const kleinunternehmer = smallBusinessCheck(tables, year, y => (Number(y) === Number(year)
+    ? summary : buildAccountingYearSummary(tables, y, providerLedger)));
+  return { summary, kleinunternehmer };
+}
+
 export async function prepareTaxDatasetV3(env, year) {
   const base = await prepareDataset(env, year);
   const tables = await loadV3Tables(env);
-  const privateIssues = validateAccountingSnapshot(tables, year);
+  const extra = await loadVorgangTables(env);
+  const v2 = {
+    orders: v2Tabelle(base, 'orders'),
+    payments: v2Tabelle(base, 'payments'),
+    cash_events: v2Tabelle(base, 'cash_events'),
+  };
+  const ledgerV2 = base.ledger || [];
+  const transactions = buildSalesTransactions(v2, ledgerV2, extra);
+  const shipping = buildShipping(v2, extra);
+  const corrections = buildInvoiceCorrections(v2, ledgerV2, extra);
+  const itemLinks = buildItemLinks(v2, tables, extra, transactions, shipping);
+  const summary = buildAccountingYearSummary(tables, year, ledgerV2);
+  const smallBusiness = smallBusinessCheck(tables, year, y => (Number(y) === Number(year)
+    ? summary : buildAccountingYearSummary(tables, y, ledgerV2)));
+  const privateIssues = [
+    ...validateAccountingSnapshot(tables, year),
+    ...vorgangIssues(transactions, shipping, corrections, tables.ledger_events),
+    ...smallBusiness.warnings,
+  ];
   const issues = [...(base.issues || []), ...privateIssues];
-  const combinedLedger = combineAccountingLedger(tables.ledger_events, base.ledger || []);
-  const summary = buildAccountingYearSummary(tables, year, base.ledger || []);
+  const combinedLedger = combineAccountingLedger(tables.ledger_events, ledgerV2);
   const ownerContributions = tables.ledger_events.filter(row => row.event_type === 'OWNER_CONTRIBUTION');
   const ownerDraws = tables.ledger_events.filter(row => row.event_type === 'OWNER_DRAW');
 
@@ -260,8 +313,13 @@ export async function prepareTaxDatasetV3(env, year) {
     'v3/tax_classifications.json': JSON.stringify(tables.tax_classifications),
     'v3/tax_year_profiles.json': JSON.stringify(tables.tax_year_profiles),
     'v3/year_summary.json': JSON.stringify(summary, null, 2),
+    'v3/sales_transactions.json': JSON.stringify(transactions),
+    'v3/shipping.json': JSON.stringify(shipping),
+    'v3/invoice_corrections.json': JSON.stringify(corrections),
+    'v3/item_links.json': JSON.stringify(itemLinks),
+    'v3/small_business_check.json': JSON.stringify(smallBusiness, null, 2),
     'v3/issues.json': JSON.stringify(issues, null, 2),
-    'v3/README.txt': 'Tax Dataset v3 ergänzt den unveränderten v2-Shop-Datensatz um private Einkaufs-, Ausgaben-, Konten-, Cash-Ledger-, Einlagen/Entnahmen-, Belegmetadaten- und Abstimmungsdaten. Verifizierte Provider-Cash-Events aus v2 fließen automatisch in die v3-Jahressicht ein. ACCOUNT_TRANSFER ist niemals Umsatz oder Betriebsausgabe. UNKNOWN/REVIEW_REQUIRED bedeutet bewusst ungeklärt. Belegdateien selbst werden nur exportiert, wenn ein separates privates Archiv sie tatsächlich speichert; METADATA_ONLY ist kein archiviertes Original.'
+    'v3/README.txt': 'Tax Dataset v3 ergänzt den unveränderten v2-Shop-Datensatz um private Einkaufs-, Ausgaben-, Konten-, Cash-Ledger-, Einlagen/Entnahmen-, Belegmetadaten- und Abstimmungsdaten. Verifizierte Provider-Cash-Events aus v2 fließen automatisch in die v3-Jahressicht ein. ACCOUNT_TRANSFER ist niemals Umsatz oder Betriebsausgabe. UNKNOWN/REVIEW_REQUIRED bedeutet bewusst ungeklärt. Belegdateien selbst werden nur exportiert, wenn ein separates privates Archiv sie tatsächlich speichert; METADATA_ONLY ist kein archiviertes Original. Abgeleitete Sichten (aus denselben Rohdaten berechnet, nichts gespeichert): sales_transactions.json (je Bestellung alle Rohzeitpunkte und Beträge getrennt, Umsatz nur mit belegter Zahlung), shipping.json (Kundenversand und Etikettenkosten getrennt, nicht verrechnet), invoice_corrections.json (Erstattung als eigene Referenz zur unveränderten Originalrechnung), item_links.json (eine Artikel-ID verbindet Einkauf, Verkauf, Zahlung, Erstattung, Versand und private Geldbewegungen), small_business_check.json (Warnungen zu den selbst eingetragenen Grenzen, keine Statusänderung).'
   };
 
   const manifest = {
@@ -275,6 +333,12 @@ export async function prepareTaxDatasetV3(env, year) {
     timezone: 'Europe/Berlin',
     review_required: true,
     v3_counts: Object.fromEntries(Object.entries(tables).map(([name, rows]) => [name, rows.length])),
+    derived_counts: {
+      sales_transactions: transactions.length,
+      shipping: shipping.length,
+      invoice_corrections: corrections.length,
+      item_links: itemLinks.length,
+    },
     combined_cash_events: combinedLedger.length,
     files: []
   };
@@ -300,6 +364,11 @@ export async function prepareTaxDatasetV3(env, year) {
     tables,
     issues,
     summary,
+    smallBusiness,
+    transactions,
+    shipping,
+    corrections,
+    itemLinks,
     combinedLedger,
     stream: () => zipStream(entries()),
     entries,

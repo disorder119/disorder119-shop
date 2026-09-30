@@ -192,6 +192,10 @@ Bestellbestaetigung mit Rechnung und Widerrufsbelehrung sowie Versandbestaetigun
 
 Noch nicht automatisiert sind Retouren-, Erstattungs- und Miet-Mails.
 
+## Buchhaltung (privat, Tax Ready 2026)
+
+Alle Buchhaltungsrouten liegen unter `/admin/buchhaltung/*` hinter der Admin-Anmeldung (Passkey/RBAC); D1 bleibt Quelle der Wahrheit, oeffentliche Routen und `data/items.json` enthalten keine privaten Kosten, Konten, Belege oder Margen. Datensatz v2 (`TAX_DATASET_V2.md`) bleibt unveraendert, Datensatz v3 (`TAX_DATASET_V3.md`) ergaenzt Einkaeufe, Ausgaben, Konten, privates Cash-Ledger, Einlagen/Entnahmen, Belegmetadaten, Abstimmungen und abgeleitete Sichten: Vorgaenge mit allen Rohzeitpunkten und Betraegen, Versand (Kundenversand getrennt von Etikettenkosten), Korrektur-Referenzen zu Erstattungen, Artikel-Verknuepfung ueber die stabile Artikel-ID und Kleinunternehmer-Warnungen. Umsatz entsteht nur aus einer belegten, abgeschlossenen Zahlung; nichts wird automatisch steuerlich freigegeben.
+
 ## Health, Logs und Fehler
 
 `GET /health` liefert nur nicht-sensible Readiness-Informationen. `adminRbacReady` bewertet ausschliesslich, ob `ADMIN_READ_TOKEN` und `ADMIN_WRITE_TOKEN` gemeinsam gesetzt sind; dieser Status haengt nicht vom PayPal-Modus ab. Die privaten `/admin/system`- und `/admin/insights`-Routen liefern nur nach Admin-Autorisierung zusaetzliche Betriebsinformationen.

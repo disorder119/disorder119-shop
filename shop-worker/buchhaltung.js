@@ -12,6 +12,7 @@ import { safeText } from "./commerce-core.js";
 import { euroAmount, formatOrderConfirmation, loadOrderForConfirmation, mailSenderIdentity } from "./customer-mail.js";
 import { prepareDataset } from './tax-dataset-stream.js';
 import { handleTaxReady2026, isTaxReadyRoute } from './tax-ready-2026.js';
+import { taxReadyYearOverview } from './tax-ready-dataset-v3.js';
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -298,7 +299,12 @@ export async function handleBuchhaltung(request, env, url, reqId = crypto.random
       const ledger=JSON.parse(dataset.files['ledger.json']);
       const rows=ledger.filter(e=>e.book_date.startsWith(String(jahr))&&!e.blocks.length);
       const sum=kind=>rows.filter(e=>e.kind===kind).reduce((s,e)=>s+e.amount_cents,0);
-      return json({ok:true,jahr,basis:'provider_cash_events',einnahmenCents:sum('capture'),erstattungenCents:sum('refund'),gebuehrenCents:sum('fee'),saldoCents:sum('capture')-sum('refund')-sum('fee'),ungeklaert:ledger.filter(e=>e.blocks.length).length,issues:JSON.parse(dataset.files['issues.json']),reviewRequired:true,hinweis:'Nur belegte Shop-Zahlungsereignisse; kein endgültiger Gewinn und keine Prüfung der Kleinunternehmergrenzen über alle Geschäftskonten.'},200,origin);
+      // v3: dieselbe Jahressicht wie im Tax Dataset v3 (Shop-Nachweise plus
+      // privates Ledger) und die Warnungen zu den selbst eingetragenen
+      // Kleinunternehmer-Grenzen. Fehlt die v3-Datenbasis, bleibt v2 unberuehrt.
+      let v3=null,v3Fehler=null;
+      try{v3=await taxReadyYearOverview(env,jahr,ledger);}catch(err){v3Fehler=safeText(err?.message||'TAX_V3_UNAVAILABLE',80);}
+      return json({ok:true,jahr,basis:'provider_cash_events',einnahmenCents:sum('capture'),erstattungenCents:sum('refund'),gebuehrenCents:sum('fee'),saldoCents:sum('capture')-sum('refund')-sum('fee'),ungeklaert:ledger.filter(e=>e.blocks.length).length,issues:JSON.parse(dataset.files['issues.json']),reviewRequired:true,hinweis:'Nur belegte Shop-Zahlungsereignisse; kein endgültiger Gewinn und keine Prüfung der Kleinunternehmergrenzen über alle Geschäftskonten.',v3:v3?{basis:'verified_provider_evidence_plus_private_cash_ledger',summary:v3.summary,kleinunternehmer:v3.kleinunternehmer}:null,v3Fehler},200,origin);
     }
 
     if (pfad === "/admin/buchhaltung/bestellungen.csv") {
