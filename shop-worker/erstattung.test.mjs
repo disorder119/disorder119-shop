@@ -90,7 +90,10 @@ test("Erstatten zahlt den ganzen Betrag ueber PayPal zurueck und setzt Erstattet
     assert.equal(pp.aufrufe.length, 1);
     assert.match(pp.aufrufe[0].url, /^https:\/\/api-m\.paypal\.com\/v2\/payments\/captures\/CAPTURE1\/refund$/);
     assert.deepEqual(pp.aufrufe[0].body, {});
-    assert.equal(pp.aufrufe[0].headers["PayPal-Request-Id"], "erstattung:o1:0");
+    // Die Request-Id gehoert zum Erstattungsauftrag.
+    assert.equal(pp.aufrufe[0].headers["PayPal-Request-Id"], `auftrag:${data.auftrag.id}`);
+    assert.equal(data.auftrag.status, "ERLEDIGT");
+    assert.equal(data.auftrag.anlass, "STORNO");
     assert.equal(data.order.status, "REFUNDED");
     assert.equal(data.erstattung.betragCents, 786);
     assert.equal(db.raw.prepare("SELECT status FROM payments WHERE id='p1'").get().status, "REFUNDED");
@@ -133,27 +136,39 @@ test("Admin zeigt die belegte PayPal-Gebuehr getrennt vom Bruttobetrag", async (
   } finally { pp.zurueck(); }
 });
 
-test("PayPal lehnt ab: Fehler sichtbar, erneuter Versuch mit derselben Request-Id", async () => {
+test("PayPal lehnt endgueltig ab: Auftrag braucht Hilfe, neuer Klick versucht es mit neuer Request-Id", async () => {
   const db = d1();
   bestellungAnlegen(db);
   let pp = paypal({ fehler: { status: 422, body: { name: "UNPROCESSABLE_ENTITY", debug_id: "debug-123", details: [{ issue: "REFUND_TIME_LIMIT_EXCEEDED" }] } } });
+  let ersterSchluessel;
   try {
     const res = await erstatten(env(db));
     const data = await res.json();
-    assert.equal(res.status, 502);
-    assert.equal(data.error, "PAYPAL_ERSTATTUNG_FEHLGESCHLAGEN");
-    assert.equal(data.detail.grund, "REFUND_TIME_LIMIT_EXCEEDED");
-    assert.equal(data.detail.debugId, "debug-123");
-    assert.equal(data.detail.paypalStatus, 422);
-    assert.equal(db.raw.prepare("SELECT status FROM commerce_orders").get().status, "PAID");
+    assert.equal(res.status, 200, JSON.stringify(data));
+    assert.equal(data.auftrag.status, "FEHLER");
+    assert.equal(data.auftrag.fehler, "REFUND_TIME_LIMIT_EXCEEDED");
+    assert.equal(data.auftrag.fehlerEndgueltig, true);
+    assert.match(data.auftrag.hinweis, /180 Tage/);
+    assert.equal(data.order.status, "PAID");
+    const protokoll = JSON.parse(db.raw.prepare("SELECT metadata_json FROM audit_events WHERE event_type='ORDER_REFUND_FAILED'").get().metadata_json);
+    assert.equal(protokoll.debugId, "debug-123");
+    assert.equal(protokoll.paypalStatus, 422);
+    ersterSchluessel = pp.aufrufe[0].headers["PayPal-Request-Id"];
   } finally {
     pp.zurueck();
   }
+  // Der Cron fasst einen endgueltig gescheiterten Auftrag nicht an ...
   pp = paypal();
   try {
+    const { ruecklaufPflegen } = await import("./admin-api.js");
+    await ruecklaufPflegen(env(db), "cron-1", new Date(Date.now() + 3 * 60 * 60 * 1000));
+    assert.equal(pp.aufrufe.length, 0);
+    // ... ein erneuter Klick schon: neue Request-Id (PayPal hat sicher nichts gezahlt).
     const res = await erstatten(env(db));
+    const data = await res.json();
     assert.equal(res.status, 200);
-    assert.equal(pp.aufrufe[0].headers["PayPal-Request-Id"], "erstattung:o1:0");
+    assert.notEqual(pp.aufrufe[0].headers["PayPal-Request-Id"], ersterSchluessel);
+    assert.equal(data.auftrag.status, "ERLEDIGT");
     assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM refunds").get().n, 1);
     assert.equal(db.raw.prepare("SELECT status FROM commerce_orders").get().status, "REFUNDED");
   } finally {
@@ -161,7 +176,32 @@ test("PayPal lehnt ab: Fehler sichtbar, erneuter Versuch mit derselben Request-I
   }
 });
 
-test("Zu wenig PayPal-Deckung liefert auch an alte Admin-Versionen einen klaren Fehlercode", async () => {
+test("PayPal-Stoerung: derselbe Schluessel beim naechsten Versuch, nie doppelt ausgezahlt", async () => {
+  const db = d1();
+  bestellungAnlegen(db);
+  let pp = paypal({ fehler: { status: 503, body: { name: "SERVICE_UNAVAILABLE" } } });
+  let ersterSchluessel;
+  try {
+    const data = await (await erstatten(env(db))).json();
+    assert.equal(data.auftrag.status, "FEHLER");
+    assert.equal(data.auftrag.fehlerEndgueltig, false);
+    assert.ok(data.auftrag.naechsterVersuchAt);
+    ersterSchluessel = pp.aufrufe[0].headers["PayPal-Request-Id"];
+    // Unklarer Ausgang: die Zeile bleibt offen.
+    assert.equal(db.raw.prepare("SELECT status FROM refunds").get().status, "PENDING");
+  } finally { pp.zurueck(); }
+  pp = paypal();
+  try {
+    const { ruecklaufPflegen } = await import("./admin-api.js");
+    const lauf = await ruecklaufPflegen(env(db), "cron-2", new Date(Date.now() + 20 * 60 * 1000));
+    assert.equal(lauf.erstattungen.ausgefuehrt, 1);
+    assert.equal(pp.aufrufe[0].headers["PayPal-Request-Id"], ersterSchluessel);
+    assert.equal(db.raw.prepare("SELECT status FROM commerce_orders").get().status, "REFUNDED");
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM refunds").get().n, 1);
+  } finally { pp.zurueck(); }
+});
+
+test("Zu wenig PayPal-Deckung: Auftrag wartet, Cron versucht es erneut und schliesst ab", async () => {
   const db = d1();
   bestellungAnlegen(db, { total: 560 });
   let pp = paypal({ fehler: { status: 422, body: { name: "UNPROCESSABLE_ENTITY",
@@ -170,46 +210,54 @@ test("Zu wenig PayPal-Deckung liefert auch an alte Admin-Versionen einen klaren 
   try {
     const res = await erstatten(env(db));
     const data = await res.json();
-    assert.equal(res.status, 502);
-    assert.equal(data.error, "PAYPAL_GUTHABEN_NICHT_AUSREICHEND");
-    assert.equal(data.detail.grund, "REFUND_FAILED_INSUFFICIENT_FUNDS");
-    assert.equal(data.detail.debugId, "funding-debug");
-    assert.equal(db.raw.prepare("SELECT status FROM commerce_orders").get().status, "PAID");
+    assert.equal(res.status, 200, JSON.stringify(data));
+    assert.equal(data.auftrag.status, "WARTET_AUF_DECKUNG");
+    assert.equal(data.auftrag.fehler, "REFUND_FAILED_INSUFFICIENT_FUNDS");
+    assert.match(data.auftrag.hinweis, /5,60/);
+    assert.equal(data.erstattung.ausstehend, true);
+    assert.equal(data.storno.moeglich, false);
+    assert.equal(data.order.status, "PAID");
     assert.equal(db.raw.prepare("SELECT status FROM refunds").get().status, "FAILED");
     ersterSchluessel = pp.aufrufe[0].headers["PayPal-Request-Id"];
   } finally { pp.zurueck(); }
-  pp = paypal();
+  // Vor dem naechsten geplanten Versuch passiert nichts.
+  pp = paypal({ fehler: { status: 422, body: { details: [{ issue: "REFUND_FAILED_INSUFFICIENT_FUNDS" }] } } });
+  const { ruecklaufPflegen } = await import("./admin-api.js");
   try {
-    const tooSoon = await erstatten(env(db));
-    assert.equal(tooSoon.status, 409);
+    await ruecklaufPflegen(env(db), "cron-a", new Date(Date.now() + 5 * 60 * 1000));
     assert.equal(pp.aufrufe.length, 0);
+    // Nach 15 Minuten: erneuter Versuch mit neuer Request-Id, wieder zu wenig.
+    await ruecklaufPflegen(env(db), "cron-b", new Date(Date.now() + 16 * 60 * 1000));
+    assert.equal(pp.aufrufe.length, 1);
+    assert.notEqual(pp.aufrufe[0].headers["PayPal-Request-Id"], ersterSchluessel);
+    assert.equal(db.raw.prepare("SELECT status FROM erstattungsauftraege").get().status, "WARTET_AUF_DECKUNG");
   } finally { pp.zurueck(); }
-  // Erst nach einem neuen, explizit bestaetigten Admin-Aufruf und behobener
-  // Deckung wird eine frische Id genutzt; die alte 422-Ablehnung wird nicht
-  // als bereits erfolgreicher Versuch wiederholt.
-  db.raw.prepare("UPDATE audit_events SET created_at='2026-09-01T00:00:00.000Z' WHERE event_type='ORDER_REFUND_FAILED'").run();
+  // Guthaben aufgeladen: der naechste Lauf zahlt aus und schliesst ab.
   pp = paypal();
   try {
-    const res = await erstatten(env(db));
-    assert.equal(res.status, 200);
-    assert.notEqual(pp.aufrufe[0].headers["PayPal-Request-Id"], ersterSchluessel);
+    await ruecklaufPflegen(env(db), "cron-c", new Date(Date.now() + 40 * 60 * 1000));
+    assert.equal(pp.aufrufe.length, 1);
+    const auftrag = db.raw.prepare("SELECT * FROM erstattungsauftraege").get();
+    assert.equal(auftrag.status, "ERLEDIGT");
+    assert.equal(auftrag.versuche, 3);
     assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM refunds").get().n, 1);
+    assert.equal(db.raw.prepare("SELECT status FROM refunds").get().status, "COMPLETED");
     assert.equal(db.raw.prepare("SELECT status FROM commerce_orders").get().status, "REFUNDED");
   } finally { pp.zurueck(); }
 });
 
-test("Zwei gleichzeitige Admin-Retries benutzen nach Deckungsfehler dieselbe neue PayPal-ID", async () => {
+test("Zwei gleichzeitige Klicks nach Deckungsfehler: ein Lauf, eine Request-Id, eine Zeile", async () => {
   const db = d1();
   bestellungAnlegen(db, { total: 560 });
   let pp = paypal({ fehler: { status: 422, body: { details: [{ issue: "REFUND_FAILED_INSUFFICIENT_FUNDS" }] } } });
   try { await erstatten(env(db)); } finally { pp.zurueck(); }
-  db.raw.prepare("UPDATE audit_events SET created_at='2026-09-01T00:00:00.000Z' WHERE event_type='ORDER_REFUND_FAILED'").run();
   pp = paypal({ fehler: { status: 422, body: { details: [{ issue: "REFUND_FAILED_INSUFFICIENT_FUNDS" }] } } });
   try {
     await Promise.all([erstatten(env(db)), erstatten(env(db))]);
     assert.ok(pp.aufrufe.length >= 1 && pp.aufrufe.length <= 2);
-    assert.equal(new Set(pp.aufrufe.map(x => x.headers["PayPal-Request-Id"])).size, 1);
+    assert.equal(new Set(pp.aufrufe.map(x => x.headers["PayPal-Request-Id"])).size, pp.aufrufe.length);
     assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM refunds").get().n, 1);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM erstattungsauftraege").get().n, 1);
   } finally { pp.zurueck(); }
 });
 

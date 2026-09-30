@@ -27,6 +27,7 @@ const EXACT_METHODS = Object.freeze({
   "/newsletter/subscribe": "POST",
   "/newsletter/confirm": "POST",
   "/newsletter/unsubscribe": "POST",
+  "/widerruf": "POST",
 });
 
 // Konto-Anmeldung und Newsletter-Anmeldung schreiben nicht nur in die
@@ -39,6 +40,8 @@ const HUMAN_LIVE_WRITES = new Set([
   "/create-order",
   "/account/login",
   "/newsletter/subscribe",
+  // Verschickt die Eingangsbestaetigung - ohne Bot-Schutz eine Mail-Schleuder.
+  "/widerruf",
 ]);
 
 const COMMERCE_LIVE_WRITES = new Set([
@@ -57,6 +60,7 @@ const LIVE_DB_WRITES = new Set([
   "/newsletter/subscribe",
   "/newsletter/confirm",
   "/newsletter/unsubscribe",
+  "/widerruf",
 ]);
 
 const ADMIN_READ_METHODS = new Set(["GET", "HEAD"]);

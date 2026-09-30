@@ -8,13 +8,34 @@ import {
 import { sendShippingConfirmation } from "./customer-mail.js";
 import {
   ErstattungsFehler,
-  bestellungErstatten,
   erstattungAusWebhook,
   paypalErstattungenAbgleichen as paypalErstattungenAbgleichenMitStatus,
   paypalWebhookErstattungenAbonnieren,
 } from "./erstattung.js";
 import { reconcilePurchasePayments } from "./worker.js";
-import { artikelWiederVerfuegbar } from "./admin-katalog.js";
+import {
+  AuftragFehler,
+  auftraegeDerBestellungPruefen,
+  auftraegeFuerBestellung,
+  auftragAbbrechen,
+  auftragAusfuehren,
+  erstattungBeauftragen,
+  erstattungenUebersicht,
+  erstattungsauftraegePflegen,
+  stueckeZurueckInDenShop,
+  versandSperre,
+} from "./erstattung-auftrag.js";
+import {
+  WiderrufFehler,
+  handleWiderruf,
+  ruecksendungAnlegen,
+  wareEingegangen,
+  widerrufBearbeiten,
+  widerrufErfassen,
+  widerrufeFuerBestellung,
+  widerrufePflegen,
+  widerrufeUebersicht,
+} from "./widerruf.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -368,15 +389,28 @@ async function getOrderDetail(env, id) {
   }
   const activity = (events.results || []).map(row => ({ ...row, metadata: parseMetadata(row.metadata_json) }));
   const itemRows = items.results || [];
+  const [erstattungsauftraege, widerrufe, sperre] = await Promise.all([
+    auftraegeFuerBestellung(db, order.id),
+    widerrufeFuerBestellung(db, order.id),
+    versandSperre(db, order.id),
+  ]);
+  const laufend = erstattungsauftraege.find(a => a.laufend) || null;
+  const shipmentRows = shipments.results || [];
   return {
     order,
     nextStatuses: orderNextStatuses(order.status),
     // Was die Admin-App zum Stornieren anbietet (siehe orderStornieren).
-    storno: stornoAngebot(order),
+    storno: laufend ? { moeglich: false, art: null, laeuft: true } : stornoAngebot(order),
+    // Storno, Ruecksendung, Widerruf, Kulanz (erstattung-auftrag.js, widerruf.js).
+    erstattungsauftraege,
+    laufenderAuftrag: laufend,
+    widerrufe,
+    versandSperre: sperre,
+    ruecklauf: ruecklaufAngebot(order, itemRows, shipmentRows, refunds.results || [], widerrufe, laufend),
     wiederVerfuegbar: wiederVerfuegbarStand(order, itemRows, activity),
     items: itemRows,
     payments: payments.results || [],
-    shipments: shipments.results || [],
+    shipments: shipmentRows,
     returns: returns.results || [],
     refunds: refunds.results || [],
     contact: (contact.results || [])[0] || null,
@@ -399,6 +433,8 @@ const DELETION_BLOCKER_TEXT = Object.freeze({
   TAX_EVIDENCE: "Steuerlicher Zahlungsnachweis vorhanden.",
   FISCAL_DOCUMENT: "Rechnung oder Bestellbestätigung archiviert.",
   SHIPPING_LABEL: "Versandlabel oder Packlink-Entwurf vorhanden.",
+  WITHDRAWAL: "Widerrufserklärung vorhanden – sie bleibt als Beleg erhalten.",
+  REFUND_JOB: "Erstattungsauftrag vorhanden.",
 });
 
 async function orderDeletionState(db, order) {
@@ -415,6 +451,8 @@ async function orderDeletionState(db, order) {
       (SELECT COUNT(*) FROM order_confirmation_archive WHERE order_id=?) AS n`).bind(order.id, order.id),
     db.prepare(`SELECT (SELECT COUNT(*) FROM dhl_qr_marken WHERE order_id=?) +
       (SELECT COUNT(*) FROM packlink_sendungen WHERE order_id=?) AS n`).bind(order.id, order.id),
+    db.prepare("SELECT COUNT(*) AS n FROM widerrufe WHERE order_id=?").bind(order.id),
+    db.prepare("SELECT COUNT(*) AS n FROM erstattungsauftraege WHERE order_id=?").bind(order.id),
   ]);
   const count = index => Number(checks[index]?.results?.[0]?.n || 0);
   const blockers = [];
@@ -426,6 +464,8 @@ async function orderDeletionState(db, order) {
   if (count(4)) blockers.push("TAX_EVIDENCE");
   if (count(5)) blockers.push("FISCAL_DOCUMENT");
   if (count(6)) blockers.push("SHIPPING_LABEL");
+  if (count(7)) blockers.push("WITHDRAWAL");
+  if (count(8)) blockers.push("REFUND_JOB");
   return {
     allowed: blockers.length === 0,
     blockers,
@@ -497,7 +537,9 @@ async function deleteTestOrder(env, id, body, reqId) {
       AND NOT EXISTS (SELECT 1 FROM rechnungen WHERE order_id=commerce_orders.id)
       AND NOT EXISTS (SELECT 1 FROM order_confirmation_archive WHERE order_id=commerce_orders.id)
       AND NOT EXISTS (SELECT 1 FROM dhl_qr_marken WHERE order_id=commerce_orders.id)
-      AND NOT EXISTS (SELECT 1 FROM packlink_sendungen WHERE order_id=commerce_orders.id)`).bind(order.id),
+      AND NOT EXISTS (SELECT 1 FROM packlink_sendungen WHERE order_id=commerce_orders.id)
+      AND NOT EXISTS (SELECT 1 FROM widerrufe WHERE order_id=commerce_orders.id)
+      AND NOT EXISTS (SELECT 1 FROM erstattungsauftraege WHERE order_id=commerce_orders.id)`).bind(order.id),
   ]);
   if (!result[result.length - 1]?.meta?.changes) throw new AdminError("ORDER_DELETE_STATE_CHANGED", 409);
   await auditAdmin(env, "order", order.id, "UNPAID_TEST_ORDER_DELETED", reqId, {
@@ -507,7 +549,9 @@ async function deleteTestOrder(env, id, body, reqId) {
   return { ok: true, deleted: true, orderNumber: order.order_number };
 }
 
-async function updateOrder(env, id, body, reqId, actorType = "ADMIN") {
+// optionen.nurInventar: nur diese Lagerstuecke wechseln mit (Teilruecksendung:
+// behaltene Stuecke bleiben "Zugestellt"); null = alle wie bisher.
+async function updateOrder(env, id, body, reqId, actorType = "ADMIN", optionen = {}) {
   const db = requireDb(env);
   const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
   if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
@@ -516,10 +560,19 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN") {
   const carrier = safeText(body.carrier, 80);
   const service = safeText(body.service, 100);
   const now = new Date().toISOString();
+  const nurInventar = Array.isArray(optionen?.nurInventar) ? optionen.nurInventar.map(String) : null;
 
   if (newStatus) {
     if (!ORDER_STATUSES.includes(newStatus) || !canTransitionOrder(order.status, newStatus)) throw new AdminError("INVALID_ORDER_STATUS_TRANSITION", 409);
     if (newStatus === "PAID") throw new AdminError("PAYMENT_PROVIDER_REQUIRED", 409);
+    // Laeuft eine Stornierung oder liegt ein Widerruf vor dem Versand vor,
+    // darf der Versandknopf das Paket nicht mehr auf den Weg bringen. Die
+    // Sendungsverfolgung (SYSTEM) bleibt frei: Ist ein Paket wirklich
+    // unterwegs, gilt das - der Auftrag haelt dann selbst an.
+    if (newStatus === "SHIPPED" && order.status !== "SHIPPED" && actorType === "ADMIN") {
+      const sperre = await versandSperre(db, order.id);
+      if (sperre) throw new AdminError(sperre.code, 409);
+    }
     if (newStatus === "REFUNDED") {
       const refunded = await db.prepare("SELECT COALESCE(SUM(amount_cents),0) AS cents FROM refunds WHERE order_id=? AND status='COMPLETED'").bind(order.id).first();
       if (Number(refunded?.cents || 0) < Number(order.total_cents || 0)) throw new AdminError("REFUND_NOT_COMPLETED", 409);
@@ -548,6 +601,13 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN") {
       statements.push(db.prepare(`UPDATE inventory SET status='AVAILABLE',updated_at=?,version=version+1
         WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status='CANCELLED'
         AND catalog_status!='SOLD' AND EXISTS (SELECT 1 FROM commerce_orders WHERE id=? AND status='CANCELLED')`).bind(now, order.id, order.id));
+    } else if (nurInventar) {
+      if (nurInventar.length) {
+        statements.push(db.prepare(`UPDATE inventory SET status=?,updated_at=?,version=version+1
+          WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?)
+            AND id IN (${nurInventar.map(() => "?").join(",")})
+            AND status NOT IN ('AVAILABLE','RESERVED','PAYMENT_PENDING')`).bind(newStatus, now, order.id, ...nurInventar));
+      }
     } else {
       // Ein Stueck, das nach einem Storno wieder im Shop steht (verfuegbar,
       // reserviert, in einer neuen Zahlung), gehoert nicht mehr zu dieser
@@ -661,44 +721,74 @@ export async function stueckeWiederVerfuegbar(env, id, reqId) {
   const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
   if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
   if (!["REFUNDED", "CANCELLED"].includes(order.status)) throw new AdminError("WIEDER_VERFUEGBAR_NICHT_MOEGLICH", 409);
-  const items = (await db.prepare("SELECT item_id,inventory_id FROM order_items WHERE order_id=? ORDER BY rowid")
-    .bind(order.id).all()).results || [];
-  const now = new Date().toISOString();
-  // Lager zuerst: steht das Stueck im Katalog noch auf "verkauft", kann es
-  // trotzdem niemand kaufen - wird es dort (auch von Hand) freigegeben, ist
-  // das Lager schon bereit.
-  if (items.length) {
-    await db.batch(items.map(it => db.prepare(`UPDATE inventory SET status='AVAILABLE',updated_at=?,version=version+1
-      WHERE id=? AND status IN ('REFUNDED','CANCELLED')`).bind(now, it.inventory_id)));
-  }
-  // Im Katalog nur, was im Lager jetzt frei ist: ein Stueck, das inzwischen
-  // eine andere Bestellung reserviert oder gekauft hat, bleibt verkauft.
-  const frei = ((await db.prepare(`SELECT oi.item_id FROM order_items oi JOIN inventory i ON i.id=oi.inventory_id
-      WHERE oi.order_id=? AND i.status='AVAILABLE' ORDER BY oi.rowid`).bind(order.id).all()).results || [])
-    .map(row => row.item_id);
-  let katalog;
-  try {
-    katalog = frei.length
-      ? await artikelWiederVerfuegbar(env, frei, `Storno ${order.order_number}`)
-      : { ok: true, geaendert: [] };
-  } catch (err) {
-    console.error(JSON.stringify({ level: "error", event: "catalog_relist_failed", requestId: reqId, orderId: String(order.id), code: safeText(err?.code || err?.message || "unknown", 80) }));
-    katalog = { ok: false, code: safeText(err?.code || "KATALOG_FEHLER", 80) };
-  }
-  await auditAdmin(env, "order", order.id, "ORDER_ITEMS_RELISTED", reqId, {
-    itemIds: items.map(it => Number(it.item_id)),
-    katalog: Boolean(katalog.ok),
-    geaendert: katalog.geaendert || [],
-    pullRequest: katalog.pullRequest ?? null,
-    code: katalog.code || undefined,
-  });
-  return { ok: Boolean(katalog.ok), itemIds: items.map(it => Number(it.item_id)), geaendert: katalog.geaendert || [], pullRequest: katalog.pullRequest ?? null, code: katalog.code || null };
+  // Lager zuerst, dann der Katalog ueber einen Pull Request - dieselbe
+  // Funktion nutzt der Erstattungsauftrag nach der Rueckzahlung.
+  return stueckeZurueckInDenShop(env, order, null, reqId, "Storno");
+}
+
+// Abhaengigkeiten fuer Erstattungsauftraege und Widerrufe: der Statuswechsel
+// laeuft ueber updateOrder (Statuspruefung, Lagerstueck, Protokoll).
+function auftragDeps(env, reqId) {
+  return {
+    statusSetzen: (orderId, status, opt = {}) =>
+      updateOrder(env, orderId, { status }, reqId, opt.actor || "SYSTEM", { nurInventar: opt.nurInventar ?? null }),
+    abgleichen: () => paypalErstattungenAbgleichen(env, reqId, true),
+  };
+}
+
+const TAG_MS = 24 * 60 * 60 * 1000;
+
+// Was die Admin-App fuer Ruecksendung, Widerruf und Kulanz anbietet.
+function ruecklaufAngebot(order, items, shipments, refunds, widerrufe, laufend) {
+  const status = String(order?.status || "");
+  const erstattet = refunds.filter(r => r.status === "COMPLETED").reduce((summe, r) => summe + Number(r.amount_cents || 0), 0);
+  const offenCents = Math.max(0, Number(order?.total_cents || 0) - erstattet);
+  const zugestellt = shipments.map(s => s.delivered_at).filter(Boolean).sort()[0] || null;
+  const widerruf = widerrufe.find(w => w.offen) || null;
+  const bezahlt = ["PAID", "PREPARING", "SHIPPED", "DELIVERED", "RETURN_REQUESTED", "RETURNED"].includes(status);
+  return {
+    offenCents,
+    erstattetCents: erstattet,
+    versandCents: Number(order?.shipping_cents || 0),
+    zugestelltAm: zugestellt,
+    // Die Kundin kann 14 Tage ab Erhalt der Ware widerrufen.
+    widerrufsfristBis: zugestellt ? new Date(Date.parse(zugestellt) + 14 * TAG_MS).toISOString() : null,
+    offenerWiderruf: widerruf,
+    ruecksendungAnlegen: !laufend && ["SHIPPED", "DELIVERED", "RETURN_REQUESTED"].includes(status),
+    wareEingegangen: !laufend && offenCents > 0 && ["SHIPPED", "DELIVERED", "RETURN_REQUESTED", "RETURNED"].includes(status),
+    kulanz: !laufend && bezahlt && offenCents > 0,
+    stuecke: items.map(it => ({
+      itemId: Number(it.item_id),
+      titel: it.title_snapshot,
+      artikelNr: it.article_no || null,
+      preisCents: Number(it.unit_price_cents || 0),
+      lager: it.inventory_status || null,
+    })),
+  };
+}
+
+function auftragAntwort(ergebnis, detail, extra = {}) {
+  const auftrag = ergebnis?.auftrag || null;
+  return {
+    ...detail,
+    auftrag,
+    // Fuer aeltere Admin-App-Staende: dieselben Felder wie vor den Auftraegen.
+    erstattung: auftrag ? {
+      betragCents: auftrag.betragCents,
+      ausstehend: auftrag.status !== "ERLEDIGT",
+      status: auftrag.status,
+      bereits: Boolean(ergebnis.bereits),
+    } : null,
+    ...extra,
+  };
 }
 
 async function orderStornieren(env, id, body, reqId) {
   const db = requireDb(env);
   const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
   if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
+  // Laeuft schon ein Auftrag, versucht ein erneuter Klick ihn sofort wieder
+  // (erstattungBeauftragen) - es entsteht kein zweiter.
   const angebot = stornoAngebot(order);
   if (!angebot.moeglich) throw new AdminError("STORNO_NICHT_MOEGLICH", 409);
   if (angebot.art === "STORNIEREN") {
@@ -708,18 +798,46 @@ async function orderStornieren(env, id, body, reqId) {
   // Ein schon gekauftes Etikett bleibt gueltig - Packlink erstattet das Porto
   // nur, wenn man es dort storniert. Darauf weist die Admin-App hin.
   const etikett = await packlinkEtikettOffen(db, order.id);
-  const erstattung = await bestellungErstatten(env, order.id, body || {}, reqId,
-    (orderId, status) => updateOrder(env, orderId, { status }, reqId, "ADMIN"));
-  const jetzt = await db.prepare("SELECT status FROM commerce_orders WHERE id=?").bind(order.id).first();
-  let wiederVerfuegbar = null;
-  if (body?.wiederVerfuegbar !== false && jetzt?.status === "REFUNDED") {
-    wiederVerfuegbar = await stueckeWiederVerfuegbar(env, order.id, reqId);
+  // Bezahlt: ein Erstattungsauftrag. Klappt PayPal sofort, ist alles erledigt
+  // (Status, Stueck zurueck im Shop, Mail an die Kundin). Fehlt Guthaben,
+  // wartet der Auftrag und versucht es selbst erneut.
+  const ergebnis = await erstattungBeauftragen(env, order.id, {
+    anlass: "STORNO",
+    wiederVerfuegbar: body?.wiederVerfuegbar !== false,
+  }, reqId, auftragDeps(env, reqId));
+  const detail = await getOrderDetail(env, order.id);
+  const erledigt = ergebnis.auftrag?.status === "ERLEDIGT";
+  return auftragAntwort(ergebnis, detail, {
+    storniert: {
+      art: erledigt ? "ERSTATTET" : "ERSTATTUNG_LAEUFT",
+      wiederVerfuegbar: detail.wiederVerfuegbar?.erledigtAm
+        ? { ok: true, pullRequest: detail.wiederVerfuegbar.pullRequest ?? null }
+        : null,
+      etikett,
+    },
+  });
+}
+
+// "Erstatten" fuer jede Lage: vor dem Versand wie Stornieren, nach einer
+// Ruecksendung die zurueckgekommenen Stuecke, sonst Kulanz mit Betrag und Grund.
+async function orderErstatten(env, id, body = {}, reqId) {
+  const db = requireDb(env);
+  const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
+  if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
+  // Schon alles zurueck: nichts zu tun (auch nicht bei einem zweiten Klick).
+  if (order.status === "REFUNDED") {
+    return { ...(await getOrderDetail(env, order.id)), auftrag: null, erstattung: { bereits: true, betragCents: 0 } };
   }
-  return {
-    ...(await getOrderDetail(env, order.id)),
-    erstattung,
-    storniert: { art: "ERSTATTET", wiederVerfuegbar, etikett },
-  };
+  let anlass = safeText(body.anlass || "", 20).toUpperCase();
+  if (!anlass) {
+    if (["PAID", "PREPARING"].includes(order.status)) anlass = "STORNO";
+    else if (["RETURN_REQUESTED", "RETURNED"].includes(order.status)) {
+      const widerruf = (await widerrufeFuerBestellung(db, order.id)).find(w => w.offen);
+      anlass = widerruf ? "WIDERRUF" : "RUECKSENDUNG";
+    } else throw new AdminError("ERSTATTUNG_STATUS", 409);
+  }
+  const ergebnis = await erstattungBeauftragen(env, order.id, { ...body, anlass }, reqId, auftragDeps(env, reqId));
+  return auftragAntwort(ergebnis, await getOrderDetail(env, order.id));
 }
 
 // Fuer automatische Schritte aus der Sendungsverfolgung (packlink.js): derselbe
@@ -732,7 +850,38 @@ export async function orderStatusAutomatisch(env, orderId, status, reqId = crypt
 // PayPal meldet eine Erstattung (auch direkt in PayPal ausgeloest).
 export async function erstattungAusPaypal(env, event, reqId = crypto.randomUUID()) {
   if (!env.DB) return null;
-  return erstattungAusWebhook(env, event, reqId, (orderId, status) => updateOrder(env, orderId, { status }, reqId, "PAYMENT_PROVIDER"));
+  const ergebnis = await erstattungAusWebhook(env, event, reqId, (orderId, status) => updateOrder(env, orderId, { status }, reqId, "PAYMENT_PROVIDER"));
+  // Ist damit das Geld eines laufenden Auftrags zurueck (auch: direkt in
+  // PayPal erstattet), geht die Kundenmail jetzt raus und nicht erst beim
+  // naechsten Cron-Lauf.
+  if (ergebnis?.orderId) {
+    try {
+      await auftraegeDerBestellungPruefen(env, ergebnis.orderId, reqId, auftragDeps(env, reqId));
+    } catch (err) {
+      console.error(JSON.stringify({ level: "error", event: "refund_job_webhook_followup_failed", requestId: reqId, code: safeText(err?.code || err?.message || "unknown", 120) }));
+    }
+  }
+  return ergebnis;
+}
+
+// Cron: Erstattungsauftraege (faellige Versuche, PayPal-Stand, Nacharbeit,
+// Erinnerungen) und Widerrufe (Bestaetigungen nachholen, Erinnerungen).
+export async function ruecklaufPflegen(env, reqId = crypto.randomUUID(), now = new Date()) {
+  if (!env?.DB) return { ok: false };
+  const erstattungen = await erstattungsauftraegePflegen(env, reqId, auftragDeps(env, reqId), now);
+  const widerrufe = await widerrufePflegen(env, reqId, now);
+  return { ok: erstattungen.ok && widerrufe.ok, erstattungen, widerrufe };
+}
+
+// Oeffentliche Widerrufsfunktion (POST /widerruf von der Website).
+export function widerrufVonWebsite(request, env, url, reqId, origin) {
+  return handleWiderruf(request, env, url, reqId, origin, auftragDeps(env, reqId));
+}
+
+// Widerruf aus dem Kundenkonto: derselbe Weg wie die Website, nur mit der
+// schon feststehenden Bestellung.
+export function widerrufAusKonto(env, orderId, reqId = crypto.randomUUID()) {
+  return widerrufErfassen(env, { orderId }, { quelle: "KONTO", reqId, deps: auftragDeps(env, reqId) });
 }
 
 export async function paypalErstattungenAbgleichen(env, reqId = crypto.randomUUID(), force = false) {
@@ -1139,31 +1288,47 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
     if (path === "/admin/system" && request.method === "GET") return adminJson(await getSystem(env), 200, origin);
     if (path === "/admin/notes" && request.method === "POST") return adminJson(await createNote(env, await readJson(request), reqId), 201, origin);
 
+    // Erstattungen laufen als Auftrag (erstattung-auftrag.js): sofort
+    // versucht, bei fehlendem Guthaben automatisch wiederholt.
     const erstattenMatch = /^\/admin\/orders\/([^/]+)\/erstatten$/.exec(path);
     if (erstattenMatch && request.method === "POST") {
-      const id = decodeURIComponent(erstattenMatch[1]);
-      try {
-        const ergebnis = await bestellungErstatten(env, id, await readJson(request), reqId,
-          (orderId, status) => updateOrder(env, orderId, { status }, reqId, "ADMIN"));
-        return adminJson({ ...(await getOrderDetail(env, id)), erstattung: ergebnis }, 200, origin);
-      } catch (err) {
-        if (err instanceof ErstattungsFehler) {
-          return adminJson({ error: err.code, detail: err.detail, requestId: reqId }, err.status, origin);
-        }
-        throw err;
-      }
+      return adminJson(await orderErstatten(env, decodeURIComponent(erstattenMatch[1]), await readJson(request), reqId), 200, origin);
     }
 
     const stornoMatch = /^\/admin\/orders\/([^/]+)\/stornieren$/.exec(path);
     if (stornoMatch && request.method === "POST") {
-      try {
-        return adminJson(await orderStornieren(env, decodeURIComponent(stornoMatch[1]), await readJson(request), reqId), 200, origin);
-      } catch (err) {
-        if (err instanceof ErstattungsFehler) {
-          return adminJson({ error: err.code, detail: err.detail, requestId: reqId }, err.status, origin);
-        }
-        throw err;
-      }
+      return adminJson(await orderStornieren(env, decodeURIComponent(stornoMatch[1]), await readJson(request), reqId), 200, origin);
+    }
+
+    // Ruecksendung: anlegen (Kundin hat per Mail/Brief widerrufen) und
+    // "Ware eingegangen" (Stuecke waehlen, pruefen, erstatten).
+    const ruecksendungMatch = /^\/admin\/orders\/([^/]+)\/ruecksendung(\/eingegangen)?$/.exec(path);
+    if (ruecksendungMatch && request.method === "POST") {
+      const id = decodeURIComponent(ruecksendungMatch[1]);
+      const body = await readJson(request);
+      const ergebnis = ruecksendungMatch[2]
+        ? await wareEingegangen(env, id, body, reqId, auftragDeps(env, reqId))
+        : await ruecksendungAnlegen(env, id, body, reqId, auftragDeps(env, reqId));
+      return adminJson({ ...(await getOrderDetail(env, id)), ruecksendung: ergebnis, auftrag: ergebnis.auftrag || null }, 200, origin);
+    }
+
+    if (path === "/admin/erstattungen" && request.method === "GET") {
+      const [erstattungen, widerrufe] = await Promise.all([erstattungenUebersicht(env), widerrufeUebersicht(env)]);
+      return adminJson({ ...erstattungen, ...widerrufe }, 200, origin);
+    }
+    const auftragMatch = /^\/admin\/erstattungen\/([^/]+)\/(erneut|abbrechen)$/.exec(path);
+    if (auftragMatch && request.method === "POST") {
+      const auftragId = decodeURIComponent(auftragMatch[1]);
+      const auftrag = auftragMatch[2] === "erneut"
+        ? (await auftragAusfuehren(env, auftragId, reqId, auftragDeps(env, reqId), { erzwingen: true })).auftrag
+        : await auftragAbbrechen(env, auftragId, (await readJson(request)).grund, reqId);
+      return adminJson({ ...(await getOrderDetail(env, auftrag.orderId)), auftrag }, 200, origin);
+    }
+
+    const widerrufMatch = /^\/admin\/widerrufe\/([^/]+)$/.exec(path);
+    if (widerrufMatch && request.method === "PATCH") {
+      const widerruf = await widerrufBearbeiten(env, decodeURIComponent(widerrufMatch[1]), await readJson(request), reqId, auftragDeps(env, reqId));
+      return adminJson({ ok: true, widerruf }, 200, origin);
     }
 
     const wiederMatch = /^\/admin\/orders\/([^/]+)\/wieder-verfuegbar$/.exec(path);
@@ -1198,6 +1363,9 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
     throw new AdminError("NOT_FOUND", 404);
   } catch (err) {
     if (err instanceof AdminError) return adminJson({ error: err.code, requestId: reqId }, err.status, origin);
+    if (err instanceof ErstattungsFehler || err instanceof AuftragFehler || err instanceof WiderrufFehler) {
+      return adminJson({ error: err.code, detail: err.detail ?? null, requestId: reqId }, err.status, origin);
+    }
     console.error(JSON.stringify({ level: "error", event: "admin_api_error", requestId: reqId, message: safeText(err?.message || "unknown", 180) }));
     return adminJson({ error: "INTERNAL_ADMIN_ERROR", requestId: reqId }, 500, origin);
   }

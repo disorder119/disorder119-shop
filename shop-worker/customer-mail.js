@@ -27,6 +27,8 @@ export const SELLER = {
 };
 
 export const SHOP_URL = "https://disorder119.com";
+// Widerrufsfunktion nach § 356a BGB ("Vertrag widerrufen").
+export const WIDERRUF_URL = `${SHOP_URL}/widerruf/`;
 
 // Schwarzes DISORDER119-Mail-Design - dieselben Farben wie die Website und die
 // Newsletter (mail-design.js nimmt sie von hier).
@@ -180,7 +182,11 @@ export function widerrufsbelehrungText(contactEmail) {
       + "der nicht der Beförderer ist, die Waren in Besitz genommen hast bzw. hat. "
       + `Um dein Widerrufsrecht auszuüben, musst du uns (${anschrift}) mittels einer eindeutigen Erklärung `
       + "(z. B. ein mit der Post versandter Brief oder eine E-Mail) über deinen Entschluss, diesen Vertrag zu "
-      + "widerrufen, informieren. Zur Wahrung der Widerrufsfrist reicht es aus, dass du die Mitteilung über die "
+      + "widerrufen, informieren. "
+      + `Du kannst dein Widerrufsrecht auch online unter ${WIDERRUF_URL} ausüben. Wenn du diese Online-Funktion `
+      + "nutzt, übermitteln wir dir auf einem dauerhaften Datenträger (z. B. durch eine E-Mail) unverzüglich eine "
+      + "Eingangsbestätigung mit Informationen zum Inhalt der Widerrufserklärung sowie dem Datum und der Uhrzeit ihres "
+      + "Eingangs. Zur Wahrung der Widerrufsfrist reicht es aus, dass du die Mitteilung über die "
       + "Ausübung des Widerrufsrechts vor Ablauf der Widerrufsfrist absendest.",
     "",
     "Folgen des Widerrufs",
@@ -361,6 +367,9 @@ export function formatShippingConfirmation(order = {}, options = {}) {
   const contactEmail = safeText(options.contactEmail || "", 200);
   const items = Array.isArray(order.items) ? order.items : [];
   const titles = items.map(item => safeText(item.title_snapshot || item.title || "", 180)).filter(Boolean);
+  // Wer zurueckschicken will, findet den Weg direkt hier - die Bestellnummer
+  // ist auf der Widerrufsseite schon eingetragen.
+  const widerrufLink = number !== "—" ? `${WIDERRUF_URL}?bestellung=${encodeURIComponent(number)}` : WIDERRUF_URL;
 
   const subject = `Deine Bestellung ${number} ist unterwegs`;
 
@@ -374,6 +383,8 @@ export function formatShippingConfirmation(order = {}, options = {}) {
     ...(url ? [`Verfolgen: ${url}`] : []),
     "",
     "Bis die Sendung beim Dienstleister erfasst ist, kann es ein paar Stunden dauern.",
+    "",
+    `Passt etwas nicht? Innerhalb von 14 Tagen nach Erhalt kannst du hier widerrufen: ${widerrufLink}`,
     "",
     ...(contactEmail ? [`Fragen? Antworte einfach auf diese Mail oder schreib an ${contactEmail}.`] : []),
   ].join("\n");
@@ -392,6 +403,7 @@ export function formatShippingConfirmation(order = {}, options = {}) {
     items.length ? mailAbschnitt("Im Paket", `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">${items.map(item => stueckZeile(item, null)).join("")}</table>`) : "",
     `<tr><td style="padding:24px 4px 30px;">
       <p style="margin:0;font-size:13px;color:${F.leise};">Bis die Sendung beim Paketdienst erfasst ist, kann es ein paar Stunden dauern.${contactEmail ? ` Fragen? Antworte einfach auf diese Mail oder schreib an <a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a>.` : ""}</p>
+      <p style="margin:12px 0 0;font-size:13px;color:${F.leise};">Passt etwas nicht? Innerhalb von 14 Tagen nach Erhalt kannst du <a href="${escapeHtml(widerrufLink)}" style="color:${F.text};">den Vertrag hier widerrufen</a>.</p>
     </td></tr>`,
   ].join("");
   const html = kundenmailRahmen({
@@ -715,4 +727,360 @@ export async function sendOrderConfirmationByProviderOrder(env, providerOrderId,
     .bind(safeText(providerOrderId, 128)).first();
   if (!payment?.order_id) return { sent: false, reason: "ORDER_NOT_FOUND" };
   return sendOrderConfirmation(env, payment.order_id, reqId);
+}
+
+// ---------------------------------------------------------------------------
+// Rueckzahlung, Ruecksendung, Widerruf
+// ---------------------------------------------------------------------------
+
+// "30.09.2026, 15:42:07 MESZ" - der Eingang eines Widerrufs zaehlt nach
+// deutscher Zeit, nicht nach UTC.
+export function berlinZeit(value) {
+  const date = value instanceof Date ? value : new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", timeZoneName: "short",
+  }).format(date);
+}
+
+export function berlinDatum(value) {
+  const date = value instanceof Date ? value : new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+}
+
+function rueckAdresseZeilen() {
+  return [`${SELLER.name} — ${SELLER.brand}`, SELLER.street, SELLER.city, SELLER.country];
+}
+
+function leise(html) {
+  return `<p style="margin:0 0 12px;color:${MAIL_FARBE.leise};">${html}</p>`;
+}
+
+function betragsZeile(label, wert, stark = false) {
+  const F = MAIL_FARBE;
+  const stil = stark ? `font-size:17px;font-weight:700;color:${F.text};` : `color:${F.leise};`;
+  return `<tr>
+    <td style="padding:${stark ? "14px 0 0" : "8px 0 0"};${stil}">${escapeHtml(label)}</td>
+    <td align="right" style="padding:${stark ? "14px 0 0" : "8px 0 0"};white-space:nowrap;${stil}">${escapeHtml(wert)}</td>
+  </tr>`;
+}
+
+function fragenZeile(contactEmail) {
+  const F = MAIL_FARBE;
+  return `<tr><td style="padding:10px 4px 30px;">
+      <p style="margin:0;font-size:13px;color:${F.leise};">${contactEmail
+        ? `Fragen? Antworte einfach auf diese Mail oder schreib an <a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a>.`
+        : "Fragen? Antworte einfach auf diese Mail."}</p>
+    </td></tr>`;
+}
+
+// So kommt die Ware zurueck - fuer die Eingangsbestaetigung und fuer
+// "Ruecksendung anlegen" in der Admin-App.
+function ruecksendeSchritte(nummer) {
+  return [
+    `Pack die Ware sicher ein und leg einen Zettel mit deiner Bestellnummer ${nummer} bei.`,
+    "Schick das Paket an die Adresse unten – am besten mit Sendungsnummer. Heb den Einlieferungsbeleg auf, er gilt als Nachweis.",
+    "Bitte innerhalb von 14 Tagen, nachdem du uns den Widerruf mitgeteilt hast. Es reicht, wenn du das Paket vor Ablauf der Frist abschickst.",
+    "Die unmittelbaren Kosten der Rücksendung trägst du (siehe Widerrufsbelehrung).",
+  ];
+}
+
+function ruecksendeHtml(nummer) {
+  const F = MAIL_FARBE;
+  const schritte = ruecksendeSchritte(nummer)
+    .map((schritt, i) => `<tr><td valign="top" style="padding:0 12px 10px 0;font-weight:700;color:${F.text};">${i + 1}.</td><td style="padding:0 0 10px;color:${F.leise};">${escapeHtml(schritt)}</td></tr>`)
+    .join("");
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${schritte}</table>
+    <div style="margin:10px 0 0;border:1px solid ${F.text};padding:14px 18px;font-size:15px;line-height:1.5;color:${F.text};">${rueckAdresseZeilen().map(escapeHtml).join("<br>")}</div>`;
+}
+
+const ERSTATTUNGS_WEG = "Das Geld geht über PayPal an dieselbe Zahlungsquelle zurück, mit der du bezahlt hast. "
+  + "Auf dein PayPal-Guthaben meist sofort, auf Bankkonto oder Karte kann es ein paar Werktage dauern.";
+
+const GELD_NACH_RUECKSENDUNG = "Sobald die Ware bei uns ist oder du uns den Versand nachweist, erstatten wir dir den Kaufpreis "
+  + "– beim Widerruf der ganzen Bestellung auch die Standard-Versandkosten – über PayPal. Du bekommst eine Mail, sobald das Geld raus ist.";
+
+// order: Bestellung; auftrag: Zeile aus erstattungsauftraege.
+export function formatRefundConfirmation(order = {}, auftrag = {}, options = {}) {
+  const contactEmail = safeText(options.contactEmail || "", 200);
+  const number = safeText(order.order_number || "", 80) || "—";
+  const betrag = euroAmount(auftrag.betrag_cents);
+  const anlass = String(auftrag.anlass || "");
+  let artikel = [];
+  try { artikel = JSON.parse(auftrag.artikel_json || "[]") || []; } catch { artikel = []; }
+  const versand = Number(auftrag.versand_cents || 0);
+  const abzug = Number(auftrag.abzug_cents || 0);
+  const warenwert = artikel.reduce((summe, a) => summe + Number(a.preisCents || 0), 0);
+  // Die Aufschluesselung nur zeigen, wenn sie auf den Cent aufgeht.
+  const aufschluesseln = anlass !== "KULANZ" && artikel.length > 0 && warenwert + versand - abzug === Number(auftrag.betrag_cents);
+  const grund = safeText(auftrag.kunden_grund || "", 300);
+  const abzugGrund = safeText(auftrag.abzug_grund || "", 300);
+
+  let subject;
+  let titel;
+  let eyebrow;
+  let einleitung;
+  if (anlass === "KULANZ") {
+    subject = `Wir haben dir ${betrag} erstattet – Bestellung ${number}`;
+    titel = "Geld ist unterwegs";
+    eyebrow = "Erstattung";
+    einleitung = `Für deine Bestellung ${number} haben wir dir ${betrag} über PayPal erstattet.`;
+  } else if (Number(auftrag.vor_versand) === 1) {
+    subject = `Deine Bestellung ${number} ist storniert – ${betrag} erstattet`;
+    titel = "Bestellung storniert";
+    eyebrow = anlass === "WIDERRUF" ? "Widerruf" : "Stornierung";
+    einleitung = `Deine Bestellung ${number} ist storniert. Wir haben dir den vollen Betrag von ${betrag} über PayPal zurückgezahlt.`;
+  } else {
+    subject = `Deine Rücksendung ist angekommen – ${betrag} erstattet`;
+    titel = "Rücksendung erstattet";
+    eyebrow = anlass === "WIDERRUF" ? "Widerruf" : "Rücksendung";
+    einleitung = `Deine Rücksendung zur Bestellung ${number} ist bei uns angekommen. Wir haben dir ${betrag} über PayPal zurückgezahlt.`;
+  }
+
+  const artikelText = a => `· ${safeText(a.titel || "Artikel", 180)}${a.artikelNr ? ` (Art.-Nr. ${safeText(a.artikelNr, 40)})` : ""}${aufschluesseln ? ` — ${euroAmount(a.preisCents)}` : ""}`;
+  const text = [
+    "DISORDER119",
+    "",
+    einleitung,
+    ...(grund ? ["", `Grund: ${grund}`] : []),
+    "",
+    ...(artikel.length ? [anlass === "KULANZ" ? "BETRIFFT" : "ERSTATTET", ...artikel.map(artikelText), ""] : []),
+    ...(aufschluesseln && versand ? [`Versandkosten: ${euroAmount(versand)}`] : []),
+    ...(aufschluesseln && abzug ? [`Abzug: −${euroAmount(abzug)}${abzugGrund ? ` (${abzugGrund})` : ""}`] : []),
+    `Erstattet: ${betrag}`,
+    "",
+    ERSTATTUNGS_WEG,
+    "",
+    ...(contactEmail ? [`Fragen? Antworte einfach auf diese Mail oder schreib an ${contactEmail}.`] : ["Fragen? Antworte einfach auf diese Mail."]),
+  ].join("\n");
+
+  const F = MAIL_FARBE;
+  const kopf = `<p style="margin:0 auto;max-width:440px;color:${F.leise};">${escapeHtml(einleitung)}</p>`;
+  const liste = artikel.length
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">
+        ${artikel.map(a => stueckZeile({ title: a.titel, article_no: a.artikelNr, bild: a.bild }, aufschluesseln ? euroAmount(a.preisCents) : null)).join("")}
+      </table>`
+    : "";
+  const summen = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">
+      ${aufschluesseln && versand ? betragsZeile("Versandkosten", euroAmount(versand)) : ""}
+      ${aufschluesseln && abzug ? betragsZeile(`Abzug${abzugGrund ? ` · ${abzugGrund}` : ""}`, `−${euroAmount(abzug)}`) : ""}
+      ${betragsZeile("Erstattet", betrag, true)}
+    </table>`;
+  const inhalt = [
+    grund ? mailAbschnitt("Grund", leise(escapeHtml(grund)), false) : "",
+    mailAbschnitt(anlass === "KULANZ" ? "Betrag" : artikel.length > 1 ? `${artikel.length} Stücke` : "Erstattet", `${liste}${summen}`, Boolean(grund)),
+    mailAbschnitt("Wann das Geld da ist", leise(escapeHtml(ERSTATTUNGS_WEG))),
+    fragenZeile(contactEmail),
+  ].join("");
+  const html = kundenmailRahmen({ titel, eyebrow, kopf, inhalt, vorschau: `${betrag} über PayPal erstattet · Bestellung ${number}` });
+  return { subject, text, html };
+}
+
+// Nach der Rueckzahlung, genau einmal je Erstattungsauftrag.
+export async function sendRefundConfirmation(env, auftrag, reqId = crypto.randomUUID()) {
+  if (!mailTransportReady(env) || !env.DB) return { sent: false, reason: "NOT_CONFIGURED" };
+  const order = await env.DB.prepare("SELECT id,order_number,status,total_cents FROM commerce_orders WHERE id=?")
+    .bind(String(auftrag.order_id)).first();
+  if (!order) return { sent: false, reason: "ORDER_NOT_FOUND" };
+  const contact = await env.DB.prepare("SELECT email,recipient_name FROM order_contact_snapshots WHERE order_id=? LIMIT 1")
+    .bind(String(order.id)).first();
+  const recipient = normalizeEmail(contact?.email);
+  if (!recipient) return { sent: false, reason: "NO_CUSTOMER_EMAIL" };
+
+  const claimId = `notify:email:refund:${auftrag.id}`;
+  const claim = await env.DB.prepare(`INSERT OR IGNORE INTO audit_events
+    (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'SYSTEM','order',?,'REFUND_NOTICE_CLAIMED',?,?,?)`)
+    .bind(claimId, String(order.id), safeText(reqId, 120), JSON.stringify({ channel: "email", auftragId: auftrag.id }), new Date().toISOString())
+    .run();
+  if (!claim?.meta?.changes) return { sent: false, duplicate: true };
+
+  const message = formatRefundConfirmation(order, auftrag, {
+    contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200),
+  });
+  try {
+    const delivery = await sendMail(env, {
+      to: recipient,
+      toName: safeText(contact?.recipient_name || "", 120),
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      tag: "refund-confirmation",
+      // Beleg ueber die Rueckzahlung: Durchschlag ins Shop-Postfach.
+      kopieAnShop: true,
+    });
+    if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
+  } catch (err) {
+    try {
+      await env.DB.prepare("DELETE FROM audit_events WHERE id=? AND event_type='REFUND_NOTICE_CLAIMED'").bind(claimId).run();
+    } catch {
+      // Eine fehlgeschlagene Mail darf die Erstattung nie kippen.
+    }
+    throw new Error(`refund_confirmation_failed:${safeText(err?.message || "unknown", 120)}`);
+  }
+  try {
+    await env.DB.prepare("UPDATE audit_events SET event_type='REFUND_NOTICE_SENT',metadata_json=? WHERE id=?")
+      .bind(JSON.stringify({ channel: "email", auftragId: auftrag.id, sentAt: new Date().toISOString() }), claimId).run();
+  } catch {
+    // Versendet ist versendet.
+  }
+  return { sent: true };
+}
+
+// Anleitung zur Ruecksendung (Admin-App: "Ruecksendung anlegen", wenn die
+// Kundin per Mail oder Brief widerrufen hat).
+export function formatReturnInstructions(order = {}, options = {}) {
+  const contactEmail = safeText(options.contactEmail || "", 200);
+  const number = safeText(order.order_number || "", 80) || "—";
+  const items = Array.isArray(order.items) ? order.items : [];
+  const subject = `So schickst du deine Bestellung ${number} zurück`;
+  const eingang = options.widerrufAm ? berlinZeit(options.widerrufAm) : "";
+  const einleitung = eingang
+    ? `Wir haben deinen Widerruf zur Bestellung ${number} am ${eingang} erhalten.`
+    : `Du möchtest deine Bestellung ${number} zurückschicken.`;
+  const text = [
+    "DISORDER119",
+    "",
+    `${einleitung} So geht es weiter:`,
+    "",
+    ...(items.length ? ["BETRIFFT", ...items.map(item => `· ${safeText(item.title_snapshot || item.title || "Artikel", 180)}`), ""] : []),
+    "SO SCHICKST DU ZURÜCK",
+    ...ruecksendeSchritte(number).map((schritt, i) => `${i + 1}. ${schritt}`),
+    "",
+    "RÜCKSENDEADRESSE",
+    ...rueckAdresseZeilen(),
+    "",
+    "DEIN GELD",
+    GELD_NACH_RUECKSENDUNG,
+    "",
+    ...(contactEmail ? [`Fragen? Antworte einfach auf diese Mail oder schreib an ${contactEmail}.`] : ["Fragen? Antworte einfach auf diese Mail."]),
+  ].join("\n");
+  const F = MAIL_FARBE;
+  const kopf = `<p style="margin:0 auto;max-width:440px;color:${F.leise};">${escapeHtml(einleitung)} So geht es weiter.</p>`;
+  const inhalt = [
+    items.length ? mailAbschnitt("Betrifft", `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">${items.map(item => stueckZeile(item, null)).join("")}</table>`, false) : "",
+    mailAbschnitt("So schickst du zurück", ruecksendeHtml(number), Boolean(items.length)),
+    mailAbschnitt("Dein Geld", leise(escapeHtml(GELD_NACH_RUECKSENDUNG))),
+    fragenZeile(contactEmail),
+  ].join("");
+  const html = kundenmailRahmen({ titel: "So geht die Rücksendung", eyebrow: "Rücksendung", kopf, inhalt, vorschau: `Rücksendung zur Bestellung ${number}` });
+  return { subject, text, html };
+}
+
+export async function sendReturnInstructions(env, orderId, reqId = crypto.randomUUID(), { widerrufAm = null, schluessel = "" } = {}) {
+  if (!mailTransportReady(env) || !env.DB) return { sent: false, reason: "NOT_CONFIGURED" };
+  const order = await loadShippedOrder(env, orderId);
+  if (!order) return { sent: false, reason: "ORDER_NOT_FOUND" };
+  const recipient = normalizeEmail(order.contact?.email);
+  if (!recipient) return { sent: false, reason: "NO_CUSTOMER_EMAIL" };
+  const claimId = `notify:email:return-instructions:${order.id}:${safeText(schluessel || "1", 80)}`;
+  const claim = await env.DB.prepare(`INSERT OR IGNORE INTO audit_events
+    (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'SYSTEM','order',?,'RETURN_INSTRUCTIONS_CLAIMED',?,?,?)`)
+    .bind(claimId, String(order.id), safeText(reqId, 120), JSON.stringify({ channel: "email" }), new Date().toISOString()).run();
+  if (!claim?.meta?.changes) return { sent: false, duplicate: true };
+  const message = formatReturnInstructions(order, {
+    contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200),
+    widerrufAm,
+  });
+  try {
+    const delivery = await sendMail(env, {
+      to: recipient,
+      toName: safeText(order.contact?.recipient_name || "", 120),
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      tag: "return-instructions",
+    });
+    if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
+  } catch (err) {
+    try {
+      await env.DB.prepare("DELETE FROM audit_events WHERE id=? AND event_type='RETURN_INSTRUCTIONS_CLAIMED'").bind(claimId).run();
+    } catch {
+      // Die Ruecksendung bleibt angelegt, die Mail laesst sich erneut ausloesen.
+    }
+    throw new Error(`return_instructions_failed:${safeText(err?.message || "unknown", 120)}`);
+  }
+  try {
+    await env.DB.prepare("UPDATE audit_events SET event_type='RETURN_INSTRUCTIONS_SENT',metadata_json=? WHERE id=?")
+      .bind(JSON.stringify({ channel: "email", sentAt: new Date().toISOString() }), claimId).run();
+  } catch {
+    // Versendet ist versendet.
+  }
+  return { sent: true };
+}
+
+// Eingangsbestaetigung nach § 356a BGB: unverzueglich, auf einem dauerhaften
+// Datentraeger, mit dem Inhalt der Erklaerung sowie Datum und Uhrzeit des
+// Eingangs. Sie bestaetigt bewusst nur den Eingang - ob der Widerruf
+// wirksam ist, steht nicht darin.
+//
+// lage: "VERSENDET" (Anleitung zur Ruecksendung), "NICHT_VERSENDET" (wir
+// halten an und erstatten) oder "OFFEN" (noch keiner Bestellung zugeordnet).
+export function formatWithdrawalReceipt(widerruf = {}, options = {}) {
+  const contactEmail = safeText(options.contactEmail || "", 200);
+  const lage = options.lage || "OFFEN";
+  const eingang = berlinZeit(widerruf.eingegangen_at);
+  const nummer = safeText(widerruf.bestellnummer_eingabe || "", 80) || "—";
+  const vorgang = safeText(widerruf.id || "", 80).replace(/-/g, "").slice(0, 8).toUpperCase();
+  const umfang = widerruf.umfang === "TEIL"
+    ? `Widerruf für folgende Stücke: ${safeText(widerruf.teile_text || "", 600)}`
+    : "Widerruf des ganzen Vertrags";
+  const felder = [
+    ["Name", safeText(widerruf.name || "", 120)],
+    ["E-Mail", safeText(widerruf.email || "", 200)],
+    ["Bestellung", nummer],
+    ["Erklärung", umfang],
+    ...(widerruf.nachricht ? [["Nachricht", safeText(widerruf.nachricht, 1000)]] : []),
+    ["Eingegangen", eingang],
+    ["Vorgang", vorgang],
+  ];
+  const items = Array.isArray(options.items) ? options.items : [];
+  const subject = `Eingangsbestätigung: dein Widerruf vom ${berlinDatum(widerruf.eingegangen_at)}`;
+  const weiter = lage === "VERSENDET"
+    ? "Bitte schick uns die Ware zurück, wie unten beschrieben. Sobald sie bei uns ist oder du uns den Versand nachweist, erstatten wir dir alle Zahlungen über PayPal – beim Widerruf der ganzen Bestellung einschließlich der Standard-Versandkosten –, spätestens 14 Tage nach Eingang deines Widerrufs. Du bekommst eine Mail, sobald das Geld raus ist."
+    : lage === "NICHT_VERSENDET"
+      ? "Deine Bestellung ist noch nicht verschickt. Wir halten sie an und erstatten dir den vollen Betrag über PayPal. Du bekommst eine Mail, sobald das Geld zurück ist. Sollte dein Paket doch schon unterwegs sein, melden wir uns bei dir."
+      : "Wir ordnen deine Erklärung jetzt deiner Bestellung zu und schicken dir die nächsten Schritte. Falls wir dafür etwas von dir brauchen, melden wir uns.";
+
+  const text = [
+    "DISORDER119",
+    "",
+    "EINGANGSBESTÄTIGUNG",
+    `Deine Widerrufserklärung ist am ${eingang} bei uns eingegangen.`,
+    "Diese Mail bestätigt den Eingang deiner Erklärung mit ihrem Inhalt.",
+    "",
+    "DEINE ERKLÄRUNG",
+    ...felder.map(([label, wert]) => `${label}: ${wert}`),
+    "",
+    ...(items.length ? ["DEINE BESTELLUNG", ...items.map(item => `· ${safeText(item.title_snapshot || item.title || "Artikel", 180)}`), ""] : []),
+    "WIE ES WEITERGEHT",
+    weiter,
+    ...(lage === "VERSENDET"
+      ? ["", "SO SCHICKST DU ZURÜCK", ...ruecksendeSchritte(nummer).map((s, i) => `${i + 1}. ${s}`), "", "RÜCKSENDEADRESSE", ...rueckAdresseZeilen()]
+      : []),
+    "",
+    ...(contactEmail ? [`Fragen? Antworte einfach auf diese Mail oder schreib an ${contactEmail}.`] : ["Fragen? Antworte einfach auf diese Mail."]),
+  ].join("\n");
+
+  const F = MAIL_FARBE;
+  const tabelle = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">
+    ${felder.map(([label, wert]) => `<tr>
+      <td valign="top" width="120" style="padding:10px 12px 10px 0;border-bottom:1px solid ${F.linie};font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:${F.leise};">${escapeHtml(label)}</td>
+      <td style="padding:10px 0;border-bottom:1px solid ${F.linie};color:${F.text};white-space:pre-wrap;">${escapeHtml(wert)}</td>
+    </tr>`).join("")}
+  </table>`;
+  const kopf = `<p style="margin:0 auto 8px;max-width:440px;color:${F.leise};">Deine Widerrufserklärung ist am <strong style="color:${F.text};">${escapeHtml(eingang)}</strong> bei uns eingegangen.</p>
+    <p style="margin:0 auto;max-width:440px;font-size:13px;color:${F.leise};">Diese Mail bestätigt den Eingang deiner Erklärung mit ihrem Inhalt.</p>`;
+  const inhalt = [
+    mailAbschnitt("Deine Erklärung", tabelle, false),
+    items.length ? mailAbschnitt("Deine Bestellung", `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">${items.map(item => stueckZeile(item, null)).join("")}</table>`) : "",
+    mailAbschnitt("Wie es weitergeht", leise(escapeHtml(weiter))),
+    lage === "VERSENDET" ? mailAbschnitt("So schickst du zurück", ruecksendeHtml(nummer)) : "",
+    fragenZeile(contactEmail),
+  ].join("");
+  const html = kundenmailRahmen({ titel: "Widerruf eingegangen", eyebrow: "Eingangsbestätigung", kopf, inhalt, vorschau: `Eingegangen am ${eingang}` });
+  return { subject, text, html };
 }

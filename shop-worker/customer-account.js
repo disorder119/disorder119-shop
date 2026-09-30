@@ -439,10 +439,11 @@ async function loadOwnOrder(env, customerId, orderId) {
   return row;
 }
 
-// Widerruf nach § 355 BGB. Der Shop entscheidet danach im Admin weiter; hier
-// wird nur die Erklaerung der Kundin festgehalten - mit Zeitpunkt, denn auf den
-// kommt es bei der Frist an.
-export async function requestReturn(env, customerId, orderId, reasonCode = "") {
+// Widerruf nach § 355 BGB aus dem Kundenkonto. Im Betrieb laeuft er ueber
+// denselben Weg wie die Widerrufsfunktion der Website (widerruf.js):
+// Erklaerung mit Zeitpunkt festhalten - auf den kommt es bei der Frist an -,
+// Eingangsbestaetigung per Mail, Bestellung und Inhaber benachrichtigen.
+export async function requestReturn(env, customerId, orderId, reasonCode = "", deps = {}) {
   const order = await loadOwnOrder(env, customerId, orderId);
 
   // Erst nachsehen, ob schon ein Widerruf laeuft, dann erst den Status pruefen.
@@ -459,14 +460,31 @@ export async function requestReturn(env, customerId, orderId, reasonCode = "") {
     throw new AccountError("ORDER_NOT_RETURNABLE", 409);
   }
 
+  if (typeof deps.widerrufErfassen === "function") {
+    const ergebnis = await deps.widerrufErfassen(String(order.id));
+    const ruecksendung = await env.DB.prepare(`SELECT id,status FROM returns
+      WHERE order_id=? AND status NOT IN ('CLOSED','REJECTED') LIMIT 1`).bind(String(order.id)).first();
+    return {
+      created: !ergebnis.doppelt,
+      returnId: ruecksendung?.id ? String(ruecksendung.id) : null,
+      status: ruecksendung?.status ? String(ruecksendung.status) : "REQUESTED",
+      declaredAt: ergebnis.widerruf?.eingegangen_at || null,
+      widerrufId: ergebnis.widerruf?.id || null,
+    };
+  }
+
+  // Ohne Widerrufsmodul (Tests): nur festhalten. Die Datenbank laesst
+  // "Ruecksendung angefragt" erst nach dem Versand zu.
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   await env.DB.prepare(`INSERT INTO returns (id,order_id,status,reason_code,created_at,updated_at)
     VALUES (?,?,'REQUESTED',?,?,?)`)
     .bind(id, String(order.id), safeText(reasonCode, 40) || "WITHDRAWAL", now, now).run();
-  await env.DB.prepare(`UPDATE commerce_orders SET status='RETURN_REQUESTED',updated_at=?
-     WHERE id=? AND status IN ('PAID','PREPARING','SHIPPED','DELIVERED')`)
-    .bind(now, String(order.id)).run();
+  if (["SHIPPED", "DELIVERED"].includes(status)) {
+    await env.DB.prepare(`UPDATE commerce_orders SET status='RETURN_REQUESTED',updated_at=?
+       WHERE id=? AND status IN ('SHIPPED','DELIVERED')`)
+      .bind(now, String(order.id)).run();
+  }
   return { created: true, returnId: id, status: "REQUESTED", declaredAt: now };
 }
 
@@ -611,7 +629,7 @@ async function verifyTurnstile(env, request, body) {
   if (!result.success) throw new AccountError("TURNSTILE_FAILED", 403);
 }
 
-export async function handleAccountRequest(request, env, url, reqId = crypto.randomUUID(), origin = null) {
+export async function handleAccountRequest(request, env, url, reqId = crypto.randomUUID(), origin = null, deps = {}) {
   try {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: { ...securityHeaders(), ...corsHeaders(origin) } });
@@ -683,7 +701,7 @@ export async function handleAccountRequest(request, env, url, reqId = crypto.ran
     const returnMatch = /^\/account\/orders\/([^/]+)\/widerruf$/.exec(path);
     if (returnMatch && request.method === "POST") {
       const body = await readJson(request);
-      const result = await requestReturn(env, session.customerId, decodeURIComponent(returnMatch[1]), body.grund);
+      const result = await requestReturn(env, session.customerId, decodeURIComponent(returnMatch[1]), body.grund, deps);
       return json({ ok: true, ...result }, 200, origin);
     }
 

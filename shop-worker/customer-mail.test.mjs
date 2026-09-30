@@ -349,6 +349,8 @@ test("the shipping notice names the parcel, the number and the link", () => {
     assert.match(part, /00340434161234567890/);
     assert.match(part, /Prada Reversible Jacket/);
     assert.match(part, /dhl\.de/);
+    // Wer zurueckschicken will: Widerrufsfunktion mit eingetragener Bestellnummer.
+    assert.match(part, /https:\/\/disorder119\.com\/widerruf\/\?bestellung=D119-20260923-ABC12345/);
   }
   assert.match(mail.subject, /unterwegs/);
 });

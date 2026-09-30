@@ -200,7 +200,7 @@ test("a piece another customer has meanwhile reserved or bought is never reliste
   }
 });
 
-test("PayPal refusing the refund changes nothing", async () => {
+test("too little PayPal balance: the storno waits, blocks shipping and nothing else changes yet", async () => {
   const DB = sqliteD1(allMigrations());
   seed(DB);
   const netz = fakeNetz({
@@ -208,12 +208,55 @@ test("PayPal refusing the refund changes nothing", async () => {
   });
   try {
     const res = await call(DB, "/admin/orders/o1/stornieren", "POST", { wiederVerfuegbar: true });
-    assert.equal(res.status, 502);
-    assert.equal(res.data.error, "PAYPAL_GUTHABEN_NICHT_AUSREICHEND");
-    assert.equal(res.data.detail.grund, "REFUND_FAILED_INSUFFICIENT_FUNDS");
+    assert.equal(res.status, 200, JSON.stringify(res.data));
+    assert.equal(res.data.storniert.art, "ERSTATTUNG_LAEUFT");
+    assert.equal(res.data.auftrag.status, "WARTET_AUF_DECKUNG");
+    assert.equal(res.data.laufenderAuftrag.id, res.data.auftrag.id);
+    assert.equal(res.data.versandSperre.code, "STORNO_LAEUFT");
     assert.equal(bestellung(DB), "PAID");
     assert.equal(lager(DB), "PAID");
     assert.equal(netz.github.length, 0);
+
+    // Nicht versenden, solange die Stornierung laeuft.
+    const versand = await call(DB, "/admin/orders/o1", "PATCH", { status: "PREPARING" });
+    assert.equal(versand.status, 200);
+    const raus = await call(DB, "/admin/orders/o1", "PATCH", { status: "SHIPPED" });
+    assert.equal(raus.status, 409);
+    assert.equal(raus.data.error, "STORNO_LAEUFT");
+
+    // Abbrechen gibt den Versand wieder frei.
+    const ab = await call(DB, `/admin/erstattungen/${res.data.auftrag.id}/abbrechen`, "POST", { grund: "Kundin will doch" });
+    assert.equal(ab.status, 200, JSON.stringify(ab.data));
+    assert.equal(ab.data.auftrag.status, "ABGEBROCHEN");
+    assert.equal(ab.data.versandSperre, null);
+    assert.equal(DB.raw.prepare("SELECT status FROM refunds").get().status, "CANCELLED");
+  } finally {
+    netz.restore();
+  }
+});
+
+test("after the balance is topped up, a second click refunds, relists and finishes", async () => {
+  const DB = sqliteD1(allMigrations());
+  seed(DB);
+  let netz = fakeNetz({
+    erstattung: { status: 422, body: { details: [{ issue: "REFUND_FAILED_INSUFFICIENT_FUNDS" }] } },
+  });
+  try {
+    await call(DB, "/admin/orders/o1/stornieren", "POST", { wiederVerfuegbar: true });
+  } finally {
+    netz.restore();
+  }
+  netz = fakeNetz();
+  try {
+    const res = await call(DB, "/admin/orders/o1/stornieren", "POST", { wiederVerfuegbar: true });
+    assert.equal(res.status, 200, JSON.stringify(res.data));
+    assert.equal(res.data.auftrag.status, "ERLEDIGT");
+    assert.equal(res.data.storniert.art, "ERSTATTET");
+    assert.equal(bestellung(DB), "REFUNDED");
+    assert.equal(lager(DB), "AVAILABLE");
+    assert.equal(netz.paypal.length, 1);
+    assert.ok(netz.github.some(c => c.method === "POST" && c.path === "/pulls"));
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM erstattungsauftraege").get().n, 1);
   } finally {
     netz.restore();
   }

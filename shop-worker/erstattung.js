@@ -1,17 +1,18 @@
 // Erstattungen ueber PayPal.
 //
-// 1. Admin-App: "Erstatten" bei einer Bestellung zahlt den noch offenen
-//    Betrag (Ware + Versand, abzueglich frueherer Erstattungen) ueber die
-//    PayPal-API an den Kaeufer zurueck und stellt die Bestellung auf
-//    "Erstattet". Derselbe Schluessel (PayPal-Request-Id) sorgt dafuer, dass
-//    ein doppelter Klick oder ein Netzfehler nie doppelt auszahlt.
+// 1. Admin-App: Stornieren, "Ware eingegangen" oder Kulanz legen einen
+//    Erstattungsauftrag an (erstattung-auftrag.js). Er zahlt ueber die
+//    urspruengliche PayPal-Zahlung zurueck - keine neue Geldsendung - und
+//    wiederholt es selbst, wenn das Guthaben nicht reicht. Die Bausteine dafuer
+//    (ein einzelner Versuch, Statusabfrage, Guthaben) stehen hier.
 // 2. Webhook PAYMENT.CAPTURE.REFUNDED: wer direkt in PayPal erstattet, sieht
 //    die Erstattung trotzdem in der Admin-App, und die Bestellung wechselt
 //    auf "Erstattet", sobald alles zurueckgezahlt ist.
+// 3. Abgleich: liest dieselben Ereignisse bei PayPal nach, falls ein Webhook
+//    verloren ging.
 //
 // Wie bisher gilt die Statuslogik aus commerce-core.js: "Erstattet" geht aus
-// "Bezahlt", "In Vorbereitung" und "Zurueckgeschickt". Ist ein Paket schon
-// unterwegs, erst die Ruecksendung erfassen.
+// "Bezahlt", "In Vorbereitung" und "Zurueckgeschickt".
 import { canTransitionOrder, safeText } from "./commerce-core.js";
 import { recordVerifiedRefund } from "./tax-evidence.js";
 
@@ -90,13 +91,13 @@ async function bestellung(db, id) {
   return order;
 }
 
-async function schonErstattet(db, orderId) {
+export async function schonErstattet(db, orderId) {
   const row = await db.prepare("SELECT COALESCE(SUM(amount_cents),0) AS cents FROM refunds WHERE order_id=? AND status='COMPLETED'")
     .bind(orderId).first();
   return Number(row?.cents || 0);
 }
 
-async function paypalZahlung(db, orderId) {
+export async function paypalZahlung(db, orderId) {
   return db.prepare(`SELECT * FROM payments WHERE order_id=? AND provider='PAYPAL' AND provider_payment_id IS NOT NULL
     AND status IN ('COMPLETED','PARTIALLY_REFUNDED','REFUNDED') ORDER BY created_at DESC LIMIT 1`).bind(orderId).first();
 }
@@ -107,16 +108,7 @@ async function protokoll(db, orderId, eventType, reqId, metadata, actor = "ADMIN
     .bind(crypto.randomUUID(), actor, orderId, eventType, safeText(reqId, 120), JSON.stringify(metadata), new Date().toISOString()).run();
 }
 
-async function letzterDeckungsfehler(db, orderId) {
-  const row = await db.prepare(`SELECT metadata_json,created_at FROM audit_events WHERE entity_type='order' AND entity_id=?
-    AND event_type='ORDER_REFUND_FAILED' ORDER BY created_at DESC LIMIT 1`).bind(orderId).first();
-  try {
-    return { ungedeckt: JSON.parse(row?.metadata_json || "{}").grund === "REFUND_FAILED_INSUFFICIENT_FUNDS",
-      zeit: Date.parse(row?.created_at || "") };
-  } catch { return { ungedeckt: false, zeit: NaN }; }
-}
-
-async function zahlungsstatusNachziehen(db, payment, order) {
+export async function zahlungsstatusNachziehen(db, payment, order) {
   const erstattet = await schonErstattet(db, order.id);
   const status = erstattet >= Number(order.total_cents) ? "REFUNDED" : erstattet > 0 ? "PARTIALLY_REFUNDED" : null;
   if (status) {
@@ -125,105 +117,127 @@ async function zahlungsstatusNachziehen(db, payment, order) {
   return erstattet;
 }
 
-// statusSetzen(orderId, "REFUNDED", actor) kommt aus admin-api.js (updateOrder):
-// derselbe Weg wie der Statusknopf, mit Lagerstueck und Protokoll.
-export async function bestellungErstatten(env, id, body, reqId, statusSetzen) {
-  const db = env.DB;
-  if (!db) throw new ErstattungsFehler("COMMERCE_DATABASE_NOT_CONFIGURED", 503);
-  const order = await bestellung(db, id);
-  if (order.status === "REFUNDED") return { bereits: true, betragCents: 0 };
-  if (!canTransitionOrder(order.status, "REFUNDED")) {
-    throw new ErstattungsFehler("ERSTATTUNG_STATUS", 409, { status: order.status });
-  }
-  const payment = await paypalZahlung(db, order.id);
-  if (!payment) throw new ErstattungsFehler("KEINE_PAYPAL_ZAHLUNG", 409);
+// ---------------------------------------------------------------------------
+// Bausteine fuer Erstattungsauftraege (erstattung-auftrag.js). Ein einzelner
+// Versuch wirft nie, sondern ordnet PayPals Antwort ein - der Auftrag
+// entscheidet danach, ob und wann er es noch einmal versucht.
+//
+//   DECKUNG          Guthaben reicht nicht. PayPal hat sicher nichts gezahlt;
+//                    der naechste Versuch braucht eine neue Request-Id, sonst
+//                    liefert PayPal nur die alte Ablehnung zurueck.
+//   SCHON_ERSTATTET  Die Zahlung ist (teilweise) schon zurueckgezahlt.
+//   VORLAEUFIG       Netz, Zeitueberschreitung, PayPal-Stoerung: unklar, ob
+//                    ausgezahlt wurde. Derselbe Schluessel holt beim naechsten
+//                    Versuch die echte Antwort ab - nie doppelt.
+//   ABGELEHNT        PayPal meldet die Erstattung als gescheitert.
+//   ENDGUELTIG       Alles andere (Frist abgelaufen, Konflikt, keine Rechte):
+//                    ein neuer Versuch aendert nichts, der Inhaber muss ran.
+// ---------------------------------------------------------------------------
+const SCHON_ERSTATTET_GRUENDE = new Set(["CAPTURE_FULLY_REFUNDED", "REFUND_AMOUNT_EXCEEDED"]);
 
-  const schon = await schonErstattet(db, order.id);
-  const offen = Number(order.total_cents) - schon;
-  // Eine Bestellung darf nie mehr aus einer einzelnen Capture erstatten, als
-  // PayPal fuer diese Zahlung urspruenglich verbucht hat.
-  if (offen > Number(payment.amount_cents) - schon || payment.currency !== order.currency) {
-    throw new ErstattungsFehler("ERSTATTUNG_BETRAG_ABWEICHUNG", 409, {
-      bestellungCents: Number(order.total_cents), zahlungCents: Number(payment.amount_cents), erstattetCents: schon,
+export function paypalFehlerArt(httpStatus, grund) {
+  if (grund === "REFUND_FAILED_INSUFFICIENT_FUNDS") return "DECKUNG";
+  if (SCHON_ERSTATTET_GRUENDE.has(grund)) return "SCHON_ERSTATTET";
+  const status = Number(httpStatus) || 0;
+  if (!status || status >= 500 || [408, 409, 429].includes(status)) return "VORLAEUFIG";
+  return "ENDGUELTIG";
+}
+
+export async function paypalCaptureErstatten(env, { captureId, betragCents, volleCapture, requestId, notiz }) {
+  let token;
+  try {
+    token = await paypalToken(env);
+  } catch (err) {
+    const code = safeText(err?.code || "PAYPAL_ANMELDUNG_FEHLGESCHLAGEN", 80);
+    return { ok: false, art: code === "PAYPAL_NOT_CONFIGURED" ? "ENDGUELTIG" : "VORLAEUFIG", grund: code, httpStatus: 0, debugId: null };
+  }
+  // Die volle Capture mit leerem Koerper, sonst genau der Betrag - immer
+  // ueber die urspruengliche Zahlung, nie als neue Geldsendung.
+  const body = volleCapture ? {} : {
+    amount: { value: euro(betragCents), currency_code: "EUR" },
+    ...(notiz ? { note_to_payer: safeText(notiz, 250) } : {}),
+  };
+  let res;
+  try {
+    res = await fetch(`${paypalApiBase(env)}/v2/payments/captures/${encodeURIComponent(captureId)}/refund`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "PayPal-Request-Id": requestId,
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(body),
     });
+  } catch {
+    return { ok: false, art: "VORLAEUFIG", grund: "NETZFEHLER", httpStatus: 0, debugId: null };
   }
-  if (offen > 0) {
-    // Ein Schluessel je offenem Restbetrag: ein zweiter Klick findet dieselbe
-    // Zeile und schickt PayPal dieselbe Request-Id - PayPal zahlt nur einmal.
-    const schluessel = `erstattung:${order.id}:${schon}`;
-    const jetzt = new Date().toISOString();
-    let zeile = await db.prepare(`SELECT * FROM refunds WHERE order_id=? AND payment_id=? AND amount_cents=?
-      AND status IN ('PENDING','FAILED') ORDER BY created_at DESC LIMIT 1`).bind(order.id, payment.id, offen).first();
-    if (!zeile) {
-      await db.prepare(`INSERT OR IGNORE INTO refunds (id,order_id,payment_id,amount_cents,currency,status,idempotency_key,created_at,updated_at)
-        VALUES (?,?,?,?,'EUR','PENDING',?,?,?)`).bind(crypto.randomUUID(), order.id, payment.id, offen, schluessel, jetzt, jetzt).run();
-      zeile = await db.prepare("SELECT * FROM refunds WHERE idempotency_key=?").bind(schluessel).first();
-    }
+  const antwort = await res.json().catch(() => ({}));
+  const debugId = safeText(antwort?.debug_id || res.headers.get("paypal-debug-id"), 120) || null;
+  if (!res.ok) {
+    const grund = safeText(antwort?.details?.[0]?.issue || antwort?.name || `HTTP ${res.status}`, 80);
+    return { ok: false, art: paypalFehlerArt(res.status, grund), grund, httpStatus: res.status, debugId };
+  }
+  const status = String(antwort.status || "").toUpperCase();
+  const refundId = safeText(antwort.id, 120) || null;
+  if (status === "FAILED" || status === "CANCELLED") {
+    return { ok: false, art: "ABGELEHNT", grund: `REFUND_${status}`, httpStatus: res.status, debugId, refundId };
+  }
+  return {
+    ok: true,
+    status: status === "COMPLETED" ? "COMPLETED" : "PENDING",
+    refundId,
+    grund: safeText(antwort?.status_details?.reason || "", 80) || null,
+    httpStatus: res.status,
+    debugId,
+  };
+}
 
-    if (zeile.status !== "COMPLETED") {
-      // Nur die eindeutig abgelehnte 422-Deckung darf nach einem bewussten
-      // neuen Klick eine neue PayPal-Request-Id erhalten. Bei unklaren
-      // Fehlern bleibt die alte Id erhalten, damit nie doppelt ausgezahlt wird.
-      if (zeile.status === "FAILED") {
-        const letzter = await letzterDeckungsfehler(db, order.id);
-        // Nach einer Ablehnung laufen parallele Admin-Anfragen moeglicherweise
-        // noch. In dieser kurzen Frist darf kein weiterer Retry-Schluessel
-        // entstehen, selbst wenn PayPal sofort erneut 422 antwortet.
-        if (letzter.ungedeckt && Date.now() - letzter.zeit < 30_000) {
-          throw new ErstattungsFehler("PAYPAL_GUTHABEN_NICHT_AUSREICHEND", 409,
-            { grund: "REFUND_FAILED_INSUFFICIENT_FUNDS" });
-        }
-        const neueId = !zeile.provider_refund_id && letzter.ungedeckt
-          ? `${schluessel}:retry:${crypto.randomUUID()}` : zeile.idempotency_key;
-        const result = await db.prepare(`UPDATE refunds SET status='PENDING',idempotency_key=?,updated_at=?
-          WHERE id=? AND status='FAILED' AND idempotency_key=?`)
-          .bind(neueId, new Date().toISOString(), zeile.id, zeile.idempotency_key).run();
-        zeile = result.meta?.changes ? { ...zeile, status: "PENDING", idempotency_key: neueId }
-          : await db.prepare("SELECT * FROM refunds WHERE id=?").bind(zeile.id).first();
-      }
-      const token = await paypalToken(env);
-      const notiz = safeText(body?.notiz || `Erstattung Bestellung ${order.order_number}`, 250);
-      // Die volle Capture direkt mit leerem Body erstatten; nur beim offenen
-      // Teilbetrag braucht PayPal ein amount-Objekt. Keine neue Geldsendung.
-      const volleCapture = schon === 0 && zeile.amount_cents === Number(payment.amount_cents);
-      const paypalBody = volleCapture ? {} : {
-        amount: { value: euro(zeile.amount_cents), currency_code: "EUR" },
-        note_to_payer: notiz,
-      };
-      const res = await fetch(`${paypalApiBase(env)}/v2/payments/captures/${encodeURIComponent(payment.provider_payment_id)}/refund`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          "PayPal-Request-Id": zeile.idempotency_key,
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify(paypalBody),
-      });
-      const antwort = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const grund = safeText(antwort?.details?.[0]?.issue || antwort?.name || `HTTP ${res.status}`, 80);
-        const debugId = safeText(antwort?.debug_id || res.headers.get("paypal-debug-id"), 120);
-        await db.prepare("UPDATE refunds SET status='FAILED',updated_at=? WHERE id=?").bind(new Date().toISOString(), zeile.id).run();
-        await protokoll(db, order.id, "ORDER_REFUND_FAILED", reqId, { grund, debugId, paypalStatus: res.status, betragCents: zeile.amount_cents });
-        // Auch eine noch nicht aktualisierte Admin-App soll den konkreten
-        // Deckungsfehler erkennen, statt nur die allgemeine Ablehnung zu zeigen.
-        const code = grund === "REFUND_FAILED_INSUFFICIENT_FUNDS"
-          ? "PAYPAL_GUTHABEN_NICHT_AUSREICHEND" : "PAYPAL_ERSTATTUNG_FEHLGESCHLAGEN";
-        throw new ErstattungsFehler(code, 502, { grund, debugId, paypalStatus: res.status });
-      }
-      const status = String(antwort.status || "").toUpperCase() === "COMPLETED" ? "COMPLETED" : "PENDING";
-      await db.prepare("UPDATE refunds SET status=?,provider_refund_id=?,updated_at=? WHERE id=?")
-        .bind(status, safeText(antwort.id, 120) || null, new Date().toISOString(), zeile.id).run();
-      await protokoll(db, order.id, "ORDER_REFUND_SENT", reqId, { betragCents: zeile.amount_cents, paypalStatus: status, refundId: safeText(antwort.id, 120) });
-      if (status !== "COMPLETED") {
-        return { ausstehend: true, betragCents: zeile.amount_cents };
-      }
+// Stand einer Erstattung, die PayPal mit PENDING angenommen hat.
+export async function paypalErstattungAbfragen(env, refundId) {
+  const token = await paypalToken(env);
+  const res = await fetch(`${paypalApiBase(env)}/v2/payments/refunds/${encodeURIComponent(refundId)}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ErstattungsFehler("PAYPAL_ERSTATTUNG_STATUS_UNBEKANNT", 502, { paypalStatus: res.status });
+  return {
+    status: String(body.status || "").toUpperCase(),
+    betragCents: centsAus(body.amount?.value),
+    grund: safeText(body?.status_details?.reason || "", 80) || null,
+  };
+}
+
+// Verfuegbares PayPal-Guthaben (EUR) - nur zur Anzeige ("es fehlen 2,40 €").
+// Die Abfrage braucht in der PayPal-App die Freigabe "Transaction search";
+// ohne sie bleibt der Betrag unbekannt, und der Auftrag versucht es trotzdem:
+// ein bestaetigtes Bankkonto deckt Erstattungen auch ohne Guthaben.
+const GUTHABEN_CACHE_MS = 5 * 60 * 1000;
+const guthabenCache = new WeakMap();
+
+export async function paypalGuthaben(env, { frisch = false } = {}) {
+  const schluessel = env?.DB || env;
+  const gemerkt = schluessel && typeof schluessel === "object" ? guthabenCache.get(schluessel) : null;
+  if (!frisch && gemerkt && Date.now() - gemerkt.zeit < GUTHABEN_CACHE_MS) return gemerkt.wert;
+  let wert;
+  try {
+    const token = await paypalToken(env);
+    const res = await fetch(`${paypalApiBase(env)}/v1/reporting/balances?currency_code=EUR`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    });
+    if (!res.ok) {
+      wert = { bekannt: false, grund: res.status === 403 ? "NICHT_FREIGEGEBEN" : `HTTP_${res.status}` };
+    } else {
+      const body = await res.json().catch(() => ({}));
+      const eur = (body.balances || []).find(b => String(b?.currency || "").toUpperCase() === "EUR");
+      const cents = eur ? centsAus(eur.available_balance?.value ?? eur.total_balance?.value) : 0;
+      wert = cents === null ? { bekannt: false, grund: "UNLESBAR" } : { bekannt: true, verfuegbarCents: cents, stand: new Date().toISOString() };
     }
+  } catch {
+    wert = { bekannt: false, grund: "NICHT_ERREICHBAR" };
   }
-  const erstattet = await zahlungsstatusNachziehen(db, payment, order);
-  if (erstattet >= Number(order.total_cents)) await statusSetzen(order.id, "REFUNDED");
-  return { betragCents: offen > 0 ? offen : 0 };
+  if (schluessel && typeof schluessel === "object") guthabenCache.set(schluessel, { zeit: Date.now(), wert });
+  return wert;
 }
 
 // Webhook PAYMENT.CAPTURE.REFUNDED (Signatur hat worker.js schon geprueft).
@@ -241,8 +255,24 @@ export async function erstattungAusWebhook(env, event, reqId, statusSetzen) {
 
   const jetzt = new Date().toISOString();
   const bekannt = await db.prepare("SELECT id FROM refunds WHERE provider_refund_id=?").bind(String(r.id)).first();
-  if (bekannt) {
-    await db.prepare("UPDATE refunds SET status='COMPLETED',updated_at=? WHERE id=?").bind(jetzt, bekannt.id).run();
+  // Die Meldung kann schneller sein als der eigene Eintrag: Der Server wartet
+  // noch auf PayPals Antwort, seine Zeile steht auf PENDING ohne PayPal-Id.
+  // Dann gehoert die Meldung zu genau dieser Zeile - eine zweite Zeile wuerde
+  // die Erstattung doppelt zaehlen.
+  let zeileId = bekannt?.id || null;
+  if (!zeileId) {
+    const unterwegs = await db.prepare(`SELECT id FROM refunds WHERE payment_id=? AND amount_cents=?
+      AND status='PENDING' AND provider_refund_id IS NULL ORDER BY created_at DESC LIMIT 1`).bind(payment.id, betrag).first();
+    if (unterwegs) {
+      const angehaengt = await db.prepare("UPDATE refunds SET provider_refund_id=?,updated_at=? WHERE id=? AND provider_refund_id IS NULL")
+        .bind(String(r.id), jetzt, unterwegs.id).run();
+      // Hat der Server die Zeile gerade selbst verknuepft, gilt seine Id.
+      zeileId = angehaengt.meta?.changes ? unterwegs.id
+        : (await db.prepare("SELECT id FROM refunds WHERE provider_refund_id=?").bind(String(r.id)).first())?.id || null;
+    }
+  }
+  if (zeileId) {
+    await db.prepare("UPDATE refunds SET status='COMPLETED',updated_at=? WHERE id=?").bind(jetzt, zeileId).run();
   } else {
     await db.prepare(`INSERT OR IGNORE INTO refunds (id,order_id,payment_id,provider_refund_id,amount_cents,currency,status,idempotency_key,created_at,updated_at)
       VALUES (?,?,?,?,?,'EUR','COMPLETED',?,?,?)`)
@@ -256,6 +286,7 @@ export async function erstattungAusWebhook(env, event, reqId, statusSetzen) {
     bestellstatusAktualisiert = true;
   }
   return {
+    orderId: order.id,
     erstattetCents: erstattet,
     vollstaendig: erstattet >= Number(order.total_cents),
     bestellstatusAktualisiert,
