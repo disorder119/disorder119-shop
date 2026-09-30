@@ -63,11 +63,16 @@ function requestId(request) {
 }
 
 function logBackgroundFailure(event, reqId, err) {
+  // detail der eigenen Fehlerklassen (Status, Debug-ID, Grund des Anbieters) -
+  // nie Zugangsdaten, nie Kundendaten.
+  let detail;
+  try { detail = err?.detail ? JSON.stringify(err.detail).slice(0, 300) : undefined; } catch { detail = undefined; }
   console.error(JSON.stringify({
     level: "error",
     event,
     requestId: reqId,
     message: String(err?.message || err || "unknown").slice(0, 180),
+    detail,
   }));
 }
 
