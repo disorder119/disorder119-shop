@@ -5,7 +5,11 @@ import {
   snapshotPaypalOrder,
   erstattungAusPaypal,
   paypalErstattungenAbgleichen,
+  ruecklaufPflegen,
+  widerrufAusKonto,
+  widerrufVonWebsite,
 } from "./admin-api.js";
+import { isWiderrufRoute } from "./widerruf.js";
 import { handleAdminInsights } from "./admin-insights.js";
 import { handleAdminCommerceMetrics } from "./admin-commerce-metrics.js";
 import { handleAdminRentalGroups } from "./admin-rental-groups.js";
@@ -241,7 +245,14 @@ export default {
       // Das Kundenkonto laeuft vor den Shop-Routen, weil worker.js /account/
       // bisher bewusst mit 501 beantwortet hat.
       if (isAccountRoute(url)) {
-        return finish(await handleAccountRequest(request, runtimeEnv, url, reqId, origin));
+        return finish(await handleAccountRequest(request, runtimeEnv, url, reqId, origin, {
+          widerrufErfassen: orderId => widerrufAusKonto(runtimeEnv, orderId, reqId),
+        }));
+      }
+
+      // Widerrufsfunktion nach § 356a BGB ("Vertrag widerrufen" auf der Website).
+      if (isWiderrufRoute(url)) {
+        return finish(await widerrufVonWebsite(request, runtimeEnv, url, reqId, origin));
       }
 
       // Katalog-Editor der Admin-App: speichert ueber Pull Requests, ohne
@@ -431,6 +442,9 @@ export default {
     const reqId = `cron-${scheduledTime}`;
     await runBackground(ctx, reconcilePurchasePayments(env, reqId), "purchase_reconciliation_failed", reqId);
     await runBackground(ctx, paypalErstattungenAbgleichen(env, reqId, true), "paypal_refund_reconciliation_failed", reqId);
+    // Nach dem Abgleich: wartende Erstattungen erneut versuchen, erledigte
+    // abschliessen (Kundenmail, wieder im Shop), an Offenes erinnern.
+    await runBackground(ctx, ruecklaufPflegen(env, reqId, new Date(scheduledTime)), "refund_jobs_failed", reqId);
     await runBackground(
       ctx,
       syncOperationsAlerts(env, {

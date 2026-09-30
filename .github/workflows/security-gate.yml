@@ -86,6 +86,12 @@ jobs:
           node --check shop-worker/paypal-einrichtung.js
           node --test shop-worker/erstattung.test.mjs shop-worker/admin-storno.test.mjs shop-worker/admin-order-management.test.mjs shop-worker/paypal-einrichtung.test.mjs
 
+      - name: Erstattungsauftraege, Ruecksendung und Widerrufsfunktion pruefen
+        run: |
+          node --check shop-worker/erstattung-auftrag.js
+          node --check shop-worker/widerruf.js
+          node --test shop-worker/ruecklauf.test.mjs
+
       - name: Gutschein-Migration pruefen
         run: |
           {

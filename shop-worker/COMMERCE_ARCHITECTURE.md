@@ -95,6 +95,18 @@ Audit metadata must contain operational IDs/status data only; do not log card da
 
 A DHL label integration and outbound email provider are not currently production-configured by this repository; they must not be represented as live until separately implemented and tested.
 
+### Storno, Rücksendung, Widerruf (seit Migration 0029)
+
+- **Erstattungsaufträge** (`erstattung-auftrag.js`, Tabelle `erstattungsauftraege`): Stornieren (bezahlt, noch nicht versendet), „Ware eingegangen“ nach einer Rücksendung und Kulanz legen einen Auftrag an. Er zahlt über die ursprüngliche PayPal-Capture zurück (keine neue Geldsendung) und bleibt bestehen, bis PayPal wirklich ausgezahlt hat.
+  - Zu wenig Guthaben (`REFUND_FAILED_INSUFFICIENT_FUNDS`): Status `WARTET_AUF_DECKUNG`, der Cron versucht es erneut (2 h lang alle 15 min, dann stündlich, ab Tag 2 alle 3 h), Telegram an den Inhaber mit Fehlbetrag, danach täglich eine Erinnerung. Ein erneuter Klick versucht es sofort.
+  - Doppelte Auszahlung ausgeschlossen: je Versuch eine PayPal-Request-Id (`auftrag:<id>`), eine neue nur nach eindeutiger Ablehnung; unklare Fehler (Netz, 5xx) wiederholen mit derselben Id. Nur ein Lauf je Auftrag (Anspruch per `UPDATE … WHERE status`), höchstens ein laufender Auftrag je Bestellung (Unique-Index).
+  - Erst nach der Rückzahlung: Bestellstatus, Stücke zurück in den Shop (Pull Request), Mail an die Kundin (`sendRefundConfirmation`, Durchschlag ins Shop-Postfach), Telegram. Scheitert ein Schritt, holt der Cron ihn 14 Tage lang nach.
+  - Direkt in PayPal erstattet oder Webhook schneller als die eigene Antwort: Der Auftrag erkennt das an der Summe der abgeschlossenen Erstattungen und zahlt nicht noch einmal.
+  - Ist ein Storno-Paket inzwischen doch unterwegs (Sendungsverfolgung), hält der Auftrag an (`SCHON_VERSENDET`) statt auszuzahlen. Solange ein Storno läuft oder vor dem Versand widerrufen wurde, sperren Admin-Versandknopf und Packlink-Etikettenkauf (`versandSperre`).
+- **Widerrufsfunktion** nach § 356a BGB (`widerruf.js`, `POST /widerruf`, Seite `/widerruf/`): Name, E-Mail, Bestellung, ganz oder teilweise, zweiter Schritt „Widerruf bestätigen“. Turnstile und Rate-Limit wie beim Newsletter. Jede Erklärung steht unveränderlich in `widerrufe` (Trigger: kein Ändern von Inhalt/Eingang, kein Löschen); die Eingangsbestätigung mit Inhalt, Datum und Uhrzeit geht sofort per Mail raus (Kopie ans Shop-Postfach), scheitert sie, holt der Cron sie nach. Zugeordnet wird nur bei passender Bestellnummer **und** E-Mail; der Absender erfährt nie, ob es die Bestellung gibt.
+  - versendet → „Rücksendung angefragt“ + Rücksendeanleitung; noch nicht versendet → Versand gesperrt, Inhaber storniert. Kundenkonto und „Rücksendung anlegen“ in der Admin-App (Widerruf per Mail/Brief) laufen über denselben Weg.
+  - Erinnerungen per Telegram: nicht zugeordnet oder vor dem Versand täglich, bei laufender Rücksendung nach 7 und 12 Tagen (Rückzahlungsfrist 14 Tage ab Eingang, Zurückbehaltung bis zum Wareneingang erlaubt).
+
 ## Backups and retention
 
 Before live launch, configure recurring D1 export/backup procedures and document restore testing. Define retention for abandoned reservations/idempotency records, payment events, audit events and legally required order/invoice records. Privacy deletion must remove or anonymize data that is not legally required while preserving accounting records as required.
