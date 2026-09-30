@@ -42,9 +42,7 @@
       plz: "PLZ",
       ort: "Ort",
       land: "Land",
-      widerruf: "Widerruf erklären",
-      widerrufFrage: "Widerruf für diese Bestellung erklären? Du hast 14 Tage ab Erhalt. Wir melden uns dann mit den Rücksendehinweisen.",
-      widerrufOk: "Dein Widerruf ist eingegangen. Wir melden uns mit den Rücksendehinweisen.",
+      widerruf: "Vertrag widerrufen",
       daten: "Deine Daten",
       datenExport: "Daten herunterladen",
       datenLoeschen: "Konto löschen lassen",
@@ -86,9 +84,7 @@
       plz: "Postcode",
       ort: "City",
       land: "Country",
-      widerruf: "Withdraw from contract",
-      widerrufFrage: "Withdraw from this order? You have 14 days from receipt. We will send you the return instructions.",
-      widerrufOk: "Your withdrawal has been received. We will send you the return instructions.",
+      widerruf: "Withdraw from contract here",
       daten: "Your data",
       datenExport: "Download my data",
       datenLoeschen: "Request account deletion",
@@ -130,9 +126,7 @@
       plz: "Code postal",
       ort: "Ville",
       land: "Pays",
-      widerruf: "Exercer la rétractation",
-      widerrufFrage: "Te rétracter pour cette commande ? Tu disposes de 14 jours à compter de la réception. Nous t'enverrons les instructions de retour.",
-      widerrufOk: "Ta rétractation est enregistrée. Nous t'enverrons les instructions de retour.",
+      widerruf: "Se rétracter du contrat ici",
       daten: "Tes données",
       datenExport: "Télécharger mes données",
       datenLoeschen: "Demander la suppression",
@@ -400,18 +394,13 @@
       fuss.appendChild(sendung);
     }
     if (["PAID", "PREPARING", "SHIPPED", "DELIVERED"].indexOf(bestellung.status) >= 0) {
-      var widerruf = document.createElement("button");
-      widerruf.type = "button";
+      // Dieselbe Widerrufsfunktion wie im Fuss jeder Seite (§ 356a BGB): zwei
+      // Schritte, Eingangsbestaetigung per Mail - die Bestellnummer ist schon
+      // eingetragen.
+      var widerruf = document.createElement("a");
       widerruf.className = "konto-btn konto-btn--schlicht";
+      widerruf.href = HOME + "widerruf/?bestellung=" + encodeURIComponent(bestellung.orderNumber || "");
       widerruf.textContent = t.widerruf;
-      widerruf.addEventListener("click", function () {
-        if (!window.confirm(t.widerrufFrage)) return;
-        widerruf.disabled = true;
-        api("/account/orders/" + encodeURIComponent(bestellung.id) + "/widerruf",
-          { method: "POST", body: { grund: "WITHDRAWAL" } })
-          .then(function () { meldung("ok", t.widerrufOk); bestellungenLaden(); })
-          .catch(function () { meldung("fehler", t.fehler); widerruf.disabled = false; });
-      });
       fuss.appendChild(widerruf);
     }
     if (fuss.childNodes.length) karte.appendChild(fuss);

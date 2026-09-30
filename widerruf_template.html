@@ -6,41 +6,37 @@
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-title" content="Disorder119">
 <meta name="description" content="__META_DESC__">
-<!-- Bestaetigen und Abmelden laufen ueber Links mit Token: nichts davon
-     gehoert in einen Suchindex, und kein Token soll als Referrer weiterwandern. -->
-<meta name="robots" content="noindex,nofollow">
-<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex,follow">
+<meta name="referrer" content="same-origin">
 <link rel="canonical" href="__CANONICAL_URL__">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <link rel="apple-touch-icon" href="/assets/favicon.png">
 <title>__META_TITLE__</title>
 <link rel="stylesheet" href="/assets/app.css?v=__APP_CSS_VERSION__">
 <link rel="stylesheet" href="/assets/konto.css?v=__KONTO_VERSION__">
-<link rel="stylesheet" href="/assets/newsletter.css?v=__NEWSLETTER_VERSION__">
+<link rel="stylesheet" href="/assets/widerruf.css?v=__WIDERRUF_VERSION__">
 <link rel="stylesheet" href="/assets/theme.css?v=__THEME_VERSION__">
 <script src="/assets/ansicht.js" defer></script>
 <script>try{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}catch(e){}</script>
 </head>
-<body class="konto-seite newsletter-seite">
+<!-- Widerrufsfunktion nach § 356a BGB. Bewusst ohne pwa.js: die
+     Passwort-Sperre des Shops darf diese Seite nie verdecken - der Widerruf
+     muss waehrend der ganzen Widerrufsfrist erreichbar sein. -->
+<body class="konto-seite widerruf-seite">
 <header class="konto-kopf">
   <a class="konto-marke" href="__HOME__">DISORDER119</a>
 </header>
 
-<main class="konto-inhalt">
-  <h1>Newsletter</h1>
-  <section class="d119-nl d119-nl-status" id="d119NewsletterStatus" aria-live="polite" hidden></section>
-  <div data-d119-newsletter data-quelle="seite"></div>
-  <noscript><p>__NOSCRIPT__</p></noscript>
-</main>
+__WIDERRUF_INHALT__
 
 <footer class="konto-fuss">
-  <a class="fuss-widerruf" href="__HOME__widerruf/">__WIDERRUF_LABEL__</a>
-  <a href="__HOME__agb/">AGB</a>
-  <a href="__HOME__datenschutz/">Datenschutz</a>
-  <a href="__HOME__impressum/">Impressum</a>
+  <a class="fuss-widerruf" href="__HOME__widerruf/" aria-current="page">__WIDERRUF_LABEL__</a>
+  <a href="__HOME__agb/">__AGB_LABEL__</a>
+  <a href="__HOME__datenschutz/">__DATENSCHUTZ_LABEL__</a>
+  <a href="__HOME__impressum/">__IMPRESSUM_LABEL__</a>
 </footer>
 
-<script>window.SHOP_CONFIG = __SHOP_CONFIG_JSON__;</script>
-<script src="/assets/newsletter.js?v=__NEWSLETTER_VERSION__" defer></script>
+<script>window.SHOP_CONFIG = __SHOP_CONFIG_JSON__; window.WIDERRUF_TEXT = __WIDERRUF_TEXT_JSON__;</script>
+<script src="/assets/widerruf.js?v=__WIDERRUF_VERSION__" defer></script>
 </body>
 </html>
