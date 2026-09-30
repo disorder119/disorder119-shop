@@ -332,6 +332,24 @@ function kaufGesperrt(row) {
   return row.state === "KAUF_LAEUFT" && alter < 120_000 ? "KAUF_LAEUFT_SCHON" : "KAUF_UNKLAR";
 }
 
+// Ob "Etikett kaufen" (POST /v1/orders) bei diesem Packlink-Konto geht. Den
+// Direktkauf rechnet Packlink ueber die Lastschrift ab, und die schaltet
+// Packlink erst frei nach 3 Monaten mit direkter Zahlung und mindestens 100 €
+// je Zweiwochenrechnung. Bis ein Direktkauf einmal geklappt hat, schlaegt die
+// Admin-App deshalb den Entwurf vor (bezahlt in Packlink per PayPal/Karte).
+async function direktkaufStand(env) {
+  const db = requireDb(env);
+  const [gekauft, letzte] = await Promise.all([
+    db.prepare("SELECT created_at FROM audit_events WHERE event_type='PACKLINK_ETIKETT_GEKAUFT' ORDER BY created_at DESC LIMIT 1").first(),
+    db.prepare(`SELECT event_type,created_at FROM audit_events
+      WHERE event_type IN ('PACKLINK_KAUF_ABGELEHNT','PACKLINK_ETIKETT_GEKAUFT') ORDER BY created_at DESC LIMIT 1`).first(),
+  ]);
+  return {
+    bewaehrt: Boolean(gekauft),
+    zuletztAbgelehntAm: letzte?.event_type === 'PACKLINK_KAUF_ABGELEHNT' ? letzte.created_at : null,
+  };
+}
+
 function protokoll(db, orderId, eventType, reqId, metadata) {
   return db.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
       VALUES (?,'ADMIN','order',?,?,?,?,?)`)
@@ -726,7 +744,7 @@ export async function handlePacklink(request, env, url, reqId = crypto.randomUUI
       // Ohne ausdrueckliche Groesse: die Paketgroesse aus dem Checkout.
       const ergebnis = await angeboteLaden(env, order, url.searchParams.get("paket") || wahl?.paket,
         { behalten: wahl?.serviceId ?? null });
-      return antwort({ ok: true, eingerichtet: packlinkReady(env), wahl, ...ergebnis }, 200, origin);
+      return antwort({ ok: true, eingerichtet: packlinkReady(env), direktkauf: await direktkaufStand(env), wahl, ...ergebnis }, 200, origin);
     }
     if (zusatz === "/kaufen") {
       if (request.method !== "POST") throw new PacklinkError("METHOD_NOT_ALLOWED", 405);
@@ -737,7 +755,7 @@ export async function handlePacklink(request, env, url, reqId = crypto.randomUUI
     if (request.method === "GET") {
       const order = await loadOrder(env, orderId, ["PAID", "PREPARING", "SHIPPED", "DELIVERED"]);
       const sendung = await statusAbrufen(env, orderId, reqId);
-      return antwort({ ok: true, eingerichtet: packlinkReady(env), pakete: PAKETE, wahl: wahlView(order), sendung }, 200, origin);
+      return antwort({ ok: true, eingerichtet: packlinkReady(env), direktkauf: await direktkaufStand(env), pakete: PAKETE, wahl: wahlView(order), sendung }, 200, origin);
     }
     if (request.method === "POST") {
       let body = {};
