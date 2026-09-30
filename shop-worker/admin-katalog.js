@@ -185,6 +185,47 @@ export async function saveCatalog(env, body = {}) {
   throw new KatalogError("KATALOG_KONFLIKT", 409);
 }
 
+// Stornierte oder erstattete Stuecke zurueck in den Shop (admin-api.js,
+// "Stornieren & erstatten" bzw. "Wieder in den Shop"): public_status
+// AVAILABLE und die Statuszeile "Verfügbar" - ueber einen Pull Request wie
+// beim Speichern im Katalog-Editor, denn direkte Pushes dreht der
+// Main-Waechter zurueck. Nur Stuecke, die im Katalog auf SOLD stehen; ein
+// Entwurf oder ein schon verfuegbares Stueck bleibt, wie es ist.
+export async function artikelWiederVerfuegbar(env, itemIds, anlass = "") {
+  if (!env.GITHUB_TOKEN) throw new KatalogError("KATALOG_NICHT_EINGERICHTET", 503);
+  const ids = [...new Set((Array.isArray(itemIds) ? itemIds : []).map(id => String(id)).filter(id => /^\d{1,9}$/.test(id)))];
+  if (!ids.length) return { ok: true, geaendert: [] };
+  const titel = safeText(`Admin: ${anlass ? `${anlass} – ` : ""}Artikel ${ids.join(", ")} wieder verfügbar`, 140)
+    .replace(/\s+/g, " ").trim();
+  for (let versuch = 0; versuch < 3; versuch++) {
+    const head = await branchHead(env, { userAgent: USER_AGENT });
+    const { text: itemsText } = await readRepoFile(env, ITEMS_PATH, { userAgent: USER_AGENT, ref: head.commitSha });
+    const items = JSON.parse(itemsText);
+    const geaendert = [];
+    for (const item of items) {
+      if (!ids.includes(String(item.id)) || String(item.public_status || "").toUpperCase() !== "SOLD") continue;
+      item.public_status = "AVAILABLE";
+      if (String(item.status || "") === "Verkauft") item.status = "Verfügbar";
+      geaendert.push(Number(item.id));
+    }
+    if (!geaendert.length) return { ok: true, geaendert };
+    const commitSha = await createCommit(env, {
+      parent: head.commitSha,
+      baseTree: head.treeSha,
+      files: [{ path: ITEMS_PATH, text: JSON.stringify(items, null, 2) + (itemsText.endsWith("\n") ? "\n" : "") }],
+      message: titel,
+      userAgent: USER_AGENT,
+    });
+    const pr = await mergeViaPullRequest(env, commitSha, {
+      title: titel,
+      body: "Bestellung in der Admin-App storniert - das Stück steht wieder zum Verkauf. Der Rebuild veröffentlicht es in wenigen Minuten.",
+      userAgent: USER_AGENT,
+    });
+    if (pr.merged) return { ok: true, geaendert, pullRequest: pr.number, url: pr.url };
+  }
+  throw new KatalogError("KATALOG_KONFLIKT", 409);
+}
+
 // ------------------------------------------------------------------- Routen
 
 function headers(origin, type = "application/json; charset=utf-8") {

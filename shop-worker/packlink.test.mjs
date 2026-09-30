@@ -49,14 +49,26 @@ const SERVICES = [
   { id: 11111, name: "Zustellung an Paketshop", carrier_name: "GLS", base_price: "3.10", price: { total_price: 3.69, base_price: 3.1 }, dropoff: true, delivery_to_parcelshop: true, transit_time: "1 DAYS" },
   { id: 22222, name: "Paketshop - Nicht rechteckige Pakete", carrier_name: "GLS", base_price: "12.00", price: { total_price: 14.28, base_price: 12 }, dropoff: true, delivery_to_parcelshop: false },
   { id: 33333, name: "Express®", carrier_name: "UPS", base_price: "12.00", price: { total_price: 14.28, base_price: 12 }, dropoff: false, delivery_to_parcelshop: false, transit_time: "1 DAYS", category: "express" },
+  { id: 55555, name: "Express 12", carrier_name: "DPD", base_price: "16.72", price: { total_price: 19.9, base_price: 16.72 }, dropoff: false, delivery_to_parcelshop: false, transit_time: "1 DAYS", category: "express" },
 ];
+
+const KAUF_REFERENZ = "DE2026PRO0099999999";
+const KAUF_ANTWORT = {
+  order_reference: "DE00019732CF",
+  total_amount: 7.85,
+  shipments: [{
+    shipment_custom_reference: "D119-2026-0001", shipment_reference: KAUF_REFERENZ,
+    insurance_coverage_amount: 0, total_price: 7.85, receipt: "https://pro.packlink.de/receipt/DE00019732CF",
+  }],
+};
 
 // Nachbau der Packlink-Schnittstelle: merkt sich jede Anfrage.
 function fakePacklink({ state = "AWAITING_COMPLETION", trackings = [], trackingUrl = "", labels = [] } = {}) {
   const calls = [];
   const mails = [];
   const original = globalThis.fetch;
-  const zustand = { state, trackings, trackingUrl, labels, kaputt: false };
+  // kauf: "ok" | "abgelehnt" (400) | "netz" (keine Antwort) | "leer" (Antwort ohne Sendung)
+  const zustand = { state, trackings, trackingUrl, labels, kaputt: false, kauf: "ok", kaufPause: null };
   globalThis.fetch = async (url, init = {}) => {
     const u = new URL(String(url));
     if (u.origin === "https://api.brevo.com") {
@@ -69,13 +81,23 @@ function fakePacklink({ state = "AWAITING_COMPLETION", trackings = [], trackingU
     const path = u.pathname.replace(/^\/v1/, "");
     if (path === "/services") return Response.json(SERVICES);
     if (path === "/shipments" && init.method === "POST") return Response.json({ reference: REFERENZ }, { status: 201 });
-    if (path === `/shipments/${REFERENZ}`) {
+    if (path === "/orders" && init.method === "POST") {
+      if (zustand.kaufPause) await zustand.kaufPause;
+      if (zustand.kauf === "netz") throw new Error("socket hang up");
+      if (zustand.kauf === "abgelehnt") {
+        return Response.json({ messages: [{ message: "Bitte hinterlege eine Zahlungsmethode." }] }, { status: 400 });
+      }
+      if (zustand.kauf === "leer") return Response.json({ order_reference: "DE000X", shipments: [] }, { status: 201 });
+      return Response.json(KAUF_ANTWORT, { status: 201 });
+    }
+    const sendungPfad = /^\/shipments\/([A-Za-z0-9-]+)(\/labels)?$/.exec(path);
+    if (sendungPfad && sendungPfad[2]) return Response.json(zustand.labels);
+    if (sendungPfad && init.method !== "POST") {
       return Response.json({
-        packlink_reference: REFERENZ, state: zustand.state, carrier: "UPS", service: "Standard Access Point™",
+        packlink_reference: sendungPfad[1], state: zustand.state, carrier: "UPS", service: "Standard Access Point™",
         trackings: zustand.trackings, tracking_url: zustand.trackingUrl, price: { base_price: 4.8 },
       });
     }
-    if (path === `/shipments/${REFERENZ}/labels`) return Response.json(zustand.labels);
     return new Response("{}", { status: 404 });
   };
   return { calls, mails, zustand, restore() { globalThis.fetch = original; } };
@@ -98,6 +120,8 @@ async function call(env, pathname, { method = "GET", body, bearer = TOKEN } = {}
 test("routes, phases and small helpers", () => {
   assert.equal(isPacklinkRoute(new URL("https://api.disorder119.com/admin/versand/o1/packlink")), true);
   assert.equal(isPacklinkRoute(new URL("https://api.disorder119.com/admin/versand/o1/packlink/angebote")), true);
+  assert.equal(isPacklinkRoute(new URL("https://api.disorder119.com/admin/versand/o1/packlink/kaufen")), true);
+  assert.equal(isPacklinkRoute(new URL("https://api.disorder119.com/admin/versand/o1/packlink/loeschen")), false);
   assert.equal(isPacklinkRoute(new URL("https://api.disorder119.com/admin/versand/o1/qr")), false);
   assert.equal(phase("READY_TO_PURCHASE"), "offen");
   assert.equal(phase("PURCHASE_SUCCESS"), "bezahlt");
@@ -105,6 +129,8 @@ test("routes, phases and small helpers", () => {
   assert.equal(phase("OUT_FOR_DELIVERY"), "unterwegs");
   assert.equal(phase("DELIVERED"), "zugestellt");
   assert.equal(phase("CANCELED"), "storniert");
+  assert.equal(phase("KAUF_LAEUFT"), "kauf");
+  assert.equal(phase("KAUF_ABGELEHNT"), "abgelehnt");
   assert.equal(laufzeit("1 DAYS"), "1 Tag");
   assert.equal(laufzeit("2 DAYS"), "2 Tage");
   assert.deepEqual(nameTeile({ recipient_name: "Anna Maria Schmidt" }), { name: "Anna Maria", surname: "Schmidt" });
@@ -116,14 +142,15 @@ test("routes, phases and small helpers", () => {
   assert.equal(angebotAus(SERVICES[1]).abgabe, "PAKETSHOP");
 });
 
-test("offers work without an API key: home delivery only, cheapest first", async () => {
+test("offers work without an API key: home delivery only, the checkout's carriers, cheapest first", async () => {
   const fake = fakePacklink();
   try {
     const result = await call(envWith(seed(), { PACKLINK_API_KEY: "" }), "/admin/versand/o1/packlink/angebote?paket=S");
     assert.equal(result.status, 200, JSON.stringify(result.data));
     assert.equal(result.data.eingerichtet, false);
-    assert.deepEqual(result.data.angebote.map(a => [a.carrier, a.preisCents]), [["UPS", 571], ["DPD", 785], ["UPS", 1428]]);
-    assert.equal(result.data.angebote[2].express, true);
+    // Wie in der Kasse nur DPD und DHL - UPS und GLS stehen nicht zur Wahl.
+    assert.deepEqual(result.data.angebote.map(a => [a.carrier, a.preisCents]), [["DPD", 785], ["DPD", 1990]]);
+    assert.equal(result.data.angebote[1].express, true);
     const anfrage = fake.calls[0];
     assert.equal(anfrage.headers.Authorization, undefined);
     assert.equal(anfrage.query.get("from[zip]"), "63739");
@@ -247,6 +274,193 @@ test("a replaced draft is kept apart and a paid one cannot be replaced", async (
     const nochmal = await call(env, "/admin/versand/o1/packlink", { method: "POST", body: { serviceId: 20955, neu: true } });
     assert.equal(nochmal.status, 409);
     assert.equal(nochmal.data.error, "SENDUNG_SCHON_BEZAHLT");
+  } finally {
+    fake.restore();
+  }
+});
+
+test("a service the customer already paid for stays bookable even if its carrier is no longer offered", async () => {
+  const DB = seed();
+  DB.raw.prepare(`INSERT INTO order_versand
+      (order_id,option_id,art,quelle,packlink_service_id,carrier,service_name,paket,preis_cents,created_at)
+      VALUES ('o1','pl-S-23655','standard','packlink',23655,'UPS','Standard Access Point™','S',571,?)`)
+    .run(new Date().toISOString());
+  const fake = fakePacklink();
+  try {
+    const result = await call(envWith(DB), "/admin/versand/o1/packlink/angebote");
+    assert.equal(result.status, 200, JSON.stringify(result.data));
+    assert.equal(result.data.wahl.serviceId, 23655);
+    assert.deepEqual(result.data.angebote.map(a => a.id), [23655, 20955, 55555]);
+  } finally {
+    fake.restore();
+  }
+});
+
+// ------------------------------------------------------------ Direktkauf
+
+const KAUF = { serviceId: 20955, paket: "M", carrier: "DPD", name: "Classic", preisCents: 785 };
+
+test("buying a label: one /v1/orders call, no customer email or phone, label straight on the order", async () => {
+  const DB = seed();
+  const env = envWith(DB);
+  const fake = fakePacklink({ state: "READY_TO_PRINT", trackings: [SENDUNGSNUMMER], labels: ["https://labels.packlink.com/x.pdf"] });
+  try {
+    const ohneSchluessel = await call(envWith(seed(), { PACKLINK_API_KEY: "" }), "/admin/versand/o1/packlink/kaufen", { method: "POST", body: KAUF });
+    assert.equal(ohneSchluessel.status, 503);
+    assert.equal(ohneSchluessel.data.error, "PACKLINK_NICHT_EINGERICHTET");
+    assert.equal(fake.calls.length, 0);
+
+    const gekauft = await call(env, "/admin/versand/o1/packlink/kaufen", { method: "POST", body: KAUF });
+    assert.equal(gekauft.status, 200, JSON.stringify(gekauft.data));
+    assert.equal(gekauft.data.sendung.reference, KAUF_REFERENZ);
+    assert.equal(gekauft.data.sendung.phase, "bereit");
+    assert.equal(gekauft.data.sendung.etikettUrl, "https://labels.packlink.com/x.pdf");
+    assert.equal(gekauft.data.sendung.preisCents, 785);
+
+    const kauf = fake.calls.find(c => c.path === "/v1/orders");
+    assert.equal(kauf.method, "POST");
+    assert.equal(kauf.headers.Authorization, "packlink-test-key");
+    assert.equal(kauf.body.order_custom_reference, "D119-2026-0001");
+    assert.equal(kauf.body.shipments.length, 1);
+    const sendung = kauf.body.shipments[0];
+    assert.equal(sendung.service_id, 20955);
+    assert.deepEqual(sendung.packages, [{ width: 30, height: 15, length: 40, weight: 2 }]);
+    assert.equal(sendung.from.zip_code, "63739");
+    assert.equal(sendung.to.surname, "Müller");
+    assert.equal("email" in sendung.to, false);
+    assert.equal("phone" in sendung.to, false);
+
+    const row = DB.raw.prepare("SELECT reference,state,price_cents FROM packlink_sendungen WHERE order_id='o1'").get();
+    assert.deepEqual({ ...row }, { reference: KAUF_REFERENZ, state: "READY_TO_PRINT", price_cents: 785 });
+    assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders WHERE id='o1'").get().status, "PREPARING");
+    const events = DB.raw.prepare("SELECT event_type FROM audit_events WHERE entity_id='o1'").all().map(r => r.event_type);
+    assert.ok(events.includes("PACKLINK_ETIKETT_GEKAUFT"));
+
+    // Kein zweites Etikett - weder per Kauf noch per Entwurf.
+    const nochmal = await call(env, "/admin/versand/o1/packlink/kaufen", { method: "POST", body: KAUF });
+    assert.equal(nochmal.status, 409);
+    assert.equal(nochmal.data.error, "SENDUNG_SCHON_BEZAHLT");
+    const entwurf = await call(env, "/admin/versand/o1/packlink", { method: "POST", body: { ...KAUF, neu: true } });
+    assert.equal(entwurf.status, 409);
+    assert.equal(fake.calls.filter(c => c.path === "/v1/orders").length, 1);
+    assert.equal(fake.calls.filter(c => c.path === "/v1/shipments" && c.method === "POST").length, 0);
+  } finally {
+    fake.restore();
+  }
+});
+
+test("two clicks at once buy only one label", async () => {
+  const DB = seed();
+  const env = envWith(DB);
+  const fake = fakePacklink({ state: "PURCHASE_SUCCESS" });
+  let weiter;
+  fake.zustand.kaufPause = new Promise(resolve => { weiter = resolve; });
+  try {
+    const erster = call(env, "/admin/versand/o1/packlink/kaufen", { method: "POST", body: KAUF });
+    const zweiter = call(env, "/admin/versand/o1/packlink/kaufen", { method: "POST", body: KAUF });
+    setTimeout(weiter, 20);
+    const ergebnisse = await Promise.all([erster, zweiter]);
+    assert.deepEqual(ergebnisse.map(r => r.status).sort(), [200, 409]);
+    assert.equal(ergebnisse.find(r => r.status === 409).data.error, "KAUF_LAEUFT_SCHON");
+    assert.equal(fake.calls.filter(c => c.path === "/v1/orders").length, 1);
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM packlink_sendungen").get().n, 1);
+  } finally {
+    fake.restore();
+  }
+});
+
+test("a purchase Packlink refuses leaves nothing behind; the offers come back", async () => {
+  const DB = seed();
+  const env = envWith(DB);
+  const fake = fakePacklink({ state: "PURCHASE_SUCCESS" });
+  fake.zustand.kauf = "abgelehnt";
+  try {
+    const abgelehnt = await call(env, "/admin/versand/o1/packlink/kaufen", { method: "POST", body: KAUF });
+    assert.equal(abgelehnt.status, 409);
+    assert.equal(abgelehnt.data.error, "KAUF_ABGELEHNT");
+    assert.match(abgelehnt.data.detail, /Zahlungsmethode/);
+    assert.equal(DB.raw.prepare("SELECT state FROM packlink_sendungen").get().state, "KAUF_ABGELEHNT");
+    const stand = await call(env, "/admin/versand/o1/packlink");
+    assert.equal(stand.data.sendung, null);
+
+    // Zahlungsart in Packlink hinterlegt: der naechste Versuch klappt.
+    fake.zustand.kauf = "ok";
+    const gekauft = await call(env, "/admin/versand/o1/packlink/kaufen", { method: "POST", body: KAUF });
+    assert.equal(gekauft.status, 200, JSON.stringify(gekauft.data));
+    assert.equal(gekauft.data.sendung.phase, "bezahlt");
+    const events = DB.raw.prepare("SELECT event_type FROM audit_events WHERE entity_id='o1'").all().map(r => r.event_type);
+    assert.ok(events.includes("PACKLINK_KAUF_ABGELEHNT"));
+  } finally {
+    fake.restore();
+  }
+});
+
+test("an unclear purchase blocks everything until it was checked in Packlink", async () => {
+  const DB = seed();
+  const env = envWith(DB);
+  const fake = fakePacklink({ state: "PURCHASE_SUCCESS" });
+  fake.zustand.kauf = "netz";
+  try {
+    const unklar = await call(env, "/admin/versand/o1/packlink/kaufen", { method: "POST", body: KAUF });
+    assert.equal(unklar.status, 502);
+    assert.equal(unklar.data.error, "KAUF_UNKLAR");
+
+    const stand = await call(env, "/admin/versand/o1/packlink");
+    assert.equal(stand.status, 200, JSON.stringify(stand.data));
+    assert.equal(stand.data.sendung.phase, "kauf");
+    assert.equal(stand.data.sendung.reference, null);
+    assert.equal(stand.data.sendung.packlinkLink, "https://pro.packlink.de/private/shipments/all");
+    // Kein Nachfragen bei Packlink mit dem Platzhalter.
+    assert.equal(fake.calls.filter(c => c.path.startsWith("/v1/shipments/")).length, 0);
+
+    fake.zustand.kauf = "ok";
+    const blind = await call(env, "/admin/versand/o1/packlink/kaufen", { method: "POST", body: KAUF });
+    assert.equal(blind.status, 409);
+    assert.equal(blind.data.error, "KAUF_UNKLAR");
+    const entwurf = await call(env, "/admin/versand/o1/packlink", { method: "POST", body: { ...KAUF, neu: true } });
+    assert.equal(entwurf.status, 409);
+    assert.equal(entwurf.data.error, "KAUF_UNKLAR");
+    assert.equal(fake.calls.filter(c => c.path === "/v1/orders").length, 1);
+
+    // In Packlink nachgesehen, nichts gekauft: ausdruecklich neu kaufen.
+    const geprueft = await call(env, "/admin/versand/o1/packlink/kaufen", { method: "POST", body: { ...KAUF, trotzdem: true } });
+    assert.equal(geprueft.status, 200, JSON.stringify(geprueft.data));
+    assert.equal(geprueft.data.sendung.reference, KAUF_REFERENZ);
+    const zeilen = DB.raw.prepare("SELECT state FROM packlink_sendungen ORDER BY created_at").all().map(r => r.state);
+    assert.deepEqual(zeilen, ["ERSETZT", "PURCHASE_SUCCESS"]);
+  } finally {
+    fake.restore();
+  }
+});
+
+test("an answer without a shipment counts as unclear, never as nothing bought", async () => {
+  const DB = seed();
+  const fake = fakePacklink();
+  fake.zustand.kauf = "leer";
+  try {
+    const leer = await call(envWith(DB), "/admin/versand/o1/packlink/kaufen", { method: "POST", body: KAUF });
+    assert.equal(leer.status, 502);
+    assert.equal(leer.data.error, "KAUF_UNKLAR");
+    assert.equal(DB.raw.prepare("SELECT state FROM packlink_sendungen").get().state, "KAUF_UNKLAR");
+  } finally {
+    fake.restore();
+  }
+});
+
+test("buying replaces an unpaid draft only on purpose", async () => {
+  const DB = seed();
+  const env = envWith(DB);
+  const fake = fakePacklink();
+  try {
+    await call(env, "/admin/versand/o1/packlink", { method: "POST", body: KAUF });
+    const ohne = await call(env, "/admin/versand/o1/packlink/kaufen", { method: "POST", body: KAUF });
+    assert.equal(ohne.status, 409);
+    assert.equal(ohne.data.error, "ENTWURF_VORHANDEN");
+    fake.zustand.state = "PURCHASE_SUCCESS";
+    const mit = await call(env, "/admin/versand/o1/packlink/kaufen", { method: "POST", body: { ...KAUF, neu: true } });
+    assert.equal(mit.status, 200, JSON.stringify(mit.data));
+    const zeilen = DB.raw.prepare("SELECT state FROM packlink_sendungen ORDER BY created_at").all().map(r => r.state);
+    assert.deepEqual(zeilen, ["ERSETZT", "PURCHASE_SUCCESS"]);
   } finally {
     fake.restore();
   }
