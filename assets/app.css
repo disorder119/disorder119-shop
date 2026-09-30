@@ -3715,6 +3715,9 @@ img[data-d119-image-protected] {
 }
 .konto-fuss a.fuss-widerruf,
 .kasse-fuss a.fuss-widerruf { margin-top: 0; }
+/* Die kleinen Rechtslinks stehen mittig neben dem hoeheren Knopf. */
+.konto-fuss,
+.kasse-fuss { align-items: center; }
 #appShell .footer a.footer__widerruf:hover,
 .konto-fuss a.fuss-widerruf:hover,
 .kasse-fuss a.fuss-widerruf:hover { background: var(--text); color: var(--ink); }

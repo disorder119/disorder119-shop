@@ -2,6 +2,10 @@
    Kopfzeile, Felder und Knoepfe wie das Kundenkonto - nur was die zwei
    Schritte und der Beleg zusaetzlich brauchen. */
 
+/* konto.css setzt display:grid auf Formular und Felder - ohne diese Regel
+   blieben Schritt 1 und "Welche Stuecke?" trotz hidden sichtbar. */
+.widerruf-seite [hidden] { display: none !important; }
+
 .widerruf__intro {
   margin: 0 0 26px;
   max-width: 62ch;
