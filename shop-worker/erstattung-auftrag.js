@@ -17,6 +17,11 @@
 //      Meldung an den Inhaber. Jeder Schritt wird einzeln nachgeholt, falls
 //      er scheitert.
 //
+// Ist die Zahlung nur reserviert (Kauf mit Einziehen beim Versand, zahlung.js),
+// gibt ein Storno vor dem Versand die Reservierung frei, statt zu erstatten:
+// kein Geld fliesst, PayPal behaelt keine Gebuehr, es braucht kein Guthaben.
+// Der Auftrag endet dann mit ergebnis FREIGEGEBEN, die Bestellung "Storniert".
+//
 // Doppelt ausgezahlt wird nie: Jeder Versuch schickt PayPal eine Request-Id,
 // eine neue gibt es nur nach einer eindeutigen Ablehnung. Erstattet jemand
 // direkt in PayPal, erkennt der Auftrag das an der Summe der abgeschlossenen
@@ -33,6 +38,7 @@ import {
 import { euroAmount, sendRefundConfirmation } from "./customer-mail.js";
 import { sendTelegramMessage } from "./notifications.js";
 import { artikelWiederVerfuegbar } from "./admin-katalog.js";
+import { reservierteZahlung, reservierungFreigeben } from "./zahlung.js";
 
 export const AUFTRAG_LAUFEND = Object.freeze(["OFFEN", "IN_ARBEIT", "WARTET_AUF_DECKUNG", "BEI_PAYPAL", "FEHLER"]);
 export const ANLAESSE = Object.freeze(["STORNO", "RUECKSENDUNG", "WIDERRUF", "KULANZ"]);
@@ -92,6 +98,9 @@ const FEHLER_TEXT = Object.freeze({
   NETZFEHLER: "PayPal war nicht erreichbar – der Shop versucht es gleich noch einmal (ohne doppelte Auszahlung).",
   KEINE_PAYPAL_ZAHLUNG: "Zu dieser Bestellung gibt es keine PayPal-Zahlung, über die erstattet werden kann.",
   SCHON_VERSENDET: "Die Bestellung ist inzwischen versendet worden. Die Stornierung ist angehalten: Warte die Rücksendung ab oder brich den Auftrag ab.",
+  ZAHLUNG_NOCH_RESERVIERT: "Die Zahlung ist bei PayPal nur reserviert, noch nicht eingezogen. Eine Reservierung lässt sich nur ganz aufheben (Storno vor dem Versand) – für einen Teilbetrag erst einziehen, dann erstatten.",
+  ZAHLUNG_WIRD_GEPRUEFT: "PayPal prüft das Einziehen dieser Zahlung noch. Der Shop versucht es danach automatisch weiter (Freigabe oder Erstattung).",
+  ZAHLUNG_SCHON_EINGEZOGEN: "Die Zahlung war inzwischen schon eingezogen – der Shop erstattet sie jetzt über PayPal.",
   BETRAG_UEBERHOLT: "Inzwischen wurde anderweitig erstattet. Bitte diesen Auftrag abbrechen und mit dem richtigen Betrag neu anlegen.",
   REFUND_FAILED: "PayPal hat die Erstattung abgelehnt. Der Shop versucht es später erneut.",
   REFUND_CANCELLED: "PayPal hat die Erstattung storniert. Der Shop versucht es später erneut.",
@@ -190,9 +199,10 @@ export function auftragView(row, extra = {}) {
   if (!row) return null;
   const laufend = AUFTRAG_LAUFEND.includes(row.status);
   const endgueltig = Number(row.fehler_endgueltig) === 1;
+  const freigegeben = row.ergebnis === "FREIGEGEBEN";
   let hinweis = null;
   if (row.status === "WARTET_AUF_DECKUNG") {
-    hinweis = `PayPal hat die Rückzahlung der Original-Zahlung abgelehnt – es ist keine neue Zahlung, aber in deinem PayPal-Konto sind keine ${euroAmount(row.betrag_cents)} verfügbar (PayPal behält seine Gebühr, zurück gehen die vollen ${euroAmount(row.betrag_cents)}). Am schnellsten: die Original-Zahlung in PayPal öffnen und dort „Rückzahlung“ wählen – PayPal kann dafür dein Bankkonto nutzen. Oder Guthaben aufladen bzw. ein Bankkonto in PayPal bestätigen, dann klappt es hier automatisch. Die Kundin bekommt ihre Mail erst, wenn das Geld wirklich zurück ist.`;
+    hinweis = `PayPal hat die Rückzahlung der Original-Zahlung abgelehnt – es ist keine neue Zahlung, aber in deinem PayPal-Konto sind keine ${euroAmount(row.betrag_cents)} verfügbar (PayPal behält seine Gebühr, zurück gehen die vollen ${euroAmount(row.betrag_cents)}). Am schnellsten: die Rückzahlung direkt in PayPal öffnen (Knopf unten) – PayPal kann dafür dein Bankkonto nutzen. Oder Guthaben aufladen bzw. ein Bankkonto in PayPal bestätigen, dann klappt es hier automatisch. Die Kundin bekommt ihre Mail erst, wenn das Geld wirklich zurück ist.`;
   } else if (row.status === "FEHLER") {
     hinweis = fehlerText(row.letzter_fehler) || "Der letzte Versuch ist gescheitert.";
     if (!endgueltig) hinweis += " Nächster automatischer Versuch ist geplant.";
@@ -215,7 +225,9 @@ export function auftragView(row, extra = {}) {
     vorVersand: Number(row.vor_versand) === 1,
     widerrufId: row.widerruf_id || null,
     status: row.status,
-    statusText: STATUS_TEXT[row.status] || row.status,
+    statusText: freigegeben && row.status === "ERLEDIGT" ? "Reservierung freigegeben – nichts abgebucht" : STATUS_TEXT[row.status] || row.status,
+    // ERSTATTET: Geld ueber PayPal zurueck; FREIGEGEBEN: nur reserviert, nichts abgebucht.
+    ergebnis: row.ergebnis || null,
     laufend,
     hinweis,
     fehler: row.letzter_fehler || null,
@@ -253,8 +265,23 @@ export async function auftraegeFuerBestellung(db, orderId) {
 // Soll das Paket gerade NICHT raus? Fuer die Admin-App (Versandknopf) und
 // Packlink (Etikett kaufen). Die Sendungsverfolgung selbst wird nie
 // blockiert: Ist ein Paket wirklich unterwegs, gilt das.
-export async function versandSperre(db, orderId) {
+//   mitZahlung: auch sperren, wenn das Geld nicht eingezogen werden konnte
+//   oder PayPal das Einziehen noch prueft (zahlung.js). Der Einzugs-Cron
+//   fragt ohne, sonst wuerde er eine gepruefte Abbuchung nie nachfragen.
+export async function versandSperre(db, orderId, { mitZahlung = true } = {}) {
   try {
+    if (mitZahlung) {
+      const zahlung = await db.prepare(`SELECT p.status,p.provider_payment_id,p.authorization_id FROM payments p
+        JOIN commerce_orders o ON o.id=p.order_id
+        WHERE p.order_id=? AND p.provider='PAYPAL' AND o.status IN ('PAID','PREPARING')
+        ORDER BY p.created_at DESC LIMIT 1`).bind(orderId).first();
+      if (zahlung?.status === "FAILED" && zahlung.authorization_id) {
+        return { code: "ZAHLUNG_GESCHEITERT", text: "Das Geld konnte bei PayPal nicht eingezogen werden – bitte nicht versenden, sondern stornieren oder die Kundin um eine neue Zahlung bitten." };
+      }
+      if (zahlung?.status === "AUTHORIZED" && zahlung.provider_payment_id) {
+        return { code: "ZAHLUNG_WIRD_GEPRUEFT", text: "PayPal prüft das Einziehen noch – bitte erst versenden, wenn die Zahlung eingegangen ist." };
+      }
+    }
     const auftrag = await db.prepare(`SELECT id,anlass FROM erstattungsauftraege WHERE order_id=? AND vor_versand=1
       AND status IN (${LAUFEND_SQL}) LIMIT 1`).bind(orderId).first();
     if (auftrag) {
@@ -309,7 +336,9 @@ export async function erstattungBeauftragen(env, id, eingabe = {}, reqId = crypt
   if (!STATUS_JE_ANLASS[anlass].includes(String(order.status))) {
     throw new AuftragFehler("ERSTATTUNG_STATUS", 409, { status: order.status, anlass });
   }
-  const payment = await paypalZahlung(db, order.id);
+  // Nur reserviert (noch nicht eingezogen): dann wird freigegeben statt erstattet.
+  const reserviert = await reservierteZahlung(db, order.id);
+  const payment = reserviert || await paypalZahlung(db, order.id);
   if (!payment) throw new AuftragFehler("KEINE_PAYPAL_ZAHLUNG", 409);
   const schon = await schonErstattet(db, order.id);
   const offen = Number(order.total_cents) - schon;
@@ -355,6 +384,11 @@ export async function erstattungBeauftragen(env, id, eingabe = {}, reqId = crypt
   }
   if (!Number.isSafeInteger(betrag) || betrag <= 0) throw new AuftragFehler("BETRAG_UNGUELTIG", 400);
   if (betrag > offen) throw new AuftragFehler("BETRAG_ZU_HOCH", 409, { offenCents: offen, betragCents: betrag });
+  // Eine Reservierung laesst sich nur als Ganzes aufheben - und nur, solange
+  // das Paket noch nicht unterwegs ist.
+  if (reserviert && (!vorVersand || betrag !== Number(order.total_cents))) {
+    throw new AuftragFehler("ZAHLUNG_NOCH_RESERVIERT", 409, { betragCents: betrag, bestellungCents: Number(order.total_cents) });
+  }
   // Nie mehr aus einer Capture erstatten, als PayPal fuer sie verbucht hat.
   if (betrag > Number(payment.amount_cents) - schon || payment.currency !== order.currency) {
     throw new AuftragFehler("ERSTATTUNG_BETRAG_ABWEICHUNG", 409, {
@@ -429,8 +463,20 @@ function notizFuer(auftrag, order) {
 // Ist das Geld dieses Auftrags schon zurueck (eigene Erstattung per Webhook,
 // oder jemand hat direkt in PayPal erstattet)?
 async function erfuellt(db, auftrag) {
+  if (auftrag.ergebnis === "FREIGEGEBEN" || await zahlungFreigegeben(db, auftrag.order_id)) return true;
   const schon = await schonErstattet(db, auftrag.order_id);
   return schon >= Number(auftrag.basis_erstattet_cents) + Number(auftrag.betrag_cents);
+}
+
+// Reservierung aufgehoben und nichts eingezogen: fuer diese Bestellung ist
+// nie Geld geflossen, also gibt es auch nichts zu erstatten.
+async function zahlungFreigegeben(db, orderId) {
+  const row = await db.prepare(`SELECT
+      (SELECT COUNT(*) FROM payments WHERE order_id=? AND provider='PAYPAL' AND status='CANCELLED' AND voided_at IS NOT NULL) AS frei,
+      (SELECT COUNT(*) FROM payments WHERE order_id=? AND provider='PAYPAL'
+        AND status IN ('PENDING','AUTHORIZED','COMPLETED','PARTIALLY_REFUNDED','REFUNDED')) AS gebunden`)
+    .bind(orderId, orderId).first();
+  return Number(row?.frei || 0) > 0 && Number(row?.gebunden || 0) === 0;
 }
 
 export async function auftragAusfuehren(env, auftragId, reqId = crypto.randomUUID(), deps = {}, { erzwingen = false, now = new Date() } = {}) {
@@ -479,16 +525,30 @@ async function versuchen(env, auftrag, order, reqId, deps, now) {
     await auftragAbschliessen(env, auftrag.id, reqId, deps, now);
     return view();
   }
-  const payment = await paypalZahlung(db, order.id);
-  if (!payment) {
-    await statusSetzen(db, auftrag.id, { status: "FEHLER", fehler_endgueltig: 1, letzter_fehler: "KEINE_PAYPAL_ZAHLUNG", naechster_versuch_at: null });
-    await inhaberMelden(env, auftrag, order, "fehler", reqId);
-    return view();
-  }
   // Storno vor dem Versand, aber das Paket ist inzwischen unterwegs: nicht
   // blind auszahlen - sonst hat die Kundin Geld und Ware.
   if (Number(auftrag.vor_versand) === 1 && !VOR_VERSAND.includes(String(order.status))) {
     await statusSetzen(db, auftrag.id, { status: "FEHLER", fehler_endgueltig: 1, letzter_fehler: "SCHON_VERSENDET", naechster_versuch_at: null });
+    await inhaberMelden(env, auftrag, order, "fehler", reqId);
+    return view();
+  }
+  // Nur reserviert: die Reservierung aufheben statt zu erstatten.
+  if (await reservierteZahlung(db, order.id)) {
+    const frei = await freigeben(env, auftrag, order, reqId, deps, now);
+    if (frei) return frei;
+    // Inzwischen doch eingezogen: weiter mit der Erstattung.
+  }
+  const payment = await paypalZahlung(db, order.id);
+  if (!payment) {
+    // Eingezogen, aber noch nicht verbucht (PayPal prueft): spaeter erneut.
+    if (await reservierteZahlung(db, order.id)) {
+      await statusSetzen(db, auftrag.id, {
+        status: "FEHLER", fehler_endgueltig: 0, letzter_fehler: "ZAHLUNG_WIRD_GEPRUEFT",
+        naechster_versuch_at: naechsterVersuch(auftrag.versuche, now),
+      });
+      return view();
+    }
+    await statusSetzen(db, auftrag.id, { status: "FEHLER", fehler_endgueltig: 1, letzter_fehler: "KEINE_PAYPAL_ZAHLUNG", naechster_versuch_at: null });
     await inhaberMelden(env, auftrag, order, "fehler", reqId);
     return view();
   }
@@ -606,6 +666,42 @@ async function versuchen(env, auftrag, order, reqId, deps, now) {
   }
   await statusSetzen(db, auftrag.id, { status: "FEHLER", fehler_endgueltig: 1, letzter_fehler: ergebnis.grund, naechster_versuch_at: null });
   await inhaberMelden(env, auftrag, order, "fehler", reqId);
+  return view();
+}
+
+// Storno einer nur reservierten Zahlung: Reservierung bei PayPal aufheben.
+// Gibt null zurueck, wenn inzwischen eingezogen wurde - dann erstattet der
+// Auftrag im selben Lauf wie gewohnt.
+async function freigeben(env, auftrag, order, reqId, deps, now) {
+  const db = env.DB;
+  const view = () => zeile(db, auftrag.id).then(row => ({ auftrag: auftragView(row, { orderNumber: order.order_number }), gelaufen: true }));
+  if (Number(auftrag.vor_versand) !== 1 || Number(auftrag.betrag_cents) !== Number(order.total_cents)) {
+    await statusSetzen(db, auftrag.id, { status: "FEHLER", fehler_endgueltig: 1, letzter_fehler: "ZAHLUNG_NOCH_RESERVIERT", naechster_versuch_at: null });
+    await inhaberMelden(env, auftrag, order, "fehler", reqId);
+    return view();
+  }
+  const ergebnis = await reservierungFreigeben(env, order.id, reqId, { now });
+  if (ergebnis.ok) {
+    await protokoll(db, order.id, "ORDER_RESERVATION_RELEASED", reqId, {
+      auftragId: auftrag.id, anlass: auftrag.anlass, betragCents: Number(auftrag.betrag_cents),
+    });
+    await statusSetzen(db, auftrag.id, { ergebnis: "FREIGEGEBEN" });
+    await auftragAbschliessen(env, auftrag.id, reqId, deps, now);
+    return view();
+  }
+  if (ergebnis.art === "SCHON_EINGEZOGEN") {
+    await protokoll(db, order.id, "ORDER_RESERVATION_ALREADY_CAPTURED", reqId, { auftragId: auftrag.id });
+    return null;
+  }
+  const meta = { auftragId: auftrag.id, grund: ergebnis.code, art: ergebnis.art, paypalStatus: ergebnis.httpStatus, debugId: ergebnis.debugId };
+  await protokoll(db, order.id, "ORDER_RESERVATION_RELEASE_FAILED", reqId, meta);
+  log("warn", "reservation_release_failed", reqId, meta);
+  const vorlaeufig = ergebnis.art === "VORLAEUFIG";
+  await statusSetzen(db, auftrag.id, {
+    status: "FEHLER", fehler_endgueltig: vorlaeufig ? 0 : 1, letzter_fehler: safeText(ergebnis.code || "FREIGABE_FEHLGESCHLAGEN", 120),
+    naechster_versuch_at: vorlaeufig ? naechsterVersuch(auftrag.versuche, now) : null,
+  });
+  if (!vorlaeufig || Number(auftrag.versuche) >= 6) await inhaberMelden(env, auftrag, order, "fehler", reqId);
   return view();
 }
 
@@ -735,15 +831,31 @@ export async function auftragAbschliessen(env, auftragId, reqId = crypto.randomU
     await db.prepare("UPDATE refunds SET status='CANCELLED',updated_at=? WHERE id=? AND status='FAILED' AND provider_refund_id IS NULL")
       .bind(jetzt, auftrag.refund_id).run();
   }
+  // Wie ging das Geld zurueck? Freigegeben (nie abgebucht) oder erstattet.
+  if (!auftrag.ergebnis) {
+    await statusSetzen(db, auftragId, { ergebnis: await zahlungFreigegeben(db, order.id) ? "FREIGEGEBEN" : "ERSTATTET" });
+    auftrag = await zeile(db, auftragId);
+  }
+  const freigegeben = auftrag.ergebnis === "FREIGEGEBEN";
   if (erstmals) {
     await protokoll(db, order.id, "ORDER_REFUND_JOB_DONE", reqId, {
-      auftragId, anlass: auftrag.anlass, betragCents: Number(auftrag.betrag_cents),
+      auftragId, anlass: auftrag.anlass, betragCents: Number(auftrag.betrag_cents), ergebnis: auftrag.ergebnis,
     });
   }
 
-  // 1. Bestellung "Erstattet", sobald alles zurueckgezahlt ist.
+  // 1a. Reservierung aufgehoben: Bestellung "Storniert" (es gab nie Geld).
+  if (freigegeben && ["PAID", "PREPARING"].includes(order.status) && typeof deps.statusSetzen === "function") {
+    try {
+      await deps.statusSetzen(order.id, "CANCELLED", { actor: "SYSTEM" });
+    } catch (err) {
+      log("error", "refund_job_order_cancel_failed", reqId, { auftragId, code: safeText(err?.code || err?.message, 80) });
+    }
+    order = await ladeBestellung(db, order.id);
+  }
+
+  // 1b. Bestellung "Erstattet", sobald alles zurueckgezahlt ist.
   const schon = await schonErstattet(db, order.id);
-  if (schon >= Number(order.total_cents) && order.status !== "REFUNDED"
+  if (!freigegeben && schon >= Number(order.total_cents) && order.status !== "REFUNDED"
     && ["PAID", "PREPARING", "RETURNED"].includes(order.status) && typeof deps.statusSetzen === "function") {
     const stuecke = await ladeStuecke(db, order.id);
     try {
@@ -818,7 +930,7 @@ function telegramText(art, auftrag, order, extra = {}) {
       kopf,
       extra.fehltCents > 0 ? `PayPal-Guthaben reicht nicht – es fehlen ${euroAmount(extra.fehltCents)}.` : "PayPal-Guthaben reicht nicht.",
       ...(extra.paypalLink
-        ? ["Original-Zahlung direkt in PayPal zurückzahlen (dort kann PayPal dein Bankkonto nutzen):", extra.paypalLink]
+        ? ["Rückzahlung direkt in PayPal (dort kann PayPal dein Bankkonto nutzen):", extra.paypalLink]
         : []),
       "Oder Guthaben aufladen bzw. Bankkonto in PayPal bestätigen – der Shop versucht es automatisch weiter.",
       "Die Kundin bekommt ihre Mail erst, wenn das Geld zurück ist.",
@@ -832,7 +944,7 @@ function telegramText(art, auftrag, order, extra = {}) {
       fehlerText(auftrag.letzter_fehler) || "Der letzte Versuch ist gescheitert.",
       `Versuche bisher: ${auftrag.versuche}`,
       ...(extra.frist ? [`Frist für die Rückzahlung: ${deutschesDatum(extra.frist)}`] : []),
-      ...(extra.paypalLink ? ["Original-Zahlung in PayPal zurückzahlen:", extra.paypalLink] : []),
+      ...(extra.paypalLink ? ["Rückzahlung direkt in PayPal:", extra.paypalLink] : []),
       "Admin-App → Bestellung → „Jetzt erneut versuchen“.",
     ].join("\n");
   }
@@ -842,6 +954,17 @@ function telegramText(art, auftrag, order, extra = {}) {
       kopf,
       fehlerText(auftrag.letzter_fehler) || "Der letzte Versuch ist gescheitert.",
       "Admin-App → Bestellung öffnen.",
+    ].join("\n");
+  }
+  if (auftrag.ergebnis === "FREIGEGEBEN") {
+    return [
+      "DISORDER119 — STORNIERT, NICHTS ABGEBUCHT",
+      kopf,
+      "Die Zahlung war nur reserviert – die Reservierung ist aufgehoben. Keine PayPal-Gebühr, kein Guthaben nötig.",
+      `Kundin informiert: ${auftrag.kunde_mail_status === "GESENDET" ? "ja" : auftrag.kunde_mail_status === "KEINE_ADRESSE" ? "nein (keine Mailadresse)" : "noch nicht – wird nachgeholt"}`,
+      ...(Number(auftrag.wieder_verfuegbar) === 1
+        ? [`Wieder im Shop: ${auftrag.wieder_im_shop_at ? "ja" : "noch nicht – wird nachgeholt"}`]
+        : []),
     ].join("\n");
   }
   return [
@@ -854,12 +977,13 @@ function telegramText(art, auftrag, order, extra = {}) {
   ].join("\n");
 }
 
-// Die Original-Transaktion im PayPal-Geschaeftskonto: dort "Rueckzahlung"
-// waehlen ist dieselbe Rueckzahlung wie ueber die API - nur kann PayPal dort
-// das Bankkonto nutzen, wenn das Guthaben nicht reicht.
+// Die Rueckzahlung der Original-Transaktion im PayPal-Geschaeftskonto (dieselbe
+// Seite wie "Rueckzahlung" im Menue der Transaktion) - dieselbe Rueckzahlung
+// wie ueber die API, nur kann PayPal dort das Bankkonto nutzen, wenn das
+// Guthaben nicht reicht.
 export function paypalTransaktionLink(captureId) {
   const id = safeText(captureId || "", 64);
-  return /^[A-Z0-9]{6,32}$/.test(id) ? `https://www.paypal.com/activity/payment/${id}` : null;
+  return /^[A-Z0-9]{6,32}$/.test(id) ? `https://www.paypal.com/activity/actions/refund/edit/${id}` : null;
 }
 
 async function paypalLinkFuer(db, orderId) {
@@ -1018,7 +1142,9 @@ export async function erstattungsauftraegePflegen(env, reqId = crypto.randomUUID
   const seit = new Date(now.getTime() - NACHARBEIT_TAGE * 24 * 60 * 60 * 1000).toISOString();
   const offen = (await db.prepare(`SELECT id FROM erstattungsauftraege WHERE status='ERLEDIGT' AND erledigt_at>=?
       AND ((kunde_benachrichtigt_at IS NULL AND (kunde_mail_status IS NULL OR kunde_mail_status IN ('FEHLER','NICHT_EINGERICHTET')))
-        OR (wieder_verfuegbar=1 AND wieder_im_shop_at IS NULL))
+        OR (wieder_verfuegbar=1 AND wieder_im_shop_at IS NULL)
+        OR (ergebnis='FREIGEGEBEN' AND EXISTS (SELECT 1 FROM commerce_orders o
+          WHERE o.id=erstattungsauftraege.order_id AND o.status IN ('PAID','PREPARING'))))
     ORDER BY erledigt_at LIMIT 10`).bind(seit).all()).results || [];
   for (const row of offen) {
     try {

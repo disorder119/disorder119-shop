@@ -31,6 +31,7 @@
 import { safeText } from "./commerce-core.js";
 import { orderStatusAutomatisch } from "./admin-api.js";
 import { versandSperre } from "./erstattung-auftrag.js";
+import { ZahlungFehler, zahlungSicherstellen } from "./zahlung.js";
 import { PAKETE, dienstErlaubt, paketFuer } from "./versand-config.js";
 
 export { PAKETE };
@@ -383,9 +384,18 @@ export function sendungView(row) {
 // Keine neue Sendung, solange eine Stornierung mit Erstattung laeuft oder die
 // Kundin vor dem Versand widerrufen hat (erstattung-auftrag.js). Die
 // Sendungsverfolgung bestehender Pakete bleibt davon unberuehrt.
-async function versandFrei(env, orderId) {
+//
+// Erst das Geld, dann das Etikett: eine beim Kauf nur reservierte Zahlung
+// wird jetzt eingezogen (zahlung.js). Klappt das nicht, gibt es kein Etikett.
+async function versandFrei(env, orderId, reqId = crypto.randomUUID()) {
   const sperre = await versandSperre(requireDb(env), orderId);
   if (sperre) throw new PacklinkError(sperre.code, 409, sperre.text);
+  try {
+    await zahlungSicherstellen(env, orderId, reqId, { anlass: "VERSAND" });
+  } catch (err) {
+    if (err instanceof ZahlungFehler) throw new PacklinkError(err.code, err.status, err.text);
+    throw err;
+  }
 }
 
 export async function entwurfAnlegen(env, orderId, body = {}) {
@@ -465,7 +475,7 @@ export async function etikettKaufen(env, orderId, body = {}, reqId = crypto.rand
   if (!packlinkReady(env)) throw new PacklinkError("PACKLINK_NICHT_EINGERICHTET", 503);
   const db = requireDb(env);
   const order = await loadOrder(env, orderId);
-  await versandFrei(env, order.id);
+  await versandFrei(env, order.id, reqId);
   const vorhanden = await letzteSendung(env, order.id);
   if (vorhanden) {
     const ph = phase(vorhanden.state);

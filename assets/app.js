@@ -250,7 +250,7 @@
         "Ein Kaufvertrag kommt erst durch gesonderte Bestätigung (Verfügbarkeit, Preis, Zahlungs- und Versandart) zustande — nicht bereits durch das Absenden der Anfrage.</p>" +
         "<h3>3. Artikel</h3><p>Alle angebotenen Artikel sind gebrauchte Einzelstücke (Vintage / Second Hand). Kleine gebrauchsbedingte " +
         "Abweichungen sind möglich und werden nach bestem Wissen in der Artikelbeschreibung angegeben.</p>" +
-        "<h3>4. Preise, Zahlung &amp; Versand</h3><p>Alle Preise verstehen sich in Euro. Kleinunternehmer gemäß § 19 UStG, keine Umsatzsteuer ausgewiesen.</p>" +
+        "<h3>4. Preise, Zahlung &amp; Versand</h3><p>Alle Preise verstehen sich in Euro. Kleinunternehmer gemäß § 19 UStG, keine Umsatzsteuer ausgewiesen.</p><p>Bezahlt wird über PayPal. PayPal reserviert den Gesamtbetrag bei der Bestellung; abgebucht wird er erst mit dem Versand, spätestens drei Tage nach der Bestellung. Wird eine Bestellung vor dem Versand storniert oder widerrufen, heben wir die Reservierung auf – dann wird nichts abgebucht.</p>" +
         "<p>Die Versandkosten innerhalb Deutschlands richten sich nach der Paketgröße (klein, mittel oder groß – je nach Art und Anzahl der Artikel) und der gewählten Versandart (Standard oder, soweit angeboten, Express). Sie werden vor Abschluss der Bestellung im Warenkorb bzw. direkt über dem Kaufknopf ausgewiesen und sind im angezeigten Gesamtpreis enthalten. Versand ins Ausland sowie eine Abholung werden auf Anfrage individuell vereinbart.</p>" +
         "<h3>5. Gewährleistung</h3><p>Es gelten die gesetzlichen Gewährleistungsrechte. Da alle Artikel gebrauchte Einzelstücke sind, wird der " +
         "Zustand nach bestem Wissen in der jeweiligen Artikelbeschreibung angegeben.</p>" +
@@ -454,7 +454,7 @@
         "A purchase contract is only formed once separately confirmed (availability, price, payment and shipping method) — not simply by sending the enquiry.</p>" +
         "<h3>3. Items</h3><p>All items offered are used one-off pieces (vintage / second-hand). Minor wear-related " +
         "variations are possible and are noted to the best of our knowledge in the item description.</p>" +
-        "<h3>4. Prices, payment &amp; shipping</h3><p>All prices are in euros. Small business as per § 19 UStG, no VAT shown.</p>" +
+        "<h3>4. Prices, payment &amp; shipping</h3><p>All prices are in euros. Small business as per § 19 UStG, no VAT shown.</p><p>Payment is made via PayPal. PayPal reserves the total amount when you order; it is only charged when we ship, at the latest three days after your order. If an order is cancelled or withdrawn before shipping, we release the reservation – nothing is charged.</p>" +
         "<p>Shipping costs within Germany depend on the parcel size (small, medium or large – based on the type and number of items) and the chosen service (standard or, where offered, express). They are shown in the cart or directly above the buy button before the order is placed and are included in the total price shown. International shipping and local pickup are agreed individually on request.</p>" +
         "<h3>5. Warranty</h3><p>Statutory warranty rights apply. As all items are used one-off pieces, condition is described to the best of our " +
         "knowledge in the respective item description.</p>" +
@@ -655,7 +655,7 @@
         "Un contrat de vente n'est conclu qu'après confirmation séparée (disponibilité, prix, mode de paiement et d'expédition) — pas par le simple envoi de la demande.</p>" +
         "<h3>3. Articles</h3><p>Tous les articles proposés sont des pièces uniques d'occasion (vintage / seconde main). De légères " +
         "variations liées à l'usage sont possibles et sont indiquées au mieux de notre connaissance dans la description de l'article.</p>" +
-        "<h3>4. Prix, paiement &amp; livraison</h3><p>Tous les prix s'entendent en euros. Micro-entreprise selon le § 19 UStG, TVA non indiquée.</p>" +
+        "<h3>4. Prix, paiement &amp; livraison</h3><p>Tous les prix s'entendent en euros. Micro-entreprise selon le § 19 UStG, TVA non indiquée.</p><p>Le paiement s'effectue via PayPal. PayPal réserve le montant total lors de la commande ; il n'est débité qu'à l'expédition, au plus tard trois jours après la commande. Si une commande est annulée ou rétractée avant l'expédition, nous levons la réservation – rien n'est débité.</p>" +
         "<p>Les frais de livraison en Allemagne dépendent de la taille du colis (petit, moyen ou grand – selon le type et le nombre d'articles) et du mode d'envoi choisi (standard ou, si proposé, express). Ils sont indiqués dans le panier ou juste au-dessus du bouton d'achat avant la validation de la commande et sont inclus dans le prix total affiché. Les envois à l'étranger et le retrait sur place sont convenus individuellement sur demande.</p>" +
         "<h3>5. Garantie</h3><p>Les droits de garantie légaux s'appliquent. Tous les articles étant des pièces uniques d'occasion, leur état est décrit " +
         "au mieux de notre connaissance dans la description de l'article concerné.</p>" +

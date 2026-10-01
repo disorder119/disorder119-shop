@@ -58,6 +58,12 @@
         RETURNED: "Zurückgesendet", REFUNDED: "Erstattet", CANCELLED: "Storniert",
         PAYMENT_PENDING: "Zahlung offen", RESERVED: "Reserviert",
       },
+      // Zahlung nur reserviert (Abbuchung beim Versand) oder vor dem Versand aufgehoben.
+      zahlung: {
+        RESERVIERT: "Zahlung bei PayPal reserviert – abgebucht wird beim Versand",
+        FREIGEGEBEN: "Nichts abgebucht",
+      },
+      bestaetigt: "Bestätigt",
     },
     en: {
       titel: "Your account",
@@ -100,6 +106,11 @@
         RETURNED: "Returned", REFUNDED: "Refunded", CANCELLED: "Cancelled",
         PAYMENT_PENDING: "Payment open", RESERVED: "Reserved",
       },
+      zahlung: {
+        RESERVIERT: "Payment reserved at PayPal – charged when we ship",
+        FREIGEGEBEN: "Nothing charged",
+      },
+      bestaetigt: "Confirmed",
     },
     fr: {
       titel: "Ton compte",
@@ -142,6 +153,11 @@
         RETURNED: "Retournée", REFUNDED: "Remboursée", CANCELLED: "Annulée",
         PAYMENT_PENDING: "Paiement en attente", RESERVED: "Réservée",
       },
+      zahlung: {
+        RESERVIERT: "Paiement réservé chez PayPal – débité à l'expédition",
+        FREIGEGEBEN: "Rien n'a été débité",
+      },
+      bestaetigt: "Confirmée",
     },
   };
   var t = T[LANG] || T.de;
@@ -321,6 +337,14 @@
     var meta = document.createElement("p");
     meta.className = "bestellung__meta";
     var statusText = (t.status && t.status[bestellung.status]) || bestellung.status;
+    // Nur reserviert ist noch nicht "bezahlt": bestaetigt, abgebucht wird beim Versand.
+    if (bestellung.zahlung === "RESERVIERT" && bestellung.status === "PAID" && t.bestaetigt) statusText = t.bestaetigt;
+    var zahlungText = bestellung.zahlung && t.zahlung ? t.zahlung[bestellung.zahlung] : "";
+    // "Reserviert" nur, solange nichts versendet ist; "nichts abgebucht" nur beim Storno.
+    if (zahlungText && ((bestellung.zahlung === "RESERVIERT" && ["PAID", "PREPARING"].indexOf(bestellung.status) >= 0)
+        || (bestellung.zahlung === "FREIGEGEBEN" && bestellung.status === "CANCELLED"))) {
+      statusText += " · " + zahlungText;
+    }
     meta.textContent = datum(bestellung.createdAt) + " · " + statusText;
     kopf.appendChild(nummer);
     kopf.appendChild(meta);

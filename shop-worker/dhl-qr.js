@@ -14,6 +14,8 @@
 // Die Sendungsnummer landet sofort am Auftrag (Status "Label erstellt").
 // "Versendet" setzt du erst nach der Abgabe - dann geht die Versandmail raus.
 import { safeText } from "./commerce-core.js";
+import { versandSperre } from "./erstattung-auftrag.js";
+import { ZahlungFehler, zahlungSicherstellen } from "./zahlung.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -203,6 +205,16 @@ export async function createMark(env, orderId, body = {}) {
   const order = await loadOrder(env, orderId);
   const existing = await latestMark(env, order.id);
   if (existing?.state === "PAYED") throw new DhlQrError("MARKE_SCHON_BEZAHLT", 409);
+  // Kein Etikett, solange ein Storno oder Widerruf vor dem Versand laeuft -
+  // und erst, wenn das Geld eingezogen ist (zahlung.js).
+  const sperre = await versandSperre(db, order.id);
+  if (sperre) throw new DhlQrError(sperre.code, 409, sperre.text);
+  try {
+    await zahlungSicherstellen(env, order.id, crypto.randomUUID(), { anlass: "VERSAND" });
+  } catch (err) {
+    if (err instanceof ZahlungFehler) throw new DhlQrError(err.code, err.status, err.text);
+    throw err;
+  }
 
   const produkt = safeText(body.produkt, 40);
   if (!/^[A-Z0-9.]{3,40}$/.test(produkt)) throw new DhlQrError("PRODUKT_FEHLT", 400);

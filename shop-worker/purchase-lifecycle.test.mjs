@@ -38,6 +38,14 @@ function capture(itemIds = [90001, 90002]) {
   } }] };
 }
 
+// PayPal-Bestellung nach /authorize: reserviert, nichts eingezogen.
+function authorization(itemIds = [90001, 90002], status = "CREATED") {
+  return { status: "COMPLETED", purchase_units: [{ custom_id: itemIds.join(","), payments: {
+    authorizations: [{ id: "AUTH-SYNTHETIC-1", status, amount: { currency_code: "EUR", value: "105.00" },
+      create_time: new Date().toISOString(), expiration_time: new Date(Date.now() + 29 * 86_400_000).toISOString() }],
+  } }] };
+}
+
 async function admin(env, path, method = "GET", data) {
   const request = new Request(`https://api.disorder119.com${path}`, {
     method, headers: { Origin: adminOrigin, Authorization: "Bearer test-only", ...(data ? { "Content-Type": "application/json" } : {}) },
@@ -146,10 +154,10 @@ test("capture claim prevents an admin cancellation while PayPal responds", async
   globalThis.fetch = async (url) => {
     const path = new URL(String(url)).pathname;
     if (path === "/v1/oauth2/token") return Response.json({ access_token: "synthetic-token" });
-    if (path.endsWith("/capture")) {
+    if (path.endsWith("/authorize")) {
       captureCalls++;
       cancelStatus = (await admin(env, "/admin/orders/order-1", "PATCH", { status: "CANCELLED" })).status;
-      return Response.json(capture());
+      return Response.json(authorization(), { status: 201 });
     }
     throw new Error(`unexpected request ${path}`);
   };
@@ -164,7 +172,51 @@ test("capture claim prevents an admin cancellation while PayPal responds", async
     assert.equal(captureCalls, 1);
     assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders").get().status, "PAID");
     assert.deepEqual(DB.raw.prepare("SELECT status FROM reservations ORDER BY id").all().map(x => x.status), ["CONSUMED", "CONSUMED"]);
-    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM tax_cash_events WHERE kind='capture'").get().n, 1);
+    // Nur reserviert: noch kein Zufluss, also auch kein Steuerbeleg.
+    assert.equal(DB.raw.prepare("SELECT status FROM payments").get().status, "AUTHORIZED");
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM tax_cash_events WHERE kind='capture'").get().n, 0);
+    // Direkt "Storniert" geht bei einer reservierten Zahlung nie - nur ueber
+    // "Stornieren", das die Reservierung bei PayPal freigibt.
+    assert.equal((await admin(env, "/admin/orders/order-1", "PATCH", { status: "CANCELLED" })).status, 409);
+  } finally { globalThis.fetch = original; }
+});
+
+test("reconciliation confirms an interrupted authorization from PayPal", async () => {
+  const { DB, env } = fixture({ expired: true });
+  DB.raw.prepare("UPDATE payments SET status='PENDING',updated_at=? WHERE id='payment-1'")
+    .run(new Date(Date.now() - 10 * 60_000).toISOString());
+  const original = globalThis.fetch;
+  globalThis.fetch = async url => {
+    const path = new URL(String(url)).pathname;
+    if (path === "/v1/oauth2/token") return Response.json({ access_token: "synthetic-token" });
+    if (path.endsWith("PAYPAL-SYNTHETIC-1")) return Response.json(authorization());
+    throw new Error(`unexpected request ${path}`);
+  };
+  try {
+    await reconcilePurchasePayments(env);
+    const zahlung = DB.raw.prepare("SELECT status,authorization_id FROM payments").get();
+    assert.deepEqual({ ...zahlung }, { status: "AUTHORIZED", authorization_id: "AUTH-SYNTHETIC-1" });
+    assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders").get().status, "PAID");
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM tax_cash_events").get().n, 0);
+  } finally { globalThis.fetch = original; }
+});
+
+test("a declined reservation is released like an abandoned payment after four hours", async () => {
+  const { DB, env } = fixture({ expired: true });
+  DB.raw.prepare("UPDATE payments SET status='PENDING',updated_at=? WHERE id='payment-1'")
+    .run(new Date(Date.now() - 5 * 60 * 60_000).toISOString());
+  const original = globalThis.fetch;
+  globalThis.fetch = async url => {
+    const path = new URL(String(url)).pathname;
+    if (path === "/v1/oauth2/token") return Response.json({ access_token: "synthetic-token" });
+    if (path.endsWith("PAYPAL-SYNTHETIC-1")) return Response.json(authorization(undefined, "DENIED"));
+    throw new Error(`unexpected request ${path}`);
+  };
+  try {
+    await reconcilePurchasePayments(env);
+    assert.equal(DB.raw.prepare("SELECT status FROM payments").get().status, "FAILED");
+    assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders").get().status, "CANCELLED");
+    assert.deepEqual(DB.raw.prepare("SELECT status FROM inventory ORDER BY id").all().map(x => x.status), ["AVAILABLE", "AVAILABLE"]);
   } finally { globalThis.fetch = original; }
 });
 

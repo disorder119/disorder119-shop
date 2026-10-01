@@ -236,9 +236,24 @@ function deliveryLines(contact = {}) {
   return lines.map(line => line.trim()).filter(Boolean);
 }
 
+// options.zahlung: fehlt = sofort eingezogen (Rechnung steht in dieser Mail),
+// "RESERVIERT" = PayPal hat nur reserviert, "EINGEZOGEN" = reserviert und
+// inzwischen eingezogen. In beiden neuen Faellen kommt die Rechnung mit dem
+// Einziehen (sendInvoiceAfterCapture) - ein Storno davor braucht keine.
 export function formatOrderConfirmation(order = {}, options = {}) {
-  const invoice=renderInvoice(order,options.taxProfile||invoiceProfile({},SELLER),options.issuedAt);
-  const documentNote=invoice.ready?'Die folgende Rechnung gehört zu deiner Vertragsbestätigung.':'Dies ist deine Vertragsbestätigung. Eine Rechnung wird nach Klärung der Rechnungsangaben separat bereitgestellt.';
+  const zahlung = ["RESERVIERT", "EINGEZOGEN"].includes(options.zahlung) ? options.zahlung : null;
+  const invoice = zahlung
+    ? { ready: false, deferred: true, grund: "RECHNUNG_NACH_EINZUG", number: safeText(order.order_number || "", 80) }
+    : renderInvoice(order,options.taxProfile||invoiceProfile({},SELLER),options.issuedAt);
+  const documentNote = zahlung === "RESERVIERT"
+    ? "Die Rechnung schicken wir dir, sobald der Betrag eingezogen ist."
+    : zahlung === "EINGEZOGEN"
+      ? "Die Rechnung bekommst du in einer eigenen Mail."
+      : invoice.ready?'Die folgende Rechnung gehört zu deiner Vertragsbestätigung.':'Dies ist deine Vertragsbestätigung. Eine Rechnung wird nach Klärung der Rechnungsangaben separat bereitgestellt.';
+  const zahlungsSatz = zahlung === "RESERVIERT"
+    ? "Deine Zahlung ist bei PayPal reserviert. Abgebucht wird erst, wenn wir dein Paket versenden – spätestens drei Tage nach deiner Bestellung. Mit dieser Bestätigung ist der Kaufvertrag geschlossen."
+    : "Die Zahlung ist bei uns eingegangen. Damit ist der Kaufvertrag geschlossen.";
+  const zahlungsart = zahlung === "RESERVIERT" ? "Zahlungsart: PayPal – reserviert, Abbuchung mit dem Versand" : "Zahlungsart: PayPal";
   const contactEmail = safeText(options.contactEmail || "", 200) || "kontakt@disorder119.com";
   const number = safeText(order.order_number || order.orderNumber || "", 80) || "—";
   const items = Array.isArray(order.items) ? order.items : [];
@@ -262,7 +277,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     "DISORDER119",
     "",
     `Danke für deine Bestellung ${number} vom ${ordered}.`,
-    "Die Zahlung ist bei uns eingegangen. Damit ist der Kaufvertrag geschlossen.",
+    zahlungsSatz,
     documentNote,
     "",
     "BESTELLUNG",
@@ -271,13 +286,14 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     `Zwischensumme: ${euroAmount(subtotal, currency)}`,
     `${versandBezeichnung(order)}: ${euroAmount(shipping, currency)}`,
     `Gesamt: ${euroAmount(total, currency)}`,
-    "Zahlungsart: PayPal",
+    zahlungsart,
     ...(invoice.ready?[invoice.text]:[]),
     "",
     ...(delivery.length ? ["LIEFERADRESSE", ...delivery, ""] : []),
     "WIE ES WEITERGEHT",
     (items.length > 1 ? "Deine Stücke werden" : "Dein Teil wird") + " von Hand verpackt und in der Regel innerhalb von zwei Werktagen "
-      + "versendet. Sobald das Paket unterwegs ist, bekommst du eine Mail mit der Sendungsnummer.",
+      + "versendet. Sobald das Paket unterwegs ist, bekommst du eine Mail mit der Sendungsnummer."
+      + (zahlung === "RESERVIERT" ? " Mit dem Versand zieht PayPal den Betrag ein – dann kommt auch deine Rechnung." : ""),
     "",
     `Deine Bestellung im Konto: ${SHOP_URL}/konto/`,
     "",
@@ -296,7 +312,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     <td align="right" style="padding:${stark ? "14px 0 0" : "8px 0 0"};white-space:nowrap;${stark ? `font-size:17px;font-weight:700;color:${F.text};` : `color:${F.leise};`}">${escapeHtml(wert)}</td>
   </tr>`;
   const kopf = `<p style="margin:0 auto 8px;max-width:440px;color:${F.leise};">Bestellung <strong style="color:${F.text};">${escapeHtml(number)}</strong> vom ${escapeHtml(ordered)}</p>
-    <p style="margin:0 auto;max-width:440px;font-size:13px;color:${F.leise};">Die Zahlung ist eingegangen — damit ist der Kaufvertrag geschlossen. ${escapeHtml(documentNote)}</p>`;
+    <p style="margin:0 auto;max-width:440px;font-size:13px;color:${F.leise};">${zahlung === "RESERVIERT" ? escapeHtml(zahlungsSatz) : "Die Zahlung ist eingegangen — damit ist der Kaufvertrag geschlossen."} ${escapeHtml(documentNote)}</p>`;
   const stuecke = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">
       ${items.map(item => stueckZeile(item, euroAmount(item.unit_price_cents ?? item.unitPriceCents ?? 0, currency))).join("")}
     </table>
@@ -305,12 +321,12 @@ export function formatOrderConfirmation(order = {}, options = {}) {
       ${summenZeile(versandBezeichnung(order), euroAmount(shipping, currency), false)}
       ${summenZeile("Gesamt", euroAmount(total, currency), true)}
     </table>
-    <p style="margin:14px 0 0;font-size:12px;color:${F.leise};">Zahlungsart: PayPal</p>`;
+    <p style="margin:14px 0 0;font-size:12px;color:${F.leise};">${escapeHtml(zahlungsart)}</p>`;
   const inhalt = [
     ...(invoice.ready?[`<tr><td>${invoice.fragment}</td></tr>`]:[]),
     mailAbschnitt(items.length > 1 ? `Deine ${items.length} Stücke` : "Dein Stück", stuecke, false),
     delivery.length ? mailAbschnitt("Lieferadresse", `<p style="margin:0;">${delivery.map(escapeHtml).join("<br>")}</p>`) : "",
-    mailAbschnitt("Wie es weitergeht", `<p style="margin:0 0 22px;color:${F.leise};">${items.length > 1 ? "Deine Stücke werden" : "Dein Teil wird"} von Hand verpackt und in der Regel innerhalb von zwei Werktagen versendet. Sobald das Paket unterwegs ist, bekommst du eine Mail mit der Sendungsnummer und dem Link zur Sendungsverfolgung.</p>
+    mailAbschnitt("Wie es weitergeht", `<p style="margin:0 0 22px;color:${F.leise};">${items.length > 1 ? "Deine Stücke werden" : "Dein Teil wird"} von Hand verpackt und in der Regel innerhalb von zwei Werktagen versendet. Sobald das Paket unterwegs ist, bekommst du eine Mail mit der Sendungsnummer und dem Link zur Sendungsverfolgung.${zahlung === "RESERVIERT" ? " Mit dem Versand zieht PayPal den Betrag ein – dann kommt auch deine Rechnung." : ""}</p>
       ${mailKnopf(`${SHOP_URL}/konto/`, "Bestellung im Konto ansehen")}`),
     mailAbschnitt("Verkäufer", `<p style="margin:0;color:${F.leise};">${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}<br>${escapeHtml(SELLER.street)}<br>${escapeHtml(SELLER.city)}<br>${escapeHtml(SELLER.country)}<br>E-Mail: <a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a></p>`),
     `<tr><td style="padding:26px 4px 30px;">
@@ -541,6 +557,20 @@ export async function loadOrderForConfirmation(env, orderId) {
   return { ...order, items: items?.results || [], contact: contact || {}, versand: versand || null };
 }
 
+// Wie wurde bezahlt? "RESERVIERT" / "EINGEZOGEN" bei Zahlungen, die erst
+// reserviert wurden (zahlung.js), sonst null (sofort eingezogen, bisheriger Weg).
+async function zahlungsModus(env, orderId) {
+  try {
+    const zahlung = await env.DB.prepare(`SELECT status,authorization_id FROM payments WHERE order_id=? AND provider='PAYPAL'
+      AND status IN ('AUTHORIZED','COMPLETED','PARTIALLY_REFUNDED','REFUNDED') ORDER BY created_at DESC LIMIT 1`)
+      .bind(String(orderId)).first();
+    if (!zahlung?.authorization_id) return null;
+    return zahlung.status === "AUTHORIZED" ? "RESERVIERT" : "EINGEZOGEN";
+  } catch {
+    return null;
+  }
+}
+
 export async function sendOrderConfirmation(env, orderId, reqId = crypto.randomUUID()) {
   if (!mailTransportReady(env) || !env.DB) return { sent: false, reason: "NOT_CONFIGURED" };
   const order = await loadOrderForConfirmation(env, orderId);
@@ -561,7 +591,7 @@ export async function sendOrderConfirmation(env, orderId, reqId = crypto.randomU
       if(await pruefsumme(saved.html)!==saved.html_sha256||await pruefsumme(saved.text)!==saved.text_sha256)throw new Error('confirmation_archive_hash_mismatch');
       message={subject:saved.subject,html:saved.html,text:saved.text,invoice:JSON.parse(saved.invoice_json)};
     } else {
-      message=formatOrderConfirmation(order,{contactEmail:mailSenderIdentity(env).email||safeText(env.MAIL_REPLY_TO||'',200),taxProfile:invoiceProfile(env,SELLER)});
+      message=formatOrderConfirmation(order,{contactEmail:mailSenderIdentity(env).email||safeText(env.MAIL_REPLY_TO||'',200),taxProfile:invoiceProfile(env,SELLER),zahlung:await zahlungsModus(env,order.id)});
       await env.DB.prepare(`INSERT INTO order_confirmation_archive(order_id,subject,html,text,html_sha256,text_sha256,invoice_json,created_at) VALUES(?,?,?,?,?,?,?,?)`)
         .bind(order.id,message.subject,message.html,message.text,await pruefsumme(message.html),await pruefsumme(message.text),JSON.stringify(message.invoice),new Date().toISOString()).run();
     }
@@ -646,6 +676,141 @@ async function archiviereRechnung(env, order, message, recipient) {
     }));
     return false;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Rechnung nach dem Einziehen einer reservierten Zahlung
+// ---------------------------------------------------------------------------
+
+// invoice: fertige Rechnung (renderInvoice oder aus dem Archiv) mit
+// fragment, text und number.
+export function formatInvoiceMail(order = {}, invoice = {}, options = {}) {
+  const contactEmail = safeText(options.contactEmail || "", 200);
+  const number = safeText(order.order_number || invoice.number || "", 80) || "—";
+  const betrag = euroAmount(order.total_cents ?? 0, order.currency || "EUR");
+  const einleitung = `Den Betrag für deine Bestellung ${number} (${betrag}) haben wir jetzt über PayPal eingezogen. Hier ist deine Rechnung.`;
+  const subject = `Deine Rechnung zur Bestellung ${number} – DISORDER119`;
+  const text = [
+    "DISORDER119",
+    "",
+    einleitung,
+    "",
+    String(invoice.text || ""),
+    "",
+    ...(contactEmail ? [`Fragen? Antworte einfach auf diese Mail oder schreib an ${contactEmail}.`] : ["Fragen? Antworte einfach auf diese Mail."]),
+  ].join("\n");
+  const F = MAIL_FARBE;
+  const kopf = `<p style="margin:0 auto;max-width:440px;color:${F.leise};">${escapeHtml(einleitung)}</p>`;
+  const inhalt = [
+    `<tr><td>${invoice.fragment || ""}</td></tr>`,
+    fragenZeile(contactEmail),
+  ].join("");
+  const html = kundenmailRahmen({ titel: "Deine Rechnung", eyebrow: "Rechnung", kopf, inhalt, vorschau: `Rechnung ${number} · ${betrag}` });
+  return { subject, text, html, invoice };
+}
+
+// Eine archivierte Rechnung wieder als Rechnung lesen (fuer eine erneute Mail
+// nach einem Versandfehler) - nie neu ausstellen, was schon ausgestellt ist.
+async function archivierteRechnung(env, orderId) {
+  const row = await env.DB.prepare(`SELECT rechnungsnummer,ausgestellt_am,html,text,pruefsumme,html_sha256
+    FROM rechnungen WHERE order_id=?`).bind(String(orderId)).first();
+  if (!row) return null;
+  if (await pruefsumme(row.text) !== row.pruefsumme || (row.html_sha256 && await pruefsumme(row.html) !== row.html_sha256)) {
+    throw new Error("invoice_archive_hash_mismatch");
+  }
+  const html = String(row.html || "");
+  const start = html.indexOf("<body>");
+  const ende = html.lastIndexOf("</body>");
+  return {
+    ready: true,
+    number: row.rechnungsnummer,
+    issued_at: row.ausgestellt_am,
+    html,
+    text: row.text,
+    fragment: start >= 0 && ende > start ? html.slice(start + 6, ende) : "",
+  };
+}
+
+// Genau einmal je Bestellung, erst wenn eine reservierte Zahlung wirklich
+// eingezogen ist. Ausstellungsdatum ist der Zeitpunkt des Einziehens - so
+// ergibt ein zweiter Versuch nach einem Mailfehler dieselbe Rechnung.
+export async function sendInvoiceAfterCapture(env, orderId, reqId = crypto.randomUUID()) {
+  if (!mailTransportReady(env) || !env.DB) return { sent: false, reason: "NOT_CONFIGURED" };
+  const order = await loadOrderForConfirmation(env, orderId);
+  if (!order) return { sent: false, reason: "ORDER_NOT_FOUND" };
+  const zahlung = await env.DB.prepare(`SELECT p.id,p.status,p.authorization_id,
+      (SELECT COALESCE(e.occurred_at,e.observed_at) FROM tax_cash_events e WHERE e.payment_id=p.id AND e.kind='capture'
+        ORDER BY e.rowid LIMIT 1) AS eingezogen_am
+    FROM payments p WHERE p.order_id=? AND p.provider='PAYPAL' AND p.authorization_id IS NOT NULL
+      AND p.status IN ('COMPLETED','PARTIALLY_REFUNDED','REFUNDED') ORDER BY p.created_at DESC LIMIT 1`)
+    .bind(String(order.id)).first();
+  if (!zahlung) return { sent: false, reason: "NOT_CAPTURED" };
+  // Stand die Rechnung schon in der Bestellbestaetigung (sofort eingezogen)?
+  const bestaetigung = await env.DB.prepare("SELECT invoice_json FROM order_confirmation_archive WHERE order_id=?")
+    .bind(String(order.id)).first();
+  try {
+    if (bestaetigung && JSON.parse(bestaetigung.invoice_json || "{}")?.ready === true) return { sent: false, reason: "IN_BESTAETIGUNG" };
+  } catch {
+    // Unlesbares Archiv: lieber die eigene Rechnungsmail schicken.
+  }
+  const recipient = normalizeEmail(order.contact?.email);
+  if (!recipient) return { sent: false, reason: "NO_CUSTOMER_EMAIL" };
+  const contactEmail = mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200);
+
+  let invoice = await archivierteRechnung(env, order.id);
+  if (!invoice) {
+    const neu = renderInvoice(order, invoiceProfile(env, SELLER), zahlung.eingezogen_am || new Date().toISOString());
+    if (!neu.ready) return { sent: false, reason: "INVOICE_NOT_READY", issues: neu.issues };
+    invoice = neu;
+  }
+
+  const claimId = `notify:email:invoice:${order.id}`;
+  const claim = await env.DB.prepare(`INSERT OR IGNORE INTO audit_events
+    (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'SYSTEM','order',?,'ORDER_INVOICE_CLAIMED',?,?,?)`)
+    .bind(claimId, String(order.id), safeText(reqId, 120), JSON.stringify({ channel: "email" }), new Date().toISOString()).run();
+  if (!claim?.meta?.changes) return { sent: false, duplicate: true };
+
+  let archiviert = false;
+  try {
+    const message = formatInvoiceMail(order, invoice, { contactEmail });
+    archiviert = await archiviereRechnung(env, order, message, recipient);
+    if (!archiviert) throw new Error("invoice_archive_failed");
+    const delivery = await sendMail(env, {
+      to: recipient,
+      toName: safeText(order.contact?.recipient_name || "", 120),
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      tag: "invoice",
+      // Beleg: Durchschlag ins Shop-Postfach.
+      kopieAnShop: true,
+    });
+    if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
+  } catch (err) {
+    try {
+      await env.DB.prepare("DELETE FROM audit_events WHERE id=? AND event_type='ORDER_INVOICE_CLAIMED'").bind(claimId).run();
+    } catch {
+      // Eine fehlgeschlagene Mail darf die Zahlung nie kippen.
+    }
+    throw new Error(`invoice_mail_failed:${safeText(err?.message || "unknown", 120)}`);
+  }
+  try {
+    await env.DB.prepare("UPDATE audit_events SET event_type='ORDER_INVOICE_SENT',metadata_json=? WHERE id=?")
+      .bind(JSON.stringify({ channel: "email", sentAt: new Date().toISOString() }), claimId).run();
+  } catch {
+    // Versendet ist versendet.
+  }
+  return { sent: true, archiviert };
+}
+
+export async function sendInvoiceAfterCaptureByProviderOrder(env, providerOrderId, reqId = crypto.randomUUID()) {
+  if (!mailTransportReady(env) || !env.DB) return { sent: false, reason: "NOT_CONFIGURED" };
+  const payment = await env.DB.prepare(`SELECT order_id FROM payments
+    WHERE provider='PAYPAL' AND provider_order_id=? LIMIT 1`)
+    .bind(safeText(providerOrderId, 128)).first();
+  if (!payment?.order_id) return { sent: false, reason: "ORDER_NOT_FOUND" };
+  return sendInvoiceAfterCapture(env, payment.order_id, reqId);
 }
 
 // ---------------------------------------------------------------------------
@@ -802,6 +967,10 @@ const ERSTATTUNGS_WEG = "Das Geld geht über PayPal an dieselbe Zahlungsquelle z
 const GELD_NACH_RUECKSENDUNG = "Sobald die Ware bei uns ist oder du uns den Versand nachweist, erstatten wir dir den Kaufpreis "
   + "– beim Widerruf der ganzen Bestellung auch die Standard-Versandkosten – über PayPal. Du bekommst eine Mail, sobald das Geld raus ist.";
 
+// Storno einer nur reservierten Zahlung: es ist nie Geld geflossen.
+const RESERVIERUNG_AUFGEHOBEN = "Abgebucht wurde nichts. Je nach Bank oder Karte kann die Vormerkung noch ein paar Tage "
+  + "in deinem Konto zu sehen sein – sie verschwindet dann von selbst.";
+
 // order: Bestellung; auftrag: Zeile aus erstattungsauftraege.
 export function formatRefundConfirmation(order = {}, auftrag = {}, options = {}) {
   const contactEmail = safeText(options.contactEmail || "", 200);
@@ -818,11 +987,17 @@ export function formatRefundConfirmation(order = {}, auftrag = {}, options = {})
   const grund = safeText(auftrag.kunden_grund || "", 300);
   const abzugGrund = safeText(auftrag.abzug_grund || "", 300);
 
+  const freigegeben = String(auftrag.ergebnis || "") === "FREIGEGEBEN";
   let subject;
   let titel;
   let eyebrow;
   let einleitung;
-  if (anlass === "KULANZ") {
+  if (freigegeben) {
+    subject = `Deine Bestellung ${number} ist storniert – nichts abgebucht`;
+    titel = "Bestellung storniert";
+    eyebrow = anlass === "WIDERRUF" ? "Widerruf" : "Stornierung";
+    einleitung = `Deine Bestellung ${number} ist storniert. Die Zahlung über ${betrag} war bei PayPal nur reserviert – wir haben die Reservierung aufgehoben.`;
+  } else if (anlass === "KULANZ") {
     subject = `Wir haben dir ${betrag} erstattet – Bestellung ${number}`;
     titel = "Geld ist unterwegs";
     eyebrow = "Erstattung";
@@ -849,9 +1024,9 @@ export function formatRefundConfirmation(order = {}, auftrag = {}, options = {})
     ...(artikel.length ? [anlass === "KULANZ" ? "BETRIFFT" : "ERSTATTET", ...artikel.map(artikelText), ""] : []),
     ...(aufschluesseln && versand ? [`Versandkosten: ${euroAmount(versand)}`] : []),
     ...(aufschluesseln && abzug ? [`Abzug: −${euroAmount(abzug)}${abzugGrund ? ` (${abzugGrund})` : ""}`] : []),
-    `Erstattet: ${betrag}`,
+    freigegeben ? `Nicht abgebucht: ${betrag}` : `Erstattet: ${betrag}`,
     "",
-    ERSTATTUNGS_WEG,
+    freigegeben ? RESERVIERUNG_AUFGEHOBEN : ERSTATTUNGS_WEG,
     "",
     ...(contactEmail ? [`Fragen? Antworte einfach auf diese Mail oder schreib an ${contactEmail}.`] : ["Fragen? Antworte einfach auf diese Mail."]),
   ].join("\n");
@@ -866,15 +1041,18 @@ export function formatRefundConfirmation(order = {}, auftrag = {}, options = {})
   const summen = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">
       ${aufschluesseln && versand ? betragsZeile("Versandkosten", euroAmount(versand)) : ""}
       ${aufschluesseln && abzug ? betragsZeile(`Abzug${abzugGrund ? ` · ${abzugGrund}` : ""}`, `−${euroAmount(abzug)}`) : ""}
-      ${betragsZeile("Erstattet", betrag, true)}
+      ${betragsZeile(freigegeben ? "Nicht abgebucht" : "Erstattet", betrag, true)}
     </table>`;
   const inhalt = [
     grund ? mailAbschnitt("Grund", leise(escapeHtml(grund)), false) : "",
-    mailAbschnitt(anlass === "KULANZ" ? "Betrag" : artikel.length > 1 ? `${artikel.length} Stücke` : "Erstattet", `${liste}${summen}`, Boolean(grund)),
-    mailAbschnitt("Wann das Geld da ist", leise(escapeHtml(ERSTATTUNGS_WEG))),
+    mailAbschnitt(anlass === "KULANZ" ? "Betrag" : artikel.length > 1 ? `${artikel.length} Stücke` : freigegeben ? "Storniert" : "Erstattet", `${liste}${summen}`, Boolean(grund)),
+    freigegeben
+      ? mailAbschnitt("Dein Geld", leise(escapeHtml(RESERVIERUNG_AUFGEHOBEN)))
+      : mailAbschnitt("Wann das Geld da ist", leise(escapeHtml(ERSTATTUNGS_WEG))),
     fragenZeile(contactEmail),
   ].join("");
-  const html = kundenmailRahmen({ titel, eyebrow, kopf, inhalt, vorschau: `${betrag} über PayPal erstattet · Bestellung ${number}` });
+  const html = kundenmailRahmen({ titel, eyebrow, kopf, inhalt,
+    vorschau: freigegeben ? `Storniert · nichts abgebucht · Bestellung ${number}` : `${betrag} über PayPal erstattet · Bestellung ${number}` });
   return { subject, text, html };
 }
 
@@ -1041,6 +1219,8 @@ export function formatWithdrawalReceipt(widerruf = {}, options = {}) {
   const subject = `Eingangsbestätigung: dein Widerruf vom ${berlinDatum(widerruf.eingegangen_at)}`;
   const weiter = lage === "VERSENDET"
     ? "Bitte schick uns die Ware zurück, wie unten beschrieben. Sobald sie bei uns ist oder du uns den Versand nachweist, erstatten wir dir alle Zahlungen über PayPal – beim Widerruf der ganzen Bestellung einschließlich der Standard-Versandkosten –, spätestens 14 Tage nach Eingang deines Widerrufs. Du bekommst eine Mail, sobald das Geld raus ist."
+    : lage === "NICHT_VERSENDET" && options.reserviert
+      ? "Deine Bestellung ist noch nicht verschickt, und abgebucht ist noch nichts – PayPal hat den Betrag nur reserviert. Wir halten die Bestellung an und heben die Reservierung auf. Du bekommst eine Mail, sobald das erledigt ist. Sollte dein Paket doch schon unterwegs sein, melden wir uns bei dir."
     : lage === "NICHT_VERSENDET"
       ? "Deine Bestellung ist noch nicht verschickt. Wir halten sie an und erstatten dir den vollen Betrag über PayPal. Du bekommst eine Mail, sobald das Geld zurück ist. Sollte dein Paket doch schon unterwegs sein, melden wir uns bei dir."
       : "Wir ordnen deine Erklärung jetzt deiner Bestellung zu und schicken dir die nächsten Schritte. Falls wir dafür etwas von dir brauchen, melden wir uns.";

@@ -390,11 +390,15 @@ export async function listOrders(env, customerId) {
   // Ein Zug fuer alle Positionen statt einer Abfrage je Bestellung.
   const ids = rows.map(row => String(row.id));
   const platzhalter = ids.map(() => "?").join(",");
-  const [items, shipments] = await Promise.all([
+  const [items, shipments, payments] = await Promise.all([
     env.DB.prepare(`SELECT order_id,item_id,article_no,title_snapshot,unit_price_cents
       FROM order_items WHERE order_id IN (${platzhalter}) ORDER BY id`).bind(...ids).all(),
     env.DB.prepare(`SELECT order_id,carrier,status,tracking_number,shipped_at,delivered_at
       FROM shipments WHERE order_id IN (${platzhalter}) ORDER BY created_at DESC`).bind(...ids).all(),
+    // Nur der Stand, keine Zahlungsdaten: reserviert, eingezogen, aufgehoben.
+    env.DB.prepare(`SELECT order_id,status,voided_at FROM payments
+      WHERE order_id IN (${platzhalter}) AND provider='PAYPAL' ORDER BY created_at DESC`).bind(...ids).all()
+      .catch(() => ({ results: [] })),
   ]);
 
   const itemsByOrder = new Map();
@@ -410,6 +414,15 @@ export async function listOrders(env, customerId) {
       priceCents: Number(item.unit_price_cents || 0),
     });
     itemsByOrder.set(String(item.order_id), list);
+  }
+  const zahlungByOrder = new Map();
+  for (const row of payments?.results || []) {
+    const key = String(row.order_id);
+    if (zahlungByOrder.has(key)) continue;
+    const status = String(row.status || "");
+    zahlungByOrder.set(key, status === "AUTHORIZED" ? "RESERVIERT"
+      : ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"].includes(status) ? "EINGEZOGEN"
+        : status === "CANCELLED" && row.voided_at ? "FREIGEGEBEN" : null);
   }
   const shipmentByOrder = new Map();
   for (const row of shipments?.results || []) {
@@ -429,6 +442,9 @@ export async function listOrders(env, customerId) {
     createdAt: row.created_at,
     items: itemsByOrder.get(String(row.id)) || [],
     shipment: shipmentByOrder.get(String(row.id)) || null,
+    // RESERVIERT: PayPal hat reserviert, abgebucht wird beim Versand.
+    // FREIGEGEBEN: storniert, bevor etwas abgebucht wurde.
+    zahlung: zahlungByOrder.get(String(row.id)) || null,
   }));
 }
 

@@ -46,7 +46,10 @@ export function buildLedger(tables) {
     add({id:`legacy:refund:${r.id}`,kind:'refund',order_id:r.order_id,payment_id:r.payment_id,provider:'',provider_reference:r.provider_refund_id,amount_cents:r.amount_cents,currency:r.currency,observed_at:r.updated_at||r.created_at},'legacy_refund_record');
   }
   for(const order of tables.orders) {
-    if (['PAID','PREPARING','SHIPPED','DELIVERED','RETURN_REQUESTED','RETURNED','REFUNDED'].includes(order.status)&&!ledger.some(e=>e.kind==='capture'&&e.order_id===order.id)) issues.push({code:'ORDER_WITHOUT_PAYMENT_EVIDENCE',reference:order.id,message:'Bestellstatus ohne Zahlungsnachweis; kein Umsatz erfunden.'});
+    // Vor dem Versand nur bei PayPal reserviert (eingezogen wird beim Versand):
+    // noch kein Zufluss und auch kein fehlender Nachweis.
+    const nurReserviert=['PAID','PREPARING'].includes(order.status)&&tables.payments.some(p=>p.order_id===order.id&&p.status==='AUTHORIZED');
+    if (['PAID','PREPARING','SHIPPED','DELIVERED','RETURN_REQUESTED','RETURNED','REFUNDED'].includes(order.status)&&!nurReserviert&&!ledger.some(e=>e.kind==='capture'&&e.order_id===order.id)) issues.push({code:'ORDER_WITHOUT_PAYMENT_EVIDENCE',reference:order.id,message:'Bestellstatus ohne Zahlungsnachweis; kein Umsatz erfunden.'});
     if (ledger.some(e=>e.kind==='capture'&&e.order_id===order.id)&&!tables.invoices.some(i=>i.order_id===order.id&&i.document_type==='invoice'))issues.push({code:'INVOICE_REQUIRES_REVIEW',reference:order.id,message:'Keine geprüfte archivierte Rechnung für diesen Zahlungsvorgang.'});
   }
   if (tables.rentals.length)issues.push({code:'RENTALS_REQUIRE_RECONCILIATION',message:'Mietzahlungen und rückzahlbare Kautionen gesondert abstimmen; Mietstatus und Kautionsforderung sind keine Einnahmen.'});

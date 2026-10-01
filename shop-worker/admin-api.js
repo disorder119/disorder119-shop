@@ -36,6 +36,16 @@ import {
   widerrufePflegen,
   widerrufeUebersicht,
 } from "./widerruf.js";
+import {
+  ZahlungFehler,
+  faelligeZahlungenEinziehen,
+  reservierungFreigeben,
+  zahlungDerBestellung,
+  zahlungEinziehen,
+  zahlungFehlerText,
+  zahlungSicherstellen,
+  zahlungView,
+} from "./zahlung.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -150,12 +160,20 @@ export function clampAnalyticsDays(value) {
   return Math.min(Math.max(parsed, 7), 365);
 }
 
-export function orderNextStatuses(status) {
+// ohneZahlung: an der Bestellung haengt kein Geld (mehr) - Einziehen
+// gescheitert oder Reservierung aufgehoben. Nur dann darf eine bezahlte
+// Bestellung direkt auf "Storniert"; sonst laeuft das ueber "Stornieren"
+// (Reservierung freigeben oder erstatten).
+export function orderNextStatuses(status, { ohneZahlung = false } = {}) {
   const current = String(status || "").toUpperCase();
   // PAID darf ausschliesslich ein verifizierter Zahlungsabschluss setzen.
   if (current === "PAYMENT_PENDING" || current === "RESERVED") return ["CANCELLED"];
-  return ORDER_STATUSES.filter(next => next !== current && canTransitionOrder(current, next));
+  return ORDER_STATUSES.filter(next => next !== current && canTransitionOrder(current, next)
+    && (next !== "CANCELLED" || ohneZahlung));
 }
+
+// Haengt an der Bestellung noch Geld (reserviert, eingezogen, erstattet)?
+const ZAHLUNG_GEBUNDEN = Object.freeze(["PENDING", "AUTHORIZED", "COMPLETED", "REFUNDED", "PARTIALLY_REFUNDED"]);
 
 export function rentalNextStatuses(status) {
   const current = String(status || "").toUpperCase();
@@ -230,7 +248,10 @@ async function getOverview(env, url) {
       FROM commerce_orders`),
     db.prepare(`SELECT COUNT(*) AS total,
       SUM(CASE WHEN status='COMPLETED' THEN 1 ELSE 0 END) AS completed,
-      SUM(CASE WHEN status IN ('CREATED','PENDING','AUTHORIZED') THEN 1 ELSE 0 END) AS open,
+      SUM(CASE WHEN status IN ('CREATED','PENDING') THEN 1 ELSE 0 END) AS open,
+      -- Bei PayPal reserviert, eingezogen wird beim Versand (zahlung.js).
+      SUM(CASE WHEN status='AUTHORIZED' THEN 1 ELSE 0 END) AS reserved,
+      COALESCE(SUM(CASE WHEN status='AUTHORIZED' THEN amount_cents ELSE 0 END),0) AS reservedCents,
       SUM(CASE WHEN status='FAILED' THEN 1 ELSE 0 END) AS failed,
       SUM(CASE WHEN status IN ('REFUNDED','PARTIALLY_REFUNDED') THEN 1 ELSE 0 END) AS refunded,
       COALESCE(SUM(CASE WHEN status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND provider_payment_id IS NOT NULL THEN amount_cents ELSE 0 END),0) AS capturedCents
@@ -396,20 +417,27 @@ async function getOrderDetail(env, id) {
   ]);
   const laufend = erstattungsauftraege.find(a => a.laufend) || null;
   const shipmentRows = shipments.results || [];
+  const paymentRows = payments.results || [];
+  // Juengste PayPal-Zahlung: reserviert, eingezogen, freigegeben, gescheitert.
+  const zahlung = zahlungView(paymentRows.find(p => p.provider === "PAYPAL") || null);
+  const gebunden = paymentRows.some(p => ZAHLUNG_GEBUNDEN.includes(String(p.status)));
+  const warVerkauft = paymentRows.some(p => p.authorization_id || p.provider_payment_id);
   return {
     order,
-    nextStatuses: orderNextStatuses(order.status),
+    nextStatuses: orderNextStatuses(order.status, { ohneZahlung: !gebunden }),
     // Was die Admin-App zum Stornieren anbietet (siehe orderStornieren).
-    storno: laufend ? { moeglich: false, art: null, laeuft: true } : stornoAngebot(order),
+    storno: laufend ? { moeglich: false, art: null, laeuft: true } : stornoAngebot(order, zahlung),
+    // Reserviert (Einziehen beim Versand), eingezogen, freigegeben (zahlung.js).
+    zahlung,
     // Storno, Ruecksendung, Widerruf, Kulanz (erstattung-auftrag.js, widerruf.js).
     erstattungsauftraege,
     laufenderAuftrag: laufend,
     widerrufe,
     versandSperre: sperre,
-    ruecklauf: ruecklaufAngebot(order, itemRows, shipmentRows, refunds.results || [], widerrufe, laufend),
-    wiederVerfuegbar: wiederVerfuegbarStand(order, itemRows, activity),
+    ruecklauf: ruecklaufAngebot(order, itemRows, shipmentRows, refunds.results || [], widerrufe, laufend, zahlung),
+    wiederVerfuegbar: wiederVerfuegbarStand(order, itemRows, activity, { warVerkauft }),
     items: itemRows,
-    payments: payments.results || [],
+    payments: paymentRows,
     shipments: shipmentRows,
     returns: returns.results || [],
     refunds: refunds.results || [],
@@ -571,7 +599,21 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN", optionen =
     // unterwegs, gilt das - der Auftrag haelt dann selbst an.
     if (newStatus === "SHIPPED" && order.status !== "SHIPPED" && actorType === "ADMIN") {
       const sperre = await versandSperre(db, order.id);
-      if (sperre) throw new AdminError(sperre.code, 409);
+      if (sperre) throw /^ZAHLUNG_/.test(sperre.code) ? new ZahlungFehler(sperre.code, 409, sperre.text) : new AdminError(sperre.code, 409);
+      // Erst das Geld, dann das Paket: eine nur reservierte Zahlung wird
+      // jetzt eingezogen. Klappt das nicht, bleibt die Bestellung, wie sie ist.
+      await zahlungSicherstellen(env, order.id, reqId, { anlass: "VERSENDET" });
+    }
+    // Die Sendungsverfolgung meldet "unterwegs": das gilt, Geld hin oder her.
+    // Einziehen trotzdem sofort versuchen - scheitert es, meldet zahlung.js
+    // sich beim Inhaber, und der Cron versucht es weiter.
+    if (newStatus === "SHIPPED" && order.status !== "SHIPPED" && actorType !== "ADMIN") {
+      try {
+        await zahlungEinziehen(env, order.id, reqId, { anlass: "VERSENDET" });
+      } catch (err) {
+        console.error(JSON.stringify({ level: "error", event: "capture_on_tracking_failed", requestId: reqId,
+          orderId: String(order.id), message: safeText(err?.message || "unknown", 160) }));
+      }
     }
     if (newStatus === "REFUNDED") {
       const refunded = await db.prepare("SELECT COALESCE(SUM(amount_cents),0) AS cents FROM refunds WHERE order_id=? AND status='COMPLETED'").bind(order.id).first();
@@ -595,8 +637,10 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN", optionen =
         WHERE order_id=? AND status='CREATED'
         AND EXISTS (SELECT 1 FROM commerce_orders o WHERE o.id=payments.order_id AND o.status='CANCELLED')`)
         .bind(now, order.id));
+      // Auch "Bezahlt"/"Wird gepackt": das ist der Storno einer nur
+      // reservierten (inzwischen freigegebenen) oder gescheiterten Zahlung.
       statements.push(db.prepare(`UPDATE inventory SET status='CANCELLED',updated_at=?,version=version+1
-        WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status IN ('RESERVED','PAYMENT_PENDING')
+        WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status IN ('RESERVED','PAYMENT_PENDING','PAID','PREPARING')
         AND EXISTS (SELECT 1 FROM commerce_orders WHERE id=? AND status='CANCELLED')`).bind(now, order.id, order.id));
       statements.push(db.prepare(`UPDATE inventory SET status='AVAILABLE',updated_at=?,version=version+1
         WHERE id IN (SELECT inventory_id FROM order_items WHERE order_id=?) AND status='CANCELLED'
@@ -681,17 +725,24 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN", optionen =
 const STORNO_UNBEZAHLT = Object.freeze(["PAYMENT_PENDING", "RESERVED"]);
 const STORNO_BEZAHLT = Object.freeze(["PAID", "PREPARING"]);
 
-function stornoAngebot(order) {
+// zahlung: zahlungView (zahlung.js). Nur reserviert -> FREIGEBEN (keine
+// PayPal-Gebuehr), Einziehen gescheitert oder schon freigegeben -> einfach
+// STORNIEREN (es ist kein Geld da), eingezogen -> ERSTATTEN.
+function stornoAngebot(order, zahlung = null) {
   const status = String(order?.status || "").toUpperCase();
   if (STORNO_UNBEZAHLT.includes(status)) return { moeglich: true, art: "STORNIEREN" };
-  if (STORNO_BEZAHLT.includes(status)) return { moeglich: true, art: "ERSTATTEN" };
+  if (STORNO_BEZAHLT.includes(status)) {
+    if (zahlung?.reserviert) return { moeglich: true, art: "FREIGEBEN", wirdGeprueft: Boolean(zahlung.wirdGeprueft) };
+    if (zahlung && (zahlung.gescheitert || zahlung.freigegeben)) return { moeglich: true, art: "STORNIEREN", ohneZahlung: true };
+    return { moeglich: true, art: "ERSTATTEN" };
+  }
   return { moeglich: false, art: null };
 }
 
 // "Wieder in den Shop": nur aus den Endzustaenden Storniert und Erstattet -
 // danach aendert sich an der Bestellung nichts mehr, das das Stueck zurueck
 // an sie binden koennte.
-function wiederVerfuegbarStand(order, items, activity) {
+function wiederVerfuegbarStand(order, items, activity, { warVerkauft = false } = {}) {
   const status = String(order?.status || "").toUpperCase();
   const letzte = activity.find(e => e.event_type === "ORDER_ITEMS_RELISTED");
   const erledigt = Boolean(letzte?.metadata?.katalog);
@@ -699,8 +750,11 @@ function wiederVerfuegbarStand(order, items, activity) {
   // Offen: das Lagerstueck haengt noch an dieser Bestellung - oder es ist frei,
   // aber der Katalog-Schritt hat noch nie geklappt. Gehoert es inzwischen einer
   // anderen Bestellung (reserviert, bezahlt ...), gibt es nichts zu tun.
+  // Storniert nach einer aufgehobenen Reservierung: im Katalog steht das Stueck
+  // als verkauft, bis der Pull Request "Wieder verfuegbar" gemergt ist.
+  const verkauftGewesen = status === "REFUNDED" || (status === "CANCELLED" && warVerkauft);
   const offen = items.some(it => ["REFUNDED", "CANCELLED"].includes(lager(it)))
-    || (status === "REFUNDED" && !erledigt && items.some(it => lager(it) === "AVAILABLE"));
+    || (verkauftGewesen && !erledigt && items.some(it => lager(it) === "AVAILABLE"));
   return {
     moeglich: ["REFUNDED", "CANCELLED"].includes(status) && offen,
     erledigtAm: erledigt ? letzte.created_at : null,
@@ -739,7 +793,8 @@ function auftragDeps(env, reqId) {
 const TAG_MS = 24 * 60 * 60 * 1000;
 
 // Was die Admin-App fuer Ruecksendung, Widerruf und Kulanz anbietet.
-function ruecklaufAngebot(order, items, shipments, refunds, widerrufe, laufend) {
+// zahlung: zahlungView - Kulanz (Teilbetrag) geht nur aus eingezogenem Geld.
+function ruecklaufAngebot(order, items, shipments, refunds, widerrufe, laufend, zahlung = null) {
   const status = String(order?.status || "");
   const erstattet = refunds.filter(r => r.status === "COMPLETED").reduce((summe, r) => summe + Number(r.amount_cents || 0), 0);
   const offenCents = Math.max(0, Number(order?.total_cents || 0) - erstattet);
@@ -756,7 +811,7 @@ function ruecklaufAngebot(order, items, shipments, refunds, widerrufe, laufend) 
     offenerWiderruf: widerruf,
     ruecksendungAnlegen: !laufend && ["SHIPPED", "DELIVERED", "RETURN_REQUESTED"].includes(status),
     wareEingegangen: !laufend && offenCents > 0 && ["SHIPPED", "DELIVERED", "RETURN_REQUESTED", "RETURNED"].includes(status),
-    kulanz: !laufend && bezahlt && offenCents > 0,
+    kulanz: !laufend && bezahlt && offenCents > 0 && Boolean(zahlung?.eingezogen),
     stuecke: items.map(it => ({
       itemId: Number(it.item_id),
       titel: it.title_snapshot,
@@ -789,11 +844,24 @@ async function orderStornieren(env, id, body, reqId) {
   if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
   // Laeuft schon ein Auftrag, versucht ein erneuter Klick ihn sofort wieder
   // (erstattungBeauftragen) - es entsteht kein zweiter.
-  const angebot = stornoAngebot(order);
+  const zahlung = zahlungView(await zahlungDerBestellung(db, order.id));
+  const angebot = stornoAngebot(order, zahlung);
   if (!angebot.moeglich) throw new AdminError("STORNO_NICHT_MOEGLICH", 409);
   if (angebot.art === "STORNIEREN") {
+    // Einziehen gescheitert: eine etwa noch bestehende Vormerkung bei der
+    // Kundin trotzdem aufheben (ohne Geld, ohne Gebuehr).
+    if (angebot.ohneZahlung && zahlung?.gescheitert) await reservierungFreigeben(env, order.id, reqId);
     await updateOrder(env, order.id, { status: "CANCELLED" }, reqId);
-    return { ...(await getOrderDetail(env, order.id)), storniert: { art: "STORNIERT" } };
+    // War die Bestellung schon verkauft (Katalog "Verkauft"), kommen die
+    // Stuecke auf Wunsch zurueck in den Shop.
+    let wieder = null;
+    if (angebot.ohneZahlung && body?.wiederVerfuegbar !== false) {
+      wieder = await stueckeZurueckInDenShop(env, { ...order, status: "CANCELLED" }, null, reqId, "Storno");
+    }
+    return {
+      ...(await getOrderDetail(env, order.id)),
+      storniert: { art: "STORNIERT", wiederVerfuegbar: wieder ? { ok: wieder.ok, pullRequest: wieder.pullRequest ?? null } : null },
+    };
   }
   // Ein schon gekauftes Etikett bleibt gueltig - Packlink erstattet das Porto
   // nur, wenn man es dort storniert. Darauf weist die Admin-App hin.
@@ -807,9 +875,11 @@ async function orderStornieren(env, id, body, reqId) {
   }, reqId, auftragDeps(env, reqId));
   const detail = await getOrderDetail(env, order.id);
   const erledigt = ergebnis.auftrag?.status === "ERLEDIGT";
+  const freigegeben = ergebnis.auftrag?.ergebnis === "FREIGEGEBEN";
   return auftragAntwort(ergebnis, detail, {
     storniert: {
-      art: erledigt ? "ERSTATTET" : "ERSTATTUNG_LAEUFT",
+      // FREIGEGEBEN: nur reserviert, nichts abgebucht, keine Gebuehr.
+      art: erledigt ? (freigegeben ? "FREIGEGEBEN" : "ERSTATTET") : angebot.art === "FREIGEBEN" ? "FREIGABE_LAEUFT" : "ERSTATTUNG_LAEUFT",
       wiederVerfuegbar: detail.wiederVerfuegbar?.erledigtAm
         ? { ok: true, pullRequest: detail.wiederVerfuegbar.pullRequest ?? null }
         : null,
@@ -871,6 +941,14 @@ export async function ruecklaufPflegen(env, reqId = crypto.randomUUID(), now = n
   const erstattungen = await erstattungsauftraegePflegen(env, reqId, auftragDeps(env, reqId), now);
   const widerrufe = await widerrufePflegen(env, reqId, now);
   return { ok: erstattungen.ok && widerrufe.ok, erstattungen, widerrufe };
+}
+
+// Cron: reservierte Zahlungen spaetestens am Ende der PayPal-Garantiezeit
+// einziehen (nicht, solange ein Storno vor dem Versand laeuft), gepruefte
+// Abbuchungen nachfragen, Rechnungsmails nachholen.
+export async function zahlungenPflegen(env, reqId = crypto.randomUUID(), now = new Date()) {
+  if (!env?.DB) return { ok: false };
+  return faelligeZahlungenEinziehen(env, reqId, now, { sperre: orderId => versandSperre(env.DB, orderId, { mitZahlung: false }) });
 }
 
 // Oeffentliche Widerrufsfunktion (POST /widerruf von der Website).
@@ -1295,6 +1373,23 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
       return adminJson(await orderErstatten(env, decodeURIComponent(erstattenMatch[1]), await readJson(request), reqId), 200, origin);
     }
 
+    // "Jetzt einziehen": eine nur reservierte Zahlung sofort einziehen.
+    const einzugMatch = /^\/admin\/orders\/([^/]+)\/zahlung\/einziehen$/.exec(path);
+    if (einzugMatch && request.method === "POST") {
+      const db = requireDb(env);
+      const id = decodeURIComponent(einzugMatch[1]);
+      const order = await db.prepare("SELECT id,status FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
+      if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
+      // Laeuft ein Storno oder Widerruf vor dem Versand, wird nicht mehr eingezogen.
+      const sperre = ["PAID", "PREPARING"].includes(String(order.status)) ? await versandSperre(db, order.id, { mitZahlung: false }) : null;
+      if (sperre) throw new AdminError(sperre.code, 409);
+      const einzug = await zahlungEinziehen(env, order.id, reqId, { anlass: "ADMIN" });
+      return adminJson({
+        ...(await getOrderDetail(env, order.id)),
+        einzug: { ...einzug, text: einzug.ok ? null : zahlungFehlerText(einzug.code) },
+      }, 200, origin);
+    }
+
     const stornoMatch = /^\/admin\/orders\/([^/]+)\/stornieren$/.exec(path);
     if (stornoMatch && request.method === "POST") {
       return adminJson(await orderStornieren(env, decodeURIComponent(stornoMatch[1]), await readJson(request), reqId), 200, origin);
@@ -1363,6 +1458,7 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
     throw new AdminError("NOT_FOUND", 404);
   } catch (err) {
     if (err instanceof AdminError) return adminJson({ error: err.code, requestId: reqId }, err.status, origin);
+    if (err instanceof ZahlungFehler) return adminJson({ error: err.code, detail: { text: err.text }, requestId: reqId }, err.status, origin);
     if (err instanceof ErstattungsFehler || err instanceof AuftragFehler || err instanceof WiderrufFehler) {
       return adminJson({ error: err.code, detail: err.detail ?? null, requestId: reqId }, err.status, origin);
     }

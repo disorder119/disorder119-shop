@@ -33,6 +33,10 @@ function seed(contact = {}) {
     VALUES ('o1','D119-2026-0001','PAID','EUR',9000,590,9590,'k1',?)`, now);
   run(`INSERT INTO order_items (id,order_id,inventory_id,item_id,article_no,title_snapshot,unit_price_cents)
     VALUES ('oi1','o1','inv_1',1,'2241','Jean Paul Gaultier Jeans Damen Blau',9000)`);
+  // Sofort eingezogene Zahlung (wie vor der Umstellung): vor dem Etikett ist
+  // nichts mehr einzuziehen.
+  run(`INSERT INTO payments (id,order_id,provider,provider_order_id,provider_payment_id,status,amount_cents,currency,idempotency_key,created_at)
+    VALUES ('pay1','o1','PAYPAL','PPORDER1','CAPTURE1','COMPLETED',9590,'EUR','paypal-create:k1',?)`, now);
   const c = {
     recipient_name: "Maria Müller", address_line1: "Musterstraße 12a", address_line2: "Hinterhaus",
     postal_code: "10115", city: "Berlin", country_code: "DE", ...contact,

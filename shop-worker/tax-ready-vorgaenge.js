@@ -115,6 +115,8 @@ export function buildSalesTransactions(v2, ledger, extra) {
     const brutto = summe(captures), gebuehr = summe(fees), erstattet = summe(refunds);
     let revenueState = 'NOT_PAID';
     if (!captures.length && order.status === 'CANCELLED') revenueState = 'CANCELLED_UNPAID';
+    // Bei PayPal nur reserviert (Einziehen beim Versand): noch kein Zufluss.
+    else if (!captures.length && (paymentsByOrder.get(order.id) || []).some(p => p.status === 'AUTHORIZED')) revenueState = 'AUTHORIZED';
     else if (captures.length && erstattet >= brutto) revenueState = 'REFUNDED_FULL';
     else if (captures.length && erstattet > 0) revenueState = 'REFUNDED_PARTIAL';
     else if (captures.length) revenueState = 'PAID';

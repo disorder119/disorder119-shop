@@ -37,6 +37,14 @@ test('legacy payments preserve gross amount but never invent a cash date',()=>{
   assert.ok(issues.some(i=>i.code==='MISSING_REFUND_EVIDENCE'));
   assert.ok(issues.some(i=>i.code==='PROVIDER_FEES_UNRECONCILED'));
 });
+test('a reservation before shipping is no sale and no missing evidence - after shipping it is flagged',()=>{
+  const leer={order_items:[],cash_events:[],refunds:[],invoices:[],rentals:[],payment_events:[],audit_events:[]};
+  const reserviert=buildLedger({...leer,orders:[{id:'o',status:'PAID'}],payments:[{id:'p',order_id:'o',status:'AUTHORIZED',amount_cents:1590,currency:'EUR'}]});
+  assert.equal(reserviert.ledger.length,0);
+  assert.ok(!reserviert.issues.some(i=>i.code==='ORDER_WITHOUT_PAYMENT_EVIDENCE'));
+  const versendet=buildLedger({...leer,orders:[{id:'o',status:'SHIPPED'}],payments:[{id:'p',order_id:'o',status:'AUTHORIZED',amount_cents:1590,currency:'EUR'}]});
+  assert.ok(versendet.issues.some(i=>i.code==='ORDER_WITHOUT_PAYMENT_EVIDENCE'));
+});
 test('multi-item CSV has a single order total and no false invoice label',()=>{
   const row={id:'o',order_number:'N',total_cents:10000,subtotal_cents:9500,shipping_cents:500,created_at:'2025-01-01'};
   const csv=bestellungenAlsCsv([{...row,article_no:'A'},{...row,article_no:'B'}]);

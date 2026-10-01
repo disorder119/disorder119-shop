@@ -36,6 +36,7 @@ import {
   stueckeZurueckInDenShop,
 } from "./erstattung-auftrag.js";
 import { schonErstattet } from "./erstattung.js";
+import { reservierteZahlung } from "./zahlung.js";
 
 const SHOP_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -287,8 +288,11 @@ export async function eingangBestaetigen(env, row, order, reqId = crypto.randomU
 
   const zugeordnet = order || (row.order_id ? await bestellungMitKontakt(db, row.order_id) : null);
   const items = zugeordnet ? await stueckeDerBestellung(db, zugeordnet.id) : [];
+  const lage = widerrufLage(zugeordnet);
   const message = formatWithdrawalReceipt(row, {
-    lage: widerrufLage(zugeordnet),
+    lage,
+    // Nur reserviert (noch nichts abgebucht): die Reservierung wird aufgehoben.
+    reserviert: lage === "NICHT_VERSENDET" && Boolean(await reservierteZahlung(db, zugeordnet.id)),
     items,
     contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200),
   });
@@ -326,14 +330,16 @@ export async function eingangBestaetigen(env, row, order, reqId = crypto.randomU
   return { sent: true };
 }
 
-function inhaberText(row, order, lage) {
+function inhaberText(row, order, lage, reserviert = false) {
   const frist = erstattungsfrist(row.eingegangen_at);
   const fristText = frist ? berlinZeit(frist).split(",")[0] : "";
   const umfang = row.umfang === "TEIL" ? `Teilwiderruf: ${safeText(row.teile_text || "", 200)}` : "Ganzer Vertrag";
   const kopf = order
     ? `Bestellung ${order.order_number}`
     : `Eingabe: „${safeText(row.bestellnummer_eingabe || "", 80)}“ – keiner Bestellung zugeordnet`;
-  const was = lage === "NICHT_VERSENDET"
+  const was = lage === "NICHT_VERSENDET" && reserviert
+    ? "NOCH NICHT VERSENDET – bitte nicht verschicken! Die Zahlung ist nur reserviert: Admin-App → Bestellung → „Stornieren“ gibt sie frei (keine PayPal-Gebühr)."
+    : lage === "NICHT_VERSENDET"
     ? "NOCH NICHT VERSENDET – bitte nicht verschicken! Admin-App → Bestellung → „Stornieren & erstatten“."
     : lage === "VERSENDET"
       ? "Versendet → Rücksendung angefragt. Die Kundin hat die Rücksendeanleitung bekommen. Kommt die Ware an: Admin-App → „Ware eingegangen“."
@@ -354,7 +360,8 @@ function inhaberText(row, order, lage) {
 
 async function inhaberInformieren(env, row, order, lage, reqId) {
   try {
-    await sendTelegramMessage(env, inhaberText(row, order, lage), reqId);
+    const reserviert = lage === "NICHT_VERSENDET" && order?.id ? Boolean(await reservierteZahlung(env.DB, order.id)) : false;
+    await sendTelegramMessage(env, inhaberText(row, order, lage, reserviert), reqId);
   } catch (err) {
     log("warn", "withdrawal_owner_notice_failed", reqId, { widerrufId: row.id, message: safeText(err?.message, 120) });
   }
