@@ -207,7 +207,11 @@ def test_search_and_mobile_filter(driver) -> None:
         fail("Mobiler Filter-Drawer hat keinen sichtbaren Backdrop")
     wait(driver, lambda d: "d119-filter-drawer__close" in (d.switch_to.active_element.get_attribute("class") or ""), "Fokus im Filter-Drawer")
 
-    driver.find_element(By.CSS_SELECTOR, '#d119Chips [data-d119-facette="department"][data-d119-wert="Men"]').click()
+    men = driver.find_element(By.CSS_SELECTOR, '#d119Chips [data-d119-facette="department"][data-d119-wert="Men"]')
+    # Unten im Vollbild-Filter liegt die feste Leiste "… Artikel anzeigen" -
+    # wie ein Mensch erst zum Chip scrollen, sonst trifft der Klick die Leiste.
+    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", men)
+    men.click()
     wait(driver, lambda d: d.find_element(By.ID, "filterDepartment").get_attribute("value") == "Men", "Bereich Herren per Chip gesetzt")
     wait(driver, lambda d: not any(re.search(r"\(0\)\s*$", (opt.get_attribute("textContent") or "").strip()) for opt in d.find_element(By.ID, "filterBrand").find_elements(By.TAG_NAME, "option")[1:]), "Null-Treffer nach Bereichswechsel entfernt")
     assert_no_zero_options(driver)
