@@ -28,19 +28,26 @@
   color-scheme: light;
 }
 
-/* Ruhiger warmer Fotohintergrund: freigestellte Stuecke heben sich im hellen
-   Modus vom Seitenweiss ab, ohne die Produktdateien zu veraendern. */
-:root[data-theme="hell"] { --mount: #d9d3c8; --mount-text: #1d1c19; --mount-rule: rgba(29, 28, 25, 0.2); }
-:root[data-theme="hell"] .plate__frame,
-:root[data-theme="hell"] .cart-line__frame,
-:root[data-theme="hell"] .kasse-stueck__bild {
-  background: radial-gradient(circle at 50% 36%, #e8e4dd 0%, #d9d3c8 72%, #c8c1b5 100%);
-}
-:root[data-theme="hell"] .plate__frame { box-shadow: inset 0 0 0 1px rgba(29, 28, 25, .08); }
-
-/* Produktfotos sind freigestellt. */
+/* Produktfotos sind freigestellt: in Weiss auf reinem Weiss. */
 :root[data-theme] .gallery__stage, :root[data-theme] .gallery__stage img,
 :root[data-theme] .gallery-thumb, :root[data-theme] .related-card__frame { background: var(--mount); }
+
+/* Helle Ansicht: Kacheln reinweiss wie die Seite (kein warmer Fotogrund).
+   Die freigestellten Fotos etwas heller und kraeftiger, dazu ein weicher
+   Schatten entlang der Silhouette - so heben sich auch weisse Teile vom
+   Weiss ab, und die Farben leuchten. Die Bilddateien bleiben unveraendert. */
+:root[data-theme="hell"] .plate__frame,
+:root[data-theme="hell"] .cart-line__frame,
+:root[data-theme="hell"] .kasse-stueck__bild { background: #ffffff; box-shadow: none; }
+:root[data-theme="hell"] .plate__frame img,
+:root[data-theme="hell"] .gallery__stage img,
+:root[data-theme="hell"] .gallery-thumb img,
+:root[data-theme="hell"] .related-card__frame img,
+:root[data-theme="hell"] .cart-line__frame img,
+:root[data-theme="hell"] .kasse-stueck__bild img {
+  background: transparent;
+  filter: brightness(1.05) contrast(1.06) saturate(1.22) drop-shadow(0 12px 16px rgba(21, 21, 20, 0.16));
+}
 
 /* Mieten-Datumsfelder: Kalender in hell */
 :root[data-theme] #d119RentalStart, :root[data-theme] #d119RentalEnd { color-scheme: light; }

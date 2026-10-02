@@ -1351,7 +1351,10 @@
     priceMax: null,
     catalogLabelKey: "statusAvailable",
     catalogLabelCategory: "",
-    catalogLabelText: ""
+    catalogLabelText: "",
+    // Kategorie-Leiste "Neu": nur die zuletzt eingestellten Stuecke
+    // (archiv-navigation.js ueber window.D119Archiv).
+    neu: false
   };
 
   // Nur oeffentliche Artikel (AVAILABLE/SOLD) fliessen in Statistiken,
@@ -1598,7 +1601,7 @@
     else if (key === "color") { state.color = ""; filterColorEl.value = ""; }
     else if (key === "condition") { state.condition = ""; filterConditionEl.value = ""; }
     else if (key === "price") { state.priceMin = null; state.priceMax = null; filterPriceMinEl.value = ""; filterPriceMaxEl.value = ""; }
-    else if (key === "category") { state.category = "all"; state.categoryGroup = null; syncCatalogChips(); }
+    else if (key === "category") { state.category = "all"; state.categoryGroup = null; state.neu = false; syncCatalogChips(); }
     else if (key === "status") { state.status = "Verfügbar"; syncCatalogChips(); }
     render();
   }
@@ -1608,6 +1611,7 @@
     state.department = ""; state.productType = ""; state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
     state.priceMin = null; state.priceMax = null;
     state.category = "all"; state.categoryGroup = null; state.status = "Verfügbar";
+    state.neu = false;
     filterDepartmentEl.value = ""; filterProductTypeEl.value = ""; filterBrandEl.value = ""; filterSizeEl.value = "";
     filterColorEl.value = ""; filterConditionEl.value = ""; filterPriceMinEl.value = ""; filterPriceMaxEl.value = "";
     syncCatalogChips();
@@ -1762,6 +1766,7 @@
     state.catalogLabelKey = "";
     state.catalogLabelCategory = "";
     state.catalogLabelText = brand;
+    state.neu = false;
     Array.prototype.forEach.call(statusChipsEl.children, function (c) {
       c.setAttribute("aria-pressed", c.getAttribute("data-i18n") === "statusAll" ? "true" : "false");
     });
@@ -1802,6 +1807,7 @@
     // wie "Bilder importiert" wurden dort schon zu DRAFT zusammengefasst und
     // erscheinen NIE oeffentlich, unabhaengig vom gewaehlten Filter.
     if (it.public_status === "DRAFT") return false;
+    if (state.neu && !NEU_IDS[it.id]) return false;
     // "Alle" zeigt wirklich alle oeffentlichen Artikel (verfuegbar + Archiv) -
     // die Beschriftung darf nicht etwas versprechen, was der Filter nicht haelt.
     if (state.status === "Verfügbar" && it.public_status !== "AVAILABLE") return false;
@@ -1900,6 +1906,7 @@
 
     catalogTitleEl.textContent = state.catalogLabelText ||
       (state.catalogLabelCategory ? trCategory(state.catalogLabelCategory) : t(state.catalogLabelKey || "statusAvailable"));
+    if (state.neu && !state.catalogLabelText && state.category === "all" && !state.categoryGroup) catalogTitleEl.textContent = t("categoryNew");
     var filterSignature = JSON.stringify([
       state.query, state.status, state.category, state.categoryGroup,
       state.sort, state.department, state.productType, state.brand, state.size, state.color,
@@ -2042,6 +2049,7 @@
       });
       firstGridRenderDone = true;
     }
+    try { document.dispatchEvent(new CustomEvent("d119:archiv")); } catch (e) {}
   }
 
   loadMoreBtn.addEventListener("click", function () {
@@ -2440,6 +2448,7 @@
     state.status = status;
     state.category = "all";
     state.categoryGroup = categories || null;
+    state.neu = false;
     state.catalogLabelKey = labelKey || "statusAvailable";
     state.catalogLabelCategory = "";
     state.catalogLabelText = "";
@@ -2450,6 +2459,62 @@
     render();
     focusCatalog();
   }
+
+  // ---- Kategorie-Leiste und Chip-Filter (assets/archiv-navigation.js) ----
+  // Eine kleine Schnittstelle statt versteckter Menue-Knoepfe: Kategorien
+  // wechseln wie im Menue (Jacken = Jackets + Coats usw.), aber Bereich und
+  // Groesse bleiben stehen, solange es dafuer noch Treffer gibt (sonst setzt
+  // catalog-filter-simplify.js sie zurueck), und die Seite springt nicht.
+  I18N.de.categoryNew = "Neu"; I18N.en.categoryNew = "New"; I18N.fr.categoryNew = "Nouveautés";
+  var NEU_ANZAHL = 24;
+  var NEU_IDS = {};
+  PUBLIC_ITEMS.filter(function (it) { return it.public_status === "AVAILABLE"; })
+    .slice(0, NEU_ANZAHL).forEach(function (it) { NEU_IDS[it.id] = true; });
+
+  window.D119Archiv = {
+    // ansicht("alle" | "neu" | "archiv" | "Jackets,Coats", labelKey)
+    ansicht: function (key, labelKey) {
+      key = String(key || "alle");
+      var sonder = key === "alle" || key === "neu" || key === "archiv";
+      state.query = "";
+      searchInputEl.value = "";
+      state.category = "all";
+      state.neu = key === "neu";
+      state.status = key === "archiv" ? "Verkauft" : "Verfügbar";
+      state.categoryGroup = sonder ? null : key.split(",");
+      state.catalogLabelKey = key === "archiv" ? "menuArchive" : (!sonder && labelKey) ? labelKey : "statusAvailable";
+      state.catalogLabelCategory = "";
+      state.catalogLabelText = "";
+      syncCatalogChips();
+      render();
+    },
+    // Welche Ansicht ist gerade aktiv? (fuer die Markierung in der Leiste)
+    ansichtJetzt: function () {
+      if (state.query || state.catalogLabelText || state.category !== "all") return "";
+      if (state.status === "Verkauft" && !state.categoryGroup) return "archiv";
+      if (state.status !== "Verfügbar") return "";
+      if (state.categoryGroup) return state.categoryGroup.join(",");
+      return state.neu ? "neu" : "alle";
+    },
+    // Artikel, die zum Zustand passen - ohne die genannte Facette (wie die
+    // Zaehler in den Filtern).
+    treffer: function (ohneFacette) {
+      return PUBLIC_ITEMS.filter(function (it) { return matches(it, ohneFacette); });
+    },
+    zustand: function () {
+      return {
+        status: state.status, neu: state.neu, categoryGroup: state.categoryGroup ? state.categoryGroup.slice() : null,
+        department: state.department, size: state.size, brand: state.brand, color: state.color,
+        condition: state.condition, priceMin: state.priceMin, priceMax: state.priceMax, sort: state.sort
+      };
+    },
+    // Alle oeffentlichen Artikel (fuer feste Zaehler wie "gibt es Schuhe?").
+    artikel: function () { return PUBLIC_ITEMS; },
+    t: t,
+    groesse: trSize,
+    bereich: trDepartment,
+    erhaltung: trCondition
+  };
 
   var menuLastFocusEl = null;
   function openMenu() {

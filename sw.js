@@ -15,6 +15,7 @@ const PRECACHE = [
   "/assets/article.css",
   "/assets/article.js",
   "/assets/catalog-filter-simplify.js",
+  "/assets/archiv-navigation.js",
   "/assets/rental-v2.js",
   "/assets/rental-v2-ui.js",
   "/assets/rental-v2-picker.js",

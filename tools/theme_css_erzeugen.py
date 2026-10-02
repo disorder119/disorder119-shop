@@ -121,6 +121,23 @@ VARIABLEN = """/* Erzeugt von tools/theme_css_erzeugen.py - nicht von Hand aende
 :root[data-theme] .gallery__stage, :root[data-theme] .gallery__stage img,
 :root[data-theme] .gallery-thumb, :root[data-theme] .related-card__frame { background: var(--mount); }
 
+/* Helle Ansicht: Kacheln reinweiss wie die Seite (kein warmer Fotogrund).
+   Die freigestellten Fotos etwas heller und kraeftiger, dazu ein weicher
+   Schatten entlang der Silhouette - so heben sich auch weisse Teile vom
+   Weiss ab, und die Farben leuchten. Die Bilddateien bleiben unveraendert. */
+:root[data-theme="hell"] .plate__frame,
+:root[data-theme="hell"] .cart-line__frame,
+:root[data-theme="hell"] .kasse-stueck__bild { background: #ffffff; box-shadow: none; }
+:root[data-theme="hell"] .plate__frame img,
+:root[data-theme="hell"] .gallery__stage img,
+:root[data-theme="hell"] .gallery-thumb img,
+:root[data-theme="hell"] .related-card__frame img,
+:root[data-theme="hell"] .cart-line__frame img,
+:root[data-theme="hell"] .kasse-stueck__bild img {
+  background: transparent;
+  filter: brightness(1.05) contrast(1.06) saturate(1.22) drop-shadow(0 12px 16px rgba(21, 21, 20, 0.16));
+}
+
 /* Mieten-Datumsfelder: Kalender in hell */
 :root[data-theme] #d119RentalStart, :root[data-theme] #d119RentalEnd { color-scheme: light; }
 

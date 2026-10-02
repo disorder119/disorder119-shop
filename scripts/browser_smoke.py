@@ -19,7 +19,7 @@ from selenium.webdriver import ChromeOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select, WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait
 
 BASE_URL = os.environ.get("D119_SMOKE_URL", "http://127.0.0.1:4173").rstrip("/") + "/"
 WAIT = 12
@@ -85,7 +85,7 @@ def assert_no_zero_options(driver) -> None:
     ids = ["filterDepartment", "filterBrand", "filterSize", "filterColor", "filterCondition"]
     for element_id in ids:
         select = driver.find_element(By.ID, element_id)
-        values = [opt.text.strip() for opt in select.find_elements(By.TAG_NAME, "option")]
+        values = [(opt.get_attribute("textContent") or "").strip() for opt in select.find_elements(By.TAG_NAME, "option")]
         zero = [value for value in values[1:] if re.search(r"\(0\)\s*$", value)]
         if zero:
             fail(f"#{element_id} zeigt Null-Treffer-Optionen: {zero[:5]}")
@@ -207,8 +207,13 @@ def test_search_and_mobile_filter(driver) -> None:
         fail("Mobiler Filter-Drawer hat keinen sichtbaren Backdrop")
     wait(driver, lambda d: "d119-filter-drawer__close" in (d.switch_to.active_element.get_attribute("class") or ""), "Fokus im Filter-Drawer")
 
-    Select(driver.find_element(By.ID, "filterDepartment")).select_by_value("Men")
-    wait(driver, lambda d: not any(re.search(r"\(0\)\s*$", opt.text.strip()) for opt in d.find_element(By.ID, "filterBrand").find_elements(By.TAG_NAME, "option")[1:]), "Null-Treffer nach Bereichswechsel entfernt")
+    men = driver.find_element(By.CSS_SELECTOR, '#d119Chips [data-d119-facette="department"][data-d119-wert="Men"]')
+    # Unten im Vollbild-Filter liegt die feste Leiste "… Artikel anzeigen" -
+    # wie ein Mensch erst zum Chip scrollen, sonst trifft der Klick die Leiste.
+    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", men)
+    men.click()
+    wait(driver, lambda d: d.find_element(By.ID, "filterDepartment").get_attribute("value") == "Men", "Bereich Herren per Chip gesetzt")
+    wait(driver, lambda d: not any(re.search(r"\(0\)\s*$", (opt.get_attribute("textContent") or "").strip()) for opt in d.find_element(By.ID, "filterBrand").find_elements(By.TAG_NAME, "option")[1:]), "Null-Treffer nach Bereichswechsel entfernt")
     assert_no_zero_options(driver)
 
     driver.switch_to.active_element.send_keys(Keys.ESCAPE)
@@ -217,6 +222,37 @@ def test_search_and_mobile_filter(driver) -> None:
         fail("Filter-Drawer gibt Fokus nicht an den ausloesenden Button zurueck")
     assert_no_horizontal_overflow(driver, "Mobiler Filter")
     assert_no_js_exceptions(driver, "Suche/Mobile Filter")
+
+
+def test_category_bar_and_sizes(driver) -> None:
+    driver.set_window_size(390, 844)
+    driver.get(BASE_URL)
+    wait_cards(driver, 3)
+    dismiss_cookie_note(driver)
+    bar = driver.find_element(By.ID, "d119Kategorien")
+    labels = [b.text.strip().casefold() for b in bar.find_elements(By.CSS_SELECTOR, "[data-d119-ansicht]")]
+    if len(labels) < 4 or labels[0] != "alle":
+        fail(f"Kategorie-Leiste unvollstaendig: {labels}")
+    toggle = driver.find_element(By.ID, "moreFiltersToggle")
+    # clientWidth statt innerWidth: Desktop-Chrome zieht die Scrollleiste ab,
+    # left:50% zentriert in der Breite ohne sie (am iPhone ist sie unsichtbar).
+    rect = driver.execute_script("const r = arguments[0].getBoundingClientRect(); return [r.left + r.width / 2, r.bottom, document.documentElement.clientWidth, innerHeight];", toggle)
+    if abs(rect[0] - rect[2] / 2) > 3 or rect[1] < rect[3] - 120:
+        fail(f"Filter-Knopf sitzt am Handy nicht unten mittig: {rect}")
+    shoes = bar.find_elements(By.CSS_SELECTOR, '[data-d119-ansicht="Shoes"]')
+    if shoes:
+        driver.execute_script("arguments[0].click()", shoes[0])
+        wait(driver, lambda d: shoes[0].get_attribute("aria-pressed") == "true", "Schuhe aktiv in der Kategorie-Leiste")
+        toggle.click()
+        wait(driver, lambda d: d.find_element(By.ID, "filterPanel").is_displayed(), "Filter im Vollbild offen")
+        sizes = [c.get_attribute("data-d119-wert") for c in driver.find_elements(By.CSS_SELECTOR, '#d119Chips [data-d119-facette="size"]')]
+        wrong = [s for s in sizes if s and s.upper() in ("XS", "S", "M", "L", "XL", "XXL")]
+        if wrong:
+            fail(f"Schuhe zeigen Kleidergroessen: {wrong}")
+        driver.switch_to.active_element.send_keys(Keys.ESCAPE)
+        wait(driver, lambda d: not d.find_element(By.ID, "filterPanel").is_displayed(), "Escape schliesst den Filter")
+    assert_no_horizontal_overflow(driver, "Kategorie-Leiste")
+    assert_no_js_exceptions(driver, "Kategorie-Leiste")
 
 
 def test_language_routes(driver) -> None:
@@ -318,6 +354,7 @@ def main() -> None:
     for test_fn in (
         test_responsive_catalog,
         test_search_and_mobile_filter,
+        test_category_bar_and_sizes,
         test_language_routes,
         test_product_cart_and_rental,
     ):

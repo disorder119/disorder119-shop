@@ -110,10 +110,12 @@ p[data-i18n="footerNote"] { color: rgba(242, 239, 231, 0.82) !important; }
     return text.rstrip() + block + "\n"
 
 
-def mobile_runtime_bootstrap(app_src: str) -> str:
+def mobile_runtime_bootstrap(app_src: str, nav_src: str | None = None) -> str:
     sources = [
         app_src,
         "/assets/catalog-filter-simplify.js",
+        # Kategorie-Leiste und Chip-Filter (inject_catalog_filter_simplify.py)
+        *([nav_src] if nav_src else []),
         "/assets/rental-v2.js",
         "/assets/rental-v2-ui.js",
         "/assets/rental-v2-picker.js",
@@ -140,6 +142,7 @@ def patch_generated_index(text: str) -> str:
     pattern = re.compile(
         r'<script src="(?P<app>/assets/app\.js\?v=[^"]+)"></script>\s*'
         r'<script src="/assets/catalog-filter-simplify\.js"></script>\s*'
+        r'(?:<script src="(?P<nav>/assets/archiv-navigation\.js[^"]*)"></script>\s*)?'
         r'<script src="/assets/rental-v2\.js"></script>\s*'
         r'<script src="/assets/rental-v2-ui\.js"></script>\s*'
         r'<script src="/assets/rental-v2-picker\.js"></script>'
@@ -147,7 +150,7 @@ def patch_generated_index(text: str) -> str:
     match = pattern.search(text)
     if not match:
         raise SystemExit("FEHLER: Focus-3: Runtime-Scriptblock auf deutscher Startseite fehlt")
-    return text[:match.start()] + mobile_runtime_bootstrap(match.group("app")) + text[match.end():]
+    return text[:match.start()] + mobile_runtime_bootstrap(match.group("app"), match.group("nav")) + text[match.end():]
 
 
 def main() -> None:
