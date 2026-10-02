@@ -63,6 +63,10 @@
   var chipsBox = null;
   var markenOffen = false;
   var geplant = false;
+  var chipsVeraltet = true;
+  // Layout-Abfragen in den naechsten Frame: dort rechnet der Browser das
+  // Layout ohnehin, statt es mitten im Skript zu erzwingen.
+  var naechsterFrame = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : function (fn) { return window.setTimeout(fn, 16); };
 
   function sprache() {
     var l = String(document.documentElement.getAttribute("lang") || "de").slice(0, 2).toLowerCase();
@@ -131,7 +135,8 @@
       ".d119-chip--leise{border-style:dashed}",
       ".d119-chips__leer{font-size:.74rem;color:var(--text);opacity:.75;margin:0}",
       ".d119-chips__mehr{grid-column:1/-1;border-top:1px solid var(--rule);padding-top:14px}",
-      ".d119-chips__mehr>summary{cursor:pointer;list-style:none;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text);padding:6px 0}",
+      ".d119-chips__mehr>summary{cursor:pointer;list-style:none;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text);display:flex;align-items:center;min-height:44px;padding:0}",
+      ".d119-chips__mehr>summary:focus-visible{outline:2px solid var(--accent-text,#8f897c);outline-offset:2px}",
       ".d119-chips__mehr>summary::-webkit-details-marker{display:none}",
       ".d119-chips__mehr>summary::after{content:\" +\"}",
       ".d119-chips__mehr[open]>summary::after{content:\" \\2013\"}",
@@ -140,12 +145,18 @@
       ".d119-chips__zurueck{appearance:none;background:none;border:0;padding:8px 0;cursor:pointer;font:inherit;font-size:.7rem;",
       "letter-spacing:.06em;text-transform:uppercase;color:var(--text);opacity:.75;text-decoration:underline;text-underline-offset:3px}",
       ".d119-chips__zurueck:hover{opacity:1}",
+      /* Schliessen im Filter in voller Textfarbe (gedaempft knapp unter 4.5:1 in Hell) */
+      "#filterPanel.d119-chips-an .d119-filter-drawer__close{color:var(--text)}",
+      /* Aktive Filter ("Groesse: M ×") direkt ueber den Artikeln */
+      "#activeFilters.d119-aktiv{padding:14px clamp(20px,5vw,64px) 0}",
+      "#activeFilters.d119-aktiv--leer{display:none}",
       /* Handy: Filter unten mittig, Filter im Vollbild */
       "@media (max-width:720px){",
       ".d119-kat{top:var(--rail-h,54px);padding:0 16px;gap:0}",
+      "#activeFilters.d119-aktiv{padding:12px 16px 0}",
       ".d119-kat__liste{gap:20px}",
       ".d119-kat__knopf{font-size:.72rem;padding:14px 0 12px}",
-      ".d119-kat #moreFiltersToggle,#moreFiltersToggle.d119-unten{position:fixed;left:50%;transform:translateX(-50%);",
+      ".d119-kat #moreFiltersToggle{position:fixed;left:50%;transform:translateX(-50%);",
       "bottom:calc(var(--d119-unten,14px) + env(safe-area-inset-bottom,0px));z-index:125;min-height:44px;min-width:128px;padding:12px 22px;",
       "border:1px solid var(--text);background:var(--text);color:var(--bg);font-size:.74rem;font-weight:700;letter-spacing:.1em;",
       "box-shadow:0 10px 30px rgba(0,0,0,.28)}",
@@ -224,10 +235,17 @@
     if (toggle) leiste.appendChild(toggle);
     var panel = document.getElementById("filterPanel");
     if (panel) leiste.parentNode.insertBefore(panel, leiste.nextSibling);
+    var aktiv = document.getElementById("activeFilters");
+    if (aktiv) {
+      aktiv.classList.add("d119-aktiv");
+      leiste.parentNode.insertBefore(aktiv, (panel || leiste).nextSibling);
+    }
     var rechts = rail.querySelector(".rail__right");
-    if (rechts && !Array.prototype.some.call(rechts.children, function (kind) {
-      return !kind.classList.contains("rail__sort") && getComputedStyle(kind).display !== "none";
-    })) rechts.style.display = "none";
+    if (rechts) naechsterFrame(function () {
+      if (!Array.prototype.some.call(rechts.children, function (kind) {
+        return !kind.classList.contains("rail__sort") && getComputedStyle(kind).display !== "none";
+      })) rechts.style.display = "none";
+    });
   }
 
   function leisteOffset() {
@@ -238,11 +256,35 @@
   function leisteZeigen() {
     if (!leiste) return;
     var aktiv = api.ansichtJetzt();
+    var markiert = false;
     Array.prototype.forEach.call(leiste.querySelectorAll("[data-d119-ansicht]"), function (b) {
       b.textContent = b._label();
-      b.setAttribute("aria-pressed", b.getAttribute("data-d119-ansicht") === aktiv ? "true" : "false");
+      var an = b.getAttribute("data-d119-ansicht") === aktiv;
+      if (an) markiert = true;
+      b.setAttribute("aria-pressed", an ? "true" : "false");
     });
     leiste.setAttribute("aria-label", tx("kategorien"));
+    doppelteChipsAus(markiert);
+  }
+
+  // "Kategorie: Schuhe ×" / "Status: Verkauft ×" sagen dasselbe wie die
+  // markierte Leiste - dann nur die echten Filter zeigen. Kommt man ueber das
+  // Menue in eine Kategorie ohne eigenen Knopf, bleibt der Chip stehen.
+  function doppelteChipsAus(leisteMarkiert) {
+    var reihe = document.getElementById("activeFilters");
+    if (!reihe) return;
+    var vorsilben = [api.t("activeFilterCategory") + " ", api.t("activeFilterStatus") + " "];
+    var sichtbar = 0;
+    var loeschen = null;
+    Array.prototype.forEach.call(reihe.children, function (kind) {
+      if (kind.classList.contains("active-filter-clear")) { loeschen = kind; return; }
+      var label = kind.getAttribute("aria-label") || "";
+      var doppelt = leisteMarkiert && vorsilben.some(function (v) { return label.indexOf(v) === 0; });
+      kind.style.display = doppelt ? "none" : "";
+      if (!doppelt) sichtbar++;
+    });
+    if (loeschen) loeschen.style.display = sichtbar < 2 ? "none" : "";
+    reihe.classList.toggle("d119-aktiv--leer", sichtbar === 0);
   }
 
   // -------------------------------------------------------------- Chips
@@ -479,11 +521,26 @@
     return b;
   }
 
+  function panelOffen() {
+    var panel = document.getElementById("filterPanel");
+    return !!panel && !panel.classList.contains("hidden");
+  }
+
   function zeichnen() {
     geplant = false;
     leisteZeigen();
+    // Chips nur bei offenem Filter bauen: beim Laden kostet das sonst
+    // Rechenzeit, die niemand sieht (TBT). Beim Oeffnen baut der
+    // Beobachter in start() sie sofort nach.
+    if (panelOffen()) chipsBauen();
+    else chipsVeraltet = true;
+    knopfText();
+  }
+
+  function chipsBauen() {
     var panel = document.getElementById("filterPanel");
     if (!panel || !api) return;
+    chipsVeraltet = false;
     if (!chipsBox) {
       chipsBox = el("div", "d119-chips");
       chipsBox.id = "d119Chips";
@@ -512,7 +569,6 @@
       var ziel = chipsBox.querySelector('[data-d119-facette="' + fokus.facette + '"][data-d119-wert="' + String(fokus.wert).replace(/"/g, '\\"') + '"]');
       if (ziel) ziel.focus();
     }
-    knopfText();
   }
 
   // "Filter anzeigen / ausblenden" am Desktop, "Filter · 2" am Handy.
@@ -531,13 +587,25 @@
   // Der Cookie-Hinweis liegt beim ersten Besuch unten - der Filterknopf
   // rutscht so lange darueber.
   function untenAbstand() {
+    var toggle = document.getElementById("moreFiltersToggle");
+    if (!toggle) return;
     var hinweis = document.getElementById("cookieNote");
     var hoehe = 0;
     if (hinweis && hinweis.classList.contains("visible")) {
       var r = hinweis.getBoundingClientRect();
       if (r.height && r.top < window.innerHeight) hoehe = Math.max(0, window.innerHeight - r.top);
     }
-    document.documentElement.style.setProperty("--d119-unten", (hoehe ? hoehe + 10 : 14) + "px");
+    var wert = (hoehe ? Math.round(hoehe) + 10 : 14) + "px";
+    // Nur am Knopf und nur bei Aenderung setzen: dieselbe Variable an <html>
+    // liesse den Browser die Styles der ganzen Seite neu berechnen.
+    if (toggle.style.getPropertyValue("--d119-unten") !== wert) toggle.style.setProperty("--d119-unten", wert);
+  }
+
+  function untenAbstandPlanen() {
+    var hinweis = document.getElementById("cookieNote");
+    // Ohne sichtbaren Hinweis gibt es nichts zu messen - sofort setzen.
+    if (!hinweis || !hinweis.classList.contains("visible")) untenAbstand();
+    else naechsterFrame(untenAbstand);
   }
 
   function planen() {
@@ -566,10 +634,43 @@
       // Andere Skripte setzen den Text nach jedem Wechsel neu - danach wieder unseren.
       new MutationObserver(function () { knopfText(); }).observe(toggle, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["aria-expanded"] });
     }
-    window.addEventListener("resize", function () { knopfText(); untenAbstand(); }, { passive: true });
+    window.addEventListener("resize", function () { knopfText(); untenAbstandPlanen(); }, { passive: true });
     var hinweis = document.getElementById("cookieNote");
-    if (hinweis) new MutationObserver(untenAbstand).observe(hinweis, { attributes: true, attributeFilter: ["class", "hidden", "style"] });
-    untenAbstand();
+    if (hinweis) new MutationObserver(untenAbstandPlanen).observe(hinweis, { attributes: true, attributeFilter: ["class", "hidden", "style"] });
+    untenAbstandPlanen();
+    // Filter geht auf (Knopf, Drawer, Tastatur): Chips sofort nachbauen,
+    // noch bevor der Browser das offene Panel zeichnet.
+    var panel = document.getElementById("filterPanel");
+    if (panel) new MutationObserver(function () {
+      if (chipsVeraltet && panelOffen()) chipsBauen();
+    }).observe(panel, { attributes: true, attributeFilter: ["class"] });
+    // Der einmalige Hinweis auf Match/Universum/Baukasten liegt direkt unter
+    // dem Kopf. Dockt die Leiste dort an, wuerde er ihre Knoepfe verdecken -
+    // dann schliesst er wie nach seinen 7 Sekunden.
+    var modusHinweis = document.getElementById("modeRailHint");
+    var modusHinweisZu = document.getElementById("modeRailHintClose");
+    if (modusHinweis && modusHinweisZu && leiste) {
+      var hinweisGeplant = false;
+      var hinweisBeobachter = null;
+      var hinweisPruefen = function () {
+        if (hinweisGeplant) return;
+        hinweisGeplant = true;
+        naechsterFrame(function () {
+          hinweisGeplant = false;
+          if (!modusHinweis.classList.contains("visible")) return;
+          var oben = parseFloat(getComputedStyle(leiste).top) || 0;
+          if (leiste.getBoundingClientRect().top <= oben + 1) {
+            window.removeEventListener("scroll", hinweisPruefen);
+            if (hinweisBeobachter) hinweisBeobachter.disconnect();
+            modusHinweisZu.click();
+          }
+        });
+      };
+      // Auch wenn der Hinweis erst erscheint, nachdem schon gescrollt wurde.
+      hinweisBeobachter = new MutationObserver(hinweisPruefen);
+      hinweisBeobachter.observe(modusHinweis, { attributes: true, attributeFilter: ["class"] });
+      window.addEventListener("scroll", hinweisPruefen, { passive: true });
+    }
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
