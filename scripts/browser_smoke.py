@@ -234,7 +234,9 @@ def test_category_bar_and_sizes(driver) -> None:
     if len(labels) < 4 or labels[0] != "alle":
         fail(f"Kategorie-Leiste unvollstaendig: {labels}")
     toggle = driver.find_element(By.ID, "moreFiltersToggle")
-    rect = driver.execute_script("const r = arguments[0].getBoundingClientRect(); return [r.left + r.width / 2, r.bottom, innerWidth, innerHeight];", toggle)
+    # clientWidth statt innerWidth: Desktop-Chrome zieht die Scrollleiste ab,
+    # left:50% zentriert in der Breite ohne sie (am iPhone ist sie unsichtbar).
+    rect = driver.execute_script("const r = arguments[0].getBoundingClientRect(); return [r.left + r.width / 2, r.bottom, document.documentElement.clientWidth, innerHeight];", toggle)
     if abs(rect[0] - rect[2] / 2) > 3 or rect[1] < rect[3] - 120:
         fail(f"Filter-Knopf sitzt am Handy nicht unten mittig: {rect}")
     shoes = bar.find_elements(By.CSS_SELECTOR, '[data-d119-ansicht="Shoes"]')
