@@ -70,6 +70,9 @@ def validate_taxonomy_categories() -> None:
         9508: "Shirts", 9500: "Jackets", 9496: "Shirts", 9499: "Jackets",
         9462: "Jackets", 9442: "Jackets", 9454: "Jackets", 9443: "Jackets",
         9401: "Shirts",
+        # Durchgang 03.10.2026 gegen Fotos: Sweatjacke und gewebte
+        # Rundholz-Jacke gehoeren zu den Jacken, nicht zu Strick/Tops.
+        9477: "Jackets", 6199: "Jackets",
     }
     for item_id, category in expected_categories.items():
         item = by_id.get(item_id)
@@ -88,7 +91,7 @@ def validate_taxonomy_mismatches() -> None:
     report = json.loads(text("data/catalog-taxonomy-report.json"))
     mismatch_ids = {int(row["id"]) for row in report.get("legacyCategoryMismatches", [])}
     intentional = {
-        6240, 6201, 6199, 6194, 9496, 9477, 9463, 9456,
+        6240, 6201, 6194, 9496, 9463, 9456,
         9449, 9423, 9435, 9434, 9383, 9386,
         9385,  # Rundholz Jacke, Altkategorie "Objects" (geprueft 17.09.2026)
         # Titel-Durchgang 27.09.2026, jeweils gegen Fotos bzw. Beschreibung
