@@ -9,6 +9,12 @@ test('website, translations and contract email share the reviewed canonical sour
   const source=JSON.parse(fs.readFileSync(new URL('../config/legal-content.json',import.meta.url),'utf8'));
   const context={window:{}};
   vm.runInNewContext(fs.readFileSync(new URL('../assets/legal-content.js',import.meta.url),'utf8'),context);
+  const app=fs.readFileSync(new URL('../assets/app.js',import.meta.url),'utf8');
+  const end='/* D119_CANONICAL_LEGAL_END */';
+  assert.equal(app.split('/* D119_CANONICAL_LEGAL_BEGIN */').length,2);
+  const bundled={window:{}};
+  vm.runInNewContext(app.slice(0,app.indexOf(end)+end.length),bundled);
+  assert.equal(JSON.stringify(bundled.window.D119Legal),JSON.stringify(context.window.D119Legal));
   assert.equal(LEGAL_VERSION,source.version); assert.equal(CONTRACT_HTML,source.legal.legalAgbHtml.de);
   for(const lang of ['de','en','fr']) {
     assert.equal(context.window.D119Legal[lang].legalAgbHtml,source.legal.legalAgbHtml[lang]);

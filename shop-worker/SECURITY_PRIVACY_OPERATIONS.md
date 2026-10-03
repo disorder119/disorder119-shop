@@ -12,7 +12,7 @@ Privacy requests are accessible only to authenticated Admin users. Review pendin
 
 Newsletter unsubscribe and consent retention are separate tasks. Review expired pending applications and unsubscribed consent proofs, including records with old IP hashing, against actual legal claims and retention requirements. Remove expired non-required personal records through a reviewed operator process and the email provider. No destructive bulk cleanup is automatically enabled by this change.
 
-`config/legal-content.json` is the reviewed canonical DE/EN/FR source. `scripts/sync_legal_content.py` generates browser and Worker copies; `build_site.py` invokes it. New contract confirmations include the full terms and withdrawal form in HTML and plain text and are archived with the existing immutable hashes. Previously archived confirmations remain unchanged.
+`config/legal-content.json` is the reviewed canonical DE/EN/FR source. `scripts/sync_legal_content.py` generates browser and Worker copies and embeds the browser constants in the existing app bundle without an extra blocking request; `build_site.py` invokes it. New contract confirmations include the full terms and withdrawal form in HTML and plain text and are archived with the existing immutable hashes. Previously archived confirmations remain unchanged.
 
 The edge enforces frame/object/base restrictions and uses the full script policy in report-only mode. Before making script restrictions blocking, test PayPal, supported Apple Pay devices, Turnstile, account login and opt-in/withdrawal in real supported browsers. No production purchase, payment, refund, customer email or label is performed by the synthetic tests.
 
