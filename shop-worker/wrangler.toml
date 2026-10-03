@@ -14,9 +14,9 @@ preview_urls = false
 
 # Oeffentliche Einstellungen ohne Geheimnis.
 # ADMIN_SESSION_HOURS: Eine Anmeldung in der Admin-App (Face ID / Windows
-# Hello) haelt 7 Tage - das Maximum, das admin-passkeys.js zulaesst.
+# Hello) haelt hoechstens 24 Stunden, auch fuer frueher laenger ausgestellte Sitzungen.
 [vars]
-ADMIN_SESSION_HOURS = "168"
+ADMIN_SESSION_HOURS = "24"
 # Echte Zahlungen: PayPal-Live-API, Turnstile und Ratenbegrenzer sind damit
 # Pflicht (backend-runtime.js). Zurueck in den Testmodus: "sandbox".
 PAYPAL_ENVIRONMENT = "live"

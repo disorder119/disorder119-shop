@@ -1,0 +1,13 @@
+name = "disorder119-storefront-security"
+main = "storefront-edge.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+preview_urls = false
+routes = [
+  { pattern = "disorder119.com/*", zone_name = "disorder119.com" },
+  { pattern = "www.disorder119.com/*", zone_name = "disorder119.com" }
+]
+
+[observability]
+enabled = true
+head_sampling_rate = 0.1

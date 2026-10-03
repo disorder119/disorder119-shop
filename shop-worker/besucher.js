@@ -381,6 +381,10 @@ export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
 
   const raw = await request.text();
   if (new TextEncoder().encode(raw).byteLength > MAX_BODY) throw new BesucherError("REQUEST_TOO_LARGE", 413);
+  // No statistics, day identifier, cart events or Telegram before opt-in.
+  let consentBody;
+  try { consentBody = JSON.parse(raw); } catch { throw new BesucherError("INVALID_JSON",400); }
+  if (consentBody?.consentVersion !== 1) return leer(origin);
   const daten = ereignisAusBody(raw);
   if (daten.typ === "verlassen") {
     // Nur der Zeitpunkt fuer die Verweildauer: keine Meldung, kein Ort.

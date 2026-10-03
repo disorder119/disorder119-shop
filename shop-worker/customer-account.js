@@ -1,3 +1,4 @@
+import { privateIpHash } from "./privacy-security.js";
 // Kundenkonto: Bestellungen ansehen, Adresse pflegen, Widerruf erklaeren,
 // Daten exportieren oder loeschen lassen.
 //
@@ -323,11 +324,10 @@ export async function redeemLoginToken(env, rawToken, reqId = crypto.randomUUID(
 }
 
 function sessionTokenFromRequest(request) {
-  const header = String(request.headers.get("Authorization") || "");
-  if (/^Bearer\s+/i.test(header)) return header.replace(/^Bearer\s+/i, "").trim();
+
   const cookie = String(request.headers.get("Cookie") || "");
   const match = /(?:^|;\s*)d119_session=([^;]+)/.exec(cookie);
-  return match ? decodeURIComponent(match[1]) : "";
+  try { return match ? decodeURIComponent(match[1]) : ""; } catch { return ""; }
 }
 
 export async function resolveSession(env, request) {
@@ -653,15 +653,16 @@ export async function handleAccountRequest(request, env, url, reqId = crypto.ran
     if (origin && !SHOP_ORIGINS.includes(origin)) {
       throw new AccountError("ORIGIN_NOT_ALLOWED", 403);
     }
+    if (!["GET", "HEAD", "OPTIONS"].includes(request.method) && (!origin || !SHOP_ORIGINS.includes(origin))) {
+      throw new AccountError("ORIGIN_NOT_ALLOWED", 403);
+    }
     const path = url.pathname.replace(/\/+$/, "") || "/account";
 
     if (path === "/account/login" && request.method === "POST") {
       await limitLoginRequests(request, env);
       const body = await readJson(request);
       await verifyTurnstile(env, request, body);
-      const ipHash = await tokenFingerprint(
-        `${safeText(request.headers.get("CF-Connecting-IP") || "", 60)}:${safeText(env.LOGIN_IP_PEPPER || "d119", 60)}`,
-      );
+      const ipHash = await privateIpHash(request, env, "account");
       // Immer dieselbe Antwort, egal ob verschickt, ungueltig oder zu oft
       // angefordert: ob es zu dieser Adresse ein Konto gibt, geht niemanden
       // etwas an, der die Adresse nur erraten hat.
@@ -678,7 +679,6 @@ export async function handleAccountRequest(request, env, url, reqId = crypto.ran
       return json({
         ok: true,
         email: result.email,
-        session: result.session,
         expiresAt: result.expiresAt,
       }, 200, origin, {
         "Set-Cookie": sessionCookie(result.session, SESSION_TTL_DAYS * 86_400),
@@ -732,7 +732,7 @@ export async function handleAccountRequest(request, env, url, reqId = crypto.ran
 
     throw new AccountError("NOT_FOUND", 404);
   } catch (err) {
-    if (err instanceof AccountError) {
+    if (err instanceof AccountError || err?.code === "IP_PRIVACY_NOT_CONFIGURED") {
       return json({ error: err.code, requestId: reqId }, err.status, origin);
     }
     console.error(JSON.stringify({
