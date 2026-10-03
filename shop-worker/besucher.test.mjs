@@ -71,7 +71,7 @@ function envMit(db, extra = {}) {
 function besuch(body, { origin = SHOP, ua = IPHONE, ip = "203.0.113.7", cf = { city: "Aschaffenburg", region: "Bavaria", country: "DE" } } = {}) {
   const headers = { "Content-Type": "text/plain;charset=UTF-8", "User-Agent": ua, "CF-Connecting-IP": ip };
   if (origin) headers.Origin = origin;
-  const req = new Request("https://api.disorder119.com/besuch", { method: "POST", headers, body: JSON.stringify(body) });
+  const req = new Request("https://api.disorder119.com/besuch", { method: "POST", headers, body: JSON.stringify({consentVersion:1, ...body}) });
   Object.defineProperty(req, "cf", { value: cf });
   return req;
 }
@@ -337,4 +337,15 @@ test("Verlassen-Meldung: nur von der Shop-Seite, ohne Telegram", async () => {
   } finally {
     n.zurueck();
   }
+});
+
+test("old clients without consent create no visitor identifier, events or notifications",async()=>{
+  const db=d1(),n=netz();
+  try {
+    const response=await senden(envMit(db),{t:'seite',p:'/',consentVersion:undefined});
+    assert.equal(response.status,204);
+    assert.equal(db.raw.prepare('SELECT COUNT(*) AS n FROM besucher_salz').get().n,0);
+    assert.equal(db.raw.prepare('SELECT COUNT(*) AS n FROM besucher_ereignisse').get().n,0);
+    assert.equal(n.telegram.length,0);
+  } finally {n.zurueck();}
 });

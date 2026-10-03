@@ -22,7 +22,7 @@ import { safeText } from "./commerce-core.js";
 import { sendTelegramMessage } from "./notifications.js";
 
 export const ADMIN_SESSION_COOKIE = "d119_admin";
-const DEFAULT_SESSION_HOURS = 12;
+const DEFAULT_SESSION_HOURS = 24;
 const DEFAULT_MAX_PASSKEYS = 2;
 const CHALLENGE_TTL_MS = 5 * 60_000;
 const PAIRING_TTL_MS = 10 * 60_000;
@@ -304,7 +304,7 @@ function maxPasskeys(env) {
 
 function sessionHours(env) {
   const configured = Number(env?.ADMIN_SESSION_HOURS);
-  return Number.isFinite(configured) && configured >= 1 && configured <= 168 ? configured : DEFAULT_SESSION_HOURS;
+  return Number.isFinite(configured) && configured >= 1 && configured <= 24 ? configured : DEFAULT_SESSION_HOURS;
 }
 
 function requireDb(env) {
@@ -382,11 +382,13 @@ async function lookupSession(request, env, token) {
   if (fetchSite && fetchSite !== "same-site" && fetchSite !== "same-origin") return null;
   if (!/^[A-Za-z0-9_-]{40,64}$/.test(token)) return null;
   const id = hex(await sha256(token));
-  const row = await env.DB.prepare(`SELECT s.id,s.passkey_id,s.expires_at,s.last_seen_at,p.name
+  const row = await env.DB.prepare(`SELECT s.id,s.passkey_id,s.expires_at,s.created_at,s.last_seen_at,p.name
       FROM admin_sessions s JOIN admin_passkeys p ON p.id=s.passkey_id
       WHERE s.id=? AND s.revoked_at IS NULL AND p.revoked_at IS NULL LIMIT 1`).bind(id).first();
   if (!row || new Date(String(row.expires_at)).getTime() <= Date.now()) return null;
   const now = Date.now();
+  const created = Date.parse(String(row.created_at || ""));
+  if (!Number.isFinite(created) || now - created >= sessionHours(env) * 3_600_000) return null;
   const lastSeen = new Date(String(row.last_seen_at || 0)).getTime();
   if (!Number.isFinite(lastSeen) || now - lastSeen > 5 * 60_000) {
     try {

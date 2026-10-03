@@ -1,3 +1,4 @@
+import { LEGAL_VERSION, CONTRACT_HTML } from "./legal-content.js";
 // Transaktionsmails an Kundinnen und Kunden: Bestellbestaetigung, Versand,
 // Anmeldelink fuers Kundenkonto.
 //
@@ -240,6 +241,14 @@ function deliveryLines(contact = {}) {
 // "RESERVIERT" = PayPal hat nur reserviert, "EINGEZOGEN" = reserviert und
 // inzwischen eingezogen. In beiden neuen Faellen kommt die Rechnung mit dem
 // Einziehen (sendInvoiceAfterCapture) - ein Storno davor braucht keine.
+export function contractInformation(contactEmail) {
+  const html = CONTRACT_HTML.replaceAll("{email}", escapeHtml(contactEmail)).replaceAll('href="/', 'href="' + SHOP_URL + '/');
+  const text = html.replace(/<br\s*\/?>(?:\s*)/gi, "\n").replace(/<\/(?:p|h[1-6])>/gi, "\n\n")
+    .replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+  return {html, text, version:LEGAL_VERSION};
+}
+
 export function formatOrderConfirmation(order = {}, options = {}) {
   const zahlung = ["RESERVIERT", "EINGEZOGEN"].includes(options.zahlung) ? options.zahlung : null;
   const invoice = zahlung
@@ -255,6 +264,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     : "Die Zahlung ist bei uns eingegangen. Damit ist der Kaufvertrag geschlossen.";
   const zahlungsart = zahlung === "RESERVIERT" ? "Zahlungsart: PayPal – reserviert, Abbuchung mit dem Versand" : "Zahlungsart: PayPal";
   const contactEmail = safeText(options.contactEmail || "", 200) || "kontakt@disorder119.com";
+  const contract = contractInformation(contactEmail);
   const number = safeText(order.order_number || order.orderNumber || "", 80) || "—";
   const items = Array.isArray(order.items) ? order.items : [];
   const currency = order.currency || "EUR";
@@ -301,9 +311,10 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     sellerBlockText(),
     `E-Mail: ${contactEmail}`,
     "",
-    widerrufsbelehrungText(contactEmail),
+    `VERTRAGSINFORMATIONEN · Fassung ${contract.version}`,
+    contract.text,
     "",
-    `Alle Bedingungen: ${SHOP_URL}/agb/`,
+    `Onlinefassung: ${SHOP_URL}/agb/`,
   ].join("\n");
 
   const F = MAIL_FARBE;
@@ -330,7 +341,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
       ${mailKnopf(`${SHOP_URL}/konto/`, "Bestellung im Konto ansehen")}`),
     mailAbschnitt("Verkäufer", `<p style="margin:0;color:${F.leise};">${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}<br>${escapeHtml(SELLER.street)}<br>${escapeHtml(SELLER.city)}<br>${escapeHtml(SELLER.country)}<br>E-Mail: <a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a></p>`),
     `<tr><td style="padding:26px 4px 30px;">
-      <div style="border-top:1px solid ${F.linie};padding-top:18px;font-size:12px;line-height:1.55;color:${F.leise};white-space:pre-wrap;">${escapeHtml(widerrufsbelehrungText(contactEmail))}</div>
+      <div style="border-top:1px solid ${F.linie};padding-top:18px;font-size:12px;line-height:1.55;color:${F.leise};white-space:pre-wrap;"><p>Vertragsinformationen · Fassung ${escapeHtml(contract.version)}</p>${contract.html}</div>
       <p style="margin:14px 0 0;font-size:12px;color:${F.leise};">Alle Bedingungen: <a href="${SHOP_URL}/agb/" style="color:${F.text};">${SHOP_URL}/agb/</a></p>
     </td></tr>`,
   ].join("");

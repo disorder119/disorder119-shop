@@ -1,3 +1,4 @@
+import { privateIpHash } from "./privacy-security.js";
 // Newsletter mit Double-Opt-in und einmaligem 10-%-Willkommenscode.
 //
 // Ablauf: Anmeldung auf der Website -> Bestaetigungsmail (Link gilt 48 Std.)
@@ -122,9 +123,7 @@ function tokenFrom(value) {
 }
 
 async function ipHash(request, env) {
-  const ip = String(request.headers.get("CF-Connecting-IP") || "").slice(0, 60);
-  if (!ip) return null;
-  return sha256Hex(`${ip}:${String(env.LOGIN_IP_PEPPER || "d119").slice(0, 60)}:newsletter`);
+  return privateIpHash(request, env, "newsletter");
 }
 
 function dailyCap(env) {
@@ -697,7 +696,7 @@ export async function handleNewsletter(request, env, url, reqId = crypto.randomU
     await limitRequests(request, env);
     return reply({ ok: true, ...(await unsubscribe(env, body.token, { reqId })) }, 200, origin);
   } catch (err) {
-    if (err instanceof NewsletterError) {
+    if (err instanceof NewsletterError || err?.code === "IP_PRIVACY_NOT_CONFIGURED") {
       return reply({ error: err.code, requestId: reqId }, err.status, origin, admin);
     }
     logFailure("newsletter_error", reqId, err);

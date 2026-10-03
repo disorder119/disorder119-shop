@@ -1,3 +1,4 @@
+import { handleAdminPrivacy } from "./admin-privacy.js";
 import shopWorker, { reconcilePurchasePayments } from "./worker.js";
 import {
   handleAdminRequest,
@@ -282,6 +283,10 @@ export default {
 
       if (url.pathname === "/admin/commerce-metrics") {
         return finish(await handleAdminCommerceMetrics(request, runtimeEnv, url, reqId, origin));
+      }
+
+      if (url.pathname.startsWith("/admin/privacy/")) {
+        return finish(await handleAdminPrivacy(request, runtimeEnv, url));
       }
 
       if (url.pathname === "/admin/system") {
