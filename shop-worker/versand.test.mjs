@@ -30,6 +30,7 @@ const SERVICES = [
   { id: 20955, name: "Classic", carrier_name: "DPD", price: { total_price: 7.85, base_price: 6.6 }, dropoff: false, delivery_to_parcelshop: false, transit_time: "2 DAYS", category: "standard" },
   { id: 23655, name: "Standard Access Point™", carrier_name: "UPS", price: { total_price: 5.49, base_price: 4.6 }, dropoff: true, delivery_to_parcelshop: false, transit_time: "2 DAYS", category: "standard" },
   { id: 11111, name: "Zustellung an Paketshop", carrier_name: "GLS", price: { total_price: 3.69, base_price: 3.1 }, dropoff: true, delivery_to_parcelshop: true, transit_time: "1 DAYS" },
+  { id: 66666, name: "BusinessParcel", carrier_name: "GLS", price: { total_price: 6.99, base_price: 5.87 }, dropoff: true, delivery_to_parcelshop: false, transit_time: "2 DAYS", category: "standard" },
   { id: 33333, name: "Express®", carrier_name: "UPS", price: { total_price: 14.28, base_price: 12 }, dropoff: false, delivery_to_parcelshop: false, transit_time: "1 DAYS", category: "express" },
   { id: 44444, name: "Domestic Express", carrier_name: "DHL Express", price: { total_price: 32.65, base_price: 27.44 }, dropoff: false, delivery_to_parcelshop: false, transit_time: "1 DAYS", category: "express" },
   { id: 55555, name: "Express 12", carrier_name: "DPD", price: { total_price: 19.9, base_price: 16.72 }, dropoff: false, delivery_to_parcelshop: false, transit_time: "1 DAYS", category: "express" },
@@ -143,6 +144,7 @@ test("only the owner's carriers reach the checkout; express only up to the price
   // Die echte Konfiguration: UPS ist raus.
   assert.equal(VERSAND.dienste.erlaubt.includes("UPS"), false);
   assert.ok(VERSAND.dienste.erlaubt.includes("DPD"));
+  assert.ok(VERSAND.dienste.erlaubt.includes("GLS"));
 });
 
 test("live Packlink prices are cached; without Packlink the fallback price applies", async () => {
@@ -151,7 +153,7 @@ test("live Packlink prices are cached; without Packlink the fallback price appli
   try {
     const erste = await versandOptionen({}, "S");
     assert.equal(erste.quelle, "packlink");
-    assert.deepEqual(erste.optionen.map(o => [o.id, o.preisCents, o.carrier]), [["pl-S-20425", 559, "DPD"], ["pl-S-55555", 1990, "DPD"]]);
+    assert.deepEqual(erste.optionen.map(o => [o.id, o.preisCents, o.carrier]), [["pl-S-20425", 559, "DPD"], ["pl-S-66666", 699, "GLS"], ["pl-S-55555", 1990, "DPD"]]);
     await versandOptionen({}, "S");
     assert.equal(netz.calls.filter(c => c.host === "api.packlink.com").length, 1);
     const anfrage = netz.calls[0];
@@ -213,7 +215,7 @@ test("GET /versand/optionen: size from the catalog, CORS only for the shop, stri
     assert.equal(eins.cors, SHOP);
     assert.equal(eins.data.paket, "S");
     assert.equal(eins.data.paketName, "Klein");
-    assert.deepEqual(eins.data.optionen.map(o => [o.id, o.titel, o.preis, o.carrier]), [["pl-S-20425", "Standard", "5.59", "DPD"], ["pl-S-55555", "Express", "19.90", "DPD"]]);
+    assert.deepEqual(eins.data.optionen.map(o => [o.id, o.titel, o.preis, o.carrier]), [["pl-S-20425", "Standard", "5.59", "DPD"], ["pl-S-66666", "Standard", "6.99", "GLS"], ["pl-S-55555", "Express", "19.90", "DPD"]]);
     // Keine internen Felder nach draussen.
     assert.equal("packlinkServiceId" in eins.data.optionen[0], false);
 
@@ -252,7 +254,7 @@ test("create-order: chosen shipping goes into PayPal and the order, tampering is
     const falsch = await bestellen({ itemId: 9428, versand: "pl-S-55555", versandPreisCents: 999 }, "k-falsch-0000000001");
     assert.equal(falsch.status, 409);
     assert.equal(falsch.data.error, "VERSAND_PREIS_GEAENDERT");
-    assert.equal(falsch.data.versand.optionen[1].preisCents, 1990);
+    assert.equal(falsch.data.versand.optionen.find(o => o.id === "pl-S-55555").preisCents, 1990);
     assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations").get().n, 0);
     assert.equal(netz.calls.filter(c => c.host === "api-m.sandbox.paypal.com").length, 0);
 
