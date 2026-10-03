@@ -37,6 +37,7 @@ import { applePayDomainSicherstellen } from "./paypal-einrichtung.js";
 import { handleNewsletter, isNewsletterRoute } from "./newsletter.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
 import { handleAdminAuth, isAdminAuthRoute } from "./admin-passkeys.js";
+import { handleManagerConnection, isManagerRoute } from "./manager-connection.js";
 import {
   CouponCheckoutError,
   applyCouponToCreatedOrder,
@@ -237,6 +238,9 @@ export default {
     try {
       // Face-ID-/Windows-Hello-Anmeldung der Admin-App: muss ohne Sitzung
       // erreichbar sein und prueft Herkunft und Berechtigung selbst.
+      if (isManagerRoute(url)) {
+        return finish(await handleManagerConnection(request, env, url));
+      }
       if (isAdminAuthRoute(url)) {
         await guardRuntimeRequest(request, env, url);
         return finish(await handleAdminAuth(request, env, url, reqId));
