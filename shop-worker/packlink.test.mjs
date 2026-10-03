@@ -146,15 +146,16 @@ test("routes, phases and small helpers", () => {
   assert.equal(angebotAus(SERVICES[1]).abgabe, "PAKETSHOP");
 });
 
-test("offers work without an API key: home delivery only, the checkout's carriers, cheapest first", async () => {
+test("admin offers work without an API key: every safe home-delivery carrier, cheapest first", async () => {
   const fake = fakePacklink();
   try {
     const result = await call(envWith(seed(), { PACKLINK_API_KEY: "" }), "/admin/versand/o1/packlink/angebote?paket=S");
     assert.equal(result.status, 200, JSON.stringify(result.data));
     assert.equal(result.data.eingerichtet, false);
-    // Wie in der Kasse nur DPD und DHL - UPS und GLS stehen nicht zur Wahl.
-    assert.deepEqual(result.data.angebote.map(a => [a.carrier, a.preisCents]), [["DPD", 785], ["DPD", 1990]]);
-    assert.equal(result.data.angebote[1].express, true);
+    // Die private Admin-App darf auch einen Dienst waehlen, der im
+    // oeffentlichen Checkout nicht beworben wird.
+    assert.deepEqual(result.data.angebote.map(a => [a.carrier, a.preisCents]), [["UPS", 571], ["DPD", 785], ["UPS", 1428], ["DPD", 1990]]);
+    assert.equal(result.data.angebote[2].express, true);
     const anfrage = fake.calls[0];
     assert.equal(anfrage.headers.Authorization, undefined);
     assert.equal(anfrage.query.get("from[zip]"), "63739");
@@ -294,7 +295,7 @@ test("a service the customer already paid for stays bookable even if its carrier
     const result = await call(envWith(DB), "/admin/versand/o1/packlink/angebote");
     assert.equal(result.status, 200, JSON.stringify(result.data));
     assert.equal(result.data.wahl.serviceId, 23655);
-    assert.deepEqual(result.data.angebote.map(a => a.id), [23655, 20955, 55555]);
+    assert.deepEqual(result.data.angebote.map(a => a.id), [23655, 20955, 33333, 55555]);
   } finally {
     fake.restore();
   }
@@ -353,6 +354,42 @@ test("buying a label: one /v1/orders call, no customer email or phone, label str
     assert.equal(entwurf.status, 409);
     assert.equal(fake.calls.filter(c => c.path === "/v1/orders").length, 1);
     assert.equal(fake.calls.filter(c => c.path === "/v1/shipments" && c.method === "POST").length, 0);
+  } finally {
+    fake.restore();
+  }
+});
+
+test("label purchase revalidates service and price and ignores browser carrier names", async () => {
+  const DB = seed();
+  const env = envWith(DB);
+  const fake = fakePacklink({ state: "PURCHASE_SUCCESS" });
+  try {
+    const stale = await call(env, "/admin/versand/o1/packlink/kaufen", {
+      method: "POST", body: { ...KAUF, preisCents: 1 },
+    });
+    assert.equal(stale.status, 409);
+    assert.equal(stale.data.error, "ANGEBOT_PREIS_GEAENDERT");
+    assert.equal(fake.calls.filter(c => c.path === "/v1/orders").length, 0);
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM packlink_sendungen").get().n, 0);
+
+    const missing = await call(env, "/admin/versand/o1/packlink/kaufen", {
+      method: "POST", body: { serviceId: 999999, paket: "M", preisCents: 785 },
+    });
+    assert.equal(missing.status, 409);
+    assert.equal(missing.data.error, "ANGEBOT_NICHT_MEHR_VERFUEGBAR");
+    assert.equal(fake.calls.filter(c => c.path === "/v1/orders").length, 0);
+
+    const bought = await call(env, "/admin/versand/o1/packlink/kaufen", {
+      method: "POST", body: { ...KAUF, carrier: "Manipuliert", name: "Falscher Dienst" },
+    });
+    assert.equal(bought.status, 200, JSON.stringify(bought.data));
+    const purchaseCall = fake.calls.find(c => c.path === "/v1/orders");
+    assert.equal(purchaseCall.body.shipments[0].service_id, 20955);
+    const row = DB.raw.prepare("SELECT carrier,service_name,price_cents FROM packlink_sendungen WHERE order_id='o1'").get();
+    // Der Fake-Provider meldet beim anschliessenden Statusabruf UPS zurueck;
+    // entscheidend ist: weder die manipulierten Browsertexte noch der
+    // manipulierte Preis wurden gespeichert oder an den Kauf uebernommen.
+    assert.deepEqual({ ...row }, { carrier: "UPS", service_name: "Standard Access Point™", price_cents: 785 });
   } finally {
     fake.restore();
   }

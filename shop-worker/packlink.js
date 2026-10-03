@@ -245,7 +245,7 @@ export function angebotAus(service = {}) {
 // behalten: Packlink-Leistung, die eine Kundin im Checkout schon bezahlt hat -
 // sie bleibt buchbar, auch wenn ihr Paketdienst inzwischen nicht mehr
 // angeboten wird.
-export async function angeboteLaden(env, ziel, paketKey, { behalten = null } = {}) {
+export async function angeboteLaden(env, ziel, paketKey, { behalten = null, nurErlaubteDienste = true } = {}) {
   const paket = paketFuer(paketKey);
   const von = absender(env);
   const query = new URLSearchParams({
@@ -271,11 +271,30 @@ export async function angeboteLaden(env, ziel, paketKey, { behalten = null } = {
       .filter(s => s && !s.delivery_to_parcelshop && !/nicht rechteckig|non.?rectang/i.test(String(s.name || "")))
       .map(angebotAus)
       .filter(a => Number.isInteger(a.id) && a.id > 0 && a.preisCents)
-      // Dieselben Paketdienste wie in der Kasse (Wunsch des Inhabers: kein UPS).
-      .filter(a => dienstErlaubt(a.carrier) || (behalten !== null && a.id === behalten))
+      // Die Kasse folgt der oeffentlichen Allowlist. Im privaten Admin darf
+      // der Inhaber dagegen jedes sichere Haustuer-Angebot waehlen; sonst
+      // koennte er trotz gueltiger Packlink-Preise kein Etikett kaufen.
+      .filter(a => !nurErlaubteDienste || dienstErlaubt(a.carrier) || (behalten !== null && a.id === behalten))
       .sort((a, b) => a.preisCents - b.preisCents)
       .slice(0, MAX_ANGEBOTE),
   };
+}
+
+// Ein Etikett kostet echtes Geld. Deshalb werden Service, Paket und Preis
+// direkt vor dem Packlink-Aufruf erneut aus Packlinks eigener Angebotsliste
+// gelesen. Werte aus dem Browser dienen nur als Auswahl, nie als Wahrheit.
+async function angebotFuerBuchung(env, order, body = {}) {
+  const serviceId = Number(body.serviceId);
+  if (!Number.isInteger(serviceId) || serviceId <= 0) throw new PacklinkError("ANGEBOT_FEHLT", 400);
+  const paket = paketFuer(body.paket || order.wahl_paket);
+  const frisch = await angeboteLaden(env, order, paket.key, { behalten: serviceId, nurErlaubteDienste: false });
+  const angebot = frisch.angebote.find(entry => entry.id === serviceId);
+  if (!angebot) throw new PacklinkError("ANGEBOT_NICHT_MEHR_VERFUEGBAR", 409);
+  const gesehen = Number(body.preisCents);
+  if (Number.isSafeInteger(gesehen) && gesehen > 0 && gesehen !== angebot.preisCents) {
+    throw new PacklinkError("ANGEBOT_PREIS_GEAENDERT", 409, `Neuer Preis: ${(angebot.preisCents / 100).toFixed(2)} EUR`);
+  }
+  return { serviceId, paket, angebot };
 }
 
 // --------------------------------------------------------------- Ablauf je Auftrag
@@ -414,9 +433,7 @@ export async function entwurfAnlegen(env, orderId, body = {}) {
     if (phase(vorhanden.state) !== "offen") throw new PacklinkError("SENDUNG_SCHON_BEZAHLT", 409);
   }
 
-  const serviceId = Number(body.serviceId);
-  if (!Number.isInteger(serviceId) || serviceId <= 0) throw new PacklinkError("ANGEBOT_FEHLT", 400);
-  const paket = paketFuer(body.paket);
+  const { serviceId, paket, angebot } = await angebotFuerBuchung(env, order, body);
   const to = empfaenger(order);
   pruefeEmpfaenger(to);
 
@@ -449,8 +466,8 @@ export async function entwurfAnlegen(env, orderId, body = {}) {
       (id,order_id,reference,service_id,carrier,service_name,paket,price_cents,state,created_at,updated_at)
       SELECT ?,?,?,?,?,?,?,?,'AWAITING_COMPLETION',?,?
       WHERE NOT EXISTS (SELECT 1 FROM packlink_sendungen WHERE order_id=? AND state IN ('KAUF_LAEUFT','KAUF_UNKLAR'))`)
-    .bind(crypto.randomUUID(), order.id, reference, serviceId, text(body.carrier, 40) || null,
-      text(body.name, 80) || null, paket.key, cents(Number(body.preisCents) / 100), now, now, order.id));
+    .bind(crypto.randomUUID(), order.id, reference, serviceId, angebot.carrier || null,
+      angebot.name || null, paket.key, angebot.preisCents, now, now, order.id));
   statements.push(db.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
       SELECT ?,'ADMIN','order',?,'PACKLINK_ENTWURF_ANGELEGT',NULL,?,?
       WHERE EXISTS (SELECT 1 FROM packlink_sendungen WHERE reference=?)`)
@@ -484,9 +501,7 @@ export async function etikettKaufen(env, orderId, body = {}, reqId = crypto.rand
     if (!["kauf", "offen", "storniert"].includes(ph)) throw new PacklinkError("SENDUNG_SCHON_BEZAHLT", 409);
   }
 
-  const serviceId = Number(body.serviceId);
-  if (!Number.isInteger(serviceId) || serviceId <= 0) throw new PacklinkError("ANGEBOT_FEHLT", 400);
-  const paket = paketFuer(body.paket);
+  const { serviceId, paket, angebot } = await angebotFuerBuchung(env, order, body);
   const to = empfaenger(order);
   pruefeEmpfaenger(to);
 
@@ -503,8 +518,8 @@ export async function etikettKaufen(env, orderId, body = {}, reqId = crypto.rand
       (id,order_id,reference,service_id,carrier,service_name,paket,price_cents,state,created_at,updated_at)
       SELECT ?,?,?,?,?,?,?,?,'KAUF_LAEUFT',?,?
       WHERE NOT EXISTS (SELECT 1 FROM packlink_sendungen WHERE order_id=? AND state NOT IN (${RUHEND}))`)
-    .bind(zeileId, order.id, `${KAUF_PRAEFIX}${zeileId}`, serviceId, text(body.carrier, 40) || null,
-      text(body.name, 80) || null, paket.key, cents(Number(body.preisCents) / 100), now, now, order.id));
+    .bind(zeileId, order.id, `${KAUF_PRAEFIX}${zeileId}`, serviceId, angebot.carrier || null,
+      angebot.name || null, paket.key, angebot.preisCents, now, now, order.id));
   const gesperrt = await db.batch(statements);
   if (!gesperrt[gesperrt.length - 1]?.meta?.changes) throw new PacklinkError("KAUF_LAEUFT_SCHON", 409);
 
@@ -555,7 +570,7 @@ export async function etikettKaufen(env, orderId, body = {}, reqId = crypto.rand
     ]);
     throw new PacklinkError("KAUF_UNKLAR", 502, "Packlink hat keine Sendungsnummer zurückgegeben.");
   }
-  const preis = cents(zeile.total_price) ?? cents(antwort?.total_amount) ?? cents(Number(body.preisCents) / 100);
+  const preis = cents(zeile.total_price) ?? cents(antwort?.total_amount) ?? angebot.preisCents;
   const jetzt = new Date().toISOString();
   await db.batch([
     db.prepare("UPDATE packlink_sendungen SET reference=?,state='PURCHASE_SUCCESS',price_cents=?,updated_at=? WHERE id=?")
@@ -764,7 +779,7 @@ export async function handlePacklink(request, env, url, reqId = crypto.randomUUI
       const wahl = wahlView(order);
       // Ohne ausdrueckliche Groesse: die Paketgroesse aus dem Checkout.
       const ergebnis = await angeboteLaden(env, order, url.searchParams.get("paket") || wahl?.paket,
-        { behalten: wahl?.serviceId ?? null });
+        { behalten: wahl?.serviceId ?? null, nurErlaubteDienste: false });
       return antwort({ ok: true, eingerichtet: packlinkReady(env), direktkauf: await direktkaufStand(env), wahl, ...ergebnis }, 200, origin);
     }
     if (zusatz === "/kaufen") {
