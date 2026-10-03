@@ -1280,8 +1280,8 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     # (apply_focus_three_hardening, apply_pwa) suchen die Zeilen darunter
     # als zusammenhaengenden Block.
     out = out.replace("__NEWSLETTER_VERSION__", NEWSLETTER_ASSET_VERSION)
-    out = out.replace("__STATIC_PAGE_CONTENT__", static_content)
     out = out.replace("__LEGAL_JS_VERSION__", _asset_version("assets/legal-content.js"))
+    out = out.replace("__STATIC_PAGE_CONTENT__", static_content)
     initial_ssr_home = (lang == "de" and path_segment == "" and slug == "")
     out = out.replace("__CRITICAL_IMAGE_PRELOADS__", initial_archive_preloads() if initial_ssr_home else "")
     out = out.replace("__APP_SHELL_HIDDEN_CLASS__", "" if initial_ssr_home else " hidden")
