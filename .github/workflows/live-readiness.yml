@@ -1,0 +1,44 @@
+name: Public technical readiness
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/check_live_readiness.py
+      - scripts/test_live_readiness.py
+      - .github/workflows/live-readiness.yml
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostics-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - run: python -m unittest discover -s scripts -p test_live_readiness.py -v
+
+  public-get-checks:
+    if: github.event_name == 'workflow_dispatch'
+    needs: diagnostics-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Public GET checks, without login or business-data writes
+        run: python scripts/check_live_readiness.py --output live-readiness.json
+      - name: Save limited technical results, not a legal or payment certification
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: public-technical-readiness
+          path: live-readiness.json
+          if-no-files-found: warn
+          retention-days: 14
