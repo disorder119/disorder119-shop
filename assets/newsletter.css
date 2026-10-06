@@ -155,50 +155,9 @@
 .d119-nl__msg--ok { border-left-color: #7d9a72; }
 .d119-nl__msg--fehler { border-left-color: #c86a5a; }
 
-/* Die neuesten Stuecke als Streifen ueber dem Formular. Die Kacheln stehen
-   von Anfang an (dunkle Platzhalter), damit beim Nachladen nichts springt. */
-.d119-nl__stuecke {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  max-width: 540px;
-}
-
-.d119-nl__stueck {
-  display: block;
-  aspect-ratio: 3 / 4;
-  overflow: hidden;
-  background: #0d0d0d;
-}
-
-.d119-nl__stueck img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: opacity 0.2s ease;
-}
-
-.d119-nl__stueck:hover img { opacity: 0.82; }
-.d119-nl__stueck:focus-visible { outline: 2px solid var(--nl-focus); outline-offset: 2px; }
-
-.d119-nl__stuecke-titel {
-  margin: 34px 0 12px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--nl-muted);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .d119-nl__stueck img { transition: none; }
-}
-
 /* Nach dem Absenden bleibt nur die Meldung stehen. */
 .d119-nl__form--fertig .d119-nl__row,
-.d119-nl__form--fertig .d119-nl__consent,
-.d119-nl__form--fertig .d119-nl__stuecke { display: none; }
+.d119-nl__form--fertig .d119-nl__consent { display: none; }
 
 /* ------------------------------------------------------------ Einbauorte */
 
@@ -267,4 +226,69 @@
 
 @media (max-width: 480px) {
   .d119-nl__row .d119-nl__btn { width: 100%; }
+}
+
+/* ------------------------------------------------------------ Pop-up */
+
+/* Einmal nach rund einer Minute (newsletter.js): mittig, ohne Bilder, im
+   Seitengrund der jeweiligen Ansicht (--ink: schwarz bzw. weiss). */
+html.d119-nlpop-offen { overflow: hidden; }
+
+.d119-nlpop {
+  position: fixed;
+  inset: 0;
+  z-index: 10030;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.62);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+:root[data-theme="hell"] .d119-nlpop { background: rgba(21, 21, 20, 0.34); }
+.d119-nlpop--offen { opacity: 1; }
+
+.d119-nlpop__karte {
+  position: relative;
+  width: min(460px, 100%);
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 36px 28px 26px;
+  background: var(--ink, #000000);
+  color: var(--text, var(--paper, #f2efe7));
+  border: 1px solid var(--rule-strong, rgba(242, 239, 231, 0.28));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  transform: translateY(12px);
+  transition: transform 0.25s ease;
+}
+
+:root[data-theme="hell"] .d119-nlpop__karte { box-shadow: 0 24px 80px rgba(21, 21, 20, 0.18); }
+.d119-nlpop--offen .d119-nlpop__karte { transform: none; }
+.d119-nlpop__karte:focus { outline: none; }
+
+.d119-nlpop__zu {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.d119-nlpop__zu svg { width: 18px; height: 18px; }
+.d119-nlpop__zu:focus-visible { outline: 2px solid var(--accent-text, #d6d0c2); outline-offset: 2px; }
+.d119-nlpop .d119-nl__form { gap: 16px; }
+.d119-nlpop .d119-nl__title { font-size: clamp(1.3rem, 5vw, 1.65rem); padding-right: 30px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .d119-nlpop, .d119-nlpop__karte { transition: none; }
 }

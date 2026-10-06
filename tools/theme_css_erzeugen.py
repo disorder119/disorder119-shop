@@ -122,9 +122,11 @@ VARIABLEN = """/* Erzeugt von tools/theme_css_erzeugen.py - nicht von Hand aende
 :root[data-theme] .gallery-thumb, :root[data-theme] .related-card__frame { background: var(--mount); }
 
 /* Helle Ansicht: Kacheln reinweiss wie die Seite (kein warmer Fotogrund).
-   Die freigestellten Fotos etwas heller und kraeftiger, dazu ein weicher
-   Schatten entlang der Silhouette - so heben sich auch weisse Teile vom
-   Weiss ab, und die Farben leuchten. Die Bilddateien bleiben unveraendert. */
+   Die freigestellten Fotos heller und kraeftiger, dazu ein weicher Schatten
+   entlang der Silhouette - so heben sich auch weisse Teile vom Weiss ab, und
+   die Farben leuchten. Wie stark aufgehellt wird, misst build_site.py je Foto
+   (foto_hell -> --d119-hell, 1.0 bis 1.25; ohne Messwert 1.08). Die
+   Bilddateien bleiben unveraendert. */
 :root[data-theme="hell"] .plate__frame,
 :root[data-theme="hell"] .cart-line__frame,
 :root[data-theme="hell"] .kasse-stueck__bild { background: #ffffff; box-shadow: none; }
@@ -135,8 +137,21 @@ VARIABLEN = """/* Erzeugt von tools/theme_css_erzeugen.py - nicht von Hand aende
 :root[data-theme="hell"] .cart-line__frame img,
 :root[data-theme="hell"] .kasse-stueck__bild img {
   background: transparent;
-  filter: brightness(1.05) contrast(1.06) saturate(1.22) drop-shadow(0 12px 16px rgba(21, 21, 20, 0.16));
+  filter: brightness(var(--d119-hell, 1.08)) contrast(1.06) saturate(1.22) drop-shadow(0 12px 16px rgba(21, 21, 20, 0.16));
+  transition: filter .35s ease;
 }
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="hell"] .plate__frame img { transition: none; }
+}
+
+/* Warenkorb und Kasse in hell: reinweiss statt warmer Flaeche, mit weichem
+   Schatten; die Hinweiskaesten darin neutral hellgrau. */
+:root[data-theme="hell"] .cart-drawer,
+:root[data-theme="hell"] .cart-drawer__head,
+:root[data-theme="hell"] .cart-drawer__kasse { background: #ffffff; }
+:root[data-theme="hell"] .cart-drawer { border-left-color: rgba(21, 21, 20, 0.1); box-shadow: -24px 0 64px rgba(21, 21, 20, 0.12); }
+:root[data-theme="hell"] .kasse-meldung,
+:root[data-theme="hell"] .kasse-konto { background: #f5f5f5; }
 
 /* Mieten-Datumsfelder: Kalender in hell */
 :root[data-theme] #d119RentalStart, :root[data-theme] #d119RentalEnd { color-scheme: light; }
