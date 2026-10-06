@@ -144,6 +144,13 @@ VARIABLEN = """/* Erzeugt von tools/theme_css_erzeugen.py - nicht von Hand aende
   :root[data-theme="hell"] .plate__frame img { transition: none; }
 }
 
+/* Kontrast in hell (WCAG AA 4.5:1 auf Weiss): Die aus app.css erzeugte
+   Regel weiter unten setzt --text-muted auf 0.58 Deckkraft (#777, 4.47:1) -
+   html:root schlaegt sie. Der aktive Sprachknopf hatte helle Schrift auf
+   Taupe (2.2:1). */
+html:root[data-theme="hell"] { --text-muted: rgba(21, 21, 20, 0.64); }
+html:root[data-theme="hell"] .lang-switch__btn[aria-current="true"] { background: #151514; border-color: #151514; color: #ffffff; }
+
 /* Warenkorb und Kasse in hell: reinweiss statt warmer Flaeche, mit weichem
    Schatten; die Hinweiskaesten darin neutral hellgrau. */
 :root[data-theme="hell"] .cart-drawer,
