@@ -20,12 +20,12 @@
     "Bomber Jacket": 1,
     "Boots": 8,
     "Cap": 3,
-    "Cardigan": 5,
+    "Cardigan": 4,
     "Coat": 2,
     "Dress": 18,
     "Hat": 3,
     "Heels": 1,
-    "Jacket": 47,
+    "Jacket": 49,
     "Joggers": 1,
     "Knit Top": 1,
     "Loafers": 2,
@@ -43,7 +43,7 @@
     "Suit": 2,
     "Sunglasses": 2,
     "Sweater": 3,
-    "Sweatshirt": 5,
+    "Sweatshirt": 4,
     "Swim Shorts": 1,
     "T-Shirt": 7,
     "Tank Top": 3,
@@ -638,7 +638,7 @@
       "descriptionLabelSize": "M"
     }
   ],
-  "legacyCategoryMismatchCount": 30,
+  "legacyCategoryMismatchCount": 28,
   "legacyCategoryMismatches": [
     {
       "id": 6240,
@@ -655,14 +655,6 @@
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
       "productType": "Long Sleeve"
-    },
-    {
-      "id": 6199,
-      "article": "2199",
-      "title": "Rundholz Asymmetrischer Cardigan Damen Elfenbein",
-      "legacyCategory": "Jackets",
-      "taxonomyCategory": "Knitwear",
-      "productType": "Cardigan"
     },
     {
       "id": 6194,
@@ -727,14 +719,6 @@
       "legacyCategory": "Tops",
       "taxonomyCategory": "Knitwear",
       "productType": "Cardigan"
-    },
-    {
-      "id": 9477,
-      "article": "121",
-      "title": "Prada Luna Rossa Sweatjacke Herren Schwarz",
-      "legacyCategory": "Jackets",
-      "taxonomyCategory": "Knitwear",
-      "productType": "Sweatshirt"
     },
     {
       "id": 9468,
