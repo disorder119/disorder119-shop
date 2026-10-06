@@ -136,6 +136,10 @@ PRODUCT_TYPE_OVERRIDES = {
     # Die Altkategorie sagt "Objects", die Fotos zeigen eine Rundholz-Jacke
     # mit Knopfleiste und gerafften Aermeln (geprueft 17.09.2026).
     9385: "Jacket",
+    # Titel sagt "Cardigan" (Rundholz-Bezeichnung), die Fotos zeigen eine
+    # gewebte Baumwolljacke mit Knopfleiste, kein Strick (geprueft
+    # 03.10.2026); Altkategorie "Jackets".
+    6199: "Jacket",
     6240: "Toaster",
     9524: "Bomber Jacket",
     9463: "Heels",
@@ -159,7 +163,6 @@ TAXONOMY_CATEGORY_OVERRIDES = {
     9386: "Accessories",   # JPG Hat, previously Tops
     9434: "Knitwear",      # description identifies a sweatshirt, legacy Objects
     9435: "Knitwear",      # Prada Cardigan
-    6199: "Knitwear",      # Rundholz Cardigan
     6194: "Knitwear",      # A.F. Vandevorst Cardigan
 }
 
@@ -340,9 +343,10 @@ def classify_product_type(item: dict[str, Any]) -> str:
         (r"\bbiker|\bmoto\b", "Biker Jacket"),
         (r"\bblazer\b", "Blazer"),
         (r"\bvest\b|\bweste\b", "Vest"),
-        (r"\bjacket\b|\bjacke\b|\bparka\b|zip[\s-]?hoodie", "Jacket"),
+        # Sweatjacke = durchgehender Reissverschluss, wie der Zip-Hoodie: Jacke.
+        (r"\bjacket\b|\bjacke\b|\bparka\b|zip[\s-]?hoodie|sweatjacke", "Jacket"),
         (r"\bcardigan\b|strickjacke", "Cardigan"),
-        (r"\bsweatshirt\b|sweatjacke|\bhoodie\b", "Sweatshirt"),
+        (r"\bsweatshirt\b|\bhoodie\b", "Sweatshirt"),
         (r"\bsweater\b|\bpulli\b|pullover|kaschmir", "Sweater"),
         (r"\bknit\b|strick", "Knit Top"),
         (r"\bpolo", "Polo Shirt"),
