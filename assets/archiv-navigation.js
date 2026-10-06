@@ -112,7 +112,7 @@
       /* "Filter anzeigen" rechts in der Leiste (Desktop) */
       ".d119-kat #moreFiltersToggle,.d119-kat #mountToggle{flex:0 0 auto;margin:0;padding:8px 14px;white-space:nowrap}",
       /* Passen die Knoepfe nicht mehr daneben, stehen sie rechts darunter */
-      ".d119-kat #mountToggle{margin-left:auto}",
+      ".d119-kat__aktionen{display:flex;align-items:center;gap:10px;flex:0 0 auto;margin-left:auto}",
       "@media (min-width:721px) and (max-width:1100px){.d119-kat__knopf{font-size:.7rem;letter-spacing:.07em}.d119-kat__liste{column-gap:16px}}",
       ".d119-kat #moreFiltersToggle::after{content:\"+\";display:inline-block;margin-left:8px;font-weight:400}",
       ".d119-kat #moreFiltersToggle[aria-expanded=\"true\"]::after{content:\"\\2013\"}",
@@ -234,10 +234,13 @@
     rail.parentNode.insertBefore(leiste, rail.nextSibling);
 
     // "Filter" wandert in die Leiste: am Desktop rechts, am Handy unten mittig.
+    // Beide Knoepfe als Gruppe: brechen nur gemeinsam (rechtsbuendig) um.
+    var aktionen = el("div", "d119-kat__aktionen");
+    leiste.appendChild(aktionen);
     var ansicht = document.getElementById("mountToggle");
-    if (ansicht) leiste.appendChild(ansicht);
+    if (ansicht) aktionen.appendChild(ansicht);
     var toggle = document.getElementById("moreFiltersToggle");
-    if (toggle) leiste.appendChild(toggle);
+    if (toggle) aktionen.appendChild(toggle);
     var panel = document.getElementById("filterPanel");
     if (panel) leiste.parentNode.insertBefore(panel, leiste.nextSibling);
     var aktiv = document.getElementById("activeFilters");
