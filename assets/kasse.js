@@ -230,6 +230,8 @@
     zustand.stuecke.forEach(function (it) {
       var li = el("li", "kasse-stueck");
       var bild = el("span", "kasse-stueck__bild");
+      // Helle Ansicht: gemessener Aufhell-Faktor des Fotos (build_site.py).
+      if (Number(it.foto_hell) > 0) bild.style.setProperty("--d119-hell", String(Number(it.foto_hell)));
       var src = vorschau(it);
       if (src) {
         var img = document.createElement("img");

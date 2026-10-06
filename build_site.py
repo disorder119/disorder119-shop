@@ -751,6 +751,8 @@ def build_page(it, shop_config, lang):
     hero = gallery[0] if gallery else "assets/favicon.png"
     hero_display_candidate = display_path(hero)
     hero_display = hero_display_candidate if (BASE / hero_display_candidate).is_file() else hero
+    hell = foto_hell(grid_thumb_path(it))
+    gallery_attr = f' style="--d119-hell:{hell}"' if hell else ""
     home = lang_home(lang)
     canonical = SITE_URL.rstrip("/") + home + "artikel/" + str(it["id"]) + "/"
     hreflang_links = "\n".join(
@@ -875,7 +877,7 @@ def build_page(it, shop_config, lang):
   <a class="article-sequence-nav__link article-sequence-nav__link--next" aria-label="{esc(product_nav_copy['next_aria'])}" style="visibility:hidden">{esc(product_nav_copy['next'])}</a>
 </nav>
 <div class="product" role="main">
-  <div class="gallery">
+  <div class="gallery"{gallery_attr}>
     <div class="gallery__stage">
 {'      <span class="gallery__badge">SOLD</span>' if sold else ""}
       <img id="galleryMain" src="/{esc(hero_display)}" alt="{esc(name)}" fetchpriority="high" decoding="sync">
@@ -2010,6 +2012,49 @@ def hover_image_path(it):
     return ""
 
 
+# Helle Ansicht: Viele Fotos sind etwas unterbelichtet - die hellsten Stellen
+# (Puppenkopf, Tuell, helle Stoffe) liegen im Mittel bei 217 von 255. Auf
+# reinem Weiss wirken sie dann matt. Gemessen wird am Kachelbild, nur am
+# freigestellten Stueck; Massstab sind die Lichter (99,5-%-Wert). Der Faktor
+# landet als --d119-hell am Bild (theme.css), die Datei bleibt unveraendert.
+# Schwarze Stuecke ohne helle Stellen (Schuhe, Sonnenbrillen) werden nur
+# wenig angehoben, damit Schwarz schwarz bleibt.
+FOTO_HELL_ZIEL = 240
+FOTO_HELL_MAX = 1.25
+FOTO_HELL_DUNKEL = 130
+FOTO_HELL_MAX_DUNKEL = 1.15
+_FOTO_HELL_CACHE = {}
+
+
+def foto_hell(path):
+    """Aufhell-Faktor 1.0 bis 1.25 fuer die helle Ansicht, None ohne Foto."""
+    if not path:
+        return None
+    if path in _FOTO_HELL_CACHE:
+        return _FOTO_HELL_CACHE[path]
+    from PIL import Image
+
+    wert = None
+    quelle = BASE / path
+    if quelle.is_file():
+        with Image.open(quelle) as im:
+            if im.mode == "RGBA":
+                maske = im.getchannel("A").point(lambda v: 255 if v > 200 else 0)
+                stufen = im.convert("RGB").convert("L").histogram(mask=maske)
+                gesamt = sum(stufen)
+                if gesamt >= 500:
+                    grenze, summe, lichter = gesamt * 0.995, 0, 255
+                    for stufe, anzahl in enumerate(stufen):
+                        summe += anzahl
+                        if summe >= grenze:
+                            lichter = max(stufe, 1)
+                            break
+                    obergrenze = FOTO_HELL_MAX if lichter >= FOTO_HELL_DUNKEL else FOTO_HELL_MAX_DUNKEL
+                    wert = round(min(max(FOTO_HELL_ZIEL / lichter, 1.0), obergrenze), 2)
+    _FOTO_HELL_CACHE[path] = wert
+    return wert
+
+
 def build_catalog_json():
     # Oeffentlicher Katalog fuer den Browser (assets/app.js laedt jetzt
     # /data/catalog.json statt /data/items.json). Zwei Gruende, warum das
@@ -2031,6 +2076,9 @@ def build_catalog_json():
         hover = hover_image_path(it)
         if hover:
             row["hover_image"] = hover
+        hell = foto_hell(row.get("grid_image"))
+        if hell:
+            row["foto_hell"] = hell
     CATALOG_PATH.write_text(
         json.dumps(catalog, ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",

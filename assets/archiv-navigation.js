@@ -97,10 +97,11 @@
          klebt nichts. clip schneidet genauso ab, ohne das. */
       "body{overflow-x:clip}",
       /* Kategorie-Leiste */
-      ".d119-kat{position:sticky;top:var(--rail-h,64px);z-index:45;display:flex;align-items:center;gap:18px;",
+      ".d119-kat{position:sticky;top:var(--rail-h,64px);z-index:45;display:flex;flex-wrap:wrap;align-items:center;column-gap:18px;row-gap:0;",
       "padding:0 clamp(20px,5vw,64px);background:var(--bg);border-bottom:1px solid var(--rule)}",
-      ".d119-kat__liste{display:flex;align-items:center;gap:clamp(16px,2.2vw,30px);flex:1 1 auto;min-width:0;",
-      "overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;padding:0 2px}",
+      /* Am Laptop alle Kategorien sichtbar: lieber umbrechen als wischen */
+      ".d119-kat__liste{display:flex;flex-wrap:wrap;align-items:center;column-gap:clamp(16px,2.2vw,30px);row-gap:0;",
+      "flex:1 1 auto;min-width:0;padding:0 2px}",
       ".d119-kat__liste::-webkit-scrollbar{display:none}",
       ".d119-kat__knopf{appearance:none;flex:0 0 auto;background:none;border:0;padding:15px 0 13px;margin:0;cursor:pointer;",
       "font:inherit;font-size:.74rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;",
@@ -110,6 +111,9 @@
       ".d119-kat__knopf:focus-visible{outline:2px solid var(--accent-text,#8f897c);outline-offset:3px}",
       /* "Filter anzeigen" rechts in der Leiste (Desktop) */
       ".d119-kat #moreFiltersToggle,.d119-kat #mountToggle{flex:0 0 auto;margin:0;padding:8px 14px;white-space:nowrap}",
+      /* Passen die Knoepfe nicht mehr daneben, stehen sie rechts darunter */
+      ".d119-kat__aktionen{display:flex;align-items:center;gap:10px;flex:0 0 auto;margin-left:auto}",
+      "@media (min-width:721px) and (max-width:1100px){.d119-kat__knopf{font-size:.7rem;letter-spacing:.07em}.d119-kat__liste{column-gap:16px}}",
       ".d119-kat #moreFiltersToggle::after{content:\"+\";display:inline-block;margin-left:8px;font-weight:400}",
       ".d119-kat #moreFiltersToggle[aria-expanded=\"true\"]::after{content:\"\\2013\"}",
       ".rail .rail__sort{display:none}",
@@ -154,7 +158,8 @@
       "@media (max-width:720px){",
       ".d119-kat{top:var(--rail-h,54px);padding:0 16px;gap:0}",
       "#activeFilters.d119-aktiv{padding:12px 16px 0}",
-      ".d119-kat__liste{gap:20px}",
+      ".d119-kat{flex-wrap:nowrap}",
+      ".d119-kat__liste{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;gap:20px}",
       ".d119-kat__knopf{font-size:.72rem;padding:14px 0 12px}",
       ".d119-kat #moreFiltersToggle{position:fixed;left:50%;transform:translateX(-50%);",
       "bottom:calc(var(--d119-unten,14px) + env(safe-area-inset-bottom,0px));z-index:125;min-height:44px;min-width:128px;padding:12px 22px;",
@@ -229,10 +234,13 @@
     rail.parentNode.insertBefore(leiste, rail.nextSibling);
 
     // "Filter" wandert in die Leiste: am Desktop rechts, am Handy unten mittig.
+    // Beide Knoepfe als Gruppe: brechen nur gemeinsam (rechtsbuendig) um.
+    var aktionen = el("div", "d119-kat__aktionen");
+    leiste.appendChild(aktionen);
     var ansicht = document.getElementById("mountToggle");
-    if (ansicht) leiste.appendChild(ansicht);
+    if (ansicht) aktionen.appendChild(ansicht);
     var toggle = document.getElementById("moreFiltersToggle");
-    if (toggle) leiste.appendChild(toggle);
+    if (toggle) aktionen.appendChild(toggle);
     var panel = document.getElementById("filterPanel");
     if (panel) leiste.parentNode.insertBefore(panel, leiste.nextSibling);
     var aktiv = document.getElementById("activeFilters");
@@ -526,9 +534,28 @@
     return !!panel && !panel.classList.contains("hidden");
   }
 
+  // Helle Ansicht: build_site.py misst je Foto, wie stark es aufgehellt
+  // werden soll (foto_hell in catalog.json). Die Kacheln baut app.js - deren
+  // Vorlage steht unter CI-Ankern -, deshalb haengt der Wert hier an.
+  var hellJeId = null;
+  function kachelnAufhellen() {
+    if (!hellJeId) {
+      hellJeId = {};
+      api.artikel().forEach(function (it) {
+        if (Number(it.foto_hell) > 0) hellJeId[it.id] = String(Number(it.foto_hell));
+      });
+    }
+    Array.prototype.forEach.call(document.querySelectorAll("#grid .plate"), function (kachel) {
+      var treffer = /\/artikel\/(\d+)\//.exec(kachel.getAttribute("href") || "");
+      var wert = treffer && hellJeId[treffer[1]];
+      if (wert && kachel.style.getPropertyValue("--d119-hell") !== wert) kachel.style.setProperty("--d119-hell", wert);
+    });
+  }
+
   function zeichnen() {
     geplant = false;
     leisteZeigen();
+    kachelnAufhellen();
     // Chips nur bei offenem Filter bauen: beim Laden kostet das sonst
     // Rechenzeit, die niemand sieht (TBT). Beim Oeffnen baut der
     // Beobachter in start() sie sofort nach.

@@ -12,7 +12,10 @@
 
    Den Code legt die Bestaetigungsseite gleich im Warenkorb ab - derselbe
    Speicherplatz, den shop-promos.js liest. Einloesbar ist er genau einmal,
-   das prueft der Server. */
+   das prueft der Server.
+
+   Dazu einmal pro Browser ein Pop-up mit demselben Formular, nach rund einer
+   Minute Nutzung (siehe "Pop-up" unten). Bilder zeigt die Anmeldung keine. */
 (function () {
   "use strict";
 
@@ -53,7 +56,7 @@
       kopieren: "Code kopieren",
       kopiert: "Kopiert",
       zumShop: "Zum Archiv",
-      neu: "Neu im Archiv",
+      schliessen: "Schließen",
       keinNeuerCode: "Deine Anmeldung ist bestätigt. Den Willkommensrabatt gibt es pro E-Mail-Adresse nur einmal – für diese Adresse wurde er schon vergeben.",
       begrenzt: "Deine Anmeldung ist bestätigt. Über diesen Internetanschluss wurden in letzter Zeit schon Willkommenscodes vergeben, deshalb gibt es diesmal keinen weiteren.",
       schonBestaetigt: "Deine Anmeldung war schon bestätigt. Deinen Code findest du in der Willkommensmail.",
@@ -85,7 +88,7 @@
       kopieren: "Copy code",
       kopiert: "Copied",
       zumShop: "Back to the archive",
-      neu: "New in the archive",
+      schliessen: "Close",
       keinNeuerCode: "Your subscription is confirmed. The welcome discount is limited to one per email address – this address already received it.",
       begrenzt: "Your subscription is confirmed. Welcome codes were recently issued via this internet connection, so there isn't another one this time.",
       schonBestaetigt: "Your subscription was already confirmed. You'll find your code in the welcome email.",
@@ -117,7 +120,7 @@
       kopieren: "Copier le code",
       kopiert: "Copié",
       zumShop: "Retour à l'archive",
-      neu: "Nouveau dans l'archive",
+      schliessen: "Fermer",
       keinNeuerCode: "Ton inscription est confirmée. La remise de bienvenue est limitée à une par adresse e-mail – cette adresse l'a déjà reçue.",
       begrenzt: "Ton inscription est confirmée. Des codes de bienvenue ont déjà été émis récemment via cette connexion internet, il n'y en a donc pas d'autre cette fois.",
       schonBestaetigt: "Ton inscription était déjà confirmée. Tu trouveras ton code dans l'e-mail de bienvenue.",
@@ -177,64 +180,6 @@
 
   // ------------------------------------------------------------------ Formular
 
-  // Die neuesten Stuecke als Bilderstreifen ueber dem Formular. Geladen wird
-  // erst, wenn das Feld in die Naehe des Bildschirms kommt - die Seite selbst
-  // wird dadurch nicht langsamer. Gleiche Auswahl wie in den Mails:
-  // verfuegbar, mit Preis, hoechste Artikelnummer zuerst.
-  var katalogVersprechen = null;
-  function neuesteStuecke() {
-    if (!katalogVersprechen) {
-      katalogVersprechen = fetch("/data/catalog.json", { credentials: "omit" })
-        .then(function (res) { return res.ok ? res.json() : []; })
-        .then(function (daten) {
-          var liste = Array.isArray(daten) ? daten : [];
-          return liste.filter(function (it) {
-            return it && it.public_status === "AVAILABLE" && Number(it.price) > 0 && (it.grid_image || it.look);
-          }).sort(function (a, b) { return Number(b.id) - Number(a.id); }).slice(0, 4);
-        })
-        .catch(function () { return []; });
-    }
-    return katalogVersprechen;
-  }
-
-  function stueckeRahmen() {
-    var streifen = el("div", "d119-nl__stuecke");
-    streifen.setAttribute("role", "group");
-    streifen.setAttribute("aria-label", t.neu);
-    for (var i = 0; i < 4; i++) streifen.appendChild(el("span", "d119-nl__stueck d119-nl__stueck--leer"));
-    return streifen;
-  }
-
-  function stueckeZeigen(streifen, stuecke) {
-    if (!stuecke.length) { streifen.parentNode && streifen.parentNode.removeChild(streifen); return; }
-    streifen.textContent = "";
-    stuecke.forEach(function (it) {
-      var link = el("a", "d119-nl__stueck");
-      link.href = HOME + "artikel/" + encodeURIComponent(it.id) + "/";
-      var bild = el("img");
-      bild.src = "/" + String(it.grid_image || it.look).replace(/^\/+/, "");
-      bild.alt = String((it.brand || "") + " " + (it.title || "")).trim();
-      bild.loading = "lazy";
-      bild.decoding = "async";
-      bild.width = 220;
-      bild.height = 293;
-      link.appendChild(bild);
-      streifen.appendChild(link);
-    });
-  }
-
-  function stueckeLadenWennSichtbar(platz, streifen) {
-    var los = function () { neuesteStuecke().then(function (s) { stueckeZeigen(streifen, s); }); };
-    if (!("IntersectionObserver" in window)) { los(); return; }
-    var beobachter = new IntersectionObserver(function (eintraege) {
-      if (!eintraege.some(function (e) { return e.isIntersecting; })) return;
-      beobachter.disconnect();
-      los();
-    }, { rootMargin: "400px 0px" });
-    beobachter.observe(platz);
-  }
-
-
   function formularBauen(platz) {
     var quelle = String(platz.getAttribute("data-quelle") || "website").replace(/[^a-z0-9_-]/gi, "").slice(0, 40);
     var form = el("form", "d119-nl__form");
@@ -245,9 +190,6 @@
     kopf.appendChild(el("p", "d119-nl__title", t.titel));
     kopf.appendChild(el("p", "d119-nl__intro", t.intro));
     form.appendChild(kopf);
-    var streifen = stueckeRahmen();
-    form.appendChild(streifen);
-    stueckeLadenWennSichtbar(platz, streifen);
 
     var zeile = el("div", "d119-nl__row");
     var feld = el("label", "d119-nl__field");
@@ -303,6 +245,7 @@
       senden("/newsletter/subscribe", { email: adresse, consent: true, lang: LANG, source: quelle })
         .then(function () {
           form.classList.add("d119-nl__form--fertig");
+          merken(POPUP_KEY, "angemeldet");
           meldung(msg, "ok", t.gesendet);
           email.value = "";
           box.checked = false;
@@ -393,10 +336,6 @@
           var weiter = el("a", "d119-nl__btn", t.zumShop);
           weiter.href = HOME;
           ziel.appendChild(weiter);
-          ziel.appendChild(el("p", "d119-nl__stuecke-titel", t.neu));
-          var stuecke = stueckeRahmen();
-          ziel.appendChild(stuecke);
-          neuesteStuecke().then(function (s) { stueckeZeigen(stuecke, s); });
         } else {
           text.textContent = data.alreadyConfirmed ? t.schonBestaetigt : data.couponLimited ? t.begrenzt : t.keinNeuerCode;
         }
@@ -408,7 +347,119 @@
       });
   }
 
+  // ------------------------------------------------------------------ Pop-up
+
+  // Einmal pro Browser, nach rund einer Minute Nutzung: gezaehlt wird nur
+  // sichtbare Zeit, ueber Seitenwechsel hinweg. Nie in Kasse, Warenkorb,
+  // Konto und Rechtstexten, nie ueber einem anderen Fenster (Warenkorb, Menue,
+  // Filter, Miete, Lightbox, Datenschutz-Abfrage) und nicht in Match,
+  // Universum und Baukasten. Wer es gesehen oder sich angemeldet hat, bekommt
+  // es nicht wieder - die Anmeldung unten auf jeder Seite bleibt.
+  var POPUP_KEY = "d119_nl_popup";
+  var ZEIT_KEY = "d119_nl_zeit";
+  var POPUP_NACH_MS = 60000;
+  var POPUP_NICHT_AUF = /\/(cart|kasse|newsletter|konto|datenschutz|impressum|agb|widerruf|versand|bestellung)(\/|$)/;
+
+  function lesen(key) { try { return localStorage.getItem(key) || ""; } catch (e) { return ""; } }
+  function merken(key, wert) { try { localStorage.setItem(key, wert); } catch (e) {} }
+
+  function popupErlaubt() {
+    // Automatisierte Browser (CI-Tests, Lighthouse) sehen kein Pop-up.
+    if (navigator.webdriver) return false;
+    if (lesen(POPUP_KEY)) return false;
+    return !POPUP_NICHT_AUF.test(location.pathname);
+  }
+
+  function anderesFensterOffen() {
+    if (document.querySelector('[id$="Backdrop"].open, .open[id$="Lightbox"], .lightbox.open, body.d119-filter-open, .d119-privacy-choice, #cookieNote.visible, .d119-nlpop')) return true;
+    return ["swipeView", "chaosView", "outfitView"].some(function (id) {
+      var modus = document.getElementById(id);
+      return modus && !modus.classList.contains("hidden");
+    });
+  }
+
+  function zeitZaehlen() {
+    if (!popupErlaubt()) return;
+    var letzter = Date.now();
+    var uhr = setInterval(function () {
+      var jetzt = Date.now();
+      var gesamt = Number(lesen(ZEIT_KEY)) || 0;
+      if (document.visibilityState === "visible") {
+        // Gedrosselte Hintergrund-Tabs zaehlen nicht nach.
+        gesamt += Math.min(jetzt - letzter, 5000);
+        merken(ZEIT_KEY, String(gesamt));
+      }
+      letzter = jetzt;
+      if (!popupErlaubt()) { clearInterval(uhr); return; }
+      if (gesamt < POPUP_NACH_MS || document.visibilityState !== "visible" || anderesFensterOffen()) return;
+      clearInterval(uhr);
+      popupZeigen();
+    }, 2000);
+  }
+
+  function popupZeigen() {
+    merken(POPUP_KEY, "gezeigt");
+    stilLaden();
+    var vorher = document.activeElement;
+    var huelle = el("div", "d119-nlpop");
+    huelle.setAttribute("role", "dialog");
+    huelle.setAttribute("aria-modal", "true");
+    var karte = el("div", "d119-nlpop__karte");
+    karte.tabIndex = -1;
+    var zu = el("button", "d119-nlpop__zu");
+    zu.type = "button";
+    zu.setAttribute("aria-label", t.schliessen);
+    zu.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>';
+    var platz = el("div");
+    platz.setAttribute("data-quelle", "popup");
+    karte.appendChild(zu);
+    karte.appendChild(platz);
+    huelle.appendChild(karte);
+    document.body.appendChild(huelle);
+    formularBauen(platz);
+    var titel = karte.querySelector(".d119-nl__title");
+    if (titel) {
+      titel.id = "d119NlPopTitel";
+      huelle.setAttribute("aria-labelledby", titel.id);
+    }
+    document.documentElement.classList.add("d119-nlpop-offen");
+    (window.requestAnimationFrame || window.setTimeout)(function () { huelle.classList.add("d119-nlpop--offen"); });
+    // Fokus ins Fenster, aber nicht ins E-Mail-Feld - am Handy ginge sonst
+    // sofort die Tastatur auf.
+    karte.focus();
+
+    function tasten(event) {
+      if (event.key === "Escape") { event.preventDefault(); schliessen(); return; }
+      if (event.key !== "Tab") return;
+      var ziele = Array.prototype.filter.call(karte.querySelectorAll("button, input, a[href]"), function (ziel) {
+        return !ziel.disabled && ziel.offsetParent !== null;
+      });
+      if (!ziele.length) return;
+      var erstes = ziele[0], letztes = ziele[ziele.length - 1];
+      if (event.shiftKey && (document.activeElement === erstes || document.activeElement === karte)) {
+        event.preventDefault();
+        letztes.focus();
+      } else if (!event.shiftKey && document.activeElement === letztes) {
+        event.preventDefault();
+        erstes.focus();
+      }
+    }
+    function schliessen() {
+      document.removeEventListener("keydown", tasten, true);
+      huelle.classList.remove("d119-nlpop--offen");
+      document.documentElement.classList.remove("d119-nlpop-offen");
+      setTimeout(function () { if (huelle.parentNode) huelle.parentNode.removeChild(huelle); }, 260);
+      if (vorher && vorher.focus && vorher !== document.body) {
+        try { vorher.focus({ preventScroll: true }); } catch (e) {}
+      }
+    }
+    document.addEventListener("keydown", tasten, true);
+    zu.addEventListener("click", schliessen);
+    huelle.addEventListener("click", function (event) { if (event.target === huelle) schliessen(); });
+  }
+
   function start() {
+    zeitZaehlen();
     var plaetze = document.querySelectorAll("[data-d119-newsletter]");
     if (!plaetze.length && !document.getElementById("d119NewsletterStatus")) return;
     stilLaden();
