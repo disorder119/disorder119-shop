@@ -157,6 +157,15 @@ TERMS = {
     ),
 }
 
+
+# Voluntary fit/notification rules never shorten statutory consumer rights.
+for language, notice in {
+    "de": "Gesetzliche Verbraucherrechte, insbesondere Gewährleistung und ein gegebenenfalls bestehendes Widerrufsrecht, bleiben unberührt. Die 12-Stunden-Meldung ist eine Bitte; die 24-Stunden-Anprobe ist ein zusätzliches freiwilliges Angebot und keine Ausschlussfrist für gesetzliche Rechte. Vor einem verbindlichen Mietvertrag erhältst du die für diesen Vertrag geltenden Verbraucherinformationen und eine etwaige Widerrufsbelehrung separat.",
+    "en": "Statutory consumer rights, including warranty and any applicable withdrawal right, remain unaffected. The 12-hour notice is a request; the 24-hour try-on option is an additional voluntary offer and does not limit statutory rights. Before a binding rental contract, the applicable consumer information and any withdrawal notice are provided separately.",
+    "fr": "Les droits légaux des consommateurs, notamment garantie et éventuel droit de rétractation, restent inchangés. Le signalement sous 12 heures est une demande ; l’essayage de 24 heures est une offre facultative supplémentaire et ne limite pas les droits légaux. Avant un contrat de location ferme, les informations consommateurs et l’éventuelle notice de rétractation applicables sont fournies séparément.",
+}.items():
+    TERMS[language] += "<h3>" + {"de":"Verbraucherrechte", "en":"Consumer rights", "fr":"Droits des consommateurs"}[language] + "</h3><p>" + notice + "</p>"
+
 PAGES = {
     "de": BASE / "mieten" / "index.html",
     "en": BASE / "en" / "mieten" / "index.html",

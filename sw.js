@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "disorder119-pwa-";
-const CACHE_NAME = CACHE_PREFIX + "v1";
+const CACHE_NAME = CACHE_PREFIX + "v2";
 const PRECACHE = [
   "/",
   "/offline.html",

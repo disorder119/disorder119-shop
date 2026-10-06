@@ -162,19 +162,12 @@
   };
   var t = T[LANG] || T.de;
 
-  // Die Sitzung liegt im HttpOnly-Cookie, das der Worker setzt. Der Wert hier
-  // ist nur der Rueckfall fuer Browser, die das Cookie zwischen den beiden
-  // Adressen nicht mitschicken (etwa bei strengem Trackingschutz).
-  var SPEICHER = "d119_konto_sitzung";
-  function sitzung() {
-    try { return window.localStorage.getItem(SPEICHER) || ""; } catch (e) { return ""; }
+  // The session is carried exclusively by the API's HttpOnly cookie.
+  // Remove tokens left by older versions; never return or persist new ones.
+  function sitzungSetzen() {
+    try { window.localStorage.removeItem("d119_konto_sitzung"); } catch (e) {}
   }
-  function sitzungSetzen(wert) {
-    try {
-      if (wert) window.localStorage.setItem(SPEICHER, wert);
-      else window.localStorage.removeItem(SPEICHER);
-    } catch (e) { /* privater Modus: dann traegt allein das Cookie */ }
-  }
+  sitzungSetzen();
 
   var katalogCache = null;
   function katalog() {
@@ -193,8 +186,6 @@
   function api(pfad, optionen) {
     var opts = optionen || {};
     var kopf = { "Content-Type": "application/json" };
-    var token = sitzung();
-    if (token) kopf.Authorization = "Bearer " + token;
     return fetch(API + pfad, {
       method: opts.method || "GET",
       headers: kopf,
@@ -303,9 +294,11 @@
     meldung("info", t.pruefe);
     api("/account/session", { method: "POST", body: { token: token } })
       .then(function (daten) {
-        sitzungSetzen(daten.session || "");
-        meldung("", "");
-        angemeldet(daten.email);
+        sitzungSetzen();
+        return api("/account/profile").then(function (profil) {
+          meldung("", "");
+          angemeldet(profil.email);
+        });
       })
       .catch(function () {
         sitzungSetzen("");

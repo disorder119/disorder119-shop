@@ -504,13 +504,13 @@ async function sessionSetup(overrides = {}) {
   return { token, db, env: { ...READY, DB: db } };
 }
 
-test("a session is accepted from the cookie and from the header", async () => {
+test("a session is accepted from the HttpOnly cookie", async () => {
   const { token, env } = await sessionSetup();
   const viaCookie = await resolveSession(env, new Request("https://worker.example/account/orders", {
     headers: { Cookie: `d119_session=${encodeURIComponent(token)}` },
   }));
   const viaHeader = await resolveSession(env, new Request("https://worker.example/account/orders", {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Cookie: `d119_session=${token}` },
   }));
   assert.equal(viaCookie.customerId, "c1");
   assert.equal(viaHeader.email, "kundin@example.com");
@@ -526,7 +526,7 @@ test("expired, revoked and missing sessions are all refused", async () => {
   const abgelaufen = await sessionSetup({ session: { expires_at: new Date(Date.now() - 1000).toISOString() } });
   await assert.rejects(
     () => resolveSession(abgelaufen.env, new Request("https://worker.example/account/orders", {
-      headers: { Authorization: `Bearer ${abgelaufen.token}` },
+      headers: { Cookie: `d119_session=${abgelaufen.token}` },
     })),
     err => err.code === "SESSION_EXPIRED",
   );
@@ -534,7 +534,7 @@ test("expired, revoked and missing sessions are all refused", async () => {
   const widerrufen = await sessionSetup({ session: { revoked_at: new Date().toISOString() } });
   await assert.rejects(
     () => resolveSession(widerrufen.env, new Request("https://worker.example/account/orders", {
-      headers: { Authorization: `Bearer ${widerrufen.token}` },
+      headers: { Cookie: `d119_session=${widerrufen.token}` },
     })),
     err => err.code === "NOT_AUTHENTICATED",
   );
@@ -542,7 +542,7 @@ test("expired, revoked and missing sessions are all refused", async () => {
   const gesperrt = await sessionSetup({ customer: { status: "DELETION_PENDING" } });
   await assert.rejects(
     () => resolveSession(gesperrt.env, new Request("https://worker.example/account/orders", {
-      headers: { Authorization: `Bearer ${gesperrt.token}` },
+      headers: { Cookie: `d119_session=${gesperrt.token}` },
     })),
     err => err.code === "ACCOUNT_DISABLED" && err.status === 403,
   );
@@ -558,7 +558,7 @@ test("the order list carries item id, prices and tracking link", async () => {
   });
   const url = new URL("https://worker.example/account/orders");
   const response = await handleAccountRequest(
-    new Request(url, { headers: { Authorization: `Bearer ${token}`, Origin: ORIGIN } }),
+    new Request(url, { headers: { Cookie: `d119_session=${token}`, Origin: ORIGIN } }),
     env, url, "req-11", ORIGIN,
   );
   const body = await response.json();
@@ -665,9 +665,23 @@ test("the session cookie cannot be read by scripts and is not sent cross-site", 
   );
   assert.equal(response.status, 200);
   const cookie = response.headers.get("Set-Cookie");
+  assert.equal(Object.hasOwn(await response.json(), "session"), false);
   assert.match(cookie, /HttpOnly/);
   assert.match(cookie, /Secure/);
   assert.match(cookie, /SameSite=Lax/);
   assert.equal(response.headers.get("Access-Control-Allow-Credentials"), "true");
   assert.equal(response.headers.get("Access-Control-Allow-Origin"), ORIGIN);
+});
+
+test("customer bearer tokens and malformed cookies are no longer usable", async () => {
+  const {env,token}=await sessionSetup();
+  for(const headers of [{Authorization:`Bearer ${token}`},{Cookie:'d119_session=%E0%A4%A'}]) {
+    await assert.rejects(resolveSession(env,new Request('https://api.disorder119.com/account/profile',{headers})),{code:'NOT_AUTHENTICATED'});
+  }
+});
+test("customer cookie mutations require a trusted Origin",async()=>{
+  const {env,token}=await sessionSetup();
+  const url=new URL('https://api.disorder119.com/account/logout');
+  const response=await handleAccountRequest(new Request(url,{method:'POST',headers:{Cookie:`d119_session=${token}`,'Content-Type':'application/json'},body:'{}'}),env,url,'synthetic',null);
+  assert.equal(response.status,403);
 });

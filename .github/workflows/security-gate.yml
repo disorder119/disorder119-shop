@@ -107,3 +107,6 @@ jobs:
 
       - name: Universum-Mobile-Regressionen pruefen
         run: python scripts/universe_regression.py
+
+      - name: Privacy and storefront security regressions
+        run: node --test shop-worker/privacy-security.test.mjs shop-worker/admin-privacy.test.mjs shop-worker/visitor-consent.test.mjs shop-worker/storefront-edge.test.mjs shop-worker/legal-content.test.mjs

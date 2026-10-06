@@ -238,7 +238,7 @@ test("the session cookie is HttpOnly, Secure, SameSite=Strict and limited to /ad
   const device = await authenticator();
   const opts = await call(env, "/admin/auth/register/options", { bearer: SETUP_TOKEN, body: {} });
   const done = await call(env, "/admin/auth/register/verify", { body: { credential: await device.register(opts.data.publicKey, ADMIN), name: "Laptop" } });
-  for (const part of ["HttpOnly", "Secure", "SameSite=Strict", "Path=/admin", "Max-Age=43200"]) {
+  for (const part of ["HttpOnly", "Secure", "SameSite=Strict", "Path=/admin", "Max-Age=86400"]) {
     assert.ok(done.setCookie.includes(part), `${part} fehlt: ${done.setCookie}`);
   }
   assert.equal(done.headers.get("Access-Control-Allow-Credentials"), "true");
@@ -517,4 +517,11 @@ test("the admin app reaches every admin module through its passkey session", asy
   const oldToken = await workerEntry.fetch(request("/admin/ping", { method: "GET", bearer: SETUP_TOKEN }), env, {});
   assert.equal(oldToken.status, 401);
   assert.equal((await oldToken.json()).error, "PASSKEY_REQUIRED");
+});
+
+test("previously issued seven-day admin sessions expire at the new 24-hour cap",async()=>{
+  const env=freshEnv({ADMIN_SESSION_HOURS:'168'});
+  const {cookie}=await setupFirstDevice(env);
+  env.DB.raw.prepare("UPDATE admin_sessions SET created_at=?,expires_at=?").run(new Date(Date.now()-25*3600000).toISOString(),new Date(Date.now()+6*86400000).toISOString());
+  assert.equal(await resolveAdminSession(request('/admin/orders',{method:'GET',cookie}),env),null);
 });
