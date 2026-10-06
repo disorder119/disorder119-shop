@@ -11,32 +11,29 @@
     de: {
       addMore: "Weiteres Piece hinzufügen",
       addMoreShort: "Mehr",
+      addMoreAria: "Mehr – weiteres Piece hinzufügen",
       setTitle: "Deine Mietauswahl",
       setHint: "Mehrere Pieces gemeinsam anfragen",
       selected: "{count} ausgewählt",
-      browseHint: "Wähle weitere Pieces aus dem Mietkatalog.",
-      cardAdd: "Zur Mietauswahl hinzufügen",
-      cardAdded: "In deiner Mietauswahl"
+      browseHint: "Wähle weitere Pieces aus dem Mietkatalog."
     },
     en: {
       addMore: "Add another piece",
       addMoreShort: "More",
+      addMoreAria: "More – add another piece",
       setTitle: "Your rental selection",
       setHint: "Request several pieces together",
       selected: "{count} selected",
-      browseHint: "Choose more pieces from the rental catalogue.",
-      cardAdd: "Add to rental selection",
-      cardAdded: "In your rental selection"
+      browseHint: "Choose more pieces from the rental catalogue."
     },
     fr: {
       addMore: "Ajouter une autre pièce",
       addMoreShort: "Plus",
+      addMoreAria: "Plus – ajouter une autre pièce",
       setTitle: "Votre sélection de location",
       setHint: "Demander plusieurs pièces ensemble",
       selected: "{count} sélectionné(s)",
-      browseHint: "Choisissez d’autres pièces dans le catalogue de location.",
-      cardAdd: "Ajouter à la sélection de location",
-      cardAdded: "Dans votre sélection de location"
+      browseHint: "Choisissez d’autres pièces dans le catalogue de location."
     }
   };
 
@@ -134,8 +131,11 @@
   function enhanceCardButtons() {
     Array.prototype.forEach.call(document.querySelectorAll("[data-rental]"), function (btn) {
       btn.classList.add("d119-rental-card-add");
-      var active = btn.getAttribute("aria-pressed") === "true";
-      btn.setAttribute("aria-label", active ? t("cardAdded") : t("cardAdd"));
+      // Kein eigenes aria-label: Der sichtbare Text ("Zur Mietanfrage
+      // hinzufuegen" / "Hinzugefuegt ✓", rental-v2.js) ist der Name, der
+      // Zustand steht in aria-pressed. Ein abweichendes Label verletzt
+      // WCAG 2.5.3 (axe label-content-name-mismatch, ab axe 4.14 aktiv).
+      btn.removeAttribute("aria-label");
     });
   }
 
@@ -160,7 +160,7 @@
     strip.setAttribute("data-signature", signature);
 
     var html = '<div class="d119-rental-set-copy"><strong>' + esc(t("setTitle")) + '</strong><span>' + esc(fmt(t("selected"), { count: ids.length })) + '<br>' + esc(t("setHint")) + '</span></div>' +
-      '<button type="button" class="d119-rental-set-add" id="d119RentalStripAdd" aria-label="' + esc(t("addMore")) + '"><span class="d119-rental-set-add__plus" aria-hidden="true">+</span><span class="d119-rental-set-add__label">' + esc(t("addMoreShort")) + '</span></button>';
+      '<button type="button" class="d119-rental-set-add" id="d119RentalStripAdd" aria-label="' + esc(t("addMoreAria")) + '"><span class="d119-rental-set-add__plus" aria-hidden="true">+</span><span class="d119-rental-set-add__label">' + esc(t("addMoreShort")) + '</span></button>';
     ids.forEach(function (id) {
       var item = catalogMap[id];
       if (!item) return;
