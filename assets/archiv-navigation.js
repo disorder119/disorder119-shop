@@ -122,6 +122,13 @@
       /* Passen die Knoepfe nicht mehr daneben, stehen sie rechts darunter */
       ".d119-kat__aktionen{display:flex;align-items:center;gap:10px;flex:0 0 auto;margin-left:auto}",
       "@media (min-width:721px) and (max-width:1100px){.d119-kat__knopf{font-size:.7rem;letter-spacing:.07em}.d119-kat__liste{column-gap:16px}}",
+      /* Laptop: Kategorien mittig auf der Seite (Wunsch des Inhabers). Links eine
+         leere Spalte so breit wie rechts "Ansicht"/"Filter"; wird es eng,
+         rueckt die Mitte nach links, statt die Knoepfe zu ueberdecken. */
+      "@media (min-width:721px){.d119-kat{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(max-content,1fr)}",
+      ".d119-kat::before{content:\"\";grid-column:1}",
+      ".d119-kat__liste{grid-column:2;justify-content:center;column-gap:clamp(12px,1.3vw,22px)}",
+      ".d119-kat__aktionen{grid-column:3;justify-self:end;margin-left:0}}",
       ".d119-kat #moreFiltersToggle::after{content:\"+\";display:inline-block;margin-left:8px;font-weight:400}",
       ".d119-kat #moreFiltersToggle[aria-expanded=\"true\"]::after{content:\"\\2013\"}",
       ".rail .rail__sort{display:none}",

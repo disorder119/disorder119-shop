@@ -195,9 +195,13 @@ def validate_and_report() -> None:
             fail("config/shop-config.json: versand.standardGroesse muss S, M oder L sein.")
         dienste = versand.get("dienste")
         if dienste is not None:
-            erlaubt = dienste.get("erlaubt") if isinstance(dienste, dict) else None
-            if not isinstance(erlaubt, list) or not erlaubt or not all(isinstance(n, str) and n.strip() for n in erlaubt):
-                fail("config/shop-config.json: versand.dienste.erlaubt muss eine Liste von Paketdienst-Namen sein.")
+            # Entweder eine Erlaubt-Liste oder eine Sperrliste ("ausgeschlossen").
+            listen = {name: dienste.get(name) for name in ("erlaubt", "ausgeschlossen")} if isinstance(dienste, dict) else {}
+            if not any(liste is not None for liste in listen.values()):
+                fail("config/shop-config.json: versand.dienste braucht \"erlaubt\" oder \"ausgeschlossen\".")
+            for name, liste in listen.items():
+                if liste is not None and (not isinstance(liste, list) or not liste or not all(isinstance(n, str) and n.strip() for n in liste)):
+                    fail(f"config/shop-config.json: versand.dienste.{name} muss eine Liste von Paketdienst-Namen sein.")
             grenze = dienste.get("expressMaxCents") if isinstance(dienste, dict) else None
             if grenze is not None and (not isinstance(grenze, int) or isinstance(grenze, bool) or grenze <= 0):
                 fail("config/shop-config.json: versand.dienste.expressMaxCents muss eine positive ganze Zahl in Cent sein.")

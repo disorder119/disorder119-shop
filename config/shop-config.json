@@ -8,11 +8,10 @@
     "referenzPlz": "10115",
     "standardGroesse": "M",
     "dienste": {
-      "_comment": "Welche Paketdienste die Kundschaft im Checkout sieht (Name wie bei Packlink). DPD, DHL und GLS bieten mehrere Auswahlmoeglichkeiten; UPS bleibt auf Wunsch des Inhabers ausgeschlossen. Express nur, wenn ein erlaubter Dienst ihn bis expressMaxCents anbietet. In der privaten Admin-App stehen beim Etikett alle sicheren Haustuer-Angebote.",
-      "erlaubt": [
-        "DPD",
-        "DHL",
-        "GLS"
+      "_comment": "Welche Paketdienste die Kundschaft im Checkout sieht: alle, die Packlink anbietet, ausser den ausgeschlossenen (Wunsch des Inhabers 07.10.2026: kein UPS, kein Hermes). Ein Name sperrt auch Varianten wie \"UPS Standard\". Express nur, wenn ein erlaubter Dienst ihn bis expressMaxCents anbietet. In der privaten Admin-App stehen beim Etikett dieselben Dienste.",
+      "ausgeschlossen": [
+        "UPS",
+        "HERMES"
       ],
       "expressMaxCents": 2500
     },
