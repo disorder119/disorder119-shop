@@ -201,7 +201,6 @@
     var facts = [];
     if (IT.category) facts.push(trCat(IT.category));
     if (IT.size) facts.push(t("factSize") + " " + trSize(IT.size));
-    if (IT.condition) facts.push(t("factCondition") + " " + trCond(IT.condition));
     var factsStr = facts.join(", ");
     return tFormat("autoDescTemplate", { name: displayName(), facts: factsStr ? " – " + factsStr : "" });
   }

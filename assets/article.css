@@ -286,6 +286,14 @@ a { color: inherit; }
   margin: 0 0 22px;
 }
 
+/* Allgemeiner Gebraucht-Hinweis unter der Beschreibung (statt Zustand je Teil). */
+.info__gebraucht {
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin: -10px 0 22px;
+}
+
 .info__cta { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
 
 .btn {

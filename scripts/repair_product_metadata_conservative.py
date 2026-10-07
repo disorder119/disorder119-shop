@@ -167,8 +167,8 @@ def missing_fields(item: dict) -> list[str]:
         missing.append("size")
     if not str(item.get("color") or "").strip():
         missing.append("color")
-    if not str(item.get("condition") or "").strip():
-        missing.append("condition")
+    # Zustand ist kein Pflichtfeld mehr: jede Produktseite traegt den
+    # allgemeinen Gebraucht-Hinweis (Wunsch des Inhabers, 07.10.2026).
     return missing
 
 
@@ -191,27 +191,24 @@ def expand_description(item: dict, lang: str) -> str:
         if category: facts.append("Kategorie: " + category)
         if size: facts.append("Größe: " + size)
         if color: facts.append("Farbe: " + color)
-        if condition: facts.append("Zustand: " + condition)
         extra = (" " + ". ".join(facts) + ".") if facts else ""
-        gap = " Fehlende Angaben werden vor dem Kauf bestätigt und nicht geschätzt." if gaps else ""
+        gap = " Fehlende Angaben bitte den Fotos entnehmen oder vor dem Kauf nachfragen." if gaps else ""
     elif lang == "en":
         start = current or f"From the curated Disorder119 archive. {title} by {brand}."
         facts = []
         if category: facts.append("Category: " + category)
         if size: facts.append("Size: " + size)
         if color: facts.append("Color: " + color)
-        if condition: facts.append("Condition: " + condition)
         extra = (" " + ". ".join(facts) + ".") if facts else ""
-        gap = " Missing details are confirmed before purchase and are never guessed." if gaps else ""
+        gap = " For missing details, please see the photos or ask before buying." if gaps else ""
     else:
         start = current or f"Issu de l’archive sélectionnée Disorder119. {title} par {brand}."
         facts = []
         if category: facts.append("Catégorie : " + category)
         if size: facts.append("Taille : " + size)
         if color: facts.append("Couleur : " + color)
-        if condition: facts.append("État : " + condition)
         extra = (" " + ". ".join(facts) + ".") if facts else ""
-        gap = " Les informations manquantes sont confirmées avant l’achat et ne sont jamais inventées." if gaps else ""
+        gap = " Pour les informations manquantes, merci de voir les photos ou de nous demander avant l’achat." if gaps else ""
     return (start.rstrip(". ") + "." + extra + gap).strip()
 
 

@@ -21,7 +21,7 @@
     de: {
       alle: "Alle", kategorien: "Kategorien", groesse: "Größe", weitereGroessen: "Weitere Größen",
       wenigerGroessen: "Weniger Größen", schuhgroessen: "Schuhgrößen",
-      fuer: "Für", sortieren: "Sortieren", preis: "Preis", mehr: "Preis, Marke, Farbe, Zustand",
+      fuer: "Für", sortieren: "Sortieren", preis: "Preis", mehr: "Preis, Marke, Farbe",
       marke: "Marke", farbe: "Farbe", erhaltung: "Zustand", zuruecksetzen: "Alles zurücksetzen",
       keineGroessen: "Für diese Auswahl gibt es keine Größenangaben.", alleMarken: "Alle Marken ({n})",
       weniger: "Weniger", bis: "bis {b} €", ab: "ab {a} €", spanne: "{a}–{b} €",
@@ -30,7 +30,7 @@
     en: {
       alle: "All", kategorien: "Categories", groesse: "Size", weitereGroessen: "More sizes",
       wenigerGroessen: "Fewer sizes", schuhgroessen: "Shoe sizes",
-      fuer: "For", sortieren: "Sort", preis: "Price", mehr: "Price, brand, colour, condition",
+      fuer: "For", sortieren: "Sort", preis: "Price", mehr: "Price, brand, colour",
       marke: "Brand", farbe: "Colour", erhaltung: "Condition", zuruecksetzen: "Reset all",
       keineGroessen: "No sizes listed for this selection.", alleMarken: "All brands ({n})",
       weniger: "Less", bis: "up to €{b}", ab: "from €{a}", spanne: "€{a}–{b}",
@@ -39,7 +39,7 @@
     fr: {
       alle: "Tout", kategorien: "Catégories", groesse: "Taille", weitereGroessen: "Autres tailles",
       wenigerGroessen: "Moins de tailles", schuhgroessen: "Pointures",
-      fuer: "Pour", sortieren: "Trier", preis: "Prix", mehr: "Prix, marque, couleur, état",
+      fuer: "Pour", sortieren: "Trier", preis: "Prix", mehr: "Prix, marque, couleur",
       marke: "Marque", farbe: "Couleur", erhaltung: "État", zuruecksetzen: "Tout réinitialiser",
       keineGroessen: "Aucune taille indiquée pour cette sélection.", alleMarken: "Toutes les marques ({n})",
       weniger: "Moins", bis: "jusqu’à {b} €", ab: "dès {a} €", spanne: "{a}–{b} €",
@@ -559,7 +559,6 @@
     var en = zaehlen(api.treffer("condition"), function (it) { return [it.condition]; });
     var erhaltung = Object.keys(en).filter(Boolean);
     if (erhaltung.length > 1 || z.condition) {
-      innen.appendChild(einfacheGruppe(tx("erhaltung"), "condition", "filterCondition", erhaltung, en, z.condition, api.erhaltung).gruppe);
     }
     return innen.childNodes.length ? details : null;
   }
