@@ -491,7 +491,8 @@
   }
   function lieferText(o) {
     var l = o && o.lieferung;
-    return l && l.von && l.bis ? tFormat("shipArrives", { von: datumKurz(l.von), bis: datumKurz(l.bis) }) : "";
+    // "14.10." am Satzende: kein doppelter Punkt.
+    return l && l.von && l.bis ? tFormat("shipArrives", { von: datumKurz(l.von), bis: datumKurz(l.bis) }).replace(/\.\.$/, ".") : "";
   }
   function versandSetzen(daten) {
     var gueltig = daten && daten.optionen && daten.optionen.length ? daten : null;

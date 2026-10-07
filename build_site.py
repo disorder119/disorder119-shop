@@ -633,7 +633,7 @@ def cta_html(it, shop_config, home, lang):
         + '" data-i18n="rentalTeaser">Auch mietbar – Für Miete anfragen</a>'
     )
     trust_notes = {
-        "de": "Einzelstück · individuell fotografiert · 14 Tage Widerrufsrecht für Verbraucher:innen · gesetzliche Gewährleistungsrechte.",
+        "de": "Einzelstück · individuell fotografiert · gesetzliches Widerrufsrecht von 14 Tagen für Verbraucher:innen · gesetzliche Gewährleistungsrechte.",
         "en": "One-off piece · individually photographed · 14-day statutory withdrawal right for consumers · statutory warranty rights.",
         "fr": "Pièce unique · photographiée individuellement · droit légal de rétractation de 14 jours pour les consommateurs · droits de garantie légaux.",
     }

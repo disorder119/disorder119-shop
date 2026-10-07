@@ -299,7 +299,8 @@
   }
   function lieferText(o) {
     var l = o && o.lieferung;
-    return l && l.von && l.bis ? tf("lieferung", { von: datumKurz(l.von), bis: datumKurz(l.bis) }) : "";
+    // "14.10." am Satzende: kein doppelter Punkt.
+    return l && l.von && l.bis ? tf("lieferung", { von: datumKurz(l.von), bis: datumKurz(l.bis) }).replace(/\.\.$/, ".") : "";
   }
 
   function versandZeichnen() {

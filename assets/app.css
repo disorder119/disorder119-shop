@@ -3743,9 +3743,10 @@ img[data-d119-image-protected] {
 .cart-lieferung { margin: 0; font-size: 0.74rem; line-height: 1.45; color: var(--text-muted); }
 .cart-drawer__kasse { flex-wrap: wrap; row-gap: 10px; }
 .cart-kasse__vertrauen {
-  flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px;
+  flex: 1 0 100%; display: flex; align-items: center; gap: 10px;
   margin: 0; font-size: 0.68rem; line-height: 1.4; color: var(--text-muted);
 }
+.cart-kasse__vertrauen > span:last-child { flex: 1 1 auto; min-width: 0; }
 /* Kasse: "Sicher bezahlen" unter dem PayPal-Knopf (assets/kasse.js) */
 .d119-zahlart {
   display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 8px;
