@@ -132,7 +132,13 @@
       "@media (min-width:721px){.d119-kat{display:grid;grid-template-columns:minmax(max-content,1fr) auto minmax(max-content,1fr)}",
       ".d119-kat__links{grid-column:1;justify-self:start;display:flex;align-items:center}",
       ".d119-kat__liste{grid-column:2;justify-content:center;column-gap:clamp(12px,1.3vw,22px)}",
-      ".d119-kat__aktionen{grid-column:3;justify-self:end;margin-left:0}}",
+      ".d119-kat__aktionen{grid-column:3;justify-self:end;margin-left:0}",
+      /* Zu schmal fuer eine Zeile (leisteZeilen misst): oben links "Ansicht",
+         oben rechts "Filter", darunter die Kategorien mittig. */
+      ".d119-kat.d119-kat--zweizeilig{grid-template-columns:minmax(max-content,1fr) minmax(max-content,1fr);grid-template-areas:\"links rechts\" \"liste liste\";padding-top:8px}",
+      ".d119-kat--zweizeilig .d119-kat__links{grid-area:links}",
+      ".d119-kat--zweizeilig .d119-kat__aktionen{grid-area:rechts}",
+      ".d119-kat--zweizeilig .d119-kat__liste{grid-area:liste;justify-content:center}}",
       ".d119-kat #moreFiltersToggle::after{content:\"+\";display:inline-block;margin-left:8px;font-weight:400}",
       ".d119-kat #moreFiltersToggle[aria-expanded=\"true\"]::after{content:\"\\2013\"}",
       ".rail .rail__sort{display:none}",
@@ -302,6 +308,29 @@
         return !kind.classList.contains("rail__sort") && getComputedStyle(kind).display !== "none";
       })) rechts.style.display = "none";
     });
+  }
+
+  // Passen "Ansicht", alle Kategorien und "Filter" nebeneinander? Gemessen wird
+  // die natuerliche Breite (Kategorien ohne Umbruch), nicht die aktuelle - so
+  // springt die Leiste nicht zwischen ein- und zweizeilig hin und her. Die
+  // Sprachen sind verschieden lang (Franzoesisch braucht am meisten).
+  function leisteZeilen() {
+    if (!leiste) return;
+    var liste = leiste.querySelector(".d119-kat__liste");
+    var knoepfe = liste ? liste.querySelectorAll("[data-d119-ansicht]") : [];
+    if (istMobil() || !knoepfe.length) { leiste.classList.remove("d119-kat--zweizeilig"); return; }
+    var vorher = liste.style.flexWrap;
+    liste.style.flexWrap = "nowrap";
+    var breite = knoepfe[knoepfe.length - 1].getBoundingClientRect().right - knoepfe[0].getBoundingClientRect().left;
+    liste.style.flexWrap = vorher;
+    var seite = 0;
+    ["mountToggle", "moreFiltersToggle"].forEach(function (id) {
+      var k = document.getElementById(id);
+      if (k) seite = Math.max(seite, k.getBoundingClientRect().width);
+    });
+    var cs = window.getComputedStyle(leiste);
+    var luft = 2 * (parseFloat(cs.columnGap) || 0) + (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    leiste.classList.toggle("d119-kat--zweizeilig", breite + 2 * seite + luft > leiste.clientWidth + 1);
   }
 
   function leisteOffset() {
@@ -762,6 +791,7 @@
   function zeichnen() {
     geplant = false;
     leisteZeigen();
+    leisteZeilen();
     kachelnAufhellen();
     verkauftPlanen();
     // Chips nur bei offenem Filter bauen: beim Laden kostet das sonst
@@ -862,6 +892,16 @@
     stil();
     leisteBauen();
     zeichnen();
+    // Schriften und Knopftexte (app.js setzt sie je Sprache) kommen evtl. erst
+    // nach dem ersten Messen: Aendert sich die Groesse der Knoepfe oder der
+    // Kategorien, wird neu gemessen - im naechsten Frame, damit der Wechsel
+    // selbst keine Schleife im ResizeObserver ausloest.
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(leisteZeilen);
+    if ("ResizeObserver" in window && leiste) {
+      var zeilenBeobachter = new ResizeObserver(function () { naechsterFrame(leisteZeilen); });
+      [document.getElementById("mountToggle"), document.getElementById("moreFiltersToggle"), leiste.querySelector(".d119-kat__liste")]
+        .forEach(function (k) { if (k) zeilenBeobachter.observe(k); });
+    }
     document.addEventListener("d119:archiv", planen);
     // Sprache wechselt auf der Seite (DE/EN/FR).
     new MutationObserver(planen).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
@@ -873,6 +913,7 @@
     window.addEventListener("resize", function () {
       knopfText();
       untenAbstandPlanen();
+      naechsterFrame(leisteZeilen);
       // Andere Spaltenzahl: das Band rutscht ans Ende einer ganzen Reihe.
       if (verkauftSpalten) { verkauftSpalten = 0; planen(); }
     }, { passive: true });
