@@ -104,6 +104,8 @@ def validate_taxonomy_mismatches() -> None:
         9411, 9508,        # T-Shirts, Altkategorie "Tops"
         9462,              # Margiela x H&M Blazer, Altkategorie "Skirts"
         9515, 9516,        # Gaultier Soleil Oberteile, Altkategorie "Dresses"
+        # 07.10.2026: laut eigenem Vinted-Text eine Strickjacke (kein Fell).
+        9365,              # Prada Strickjacke, Altkategorie "Jackets"
     }
     unexpected = sorted(mismatch_ids - intentional)
     require(not unexpected, "unerwartete Broad-Category-Abweichungen: " + ", ".join(map(str, unexpected)))
