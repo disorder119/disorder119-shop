@@ -15,6 +15,10 @@
       ],
       "expressMaxCents": 2500
     },
+    "versandkostenfrei": {
+      "_comment": "Ab diesem Warenwert (Summe der Artikelpreise vor einem Gutschein, in Cent) uebernimmt der Shop den guenstigsten Standardversand: Die Kundschaft zahlt dafuer nichts, fuer einen anderen Paketdienst oder Express nur den Aufpreis. Wunsch des Inhabers 07.10.2026: ab 99 Euro. Block weglassen schaltet es ab. Gilt im Worker (shop-worker/versand.js) und in den Texten (build_site.py, AGB).",
+      "abCents": 9900
+    },
     "pakete": {
       "S": {
         "name": "Klein",

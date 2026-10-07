@@ -49,7 +49,7 @@ function fakeNetz({ intent = "AUTHORIZE" } = {}) {
         return Response.json({
           id: "PAYPAL-MULTI-1", status: "COMPLETED",
           purchase_units: [{ custom_id: "9428,9427", payments: { authorizations: [{
-            id: "AUTH-1", status: "CREATED", amount: { currency_code: "EUR", value: "245.59" },
+            id: "AUTH-1", status: "CREATED", amount: { currency_code: "EUR", value: "240.00" },
             create_time: "2026-09-30T10:00:00Z", expiration_time: "2026-10-29T10:00:00Z",
           }] } }],
         }, { status: 201 });
@@ -57,7 +57,7 @@ function fakeNetz({ intent = "AUTHORIZE" } = {}) {
       if (u.pathname === "/v2/checkout/orders/PAYPAL-MULTI-1/capture") {
         return Response.json({
           id: "PAYPAL-MULTI-1", status: "COMPLETED",
-          purchase_units: [{ custom_id: "9428,9427", payments: { captures: [{ id: "CAP-1", status: "COMPLETED", amount: { currency_code: "EUR", value: "245.59" } }] } }],
+          purchase_units: [{ custom_id: "9428,9427", payments: { captures: [{ id: "CAP-1", status: "COMPLETED", amount: { currency_code: "EUR", value: "240.00" } }] } }],
         });
       }
     }
@@ -108,7 +108,7 @@ test("opted-in paid order keeps checkout email and sends one verified-account li
     MAIL_API_KEY: "test-key", MAIL_FROM: "shop@example.com" };
   try {
     const created = await post(env, "/create-order", { itemIds: [9428, 9427], adresse: ADRESSE,
-      email: "Kundin@Example.com", createAccount: true, versand: "pl-M-20425", versandPreisCents: 559 }, "k-konto-0000000001");
+      email: "Kundin@Example.com", createAccount: true, versand: "pl-M-20425", versandPreisCents: 0 }, "k-konto-0000000001");
     assert.equal(created.status, 200, JSON.stringify(created.data));
     const paid = await post({ ...env, GITHUB_TOKEN: "" }, "/capture-order", { orderId: created.data.id }, "k-konto-zahlung-001");
     assert.equal(paid.status, 200, JSON.stringify(paid.data));
@@ -153,20 +153,21 @@ test("checkout with two pieces: one PayPal order with the checkout address, both
     assert.equal(ohneAdresse.status, 422);
     assert.equal(ohneAdresse.data.error, "ADRESSE_UNVOLLSTAENDIG");
     assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations").get().n, 0);
-    // Zwei Teile brauchen mindestens das mittlere Paket (Nachbau: DPD 5,59 EUR).
+    // Zwei Teile brauchen mindestens das mittlere Paket (Nachbau: DPD 5,59
+    // EUR). Ab 99 EUR Warenwert uebernimmt der Shop den guenstigsten Standard.
     const angelegt = await post(env, "/create-order",
-      { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 559 }, "k-kasse-00000000001");
+      { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 0 }, "k-kasse-00000000001");
     assert.equal(angelegt.status, 200, JSON.stringify(angelegt.data));
     assert.deepEqual(angelegt.data.itemIds, [9428, 9427]);
     assert.equal(angelegt.data.itemPrice, "240.00");
-    assert.equal(angelegt.data.shipping, "5.59");
-    assert.equal(angelegt.data.total, "245.59");
+    assert.equal(angelegt.data.shipping, "0.00");
+    assert.equal(angelegt.data.total, "240.00");
 
     const paypal = netz.calls.find(c => c.host === "api-m.sandbox.paypal.com" && c.path === "/v2/checkout/orders");
     const unit = paypal.body.purchase_units[0];
     assert.equal(unit.custom_id, "9428,9427");
     assert.match(unit.description, /^2 Teile: /);
-    assert.equal(unit.amount.value, "245.59");
+    assert.equal(unit.amount.value, "240.00");
     assert.deepEqual(unit.shipping, {
       type: "SHIPPING",
       name: { full_name: "Maria Müller" },
@@ -177,7 +178,7 @@ test("checkout with two pieces: one PayPal order with the checkout address, both
     assert.equal(paypal.body.intent, "AUTHORIZE");
 
     const order = DB.raw.prepare("SELECT id,subtotal_cents,shipping_cents,total_cents FROM commerce_orders").get();
-    assert.deepEqual({ ...order, id: undefined }, { id: undefined, subtotal_cents: 24000, shipping_cents: 559, total_cents: 24559 });
+    assert.deepEqual({ ...order, id: undefined }, { id: undefined, subtotal_cents: 24000, shipping_cents: 0, total_cents: 24000 });
     const zeilen = DB.raw.prepare("SELECT item_id,unit_price_cents FROM order_items WHERE order_id=? ORDER BY rowid").all(order.id);
     assert.deepEqual(zeilen.map(z => [z.item_id, z.unit_price_cents]), [[9428, 15000], [9427, 9000]]);
     const reservierungen = DB.raw.prepare("SELECT idempotency_key,status FROM reservations ORDER BY idempotency_key").all();
@@ -219,7 +220,7 @@ test("a PayPal order created before the switch (intent CAPTURE) is still capture
   const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
   try {
     const angelegt = await post(env, "/create-order",
-      { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 559 }, "k-kasse-alt-0000001");
+      { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 0 }, "k-kasse-alt-0000001");
     assert.equal(angelegt.status, 200, JSON.stringify(angelegt.data));
     const bezahlt = await post({ ...env, GITHUB_TOKEN: "" }, "/capture-order", { orderId: "PAYPAL-MULTI-1" }, "k-zahlung-alt-00001");
     assert.equal(bezahlt.status, 200, JSON.stringify(bezahlt.data));
@@ -248,7 +249,7 @@ test("checkout: a sold piece stops the whole order, nothing stays reserved", asy
     // Schon reserviertes Stueck in einer zweiten Bestellung: die erste Reservierung wird zurueckgenommen.
     const erste = await post(env, "/create-order", { itemIds: [9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 559 }, "k-kasse-00000000003");
     assert.equal(erste.status, 200, JSON.stringify(erste.data));
-    const zweite = await post(env, "/create-order", { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 559 }, "k-kasse-00000000004");
+    const zweite = await post(env, "/create-order", { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 0 }, "k-kasse-00000000004");
     assert.equal(zweite.status, 409);
     assert.equal(zweite.data.error, "ITEM_UNAVAILABLE");
     const aktiv = DB.raw.prepare("SELECT idempotency_key FROM reservations WHERE status='RESERVED'").all();

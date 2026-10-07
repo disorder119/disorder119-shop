@@ -48,6 +48,9 @@
       checkoutTitle: "Deine Bestellung", checkoutShipping: "Versand", checkoutTotal: "Gesamt",
       shipTitle: "Versandart", shipParcel: "Paket", shipLoading: "wird berechnet …", shipDays1: "1 Werktag", shipDaysN: "{n} Werktage",
       shipParcelS: "klein", shipParcelM: "mittel", shipParcelL: "groß", shipHint: "Versand innerhalb Deutschlands",
+      shipFree: "kostenlos", shipFreeFrom: "Ab {betrag} Warenwert versenden wir kostenlos.",
+      shipArrives: "Heute bestellt – voraussichtlich bei dir zwischen {von} und {bis}.",
+      payTrust: "Sicher bezahlen · mit Käuferschutz", stickyFree: "Versand kostenlos", stickyShip: "zzgl. Versand",
       shipInquiry: "Versand (Standard)", shipLocked: "Die Versandart ist bis {zeit} Uhr für diese Reservierung festgelegt.",
       checkoutShippingChanged: "Der Versandpreis hat sich gerade geändert. Bitte prüf die Versandart und klick noch einmal auf Kaufen.",
       checkoutShippingMissing: "Der Versand wird noch berechnet. Bitte versuch es gleich noch einmal.",
@@ -90,6 +93,9 @@
       checkoutTitle: "Your order", checkoutShipping: "Shipping", checkoutTotal: "Total",
       shipTitle: "Shipping method", shipParcel: "parcel", shipLoading: "calculating …", shipDays1: "1 working day", shipDaysN: "{n} working days",
       shipParcelS: "small", shipParcelM: "medium", shipParcelL: "large", shipHint: "Shipping within Germany",
+      shipFree: "free", shipFreeFrom: "Free shipping from {betrag} goods value.",
+      shipArrives: "Order today – expected to arrive between {von} and {bis}.",
+      payTrust: "Secure checkout · Buyer Protection", stickyFree: "Free shipping", stickyShip: "plus shipping",
       shipInquiry: "Shipping (standard)", shipLocked: "The shipping method is fixed for this reservation until {zeit}.",
       checkoutShippingChanged: "The shipping price has just changed. Please check the shipping method and click buy again.",
       checkoutShippingMissing: "Shipping is still being calculated. Please try again in a moment.",
@@ -132,6 +138,9 @@
       checkoutTitle: "Votre commande", checkoutShipping: "Livraison", checkoutTotal: "Total",
       shipTitle: "Mode d'envoi", shipParcel: "colis", shipLoading: "calcul en cours …", shipDays1: "1 jour ouvré", shipDaysN: "{n} jours ouvrés",
       shipParcelS: "petit", shipParcelM: "moyen", shipParcelL: "grand", shipHint: "Livraison en Allemagne",
+      shipFree: "gratuit", shipFreeFrom: "Livraison gratuite dès {betrag} d’articles.",
+      shipArrives: "Commande aujourd’hui – livraison prévue entre le {von} et le {bis}.",
+      payTrust: "Paiement sécurisé · Protection des achats", stickyFree: "Livraison gratuite", stickyShip: "hors livraison",
       shipInquiry: "Livraison (standard)", shipLocked: "Le mode d'envoi est fixé pour cette réservation jusqu'à {zeit}.",
       checkoutShippingChanged: "Le prix de livraison vient de changer. Vérifie le mode d'envoi et clique à nouveau sur Acheter.",
       checkoutShippingMissing: "La livraison est encore en cours de calcul. Réessaie dans un instant.",
@@ -460,6 +469,30 @@
   function versandPaket(d) {
     return d ? t("shipParcel") + " " + (t("shipParcel" + d.paket) || d.paketName) : "";
   }
+  // Ab 99 € Warenwert uebernimmt der Shop den guenstigsten Standard (Worker,
+  // versand.versandkostenfrei): dann "kostenlos" statt "0,00 €".
+  function versandPreisText(cents) {
+    return cents === 0 ? t("shipFree") : fmtPrice(cents / 100);
+  }
+  function versandName(o) {
+    if (o.art === "express") return o.titel + (o.carrier ? " (" + o.carrier + ")" : "");
+    return o.carrier || o.titel;
+  }
+  // "Mo., 12.10." - das Datum rechnet der Worker (Werktage, Feiertage in
+  // Bayern, deutsche Zeit, shop-worker/lieferzeit.js); hier nur formatiert.
+  function datumKurz(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+    if (!m) return "";
+    var d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    try {
+      return d.toLocaleDateString(LANG === "en" ? "en-GB" : LANG === "fr" ? "fr-FR" : "de-DE",
+        { weekday: "short", day: "numeric", month: LANG === "de" ? "numeric" : "short", timeZone: "UTC" });
+    } catch (e) { return +m[3] + "." + +m[2] + "."; }
+  }
+  function lieferText(o) {
+    var l = o && o.lieferung;
+    return l && l.von && l.bis ? tFormat("shipArrives", { von: datumKurz(l.von), bis: datumKurz(l.bis) }) : "";
+  }
   function versandSetzen(daten) {
     var gueltig = daten && daten.optionen && daten.optionen.length ? daten : null;
     var vorher = versandZustand.gewaehlt;
@@ -502,12 +535,100 @@
       var d = versandZustand.daten;
       hinweis.hidden = !d;
       if (!d) return;
-      hinweis.textContent = t("shipHint") + ": " + d.optionen.map(function (o) {
-        return o.titel + " " + fmtPrice(o.preisCents / 100);
-      }).join(" · ") + " (" + versandPaket(d) + ")";
+      hinweis.textContent = "";
+      // Zeile 1: Paketdienste mit Preis ("DPD kostenlos · GLS 2,65 €").
+      var preise = document.createElement("span");
+      preise.appendChild(document.createTextNode(t("shipHint") + ": "));
+      d.optionen.forEach(function (o, i) {
+        if (i) preise.appendChild(document.createTextNode(" · "));
+        preise.appendChild(document.createTextNode(versandName(o) + " "));
+        if (o.preisCents === 0) {
+          var frei = document.createElement("strong");
+          frei.textContent = t("shipFree");
+          preise.appendChild(frei);
+        } else {
+          preise.appendChild(document.createTextNode(fmtPrice(o.preisCents / 100)));
+        }
+      });
+      preise.appendChild(document.createTextNode(" (" + versandPaket(d) + ")"));
+      hinweis.appendChild(preise);
+      // Zeile 2: ab welchem Warenwert der Versand kostenlos ist.
+      if (d.frei && !d.frei.erreicht) {
+        var grenze = document.createElement("span");
+        grenze.textContent = tFormat("shipFreeFrom", { betrag: fmtPrice(d.frei.abCents / 100) });
+        hinweis.appendChild(grenze);
+      }
+      // Zeile 3: voraussichtlich bei der Kundschaft (guenstigster Standard).
+      var lieferung = lieferText(d.optionen[0]);
+      if (lieferung) {
+        var datum = document.createElement("span");
+        datum.className = "info__lieferung";
+        datum.textContent = lieferung;
+        hinweis.appendChild(datum);
+      }
       if (typeof updateOrderLinks === "function") updateOrderLinks();
     });
     versandLaden();
+  })();
+
+  // Unter "Jetzt kaufen": womit bezahlt wird (§ 312j Abs. 1 BGB: Zahlungs-
+  // mittel spaetestens zu Beginn des Bestellvorgangs).
+  (function zahlartHinweis() {
+    var kaufen = document.getElementById("buyNowBtn");
+    if (!kaufen || IT.sold) return;
+    var p = document.createElement("p");
+    p.className = "d119-zahlart";
+    var marke = document.createElement("span");
+    marke.className = "d119-zahlart__marke";
+    marke.innerHTML = "<i>Pay</i><i>Pal</i>";
+    var text = document.createElement("span");
+    text.textContent = t("payTrust");
+    p.appendChild(marke);
+    p.appendChild(text);
+    kaufen.parentNode.insertBefore(p, kaufen.nextSibling);
+  })();
+
+  // ---- Kaufleiste am Handy: Preis und "Jetzt kaufen" bleiben unten
+  // sichtbar, sobald der Kaufbereich aus dem Bild scrollt. Sie fuehrt wie
+  // "Jetzt kaufen" in die Kasse und verschwindet am Seitenende.
+  (function kaufleiste() {
+    var kaufen = document.getElementById("buyNowBtn");
+    var cta = document.querySelector(".info__cta");
+    if (!kaufen || !cta || IT.sold || !(IT.price > 0) || !("IntersectionObserver" in window) || !window.matchMedia) return;
+    var leiste = document.createElement("div");
+    leiste.className = "d119-kaufleiste";
+    var text = document.createElement("div");
+    text.className = "d119-kaufleiste__text";
+    var preis = document.createElement("span");
+    preis.className = "d119-kaufleiste__preis";
+    preis.textContent = fmtPrice(IT.price);
+    var versand = document.createElement("span");
+    versand.className = "d119-kaufleiste__versand";
+    text.appendChild(preis);
+    text.appendChild(versand);
+    var knopf = document.createElement("a");
+    knopf.className = "d119-kaufleiste__knopf";
+    knopf.href = kaufen.getAttribute("href");
+    knopf.textContent = t("buyNow");
+    leiste.appendChild(text);
+    leiste.appendChild(knopf);
+    document.body.appendChild(leiste);
+    versandZustand.anzeigen.push(function () {
+      var d = versandZustand.daten;
+      versand.textContent = !d ? "" : d.frei && d.frei.erreicht ? t("stickyFree") : t("stickyShip");
+    });
+    var handy = window.matchMedia("(max-width: 860px)");
+    var ctaSichtbar = true;
+    var fussSichtbar = false;
+    function setzen() {
+      var an = handy.matches && !ctaSichtbar && !fussSichtbar;
+      leiste.classList.toggle("d119-kaufleiste--an", an);
+      document.body.classList.toggle("d119-kaufleiste-an", an);
+    }
+    new IntersectionObserver(function (e) { ctaSichtbar = e[e.length - 1].isIntersecting; setzen(); }).observe(cta);
+    var fuss = document.querySelector(".page-foot");
+    if (fuss) new IntersectionObserver(function (e) { fussSichtbar = e[e.length - 1].isIntersecting; setzen(); }).observe(fuss);
+    if (handy.addEventListener) handy.addEventListener("change", setzen);
   })();
 
   // ---- PayPal "Jetzt kaufen" (nur gerendert, wenn CONFIG.paypalClientId +
@@ -639,7 +760,7 @@
         }
         var preisEl = document.createElement("span");
         preisEl.className = "checkout-versand__preis";
-        preisEl.textContent = fmtPrice(opt.preisCents / 100);
+        preisEl.textContent = versandPreisText(opt.preisCents);
         label.appendChild(radio);
         label.appendChild(nameEl);
         label.appendChild(preisEl);
@@ -650,7 +771,7 @@
       sperrHinweis.textContent = gesperrt ? tFormat("shipLocked", { zeit: uhrzeit(versandZustand.gesperrtBis) }) : "";
       if (o) {
         versandZeile.dt.textContent = t("checkoutShipping") + " · " + o.titel;
-        versandZeile.dd.textContent = fmtPrice(o.preisCents / 100);
+        versandZeile.dd.textContent = versandPreisText(o.preisCents);
         gesamtZeile.dd.textContent = fmtPrice(IT.price + o.preisCents / 100);
       } else {
         versandZeile.dt.textContent = t("checkoutShipping");

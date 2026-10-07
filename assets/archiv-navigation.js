@@ -25,7 +25,8 @@
       marke: "Marke", farbe: "Farbe", erhaltung: "Zustand", zuruecksetzen: "Alles zurücksetzen",
       keineGroessen: "Für diese Auswahl gibt es keine Größenangaben.", alleMarken: "Alle Marken ({n})",
       weniger: "Weniger", bis: "bis {b} €", ab: "ab {a} €", spanne: "{a}–{b} €",
-      anzeigen: "Filter anzeigen", ausblenden: "Filter ausblenden", filter: "Filter", schliessen: "Schließen"
+      anzeigen: "Filter anzeigen", ausblenden: "Filter ausblenden", filter: "Filter", schliessen: "Schließen",
+      verkauft: "Bereits verkauft", verkauftArchiv: "Zum Archiv der verkauften Stücke", verkauftStatus: "Verkauft"
     },
     en: {
       alle: "All", kategorien: "Categories", groesse: "Size", weitereGroessen: "More sizes",
@@ -34,7 +35,8 @@
       marke: "Brand", farbe: "Colour", erhaltung: "Condition", zuruecksetzen: "Reset all",
       keineGroessen: "No sizes listed for this selection.", alleMarken: "All brands ({n})",
       weniger: "Less", bis: "up to €{b}", ab: "from €{a}", spanne: "€{a}–{b}",
-      anzeigen: "Show filters", ausblenden: "Hide filters", filter: "Filters", schliessen: "Close"
+      anzeigen: "Show filters", ausblenden: "Hide filters", filter: "Filters", schliessen: "Close",
+      verkauft: "Already sold", verkauftArchiv: "See the archive of sold pieces", verkauftStatus: "Sold"
     },
     fr: {
       alle: "Tout", kategorien: "Catégories", groesse: "Taille", weitereGroessen: "Autres tailles",
@@ -43,7 +45,8 @@
       marke: "Marque", farbe: "Couleur", erhaltung: "État", zuruecksetzen: "Tout réinitialiser",
       keineGroessen: "Aucune taille indiquée pour cette sélection.", alleMarken: "Toutes les marques ({n})",
       weniger: "Moins", bis: "jusqu’à {b} €", ab: "dès {a} €", spanne: "{a}–{b} €",
-      anzeigen: "Afficher les filtres", ausblenden: "Masquer les filtres", filter: "Filtres", schliessen: "Fermer"
+      anzeigen: "Afficher les filtres", ausblenden: "Masquer les filtres", filter: "Filtres", schliessen: "Fermer",
+      verkauft: "Déjà vendu", verkauftArchiv: "Voir l’archive des pièces vendues", verkauftStatus: "Vendu"
     }
   };
   // Kleidung in der ueblichen Reihenfolge; Zahlen danach, Schuhe numerisch.
@@ -200,6 +203,27 @@
       ".d119-chips__mehrinhalt{grid-template-columns:1fr;gap:22px}",
       "}",
       "@media (prefers-reduced-motion:reduce){.d119-kat__knopf,.d119-chip{transition:none}}",
+      /* Band "Bereits verkauft" im Raster (verkauftBandSetzen) */
+      ".d119-verkauft{grid-column:1/-1;min-width:0;margin:clamp(4px,1.5vw,14px) 0;padding:16px 0 14px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}",
+      ".d119-verkauft__kopf{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 16px;margin:0 0 10px}",
+      ".d119-verkauft__titel{margin:0;font-size:.72rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text)}",
+      ".d119-verkauft__link{min-height:44px;padding:0;border:0;background:none;color:var(--text-muted);font:inherit;font-size:.72rem;letter-spacing:.06em;",
+      "text-decoration:underline;text-underline-offset:3px;cursor:pointer}",
+      ".d119-verkauft__link:hover{color:var(--text)}",
+      ".d119-verkauft__fenster{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}",
+      ".d119-verkauft__spur{display:flex;width:max-content;animation:d119-verkauft-lauf 80s linear infinite}",
+      ".d119-verkauft:not(.d119-verkauft--sichtbar) .d119-verkauft__spur,.d119-verkauft:hover .d119-verkauft__spur,.d119-verkauft:focus-within .d119-verkauft__spur{animation-play-state:paused}",
+      ".d119-verkauft__liste{display:flex;gap:18px;margin:0;padding:0 18px 0 0;list-style:none}",
+      ".d119-verkauft__karte{display:flex;align-items:center;gap:10px;min-height:44px;color:var(--text);text-decoration:none}",
+      "a.d119-verkauft__karte:focus-visible{outline:2px solid var(--focus,var(--text));outline-offset:2px}",
+      ".d119-verkauft__bild{flex:0 0 auto;width:48px;height:64px;background:var(--mount);overflow:hidden}",
+      ".d119-verkauft__bild img{display:block;width:100%;height:100%;object-fit:contain}",
+      ".d119-verkauft__text{display:grid;gap:3px;white-space:nowrap}",
+      ".d119-verkauft__marke{font-size:.76rem;font-weight:600}",
+      ".d119-verkauft__status{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted)}",
+      ".d119-verkauft__unsichtbar{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}",
+      "@keyframes d119-verkauft-lauf{to{transform:translateX(-50%)}}",
+      "@media (prefers-reduced-motion:reduce){.d119-verkauft__spur{animation:none}.d119-verkauft__fenster{overflow-x:auto;-webkit-mask-image:none;mask-image:none}.d119-verkauft__liste[aria-hidden]{display:none}}",
       "@media print{.d119-kat,#moreFiltersToggle{display:none!important}}"
     ].join("");
     document.head.appendChild(s);
@@ -596,10 +620,146 @@
     });
   }
 
+  // ------------------------------------------- Band "Bereits verkauft"
+
+  // Echte verkaufte Stuecke aus dem Archiv laufen als schmales Band durch die
+  // Ansicht "Alle" - ohne Datum und ohne Zahlen: gezeigt wird nur, was in
+  // catalog.json als verkauft steht (Testartikel ausgenommen). Es sitzt nach
+  // ganzen Reihen, damit das Raster keine Luecke bekommt, und traegt nicht die
+  // Klasse "plate" - die gehoert allein den Produktkarten.
+  var VERKAUFT_MAX = 14;
+  var verkauftBand = null;
+  var verkauftSprache = "";
+  var verkauftSpalten = 0;
+  var verkauftGeplant = false;
+
+  function verkauftListe() {
+    return api.artikel().filter(function (it) {
+      return it.public_status === "SOLD" && (it.grid_image || (it.gallery && it.gallery[0])) &&
+        !/testartikel/i.test(String(it.title || ""));
+    }).sort(function (a, b) { return Number(b.id) - Number(a.id); }).slice(0, VERKAUFT_MAX);
+  }
+
+  function vorschauPfad(it) {
+    var pfad = String(it.grid_image || "");
+    if (!pfad) {
+      pfad = String(it.gallery[0]);
+      var i = pfad.lastIndexOf("/");
+      pfad = pfad.slice(0, i) + "/thumbs/" + pfad.slice(i + 1);
+    }
+    return /^(https?:)?\//.test(pfad) ? pfad : "/" + pfad;
+  }
+
+  function verkauftBandBauen() {
+    var liste = verkauftListe();
+    if (liste.length < 6) return null;
+    var lang = sprache();
+    var home = lang === "de" ? "/" : "/" + lang + "/";
+    var band = el("section", "d119-verkauft");
+    band.setAttribute("aria-labelledby", "d119VerkauftTitel");
+    var kopf = el("div", "d119-verkauft__kopf");
+    var titel = el("h2", "d119-verkauft__titel", tx("verkauft"));
+    titel.id = "d119VerkauftTitel";
+    var archiv = el("button", "d119-verkauft__link", tx("verkauftArchiv"));
+    archiv.type = "button";
+    archiv.addEventListener("click", function () {
+      api.ansicht("archiv", "menuArchive");
+      var grid = document.getElementById("grid");
+      if (grid) window.scrollTo(0, Math.max(0, grid.getBoundingClientRect().top + window.pageYOffset - 160));
+    });
+    kopf.appendChild(titel);
+    kopf.appendChild(archiv);
+    band.appendChild(kopf);
+    // Zweimal dieselbe Reihe: das Band laeuft um die halbe Breite und beginnt
+    // dann unmerklich von vorn. Die zweite Reihe ist nur Bild, ohne Links.
+    function reihe(kopie) {
+      var ul = el("ul", "d119-verkauft__liste");
+      if (kopie) ul.setAttribute("aria-hidden", "true");
+      liste.forEach(function (it) {
+        var li = el("li", "");
+        var karte = el(kopie ? "span" : "a", "d119-verkauft__karte");
+        if (!kopie) karte.href = home + "artikel/" + it.id + "/";
+        var bild = el("span", "d119-verkauft__bild");
+        var img = document.createElement("img");
+        img.src = vorschauPfad(it);
+        img.alt = "";
+        img.loading = "lazy";
+        img.decoding = "async";
+        img.width = 48;
+        img.height = 64;
+        bild.appendChild(img);
+        var text = el("span", "d119-verkauft__text");
+        text.appendChild(el("span", "d119-verkauft__marke", it.brand || "DISORDER119"));
+        if (!kopie) text.appendChild(el("span", "d119-verkauft__unsichtbar", it.title || ""));
+        text.appendChild(el("span", "d119-verkauft__status", tx("verkauftStatus")));
+        karte.appendChild(bild);
+        karte.appendChild(text);
+        li.appendChild(karte);
+        ul.appendChild(li);
+      });
+      return ul;
+    }
+    var fenster = el("div", "d119-verkauft__fenster");
+    var spur = el("div", "d119-verkauft__spur");
+    spur.appendChild(reihe(false));
+    spur.appendChild(reihe(true));
+    fenster.appendChild(spur);
+    band.appendChild(fenster);
+    // Ausserhalb des Bildes steht das Band still.
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (eintraege) {
+        band.classList.toggle("d119-verkauft--sichtbar", eintraege[eintraege.length - 1].isIntersecting);
+      }).observe(band);
+    } else {
+      band.classList.add("d119-verkauft--sichtbar");
+    }
+    return band;
+  }
+
+  function verkauftBandSetzen() {
+    var grid = document.getElementById("grid");
+    if (!grid || !api) return;
+    var z = api.zustand();
+    var passt = api.ansichtJetzt() === "alle" && !z.department && !z.size && !z.brand && !z.color &&
+      z.priceMin == null && z.priceMax == null;
+    if (passt && !verkauftSpalten) {
+      var spalten = String(window.getComputedStyle(grid).gridTemplateColumns || "").trim();
+      verkauftSpalten = spalten && spalten !== "none" ? spalten.split(/\s+/).length : 0;
+    }
+    var karten = grid.querySelectorAll(".plate");
+    // Nach ganzen Reihen, mindestens zwei (am Handy vier mit je zwei Karten).
+    var nach = verkauftSpalten ? verkauftSpalten * Math.max(2, Math.ceil(8 / verkauftSpalten)) : 0;
+    if (!passt || !nach || karten.length <= nach) {
+      if (verkauftBand && verkauftBand.parentNode) verkauftBand.parentNode.removeChild(verkauftBand);
+      return;
+    }
+    if (!verkauftBand || verkauftSprache !== sprache()) {
+      if (verkauftBand && verkauftBand.parentNode) verkauftBand.parentNode.removeChild(verkauftBand);
+      verkauftBand = verkauftBandBauen();
+      verkauftSprache = sprache();
+      if (!verkauftBand) return;
+    }
+    var vorher = karten[nach - 1];
+    if (vorher.nextSibling !== verkauftBand) grid.insertBefore(verkauftBand, vorher.nextSibling);
+  }
+
+  // Beim ersten Mal erst, wenn der Browser Luft hat: Das Band liegt unter den
+  // ersten Reihen und soll den Seitenaufbau nicht bremsen. Danach (Filter,
+  // "Mehr laden") sofort im selben Frame wie das neue Raster.
+  function verkauftPlanen() {
+    if (verkauftBand) { verkauftBandSetzen(); return; }
+    if (verkauftGeplant) return;
+    verkauftGeplant = true;
+    var los = function () { verkauftGeplant = false; verkauftBandSetzen(); };
+    if (window.requestIdleCallback) window.requestIdleCallback(los, { timeout: 2500 });
+    else window.setTimeout(los, 600);
+  }
+
   function zeichnen() {
     geplant = false;
     leisteZeigen();
     kachelnAufhellen();
+    verkauftPlanen();
     // Chips nur bei offenem Filter bauen: beim Laden kostet das sonst
     // Rechenzeit, die niemand sieht (TBT). Beim Oeffnen baut der
     // Beobachter in start() sie sofort nach.
@@ -706,7 +866,12 @@
       // Andere Skripte setzen den Text nach jedem Wechsel neu - danach wieder unseren.
       new MutationObserver(function () { knopfText(); }).observe(toggle, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["aria-expanded"] });
     }
-    window.addEventListener("resize", function () { knopfText(); untenAbstandPlanen(); }, { passive: true });
+    window.addEventListener("resize", function () {
+      knopfText();
+      untenAbstandPlanen();
+      // Andere Spaltenzahl: das Band rutscht ans Ende einer ganzen Reihe.
+      if (verkauftSpalten) { verkauftSpalten = 0; planen(); }
+    }, { passive: true });
     var hinweis = document.getElementById("cookieNote");
     if (hinweis) new MutationObserver(untenAbstandPlanen).observe(hinweis, { attributes: true, attributeFilter: ["class", "hidden", "style"] });
     untenAbstandPlanen();

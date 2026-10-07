@@ -444,3 +444,8 @@
 @media (prefers-reduced-motion: reduce) {
   .kasse-vorschlaege { scroll-behavior: auto; }
 }
+
+/* Versand: voraussichtliches Lieferdatum und "Noch X € bis zum kostenlosen
+   Versand" unter den Versandarten (assets/kasse.js). */
+.kasse-lieferung { margin: 0; font-size: 0.82rem; line-height: 1.5; color: var(--text); }
+.kasse-frei { color: var(--text); }

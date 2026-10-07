@@ -47,6 +47,15 @@ export function versandKonfigurationPruefen(roh) {
   const erlaubt = Array.isArray(d.erlaubt) ? namen(d.erlaubt) : null;
   const ausgeschlossen = Array.isArray(d.ausgeschlossen) ? namen(d.ausgeschlossen) : Object.freeze([]);
   const expressMaxCents = ganzzahl(d.expressMaxCents, 1, 100000) ? d.expressMaxCents : null;
+  // Versandkostenfrei ab einem Warenwert in Cent (Wunsch des Inhabers: ab 99
+  // Euro). Fehlt der Block, gibt es keine Grenze; ist er kaputt, bricht der
+  // Worker ab, statt falsch zu rechnen.
+  let versandkostenfrei = null;
+  if (v.versandkostenfrei !== undefined && v.versandkostenfrei !== null) {
+    const f = v.versandkostenfrei;
+    if (typeof f !== "object" || !ganzzahl(f.abCents, 1, 10000000)) throw new Error("VERSAND_VERSANDKOSTENFREI_UNGUELTIG");
+    versandkostenfrei = Object.freeze({ abCents: f.abCents });
+  }
   return Object.freeze({
     pakete: Object.freeze(pakete),
     standardGroesse: standard,
@@ -55,6 +64,7 @@ export function versandKonfigurationPruefen(roh) {
     zielLand: land,
     referenzPlz: plz,
     dienste: Object.freeze({ erlaubt, ausgeschlossen, expressMaxCents }),
+    versandkostenfrei,
   });
 }
 

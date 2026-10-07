@@ -24,14 +24,16 @@
       fehltEmail: "Bitte gib eine gültige E-Mail-Adresse an.", appleCoupon: "Mit Gutschein bitte PayPal wählen; der Rabatt wird dort vor der Zahlung geprüft.",
       vorname: "Vorname", nachname: "Nachname", plz: "PLZ", ort: "Ort", strasse: "Straße",
       hausnummer: "Nr.", zusatz: "Adresszusatz (optional)",
-      landHinweis: "Wir liefern innerhalb Deutschlands. Lieferung an eine Packstation ist bald mit DHL möglich.",
+      landHinweis: "Wir liefern innerhalb Deutschlands, bezahlt wird mit PayPal. Lieferung an eine Packstation ist bald mit DHL möglich.",
       agb: "AGB & Widerruf", datenschutz: "Datenschutz", impressum: "Impressum", widerruf: "Vertrag widerrufen",
       laedt: "Wird geladen …", leer: "Dein Warenkorb ist leer.", zumArchiv: "Zum Archiv",
       nichtMehr: "Nicht mehr verfügbar – wird nicht mitbestellt:", groesse: "Größe", paket: "Paket",
       paketS: "klein", paketM: "mittel", paketL: "groß", tag1: "1 Werktag", tageN: "{n} Werktage",
       versandLaedt: "Versand wird berechnet …", versandFehlt: "Der Versandpreis ist gerade nicht abrufbar. Bitte lade die Seite gleich neu.",
       versandWahlFehlt: "Dein gewählter Versanddienst ist nicht mehr verfügbar. Bitte wähle eine neue Versandart.",
-      zwischensumme: "Stücke", versandZeile: "Versand", gesamt: "Gesamt",
+      zwischensumme: "Stücke", versandZeile: "Versand", gesamt: "Gesamt", kostenlos: "kostenlos",
+      freiFehlt: "Noch {betrag} bis zum kostenlosen Versand – ab {grenze} Warenwert übernehmen wir den günstigsten Standardversand.",
+      lieferung: "Heute bestellt – voraussichtlich bei dir zwischen {von} und {bis}.", zahlart: "Sicher bezahlen · mit Käuferschutz",
       gutschein: "Gutschein {code} wird beim Bezahlen verrechnet.",
       recht: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Versand innerhalb von 3 Werktagen; die angezeigte Lieferzeit gilt ab Bestellung. Mit dem PayPal-Knopf und deiner Bestätigung bei PayPal bestellst du zahlungspflichtig. PayPal reserviert den Betrag – abgebucht wird erst mit dem Versand, spätestens drei Tage nach der Bestellung.",
       rechtAnfrage: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Die Anfrage ist unverbindlich – wir bestätigen Verfügbarkeit und Gesamtpreis per E-Mail.",
@@ -64,14 +66,16 @@
       fehltEmail: "Please enter a valid email address.", appleCoupon: "For coupons, please choose PayPal; the discount is checked before payment.",
       vorname: "First name", nachname: "Last name", plz: "Postcode", ort: "Town", strasse: "Street",
       hausnummer: "No.", zusatz: "Address line 2 (optional)",
-      landHinweis: "We deliver within Germany. Delivery to a DHL Packstation is coming soon.",
+      landHinweis: "We deliver within Germany; payment is made with PayPal. Delivery to a DHL Packstation is coming soon.",
       agb: "Terms & withdrawal", datenschutz: "Privacy", impressum: "Legal notice", widerruf: "Withdraw from contract here",
       laedt: "Loading …", leer: "Your cart is empty.", zumArchiv: "To the archive",
       nichtMehr: "No longer available – not included:", groesse: "Size", paket: "parcel",
       paketS: "small", paketM: "medium", paketL: "large", tag1: "1 working day", tageN: "{n} working days",
       versandLaedt: "Calculating shipping …", versandFehlt: "The shipping price is not available right now. Please reload the page in a moment.",
       versandWahlFehlt: "Your selected carrier is no longer available. Please choose another shipping option.",
-      zwischensumme: "Pieces", versandZeile: "Shipping", gesamt: "Total",
+      zwischensumme: "Pieces", versandZeile: "Shipping", gesamt: "Total", kostenlos: "free",
+      freiFehlt: "{betrag} more for free shipping – from {grenze} goods value we cover the cheapest standard shipping.",
+      lieferung: "Order today – expected to arrive between {von} and {bis}.", zahlart: "Secure checkout · Buyer Protection",
       gutschein: "Coupon {code} is applied when you pay.",
       recht: "Small business under § 19 UStG, so no VAT is charged. Shipped within 3 working days; the delivery time shown counts from your order. With the PayPal button and your confirmation at PayPal you place a binding order. PayPal reserves the amount – it is only charged when we ship, at the latest three days after your order.",
       rechtAnfrage: "Small business under § 19 UStG, so no VAT is charged. The request is non-binding – we confirm availability and the total by e-mail.",
@@ -104,14 +108,16 @@
       fehltEmail: "Saisis une adresse e-mail valide.", appleCoupon: "Pour utiliser un bon, choisis PayPal ; la réduction est vérifiée avant le paiement.",
       vorname: "Prénom", nachname: "Nom", plz: "Code postal", ort: "Ville", strasse: "Rue",
       hausnummer: "N°", zusatz: "Complément d'adresse (facultatif)",
-      landHinweis: "Nous livrons en Allemagne. La livraison en Packstation DHL arrive bientôt.",
+      landHinweis: "Nous livrons en Allemagne ; le paiement se fait avec PayPal. La livraison en Packstation DHL arrive bientôt.",
       agb: "CGV & rétractation", datenschutz: "Confidentialité", impressum: "Mentions légales", widerruf: "Se rétracter du contrat ici",
       laedt: "Chargement …", leer: "Ton panier est vide.", zumArchiv: "Vers l'archive",
       nichtMehr: "Plus disponible – non inclus :", groesse: "Taille", paket: "colis",
       paketS: "petit", paketM: "moyen", paketL: "grand", tag1: "1 jour ouvré", tageN: "{n} jours ouvrés",
       versandLaedt: "Calcul de la livraison …", versandFehlt: "Le prix de livraison n'est pas disponible pour le moment. Recharge la page dans un instant.",
       versandWahlFehlt: "Le transporteur choisi n'est plus disponible. Choisis un autre mode de livraison.",
-      zwischensumme: "Pièces", versandZeile: "Livraison", gesamt: "Total",
+      zwischensumme: "Pièces", versandZeile: "Livraison", gesamt: "Total", kostenlos: "gratuite",
+      freiFehlt: "Plus que {betrag} pour la livraison gratuite – dès {grenze} d’articles, nous offrons la livraison standard la moins chère.",
+      lieferung: "Commande aujourd’hui – livraison prévue entre le {von} et le {bis}.", zahlart: "Paiement sécurisé · Protection des achats",
       gutschein: "Le bon {code} est déduit au paiement.",
       recht: "Micro-entreprise selon le § 19 UStG, pas de TVA. Expédition sous 3 jours ouvrés ; le délai de livraison indiqué court à partir de la commande. Avec le bouton PayPal et ta confirmation chez PayPal, tu passes une commande ferme. PayPal réserve le montant – il n'est débité qu'à l'expédition, au plus tard trois jours après la commande.",
       rechtAnfrage: "Micro-entreprise selon le § 19 UStG, pas de TVA. La demande est sans engagement – nous confirmons disponibilité et total par e-mail.",
@@ -279,6 +285,22 @@
   var VERSAND_TAGE = 3;
   function tage(o) { return !o || !o.tage ? "" : tf("tageN", { n: (o.tage + 1) + "–" + (o.tage + VERSAND_TAGE) }); }
   function paketName(d) { return d ? t("paket") + " " + (t("paket" + d.paket) || d.paketName) : ""; }
+  // Ab 99 € Warenwert uebernimmt der Shop den guenstigsten Standard (Worker).
+  function preisText(cents) { return Number(cents) === 0 ? t("kostenlos") : geld(cents); }
+  // "Mo., 12.10." - das Datum rechnet der Worker (shop-worker/lieferzeit.js).
+  function datumKurz(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+    if (!m) return "";
+    var d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    try {
+      return d.toLocaleDateString(LANG === "en" ? "en-GB" : LANG === "fr" ? "fr-FR" : "de-DE",
+        { weekday: "short", day: "numeric", month: LANG === "de" ? "numeric" : "short", timeZone: "UTC" });
+    } catch (e) { return +m[3] + "." + +m[2] + "."; }
+  }
+  function lieferText(o) {
+    var l = o && o.lieferung;
+    return l && l.von && l.bis ? tf("lieferung", { von: datumKurz(l.von), bis: datumKurz(l.bis) }) : "";
+  }
 
   function versandZeichnen() {
     var box = $("kasseVersand");
@@ -302,11 +324,17 @@
       if (meta) name.appendChild(el("small", "", meta));
       label.appendChild(radio);
       label.appendChild(name);
-      label.appendChild(el("span", "kasse-option__preis", geld(o.preisCents)));
+      label.appendChild(el("span", "kasse-option__preis", preisText(o.preisCents)));
       gruppe.appendChild(label);
     });
     box.appendChild(gruppe);
     if (!zustand.wahl) box.appendChild(el("p", "kasse-hinweis", t("versandWahlFehlt")));
+    var lieferung = lieferText(zustand.wahl);
+    if (lieferung) box.appendChild(el("p", "kasse-lieferung", lieferung));
+    var frei = d.frei;
+    if (frei && !frei.erreicht && frei.fehltCents > 0) {
+      box.appendChild(el("p", "kasse-hinweis kasse-frei", tf("freiFehlt", { betrag: geld(frei.fehltCents), grenze: geld(frei.abCents) })));
+    }
     box.appendChild(el("p", "kasse-hinweis", paketName(d)));
     summeZeichnen();
   }
@@ -326,7 +354,7 @@
     }
     var ware = stueckeCents();
     zeile(t("zwischensumme") + " (" + zustand.stuecke.length + ")", geld(ware));
-    zeile(t("versandZeile") + (zustand.wahl ? " · " + [zustand.wahl.carrier, zustand.wahl.titel].filter(Boolean).join(" ") : ""), zustand.wahl ? geld(zustand.wahl.preisCents) : "…");
+    zeile(t("versandZeile") + (zustand.wahl ? " · " + [zustand.wahl.carrier, zustand.wahl.titel].filter(Boolean).join(" ") : ""), zustand.wahl ? preisText(zustand.wahl.preisCents) : "…");
     zeile(t("gesamt"), zustand.wahl ? geld(ware + zustand.wahl.preisCents) : "…", "kasse-summe__gesamt");
     var code = "";
     try { code = String(localStorage.getItem(CODE_KEY) || "").trim().toUpperCase(); } catch (e) { code = ""; }
@@ -562,6 +590,12 @@
     var knopf = el("div", "kasse-paypal");
     knopf.id = "kassePaypal";
     ziel.appendChild(knopf);
+    var zahlart = el("p", "d119-zahlart");
+    var marke = el("span", "d119-zahlart__marke");
+    marke.innerHTML = "<i>Pay</i><i>Pal</i>";
+    zahlart.appendChild(marke);
+    zahlart.appendChild(el("span", "", t("zahlart")));
+    ziel.appendChild(zahlart);
     var schutz = schutzLaden();
     schutz.then(function (S) { S.waechter(); }).catch(function () { /* meldet sich beim Klick */ });
     var bezahlSchluessel = {};
@@ -705,7 +739,7 @@
         zeilen.push("- " + (it.title || "") + (it.size ? " · " + t("groesse") + " " + it.size : "") + " · Art.-Nr. " + (it.article || it.id) + " · " + geld(Math.round(it.price * 100)));
       });
       zeilen.push("");
-      if (zustand.wahl) zeilen.push(t("mailVersand") + ": " + zustand.wahl.titel + (zustand.wahl.carrier ? " (" + zustand.wahl.carrier + ")" : "") + ", " + paketName(zustand.versand) + " – " + geld(zustand.wahl.preisCents));
+      if (zustand.wahl) zeilen.push(t("mailVersand") + ": " + zustand.wahl.titel + (zustand.wahl.carrier ? " (" + zustand.wahl.carrier + ")" : "") + ", " + paketName(zustand.versand) + " – " + preisText(zustand.wahl.preisCents));
       zeilen.push(t("mailGesamt") + ": " + geld(stueckeCents() + (zustand.wahl ? zustand.wahl.preisCents : 0)));
       zeilen.push("", t("email") + ": " + f.email.value.trim(), t("mailAdresse") + ":", a.name, a.strasse + " " + a.hausnummer);
       if (a.zusatz) zeilen.push(a.zusatz);
