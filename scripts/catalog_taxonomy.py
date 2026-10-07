@@ -24,7 +24,7 @@ TAXONOMY_CATEGORIES = {
 DEPARTMENT_OVERRIDES = {
     # Disorder119 has no separate children's department. Real child-size facts
     # remain in the raw size field, while the browse department stays neutral.
-    6202: "Unisex", # Prada Light Blue Cropped Jacket – Kindergröße L
+    6202: "Unisex", # Prada Light Blue Cropped Jacket – Größe S (keine Kinderjacke)
     9533: "Unisex", # Prada Flops – EU 28
     6235: "Men",    # Dior Homme high-tops
     6233: "Men",    # Dior Homme high-tops

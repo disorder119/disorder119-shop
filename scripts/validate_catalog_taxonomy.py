@@ -106,11 +106,11 @@ def main() -> None:
         if got != wanted:
             fail(f"Taxonomie bei {item_id} unerwartet: {got!r} statt {wanted!r}")
 
-    # Child-size facts stay factual but must not create a child browse area.
-    if by_id[6202].get("size") != "Kindergröße L":
-        fail("Prada Cropped Jacket: faktische Größenangabe wurde verändert")
-    if by_id[6202].get("size_normalized") != "L":
-        fail("Prada Cropped Jacket: normalisierte Größe soll L sein")
+    # Keine Kinderjacke (Inhaber 07.10.2026): Prada-Jacke in Größe S.
+    if by_id[6202].get("size") != "S":
+        fail("Prada Cropped Jacket: Größe soll S sein (keine Kindergröße)")
+    if by_id[6202].get("size_normalized") != "S":
+        fail("Prada Cropped Jacket: normalisierte Größe soll S sein")
     if by_id[9533].get("size_normalized") != "EU 28":
         fail("Prada Flops: EU 28 muss als Größenangabe erhalten bleiben")
 

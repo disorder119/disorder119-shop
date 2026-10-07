@@ -2353,7 +2353,8 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   // wechseln wie im Menue (Jacken = Jackets + Coats usw.), aber Bereich und
   // Groesse bleiben stehen, solange es dafuer noch Treffer gibt (sonst setzt
   // catalog-filter-simplify.js sie zurueck), und die Seite springt nicht.
-  I18N.de.categoryNew = "Neu"; I18N.en.categoryNew = "New"; I18N.fr.categoryNew = "Nouveautés";
+  // "Neu" klang bei Gebrauchtware nach Neuware - deshalb "Neuzugänge".
+  I18N.de.categoryNew = "Neuzugänge"; I18N.en.categoryNew = "New in"; I18N.fr.categoryNew = "Nouveautés";
   var NEU_ANZAHL = 24;
   var NEU_IDS = {};
   PUBLIC_ITEMS.filter(function (it) { return it.public_status === "AVAILABLE"; })

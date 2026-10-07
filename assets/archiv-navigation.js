@@ -125,11 +125,12 @@
       /* Passen die Knoepfe nicht mehr daneben, stehen sie rechts darunter */
       ".d119-kat__aktionen{display:flex;align-items:center;gap:10px;flex:0 0 auto;margin-left:auto}",
       "@media (min-width:721px) and (max-width:1100px){.d119-kat__knopf{font-size:.7rem;letter-spacing:.07em}.d119-kat__liste{column-gap:16px}}",
-      /* Laptop: Kategorien mittig auf der Seite (Wunsch des Inhabers). Links eine
-         leere Spalte so breit wie rechts "Ansicht"/"Filter"; wird es eng,
-         rueckt die Mitte nach links, statt die Knoepfe zu ueberdecken. */
-      "@media (min-width:721px){.d119-kat{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(max-content,1fr)}",
-      ".d119-kat::before{content:\"\";grid-column:1}",
+      /* Laptop: links "Ansicht", in der Mitte die Kategorien, rechts "Filter"
+         (Wunsch des Inhabers 07.10.2026). Beide Seitenspalten sind gleich
+         breit, so steht die Mitte genau mittig; wird es eng, bekommt jede
+         Seite mindestens ihren Knopf, statt ihn zu ueberdecken. */
+      "@media (min-width:721px){.d119-kat{display:grid;grid-template-columns:minmax(max-content,1fr) auto minmax(max-content,1fr)}",
+      ".d119-kat__links{grid-column:1;justify-self:start;display:flex;align-items:center}",
       ".d119-kat__liste{grid-column:2;justify-content:center;column-gap:clamp(12px,1.3vw,22px)}",
       ".d119-kat__aktionen{grid-column:3;justify-self:end;margin-left:0}}",
       ".d119-kat #moreFiltersToggle::after{content:\"+\";display:inline-block;margin-left:8px;font-weight:400}",
@@ -191,7 +192,7 @@
       "#filterPanel.d119-chips-an.d119-filter-drawer{inset:0;max-height:none;height:100%;height:100dvh;padding:0;z-index:400;",
       "border-top:0;box-shadow:none;display:flex;flex-direction:column;align-items:stretch}",
       ".d119-filter-backdrop{z-index:399}",
-      ".d119-kat #mountToggle{display:none}",
+      ".d119-kat #mountToggle,.d119-kat__links{display:none}",
       "#filterPanel.d119-chips-an.d119-filter-drawer.hidden{display:none}",
       "#filterPanel.d119-chips-an .d119-filter-drawer__head{padding-top:max(12px,env(safe-area-inset-top))}",
       "#filterPanel.d119-chips-an .d119-chips{display:flex;flex-direction:column;gap:26px;padding:4px 18px 24px;flex:1 1 auto}",
@@ -256,6 +257,9 @@
     if (!rail || leiste) return;
     leiste = el("nav", "d119-kat");
     leiste.id = "d119Kategorien";
+    // Links "Ansicht", in der Mitte die Kategorien, rechts "Filter".
+    var links = el("div", "d119-kat__links");
+    leiste.appendChild(links);
     var liste = el("div", "d119-kat__liste");
     leiste.appendChild(liste);
     ansichten().forEach(function (a) {
@@ -277,12 +281,12 @@
     });
     rail.parentNode.insertBefore(leiste, rail.nextSibling);
 
-    // "Filter" wandert in die Leiste: am Desktop rechts, am Handy unten mittig.
-    // Beide Knoepfe als Gruppe: brechen nur gemeinsam (rechtsbuendig) um.
+    // "Ansicht" links, "Filter" rechts in der Leiste; am Handy steht "Filter"
+    // unten mittig und "Ansicht" entfaellt.
     var aktionen = el("div", "d119-kat__aktionen");
     leiste.appendChild(aktionen);
     var ansicht = document.getElementById("mountToggle");
-    if (ansicht) aktionen.appendChild(ansicht);
+    if (ansicht) links.appendChild(ansicht);
     var toggle = document.getElementById("moreFiltersToggle");
     if (toggle) aktionen.appendChild(toggle);
     var panel = document.getElementById("filterPanel");
