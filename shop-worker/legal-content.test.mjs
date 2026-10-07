@@ -29,7 +29,7 @@ test('confirmation contains full terms and withdrawal form in HTML and plain tex
   for(const body of [mail.text,mail.html]) {
     assert.match(body,/Geltungsbereich/); assert.match(body,/Bestellung und Vertragsschluss/);
     assert.match(body,/Gewährleistung/);assert.match(body,/Muster-Widerrufsformular/);
-    assert.match(body,/2026-10-03/);assert.match(body,/office@example.test/);
+    assert.match(body,/2026-10-07/);assert.match(body,/\+49 152 0829 7741/);assert.match(body,/office@example.test/);
     assert.doesNotMatch(body,/\{email\}/);
   }
   assert.doesNotMatch(mail.text,/<h3>/);

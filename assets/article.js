@@ -51,11 +51,11 @@
       shipInquiry: "Versand (Standard)", shipLocked: "Die Versandart ist bis {zeit} Uhr für diese Reservierung festgelegt.",
       checkoutShippingChanged: "Der Versandpreis hat sich gerade geändert. Bitte prüf die Versandart und klick noch einmal auf Kaufen.",
       checkoutShippingMissing: "Der Versand wird noch berechnet. Bitte versuch es gleich noch einmal.",
-      checkoutLegal: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Versand in der Regel innerhalb von 2 Werktagen. Mit dem PayPal-Knopf und deiner Bestätigung bei PayPal bestellst du zahlungspflichtig.",
+      checkoutLegal: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Versand innerhalb von 3 Werktagen; die angezeigte Lieferzeit gilt ab Bestellung. Mit dem PayPal-Knopf und deiner Bestätigung bei PayPal bestellst du zahlungspflichtig.",
       checkoutTerms: "AGB und Widerrufsbelehrung", checkoutPrivacy: "Datenschutz",
       checkoutCapturing: "Zahlung wird abgeschlossen …",
       checkoutThanks: "Danke für deine Bestellung!", checkoutOrderNo: "Bestellnummer:",
-      checkoutThanksText: "Die Bestätigung mit Rechnung kommt gleich per E-Mail an die Adresse deines PayPal-Kontos. Wir packen dein Teil von Hand und verschicken es in der Regel innerhalb von 2 Werktagen.",
+      checkoutThanksText: "Die Bestätigung mit Rechnung kommt gleich per E-Mail an die Adresse deines PayPal-Kontos. Wir packen dein Teil von Hand und verschicken es innerhalb von 3 Werktagen.",
       checkoutAccount: "Bestellung im Konto ansehen",
       checkoutCancelled: "Kauf abgebrochen. Es wurde nichts abgebucht.",
       checkoutCancelledHeld: "Kauf abgebrochen, es wurde nichts abgebucht. Das Stück bleibt bis {zeit} Uhr für dich reserviert.",
@@ -93,11 +93,11 @@
       shipInquiry: "Shipping (standard)", shipLocked: "The shipping method is fixed for this reservation until {zeit}.",
       checkoutShippingChanged: "The shipping price has just changed. Please check the shipping method and click buy again.",
       checkoutShippingMissing: "Shipping is still being calculated. Please try again in a moment.",
-      checkoutLegal: "Small business under § 19 UStG, so no VAT is charged. Usually ships within 2 working days. By using the PayPal button and confirming in PayPal, you place an order with an obligation to pay.",
+      checkoutLegal: "Small business under § 19 UStG, so no VAT is charged. Ships within 3 working days; the delivery time shown counts from your order. By using the PayPal button and confirming in PayPal, you place an order with an obligation to pay.",
       checkoutTerms: "Terms and cancellation policy", checkoutPrivacy: "Privacy",
       checkoutCapturing: "Completing payment …",
       checkoutThanks: "Thank you for your order!", checkoutOrderNo: "Order number:",
-      checkoutThanksText: "Your confirmation and invoice are on their way to the e-mail address of your PayPal account. We pack your piece by hand and usually ship within 2 working days.",
+      checkoutThanksText: "Your confirmation and invoice are on their way to the e-mail address of your PayPal account. We pack your piece by hand and ship within 3 working days.",
       checkoutAccount: "View order in your account",
       checkoutCancelled: "Purchase cancelled. Nothing was charged.",
       checkoutCancelledHeld: "Purchase cancelled, nothing was charged. The piece stays reserved for you until {zeit}.",
@@ -135,11 +135,11 @@
       shipInquiry: "Livraison (standard)", shipLocked: "Le mode d'envoi est fixé pour cette réservation jusqu'à {zeit}.",
       checkoutShippingChanged: "Le prix de livraison vient de changer. Vérifie le mode d'envoi et clique à nouveau sur Acheter.",
       checkoutShippingMissing: "La livraison est encore en cours de calcul. Réessaie dans un instant.",
-      checkoutLegal: "Micro-entreprise selon le § 19 UStG, TVA non applicable. Expédition en général sous 2 jours ouvrés. En utilisant le bouton PayPal et en confirmant dans PayPal, vous passez une commande avec obligation de paiement.",
+      checkoutLegal: "Micro-entreprise selon le § 19 UStG, TVA non applicable. Expédition sous 3 jours ouvrés ; le délai de livraison indiqué court à partir de la commande. En utilisant le bouton PayPal et en confirmant dans PayPal, vous passez une commande avec obligation de paiement.",
       checkoutTerms: "CGV et droit de rétractation", checkoutPrivacy: "Confidentialité",
       checkoutCapturing: "Finalisation du paiement …",
       checkoutThanks: "Merci pour votre commande !", checkoutOrderNo: "Numéro de commande :",
-      checkoutThanksText: "La confirmation avec facture arrive par e-mail à l'adresse de votre compte PayPal. Nous emballons votre pièce à la main et l'expédions en général sous 2 jours ouvrés.",
+      checkoutThanksText: "La confirmation avec facture arrive par e-mail à l'adresse de votre compte PayPal. Nous emballons votre pièce à la main et l'expédions sous 3 jours ouvrés.",
       checkoutAccount: "Voir la commande dans votre compte",
       checkoutCancelled: "Achat annulé. Rien n'a été débité.",
       checkoutCancelledHeld: "Achat annulé, rien n'a été débité. La pièce reste réservée pour vous jusqu'à {zeit}.",
@@ -455,7 +455,8 @@
   }
   function versandTage(o) {
     if (!o || !o.tage) return "";
-    return o.tage === 1 ? t("shipDays1") : tFormat("shipDaysN", { n: o.tage });
+    // Gesamte Lieferzeit: Versand innerhalb von 1 bis 3 Werktagen plus Laufzeit des Paketdienstes.
+    return tFormat("shipDaysN", { n: (o.tage + 1) + "–" + (o.tage + 3) });
   }
   function versandPaket(d) {
     return d ? t("shipParcel") + " " + (t("shipParcel" + d.paket) || d.paketName) : "";
