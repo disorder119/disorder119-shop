@@ -164,12 +164,8 @@
       ]
     },
     "price_on_request": {
-      "count": 3,
-      "item_ids": [
-        9426,
-        9437,
-        9457
-      ]
+      "count": 0,
+      "item_ids": []
     },
     "missing_brand": {
       "count": 0,
