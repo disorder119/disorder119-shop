@@ -11,6 +11,10 @@ test('publication rejects backend sources, drafts metadata, configuration and tr
 test('only public records and approved simple fields leave the origin',()=>{
   assert.deepEqual(publicCatalog([{id:1,public_status:'AVAILABLE',title:'A',purchase_price:20,nested:{private:1},gallery:['assets/a.webp']},{id:2,public_status:'DRAFT',title:'Hidden'},{id:3,public_status:'SOLD',title:{private:1}}]),[{id:1,public_status:'AVAILABLE',title:'A',gallery:['assets/a.webp']},{id:3,public_status:'SOLD'}]);
 });
+test('photo brightness for the light view reaches the browser',()=>{
+  // foto_hell (build_site.py) steuert die Aufhellung je Foto in der hellen Ansicht.
+  assert.deepEqual(publicCatalog([{id:7,public_status:'AVAILABLE',foto_hell:1.25,taxonomy_reviewed:true}]),[{id:7,public_status:'AVAILABLE',foto_hell:1.25}]);
+});
 test('static body is preserved and payment-compatible security headers are present',async()=>{
   const html='<html><script>window.publicConfig={}</script><p>Shop</p></html>';
   const response=await edge.fetch(new Request('https://disorder119.com/kasse/'),{}, {},async()=>new Response(html,{headers:{'Content-Type':'text/html'}}));
