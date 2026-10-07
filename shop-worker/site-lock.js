@@ -140,7 +140,7 @@ async function bremse(request, env, zweck) {
 }
 
 // ------------------------------------------------------------- Routen
-export async function handleSiteLock(request, env, url, reqId = crypto.randomUUID(), origin = null) {
+export async function handleSiteLock(request, env, url, reqId = crypto.randomUUID(), origin = null, optionen = {}) {
   const path = url.pathname.replace(/\/+$/, "");
   const admin = path === "/admin/site-lock";
   const erlaubt = admin ? ADMIN_ORIGINS : SHOP_ORIGINS;
@@ -167,6 +167,7 @@ export async function handleSiteLock(request, env, url, reqId = crypto.randomUUI
       if (!passwort || !gleich(await passwortHash(sperre.salt, passwort), sperre.hash)) {
         throw new SiteLockError("FALSCHES_PASSWORT", 403);
       }
+      if (typeof optionen.entsperrt === "function") await optionen.entsperrt();
       return antwort({ ok: true, pass: await passAusstellen(sperre) }, 200, origin, erlaubt);
     }
 

@@ -6,8 +6,10 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import workerEntry from "./worker-entry.js";
 import {
+  artikelAusPfad,
   artikelName,
   besucherAufraeumen,
+  entsperrtMelden,
   geraetUndBrowser,
   handleBesucher,
   istBot,
@@ -348,4 +350,137 @@ test("old clients without consent create no visitor identifier, events or notifi
     assert.equal(db.raw.prepare('SELECT COUNT(*) AS n FROM besucher_ereignisse').get().n,0);
     assert.equal(n.telegram.length,0);
   } finally {n.zurueck();}
+});
+
+// ---------------------------------------------------------------- Seitenaufrufe vom Storefront-Worker
+
+function seitenaufruf(body, host = "storefront.intern", method = "POST") {
+  const init = { method, headers: { "Content-Type": "application/json" } };
+  if (method === "POST") init.body = typeof body === "string" ? body : JSON.stringify(body);
+  return new Request(`https://${host}/intern/seitenaufruf`, init);
+}
+const zaehlen = (env, body, now = T0, host = "storefront.intern", method = "POST") =>
+  handleBesucher(seitenaufruf(body, host, method), env, new URL(`https://${host}/intern/seitenaufruf`), "req", null, now);
+const aufrufVon = (p, extra = {}) => ({ p, r: "", ua: IPHONE, ip: "203.0.113.7", land: "DE", ...extra });
+
+test("Seitenaufruf vom Server: ohne Einwilligung, ohne Stadt und IP, Telegram mit Sperrhinweis", async () => {
+  const db = d1();
+  const n = netz();
+  try {
+    const env = envMit(db);
+    db.raw.prepare("INSERT INTO site_settings (key, value, updated_at) VALUES ('site_lock', ?, ?)")
+      .run(JSON.stringify({ locked: true, version: 3 }), new Date(T0).toISOString());
+    let res = await zaehlen(env, aufrufVon("/", { r: "https://l.instagram.com/" }));
+    assert.equal(res.status, 204);
+    res = await zaehlen(env, aufrufVon("/en/artikel/6042/"), T0 + 60_000);
+    assert.equal(res.status, 204);
+
+    const rows = db.raw.prepare("SELECT * FROM besucher_ereignisse ORDER BY id").all();
+    assert.equal(rows.length, 2);
+    assert.deepEqual(rows.map(r => [r.typ, r.pfad, r.artikel_id, r.sprache, r.server]),
+      [["seite", "/", null, "de", 1], ["artikel", "/en/artikel/6042/", "6042", "en", 1]]);
+    assert.equal(rows[0].quelle, "instagram.com");
+    assert.equal(rows[0].land, "DE");
+    assert.equal(rows[0].stadt, null);
+    assert.equal(rows[0].region, null);
+    assert.equal(rows[1].titel, "Prada – Nylonjacke");
+    assert.ok(!JSON.stringify(rows).includes("203.0.113.7"), "keine IP in der Datenbank");
+
+    assert.equal(n.telegram.length, 1, "nur der neue Besucher wird gemeldet");
+    assert.match(n.telegram[0], /BESUCHER GERADE IM SHOP/);
+    assert.match(n.telegram[0], /📍 Deutschland\n/);
+    assert.match(n.telegram[0], /iPhone · Safari/);
+    assert.match(n.telegram[0], /kommt von instagram\.com/);
+    assert.match(n.telegram[0], /Shop ist gesperrt/);
+    assert.ok(!n.telegram[0].includes("203.0.113.7"), "keine IP in Telegram");
+
+    // Offener Shop: kein Sperrhinweis.
+    db.raw.prepare("UPDATE site_settings SET value=? WHERE key='site_lock'").run(JSON.stringify({ locked: false, version: 4 }));
+    await zaehlen(env, aufrufVon("/", { ip: "198.51.100.9" }), T0 + 120_000);
+    assert.equal(n.telegram.length, 2);
+    assert.doesNotMatch(n.telegram[1], /gesperrt/);
+  } finally {
+    n.zurueck();
+  }
+});
+
+test("Seitenaufruf: nur ueber die Dienstbindung, ohne Bots, Ratenlimit und abgeschaltetes Tracking", async () => {
+  const db = d1();
+  const n = netz();
+  try {
+    const env = envMit(db);
+    assert.equal((await zaehlen(env, aufrufVon("/"), T0, "api.disorder119.com")).status, 404);
+    assert.equal((await zaehlen(env, null, T0, "storefront.intern", "GET")).status, 405);
+    assert.equal((await zaehlen(env, "{kaputt")).status, 400);
+    assert.equal((await zaehlen(env, aufrufVon("/", { ua: "Googlebot/2.1" }))).status, 204);
+    assert.equal((await zaehlen(env, aufrufVon("/", { ip: "" }))).status, 204);
+    assert.equal((await zaehlen(envMit(db, { BESUCHER_TRACKING: "aus" }), aufrufVon("/"))).status, 204);
+    const gebremst = envMit(db, { RATE_LIMITER: { limit: async () => ({ success: false }) } });
+    assert.equal((await zaehlen(gebremst, aufrufVon("/"))).status, 204);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM besucher_ereignisse").get().n, 0);
+    assert.equal(n.telegram.length, 0);
+  } finally {
+    n.zurueck();
+  }
+});
+
+test("Mit Einwilligung: Startereignis zaehlt nicht doppelt, Stadt und Warenkorb kommen dazu", async () => {
+  const db = d1();
+  const n = netz();
+  try {
+    const env = envMit(db);
+    await zaehlen(env, aufrufVon("/"));
+    // Gleicher Browser (IP und Kennung wie in besuch()): Startereignis s=1.
+    await senden(env, { t: "seite", p: "/", s: 1 }, undefined, T0 + 2_000);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM besucher_ereignisse").get().n, 1, "Startereignis nicht doppelt");
+    await senden(env, { t: "warenkorb_rein", a: "6042", n: 1 }, undefined, T0 + 60_000);
+    await senden(env, { t: "seite", p: "/cart/" }, undefined, T0 + 70_000);
+    const rows = db.raw.prepare("SELECT typ, server, stadt FROM besucher_ereignisse ORDER BY id").all();
+    assert.deepEqual(rows.map(r => [r.typ, r.server]), [["seite", 1], ["warenkorb_rein", 0], ["seite", 0]]);
+    assert.equal(n.telegram.length, 2, "Besuch vom Server und Warenkorb, kein zweiter Besuchsalarm");
+    assert.match(n.telegram[1], /IN DEN WARENKORB/);
+    assert.match(n.telegram[1], /Aschaffenburg/);
+
+    const angemeldet = { ...env, ADMIN_AUTH_CONTEXT: { role: "READER" } };
+    const adminReq = pfad => new Request(`https://api.disorder119.com${pfad}`, { headers: { Origin: ADMIN } });
+    const live = await (await handleBesucher(adminReq("/admin/besucher/live"), angemeldet,
+      new URL("https://api.disorder119.com/admin/besucher/live?minuten=30"), "r", null, T0 + 80_000)).json();
+    assert.equal(live.besucher.length, 1);
+    assert.equal(live.besucher[0].ort.stadt, "Aschaffenburg", "Stadt aus der Einwilligung ergaenzt");
+    const auswertung = await (await handleBesucher(adminReq("/admin/besucher/auswertung"), angemeldet,
+      new URL("https://api.disorder119.com/admin/besucher/auswertung?tage=7"), "r", null, T0 + 80_000)).json();
+    assert.equal(auswertung.sitzungen.length, 1);
+    assert.equal(auswertung.sitzungen[0].ort.stadt, "Aschaffenburg");
+
+    // Spaeteres Startereignis auf einer Seite, die der Server nicht gezaehlt hat: zaehlt.
+    await senden(env, { t: "artikel", p: "/artikel/6184/", a: 6184, s: 1 }, undefined, T0 + 90_000);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM besucher_ereignisse").get().n, 4);
+  } finally {
+    n.zurueck();
+  }
+});
+
+test("Artikelnummer aus der Adresse und Meldung bei Passwort-Eingabe", async () => {
+  assert.equal(artikelAusPfad("/artikel/6042/"), "6042");
+  assert.equal(artikelAusPfad("/fr/artikel/6042/index.html"), "6042");
+  assert.equal(artikelAusPfad("/artikel/6042.html"), "6042");
+  assert.equal(artikelAusPfad("/artikel/"), null);
+  assert.equal(artikelAusPfad("/kasse/"), null);
+
+  const db = d1();
+  const n = netz();
+  try {
+    const req = new Request("https://api.disorder119.com/site-unlock", { method: "POST", headers: { "User-Agent": IPHONE, "CF-Connecting-IP": "203.0.113.7" } });
+    Object.defineProperty(req, "cf", { value: { country: "DE", city: "Aschaffenburg" } });
+    await entsperrtMelden(req, envMit(db), T0);
+    assert.equal(n.telegram.length, 1);
+    assert.match(n.telegram[0], /PASSWORT EINGEGEBEN/);
+    assert.match(n.telegram[0], /📍 Deutschland/);
+    assert.match(n.telegram[0], /iPhone · Safari/);
+    assert.ok(!n.telegram[0].includes("Aschaffenburg") && !n.telegram[0].includes("203.0.113.7"));
+    await entsperrtMelden(req, envMit(db, { BESUCHER_TELEGRAM: "aus" }), T0);
+    assert.equal(n.telegram.length, 1);
+  } finally {
+    n.zurueck();
+  }
 });

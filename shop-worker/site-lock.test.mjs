@@ -93,3 +93,17 @@ test("abgelaufener oder manipulierter Pass zählt nicht", async () => {
   assert.equal(await passGueltig(sperre, kaputt, t0 + 1000), false);
   assert.notEqual(await passwortHash("salz", "a"), await passwortHash("salz", "b"));
 });
+
+test("richtiges Passwort meldet die Oeffnung, falsches nicht", async () => {
+  const db = fakeDb();
+  await call(adminPost({ locked: true, password: "vorschau119" }), adminEnv(db));
+  let gemeldet = 0;
+  const optionen = { entsperrt: async () => { gemeldet++; } };
+  const mit = req => handleSiteLock(req, { DB: db }, new URL(req.url), "t", req.headers.get("Origin"), optionen);
+  assert.equal((await mit(shopUnlock("falsch"))).status, 403);
+  assert.equal(gemeldet, 0);
+  assert.equal((await mit(shopUnlock("vorschau119"))).status, 200);
+  assert.equal(gemeldet, 1);
+  assert.equal((await mit(shopGet())).status, 200);
+  assert.equal(gemeldet, 1, "Statusabfrage meldet nichts");
+});

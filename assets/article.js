@@ -414,7 +414,7 @@
   if (/^https:\/\//.test(String(SHOP_CONFIG.shopWorkerUrl || ""))) {
     try {
       var besucherScript = document.createElement("script");
-      besucherScript.src = "/assets/besucher.js?v=consent-20261003";
+      besucherScript.src = "/assets/besucher.js?v=server-20261008";
       besucherScript.defer = true;
       document.head.appendChild(besucherScript);
     } catch (e) {}
