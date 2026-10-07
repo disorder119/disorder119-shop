@@ -598,12 +598,14 @@
   })();
 
   // ---- Kaufleiste am Handy: Preis und "Jetzt kaufen" bleiben unten
-  // sichtbar, sobald der Kaufbereich aus dem Bild scrollt. Sie fuehrt wie
-  // "Jetzt kaufen" in die Kasse und verschwindet am Seitenende.
+  // sichtbar, sobald man am Kaufbereich vorbei nach unten gescrollt hat (nicht
+  // schon beim Laden, solange er noch kommt - dann laege die Leiste ueber den
+  // Knoepfen). Sie fuehrt wie "Jetzt kaufen" in die Kasse und verschwindet
+  // am Seitenende.
   (function kaufleiste() {
     var kaufen = document.getElementById("buyNowBtn");
     var cta = document.querySelector(".info__cta");
-    if (!kaufen || !cta || IT.sold || !(IT.price > 0) || !("IntersectionObserver" in window) || !window.matchMedia) return;
+    if (!kaufen || !cta || IT.sold || !(IT.price > 0) || !window.matchMedia || !window.requestAnimationFrame) return;
     var leiste = document.createElement("div");
     leiste.className = "d119-kaufleiste";
     var text = document.createElement("div");
@@ -627,17 +629,26 @@
       versand.textContent = !d ? "" : d.frei && d.frei.erreicht ? t("stickyFree") : t("stickyShip");
     });
     var handy = window.matchMedia("(max-width: 860px)");
-    var ctaSichtbar = true;
-    var fussSichtbar = false;
+    var fuss = document.querySelector(".page-foot");
+    var geplant = false;
+    // Beim Scrollen einmal je Bild nachsehen - auch ein Sprung ganz nach oben
+    // (Tipp auf die Statusleiste) blendet die Leiste so sicher aus.
     function setzen() {
-      var an = handy.matches && !ctaSichtbar && !fussSichtbar;
+      geplant = false;
+      var vorbei = cta.getBoundingClientRect().bottom < 0;
+      var amEnde = !!fuss && fuss.getBoundingClientRect().top < window.innerHeight;
+      var an = handy.matches && vorbei && !amEnde;
       leiste.classList.toggle("d119-kaufleiste--an", an);
       document.body.classList.toggle("d119-kaufleiste-an", an);
     }
-    new IntersectionObserver(function (e) { ctaSichtbar = e[e.length - 1].isIntersecting; setzen(); }).observe(cta);
-    var fuss = document.querySelector(".page-foot");
-    if (fuss) new IntersectionObserver(function (e) { fussSichtbar = e[e.length - 1].isIntersecting; setzen(); }).observe(fuss);
-    if (handy.addEventListener) handy.addEventListener("change", setzen);
+    function planen() {
+      if (geplant) return;
+      geplant = true;
+      window.requestAnimationFrame(setzen);
+    }
+    window.addEventListener("scroll", planen, { passive: true });
+    window.addEventListener("resize", planen, { passive: true });
+    planen();
   })();
 
   // ---- PayPal "Jetzt kaufen" (nur gerendert, wenn CONFIG.paypalClientId +
