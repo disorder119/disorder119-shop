@@ -25,6 +25,7 @@ export const SELLER = {
   street: "Nelseestraße 25",
   city: "63739 Aschaffenburg",
   country: "Deutschland",
+  phone: "+49 152 0829 7741",
 };
 
 export const SHOP_URL = "https://disorder119.com";
@@ -166,6 +167,7 @@ function sellerBlockText() {
     SELLER.street,
     SELLER.city,
     SELLER.country,
+    `Telefon: ${SELLER.phone}`,
   ].join("\n");
 }
 
@@ -173,7 +175,7 @@ function sellerBlockText() {
 // Widerrufsbelehrung. Wortgleich zur AGB-Seite (build_site.py, Abschnitt 6).
 // ---------------------------------------------------------------------------
 export function widerrufsbelehrungText(contactEmail) {
-  const anschrift = `${SELLER.name}, ${SELLER.brand}, ${SELLER.street}, ${SELLER.city}, E-Mail: ${contactEmail}`;
+  const anschrift = `${SELLER.name}, ${SELLER.brand}, ${SELLER.street}, ${SELLER.city}, Telefon: ${SELLER.phone}, E-Mail: ${contactEmail}`;
   return [
     "WIDERRUFSBELEHRUNG",
     "",
@@ -301,7 +303,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     "",
     ...(delivery.length ? ["LIEFERADRESSE", ...delivery, ""] : []),
     "WIE ES WEITERGEHT",
-    (items.length > 1 ? "Deine Stücke werden" : "Dein Teil wird") + " von Hand verpackt und in der Regel innerhalb von zwei Werktagen "
+    (items.length > 1 ? "Deine Stücke werden" : "Dein Teil wird") + " von Hand verpackt und innerhalb von drei Werktagen "
       + "versendet. Sobald das Paket unterwegs ist, bekommst du eine Mail mit der Sendungsnummer."
       + (zahlung === "RESERVIERT" ? " Mit dem Versand zieht PayPal den Betrag ein – dann kommt auch deine Rechnung." : ""),
     "",
@@ -337,9 +339,9 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     ...(invoice.ready?[`<tr><td>${invoice.fragment}</td></tr>`]:[]),
     mailAbschnitt(items.length > 1 ? `Deine ${items.length} Stücke` : "Dein Stück", stuecke, false),
     delivery.length ? mailAbschnitt("Lieferadresse", `<p style="margin:0;">${delivery.map(escapeHtml).join("<br>")}</p>`) : "",
-    mailAbschnitt("Wie es weitergeht", `<p style="margin:0 0 22px;color:${F.leise};">${items.length > 1 ? "Deine Stücke werden" : "Dein Teil wird"} von Hand verpackt und in der Regel innerhalb von zwei Werktagen versendet. Sobald das Paket unterwegs ist, bekommst du eine Mail mit der Sendungsnummer und dem Link zur Sendungsverfolgung.${zahlung === "RESERVIERT" ? " Mit dem Versand zieht PayPal den Betrag ein – dann kommt auch deine Rechnung." : ""}</p>
+    mailAbschnitt("Wie es weitergeht", `<p style="margin:0 0 22px;color:${F.leise};">${items.length > 1 ? "Deine Stücke werden" : "Dein Teil wird"} von Hand verpackt und innerhalb von drei Werktagen versendet. Sobald das Paket unterwegs ist, bekommst du eine Mail mit der Sendungsnummer und dem Link zur Sendungsverfolgung.${zahlung === "RESERVIERT" ? " Mit dem Versand zieht PayPal den Betrag ein – dann kommt auch deine Rechnung." : ""}</p>
       ${mailKnopf(`${SHOP_URL}/konto/`, "Bestellung im Konto ansehen")}`),
-    mailAbschnitt("Verkäufer", `<p style="margin:0;color:${F.leise};">${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}<br>${escapeHtml(SELLER.street)}<br>${escapeHtml(SELLER.city)}<br>${escapeHtml(SELLER.country)}<br>E-Mail: <a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a></p>`),
+    mailAbschnitt("Verkäufer", `<p style="margin:0;color:${F.leise};">${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}<br>${escapeHtml(SELLER.street)}<br>${escapeHtml(SELLER.city)}<br>${escapeHtml(SELLER.country)}<br>Telefon: ${escapeHtml(SELLER.phone)}<br>E-Mail: <a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a></p>`),
     `<tr><td style="padding:26px 4px 30px;">
       <div style="border-top:1px solid ${F.linie};padding-top:18px;font-size:12px;line-height:1.55;color:${F.leise};white-space:pre-wrap;"><p>Vertragsinformationen · Fassung ${escapeHtml(contract.version)}</p>${contract.html}</div>
       <p style="margin:14px 0 0;font-size:12px;color:${F.leise};">Alle Bedingungen: <a href="${SHOP_URL}/agb/" style="color:${F.text};">${SHOP_URL}/agb/</a></p>
