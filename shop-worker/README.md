@@ -196,6 +196,15 @@ Noch nicht automatisiert sind Retouren-, Erstattungs- und Miet-Mails.
 
 Alle Buchhaltungsrouten liegen unter `/admin/buchhaltung/*` hinter der Admin-Anmeldung (Passkey/RBAC); D1 bleibt Quelle der Wahrheit, oeffentliche Routen und `data/items.json` enthalten keine privaten Kosten, Konten, Belege oder Margen. Datensatz v2 (`TAX_DATASET_V2.md`) bleibt unveraendert, Datensatz v3 (`TAX_DATASET_V3.md`) ergaenzt Einkaeufe, Ausgaben, Konten, privates Cash-Ledger, Einlagen/Entnahmen, Belegmetadaten, Abstimmungen und abgeleitete Sichten: Vorgaenge mit allen Rohzeitpunkten und Betraegen, Versand (Kundenversand getrennt von Etikettenkosten), Korrektur-Referenzen zu Erstattungen, Artikel-Verknuepfung ueber die stabile Artikel-ID und Kleinunternehmer-Warnungen. Umsatz entsteht nur aus einer belegten, abgeschlossenen Zahlung; nichts wird automatisch steuerlich freigegeben.
 
+## Live-Besucher
+
+Zwei Quellen landen in `besucher_ereignisse` (`besucher.js`), beide mit taeglich wechselndem Hash statt IP und Loeschung nach 30 Tagen:
+
+- **Ohne Einwilligung, auch bei gesperrtem Shop:** Der Storefront-Worker (`storefront-edge.js`) meldet jeden echten Seitenaufruf eines Browsers (`Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document`, Status 200/304) ueber die Dienstbindung `BESUCH` an `POST https://storefront.intern/intern/seitenaufruf`. Die Route nimmt nur diesen internen Hostnamen an. Gespeichert werden Seite, verweisende Domain, Geraet, Browser und Land (`server=1`), keine Stadt. Bilder, Daten, Vorab-Ladungen, Bots, Do Not Track, Global Privacy Control und das Widerspruchs-Cookie `d119_nicht_zaehlen` (gesetzt ueber `/#nicht-zaehlen`) zaehlen nicht. Telegram meldet neue Besucher (bei gesperrtem Shop mit Hinweis) und die richtige Passworteingabe auf der Sperrseite.
+- **Mit Einwilligung** („Statistik erlauben“, auch auf der Sperrseite): `assets/besucher.js` meldet zusaetzlich Artikel im Overlay, Seitenwechsel ohne Neuladen, Warenkorb, Anfragen, Verweildauer und Stadt an `POST /besuch`. Das Startereignis (`s=1`) wird verworfen, wenn der Server denselben Aufruf schon gezaehlt hat.
+
+Reihenfolge beim Ausrollen: Migration `0034_besucher_server.sql`, dann dieser Worker, dann `npx wrangler deploy -c wrangler.storefront.toml` (die Dienstbindung braucht den Shop-Worker).
+
 ## Hintergrundjobs (Cron) und Selbstheilung
 
 `wrangler.toml` startet den Worker alle 15 Minuten (`[triggers] crons`). `scheduled()` in `worker-entry.js` gleicht offene PayPal-Zahlungen ab und gibt abgelaufene Reservierungen frei, holt direkt in PayPal ausgeloeste Erstattungen nach, pflegt die Betriebswarnungen, raeumt die Besucherstatistik auf und registriert einmalig die Apple-Pay-Domain bei PayPal (`paypal-einrichtung.js`, `POST /v1/customer/wallet-domains`; nach einem Fehler hoechstens ein Versuch pro Tag, Ergebnis im Audit unter `paypal/apple-pay-domain`). Fehlt am PayPal-Webhook das Ereignis `PAYMENT.CAPTURE.REFUNDED`, ergaenzt der Erstattungsabgleich es selbst (Audit `paypal_webhook/refunds`); der Knopf in der Admin-App bleibt als Ersatzweg. Dieselben Jobs laufen weiterhin auch beim Oeffnen der Admin-App.

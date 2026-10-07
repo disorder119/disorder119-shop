@@ -3,13 +3,19 @@
 // legt sie in D1 ab, schickt die wichtigen Momente an den Telegram-Bot und
 // zeigt sie der Admin-App unter /admin/besucher/*.
 //
+// Zwei Quellen: Ohne Einwilligung meldet nur der Storefront-Worker jeden
+// echten Seitenaufruf (seitenaufrufAnnehmen, ohne Skript und ohne Stadt).
+// Erst mit Einwilligung kommt assets/besucher.js dazu: Artikel im Overlay,
+// Seitenwechsel ohne Neuladen, Warenkorb, Anfragen, Verweildauer, Stadt.
+//
 // Datenschutz: keine Cookies, keine IP in der Datenbank oder in Telegram.
 // Der Besucher-Schluessel ist ein Hash aus IP, Browserkennung und einem
 // Tagessalz, das der Cron nach Tagesende loescht. Ort (Stadt/Region/Land)
 // kommt grob aus request.cf. Browser mit "Do Not Track" oder Global Privacy
-// Control senden gar nichts (siehe assets/besucher.js).
+// Control senden gar nichts (siehe assets/besucher.js und storefront-edge.js).
 import { safeText } from "./commerce-core.js";
 import { sendTelegramMessage, telegramTransportReady } from "./notifications.js";
+import { sperreLesen } from "./site-lock.js";
 
 const SHOP_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -259,11 +265,15 @@ async function tagesSalz(env, now) {
   return neu.salz;
 }
 
-async function besucherSchluessel(env, request, now) {
-  const ip = request.headers.get("CF-Connecting-IP") || "";
-  const ua = request.headers.get("User-Agent") || "";
+// Derselbe Schluessel fuer Skript- und Server-Meldungen: so landen beide in
+// derselben Sitzung.
+async function schluesselAus(env, ip, ua, now) {
   const salz = await tagesSalz(env, now);
   return (await sha256Hex(`${salz}|${ip}|${ua}`)).slice(0, 20);
+}
+
+async function besucherSchluessel(env, request, now) {
+  return schluesselAus(env, request.headers.get("CF-Connecting-IP") || "", request.headers.get("User-Agent") || "", now);
 }
 
 export function besucherKuerzel(schluessel) {
@@ -400,6 +410,8 @@ export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
   const cf = request.cf || {};
   const { geraet, browser } = geraetUndBrowser(ua);
   const besucher = await besucherSchluessel(env, request, now);
+  if (consentBody.s === 1 && ["seite", "artikel"].includes(daten.typ)
+    && await vomServerGezaehlt(env, besucher, daten, now)) return leer(origin);
   const zuletzt = await zuletztGesehen(env, besucher);
   const neu = !zuletzt || Date.parse(zuletzt) < now - SITZUNG_MS;
   const map = daten.artikelId || daten.typ === "anfrage" ? await katalog(env) : new Map();
@@ -429,20 +441,145 @@ export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
 
   if (melden) {
     const warenkorbTitel = e.typ === "anfrage" ? await warenkorbTitelFuer(env, besucher, map) : [];
-    const senden = sendTelegramMessage(env, telegramText(e, neu, eintrag, warenkorbTitel))
-      .catch(err => {
-        console.error(JSON.stringify({
-          level: "error",
-          event: "besucher_telegram_failed",
-          message: String(err?.message || err).slice(0, 160),
-        }));
-        const id = insert?.meta?.last_row_id;
-        if (id) return env.DB.prepare("UPDATE besucher_ereignisse SET gemeldet=0 WHERE id=?").bind(id).run().catch(() => {});
-      });
-    if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(senden);
-    else await senden;
+    await telegramNachEintrag(env, ctx, telegramText(e, neu, eintrag, warenkorbTitel), insert);
   }
   return leer(origin);
+}
+
+// Schlaegt Telegram fehl, gilt das Ereignis wieder als ungemeldet (zaehlt dann
+// nicht gegen den Stunden-Deckel).
+function telegramNachEintrag(env, ctx, text, insert) {
+  const senden = sendTelegramMessage(env, text)
+    .catch(err => {
+      console.error(JSON.stringify({
+        level: "error",
+        event: "besucher_telegram_failed",
+        message: String(err?.message || err).slice(0, 160),
+      }));
+      const id = insert?.meta?.last_row_id;
+      if (id) return env.DB.prepare("UPDATE besucher_ereignisse SET gemeldet=0 WHERE id=?").bind(id).run().catch(() => {});
+    });
+  if (ctx && typeof ctx.waitUntil === "function") {
+    ctx.waitUntil(senden);
+    return Promise.resolve();
+  }
+  return senden;
+}
+
+// Das Startereignis von assets/besucher.js (s=1) meldet denselben
+// Seitenaufruf, den der Storefront-Worker schon gezaehlt hat.
+async function vomServerGezaehlt(env, besucher, daten, now) {
+  try {
+    const row = await env.DB.prepare(`SELECT 1 AS da FROM besucher_ereignisse
+      WHERE besucher=? AND server=1 AND typ=? AND pfad=? AND zeit>=? LIMIT 1`)
+      .bind(besucher, daten.typ, daten.pfad, new Date(now - SITZUNG_MS).toISOString()).first();
+    return Boolean(row);
+  } catch {
+    // Migration 0034 noch nicht eingespielt: lieber doppelt zaehlen.
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------- Seitenaufrufe vom Server
+//
+// Der Storefront-Worker (storefront-edge.js) liefert disorder119.com aus und
+// meldet jeden echten Seitenaufruf eines Browsers ueber die Dienstbindung
+// BESUCH hierher - auch solange der Shop gesperrt ist. Das braucht kein
+// Skript, keinen Speicher im Browser und keine Einwilligung: verarbeitet wird
+// nur, was jeder Webserver beim Abruf einer Seite ohnehin erhaelt (Adresse der
+// Seite, verweisende Website, Browserkennung, IP fuer den Tages-Schluessel,
+// Land). Bewusst ohne Stadt und Region; die IP landet weder in D1 noch in
+// Telegram.
+export const INTERN_HOST = "storefront.intern";
+export const SEITENAUFRUF_PFAD = "/intern/seitenaufruf";
+
+export function artikelAusPfad(pfad) {
+  const treffer = /^\/(?:(?:en|fr)\/)?artikel\/(\d{1,9})(?:\.html|\/(?:index\.html)?)?$/.exec(String(pfad || ""));
+  return treffer ? treffer[1] : null;
+}
+
+function spracheAusPfad(pfad) {
+  const treffer = /^\/(en|fr)(?:\/|$)/.exec(String(pfad || ""));
+  return treffer ? treffer[1] : "de";
+}
+
+async function gesperrtHinweis(env) {
+  const sperre = await sperreLesen(env);
+  return sperre.locked ? "\n🔒 Shop ist gesperrt: ohne Passwort sieht man nur die Sperrseite" : "";
+}
+
+export async function seitenaufrufAnnehmen(request, env, ctx, now = Date.now()) {
+  // Nur ueber die Dienstbindung: oeffentlich kommt jede Anfrage ueber
+  // api.disorder119.com.
+  if (new URL(request.url).hostname !== INTERN_HOST) throw new BesucherError("NOT_FOUND", 404);
+  if (request.method !== "POST") throw new BesucherError("METHOD_NOT_ALLOWED", 405);
+  const raw = await request.text();
+  if (new TextEncoder().encode(raw).byteLength > MAX_BODY) throw new BesucherError("REQUEST_TOO_LARGE", 413);
+  let body;
+  try { body = JSON.parse(raw); } catch { throw new BesucherError("INVALID_JSON", 400); }
+  if (!body || typeof body !== "object" || Array.isArray(body)) throw new BesucherError("INVALID_JSON", 400);
+
+  const ua = String(body.ua || "").slice(0, 400);
+  const ip = String(body.ip || "").slice(0, 64);
+  const fertig = new Response(null, { status: 204, headers: sicherheitsHeader() });
+  if (!besucherAktiv(env) || !env.DB || !ip || istBot(ua)) return fertig;
+  if (env.RATE_LIMITER && typeof env.RATE_LIMITER.limit === "function") {
+    const result = await env.RATE_LIMITER.limit({ key: `seitenaufruf:${ip}` });
+    if (result && result.success === false) return fertig;
+  }
+
+  const pfad = pfadAus(body.p);
+  const artikelId = artikelAusPfad(pfad);
+  const { geraet, browser } = geraetUndBrowser(ua);
+  const besucher = await schluesselAus(env, ip, ua, now);
+  const zuletzt = await zuletztGesehen(env, besucher);
+  const neu = !zuletzt || Date.parse(zuletzt) < now - SITZUNG_MS;
+  const eintrag = artikelId ? (await katalog(env)).get(artikelId) : null;
+
+  const e = {
+    typ: artikelId ? "artikel" : "seite",
+    pfad,
+    artikelId,
+    warenkorb: 0,
+    kanal: null,
+    quelle: quelleAus(body.r),
+    sprache: spracheAusPfad(pfad),
+    besucher,
+    zeit: new Date(now).toISOString(),
+    titel: eintrag ? artikelName(eintrag) || null : null,
+    land: kurz(body.land, 2),
+    geraet,
+    browser,
+  };
+
+  const melden = sollMelden(telegramModus(env), e, neu) && telegramTransportReady(env) && await telegramBudget(env, now);
+  const insert = await env.DB.prepare(`INSERT INTO besucher_ereignisse
+    (besucher, zeit, typ, pfad, artikel_id, titel, warenkorb, kanal, quelle, sprache, land, region, stadt, geraet, browser, gemeldet, server)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,NULL,?,?,?,1)`)
+    .bind(e.besucher, e.zeit, e.typ, e.pfad, e.artikelId, e.titel, e.warenkorb, e.kanal, e.quelle, e.sprache,
+      e.land, e.geraet, e.browser, melden ? 1 : 0)
+    .run();
+
+  if (melden) {
+    const text = telegramText(e, neu, eintrag) + (neu ? await gesperrtHinweis(env) : "");
+    await telegramNachEintrag(env, ctx, text, insert);
+  }
+  return fertig;
+}
+
+// Bei gesperrtem Shop: jemand hat das richtige Passwort eingegeben. Nur
+// Geraet, Browser und Land - wie bei der Besuchsmeldung, ohne IP.
+export async function entsperrtMelden(request, env, now = Date.now()) {
+  const ua = request.headers.get("User-Agent") || "";
+  if (!besucherAktiv(env) || !env.DB || istBot(ua) || telegramModus(env) === "aus" || !telegramTransportReady(env)) return;
+  if (!(await telegramBudget(env, now))) return;
+  const { geraet, browser } = geraetUndBrowser(ua);
+  const land = landName(request.cf?.country) || "unbekanntem Land";
+  try {
+    await sendTelegramMessage(env, `🔓 PASSWORT EINGEGEBEN\nJemand hat den gesperrten Shop geöffnet\n📍 ${land}\n📱 ${geraet} · ${browser}`);
+  } catch (err) {
+    console.error(JSON.stringify({ level: "error", event: "besucher_telegram_failed", message: String(err?.message || err).slice(0, 160) }));
+  }
 }
 
 // ---------------------------------------------------------------- Aufraeumen (Cron)
@@ -500,6 +637,8 @@ async function live(env, url, now) {
     }
     b.zuletzt = row.zeit;
     if (!b.quelle && row.quelle) b.quelle = row.quelle;
+    // Server-Meldungen kennen nur das Land; die Stadt kommt erst mit Einwilligung.
+    if (!b.ort.stadt && row.stadt) b.ort = { stadt: row.stadt, region: row.region, land: row.land, landName: landName(row.land) };
     if (["warenkorb_rein", "warenkorb_raus", "anfrage"].includes(row.typ)) b.warenkorb = row.warenkorb;
     b.ereignisse.push(ereignisAusgabe(row));
   }
@@ -636,6 +775,7 @@ export function sitzungenBilden(zeilen, verlassen = []) {
     } else {
       vorher.dauerMs = Math.min(t - vorher.t, MAX_SCHRITT_MS);
       if (!aktuell.quelle && z.quelle) aktuell.quelle = z.quelle;
+      if (!aktuell.ort.stadt && z.stadt) aktuell.ort = { stadt: z.stadt, region: z.region, land: z.land, landName: landName(z.land) };
     }
     aktuell.schritte.push({
       t, typ: z.typ, pfad: z.pfad, artikelId: z.artikel_id, titel: z.titel,
@@ -766,13 +906,15 @@ async function auswertung(env, url, now) {
 }
 
 export function istBesucherRoute(url) {
-  return url.pathname === "/besuch" || url.pathname === "/admin/besucher" || url.pathname.startsWith("/admin/besucher/");
+  return url.pathname === "/besuch" || url.pathname === SEITENAUFRUF_PFAD
+    || url.pathname === "/admin/besucher" || url.pathname.startsWith("/admin/besucher/");
 }
 
 export async function handleBesucher(request, env, url, reqId = crypto.randomUUID(), ctx = null, now = Date.now()) {
   const origin = request.headers.get("Origin");
   try {
     if (url.pathname === "/besuch") return await besuchAnnehmen(request, env, ctx, now);
+    if (url.pathname === SEITENAUFRUF_PFAD) return await seitenaufrufAnnehmen(request, env, ctx, now);
 
     if (request.method === "OPTIONS") {
       if (origin && !ADMIN_ORIGINS.includes(origin)) return new Response(null, { status: 403, headers: sicherheitsHeader() });

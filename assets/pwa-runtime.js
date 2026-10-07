@@ -13,7 +13,7 @@
   // gesperrter Shop so kurz wie moeglich sichtbar ist.
   if (!document.querySelector('script[data-d119-site-lock]')) {
     var siteLockScript = document.createElement("script");
-    siteLockScript.src = "/assets/site-lock.js?v=20260926-2";
+    siteLockScript.src = "/assets/site-lock.js?v=20261008-1";
     siteLockScript.async = false;
     siteLockScript.setAttribute("data-d119-site-lock", "");
     document.head.appendChild(siteLockScript);

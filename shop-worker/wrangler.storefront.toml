@@ -8,6 +8,13 @@ routes = [
   { pattern = "www.disorder119.com/*", zone_name = "disorder119.com" }
 ]
 
+# Anonyme Besuchszaehlung (storefront-edge.js): echte Seitenaufrufe gehen
+# ueber diese Dienstbindung an den Shop-Worker - ohne oeffentliche Adresse,
+# ohne Geheimnis. Der Shop-Worker muss vor diesem Worker deployt sein.
+[[services]]
+binding = "BESUCH"
+service = "disorder119-shop-worker"
+
 [observability]
 enabled = true
 head_sampling_rate = 0.1

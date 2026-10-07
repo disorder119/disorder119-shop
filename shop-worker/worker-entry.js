@@ -33,7 +33,7 @@ import { handleAdresse, isAdresseRoute } from "./adresse.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
 import { handleIncomingEmail, handlePostfach, isPostfachRoute } from "./postfach.js";
-import { besucherAufraeumen, handleBesucher, istBesucherRoute } from "./besucher.js";
+import { besucherAufraeumen, entsperrtMelden, handleBesucher, istBesucherRoute } from "./besucher.js";
 import { applePayDomainSicherstellen } from "./paypal-einrichtung.js";
 import { handleNewsletter, isNewsletterRoute } from "./newsletter.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
@@ -319,14 +319,19 @@ export default {
       // Shop voruebergehend sperren: /site-status und /site-unlock fragt der
       // Shop ohne Anmeldung, /admin/site-lock schaltet die Admin-App.
       if (isSiteLockRoute(url)) {
-        return finish(await handleSiteLock(request, runtimeEnv, url, reqId, origin));
+        return finish(await handleSiteLock(request, runtimeEnv, url, reqId, origin, {
+          // Telegram: jemand hat den gesperrten Shop mit dem Passwort geoeffnet.
+          entsperrt: () => runBackground(ctx, entsperrtMelden(request, runtimeEnv), "besucher_unlock_failed", reqId),
+        }));
       }
 
-      // Postfach der Admin-App (Mails an kontakt@disorder119.com).
+      // Live-Besucher: /besuch vom Shop (nur mit Einwilligung), Seitenaufrufe
+      // vom Storefront-Worker (Dienstbindung) und die Auswertung der Admin-App.
       if (istBesucherRoute(url)) {
         return finish(await handleBesucher(request, runtimeEnv, url, reqId, ctx));
       }
 
+      // Postfach der Admin-App (Mails an kontakt@disorder119.com).
       if (isPostfachRoute(url)) {
         return finish(await handlePostfach(request, runtimeEnv, url, reqId, origin));
       }

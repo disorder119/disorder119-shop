@@ -1,5 +1,7 @@
 // Edge route in front of the existing static origin. No database or secrets.
 // Catalog source files stay intact in Git; only the public response is filtered.
+// Page views are handed to the shop Worker through the BESUCH service binding
+// (no public address); this Worker stores nothing itself.
 const PAGES = new Set(['agb','baukasten','cart','chaos','datenschutz','faq','impressum','kasse','konto','match','mieten','newsletter','ueber-uns','universe','widerruf']);
 const ROOT_FILES = new Set(['index.html','404.html','offline.html','robots.txt','sitemap.xml','manifest.webmanifest','sw.js','favicon.ico']);
 const FIELDS = new Set(['id','article','title','brand','price','price_estimated','public_status','status','category','size','color','condition','brightness','gallery','look','department','product_type','taxonomy_category','size_normalized','rental_price','grid_image','hover_image','foto_hell']);
@@ -24,6 +26,35 @@ export function publicCatalog(value) {
   return value.filter(item=>item && ['AVAILABLE','SOLD'].includes(item.public_status))
     .map(item=>Object.fromEntries(Object.entries(item).filter(([key,val])=>FIELDS.has(key) &&
       (val===null || ['string','number','boolean'].includes(typeof val) || (['gallery','size_normalized'].includes(key) && Array.isArray(val) && val.every(x=>typeof x==='string'))))));
+}
+
+// Anonyme Besuchszaehlung ohne Skript, auch bei gesperrtem Shop: nur echte
+// Seitenaufrufe eines Browsers (Navigation zu einer Seite). Bilder, Daten,
+// Vorab-Ladungen, Fehlerseiten, Do Not Track, Global Privacy Control und der
+// Widerspruch ueber #nicht-zaehlen (Cookie d119_nicht_zaehlen) zaehlen nicht.
+// Tages-Schluessel, Speicherung und Telegram macht der Shop-Worker.
+const BESUCH_ZIEL='https://storefront.intern/intern/seitenaufruf';
+export function seitenaufruf(request,url,status) {
+  const h=request.headers;
+  if (request.method!=='GET' || ![200,304].includes(status)) return null;
+  if (h.get('Sec-Fetch-Mode')!=='navigate' || h.get('Sec-Fetch-Dest')!=='document') return null;
+  if (/prefetch|prerender/i.test(`${h.get('Sec-Purpose')||''} ${h.get('Purpose')||''}`)) return null;
+  if (h.get('Sec-GPC')==='1' || h.get('DNT')==='1') return null;
+  if (/(?:^|;\s*)d119_nicht_zaehlen=1(?:;|$)/.test(h.get('Cookie')||'')) return null;
+  if (/^\/(?:assets|data|\.well-known)\//.test(url.pathname) || /\.(?!html$)[a-z0-9]+$/i.test(url.pathname)) return null;
+  return {p:url.pathname.slice(0,200),r:(h.get('Referer')||'').slice(0,300),ua:(h.get('User-Agent')||'').slice(0,400),
+    ip:(h.get('CF-Connecting-IP')||'').slice(0,64),land:String(request.cf?.country||'').slice(0,2)};
+}
+
+function besuchMelden(request,url,status,env,ctx) {
+  try {
+    if (!env?.BESUCH || typeof env.BESUCH.fetch!=='function' || typeof ctx?.waitUntil!=='function') return;
+    const daten=seitenaufruf(request,url,status);
+    if (!daten) return;
+    // Laeuft nach der Antwort weiter; ein Fehler dort erreicht die Seite nie.
+    ctx.waitUntil(env.BESUCH.fetch(BESUCH_ZIEL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(daten)})
+      .then(res=>res.body?.cancel()).catch(()=>{}));
+  } catch {}
 }
 
 export function storefrontHeaders(response) {
@@ -64,6 +95,7 @@ export default {
       headers.set('Content-Type','application/json; charset=utf-8');headers.set('Cache-Control','no-store');
       return new Response(request.method==='HEAD'?null:body,{status:200,headers});
     }
+    besuchMelden(request,url,response.status,env,ctx);
     return new Response(request.method==='HEAD'?null:response.body,{status:response.status,statusText:response.statusText,headers});
   }
 };
