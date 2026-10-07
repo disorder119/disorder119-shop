@@ -162,8 +162,6 @@ def main() -> None:
             actual_open.append("size")
         if not present(it.get("color")):
             actual_open.append("color")
-        if not present(it.get("condition")):
-            actual_open.append("condition")
         if open_fields != actual_open:
             bad_flags.append(item_id)
 
@@ -200,15 +198,13 @@ def main() -> None:
             unresolved["color"] += 1
             total_points += 0.5
 
-        if present(it.get("condition")):
-            raw["condition_present"] += 1
-            total_points += 1.0
-        elif "condition" in open_fields:
-            unresolved["condition"] += 1
-            total_points += 0.5
-
         page = BASE / "artikel" / str(item_id) / "index.html"
         page_html = page.read_text(encoding="utf-8") if page.is_file() else ""
+        # Zustand: kein Einzelwert mehr, sondern der allgemeine Gebraucht-
+        # Hinweis auf jeder Produktseite (Wunsch des Inhabers, 07.10.2026).
+        if "data-zustand-hinweis" in page_html:
+            raw["condition_present"] += 1
+            total_points += 1.0
         transparency_ok = True
         if actual_open and "data-product-data-gap" not in page_html:
             transparency_ok = False

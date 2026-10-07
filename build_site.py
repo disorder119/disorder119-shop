@@ -403,7 +403,6 @@ def title_size(it, lang):
 def meta_description(it, lang):
     ph = META_PHRASES[lang]
     cat = cat_tr(it.get("category") or "", lang)
-    cond = cond_tr(it.get("condition") or "", lang)
     name = display_name(it)
     if it.get("public_status") == "SOLD":
         return ph["sold"].format(name=name)
@@ -412,8 +411,6 @@ def meta_description(it, lang):
         tail.append(cat)
     if it.get("size"):
         tail.append(ph["size_label"] + " " + size_tr(it["size"], lang))
-    if cond:
-        tail.append(ph["condition_label"] + " " + cond)
     tail_str = ", ".join(tail)
     prefix = (name + " – " + tail_str) if tail_str else name
     eigener_text = {"de": it.get("desc_de") or it.get("desc"),
@@ -428,8 +425,6 @@ def auto_description(it, lang):
         facts.append(cat_tr(it["category"], lang))
     if it.get("size"):
         facts.append(ph["size_label"] + " " + size_tr(it["size"], lang))
-    if it.get("condition"):
-        facts.append(ph["condition_label"] + " " + cond_tr(it["condition"], lang))
     name = display_name(it)
     tail = (" – " + ", ".join(facts)) if facts else ""
     return name + tail + ph["auto_suffix"]
@@ -526,8 +521,6 @@ def facts_html(it, lang):
         facts.append(('factSize', labels["size"], "factSizeValue", size_tr(it["size"], lang)))
     if it.get("color"):
         facts.append(('factColor', labels["color"], None, it["color"]))
-    if it.get("condition"):
-        facts.append(('factCondition', labels["condition"], "factConditionValue", cond_tr(it["condition"], lang)))
     out = []
     for i18n_key, label, value_id, value in facts:
         value_attr = f' id="{value_id}"' if value_id else ""
@@ -893,6 +886,7 @@ def build_page(it, shop_config, lang):
     <div id="priceBlock">{price_block_html(it)}</div>
     <div class="info__facts">{facts_html(it, lang)}</div>
     <p class="info__desc" id="itemDesc">{esc(body_desc)}</p>
+    <p class="info__gebraucht" data-zustand-hinweis>{esc(GEBRAUCHT_HINWEIS[lang])}</p>
     {cta_html(it, shop_config, home, lang)}
   </div>
 </div>
@@ -1222,6 +1216,16 @@ def initial_archive_preloads():
     return "\n".join(links)
 
 
+# Kein Zustand je Artikel (Wunsch des Inhabers, 07.10.2026): jede
+# Produktseite traegt denselben allgemeinen Hinweis, Besonderheiten stehen
+# als "Hinweis zum Zustand" in der Beschreibung (siehe AGB Abschnitt 3).
+GEBRAUCHT_HINWEIS = {
+    "de": "Gebrauchtes Einzelstück (Vintage / Second Hand) in gutem Zustand mit normalen, altersgemäßen Gebrauchsspuren. Besonderheiten stehen in der Beschreibung und sind auf den Fotos zu sehen.",
+    "en": "Pre-owned one-off piece (vintage / second hand) in good condition with normal, age-appropriate signs of wear. Any particular features are noted in the description and shown in the photos.",
+    "fr": "Pièce unique d’occasion (vintage / seconde main) en bon état, avec des traces d’usure normales liées à l’âge. Les particularités sont indiquées dans la description et visibles sur les photos.",
+}
+
+
 def product_data_gap_html(it, lang):
     """Truthful disclosure for unresolved source metadata; never invent facts."""
     category = it.get("taxonomy_category") or it.get("category") or ""
@@ -1231,14 +1235,12 @@ def product_data_gap_html(it, lang):
         missing.append({"de": "Größe", "en": "size", "fr": "taille"}[lang])
     if not str(it.get("color") or "").strip():
         missing.append({"de": "Farbe", "en": "color", "fr": "couleur"}[lang])
-    if not str(it.get("condition") or "").strip():
-        missing.append({"de": "Zustand", "en": "condition", "fr": "état"}[lang])
     if not missing:
         return ""
     copy = {
-        "de": "Noch nicht abschließend dokumentiert: {fields}. Diese Angaben werden vor Vertragsschluss bestätigt; es werden keine fehlenden Produktdaten geschätzt.",
-        "en": "Not yet fully documented: {fields}. These details are confirmed before the contract is concluded; missing product data is never guessed.",
-        "fr": "Pas encore entièrement documenté : {fields}. Ces informations sont confirmées avant la conclusion du contrat ; aucune donnée produit manquante n’est inventée.",
+        "de": "Nicht angegeben: {fields}. Bitte die Fotos beachten; Fragen beantworten wir gern vor dem Kauf.",
+        "en": "Not specified: {fields}. Please refer to the photos; we are happy to answer questions before you buy.",
+        "fr": "Non indiqué : {fields}. Merci de vous référer aux photos ; nous répondons volontiers à vos questions avant l’achat.",
     }[lang]
     return '<p class="info__note info__note--data-gap" data-product-data-gap>' + esc(copy.format(fields=", ".join(missing))) + '</p>'
 

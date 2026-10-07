@@ -49,6 +49,7 @@
   padding-top: 18px;
   border-top: 1px solid var(--rule);
 }
+.info__gebraucht { order: 7; margin: 10px 0 0; }
 .info__note { order: 8; }
 .info__config-warning { order: 9; }
 

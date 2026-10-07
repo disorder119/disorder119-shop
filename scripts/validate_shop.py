@@ -239,7 +239,6 @@ def validate_and_report() -> None:
     issues = {
         "missing_size": [],
         "missing_color": [],
-        "missing_condition": [],
         "missing_or_thin_description": [],
         "missing_gallery": [],
         "single_photo_only": [],
@@ -287,8 +286,6 @@ def validate_and_report() -> None:
             issues["missing_size"].append(item_id)
         if not str(item.get("color") or "").strip():
             issues["missing_color"].append(item_id)
-        if not str(item.get("condition") or "").strip():
-            issues["missing_condition"].append(item_id)
         desc = str(item.get("desc_de") or item.get("desc") or "").strip()
         if len(desc) < 80:
             issues["missing_or_thin_description"].append(item_id)
