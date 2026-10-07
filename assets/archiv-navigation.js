@@ -19,24 +19,27 @@
 
   var TEXT = {
     de: {
-      alle: "Alle", kategorien: "Kategorien", groesse: "Größe", kleidung: "Kleidung", schuhe: "Schuhe",
-      accessoires: "Accessoires", fuer: "Für", sortieren: "Sortieren", preis: "Preis", mehr: "Marke, Farbe, Zustand",
+      alle: "Alle", kategorien: "Kategorien", groesse: "Größe", weitereGroessen: "Weitere Größen",
+      wenigerGroessen: "Weniger Größen", schuhgroessen: "Schuhgrößen",
+      fuer: "Für", sortieren: "Sortieren", preis: "Preis", mehr: "Preis, Marke, Farbe, Zustand",
       marke: "Marke", farbe: "Farbe", erhaltung: "Zustand", zuruecksetzen: "Alles zurücksetzen",
       keineGroessen: "Für diese Auswahl gibt es keine Größenangaben.", alleMarken: "Alle Marken ({n})",
       weniger: "Weniger", bis: "bis {b} €", ab: "ab {a} €", spanne: "{a}–{b} €",
       anzeigen: "Filter anzeigen", ausblenden: "Filter ausblenden", filter: "Filter", schliessen: "Schließen"
     },
     en: {
-      alle: "All", kategorien: "Categories", groesse: "Size", kleidung: "Clothing", schuhe: "Shoes",
-      accessoires: "Accessories", fuer: "For", sortieren: "Sort", preis: "Price", mehr: "Brand, colour, condition",
+      alle: "All", kategorien: "Categories", groesse: "Size", weitereGroessen: "More sizes",
+      wenigerGroessen: "Fewer sizes", schuhgroessen: "Shoe sizes",
+      fuer: "For", sortieren: "Sort", preis: "Price", mehr: "Price, brand, colour, condition",
       marke: "Brand", farbe: "Colour", erhaltung: "Condition", zuruecksetzen: "Reset all",
       keineGroessen: "No sizes listed for this selection.", alleMarken: "All brands ({n})",
       weniger: "Less", bis: "up to €{b}", ab: "from €{a}", spanne: "€{a}–{b}",
       anzeigen: "Show filters", ausblenden: "Hide filters", filter: "Filters", schliessen: "Close"
     },
     fr: {
-      alle: "Tout", kategorien: "Catégories", groesse: "Taille", kleidung: "Vêtements", schuhe: "Chaussures",
-      accessoires: "Accessoires", fuer: "Pour", sortieren: "Trier", preis: "Prix", mehr: "Marque, couleur, état",
+      alle: "Tout", kategorien: "Catégories", groesse: "Taille", weitereGroessen: "Autres tailles",
+      wenigerGroessen: "Moins de tailles", schuhgroessen: "Pointures",
+      fuer: "Pour", sortieren: "Trier", preis: "Prix", mehr: "Prix, marque, couleur, état",
       marke: "Marque", farbe: "Couleur", erhaltung: "État", zuruecksetzen: "Tout réinitialiser",
       keineGroessen: "Aucune taille indiquée pour cette sélection.", alleMarken: "Toutes les marques ({n})",
       weniger: "Moins", bis: "jusqu’à {b} €", ab: "dès {a} €", spanne: "{a}–{b} €",
@@ -49,6 +52,11 @@
   var ACCESSOIRES = ["Accessories", "Objects"];
   var PREISE = [[0, 100], [100, 200], [200, 400], [400, null]];
   var MARKEN_KURZ = 10;
+  var SORT_KURZ = {
+    de: { "new": "Neueste", "price-asc": "Günstigste", "price-desc": "Teuerste", brightness: "Hell → Dunkel", brand: "Marke A–Z" },
+    en: { "new": "Newest", "price-asc": "Lowest price", "price-desc": "Highest price", brightness: "Light → dark", brand: "Brand A–Z" },
+    fr: { "new": "Nouveautés", "price-asc": "Prix croissant", "price-desc": "Prix décroissant", brightness: "Clair → foncé", brand: "Marque A–Z" }
+  };
   var FARBEN = {
     "Schwarz": "#111", "Grau": "#8a8a8a", "Braun": "#6b4a2f", "Blau": "#2f5fb3", "Grün": "#2f8a4a", "Weiß": "#fff",
     "Khaki": "#8b8455", "Marineblau": "#1d2a4d", "Rot": "#c0322d", "Dunkelblau": "#1f3566", "Beige": "#d9c7a6",
@@ -134,7 +142,11 @@
       ".d119-chip:hover{border-color:var(--text)}",
       ".d119-chip[aria-pressed=\"true\"]{background:var(--text);border-color:var(--text);color:var(--bg)}",
       ".d119-chip:focus-visible{outline:2px solid var(--accent-text,#8f897c);outline-offset:2px}",
-      ".d119-chip__zahl{font-size:.62rem;opacity:.72;font-variant-numeric:tabular-nums}",
+      /* "Weitere Groessen" / "Schuhgroessen": leise Textknoepfe unter den Chips */
+      ".d119-chips__links{display:flex;flex-wrap:wrap;gap:4px 20px}",
+      ".d119-chips__link{appearance:none;background:none;border:0;padding:6px 0;min-height:32px;cursor:pointer;font:inherit;",
+      "font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;color:var(--text);text-decoration:underline;text-underline-offset:3px}",
+      ".d119-chips__link:focus-visible{outline:2px solid var(--accent-text,#8f897c);outline-offset:2px}",
       ".d119-chip__punkt{width:12px;height:12px;border-radius:50%;border:1px solid var(--rule-strong);flex:0 0 auto}",
       ".d119-chip--leise{border-style:dashed}",
       ".d119-chips__leer{font-size:.74rem;color:var(--text);opacity:.75;margin:0}",
@@ -142,8 +154,8 @@
       ".d119-chips__mehr>summary{cursor:pointer;list-style:none;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text);display:flex;align-items:center;min-height:44px;padding:0}",
       ".d119-chips__mehr>summary:focus-visible{outline:2px solid var(--accent-text,#8f897c);outline-offset:2px}",
       ".d119-chips__mehr>summary::-webkit-details-marker{display:none}",
-      ".d119-chips__mehr>summary::after{content:\" +\"}",
-      ".d119-chips__mehr[open]>summary::after{content:\" \\2013\"}",
+      ".d119-chips__mehr>summary::after{content:\"\\00a0+\"}",
+      ".d119-chips__mehr[open]>summary::after{content:\"\\00a0\\2013\"}",
       ".d119-chips__mehrinhalt{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px 40px;padding-top:10px}",
       ".d119-chips__fuss{grid-column:1/-1;display:flex;gap:18px;align-items:center;flex-wrap:wrap}",
       ".d119-chips__zurueck{appearance:none;background:none;border:0;padding:8px 0;cursor:pointer;font:inherit;font-size:.7rem;",
@@ -177,6 +189,7 @@
       "#filterPanel.d119-chips-an .d119-filter-drawer__foot{margin-top:auto;display:flex;gap:12px;align-items:center}",
       "#filterPanel.d119-chips-an .d119-filter-drawer__foot .d119-chips__zurueck{flex:0 0 auto}",
       ".d119-chip{min-height:44px;padding:10px 14px}",
+      ".d119-chips__link{min-height:44px}",
       ".d119-chips__mehrinhalt{grid-template-columns:1fr;gap:22px}",
       "}",
       "@media (prefers-reduced-motion:reduce){.d119-kat__knopf,.d119-chip{transition:none}}",
@@ -350,11 +363,6 @@
       b.appendChild(punkt);
     }
     b.appendChild(document.createTextNode(text));
-    if (extra && extra.zahl != null) {
-      var zahl = el("span", "d119-chip__zahl", String(extra.zahl));
-      zahl.setAttribute("aria-hidden", "true");
-      b.appendChild(zahl);
-    }
     if (extra && extra.daten) {
       for (var k in extra.daten) b.setAttribute("data-d119-" + k, extra.daten[k]);
     }
@@ -379,39 +387,66 @@
     return r;
   }
 
+  // Hauptgroessen: Buchstaben (XS-XXXL) und EU-Schuhgroessen. Zahlen wie
+  // 46/48, "3", Einheitsgroesse und UK/US-Schuhgroessen stehen hinter
+  // "Weitere Groessen" - der Filter soll ruhig bleiben (Wunsch 07.10.2026).
+  function hauptGroesse(wert) {
+    return BUCHSTABEN.indexOf(String(wert).toUpperCase()) >= 0 || /^EU\s*\d/i.test(String(wert));
+  }
+  var weitereOffen = false;
+  var weitereAnsicht = null;
+
   function groessenGruppe(z) {
     var g = gruppe(tx("groesse"));
-    var treffer = api.treffer("size");
     var ansicht = api.ansichtJetzt();
+    if (ansicht !== weitereAnsicht) { weitereOffen = false; weitereAnsicht = ansicht; }
     var gruppiert = ansicht === "alle" || ansicht === "neu" || ansicht === "archiv" || ansicht === "";
-    var bloecke = [];
+    var treffer = api.treffer("size");
+    // Unter "Alle" nur Kleidungsgroessen; Schuh- und Accessoire-Groessen gibt
+    // es in ihrer Kategorie ("Schuhgroessen" springt dorthin).
     if (gruppiert) {
-      bloecke.push({ titel: tx("kleidung"), stuecke: treffer.filter(function (it) { var k = kategorie(it); return SCHUHE.indexOf(k) < 0 && ACCESSOIRES.indexOf(k) < 0; }) });
-      bloecke.push({ titel: tx("schuhe"), stuecke: treffer.filter(function (it) { return SCHUHE.indexOf(kategorie(it)) >= 0; }), wechsel: "Shoes", wechselLabel: "menuShoes" });
-      bloecke.push({ titel: tx("accessoires"), stuecke: treffer.filter(function (it) { return ACCESSOIRES.indexOf(kategorie(it)) >= 0; }), wechsel: "Accessories,Objects", wechselLabel: "menuAccessories" });
-    } else {
-      bloecke.push({ titel: "", stuecke: treffer });
-    }
-    var irgendwas = false;
-    bloecke.forEach(function (block) {
-      var n = zaehlen(block.stuecke, groesseVon);
-      var werte = groessenSortieren(Object.keys(n));
-      // Eine aktive Groesse bleibt sichtbar, auch wenn sie gerade 0 Treffer hat.
-      if (z.size && !gruppiert && werte.indexOf(z.size) < 0) werte.push(z.size);
-      if (!werte.length) return;
-      irgendwas = true;
-      var r = reihe(g, gruppiert ? block.titel : "");
-      werte.forEach(function (wert) {
-        var aktiv = z.size === wert && (!block.wechsel || ansicht === block.wechsel);
-        r.appendChild(chip(api.groesse(wert) || wert, aktiv, function () {
-          if (aktiv) { selectSetzen("filterSize", ""); return; }
-          // Unter "Alle": ein Schuh- oder Accessoire-Chip wechselt in die Kategorie.
-          if (gruppiert && block.wechsel && ansicht !== "archiv") api.ansicht(block.wechsel, block.wechselLabel);
-          selectSetzen("filterSize", wert);
-        }, { zahl: n[wert] || 0, daten: { facette: "size", wert: wert } }));
+      treffer = treffer.filter(function (it) {
+        var k = kategorie(it);
+        return SCHUHE.indexOf(k) < 0 && ACCESSOIRES.indexOf(k) < 0;
       });
-    });
-    if (!irgendwas) g.appendChild(el("p", "d119-chips__leer", tx("keineGroessen")));
+    }
+    var werte = groessenSortieren(Object.keys(zaehlen(treffer, groesseVon)));
+    // Eine aktive Groesse bleibt sichtbar, auch ohne Treffer.
+    if (z.size && werte.indexOf(z.size) < 0) werte.push(z.size);
+    var haupt = werte.filter(hauptGroesse);
+    var weitere = werte.filter(function (w) { return !hauptGroesse(w); });
+    if (!haupt.length) { haupt = weitere; weitere = []; }
+    var offen = weitereOffen || (!!z.size && weitere.indexOf(z.size) >= 0);
+    var zeigen = offen ? haupt.concat(weitere) : haupt;
+    if (zeigen.length) {
+      var r = reihe(g, "");
+      zeigen.forEach(function (wert) {
+        var aktiv = z.size === wert;
+        r.appendChild(chip(api.groesse(wert) || wert, aktiv, function () {
+          selectSetzen("filterSize", aktiv ? "" : wert);
+        }, { daten: { facette: "size", wert: wert } }));
+      });
+    } else {
+      g.appendChild(el("p", "d119-chips__leer", tx("keineGroessen")));
+    }
+    var links = el("div", "d119-chips__links");
+    if (weitere.length) {
+      var mehr = el("button", "d119-chips__link", tx(offen ? "wenigerGroessen" : "weitereGroessen"));
+      mehr.type = "button";
+      mehr.setAttribute("aria-expanded", offen ? "true" : "false");
+      mehr.setAttribute("data-d119-facette", "groessen-mehr");
+      mehr.setAttribute("data-d119-wert", "1");
+      mehr.addEventListener("click", function () { weitereOffen = !offen; zeichnen(); });
+      links.appendChild(mehr);
+    }
+    if (gruppiert && ansicht !== "archiv" && leiste && leiste.querySelector('[data-d119-ansicht="Shoes"]')) {
+      var schuhe = el("button", "d119-chips__link", tx("schuhgroessen"));
+      schuhe.type = "button";
+      schuhe.setAttribute("data-d119-facette", "schuhgroessen");
+      schuhe.addEventListener("click", function () { api.ansicht("Shoes", "menuShoes"); });
+      links.appendChild(schuhe);
+    }
+    if (links.childNodes.length) g.appendChild(links);
     return g;
   }
 
@@ -422,7 +457,7 @@
       var istAktiv = aktiv === wert;
       r.appendChild(chip(label ? label(wert) : wert, istAktiv, function () {
         selectSetzen(feldId, istAktiv ? "" : wert);
-      }, { zahl: n ? n[wert] || 0 : null, punkt: extra && extra.punkt ? extra.punkt(wert) : null, daten: { facette: facette, wert: wert } }));
+      }, { punkt: extra && extra.punkt ? extra.punkt(wert) : null, daten: { facette: facette, wert: wert } }));
     });
     return { gruppe: g, reihe: r };
   }
@@ -444,7 +479,8 @@
     Array.prototype.slice.call(sel.options).sort(function (a, b) {
       return reihenfolge.indexOf(a.value) - reihenfolge.indexOf(b.value);
     }).forEach(function (opt) {
-      r.appendChild(chip(opt.textContent, z.sort === opt.value, function () {
+      var kurz = (SORT_KURZ[sprache()] || SORT_KURZ.de)[opt.value] || opt.textContent;
+      r.appendChild(chip(kurz, z.sort === opt.value, function () {
         selectSetzen("sortSelect", opt.value);
       }, { daten: { facette: "sort", wert: opt.value } }));
     });
@@ -468,17 +504,19 @@
         max.value = aktiv || b == null ? "" : String(b);
         min.dispatchEvent(new Event("input", { bubbles: true }));
         max.dispatchEvent(new Event("input", { bubbles: true }));
-      }, { zahl: anzahl, daten: { facette: "price", wert: a + "-" + (b == null ? "" : b) } }));
+      }, { daten: { facette: "price", wert: a + "-" + (b == null ? "" : b) } }));
     });
     return r.childNodes.length ? g : null;
   }
 
   function mehrGruppe(z) {
     var details = el("details", "d119-chips__mehr");
-    if (z.brand || z.color || z.condition) details.open = true;
+    if (z.brand || z.color || z.condition || z.priceMin != null || z.priceMax != null) details.open = true;
     details.appendChild(el("summary", "", tx("mehr")));
     var innen = el("div", "d119-chips__mehrinhalt");
     details.appendChild(innen);
+    var preis = preisGruppe(z);
+    if (preis) innen.appendChild(preis);
 
     var mn = zaehlen(api.treffer("brand"), function (it) { return [it.brand]; });
     var marken = Object.keys(mn).sort(function (a, b) { return mn[b] - mn[a] || a.localeCompare(b, "de"); });
@@ -582,7 +620,7 @@
     var z = api.zustand();
     chipsBox.textContent = "";
     chipsBox.appendChild(groessenGruppe(z));
-    [bereichGruppe(z), sortierGruppe(z), preisGruppe(z), mehrGruppe(z)].forEach(function (g) { if (g) chipsBox.appendChild(g); });
+    [bereichGruppe(z), sortierGruppe(z), mehrGruppe(z)].forEach(function (g) { if (g) chipsBox.appendChild(g); });
     var fuss = el("div", "d119-chips__fuss");
     fuss.appendChild(zuruecksetzenKnopf());
     chipsBox.appendChild(fuss);
@@ -593,7 +631,8 @@
     else if (drawerFuss) drawerFuss.querySelector(".d119-chips__zurueck").textContent = tx("zuruecksetzen");
 
     if (fokus && fokus.facette) {
-      var ziel = chipsBox.querySelector('[data-d119-facette="' + fokus.facette + '"][data-d119-wert="' + String(fokus.wert).replace(/"/g, '\\"') + '"]');
+      var ziel = chipsBox.querySelector('[data-d119-facette="' + fokus.facette + '"][data-d119-wert="' + String(fokus.wert).replace(/"/g, '\\"') + '"]')
+        || chipsBox.querySelector('[data-d119-facette="size"]');
       if (ziel) ziel.focus();
     }
   }
