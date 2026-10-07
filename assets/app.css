@@ -520,6 +520,10 @@
   .cart-bag:hover { border-color: var(--accent); }
 
   .cart-bag svg { display: block; width: 26px; height: auto; }
+  /* Das Symbol hat im HTML stroke="#fff" - in der weissen Ansicht ist der
+     Knopf aber weiss. Deshalb immer in der Textfarbe zeichnen. */
+  .cart-bag { color: var(--text); }
+  .cart-bag svg g { stroke: currentColor; }
 
   .cart-bag__badge {
     position: absolute;

@@ -40,11 +40,12 @@ export function versandKonfigurationPruefen(roh) {
   ));
   const land = /^[A-Z]{2}$/.test(String(v.zielLand || "")) ? v.zielLand : "DE";
   const plz = /^\d{5}$/.test(String(v.referenzPlz || "")) ? v.referenzPlz : "10115";
-  // Paketdienste fuer den Checkout. Fehlt die Liste, sind alle erlaubt.
+  // Paketdienste fuer den Checkout. Fehlt die Erlaubt-Liste, sind alle
+  // erlaubt - ausser denen auf der Sperrliste ("ausgeschlossen").
   const d = v.dienste && typeof v.dienste === "object" ? v.dienste : {};
-  const erlaubt = Array.isArray(d.erlaubt)
-    ? Object.freeze(d.erlaubt.map(n => String(n || "").trim().toUpperCase()).filter(Boolean))
-    : null;
+  const namen = liste => Object.freeze(liste.map(n => String(n || "").trim().toUpperCase()).filter(Boolean));
+  const erlaubt = Array.isArray(d.erlaubt) ? namen(d.erlaubt) : null;
+  const ausgeschlossen = Array.isArray(d.ausgeschlossen) ? namen(d.ausgeschlossen) : Object.freeze([]);
   const expressMaxCents = ganzzahl(d.expressMaxCents, 1, 100000) ? d.expressMaxCents : null;
   return Object.freeze({
     pakete: Object.freeze(pakete),
@@ -53,16 +54,26 @@ export function versandKonfigurationPruefen(roh) {
     nachKategorie: nurGroessen(v.groesseNachKategorie),
     zielLand: land,
     referenzPlz: plz,
-    dienste: Object.freeze({ erlaubt, expressMaxCents }),
+    dienste: Object.freeze({ erlaubt, ausgeschlossen, expressMaxCents }),
   });
 }
 
-// Darf die Kundschaft diesen Paketdienst im Checkout sehen? Der Name muss
-// genau passen ("DHL" ist nicht "DHL Express").
+// Ein gesperrter Name trifft auch Varianten: "UPS" sperrt "UPS® Standard",
+// aber nicht "GROUPS" (davor und dahinter darf kein Buchstabe stehen).
+function namePasst(name, gesperrt) {
+  const muster = gesperrt.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp("(^|[^A-Z0-9])" + muster + "(?![A-Z0-9])").test(name);
+}
+
+// Darf die Kundschaft diesen Paketdienst im Checkout sehen? Die Sperrliste
+// gilt immer; eine Erlaubt-Liste muss genau passen ("DHL" ist nicht
+// "DHL Express").
 export function dienstErlaubt(carrier, konfig = VERSAND) {
-  const liste = konfig.dienste && konfig.dienste.erlaubt;
-  if (!liste) return true;
-  return liste.includes(String(carrier || "").trim().toUpperCase());
+  const name = String(carrier || "").trim().toUpperCase();
+  const d = konfig.dienste || {};
+  if ((d.ausgeschlossen || []).some(gesperrt => namePasst(name, gesperrt))) return false;
+  if (!d.erlaubt) return true;
+  return d.erlaubt.includes(name);
 }
 
 export const VERSAND = versandKonfigurationPruefen(shopConfig);

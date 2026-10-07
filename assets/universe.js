@@ -15,13 +15,32 @@
   if (!canvas || !stage) return;
 
   var ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
+  // Weisse Ansicht: dieselbe Wahl wie im Shop (localStorage "d119_ansicht").
+  // Der Kopf der Seite setzt data-theme schon vor dem ersten Bild.
+  var root = document.documentElement;
+  var FARBEN = {
+    dunkel: { grund: "#000", stern: "#f2efe7", sternKraft: 1, punkt: "#e8e4db", schweif: "255,226,160", kopf: "#fff4d6", meta: "#000000" },
+    hell: { grund: "#fff", stern: "#4a463f", sternKraft: 0.7, punkt: "#d9d5cc", schweif: "74,70,63", kopf: "#2a2825", meta: "#ffffff" }
+  };
+  var F = FARBEN.dunkel;
+  function themaLesen() {
+    F = root.getAttribute("data-theme") === "hell" ? FARBEN.hell : FARBEN.dunkel;
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", F.meta);
+  }
+  themaLesen();
+  window.addEventListener("storage", function (e) {
+    if (e.key !== "d119_ansicht") return;
+    if (e.newValue === "hell") root.setAttribute("data-theme", "hell"); else root.removeAttribute("data-theme");
+    themaLesen(); requestFrame();
+  });
   var rawLang = String(document.documentElement.lang || "de").toLowerCase();
   var LANG = rawLang.indexOf("en") === 0 ? "en" : rawLang.indexOf("fr") === 0 ? "fr" : "de";
   var PREFIX = LANG === "de" ? "/" : "/" + LANG + "/";
   var COPY = {
-    de: { hintMouse: "Maus bewegen: umsehen · Mausrad/Trackpad: zoomen · Doppelklick: öffnen", hintTouch: "Wischen: umsehen · Zwei Finger: zoomen · Tippen: annähern", closer: "Näher heranzoomen", size: "Größe", loaded: "Universum bereit", fail: "Das Universum konnte nicht geladen werden." },
-    en: { hintMouse: "Move mouse: look around · Wheel/trackpad: zoom · Double-click: open", hintTouch: "Swipe: look around · Two fingers: zoom · Tap: move closer", closer: "Zoom in closer", size: "Size", loaded: "Universe ready", fail: "The universe could not be loaded." },
-    fr: { hintMouse: "Déplacez la souris : regarder · Molette/trackpad : zoomer · Double-clic : ouvrir", hintTouch: "Glissez : regarder · Deux doigts : zoomer · Touchez : approcher", closer: "Zoomer davantage", size: "Taille", loaded: "Univers prêt", fail: "L’univers n’a pas pu être chargé." }
+    de: { hintMouse: "Maus bewegen: umsehen · Mausrad/Trackpad: zoomen · Doppelklick: öffnen", hintTouch: "Wischen: umsehen · Zwei Finger: zoomen · Tippen: heranholen, nochmal tippen: öffnen", closer: "Näher heranzoomen", size: "Größe", loaded: "Universum bereit", fail: "Das Universum konnte nicht geladen werden." },
+    en: { hintMouse: "Move mouse: look around · Wheel/trackpad: zoom · Double-click: open", hintTouch: "Swipe: look around · Two fingers: zoom · Tap: bring closer, tap again: open", closer: "Zoom in closer", size: "Size", loaded: "Universe ready", fail: "The universe could not be loaded." },
+    fr: { hintMouse: "Déplacez la souris : regarder · Molette/trackpad : zoomer · Double-clic : ouvrir", hintTouch: "Glissez : regarder · Deux doigts : zoomer · Touchez : approcher, encore : ouvrir", closer: "Zoomer davantage", size: "Taille", loaded: "Univers prêt", fail: "L’univers n’a pas pu être chargé." }
   }[LANG];
 
   var U = {
@@ -31,7 +50,7 @@
     FAR: 10.2,
     REF: 2.15,
     BIG: 122,
-    STAR_N: 360,
+    STAR_N: 620,
     STAR_SX: 42,
     STAR_SY: 78,
     STAR_SZ: 34,
@@ -87,7 +106,8 @@
     }
     im = new Image();
     im.decoding = "async";
-    im.onload = requestFrame;
+    var fertig = function () { im._bereit = true; requestFrame(); };
+    im.onload = function () { if (im.decode) im.decode().then(fertig, fertig); else fertig(); };
     im.onerror = requestFrame;
     im.src = url;
     map.set(url, im);
@@ -99,7 +119,7 @@
     while (S.displays.size > U.DISPLAY_KEEP) S.displays.delete(S.displays.keys().next().value);
     return im;
   }
-  function ready(im) { return !!(im && im.complete && im.naturalWidth > 0); }
+  function ready(im) { return !!(im && im._bereit && im.naturalWidth > 0); }
 
   function resize() {
     var r = stage.getBoundingClientRect();
@@ -115,7 +135,9 @@
   function makeStars() {
     S.stars = [];
     for (var i = 0; i < U.STAR_N; i++) {
-      S.stars.push({ x: Math.random() * U.STAR_SX, y: Math.random() * U.STAR_SY, z: Math.random() * U.STAR_SZ, b: 0.25 + Math.random() * 0.7 });
+      // Etwa jeder zwanzigste Stern ist groesser und heller.
+      var gross = Math.random() < 0.05;
+      S.stars.push({ x: Math.random() * U.STAR_SX, y: Math.random() * U.STAR_SY, z: Math.random() * U.STAR_SZ, b: gross ? 1 : 0.4 + Math.random() * 0.6, g: gross ? 1.8 : 1 });
     }
   }
 
@@ -199,16 +221,16 @@
     S.preloadAt = now;
     var candidates = list.filter(function (o) { return o.w > 72 && o.a > 0.25; })
       .sort(function (a, b) { return a.d - b.d; })
-      .slice(0, 10);
+      .slice(0, S.W < 760 ? 4 : 10);
     candidates.forEach(function (o) { display(o.it); });
   }
 
   function render(now) {
     var W = S.W, H = S.H, DPR = S.DPR, cam = S.cam;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    ctx.globalAlpha = 1; ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1; ctx.fillStyle = F.grund; ctx.fillRect(0, 0, W, H);
     var cx = W / 2, cy = H / 2;
-    ctx.fillStyle = "#f2efe7";
+    ctx.fillStyle = F.stern;
     for (var s = 0; s < S.stars.length; s++) {
       var st = S.stars[s];
       var dz = mod(st.z - cam.z, U.STAR_SZ) + U.STAR_Z0;
@@ -217,10 +239,11 @@
       var y = cy + (mod(st.y - cam.y + U.STAR_SY / 2, U.STAR_SY) - U.STAR_SY / 2) * sc;
       if (x < -2 || x > W + 2 || y < -2 || y > H + 2) continue;
       var t = (dz - U.STAR_Z0) / U.STAR_SZ;
-      var sz = 0.55 + 1.25 * (1 - t);
-      ctx.globalAlpha = st.b * Math.min(1, (1 - t) * 1.5) * Math.min(1, t * 5);
-      ctx.fillRect(x, y, sz, sz);
+      var sz = (0.75 + 1.65 * (1 - t)) * st.g;
+      ctx.globalAlpha = F.sternKraft * st.b * Math.min(1, (1 - t) * 1.6) * Math.min(1, t * 6);
+      ctx.fillRect(x - sz / 2, y - sz / 2, sz, sz);
     }
+    schnuppeZeichnen(now);
 
     var list = buildVisible();
     var best = null, bestScore = Infinity;
@@ -242,7 +265,7 @@
       ctx.rotate(o.rot);
       ctx.globalAlpha = o.a;
       if (ready(im)) ctx.drawImage(im, -o.w / 2, -o.h / 2, o.w, o.h);
-      else { ctx.fillStyle = "#e8e4db"; ctx.fillRect(-1.5, -1.5, 3, 3); }
+      else { ctx.fillStyle = F.punkt; ctx.fillRect(-1.5, -1.5, 3, 3); }
       // Kein Rahmen um das Teil in der Mitte: welches Teil gemeint ist, zeigt
       // die Leiste unten (#uFocus). Der duenne Rahmen wirkte am Handy wie ein
       // Darstellungsfehler (Wunsch des Inhabers, 27.09.2026).
@@ -252,6 +275,31 @@
     S.drawn = list;
     setFocus(best);
     preloadVisible(list, now);
+  }
+
+  var schnuppe = null, schnuppeTimer = 0;
+  function schnuppePlanen(ms) {
+    clearTimeout(schnuppeTimer);
+    if (reducedMotion()) return;
+    schnuppeTimer = setTimeout(function () {
+      if (document.hidden) { schnuppePlanen(15000); return; }
+      var links = Math.random() < 0.5, y0 = S.H * (0.12 + Math.random() * 0.35);
+      schnuppe = { x0: links ? -40 : S.W + 40, y0: y0, x1: links ? S.W + 40 : -40, y1: y0 + S.H * (0.18 + Math.random() * 0.2), t0: performance.now(), ms: 1500 };
+      requestFrame();
+    }, ms);
+  }
+  function schnuppeZeichnen(now) {
+    if (!schnuppe) return;
+    var p = (now - schnuppe.t0) / schnuppe.ms;
+    if (p >= 1) { schnuppe = null; schnuppePlanen(45000 + Math.random() * 60000); return; }
+    var dx = schnuppe.x1 - schnuppe.x0, dy = schnuppe.y1 - schnuppe.y0;
+    var hx = schnuppe.x0 + dx * p, hy = schnuppe.y0 + dy * p, tx = hx - dx * 0.09, ty = hy - dy * 0.09;
+    var grad = ctx.createLinearGradient(tx, ty, hx, hy);
+    grad.addColorStop(0, "rgba(" + F.schweif + ",0)");
+    grad.addColorStop(1, "rgba(" + F.schweif + ",0.95)");
+    ctx.globalAlpha = 1; ctx.strokeStyle = grad; ctx.lineWidth = 2.2; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.fillStyle = F.kopf; ctx.beginPath(); ctx.arc(hx, hy, 2.4, 0, Math.PI * 2); ctx.fill();
   }
 
   function requestFrame() {
@@ -302,14 +350,14 @@
     var v = S.vel;
     if (!S.anim && !S.pointers.size && Math.abs(v.x) + Math.abs(v.y) + Math.abs(v.z) > 0.000001) {
       S.cam.x += v.x * dt; S.cam.y += v.y * dt; S.cam.z += v.z * dt;
-      var damp = Math.pow(0.92, dt / 16.7);
+      var damp = Math.pow(0.945, dt / 16.7);
       v.x *= damp; v.y *= damp; v.z *= damp;
       if (Math.abs(v.x) + Math.abs(v.y) + Math.abs(v.z) < 0.000003) v.x = v.y = v.z = 0;
       moving = true;
     }
 
     render(now);
-    if (moving || S.pendingWheel || S.anim) requestFrame();
+    if (moving || S.pendingWheel || S.anim || schnuppe) requestFrame();
   }
 
   function local(e) { return { x: e.clientX - S.left, y: e.clientY - S.top }; }
@@ -422,7 +470,7 @@
     var g = S.gesture; S.gesture = null;
     if (!g) return;
     if (wasSingle && g.moved < 10 && performance.now() - g.t0 < 360 && e.type === "pointerup") { tap(localEnd.x, localEnd.y, e.pointerType); return; }
-    var recent = g.samples.filter(function (s) { return e.timeStamp - s.t < 100; });
+    var recent = g.samples.filter(function (s) { return e.timeStamp - s.t < 120; });
     if (recent.length > 1) {
       var span = Math.max(16, e.timeStamp - recent[0].t), sx = 0, sy = 0, sz = 0;
       recent.forEach(function (s) { sx += s.x; sy += s.y; sz += s.z; });
@@ -484,6 +532,7 @@
     S.pool = items.filter(function (it) { return it && it.public_status === "AVAILABLE" && it.gallery && it.gallery[0]; });
     if (!S.pool.length) throw new Error("empty catalog");
     makeStars(); resize(); prewarm();
+    schnuppePlanen(9000 + Math.random() * 16000);
     status.textContent = COPY.loaded + " · " + S.pool.length;
     hint.textContent = finePointer() ? COPY.hintMouse : COPY.hintTouch;
     setTimeout(function () { hint.classList.add("is-gone"); }, 6500);

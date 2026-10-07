@@ -4,6 +4,7 @@ import shopConfig from "../config/shop-config.json" with { type: "json" };
 import {
   PAKETE,
   VERSAND,
+  dienstErlaubt,
   groesseFuerArtikel,
   paketFuer,
   paketFuerArtikel,
@@ -141,10 +142,24 @@ test("only the owner's carriers reach the checkout; express only up to the price
   // "DHL" ist nicht "DHL Express"; ueber der Grenze gibt es kein Express.
   const teuer = { dienste: { erlaubt: ["DPD", "DHL", "HERMES"], expressMaxCents: 1500 } };
   assert.deepEqual(optionenAus(angebote, "M", teuer).map(o => o.id), ["pl-M-2"]);
-  // Die echte Konfiguration: UPS ist raus.
-  assert.equal(VERSAND.dienste.erlaubt.includes("UPS"), false);
-  assert.ok(VERSAND.dienste.erlaubt.includes("DPD"));
-  assert.ok(VERSAND.dienste.erlaubt.includes("GLS"));
+  // Die echte Konfiguration (Inhaber 07.10.2026): alles ausser UPS und Hermes.
+  for (const name of ["DPD", "DHL", "GLS", "DHL Express", "FedEx"]) assert.equal(dienstErlaubt(name), true, name);
+  for (const name of ["UPS", "UPS® Standard Service", "ups", "Hermes", "HERMES Germany"]) assert.equal(dienstErlaubt(name), false, name);
+  assert.equal(dienstErlaubt("Groups Logistics"), true);
+});
+
+test("a block list removes UPS and Hermes, everything else reaches the checkout", () => {
+  const angebote = [
+    { id: 1, carrier: "UPS", preisCents: 400, express: false },
+    { id: 2, carrier: "GLS", preisCents: 1050, express: false },
+    { id: 3, carrier: "DPD", preisCents: 785, express: false },
+    { id: 4, carrier: "Hermes", preisCents: 500, express: false },
+    { id: 5, carrier: "UPS® Express Saver", preisCents: 1200, express: true },
+    { id: 6, carrier: "DHL Express", preisCents: 2100, express: true },
+  ];
+  const konfig = { dienste: { erlaubt: null, ausgeschlossen: ["UPS", "HERMES"], expressMaxCents: 2500 } };
+  assert.deepEqual(optionenAus(angebote, "M", konfig).map(o => [o.id, o.carrier]),
+    [["pl-M-3", "DPD"], ["pl-M-2", "GLS"], ["pl-M-6", "DHL Express"]]);
 });
 
 test("live Packlink prices are cached; without Packlink the fallback price applies", async () => {
