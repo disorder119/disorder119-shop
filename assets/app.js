@@ -165,7 +165,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       cartCheckout: "Zur Kasse", cartPlusShipping: "zzgl. Versand",
       shipFree: "kostenlos", shipFreeMissing: "Noch {betrag} bis zum kostenlosen Versand",
       shipArrives: "Heute bestellt – voraussichtlich bei dir zwischen {von} und {bis}.",
-      cartTrust: "Käuferschutz · Versand innerhalb Deutschlands · gesetzliches Widerrufsrecht (14 Tage)",
+      cartTrust: "Bezahlen mit PayPal (Käuferschutz) · Versand innerhalb Deutschlands · gesetzliches Widerrufsrecht (14 Tage)",
       shipParcelS: "klein", shipParcelM: "mittel", shipParcelL: "groß",
       cartWhatsapp: "Anfrage per WhatsApp senden", cartEmail: "Anfrage per E-Mail senden",
       paypalSoon: "Bald verfügbar", paypalSoonAria: "Bezahlen mit PayPal – bald verfügbar",
@@ -313,7 +313,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       cartCheckout: "Checkout", cartPlusShipping: "plus shipping",
       shipFree: "free", shipFreeMissing: "{betrag} more for free shipping",
       shipArrives: "Order today – expected to arrive between {von} and {bis}.",
-      cartTrust: "Buyer Protection · Shipping within Germany · statutory 14-day right of withdrawal",
+      cartTrust: "Pay with PayPal (Buyer Protection) · Shipping within Germany · statutory 14-day right of withdrawal",
       shipParcelS: "small", shipParcelM: "medium", shipParcelL: "large",
       cartWhatsapp: "Send request via WhatsApp", cartEmail: "Send request via e-mail",
       paypalSoon: "Coming soon", paypalSoonAria: "Pay with PayPal – coming soon",
@@ -462,7 +462,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       cartCheckout: "Commander", cartPlusShipping: "hors livraison",
       shipFree: "gratuite", shipFreeMissing: "Plus que {betrag} pour la livraison gratuite",
       shipArrives: "Commande aujourd’hui – livraison prévue entre le {von} et le {bis}.",
-      cartTrust: "Protection des achats · Livraison en Allemagne · droit légal de rétractation (14 jours)",
+      cartTrust: "Paiement avec PayPal (protection des achats) · Livraison en Allemagne · droit légal de rétractation (14 jours)",
       shipParcelS: "petit", shipParcelM: "moyen", shipParcelL: "grand",
       cartWhatsapp: "Envoyer la demande par WhatsApp", cartEmail: "Envoyer la demande par e-mail",
       paypalSoon: "Bientôt disponible", paypalSoonAria: "Payer avec PayPal – bientôt disponible",
@@ -994,7 +994,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       (cartVersandOption() ? "" : ' <small>' + escapeHtml(t("cartPlusShipping")) + "</small>") + "</span><strong>" + escapeHtml(betrag) + "</strong></div>" +
       '<a class="cart-kasse__btn" href="' + langHome(LANG) + 'kasse/">' + escapeHtml(t("cartCheckout")) + "</a>" +
       // Zahlungsmittel und Lieferbeschraenkung zu Beginn des Bestellvorgangs (§ 312j Abs. 1 BGB).
-      '<p class="cart-kasse__vertrauen"><span class="d119-zahlart__marke"><i>Pay</i><i>Pal</i></span><span>' + escapeHtml(t("cartTrust")) + "</span></p>";
+      '<p class="cart-kasse__vertrauen">' + escapeHtml(t("cartTrust")) + "</p>";
     bar.hidden = false;
   }
 

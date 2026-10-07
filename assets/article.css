@@ -612,17 +612,6 @@ img[data-d119-image-protected] {
   margin: 0; font-size: 0.7rem; letter-spacing: 0.02em; color: var(--text-muted);
 }
 
-/* PayPal-Schriftzug in den Markenfarben auf weissem Schild - ohne fremde
-   Bilddatei, in beiden Ansichten lesbar (Kontrast >= 4,5:1 auf Weiss). */
-.d119-zahlart__marke {
-  display: inline-flex; align-items: center; flex: 0 0 auto;
-  padding: 3px 7px; border-radius: 3px; background: #ffffff; border: 1px solid var(--rule-strong);
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-style: italic; font-weight: 800;
-  font-size: 0.8rem; letter-spacing: -0.01em; line-height: 1; text-transform: none;
-}
-.d119-zahlart__marke i { font-style: inherit; }
-.d119-zahlart__marke i:first-child { color: #003087; }
-.d119-zahlart__marke i:last-child { color: #0070e0; }
 
 /* Kaufleiste am Handy (assets/article.js) */
 .d119-kaufleiste { display: none; }

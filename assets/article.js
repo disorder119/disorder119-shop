@@ -50,7 +50,7 @@
       shipParcelS: "klein", shipParcelM: "mittel", shipParcelL: "groß", shipHint: "Versand innerhalb Deutschlands",
       shipFree: "kostenlos", shipFreeFrom: "Ab {betrag} Warenwert versenden wir kostenlos.",
       shipArrives: "Heute bestellt – voraussichtlich bei dir zwischen {von} und {bis}.",
-      payTrust: "Sicher bezahlen · mit Käuferschutz", stickyFree: "Versand kostenlos", stickyShip: "zzgl. Versand",
+      payTrust: "Sicher bezahlen mit PayPal · mit PayPal-Käuferschutz", stickyFree: "Versand kostenlos", stickyShip: "zzgl. Versand",
       shipInquiry: "Versand (Standard)", shipLocked: "Die Versandart ist bis {zeit} Uhr für diese Reservierung festgelegt.",
       checkoutShippingChanged: "Der Versandpreis hat sich gerade geändert. Bitte prüf die Versandart und klick noch einmal auf Kaufen.",
       checkoutShippingMissing: "Der Versand wird noch berechnet. Bitte versuch es gleich noch einmal.",
@@ -95,7 +95,7 @@
       shipParcelS: "small", shipParcelM: "medium", shipParcelL: "large", shipHint: "Shipping within Germany",
       shipFree: "free", shipFreeFrom: "Free shipping from {betrag} goods value.",
       shipArrives: "Order today – expected to arrive between {von} and {bis}.",
-      payTrust: "Secure checkout · Buyer Protection", stickyFree: "Free shipping", stickyShip: "plus shipping",
+      payTrust: "Secure payment with PayPal · PayPal Buyer Protection", stickyFree: "Free shipping", stickyShip: "plus shipping",
       shipInquiry: "Shipping (standard)", shipLocked: "The shipping method is fixed for this reservation until {zeit}.",
       checkoutShippingChanged: "The shipping price has just changed. Please check the shipping method and click buy again.",
       checkoutShippingMissing: "Shipping is still being calculated. Please try again in a moment.",
@@ -140,7 +140,7 @@
       shipParcelS: "petit", shipParcelM: "moyen", shipParcelL: "grand", shipHint: "Livraison en Allemagne",
       shipFree: "gratuit", shipFreeFrom: "Livraison gratuite dès {betrag} d’articles.",
       shipArrives: "Commande aujourd’hui – livraison prévue entre le {von} et le {bis}.",
-      payTrust: "Paiement sécurisé · Protection des achats", stickyFree: "Livraison gratuite", stickyShip: "hors livraison",
+      payTrust: "Paiement sécurisé avec PayPal · Protection des achats PayPal", stickyFree: "Livraison gratuite", stickyShip: "hors livraison",
       shipInquiry: "Livraison (standard)", shipLocked: "Le mode d'envoi est fixé pour cette réservation jusqu'à {zeit}.",
       checkoutShippingChanged: "Le prix de livraison vient de changer. Vérifie le mode d'envoi et clique à nouveau sur Acheter.",
       checkoutShippingMissing: "La livraison est encore en cours de calcul. Réessaie dans un instant.",
@@ -579,13 +579,7 @@
     if (!kaufen || IT.sold) return;
     var p = document.createElement("p");
     p.className = "d119-zahlart";
-    var marke = document.createElement("span");
-    marke.className = "d119-zahlart__marke";
-    marke.innerHTML = "<i>Pay</i><i>Pal</i>";
-    var text = document.createElement("span");
-    text.textContent = t("payTrust");
-    p.appendChild(marke);
-    p.appendChild(text);
+    p.textContent = t("payTrust");
     kaufen.parentNode.insertBefore(p, kaufen.nextSibling);
   })();
 

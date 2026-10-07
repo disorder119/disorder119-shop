@@ -33,7 +33,7 @@
       versandWahlFehlt: "Dein gewählter Versanddienst ist nicht mehr verfügbar. Bitte wähle eine neue Versandart.",
       zwischensumme: "Stücke", versandZeile: "Versand", gesamt: "Gesamt", kostenlos: "kostenlos",
       freiFehlt: "Noch {betrag} bis zum kostenlosen Versand – ab {grenze} Warenwert übernehmen wir den günstigsten Standardversand.",
-      lieferung: "Heute bestellt – voraussichtlich bei dir zwischen {von} und {bis}.", zahlart: "Sicher bezahlen · mit Käuferschutz",
+      lieferung: "Heute bestellt – voraussichtlich bei dir zwischen {von} und {bis}.", zahlart: "Mit PayPal-Käuferschutz",
       gutschein: "Gutschein {code} wird beim Bezahlen verrechnet.",
       recht: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Versand innerhalb von 3 Werktagen; die angezeigte Lieferzeit gilt ab Bestellung. Mit dem PayPal-Knopf und deiner Bestätigung bei PayPal bestellst du zahlungspflichtig. PayPal reserviert den Betrag – abgebucht wird erst mit dem Versand, spätestens drei Tage nach der Bestellung.",
       rechtAnfrage: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Die Anfrage ist unverbindlich – wir bestätigen Verfügbarkeit und Gesamtpreis per E-Mail.",
@@ -75,7 +75,7 @@
       versandWahlFehlt: "Your selected carrier is no longer available. Please choose another shipping option.",
       zwischensumme: "Pieces", versandZeile: "Shipping", gesamt: "Total", kostenlos: "free",
       freiFehlt: "{betrag} more for free shipping – from {grenze} goods value we cover the cheapest standard shipping.",
-      lieferung: "Order today – expected to arrive between {von} and {bis}.", zahlart: "Secure checkout · Buyer Protection",
+      lieferung: "Order today – expected to arrive between {von} and {bis}.", zahlart: "With PayPal Buyer Protection",
       gutschein: "Coupon {code} is applied when you pay.",
       recht: "Small business under § 19 UStG, so no VAT is charged. Shipped within 3 working days; the delivery time shown counts from your order. With the PayPal button and your confirmation at PayPal you place a binding order. PayPal reserves the amount – it is only charged when we ship, at the latest three days after your order.",
       rechtAnfrage: "Small business under § 19 UStG, so no VAT is charged. The request is non-binding – we confirm availability and the total by e-mail.",
@@ -117,7 +117,7 @@
       versandWahlFehlt: "Le transporteur choisi n'est plus disponible. Choisis un autre mode de livraison.",
       zwischensumme: "Pièces", versandZeile: "Livraison", gesamt: "Total", kostenlos: "gratuite",
       freiFehlt: "Plus que {betrag} pour la livraison gratuite – dès {grenze} d’articles, nous offrons la livraison standard la moins chère.",
-      lieferung: "Commande aujourd’hui – livraison prévue entre le {von} et le {bis}.", zahlart: "Paiement sécurisé · Protection des achats",
+      lieferung: "Commande aujourd’hui – livraison prévue entre le {von} et le {bis}.", zahlart: "Avec la Protection des achats PayPal",
       gutschein: "Le bon {code} est déduit au paiement.",
       recht: "Micro-entreprise selon le § 19 UStG, pas de TVA. Expédition sous 3 jours ouvrés ; le délai de livraison indiqué court à partir de la commande. Avec le bouton PayPal et ta confirmation chez PayPal, tu passes une commande ferme. PayPal réserve le montant – il n'est débité qu'à l'expédition, au plus tard trois jours après la commande.",
       rechtAnfrage: "Micro-entreprise selon le § 19 UStG, pas de TVA. La demande est sans engagement – nous confirmons disponibilité et total par e-mail.",
@@ -591,12 +591,7 @@
     var knopf = el("div", "kasse-paypal");
     knopf.id = "kassePaypal";
     ziel.appendChild(knopf);
-    var zahlart = el("p", "d119-zahlart");
-    var marke = el("span", "d119-zahlart__marke");
-    marke.innerHTML = "<i>Pay</i><i>Pal</i>";
-    zahlart.appendChild(marke);
-    zahlart.appendChild(el("span", "", t("zahlart")));
-    ziel.appendChild(zahlart);
+    ziel.appendChild(el("p", "d119-zahlart", t("zahlart")));
     var schutz = schutzLaden();
     schutz.then(function (S) { S.waechter(); }).catch(function () { /* meldet sich beim Klick */ });
     var bezahlSchluessel = {};
