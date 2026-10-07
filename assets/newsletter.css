@@ -52,6 +52,14 @@
   color: var(--nl-muted);
 }
 
+.d119-nl__bedingungen {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--nl-muted);
+}
+
 .d119-nl__row {
   display: flex;
   flex-wrap: wrap;

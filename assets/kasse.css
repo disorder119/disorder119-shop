@@ -225,7 +225,12 @@
 }
 .kasse-konto input { width: 18px; height: 18px; flex: 0 0 auto; margin: 1px 0 0; accent-color: var(--text); }
 .kasse-applepay { margin-bottom: 10px; }
-.kasse-applepay apple-pay-button { display: block; width: 100%; height: 48px; }
+.kasse-applepay apple-pay-button {
+  display: block; width: 100%; height: 48px;
+  /* Apples Knopf liest seine Groesse aus diesen Variablen: so breit und hoch wie PayPal. */
+  --apple-pay-button-width: 100%; --apple-pay-button-height: 48px;
+  --apple-pay-button-border-radius: 4px; --apple-pay-button-padding: 0px; --apple-pay-button-box-sizing: border-box;
+}
 
 .kasse-feld input {
   font-family: inherit;
@@ -444,3 +449,8 @@
 @media (prefers-reduced-motion: reduce) {
   .kasse-vorschlaege { scroll-behavior: auto; }
 }
+
+/* Versand: voraussichtliches Lieferdatum und "Noch X € bis zum kostenlosen
+   Versand" unter den Versandarten (assets/kasse.js). */
+.kasse-lieferung { margin: 0; font-size: 0.82rem; line-height: 1.5; color: var(--text); }
+.kasse-frei { color: var(--text); }

@@ -14,9 +14,11 @@ import {
   VersandError,
   artikelIdsAus,
   handleVersandOptionen,
+  oeffentlicheOptionen,
   optionenAus,
   versandCacheLeeren,
   versandFuerBestellung,
+  versandkostenfreiAnwenden,
   versandOptionen,
 } from "./versand.js";
 import shopWorker from "./worker.js";
@@ -41,6 +43,8 @@ const ITEMS = [
   { id: 9428, article: "9428", brand: "Jean Paul Gaultier", title: "Jean Paul Gaultier T-Shirt mit Print Damen Blau", price: 150, public_status: "AVAILABLE", category: "Tops", taxonomy_category: "Tops", product_type: "T-Shirt" },
   { id: 9401, article: "9401", brand: "Prada", title: "Prada Boots Damen Schwarz", price: 390, public_status: "AVAILABLE", category: "Shoes", taxonomy_category: "Shoes", product_type: "Boots" },
   { id: 9402, article: "9402", brand: "Dior", title: "Dior Jacke Herren Schwarz", price: 480, public_status: "AVAILABLE", category: "Jackets", taxonomy_category: "Jackets", product_type: "Jacket" },
+  // Unter der Grenze fuer versandkostenfrei (99 EUR).
+  { id: 9403, article: "9403", brand: "Y-3", title: "Y-3 Logo-Shirt Schwarz", price: 60, public_status: "AVAILABLE", category: "Tops", taxonomy_category: "Tops", product_type: "T-Shirt" },
 ];
 
 // Nachbau von Packlink, GitHub (data/items.json) und PayPal. Merkt sich jede Anfrage.
@@ -210,9 +214,65 @@ test("the server checks option and price at checkout", async () => {
     });
     // Preis im Browser manipuliert oder bei Packlink geaendert.
     await assert.rejects(versandFuerBestellung({}, [ITEMS[0]], "pl-S-20425", 1), err => err.code === "VERSAND_PREIS_GEAENDERT");
+
+    // Ab 99 EUR Warenwert: der guenstigste Standard kostet nichts, die
+    // anderen Dienste nur den Aufpreis.
+    const frei = await versandFuerBestellung({}, [ITEMS[0]], "pl-S-20425", 0, 15000);
+    assert.equal(frei.preisCents, 0);
+    assert.equal(frei.listenpreisCents, 559);
+    assert.equal((await versandFuerBestellung({}, [ITEMS[0]], "pl-S-66666", 140, 15000)).preisCents, 140);
+    assert.equal((await versandFuerBestellung({}, [ITEMS[0]], "pl-S-55555", 1431, 15000)).preisCents, 1431);
+    // Wer den alten Preis gesehen hat, bekommt die neue Liste.
+    await assert.rejects(versandFuerBestellung({}, [ITEMS[0]], "pl-S-20425", 559, 15000), err => {
+      assert.equal(err.code, "VERSAND_PREIS_GEAENDERT");
+      assert.deepEqual(err.versand.frei, { abCents: 9900, warenwertCents: 15000, erreicht: true, fehltCents: 0 });
+      return true;
+    });
+    // Knapp darunter: voller Preis, 0 Cent wird abgelehnt.
+    assert.equal((await versandFuerBestellung({}, [ITEMS[3]], "pl-S-20425", 559, 9899)).preisCents, 559);
+    await assert.rejects(versandFuerBestellung({}, [ITEMS[3]], "pl-S-20425", 0, 9899), err => err.code === "VERSAND_PREIS_GEAENDERT");
   } finally {
     netz.restore();
   }
+});
+
+test("versandkostenfrei: only the cheapest standard is free, the rest costs the difference", () => {
+  const ergebnis = { paket: "M", quelle: "packlink", optionen: [
+    { id: "pl-M-1", art: "standard", preisCents: 785 },
+    { id: "pl-M-2", art: "standard", preisCents: 1050 },
+    { id: "pl-M-3", art: "express", preisCents: 2291 },
+  ] };
+  const konfig = { versandkostenfrei: { abCents: 9900 } };
+  const frei = versandkostenfreiAnwenden(ergebnis, 9900, konfig);
+  assert.deepEqual(frei.optionen.map(o => [o.id, o.preisCents, o.listenpreisCents]), [["pl-M-1", 0, 785], ["pl-M-2", 265, 1050], ["pl-M-3", 1506, 2291]]);
+  assert.deepEqual(frei.frei, { abCents: 9900, warenwertCents: 9900, erreicht: true });
+  const darunter = versandkostenfreiAnwenden(ergebnis, 9000, konfig);
+  assert.equal(darunter.optionen, ergebnis.optionen);
+  assert.equal(oeffentlicheOptionen(darunter).frei.fehltCents, 900);
+  // Ohne Grenze in der Konfiguration bleibt alles, wie es ist - auch ohne frei-Block.
+  assert.equal(versandkostenfreiAnwenden(ergebnis, 50000, {}), ergebnis);
+  assert.equal("frei" in oeffentlicheOptionen(ergebnis), false);
+  // Ersatzpreis (Packlink fehlt): auch der wird uebernommen.
+  const ersatz = versandkostenfreiAnwenden({ paket: "S", quelle: "ersatz", optionen: [{ id: "ersatz-S", art: "standard", preisCents: 590 }] }, 12000, konfig);
+  assert.equal(ersatz.optionen[0].preisCents, 0);
+  // Die echte Konfiguration: ab 99 Euro.
+  assert.deepEqual(VERSAND.versandkostenfrei, { abCents: 9900 });
+  const kaputt = structuredClone(shopConfig);
+  kaputt.versand.versandkostenfrei = { abCents: "99" };
+  assert.throws(() => versandKonfigurationPruefen(kaputt), /VERSAND_VERSANDKOSTENFREI_UNGUELTIG/);
+  delete kaputt.versand.versandkostenfrei;
+  assert.equal(versandKonfigurationPruefen(kaputt).versandkostenfrei, null);
+});
+
+test("public options carry the expected delivery window", () => {
+  const ergebnis = { paket: "M", quelle: "packlink", optionen: [
+    { id: "pl-M-1", art: "standard", titel: "Standard", preisCents: 785, laufzeit: "2 Tage", carrier: "DPD" },
+    { id: "ersatz-M", art: "standard", titel: "Standard", preisCents: 850, laufzeit: "", carrier: "" },
+  ] };
+  // Mittwoch, 7. Oktober 2026: Versand bis Montag, dazu 2 Tage Laufzeit.
+  const daten = oeffentlicheOptionen(ergebnis, new Date("2026-10-07T10:00:00Z"));
+  assert.deepEqual(daten.optionen[0].lieferung, { von: "2026-10-12", bis: "2026-10-14" });
+  assert.equal(daten.optionen[1].lieferung, null);
 });
 
 test("GET /versand/optionen: size from the catalog, CORS only for the shop, strict ids", async () => {
@@ -230,9 +290,21 @@ test("GET /versand/optionen: size from the catalog, CORS only for the shop, stri
     assert.equal(eins.cors, SHOP);
     assert.equal(eins.data.paket, "S");
     assert.equal(eins.data.paketName, "Klein");
-    assert.deepEqual(eins.data.optionen.map(o => [o.id, o.titel, o.preis, o.carrier]), [["pl-S-20425", "Standard", "5.59", "DPD"], ["pl-S-66666", "Standard", "6.99", "GLS"], ["pl-S-55555", "Express", "19.90", "DPD"]]);
+    // 150 EUR: der guenstigste Standard ist kostenlos, der Rest kostet den Aufpreis.
+    assert.deepEqual(eins.data.optionen.map(o => [o.id, o.titel, o.preis, o.carrier]), [["pl-S-20425", "Standard", "0.00", "DPD"], ["pl-S-66666", "Standard", "1.40", "GLS"], ["pl-S-55555", "Express", "14.31", "DPD"]]);
+    assert.deepEqual(eins.data.frei, { abCents: 9900, warenwertCents: 15000, erreicht: true, fehltCents: 0 });
+    assert.match(eins.data.optionen[0].lieferung.von, /^\d{4}-\d{2}-\d{2}$/);
+    assert.ok(eins.data.optionen[0].lieferung.von < eins.data.optionen[0].lieferung.bis);
     // Keine internen Felder nach draussen.
     assert.equal("packlinkServiceId" in eins.data.optionen[0], false);
+    assert.equal("listenpreisCents" in eins.data.optionen[0], false);
+
+    // 60 EUR: volle Preise und wie viel bis zur Grenze fehlt.
+    const guenstig = await abfrage("?artikel=9403");
+    assert.deepEqual(guenstig.data.optionen.map(o => o.preis), ["5.59", "6.99", "19.90"]);
+    assert.deepEqual(guenstig.data.frei, { abCents: 9900, warenwertCents: 6000, erreicht: false, fehltCents: 3900 });
+    // Zwei Stuecke zusammen ueber der Grenze.
+    assert.equal((await abfrage("?artikel=9403,9428")).data.frei.erreicht, true);
 
     const zwei = await abfrage("?artikel=9428,9402");
     assert.equal(zwei.data.paket, "M");
@@ -265,33 +337,34 @@ test("create-order: chosen shipping goes into PayPal and the order, tampering is
     return { status: res.status, data: await res.json() };
   };
   try {
-    // Preis stimmt nicht: 409 mit aktueller Liste, nichts reserviert.
-    const falsch = await bestellen({ itemId: 9428, versand: "pl-S-55555", versandPreisCents: 999 }, "k-falsch-0000000001");
+    // Preis stimmt nicht: 409 mit aktueller Liste, nichts reserviert. Ab
+    // 99 EUR kostet Express nur den Aufpreis zum Standard (19,90 - 5,59).
+    const falsch = await bestellen({ itemId: 9428, versand: "pl-S-55555", versandPreisCents: 1990 }, "k-falsch-0000000001");
     assert.equal(falsch.status, 409);
     assert.equal(falsch.data.error, "VERSAND_PREIS_GEAENDERT");
-    assert.equal(falsch.data.versand.optionen.find(o => o.id === "pl-S-55555").preisCents, 1990);
+    assert.equal(falsch.data.versand.optionen.find(o => o.id === "pl-S-55555").preisCents, 1431);
     assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations").get().n, 0);
     assert.equal(netz.calls.filter(c => c.host === "api-m.sandbox.paypal.com").length, 0);
 
-    const ok = await bestellen({ itemId: 9428, versand: "pl-S-55555", versandPreisCents: 1990 }, "k-richtig-000000001");
+    const ok = await bestellen({ itemId: 9428, versand: "pl-S-55555", versandPreisCents: 1431 }, "k-richtig-000000001");
     assert.equal(ok.status, 200, JSON.stringify(ok.data));
     assert.equal(ok.data.itemPrice, "150.00");
-    assert.equal(ok.data.shipping, "19.90");
-    assert.equal(ok.data.total, "169.90");
+    assert.equal(ok.data.shipping, "14.31");
+    assert.equal(ok.data.total, "164.31");
     assert.equal(ok.data.versand.art, "express");
 
     const paypal = netz.calls.find(c => c.host === "api-m.sandbox.paypal.com" && c.path === "/v2/checkout/orders");
     assert.deepEqual(paypal.body.purchase_units[0].amount, {
       currency_code: "EUR",
-      value: "169.90",
+      value: "164.31",
       breakdown: {
         item_total: { currency_code: "EUR", value: "150.00" },
-        shipping: { currency_code: "EUR", value: "19.90" },
+        shipping: { currency_code: "EUR", value: "14.31" },
       },
     });
     const order = DB.raw.prepare("SELECT id,shipping_cents,total_cents FROM commerce_orders").get();
-    assert.equal(order.shipping_cents, 1990);
-    assert.equal(order.total_cents, 16990);
+    assert.equal(order.shipping_cents, 1431);
+    assert.equal(order.total_cents, 16431);
     const wahl = DB.raw.prepare("SELECT * FROM order_versand WHERE order_id=?").get(order.id);
     assert.equal(wahl.option_id, "pl-S-55555");
     assert.equal(wahl.art, "express");
@@ -299,12 +372,55 @@ test("create-order: chosen shipping goes into PayPal and the order, tampering is
     assert.equal(wahl.packlink_service_id, 55555);
     assert.equal(wahl.carrier, "DPD");
     assert.equal(wahl.paket, "S");
-    assert.equal(wahl.preis_cents, 1990);
+    assert.equal(wahl.preis_cents, 1431);
 
     // Derselbe Schluessel noch einmal: dieselbe Antwort, keine zweite Bestellung.
-    const nochmal = await bestellen({ itemId: 9428, versand: "pl-S-55555", versandPreisCents: 1990 }, "k-richtig-000000001");
+    const nochmal = await bestellen({ itemId: 9428, versand: "pl-S-55555", versandPreisCents: 1431 }, "k-richtig-000000001");
     assert.equal(nochmal.data.id, ok.data.id);
     assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM commerce_orders").get().n, 1);
+  } finally {
+    netz.restore();
+  }
+});
+
+test("create-order: from 99 EUR the cheapest standard costs nothing, below it the full price", async () => {
+  versandCacheLeeren();
+  const netz = fakeNetz();
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  const bestellen = async (body, key) => {
+    const req = new Request("https://api.disorder119.com/create-order", {
+      method: "POST",
+      headers: { Origin: SHOP, "Content-Type": "application/json", "Idempotency-Key": key },
+      body: JSON.stringify({ email: "kundin@example.com", adresse: TEST_ADRESSE, ...body }),
+    });
+    const res = await shopWorker.fetch(req, env);
+    return { status: res.status, data: await res.json() };
+  };
+  try {
+    // 60 EUR: 0 Cent Versand gibt es nicht.
+    const darunter = await bestellen({ itemId: 9403, versand: "pl-S-20425", versandPreisCents: 0 }, "k-frei-unter-000001");
+    assert.equal(darunter.status, 409);
+    assert.equal(darunter.data.error, "VERSAND_PREIS_GEAENDERT");
+    assert.equal(darunter.data.versand.frei.fehltCents, 3900);
+
+    const frei = await bestellen({ itemId: 9428, versand: "pl-S-20425", versandPreisCents: 0 }, "k-frei-ueber-000001");
+    assert.equal(frei.status, 200, JSON.stringify(frei.data));
+    assert.equal(frei.data.shipping, "0.00");
+    assert.equal(frei.data.total, "150.00");
+    const paypal = netz.calls.find(c => c.host === "api-m.sandbox.paypal.com" && c.path === "/v2/checkout/orders");
+    assert.deepEqual(paypal.body.purchase_units[0].amount, {
+      currency_code: "EUR",
+      value: "150.00",
+      breakdown: {
+        item_total: { currency_code: "EUR", value: "150.00" },
+        shipping: { currency_code: "EUR", value: "0.00" },
+      },
+    });
+    const order = DB.raw.prepare("SELECT id,shipping_cents,total_cents FROM commerce_orders").get();
+    assert.deepEqual({ ...order, id: undefined }, { id: undefined, shipping_cents: 0, total_cents: 15000 });
+    const wahl = DB.raw.prepare("SELECT option_id,art,preis_cents FROM order_versand WHERE order_id=?").get(order.id);
+    assert.deepEqual({ ...wahl }, { option_id: "pl-S-20425", art: "standard", preis_cents: 0 });
   } finally {
     netz.restore();
   }
@@ -319,15 +435,16 @@ test("create-order falls back to the configured price when Packlink is down", as
     const req = new Request("https://api.disorder119.com/create-order", {
       method: "POST",
       headers: { Origin: SHOP, "Content-Type": "application/json", "Idempotency-Key": "k-ersatz-0000000001" },
-      body: JSON.stringify({ itemId: 9401, email: "kundin@example.com", adresse: TEST_ADRESSE,
-        versand: "ersatz-L", versandPreisCents: PAKETE.L.ersatzCents }),
+      // 60 EUR: unter der Grenze fuer versandkostenfrei, also Ersatzpreis.
+      body: JSON.stringify({ itemId: 9403, email: "kundin@example.com", adresse: TEST_ADRESSE,
+        versand: "ersatz-S", versandPreisCents: PAKETE.S.ersatzCents }),
     });
     const res = await shopWorker.fetch(req, env);
     const data = await res.json();
     assert.equal(res.status, 200, JSON.stringify(data));
-    assert.equal(data.shipping, (PAKETE.L.ersatzCents / 100).toFixed(2));
+    assert.equal(data.shipping, (PAKETE.S.ersatzCents / 100).toFixed(2));
     const wahl = DB.raw.prepare("SELECT quelle,paket,packlink_service_id FROM order_versand").get();
-    assert.deepEqual({ ...wahl }, { quelle: "ersatz", paket: "L", packlink_service_id: null });
+    assert.deepEqual({ ...wahl }, { quelle: "ersatz", paket: "S", packlink_service_id: null });
   } finally {
     netz.restore();
   }

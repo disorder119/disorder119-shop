@@ -118,6 +118,12 @@ function versandBezeichnung(order) {
   return `Versand · ${art}${carrier ? ` (${carrier})` : ""}`;
 }
 
+// Ab 99 € Warenwert uebernimmt der Shop den Standardversand: dann
+// "kostenlos" statt "0,00 €" (versand.js, versandkostenfrei).
+function versandBetrag(cents, currency) {
+  return Number(cents) === 0 ? "kostenlos" : euroAmount(cents, currency);
+}
+
 export function mailTransportReady(env = {}) {
   return Boolean(env.MAIL_API_KEY && env.MAIL_FROM);
 }
@@ -296,7 +302,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     ...itemTextLines,
     "",
     `Zwischensumme: ${euroAmount(subtotal, currency)}`,
-    `${versandBezeichnung(order)}: ${euroAmount(shipping, currency)}`,
+    `${versandBezeichnung(order)}: ${versandBetrag(shipping, currency)}`,
     `Gesamt: ${euroAmount(total, currency)}`,
     zahlungsart,
     ...(invoice.ready?[invoice.text]:[]),
@@ -331,7 +337,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     </table>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">
       ${summenZeile("Zwischensumme", euroAmount(subtotal, currency), false)}
-      ${summenZeile(versandBezeichnung(order), euroAmount(shipping, currency), false)}
+      ${summenZeile(versandBezeichnung(order), versandBetrag(shipping, currency), false)}
       ${summenZeile("Gesamt", euroAmount(total, currency), true)}
     </table>
     <p style="margin:14px 0 0;font-size:12px;color:${F.leise};">${escapeHtml(zahlungsart)}</p>`;

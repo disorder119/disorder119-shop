@@ -565,6 +565,25 @@ def paypal_vorschau_html(lang):
     )
 
 
+_VERSANDKOSTENFREI_AB = []
+
+
+def versandkostenfrei_ab_cents():
+    """Ab welchem Warenwert (Cent) der Shop den guenstigsten Standard
+    uebernimmt - config/shop-config.json versand.versandkostenfrei, sonst None.
+    Dieselbe Zahl rechnet der Worker (shop-worker/versand-config.js)."""
+    if not _VERSANDKOSTENFREI_AB:
+        roh = json.loads(SHOP_CONFIG_PATH.read_text(encoding="utf-8")).get("versand") or {}
+        wert = (roh.get("versandkostenfrei") or {}).get("abCents")
+        _VERSANDKOSTENFREI_AB.append(wert if isinstance(wert, int) and wert > 0 else None)
+    return _VERSANDKOSTENFREI_AB[0]
+
+
+def euro_text(cents, lang):
+    betrag = f"{cents / 100:.2f}"
+    return "€" + betrag if lang == "en" else betrag.replace(".", ",") + " €"
+
+
 def cta_html(it, shop_config, home, lang):
     sold = it.get("public_status") == "SOLD"
     if sold:
@@ -614,7 +633,7 @@ def cta_html(it, shop_config, home, lang):
         + '" data-i18n="rentalTeaser">Auch mietbar – Für Miete anfragen</a>'
     )
     trust_notes = {
-        "de": "Einzelstück · individuell fotografiert · 14 Tage Widerrufsrecht für Verbraucher:innen · gesetzliche Gewährleistungsrechte.",
+        "de": "Einzelstück · individuell fotografiert · gesetzliches Widerrufsrecht von 14 Tagen für Verbraucher:innen · gesetzliche Gewährleistungsrechte.",
         "en": "One-off piece · individually photographed · 14-day statutory withdrawal right for consumers · statutory warranty rights.",
         "fr": "Pièce unique · photographiée individuellement · droit légal de rétractation de 14 jours pour les consommateurs · droits de garantie légaux.",
     }
@@ -622,12 +641,28 @@ def cta_html(it, shop_config, home, lang):
     # BGB, § 6 PAngV). Seit dem Versand ueber Packlink haengen sie an
     # Paketgroesse und Versandart; den genauen Betrag holt assets/article.js
     # live vom Worker und zeigt ihn unter dem Preis und direkt ueber dem
-    # Kaufknopf. Hier steht deshalb bewusst keine feste Zahl.
-    ship_notes = {
-        "de": " Zzgl. Versand je nach Paketgröße und Versandart (Standard oder Express) – der genaue Betrag steht vor der Bestellung.",
-        "en": " Plus shipping depending on parcel size and service (standard or express) – the exact amount is shown before you order.",
-        "fr": " Livraison en sus selon la taille du colis et le mode d'envoi (standard ou express) – le montant exact est indiqué avant la commande.",
-    }
+    # Kaufknopf. Hier steht deshalb bewusst keine feste Zahl - ausser der
+    # Grenze, ab der der Shop den guenstigsten Standard uebernimmt
+    # (config/shop-config.json versand.versandkostenfrei, AGB § 4).
+    frei_ab = versandkostenfrei_ab_cents()
+    if frei_ab and it.get("price", 0) * 100 >= frei_ab:
+        ship_notes = {
+            "de": " Versand innerhalb Deutschlands kostenlos (günstigster Standardversand); andere Paketdienste und Express gegen Aufpreis – der genaue Betrag steht vor der Bestellung.",
+            "en": " Free shipping within Germany (cheapest standard service); other carriers and express at a surcharge – the exact amount is shown before you order.",
+            "fr": " Livraison gratuite en Allemagne (envoi standard le moins cher) ; autres transporteurs et express avec supplément – le montant exact est indiqué avant la commande.",
+        }
+    elif frei_ab:
+        ship_notes = {
+            "de": " Zzgl. Versand je nach Paketgröße und Versandart (Standard oder Express), ab " + euro_text(frei_ab, "de") + " Warenwert kostenlos – der genaue Betrag steht vor der Bestellung.",
+            "en": " Plus shipping depending on parcel size and service (standard or express), free from " + euro_text(frei_ab, "en") + " goods value – the exact amount is shown before you order.",
+            "fr": " Livraison en sus selon la taille du colis et le mode d'envoi (standard ou express), gratuite dès " + euro_text(frei_ab, "fr") + " d'articles – le montant exact est indiqué avant la commande.",
+        }
+    else:
+        ship_notes = {
+            "de": " Zzgl. Versand je nach Paketgröße und Versandart (Standard oder Express) – der genaue Betrag steht vor der Bestellung.",
+            "en": " Plus shipping depending on parcel size and service (standard or express) – the exact amount is shown before you order.",
+            "fr": " Livraison en sus selon la taille du colis et le mode d'envoi (standard ou express) – le montant exact est indiqué avant la commande.",
+        }
     note_text = trust_notes.get(lang, trust_notes["de"]) + ship_notes.get(lang, ship_notes["de"])
     parts.append('<p class="info__note">' + esc(note_text) + '</p>')
     parts.append(product_data_gap_html(it, lang))

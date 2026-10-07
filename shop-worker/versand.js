@@ -14,11 +14,16 @@
 //      gesehen hat: Weicht er ab (neuer Packlink-Preis, andere Paketgroesse,
 //      manipulierte Anfrage), gibt es 409 samt frischer Liste statt eines
 //      stillschweigend anderen Betrags bei PayPal.
+//   4. Ab einem Warenwert (config/shop-config.json versand.versandkostenfrei,
+//      99 Euro) uebernimmt der Shop den guenstigsten Standard: Die Kundschaft
+//      zahlt dafuer 0 Cent, fuer andere Dienste nur den Aufpreis. Jede Option
+//      traegt ausserdem das voraussichtliche Lieferfenster (lieferzeit.js).
 //
 // Liefert Packlink gerade keine Preise, gilt der Ersatzpreis der Paketgroesse
 // aus config/shop-config.json - als eigene Option "ersatz-<Groesse>".
 // Das Etikett wird nie automatisch gekauft: das macht die Admin-App.
-import { safeText } from "./commerce-core.js";
+import { parsePriceToCents, safeText } from "./commerce-core.js";
+import { lieferfenster } from "./lieferzeit.js";
 import { angeboteLaden } from "./packlink.js";
 import { PAKETE, VERSAND, dienstErlaubt, paketFuer, paketFuerArtikel } from "./versand-config.js";
 
@@ -137,24 +142,56 @@ export async function versandOptionen(env, paket) {
   return { paket: p.key, quelle: "ersatz", optionen: [ersatzOption(p.key)] };
 }
 
-export function oeffentlicheOptionen(ergebnis) {
+// Versandkostenfrei ab einem Warenwert: Den guenstigsten Standard uebernimmt
+// der Shop. Fuer einen anderen Paketdienst oder Express zahlt die Kundschaft
+// nur den Aufpreis - so kostet den Shop jede Bestellung hoechstens den
+// guenstigsten Standard. Massgeblich ist der Warenwert vor einem Gutschein:
+// Der Gutschein wird erst nach dem Anlegen der Bestellung verrechnet und
+// aendert den Versand nicht (coupon-checkout.js).
+export function versandkostenfreiAnwenden(ergebnis, warenwertCents, konfig = VERSAND) {
+  const grenze = konfig.versandkostenfrei;
+  if (!grenze) return ergebnis;
+  const wert = Number.isSafeInteger(warenwertCents) && warenwertCents > 0 ? warenwertCents : 0;
+  const erreicht = wert >= grenze.abCents;
+  const standards = ergebnis.optionen.filter(o => o.art === "standard").map(o => o.preisCents);
+  const basis = standards.length ? Math.min(...standards) : 0;
+  return {
+    ...ergebnis,
+    frei: { abCents: grenze.abCents, warenwertCents: wert, erreicht },
+    optionen: !erreicht || !(basis > 0) ? ergebnis.optionen : ergebnis.optionen.map(o => ({
+      ...o,
+      preisCents: Math.max(0, o.preisCents - basis),
+      listenpreisCents: o.preisCents,
+    })),
+  };
+}
+
+export function oeffentlicheOptionen(ergebnis, jetzt = new Date()) {
   const p = paketFuer(ergebnis.paket);
+  const frei = ergebnis.frei;
   return {
     paket: p.key,
     paketName: p.name,
     quelle: ergebnis.quelle,
-    optionen: ergebnis.optionen.map(o => ({
-      id: o.id,
-      art: o.art,
-      titel: o.titel,
-      preisCents: o.preisCents,
-      preis: (o.preisCents / 100).toFixed(2),
-      laufzeit: o.laufzeit,
+    optionen: ergebnis.optionen.map(o => {
       // Werktage als Zahl, damit Produktseite und Warenkorb sie in ihrer
       // Sprache anzeigen koennen ("2 Tage", "2 days", "2 jours").
-      tage: Number(/(\d+)/.exec(o.laufzeit || "")?.[1]) || null,
-      carrier: o.carrier,
-    })),
+      const tage = Number(/(\d+)/.exec(o.laufzeit || "")?.[1]) || null;
+      return {
+        id: o.id,
+        art: o.art,
+        titel: o.titel,
+        preisCents: o.preisCents,
+        preis: (o.preisCents / 100).toFixed(2),
+        laufzeit: o.laufzeit,
+        tage,
+        carrier: o.carrier,
+        // Voraussichtlich bei der Kundschaft: { von, bis } als Datum.
+        lieferung: lieferfenster(tage, jetzt),
+      };
+    }),
+    // "Ab 99 € versandkostenfrei" - fuer "Noch 9,00 € bis zum kostenlosen Versand".
+    ...(frei ? { frei: { ...frei, fehltCents: Math.max(0, frei.abCents - frei.warenwertCents) } } : {}),
   };
 }
 
@@ -162,14 +199,17 @@ export function oeffentlicheOptionen(ergebnis) {
 
 // Pruefung beim Bestellen: Paketgroesse aus den echten Artikeln (nie aus dem
 // Browser), Preis aus der eigenen, frisch gerechneten Liste. `gesehenCents`
-// ist der Preis, den die Kundschaft vor dem Kaufknopf gesehen hat.
-export async function versandFuerBestellung(env, items, gewaehlteId, gesehenCents) {
+// ist der Preis, den die Kundschaft vor dem Kaufknopf gesehen hat,
+// `warenwertCents` die Summe der echten Artikelpreise (versandkostenfrei ab).
+export async function versandFuerBestellung(env, items, gewaehlteId, gesehenCents, warenwertCents = 0) {
   const paket = paketFuerArtikel(items);
-  const ergebnis = await versandOptionen(env, paket);
+  const ergebnis = versandkostenfreiAnwenden(await versandOptionen(env, paket), warenwertCents);
   const id = safeText(gewaehlteId, 40);
   const gewaehlt = id ? ergebnis.optionen.find(o => o.id === id) : ergebnis.optionen[0];
   if (!gewaehlt) throw new VersandError("VERSAND_OPTION_UNGUELTIG", 409, oeffentlicheOptionen(ergebnis));
-  if (!Number.isSafeInteger(gewaehlt.preisCents) || gewaehlt.preisCents <= 0) {
+  // 0 Cent nur, wenn der Shop den Versand uebernimmt - nie aus Versehen.
+  const uebernommen = gewaehlt.preisCents === 0 && Number.isSafeInteger(gewaehlt.listenpreisCents) && gewaehlt.listenpreisCents > 0;
+  if (!Number.isSafeInteger(gewaehlt.preisCents) || (gewaehlt.preisCents <= 0 && !uebernommen)) {
     throw new VersandError("VERSAND_NICHT_VERFUEGBAR", 503);
   }
   if (gesehenCents !== undefined && gesehenCents !== null && gesehenCents !== "") {
@@ -279,14 +319,19 @@ export async function handleVersandOptionen(request, env, url, reqId = crypto.ra
     }
     const ids = artikelIdsAus(url.searchParams.get("artikel"));
     let paket = VERSAND.standardGroesse;
+    let warenwertCents = 0;
     try {
       const artikel = await katalogArtikel(env, ids);
       // Unbekannte Nummern zaehlen trotzdem mit: zwei Teile bleiben zwei Teile.
       paket = paketFuerArtikel([...artikel, ...Array(Math.max(0, ids.length - artikel.length)).fill({})]);
+      // Warenwert wie beim Bestellen: nur verfuegbare Stuecke mit Preis.
+      warenwertCents = artikel.filter(it => it.public_status === "AVAILABLE")
+        .reduce((summe, it) => summe + (parsePriceToCents(it.price) || 0), 0);
     } catch (err) {
       console.warn(JSON.stringify({ level: "warn", event: "versand_katalog_fehlt", requestId: reqId, code: safeText(err?.message || "unbekannt", 60) }));
     }
-    return antwort({ ok: true, ...oeffentlicheOptionen(await versandOptionen(env, paket)) }, 200, origin);
+    const ergebnis = versandkostenfreiAnwenden(await versandOptionen(env, paket), warenwertCents);
+    return antwort({ ok: true, ...oeffentlicheOptionen(ergebnis) }, 200, origin);
   } catch (err) {
     if (err instanceof VersandError) return antwort({ error: err.code, requestId: reqId }, err.status, origin);
     console.error(JSON.stringify({ level: "error", event: "versand_optionen_fehler", requestId: reqId, message: safeText(err?.message || "unknown", 160) }));

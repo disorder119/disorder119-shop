@@ -37,6 +37,7 @@
       eyebrow: "Newsletter",
       titel: "10 % auf deine nächste Bestellung",
       intro: "Neue Stücke zuerst sehen – und als Dankeschön einen einmaligen 10-%-Code.",
+      bedingungen: "Gilt auf den Warenwert deiner nächsten Bestellung (nicht auf Versand), einmal einlösbar, ein Code pro Bestellung, keine Barauszahlung.",
       emailLabel: "E-Mail-Adresse",
       platzhalter: "name@beispiel.de",
       einwilligung: "Ja, ich möchte den DISORDER119-Newsletter mit neuen Stücken und Aktionen per E-Mail erhalten – einschließlich der Messung, ob die Mails geöffnet und Links angeklickt werden. Die Einwilligung kann ich jederzeit widerrufen, z. B. über den Abmeldelink in jeder Mail.",
@@ -69,6 +70,7 @@
       eyebrow: "Newsletter",
       titel: "10% off your next order",
       intro: "See new pieces first – and get a one-time 10% code as a thank-you.",
+      bedingungen: "Valid on the goods value of your next order (not on shipping), redeemable once, one code per order, no cash payout.",
       emailLabel: "Email address",
       platzhalter: "name@example.com",
       einwilligung: "Yes, I want to receive the DISORDER119 newsletter with new pieces and offers by email – including measurement of whether the emails are opened and links are clicked. I can withdraw my consent at any time, e.g. via the unsubscribe link in every email.",
@@ -101,6 +103,7 @@
       eyebrow: "Newsletter",
       titel: "10 % sur ta prochaine commande",
       intro: "Découvre les nouvelles pièces en premier – et reçois un code unique de 10 % en remerciement.",
+      bedingungen: "Valable sur la valeur des articles de ta prochaine commande (hors livraison), utilisable une fois, un code par commande, non remboursable en espèces.",
       emailLabel: "Adresse e-mail",
       platzhalter: "nom@exemple.fr",
       einwilligung: "Oui, je souhaite recevoir la newsletter DISORDER119 avec les nouvelles pièces et offres par e-mail – y compris la mesure de l'ouverture des e-mails et des clics sur les liens. Je peux retirer mon consentement à tout moment, p. ex. via le lien de désinscription dans chaque e-mail.",
@@ -189,6 +192,8 @@
     kopf.appendChild(el("p", "d119-nl__eyebrow", t.eyebrow));
     kopf.appendChild(el("p", "d119-nl__title", t.titel));
     kopf.appendChild(el("p", "d119-nl__intro", t.intro));
+    // Bedingungen direkt am Angebot, nicht erst in der Mail.
+    kopf.appendChild(el("p", "d119-nl__bedingungen", t.bedingungen));
     form.appendChild(kopf);
 
     var zeile = el("div", "d119-nl__row");

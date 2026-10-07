@@ -427,3 +427,11 @@ test("the confirmation shows each piece with its photo and the chosen shipping",
   assert.match(mail.html, /Deine 2 Stücke/);
   assert.match(mail.html, /disorder119\.com\/konto\//);
 });
+
+test("free standard shipping reads 'kostenlos' instead of 0,00 €", () => {
+  const mail = formatOrderConfirmation({ ...ORDER, shipping_cents: 0, total_cents: 38000, versand: { art: "standard", carrier: "DPD" } },
+    { contactEmail: "bestellung@disorder119.com", taxProfile: {mode:"small_business",confirmed:true,tax_number:"TEST-ONLY-123",seller:SELLER} });
+  assert.match(mail.text, /Versand · Standard \(DPD\): kostenlos/);
+  assert.match(mail.html, /kostenlos/);
+  assert.doesNotMatch(mail.text, /Versand · Standard \(DPD\): 0,00/);
+});

@@ -1023,8 +1023,9 @@ export default {
         if (!adresse) throw new PublicError("ADRESSE_UNVOLLSTAENDIG", 422);
         // Versandart und -preis prueft der Server selbst (versand.js). Weicht
         // der Preis von dem ab, den die Kundschaft gesehen hat, gibt es 409
-        // mit der aktuellen Liste - noch bevor etwas reserviert wird.
-        const versand = await versandFuerBestellung(env, items, body.versand, body.versandPreisCents);
+        // mit der aktuellen Liste - noch bevor etwas reserviert wird. Ab dem
+        // Warenwert in versand.versandkostenfrei kostet der Standard 0 Cent.
+        const versand = await versandFuerBestellung(env, items, body.versand, body.versandPreisCents, cents);
         const shippingCents = versand.preisCents;
         const reservations = await reserveAll(env, items, key, reqId);
         let providerOrder;
