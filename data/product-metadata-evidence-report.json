@@ -1,20 +1,21 @@
 {
   "policy": "Only explicit source evidence; no guessed physical product facts.",
-  "available_items": 165,
+  "available_items": 164,
   "filled_this_run": {
     "color": 0,
     "color_corrected": 0,
     "size": 0,
-    "condition": 0,
+    "condition": 2,
     "description": 0
   },
   "unresolved_available": {
-    "size": 10,
-    "color": 28,
+    "size": 9,
+    "color": 27,
     "condition": 0
   },
   "provenance_counts": {
-    "explicit-title-color": 45
+    "explicit-labeled-source-text": 2,
+    "explicit-title-color": 46
   },
   "manual_evidence_queue": [
     {
@@ -253,14 +254,6 @@
       ]
     },
     {
-      "id": 9521,
-      "title": "Just Cavalli Jacke Damen",
-      "brand": "Just Cavalli",
-      "missing": [
-        "color"
-      ]
-    },
-    {
       "id": 9457,
       "title": "Prada Fellstola Damen",
       "brand": "Prada",
@@ -283,14 +276,6 @@
       "brand": "Prada",
       "missing": [
         "color"
-      ]
-    },
-    {
-      "id": 9365,
-      "title": "Prada Jacke mit Fellbesatz Damen Lila",
-      "brand": "Prada",
-      "missing": [
-        "size"
       ]
     }
   ]

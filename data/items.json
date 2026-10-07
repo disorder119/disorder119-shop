@@ -2799,7 +2799,7 @@
     "category": "Jackets",
     "size": "42",
     "color": "Schwarz",
-    "condition": "",
+    "condition": "Gut",
     "desc": "Aus dem kuratierten Archiv von Disorder119.\n\nEine präzise geschnittene Silhouette trifft auf eine klare, nahezu skulpturale Linienführung. Diese Just Cavalli Jacke zeichnet sich durch ihre taillierte Form aus, die den Körper strukturiert umschließt und eine elegante, leicht ausgestellte Linie im unteren Bereich erzeugt. Das textile Obermaterial zeigt eine feine, leicht strukturierte Oberfläche, die Tiefe und Charakter verleiht, ohne aufdringlich zu wirken. Markant sind die Besätze aus Felloptik am Kragen, an den Ärmeln sowie am Saum, die dem ansonsten reduzierten Design eine subtile, expressive Note hinzufügen. Der durchgehende Frontreißverschluss unterstreicht die klare, moderne Anmutung und sorgt für eine ruhige, lineare Front. Eine Balance aus klassischer Schneiderkunst und dekorativer Akzentuierung.\n\nDetails:\n\nMarke: Just Cavalli\nFarbe: Schwarz\nGröße: 42\nPassform: Tailliert\nVerschluss: Reißverschluss\nMaterial: Keine Angabe\nHerstellungsland: Italien\n\nFotografie & Passform:\n\nDas Kleidungsstück wurde auf unserer Standard-Schneiderpuppe fotografiert, die wir zur konsistenten Darstellung aller Kleidungsstücke verwenden.\n\nMaße der Schneiderpuppe:\n\nBrustumfang 89 cm\nTaillenumfang 66 cm\nHüftumfang 89 cm\nSchulterbreite 38 cm\n\nZustand:\n\nGuter gebrauchter Zustand mit leichten Gebrauchsspuren.\n\nRechtliche Hinweise:\n\nVerkauf als gebrauchtes Kleidungsstück. Die Beschreibung erfolgt nach bestem Wissen und Gewissen. Farbnuancen und Oberflächenwirkungen können aufgrund von Lichtverhältnissen bei der Fotografie sowie unterschiedlicher Bildschirmdarstellungen leicht vom Original abweichen.\n\nDisorder119 steht für sorgfältig kuratierte Designerstücke mit Fokus auf Authentizität, Qualität und zeitlose Relevanz.",
     "desc_de": "Aus dem kuratierten Archiv von Disorder119.\n\nEine präzise geschnittene Silhouette trifft auf eine klare, nahezu skulpturale Linienführung. Diese Just Cavalli Jacke zeichnet sich durch ihre taillierte Form aus, die den Körper strukturiert umschließt und eine elegante, leicht ausgestellte Linie im unteren Bereich erzeugt. Das textile Obermaterial zeigt eine feine, leicht strukturierte Oberfläche, die Tiefe und Charakter verleiht, ohne aufdringlich zu wirken. Markant sind die Besätze aus Felloptik am Kragen, an den Ärmeln sowie am Saum, die dem ansonsten reduzierten Design eine subtile, expressive Note hinzufügen. Der durchgehende Frontreißverschluss unterstreicht die klare, moderne Anmutung und sorgt für eine ruhige, lineare Front. Eine Balance aus klassischer Schneiderkunst und dekorativer Akzentuierung.\n\nDetails:\n\nMarke: Just Cavalli\nFarbe: Schwarz\nGröße: 42\nPassform: Tailliert\nVerschluss: Reißverschluss\nMaterial: Keine Angabe\nHerstellungsland: Italien\n\nFotografie & Passform:\n\nDas Kleidungsstück wurde auf unserer Standard-Schneiderpuppe fotografiert, die wir zur konsistenten Darstellung aller Kleidungsstücke verwenden.\n\nMaße der Schneiderpuppe:\n\nBrustumfang 89 cm\nTaillenumfang 66 cm\nHüftumfang 89 cm\nSchulterbreite 38 cm\n\nZustand:\n\nGuter gebrauchter Zustand mit leichten Gebrauchsspuren.\n\nRechtliche Hinweise:\n\nVerkauf als gebrauchtes Kleidungsstück. Die Beschreibung erfolgt nach bestem Wissen und Gewissen. Farbnuancen und Oberflächenwirkungen können aufgrund von Lichtverhältnissen bei der Fotografie sowie unterschiedlicher Bildschirmdarstellungen leicht vom Original abweichen.\n\nDisorder119 steht für sorgfältig kuratierte Designerstücke mit Fokus auf Authentizität, Qualität und zeitlose Relevanz.",
     "desc_en": "From the curated archive of Disorder119.\n\nA precisely cut silhouette meets a clear, almost sculptural line. This Just Cavalli jacket stands out for its fitted shape, which wraps the body in a structured way and creates an elegant, slightly flared line at the bottom. The textile outer fabric has a fine, lightly textured surface that adds depth and character without being loud. The fur-look trims at the collar, sleeves and hem are striking and give the otherwise reduced design a subtle, expressive note. The full-length front zip underlines the clean, modern look and keeps the front calm and linear. A balance of classic tailoring and decorative accents.\n\nDetails:\n\nBrand: Just Cavalli\nColour: Black\nSize: 42\nFit: Fitted\nClosure: Zip\nMaterial: Not specified\nCountry of manufacture: Italy\n\nPhotography & fit:\n\nThe garment was photographed on our standard dress form, which we use to show all garments consistently.\n\nDress form measurements:\n\nChest 89 cm\nWaist 66 cm\nHips 89 cm\nShoulder width 38 cm\n\nCondition:\n\nGood used condition with light signs of wear.\n\nLegal notes:\n\nSold as a used garment. The description is given to the best of our knowledge. Colour nuances and surface effects may differ slightly from the original due to lighting during photography and different screen displays.\n\nDisorder119 stands for carefully curated designer pieces with a focus on authenticity, quality and timeless relevance.",
@@ -2819,6 +2819,10 @@
     "brightness": 0.247,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "data_quality_sources": {
+      "color": "explicit-title-color",
+      "condition": "explicit-labeled-source-text"
+    },
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -2826,9 +2830,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "data_quality_sources": {
-      "color": "explicit-title-color"
-    }
+    "label_size": "42"
   },
   {
     "id": 9520,
@@ -8650,7 +8652,7 @@
     "category": "Jackets",
     "size": "M",
     "color": "Violett",
-    "condition": "",
+    "condition": "Gut",
     "desc": "Aus dem kuratierten Archiv von Disorder119.\n\nDiese Prada Strickjacke präsentiert sich in einem tiefen Violettton und verbindet sportliche Funktionalität mit einer klaren, reduzierten Designsprache. Der fein gerippte Strick bildet eine schmale, körpernahe Silhouette, die durch die kontrastierenden Einsätze an Schultern und Ellbogen akzentuiert wird. Der kurze Stehkragen aus technischem Material und der durchgehende Reißverschluss mit roter Zuglasche verleihen dem Piece eine funktionale, fast utilitäre Note. Die Verarbeitung wirkt präzise und ausgewogen, mit einem klaren Fokus auf Form, Linie und Tragbarkeit. Ein charakteristisches Prada-Design, das zwischen klassischer Knitwear und technischer Sportswear vermittelt.\n\nDetails:\nMarke: Prada\nFarbe: Violett\nGröße: M\nPassform: Schmal geschnitten\nVerschluss: Reißverschluss\nMaterial: Strickmaterial mit technischen Einsätzen\nHerstellungsland: Italien\n\nFotografie & Passform:\nDas Kleidungsstück wurde auf unserer Standard-Schneiderpuppe fotografiert, die wir zur konsistenten Darstellung aller Kleidungsstücke verwenden.\n\nMaße der Schneiderpuppe:\nBrustumfang 89 cm\nTaillenumfang 66 cm\nHüftumfang 89 cm\nSchulterbreite 38 cm\n\nZustand:\nGuter getragener Zustand mit leichten, altersbedingten Gebrauchsspuren.\n\nRechtliche Hinweise:\n\nVerkauf als gebrauchtes Kleidungsstück. Die Beschreibung erfolgt nach bestem Wissen und Gewissen. Farbnuancen und Oberflächenwirkungen können aufgrund von Lichtverhältnissen bei der Fotografie sowie unterschiedlicher Bildschirmdarstellungen leicht vom Original abweichen.\n\nDisorder119 steht für sorgfältig kuratierte Designerstücke mit Fokus auf Authentizität, Qualität und zeitlose Relevanz.",
     "desc_de": "Aus dem kuratierten Archiv von Disorder119.\n\nDiese Prada Strickjacke präsentiert sich in einem tiefen Violettton und verbindet sportliche Funktionalität mit einer klaren, reduzierten Designsprache. Der fein gerippte Strick bildet eine schmale, körpernahe Silhouette, die durch die kontrastierenden Einsätze an Schultern und Ellbogen akzentuiert wird. Der kurze Stehkragen aus technischem Material und der durchgehende Reißverschluss mit roter Zuglasche verleihen dem Piece eine funktionale, fast utilitäre Note. Die Verarbeitung wirkt präzise und ausgewogen, mit einem klaren Fokus auf Form, Linie und Tragbarkeit. Ein charakteristisches Prada-Design, das zwischen klassischer Knitwear und technischer Sportswear vermittelt.\n\nDetails:\nMarke: Prada\nFarbe: Violett\nGröße: M\nPassform: Schmal geschnitten\nVerschluss: Reißverschluss\nMaterial: Strickmaterial mit technischen Einsätzen\nHerstellungsland: Italien\n\nFotografie & Passform:\nDas Kleidungsstück wurde auf unserer Standard-Schneiderpuppe fotografiert, die wir zur konsistenten Darstellung aller Kleidungsstücke verwenden.\n\nMaße der Schneiderpuppe:\nBrustumfang 89 cm\nTaillenumfang 66 cm\nHüftumfang 89 cm\nSchulterbreite 38 cm\n\nZustand:\nGuter getragener Zustand mit leichten, altersbedingten Gebrauchsspuren.\n\nRechtliche Hinweise:\n\nVerkauf als gebrauchtes Kleidungsstück. Die Beschreibung erfolgt nach bestem Wissen und Gewissen. Farbnuancen und Oberflächenwirkungen können aufgrund von Lichtverhältnissen bei der Fotografie sowie unterschiedlicher Bildschirmdarstellungen leicht vom Original abweichen.\n\nDisorder119 steht für sorgfältig kuratierte Designerstücke mit Fokus auf Authentizität, Qualität und zeitlose Relevanz.",
     "desc_en": "From the curated archive of Disorder119.\n\nThis Prada knit jacket comes in a deep violet and combines sporty functionality with a clear, reduced design language. The finely ribbed knit forms a slim, close-fitting silhouette, accentuated by contrasting panels at the shoulders and elbows. The short stand-up collar in technical fabric and the full-length zip with a red pull tab give the piece a functional, almost utilitarian note. The workmanship is precise and balanced, with a clear focus on shape, line and wearability. A characteristic Prada design that bridges classic knitwear and technical sportswear.\n\nDetails:\nBrand: Prada\nColour: Violet\nSize: M\nFit: Slim\nClosure: Zip\nMaterial: Knit with technical panels\nCountry of manufacture: Italy\n\nPhotography & fit:\nThe garment was photographed on our standard dress form, which we use to show all garments consistently.\n\nDress form measurements:\nChest 89 cm\nWaist 66 cm\nHips 89 cm\nShoulder width 38 cm\n\nCondition:\nGood worn condition with light, age-related signs of wear.\n\nLegal notes:\n\nSold as a used garment. The description is given to the best of our knowledge. Colour nuances and surface effects may differ slightly from the original due to lighting during photography and different screen displays.\n\nDisorder119 stands for carefully curated designer pieces with a focus on authenticity, quality and timeless relevance.",
@@ -8669,15 +8671,17 @@
     "public_status": "AVAILABLE",
     "data_quality_open": [],
     "data_quality_sources": {
-      "color": "explicit-title-color"
+      "color": "explicit-title-color",
+      "condition": "explicit-labeled-source-text"
     },
     "department": "Women",
-    "product_type": "Jacket",
-    "taxonomy_category": "Jackets",
+    "product_type": "Cardigan",
+    "taxonomy_category": "Knitwear",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true
+    "taxonomy_reviewed": true,
+    "label_size": "M"
   },
   {
     "id": 9368,

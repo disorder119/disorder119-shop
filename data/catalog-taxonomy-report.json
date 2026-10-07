@@ -20,12 +20,12 @@
     "Bomber Jacket": 1,
     "Boots": 8,
     "Cap": 3,
-    "Cardigan": 4,
+    "Cardigan": 5,
     "Coat": 2,
     "Dress": 18,
     "Hat": 3,
     "Heels": 1,
-    "Jacket": 49,
+    "Jacket": 48,
     "Joggers": 1,
     "Knit Top": 1,
     "Loafers": 2,
@@ -56,7 +56,7 @@
     "Vest": 7,
     "Wallet": 1
   },
-  "missingSizeCount": 48,
+  "missingSizeCount": 47,
   "missingSize": [
     {
       "id": 6239,
@@ -289,11 +289,6 @@
       "title": "Yves Saint Laurent Nadelstreifen-Anzug Herren"
     },
     {
-      "id": 9365,
-      "article": "11",
-      "title": "Prada Jacke mit Fellbesatz Damen Lila"
-    },
-    {
       "id": 9368,
       "article": "10",
       "title": "Balmain Kunstfelljacke Damen"
@@ -423,7 +418,7 @@
     {
       "id": 9440,
       "article": "85",
-      "title": "Prada Langarm-Poloshirt mit Fellkragen Damen Grau",
+      "title": "Prada Langarm-Poloshirt mit Felloptik-Kragen Damen Grau",
       "structuredSize": "M",
       "descriptionLabelSize": "L"
     },
@@ -638,7 +633,7 @@
       "descriptionLabelSize": "M"
     }
   ],
-  "legacyCategoryMismatchCount": 28,
+  "legacyCategoryMismatchCount": 29,
   "legacyCategoryMismatches": [
     {
       "id": 6240,
@@ -863,6 +858,14 @@
       "legacyCategory": "Tops",
       "taxonomyCategory": "Knitwear",
       "productType": "Sweatshirt"
+    },
+    {
+      "id": 9365,
+      "article": "11",
+      "title": "Prada Strickjacke Damen Lila",
+      "legacyCategory": "Jackets",
+      "taxonomyCategory": "Knitwear",
+      "productType": "Cardigan"
     }
   ],
   "note": "Legacy category is intentionally preserved for protected Match/Chaos/Baukasten behavior; reviewed taxonomy is exported separately."

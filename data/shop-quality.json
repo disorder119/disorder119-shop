@@ -2,14 +2,14 @@
   "summary": {
     "items_total": 239,
     "catalog_public": 236,
-    "available": 165,
+    "available": 164,
     "reserved": 0,
-    "sold": 71,
+    "sold": 72,
     "draft": 3
   },
   "quality": {
     "missing_size": {
-      "count": 48,
+      "count": 47,
       "item_ids": [
         6042,
         6184,
@@ -25,7 +25,6 @@
         6220,
         6238,
         6239,
-        9365,
         9367,
         9368,
         9369,
@@ -62,7 +61,7 @@
       ]
     },
     "missing_color": {
-      "count": 84,
+      "count": 83,
       "item_ids": [
         6042,
         6184,
@@ -139,7 +138,6 @@
         9504,
         9505,
         9507,
-        9521,
         9528,
         9529,
         9530,
@@ -166,15 +164,11 @@
       ]
     },
     "price_on_request": {
-      "count": 7,
+      "count": 3,
       "item_ids": [
-        9365,
-        9413,
         9426,
         9437,
-        9457,
-        9521,
-        9535
+        9457
       ]
     },
     "missing_brand": {
