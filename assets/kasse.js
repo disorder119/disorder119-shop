@@ -24,7 +24,7 @@
       fehltEmail: "Bitte gib eine gültige E-Mail-Adresse an.", appleCoupon: "Mit Gutschein bitte PayPal wählen; der Rabatt wird dort vor der Zahlung geprüft.",
       vorname: "Vorname", nachname: "Nachname", plz: "PLZ", ort: "Ort", strasse: "Straße",
       hausnummer: "Nr.", zusatz: "Adresszusatz (optional)",
-      landHinweis: "Wir liefern innerhalb Deutschlands, bezahlt wird mit PayPal. Lieferung an eine Packstation ist bald mit DHL möglich.",
+      landHinweis: "Wir liefern innerhalb Deutschlands, bezahlt wird mit PayPal oder Apple Pay. Lieferung an eine Packstation ist bald mit DHL möglich.",
       agb: "AGB & Widerruf", datenschutz: "Datenschutz", impressum: "Impressum", widerruf: "Vertrag widerrufen",
       laedt: "Wird geladen …", leer: "Dein Warenkorb ist leer.", zumArchiv: "Zum Archiv",
       nichtMehr: "Nicht mehr verfügbar – wird nicht mitbestellt:", groesse: "Größe", paket: "Paket",
@@ -66,7 +66,7 @@
       fehltEmail: "Please enter a valid email address.", appleCoupon: "For coupons, please choose PayPal; the discount is checked before payment.",
       vorname: "First name", nachname: "Last name", plz: "Postcode", ort: "Town", strasse: "Street",
       hausnummer: "No.", zusatz: "Address line 2 (optional)",
-      landHinweis: "We deliver within Germany; payment is made with PayPal. Delivery to a DHL Packstation is coming soon.",
+      landHinweis: "We deliver within Germany; payment is made with PayPal or Apple Pay. Delivery to a DHL Packstation is coming soon.",
       agb: "Terms & withdrawal", datenschutz: "Privacy", impressum: "Legal notice", widerruf: "Withdraw from contract here",
       laedt: "Loading …", leer: "Your cart is empty.", zumArchiv: "To the archive",
       nichtMehr: "No longer available – not included:", groesse: "Size", paket: "parcel",
@@ -108,7 +108,7 @@
       fehltEmail: "Saisis une adresse e-mail valide.", appleCoupon: "Pour utiliser un bon, choisis PayPal ; la réduction est vérifiée avant le paiement.",
       vorname: "Prénom", nachname: "Nom", plz: "Code postal", ort: "Ville", strasse: "Rue",
       hausnummer: "N°", zusatz: "Complément d'adresse (facultatif)",
-      landHinweis: "Nous livrons en Allemagne ; le paiement se fait avec PayPal. La livraison en Packstation DHL arrive bientôt.",
+      landHinweis: "Nous livrons en Allemagne ; le paiement se fait avec PayPal ou Apple Pay. La livraison en Packstation DHL arrive bientôt.",
       agb: "CGV & rétractation", datenschutz: "Confidentialité", impressum: "Mentions légales", widerruf: "Se rétracter du contrat ici",
       laedt: "Chargement …", leer: "Ton panier est vide.", zumArchiv: "Vers l'archive",
       nichtMehr: "Plus disponible – non inclus :", groesse: "Taille", paket: "colis",
@@ -671,6 +671,8 @@
         return;
       }
     } catch (e) { /* ohne Gutschein fortfahren */ }
+    // ApplePaySession gibt es in Safari - und mit Apples Skript (apple-pay-sdk.js)
+    // auch in Chrome, Edge und Firefox: Dort bezahlt man per QR-Code mit dem iPhone.
     if (!window.paypal || typeof window.paypal.Applepay !== "function" ||
         !window.ApplePaySession || !window.ApplePaySession.canMakePayments()) return;
     var apple = window.paypal.Applepay();
