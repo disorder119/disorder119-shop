@@ -1,0 +1,2538 @@
+{
+ "_hinweis": "Artikel-Research 08.10.2026: Etiketten/Datumscodes auf den Fotos, Google Lens (Rueckwaertsbildsuche), gezielte Websuche. konfidenz: hoch = Jahr/Saison belegt, mittel = Linie + Aera belegt, niedrig = nur Etikett/Katalog. zustand: Maengel aus der Fotodurchsicht, die nicht im Katalogtext stehen. Genutzt von scripts/ebay_export.py.",
+ "artikel": {
+  "6241": {
+   "linie": "Gaultier Jean's (Denim-Linie von Jean Paul Gaultier, ab 1992)",
+   "modell": "Marbled-Wash Jeans mit V-Passe, Sternlogo-Bund, Knopfleiste",
+   "era": "1990er (Gaultier-Jean's-Label mit Stern, ca. 1992–2004)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Gaultier Jean's Label ab 1992 (University of Westminster Archive); Vintage Fashion Guild zu Labelvarianten 1990er/1999–2004"
+   ],
+   "stichworte": [
+    "Gaultier Jean's",
+    "90s Vintage",
+    "Marble Wash",
+    "Sternlogo",
+    "Archive Denim"
+   ]
+  },
+  "6237": {
+   "linie": "Prada (Linea Rossa / Prada Sport: roter Sohlen-Tab)",
+   "modell": "Glatte Leder-Loafer, Stilcode 4D1653 (Innensohle), UK 9",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Stilcode 4D1653 auf der Innensohle; kein Treffer online"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Linea Rossa",
+    "Loafer",
+    "Made in Italy",
+    "Y2K"
+   ]
+  },
+  "6236": {
+   "linie": "Prada Linea Rossa (roter Streifen)",
+   "modell": "Plume Nylon-Sneaker, Stilcode 3E6029 (Karton), Nylon/Wildleder, Metallic-Einsätze",
+   "era": "um 2010 (Kartonetikett 'C004 2010')",
+   "jahr": "2010",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Originalkarton mit Stilcode 3E6029 und Datumscode 2010"
+   ],
+   "stichworte": [
+    "Prada Linea Rossa",
+    "Plume",
+    "Nylon Sneaker",
+    "Y2K Archive",
+    "Originalkarton"
+   ]
+  },
+  "6235": {
+   "linie": "Dior Homme (Ära Kris Van Assche, 2007–2018)",
+   "modell": "High-Top-Sneaker mit Wollfilz-Schaft, Leder/Wildleder, CD-Logo in der Sohle, Innencode '12E FR 40'",
+   "era": "Anfang 2010er (Innencode 12E deutet auf 2012)",
+   "jahr": "2012 (vermutlich)",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Innencode 12E FR 40; Kris-Van-Assche-Ära laut Grailed 2007–2018"
+   ],
+   "stichworte": [
+    "Dior Homme",
+    "Kris Van Assche",
+    "High Top",
+    "Wollfilz",
+    "Archive Sneaker"
+   ]
+  },
+  "6234": {
+   "linie": "Y's (Yohji Yamamoto), Made in Japan",
+   "modell": "High-Top mit drei Klettriemen und seitlichem Reißverschluss, Leder, Karton MX-E02-725, Etikett 'AW05502AA'",
+   "era": "Herbst/Winter 2005 (Karton-Etikett AW05)",
+   "jahr": "2005",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Originalkarton MX-E02-725 mit Saisoncode AW05, Größe 3 / 26 cm"
+   ],
+   "stichworte": [
+    "Y's Yohji Yamamoto",
+    "AW05",
+    "Made in Japan",
+    "Riemen-Sneaker",
+    "Originalkarton"
+   ]
+  },
+  "6233": {
+   "linie": "Dior Homme (Ära Kris Van Assche)",
+   "modell": "High-Top-Sneaker, schwarzes Leder, weißer Zungen-Tab, Metallplättchen an den Schnürsenkeln, 'Dior Homme' auf der Sohle, Innencode '15E FR 41'",
+   "era": "Mitte 2010er (Innencode 15E deutet auf 2015)",
+   "jahr": "2015 (vermutlich)",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Innencode 15E FR 41"
+   ],
+   "stichworte": [
+    "Dior Homme",
+    "High Top",
+    "Kris Van Assche",
+    "B01-Ära",
+    "Archive"
+   ]
+  },
+  "6232": {
+   "linie": "Prada Linea Rossa",
+   "modell": "America's Cup Sneaker, Lackleder Dunkelblau mit silbernem Mesh – die Original-Farbstellung des 1997 für das Luna-Rossa-Segelteam entworfenen Modells",
+   "era": "America's Cup seit 1997; dieses Paar frühe 2000er-Ausführung (Rotstreifen-Sohle, Lackleder)",
+   "jahr": "",
+   "konfidenz": "hoch (Modell) / mittel (Ära)",
+   "quellen": [
+    "Modellmerkmale America's Cup (Prada Linea Rossa, 1997 Luna Rossa)"
+   ],
+   "stichworte": [
+    "Prada America's Cup",
+    "Linea Rossa",
+    "Luna Rossa",
+    "Y2K Sneaker",
+    "Lackleder"
+   ]
+  },
+  "6231": {
+   "linie": "Prada Linea Rossa / Prada Sport (roter Sohlen-Tab)",
+   "modell": "Chelsea Boots aus schwarzem Glattleder mit Gummizug, Stilcode 4T2437 (Innensohle), UK 9",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Stilcode 4T2437 auf der Innensohle"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Chelsea Boots",
+    "Linea Rossa",
+    "Made in Italy"
+   ]
+  },
+  "6230": {
+   "linie": "Prada Sport (Linea Rossa)",
+   "modell": "Low-Top-Sneaker mit Klettriemen, Mesh Grün, Wildleder/Leder Navy-Schwarz, Innencode 1961",
+   "era": "spätes 1990er / frühes 2000er Prada-Sport-Design (Klettriemen über Schnürung)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Innencode 1961, Designmerkmale Prada Sport um 1999–2003"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Linea Rossa",
+    "Velcro Sneaker",
+    "90s",
+    "Y2K"
+   ]
+  },
+  "6229": {
+   "linie": "Prada Sport (Linea Rossa)",
+   "modell": "Mesh-Sneaker mit drei Klettriemen, Creme/Grau, Wildleder-Zehenkappe, Innencode 2221",
+   "era": "frühe 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Innencode 2221, Designmerkmale Prada Sport um 2000–2004"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Linea Rossa",
+    "Mesh Sneaker",
+    "Y2K",
+    "Velcro"
+   ]
+  },
+  "6228": {
+   "linie": "Prada Linea Rossa",
+   "modell": "Walking-/Trainingssneaker, Mesh Grau mit Wildleder und weißem Leder-Schnürfeld, Gummisohle mit Prada-Kreislogo, Stilcode 4E0874 (Zungenetikett), US 9",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Stilcode 4E0874 auf dem Zungenetikett"
+   ],
+   "stichworte": [
+    "Prada Linea Rossa",
+    "Prada Sport",
+    "Mesh Sneaker",
+    "Y2K",
+    "Made in Italy"
+   ]
+  },
+  "6227": {
+   "linie": "Prada Linea Rossa (roter Zungen-Tab)",
+   "modell": "Low-Top-Sneaker aus grauem Wildleder mit schwarzer Gummi-Zehenkappe und Prada-Schriftzug an der Sohle, Stilcode 4E2105",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Stilcode 4E2105 auf der Innenzunge"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Wildleder Sneaker",
+    "Linea Rossa",
+    "Toe Cap"
+   ]
+  },
+  "6226": {
+   "linie": "Prada (Hauptlinie, Herbst/Winter-Schuh)",
+   "modell": "Chelsea Boots aus grauem Wildleder mit gezahnter schwarzer Gummisohle (Prada-Sägezahnsohle), Stilcode 3T5874 (Innensohle), EU 40",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Stilcode 3T5874 auf der Innensohle"
+   ],
+   "stichworte": [
+    "Prada Chelsea Boots",
+    "Wildleder",
+    "Sägezahnsohle",
+    "Made in Italy"
+   ]
+  },
+  "6225": {
+   "linie": "Prada Sport / Linea Rossa (rote Sohlenmarke)",
+   "modell": "Stiefeletten aus schwarzem Glattleder mit seitlichem Reißverschluss und abgesteppten Nähten, Stilcode 4T1437 (Innenetikett), UK 7.5",
+   "era": "frühe 2000er (typische Prada-Sport-Zip-Boots um 2000–2005)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Stilcode 4T1437, Prada-Sport-Sohle mit rotem Kreis"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Zip Boots",
+    "Y2K",
+    "Linea Rossa"
+   ]
+  },
+  "6224": {
+   "linie": "Prada Sport / Linea Rossa (roter Fersen-Tab)",
+   "modell": "Stiefeletten aus schwarzem Glattleder mit seitlichem Reißverschluss, flache Gummisohle, EU 38",
+   "era": "frühe 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Linea-Rossa-Tab an der Ferse, flache Prada-Sport-Sohle"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Zip Boots",
+    "Y2K",
+    "Linea Rossa",
+    "Stiefeletten"
+   ]
+  },
+  "6223": {
+   "linie": "Prada Linea Rossa (rotes Zungenetikett)",
+   "modell": "Low-Top-Sneaker aus schwarzem Leder mit gerillter Gummi-Zehenkappe und Rillensohle, EU 37",
+   "era": "frühe 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Prada-Zungenetikett, Rillensohle typisch Prada Sport um 2000–2005"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Rillensohle",
+    "Y2K",
+    "Leder Sneaker"
+   ]
+  },
+  "6222": {
+   "linie": "Prada Linea Rossa (roter Sohlenstreifen)",
+   "modell": "Low-Top-Sneaker aus schwarzem Leder mit Prada-Prägung, Stilcode 4E1835 (Innenzunge), UK 8.5",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Stilcode 4E1835 auf der Innenzunge"
+   ],
+   "stichworte": [
+    "Prada Linea Rossa",
+    "Leder Sneaker",
+    "Made in Italy",
+    "Y2K"
+   ]
+  },
+  "6221": {
+   "linie": "Rundholz (Mainline, Schuhkollektion)",
+   "modell": "Slide-Sandalen aus Leder mit schwarzen Punkten, Rundholz-Prägung auf dem Fußbett, Profilsohle",
+   "era": "2010er/2020er Sommerkollektion",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Rundholz-Prägung auf dem Fußbett"
+   ],
+   "stichworte": [
+    "Rundholz",
+    "Slides",
+    "Punkte",
+    "Avantgarde",
+    "Lagenlook"
+   ]
+  },
+  "6220": {
+   "linie": "Y-3 (Yohji Yamamoto × adidas)",
+   "modell": "Sport Uniform UT Straight Leg Cargo Pants, Artikelnummer KH3044, Schwarz, neu mit Hängeetikett (adidas AG 2023, Produktion 09/25)",
+   "era": "Kollektion 2025",
+   "jahr": "2025",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Hängeetikett KH3044 'SU UT STR PANTS'; SSENSE führt das Modell als 'Sport Uniform UT Straight Leg Cargo Pants' (UVP 350 $)"
+   ],
+   "stichworte": [
+    "Y-3",
+    "Sport Uniform",
+    "Cargo Pants",
+    "Neu mit Etikett",
+    "KH3044",
+    "Yohji Yamamoto adidas"
+   ]
+  },
+  "6219": {
+   "linie": "Prada Sport / Linea Rossa (rotes Gummilogo)",
+   "modell": "Nylon-Badeshorts mit Tunnelzug und Netzinnenslip, Braun, IT 50",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Prada-Sport-Gummilogo, Prada-Wappenetikett im Bund"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Badeshorts",
+    "Nylon",
+    "Y2K",
+    "Linea Rossa"
+   ]
+  },
+  "6218": {
+   "linie": "Rundholz Black Label",
+   "modell": "Ballonrock aus schwarzer Baumwolle mit Rippbund, Größe S",
+   "era": "2010er/2020er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Etikett Rundholz Black Label"
+   ],
+   "stichworte": [
+    "Rundholz Black Label",
+    "Ballonrock",
+    "Avantgarde",
+    "Lagenlook",
+    "Oversize"
+   ]
+  },
+  "6217": {
+   "linie": "Y-3 (Yohji Yamamoto × adidas), orangefarbenes Y-3-Etikett (ältere Etikettgeneration)",
+   "modell": "Lange Slouch-Beanie ('Rasta'-Mütze) aus Strick mit tonalem Y-3-Logo, Einheitsgröße",
+   "era": "späte 2000er / frühe 2010er (orangefarbenes Etikett)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Orangefarbenes Y-3-Innenetikett"
+   ],
+   "stichworte": [
+    "Y-3",
+    "Slouch Beanie",
+    "Yohji Yamamoto",
+    "adidas",
+    "Archive"
+   ]
+  },
+  "6216": {
+   "linie": "Y-3 (Yohji Yamamoto × adidas), schwarzes Y-3-Etikett (neuere Etikettgeneration)",
+   "modell": "Strick-Beanie mit großem gesticktem Y-3-Drei-Streifen-Logo in Creme, Einheitsgröße",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Schwarzes Y-3-Innenetikett, Logo-Stickerei"
+   ],
+   "stichworte": [
+    "Y-3",
+    "Logo Beanie",
+    "Yohji Yamamoto adidas",
+    "Drei Streifen"
+   ]
+  },
+  "6215": {
+   "linie": "Ann Demeulemeester (Mainline, Made in Belgium)",
+   "modell": "Ärmelloses Tunika-Top aus bedruckter Seide mit schwarzem Blütenmuster auf Braun, Schulterbindung, Größe 38",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Weißes Ann-Demeulemeester-Etikett, Made in Belgium"
+   ],
+   "stichworte": [
+    "Ann Demeulemeester",
+    "Antwerp Six",
+    "Seide",
+    "Avantgarde",
+    "Belgian Design"
+   ]
+  },
+  "6214": {
+   "linie": "Jean Paul Gaultier Maille (Strick-Linie, 1990er/2000er)",
+   "modell": "Langer Wickelrock aus Strick mit schwarzem Blütenmotiv auf Creme, Größe L",
+   "era": "1990er/frühe 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Rotes Gaultier-Maille-Etikett mit Wappen"
+   ],
+   "stichworte": [
+    "Jean Paul Gaultier Maille",
+    "90s",
+    "Strickrock",
+    "Vintage Gaultier",
+    "Archive"
+   ]
+  },
+  "6213": {
+   "linie": "Jean Paul Gaultier Classique (Damen-Hauptlinie)",
+   "modell": "Patchwork-Mesh-Top mit Rollkragen aus bedrucktem Stretch-Tüll (Paisley, Punkte, Ikat-Motive), Größe XL",
+   "era": "späte 1990er / frühe 2000er – die bedruckten Mesh-Patchwork-Tops gehören zu Gaultiers bekanntesten Archive-Stücken (1stDibs datiert vergleichbare Classique-Mesh-Rollkragen auf 1994–1998)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Jean Paul Gaultier Classique Etikett mit Wappen; 1stDibs: Classique Mesh-Rollkragen FW 1994/95 und 1998"
+   ],
+   "stichworte": [
+    "Jean Paul Gaultier Classique",
+    "Mesh Top",
+    "Patchwork",
+    "90s Gaultier",
+    "Archive"
+   ]
+  },
+  "6212": {
+   "linie": "Jean Paul Gaultier Classique / Maille (Mesh-Linie)",
+   "modell": "Rollkragen-Top aus bedrucktem Stretch-Mesh mit rot-cremefarbenem Bandhani-/Paisley-Print und schwarzen Samtabschlüssen, Größe L",
+   "era": "1990er (vergleichbare rote Paisley-Mesh-Rollkragen bei 1stDibs als 90s Gaultier Maille)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Classique-Etikett; 1stDibs: 'Gaultier Maille vintage red paisley sheer mesh turtleneck'"
+   ],
+   "stichworte": [
+    "Jean Paul Gaultier",
+    "Mesh Top",
+    "Paisley",
+    "90s",
+    "Archive",
+    "Rollkragen"
+   ]
+  },
+  "6211": {
+   "linie": "Y-3 (Yohji Yamamoto × adidas), orangefarbenes Frühphasen-Etikett",
+   "modell": "Baseball-Cap Grün mit großem Y-3-Logo, verstellbar; Innenetikett '05/05 745254' = Produktion Mai 2005",
+   "era": "2005 – aus den ersten Y-3-Jahren (Linie seit 2002/03)",
+   "jahr": "2005",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Innenetikett mit Datumscode 05/05 und Artikelnummer 745254"
+   ],
+   "stichworte": [
+    "Y-3 2005",
+    "Early Y-3",
+    "Logo Cap",
+    "Yohji Yamamoto adidas",
+    "Archive"
+   ]
+  },
+  "6210": {
+   "linie": "Prada Sport / Linea Rossa (roter Tab, altes Prada-Etikett 'Made in Italy')",
+   "modell": "Fleecejacke Schwarz mit Stehkragen, Nylon-Taschenblenden und Saumkordel, Größe XL",
+   "era": "späte 1990er / frühe 2000er (klassische Prada-Sport-Fleece-Ära)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Prada-Sport-Tab und Etikettgeneration"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Fleece",
+    "Linea Rossa",
+    "90s Techwear",
+    "Y2K"
+   ]
+  },
+  "6209": {
+   "linie": "Prada Sport / Linea Rossa (rotes Wappenetikett)",
+   "modell": "Fleecejacke Dunkelgrün mit Stehkragen und Nylon-Ellbogenverstärkungen, Größe XXL",
+   "era": "späte 1990er / frühe 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Prada-Wappenetikett, Prada-Sport-Tab"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Fleece",
+    "Linea Rossa",
+    "Techwear",
+    "Y2K"
+   ]
+  },
+  "6208": {
+   "linie": "Prada Challenge – Teamwear der Luna Rossa Challenge (Prada-Segelteam, America's Cup 2003)",
+   "modell": "Trainingsjacke aus Baumwoll-Piqué (100 % Baumwolle laut Etikett) mit hellblauem Reißverschluss und Paspeln, 'PRADA CHALLENGE'-Namensetikett, roter Rückenstreifen",
+   "era": "America's-Cup-Kampagnen von Prada/Luna Rossa (2000 Auckland, 2003 Auckland, 2007 Valencia); Händlerangaben datieren vergleichbare Teile meist auf 2003",
+   "jahr": "2003 (vermutlich)",
+   "konfidenz": "hoch (Linie) / niedrig (Jahr)",
+   "quellen": [
+    "'Prada Challenge'-Etikett mit Namensfeld; Vestiaire/eBay-Listings 'Prada Challenge Luna Rossa 2003'; andere Händler nennen 2000 oder 2007"
+   ],
+   "stichworte": [
+    "Prada Challenge",
+    "Luna Rossa",
+    "America's Cup 2003",
+    "Sailing Team",
+    "Archive Prada Sport"
+   ]
+  },
+  "6207": {
+   "linie": "Yves Saint Laurent Fourrures (Pelz-/Lederlinie von YSL, 1970er–1990er)",
+   "modell": "Lederjacke/Kurzmantel Schwarz mit Fellbesatz an Kragen und Ärmeln, innen komplett gefüttert, Made in France",
+   "era": "1980er/1990er (Fourrures-Etikett in Gold auf Braun)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Etikett 'Yves Saint Laurent Fourrures, Made in France'"
+   ],
+   "stichworte": [
+    "Yves Saint Laurent Fourrures",
+    "Vintage YSL",
+    "80s",
+    "Lederjacke",
+    "Rive Gauche Ära"
+   ]
+  },
+  "6206": {
+   "linie": "JPG Jean's (Denim-Linie von Jean Paul Gaultier, Nachfolger von Gaultier Jean's, 2000er)",
+   "modell": "Jeansrock Schwarz, knielang, mit seitlichem Reißverschluss und Fransensaum, Made in Italy, Größe 42",
+   "era": "frühe/mittlere 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Etikett 'JPG Jean's' mit Weltkugeln, Made in Italy"
+   ],
+   "stichworte": [
+    "JPG Jean's",
+    "Jean Paul Gaultier",
+    "Y2K",
+    "Jeansrock",
+    "Archive"
+   ]
+  },
+  "6205": {
+   "linie": "Jean Paul Gaultier (Accessoires)",
+   "modell": "Ledergürtel mit handbemalten Schwan-Bildfeldern in Rot, Blau, Grün und Braun, silberfarbene Schließe, geprägter Gaultier-Schriftzug",
+   "era": "1990er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Prägung 'Jean Paul Gaultier' auf der Rückseite"
+   ],
+   "stichworte": [
+    "Jean Paul Gaultier",
+    "Vintage Gürtel",
+    "Schwan",
+    "90s",
+    "Handbemalt"
+   ]
+  },
+  "6204": {
+   "linie": "Raf Simons (Mainline, frühes schwarzes Etikett, Made in Belgium)",
+   "modell": "Ärmellose Lederweste ('Leather Shoulder Vest') aus grau-grünem Nappaleder mit seitlichem Reißverschluss, Größe 52",
+   "era": "Frühjahr/Sommer 1999 – Kollektion 'Kinetic Youth' (Pariser Show mit Spiegelkugel, Bowie-Soundtrack; Vogue beschreibt 'leather shoulder vests' als Teil der Looks)",
+   "jahr": "1999",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Vogue Philippines / The Fader / Dazed zu Raf Simons SS 1999 'Kinetic Youth'; Hero Magazine nennt abweichend FW99"
+   ],
+   "stichworte": [
+    "Raf Simons Kinetic Youth",
+    "SS99",
+    "Archive Raf Simons",
+    "Lederweste",
+    "90s Antwerp"
+   ]
+  },
+  "6203": {
+   "linie": "Y-3 (Yohji Yamamoto × adidas), schwarzes Etikett 'Y-3 adidas Yohji Yamamoto'",
+   "modell": "Asymmetrisches Maxikleid aus Jersey mit Lagen-Oberteil, Cut-out-Rücken und Y-3-Logo am Saum, Größe XS/TP, Made in Thailand",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Etikettgeneration, Logo-Druck"
+   ],
+   "stichworte": [
+    "Y-3",
+    "Asymmetric Dress",
+    "Yohji Yamamoto adidas",
+    "Avantgarde Sportswear"
+   ]
+  },
+  "6202": {
+   "linie": "Prada Linea Rossa (rotes 'Prada Made in Italy'-Etikett)",
+   "modell": "Kurze Trainingsjacke aus hellblauem Nylon mit gestreiftem Stehkragen (Marine/Creme), Rippbündchen, Netzfutter, Größe S (laut Nutzer eher Kinder-/XS-Passform)",
+   "era": "um 2000 (Prada-Sport-Nylon-Ära)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Etikettgeneration Prada Sport, Materialetikett 100 % Nylon/Polyamid"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Linea Rossa",
+    "Track Jacket",
+    "Y2K",
+    "Nylon"
+   ]
+  },
+  "6201": {
+   "linie": "Walter Van Beirendonck (Mainline, rotes Namensetikett)",
+   "modell": "Longsleeve Marineblau mit 'DO(N'T) WORRY'-Print in Schwarz, Größe XXL (Etikett) / XL",
+   "era": "2000er/2010er (Mainline-Etikett nach dem W<-Ende 1999)",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Rotes Walter-Van-Beirendonck-Etikett; keine Saisonquelle gefunden"
+   ],
+   "stichworte": [
+    "Walter Van Beirendonck",
+    "Don't Worry",
+    "Antwerp Six",
+    "Graphic Longsleeve"
+   ]
+  },
+  "9364": {
+   "linie": "Prada (Hauptlinie)",
+   "modell": "Rabbit-Intarsia-Pullover aus Wolle/Kaschmir, Rosé mit blauem Hasen-Jacquard",
+   "era": "2018",
+   "jahr": "2018",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Google Lens: Prada Rabbit Intarsia Sweater, Frühjahrskollektion 2018; Vestiaire, The RealReal 'Prada 2018', ModeSens"
+   ],
+   "stichworte": [
+    "Prada Bunny",
+    "Rabbit Intarsia",
+    "Resort 2018",
+    "SS18",
+    "Hasenpullover"
+   ]
+  },
+  "9476": {
+   "linie": "Jean Paul Gaultier (Hauptlinie)",
+   "modell": "Cyberbaba Maori-Tribal-Tattoo-Maxikleid, ärmellos, Schwarz/Rot/Creme",
+   "era": "Frühjahr/Sommer 1996",
+   "jahr": "1996",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Google Lens: 'Jean Paul Gaultier Vintage SS 1996 Cyberbaba Maori Tribal Tattoo Maxi Dress' (Etsy, Ciao Kasia, DolceVitaHub 570 €, ReSee 'Tattoo Print Maxi Dress S/S 1996')"
+   ],
+   "stichworte": [
+    "Cyberbaba",
+    "SS 1996",
+    "Tattoo Dress",
+    "Maori",
+    "Runway",
+    "Archive"
+   ]
+  },
+  "9410": {
+   "linie": "Prada (Hauptlinie)",
+   "modell": "Nylon-Windbreaker mit Kapuze und Strand-Landschafts-Print in Lila/Blau",
+   "era": "Frühjahr/Sommer 2010",
+   "jahr": "2010",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Google Lens: 'Prada Nylon Jacket Windbreaker Spring/Summer 2010' (eBay), DolceVitaHub 'SS2010 Prada Beach Landscape Purple Windbreaker', Holsales"
+   ],
+   "stichworte": [
+    "SS 2010",
+    "Beach Print",
+    "Landscape",
+    "Runway",
+    "Prada Nylon"
+   ]
+  },
+  "9383": {
+   "linie": "Balenciaga (Demna-Ära)",
+   "modell": "Speedhunters Longsleeve, verwaschenes Schwarz mit Bandgrafik-Print",
+   "era": "2018",
+   "jahr": "2018",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Google Lens: Balenciaga Speedhunters Long Sleeve T-Shirt; eBay 'Balenciaga 2018 Speedhunters Demna', SASOM, The Luxury Closet"
+   ],
+   "stichworte": [
+    "Speedhunters",
+    "Demna",
+    "2018",
+    "Band Tee"
+   ]
+  },
+  "9510": {
+   "linie": "Balenciaga (Uniform für die SNCF)",
+   "modell": "Weste aus der Dienstkleidung, die Balenciaga für die französische Bahn SNCF entwarf",
+   "era": "ca. 1990–1996",
+   "jahr": "1990 (vermutlich)",
+   "konfidenz": "mittel",
+   "quellen": [
+    "INA-Archiv: SNCF ließ 1990 neue Uniformen der Zugbegleiter von Balenciaga entwerfen (Antenne 2, 18.09.1990)",
+    "Vintage Fashion Guild Forum: Balenciaga-SNCF-Uniformen bis Ende der 1990er in Gebrauch, Nachfolger Ted Lapidus 1996"
+   ],
+   "stichworte": [
+    "SNCF",
+    "Uniform",
+    "1990",
+    "Balenciaga Vintage",
+    "Workwear"
+   ]
+  },
+  "9398": {
+   "linie": "Comme des Garçons (Hauptlinie)",
+   "modell": "Union-Jack-Cami, feingestricktes Trägertop mit britischer Flagge",
+   "era": "2006 (Kollektion mit Union-Jack-Motiven)",
+   "jahr": "2006",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Google Lens: 'Comme des Garçons Union Jack Cami'; 1stDibs '2006 Comme des Garcons British Flag tank', RAGTAG"
+   ],
+   "stichworte": [
+    "Union Jack",
+    "2006",
+    "Rei Kawakubo",
+    "British Flag",
+    "Archive"
+   ]
+  },
+  "9412": {
+   "linie": "Supreme",
+   "modell": "Jeans mit Cloud-/Bleach-Wash in Grau, rotes Box-Logo-Label, Lederpatch 'Supreme New York'",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Google Lens nur generische Treffer; Websuche ohne 'Cloud Wash'-Treffer"
+   ],
+   "stichworte": [
+    "Supreme Denim",
+    "Bleach Wash",
+    "Box Logo"
+   ]
+  },
+  "6194": {
+   "linie": "A.F. Vandevorst",
+   "modell": "Cardigan mit Camouflage-Jacquard Grau/Braun, rotes Kreuz im Nacken gestickt, 100 % Wolle, Made in Belgium",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Etikettgeneration (schwarz)"
+   ],
+   "stichworte": [
+    "A.F. Vandevorst",
+    "Red Cross",
+    "Antwerpen",
+    "Camouflage"
+   ]
+  },
+  "6195": {
+   "linie": "A.F. Vandevorst",
+   "modell": "Transparente Baumwoll-Organza-Bluse Marine mit rotem Kreuz an der Rückenpasse",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Etikett A.F. VANDEVORST 42"
+   ],
+   "stichworte": [
+    "A.F. Vandevorst",
+    "Red Cross",
+    "Sheer",
+    "Antwerpen"
+   ]
+  },
+  "9379": {
+   "linie": "Y-3 (Yohji Yamamoto × adidas), orangefarbenes Etikett",
+   "modell": "Kapuzenjacke aus Baumwoll-Twill mit grau gefütterter Kapuze",
+   "era": "frühe Y-3-Jahre, 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Orangefarbenes Y-3-Etikett 'YOHJI YAMAMOTO' (ca. 2003–2009)"
+   ],
+   "stichworte": [
+    "Y-3",
+    "Early Y-3",
+    "2000s",
+    "Yohji Yamamoto adidas"
+   ]
+  },
+  "9380": {
+   "linie": "Y-3 (Yohji Yamamoto × adidas), weißes Etikett mit Zitat",
+   "modell": "Nylon-Parka mit Kapuze, Pattentaschen, verlängertem Rücken",
+   "era": "2017–2022",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Weißes Y-3-Etikett mit Zitat 'It's an exchange between different cultures…' und Yohji-Signatur (ab ca. 2017), M/M, Made in China"
+   ],
+   "stichworte": [
+    "Y-3",
+    "Parka",
+    "Techwear",
+    "Yohji Yamamoto"
+   ]
+  },
+  "9416": {
+   "linie": "Y-3 (Yohji Yamamoto × adidas), orangefarbenes Etikett",
+   "modell": "Zip-Hoodie mit Cargo-Taschen und Netzfutter, 95 % Baumwolle / 5 % Elasthan, XS/TP",
+   "era": "2005",
+   "jahr": "2005",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Pflegeetikett '05/05 744095 KCK001' = Produktion Mai 2005, Artikelnummer 744095"
+   ],
+   "stichworte": [
+    "Y-3 2005",
+    "Early Y-3",
+    "Cargo Hoodie",
+    "Yohji Yamamoto adidas"
+   ]
+  },
+  "9417": {
+   "linie": "Y-3 (Yohji Yamamoto × adidas)",
+   "modell": "Zip-Weste mit Netzrücken, Riegel und großem Y-3-Logo, S/P",
+   "era": "Frühjahr/Sommer 2007",
+   "jahr": "2007",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Pflegeetikett '12/06 908460 KYT1004' = Produktion Dezember 2006, Artikelnummer 908460"
+   ],
+   "stichworte": [
+    "Y-3 2007",
+    "Mesh Vest",
+    "Yohji Yamamoto adidas"
+   ]
+  },
+  "9480": {
+   "linie": "Y-3 (Yohji Yamamoto × adidas), Schuhe Made in Italy",
+   "modell": "Klett-Sneaker aus Leder/Neopren mit neongrünen Sohlenakzenten, mit silbernem Originalkarton",
+   "era": "frühe Y-3-Schuhgeneration, ca. 2003–2008",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Originalkarton 'Trademark Application N° MI98C011995, Made in Italy' (frühe Y-3-Kartons)"
+   ],
+   "stichworte": [
+    "Y-3 Sneaker",
+    "Made in Italy",
+    "Early Y-3",
+    "Velcro"
+   ]
+  },
+  "6192": {
+   "linie": "Y-3 (Yohji Yamamoto × adidas), schwarzes Etikett",
+   "modell": "Trainingsjacke aus meliertem Strick mit Tape-Zippern und Stehkragen, Gr. S",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Schwarzes Y-3-Etikett, Barcode-Tag Y-3 B20256, Made in China"
+   ],
+   "stichworte": [
+    "Y-3",
+    "Track Jacket",
+    "Yohji Yamamoto adidas"
+   ]
+  },
+  "6184": {
+   "linie": "Y-3 (Yohji Yamamoto × adidas)",
+   "modell": "Boater-Strohhut aus Raffia mit schwarzem Ripsband, Gr. S",
+   "era": "Frühjahr/Sommer 2015",
+   "jahr": "2015",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Innentag '11/14 A95617 A2L001' = Produktion November 2014, Artikelnummer A95617"
+   ],
+   "stichworte": [
+    "Y-3 SS15",
+    "Boater",
+    "Strohhut",
+    "Yohji Yamamoto adidas"
+   ]
+  },
+  "6189": {
+   "linie": "Y-3 (Yohji Yamamoto × adidas), Kasten-Logo-Etikett",
+   "modell": "Logo-T-Shirt mit großem Y-3-Print, S/P, Made in Thailand",
+   "era": "2010er (ab ca. 2013)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Etikettgeneration (Kasten-Logo), Nackenprint 'Approved under the brand with the three stripes'"
+   ],
+   "stichworte": [
+    "Y-3 Logo Tee",
+    "Yohji Yamamoto adidas"
+   ]
+  },
+  "9381": {
+   "linie": "Y-3 (Yohji Yamamoto × adidas)",
+   "modell": "Poloshirt Grün mit weißem Kragen und Y-3-Stickerei",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Schwarzes Y-3-Etikett"
+   ],
+   "stichworte": [
+    "Y-3 Polo",
+    "Yohji Yamamoto adidas"
+   ]
+  },
+  "9489": {
+   "linie": "Christian Dior (Galliano-Ära)",
+   "modell": "'I Love Dior' Set: Strick-Top und Schal mit Dior-♥-Streifen in Schwarz/Grau/Creme",
+   "era": "ca. 2004/2005 (Logomania-Strick)",
+   "jahr": "2005",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Christian-Dior-Webetikett am Schal, Katalogangabe 2005"
+   ],
+   "stichworte": [
+    "I Love Dior",
+    "Galliano",
+    "2005",
+    "Logomania",
+    "Dior Heart"
+   ]
+  },
+  "9378": {
+   "linie": "Walter Van Beirendonck – W&LT (Wild & Lethal Trash)",
+   "modell": "Eng anliegendes Top Neongrün aus Polyamid mit Hologramm-Print (Scheibe und Schriftzug), Made in Italy",
+   "era": "W&LT-Linie 1993–1999, Hologramm-Grafiken typisch 1996–1998",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Etikett 'W&LT Wild and Lethal Trash' mit Stern; 1stDibs datiert W&LT-Printtops auf die 1990er"
+   ],
+   "stichworte": [
+    "W&LT",
+    "Wild and Lethal Trash",
+    "90s",
+    "Hologram",
+    "Walter Van Beirendonck",
+    "Rave"
+   ]
+  },
+  "9377": {
+   "linie": "Walter Van Beirendonck – W&LT (Wild & Lethal Trash)",
+   "modell": "Jersey-Kleid Blau mit Hawaii-Blumen-Einsätzen, Neon-Ärmeln, Vichy-Bindeband und Stern-Badge",
+   "era": "W&LT 1996–1999",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Buntes W&LT-Etikett mit Stern"
+   ],
+   "stichworte": [
+    "W&LT",
+    "Wild and Lethal Trash",
+    "90s",
+    "Walter Van Beirendonck",
+    "Patchwork"
+   ]
+  },
+  "9413": {
+   "linie": "Walter Van Beirendonck – W&LT Jeans",
+   "modell": "Jeansrock mit Lederpatch 'Kiss the Future! W&LT Wild and Lethal Trash'",
+   "era": "W&LT 1990er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Lederpatch 'Kiss the Future!'"
+   ],
+   "stichworte": [
+    "W&LT",
+    "Kiss the Future",
+    "90s Denim",
+    "Walter Van Beirendonck"
+   ]
+  },
+  "9414": {
+   "linie": "Walter Van Beirendonck – W&LT Jeans",
+   "modell": "Jeans-Shorts mit Lederpatch 'Kiss the Future! W&LT Wild and Lethal Trash'",
+   "era": "W&LT 1990er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Lederpatch 'Kiss the Future!'"
+   ],
+   "stichworte": [
+    "W&LT",
+    "Kiss the Future",
+    "90s Denim",
+    "Walter Van Beirendonck"
+   ]
+  },
+  "9360": {
+   "linie": "Jean Paul Gaultier (JPG Jean's / Maille)",
+   "modell": "Feinstrick-Zipjacke mit Stehkragen und Lederpatch im Nacken",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Marineblaues JPG-Etikett"
+   ],
+   "stichworte": [
+    "JPG",
+    "Gaultier Knit",
+    "2000s"
+   ]
+  },
+  "9389": {
+   "linie": "Jean Paul Gaultier (JPG Jean's)",
+   "modell": "Wolljacke im Military-Stil mit gesticktem Gaultier-Wappen, Kontrastnähten und Rippbündchen",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Marineblaues JPG-Etikett, Lederpatch Nacken"
+   ],
+   "stichworte": [
+    "JPG Jean's",
+    "Military",
+    "Gaultier Crest",
+    "2000s"
+   ]
+  },
+  "9430": {
+   "linie": "Jean Paul Gaultier – JPG Jean's",
+   "modell": "Trompe-l'œil-Jacke 'Flamenco Love': weiße Denimjacke mit aufgedrucktem rotem Barock-Stickmuster (Samtflock)",
+   "era": "1990er (vgl. Herbst/Winter 1994)",
+   "jahr": "1994 (vermutlich)",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Google Lens: 'vintage Jean Paul Gaultier Flamenco Love Optische-Täuschung-Jacke'; Etsy 'Vintage JPG Jacket Flamenco Love 90s'; Instagram nennt FW1994",
+    "Etikett 'JPG JEAN'S' mit drei Weltkugeln, Gr. 42"
+   ],
+   "stichworte": [
+    "Flamenco Love",
+    "Trompe l'oeil",
+    "JPG Jean's",
+    "90s",
+    "Barock",
+    "Archive"
+   ]
+  },
+  "9401": {
+   "linie": "Jean Paul Gaultier – JPG Jean's",
+   "modell": "Longsleeve mit weißem Gitter-/Spinnennetz-Print auf Schwarz, Rückenpatch 'JPG by Gaultier'",
+   "era": "ca. 1999–2004",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Etikett 'JPG JEAN'S Collection No …'"
+   ],
+   "stichworte": [
+    "JPG Jean's",
+    "Spider",
+    "Grid Print",
+    "Y2K"
+   ]
+  },
+  "9403": {
+   "linie": "Jean Paul Gaultier Soleil",
+   "modell": "Patchwork-Bluse aus Wax-Print-Mesh (Rot/Grün/Türkis) mit Punkt-Tüll-Ärmeln, Vichy-Bündchen und Bindebändern",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Schwarzes Etikett mit Sonnen-Logo (Soleil-Linie)"
+   ],
+   "stichworte": [
+    "Gaultier Soleil",
+    "Mesh",
+    "Patchwork",
+    "Wax Print",
+    "2000s"
+   ]
+  },
+  "9520": {
+   "linie": "Jean Paul Gaultier Femme",
+   "modell": "Lederjacke in Metallic-Rosé mit Schößchen und zwei Knöpfen",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Marineblaues 'Jean Paul Gaultier'-Etikett"
+   ],
+   "stichworte": [
+    "Gaultier Leather",
+    "Peplum",
+    "2000s"
+   ]
+  },
+  "9405": {
+   "linie": "Jean Paul Gaultier – JPG Jean's",
+   "modell": "Sportmesh-Tanktop mit Collage-Print (Porträt/Kamee, Rosen)",
+   "era": "späte 1990er (Collage-/Venus-de-Milo-Serie um Frühjahr/Sommer 1999)",
+   "jahr": "1999 (vermutlich)",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Google Lens: 'vintage JPG Jean's Mesh-Top 1990er mit Collage-Print'; Instagram 'SS1999 Jean Paul Gaultier Venus de Milo Mesh Top'; The RealReal 'JPG Jeans late 1990s'"
+   ],
+   "stichworte": [
+    "JPG Jean's",
+    "Mesh Top",
+    "Collage Print",
+    "SS 1999",
+    "90s"
+   ]
+  },
+  "9515": {
+   "linie": "Jean Paul Gaultier Soleil",
+   "modell": "Transparentes Mesh-Top Schwarz mit Kordeln, Perlen und bestickten Ärmelsäumen",
+   "era": "2000er (Soleil-Linie ca. 2001–2012)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Schwarzes Etikett mit orangefarbener Sonne 'Jean Paul Gaultier Soleil'"
+   ],
+   "stichworte": [
+    "Gaultier Soleil",
+    "Mesh",
+    "Sheer",
+    "2000s"
+   ]
+  },
+  "9516": {
+   "linie": "Jean Paul Gaultier Soleil",
+   "modell": "Transparentes Mesh-Top Weiß mit Kordeln, Perlen und bestickten Ärmelsäumen",
+   "era": "2000er (Soleil-Linie ca. 2001–2012)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Schwarzes Etikett mit orangefarbener Sonne 'Jean Paul Gaultier Soleil'"
+   ],
+   "stichworte": [
+    "Gaultier Soleil",
+    "Mesh",
+    "Sheer",
+    "2000s"
+   ]
+  },
+  "9514": {
+   "linie": "Jean Paul Gaultier Maille",
+   "modell": "Mesh-Trägerkleid mit Blumen- und Barockporträt-Print und Rüschensaum, Gr. L, Made in Italy",
+   "era": "späte 1990er / frühe 2000er (Vergleichsstücke auf Frühjahr/Sommer 1998 datiert)",
+   "jahr": "1998 (vermutlich)",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Google Lens: 1stDibs 'Jean Paul Gaultier Mesh-Kleid mit Blumendruck und Porträt' (1.320 €), Resurrection Vintage, Into Archive 'JPG SS 1998 Graphic Printed Mesh Dress'"
+   ],
+   "stichworte": [
+    "Gaultier Maille",
+    "Portrait Print",
+    "Mesh Dress",
+    "SS 1998",
+    "Archive"
+   ]
+  },
+  "9404": {
+   "linie": "Gaultier Jean's",
+   "modell": "Denim-Utility-Gürtel mit abnehmbaren Taschen, Metallplatte 'Gaultier Jean's Paris'",
+   "era": "1990er (Gaultier Jean's 1992–ca. 2004)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Metallplatte und Lederpatch 'Gaultier Jean's'"
+   ],
+   "stichworte": [
+    "Gaultier Jean's",
+    "Utility Belt",
+    "90s",
+    "Denim"
+   ]
+  },
+  "9406": {
+   "linie": "Gaultier Jean's / JPG Jean's",
+   "modell": "Mesh-Tanktop Weiß mit Patch 'Gaultier Jean's' und gesticktem Sternlogo",
+   "era": "späte 1990er / frühe 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Patch und rotes JPG-Jean's-Etikett"
+   ],
+   "stichworte": [
+    "Gaultier Jean's",
+    "Mesh Tank",
+    "90s"
+   ]
+  },
+  "9408": {
+   "linie": "Jean Paul Gaultier Femme / Jean's",
+   "modell": "Hose Grau mit Rundnähten und Schild am Bund",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Marineblaues 'Jean Paul Gaultier'-Etikett"
+   ],
+   "stichworte": [
+    "Gaultier",
+    "2000s"
+   ]
+  },
+  "9490": {
+   "linie": "Jean Paul Gaultier Maille Femme",
+   "modell": "Zweiteiliges Lounge-Set aus Frottee/Velours, Top L und Hose M, Made in Italy",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Etikett 'Jean Paul Gaultier MAILLE Femme'"
+   ],
+   "stichworte": [
+    "Gaultier Maille",
+    "Lounge Set",
+    "2000s"
+   ]
+  },
+  "9428": {
+   "linie": "Gaultier Jean's",
+   "modell": "T-Shirt mit 'Carte postale'-Schriftprint Blau/Weiß",
+   "era": "1990er (Etikettgeneration 1992–1999)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Rotes 'Gaultier Jean's'-Etikett"
+   ],
+   "stichworte": [
+    "Gaultier Jean's",
+    "Carte Postale",
+    "90s",
+    "Script Print"
+   ]
+  },
+  "9427": {
+   "linie": "Gaultier Jean's",
+   "modell": "Jeans mit Patch 'Gaultier Jean's Paris', Stern-Bundband und Knopfleiste",
+   "era": "1990er (1992–1999)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Patch und Bundband 'GAULTIER JEAN'S ★'"
+   ],
+   "stichworte": [
+    "Gaultier Jean's",
+    "90s Denim",
+    "Button Fly"
+   ]
+  },
+  "9431": {
+   "linie": "Jean Paul Gaultier Classique",
+   "modell": "Bleistiftrock mit gestepptem Satin-Korsett-/Herz-Einsatz und seitlichem Reißverschluss, I44/F40/GB12/USA10",
+   "era": "späte 1990er / 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Rotes Etikett 'Jean Paul Gaultier CLASSIQUE Paris' mit Wappen"
+   ],
+   "stichworte": [
+    "Gaultier Classique",
+    "Corset",
+    "Pencil Skirt",
+    "90s"
+   ]
+  },
+  "9432": {
+   "linie": "Jean Paul Gaultier Maille",
+   "modell": "Satin-Shorts Lila mit Blumen-/Zitronenprint, Made in Italy",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Etikett 'Jean Paul Gaultier MAILLE'"
+   ],
+   "stichworte": [
+    "Gaultier Maille",
+    "Satin Shorts",
+    "2000s"
+   ]
+  },
+  "9519": {
+   "linie": "Jil Sander",
+   "modell": "Wende-Top mit 'Sweet Angel'-Schriftzug und Adler-Grafik 'Fly High'",
+   "era": "frühe 2000er (Katalogangabe)",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Weißes JIL-SANDER-Etikett; Google Lens ohne Kollektionstreffer"
+   ],
+   "stichworte": [
+    "Jil Sander",
+    "Sweet Angel",
+    "Y2K",
+    "Reversible"
+   ]
+  },
+  "9498": {
+   "linie": "Helmut Lang (Theory-Ära)",
+   "modell": "Gestreiftes Hemd mit Rückendruck 'HELMUT LANG 21-22' und Stencil 'www.helmutlang.com est. 1986 New York N.Y.'",
+   "era": "Herbst/Winter 2021/22",
+   "jahr": "2021",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Aufdruck '21-22' auf der Rückenpasse"
+   ],
+   "stichworte": [
+    "Helmut Lang",
+    "FW21",
+    "Stencil",
+    "Striped Shirt"
+   ]
+  },
+  "9506": {
+   "linie": "Yves Saint Laurent Rive Gauche",
+   "modell": "Ärmelloses Seidentop mit Pinselstrich-Karo in Orange/Rot/Lila/Braun, Gr. 36 (im Katalog als Kleid geführt)",
+   "era": "1990er bis ca. 2002 (Rive-Gauche-Etikettgeneration)",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Weißes Etikett 'YVES SAINT LAURENT rive gauche'"
+   ],
+   "stichworte": [
+    "YSL Rive Gauche",
+    "Silk",
+    "90s",
+    "Vintage YSL"
+   ]
+  },
+  "9454": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Gore-Tex-Jacke Weiß mit verstaubarer Kapuze und Netz-Einsätzen, Art. 280650 Mat. JZA",
+   "era": "frühe Linea Rossa, ca. 1999–2004",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Etikettformat 'Art./Mat.' (frühe Prada-Sport-Etiketten), GORE-TEX-Tag"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Gore-Tex",
+    "Linea Rossa",
+    "Y2K Techwear",
+    "Archive"
+   ]
+  },
+  "9500": {
+   "linie": "Prada (Hauptlinie)",
+   "modell": "Kurze Jacke aus gewaschener Knitter-Baumwolle mit Kapuze und Kordelzug, Gr. 44",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Weißes 'PRADA Milano'-Etikett"
+   ],
+   "stichworte": [
+    "Prada",
+    "Crinkle",
+    "Cropped Jacket"
+   ]
+  },
+  "9524": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Bomberjacke aus Stretch-Nylon mit gestreiftem Rippkragen, XS",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Roter Tab, schwarzes Pflegeetikett neuerer Generation"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Bomber",
+    "Linea Rossa"
+   ]
+  },
+  "9509": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Leichte Jacke Hellblau mit Stehkragen, Art. 1A8084 Mat. 09W, Body 100 % Polyester, Hood 100 % Nylon, Made in Italy",
+   "era": "frühe Linea Rossa, ca. 1999–2004",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Etikettformat 'Art./Mat.'"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Linea Rossa",
+    "Y2K",
+    "Nylon Jacket"
+   ]
+  },
+  "9440": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Langarm-Poloshirt Grau mit Felloptik-Kragen (Etikettgröße L)",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Roter Prada-Tab, schwarzes Pflegeetikett neuerer Generation"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Faux Fur Collar",
+    "Polo"
+   ]
+  },
+  "9441": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Langarm-Poloshirt Schwarz mit Felloptik-Kragen, Made in Mauritius (Etikettgröße L)",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Roter Prada-Tab, Pflegeetikett Made in Mauritius"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Faux Fur Collar",
+    "Polo"
+   ]
+  },
+  "9439": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Stola/Schal Oliv aus Strick und Nylon mit Schlitz und rotem Tab",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Linea-Rossa-Tab"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Scarf",
+    "Hybrid"
+   ]
+  },
+  "9457": {
+   "linie": "Prada",
+   "modell": "Fellstola Braun/Beige mit Organza-Enden und weißem PRADA-Etikett",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "PRADA-Etikett (auf Foto 6 von Artikel 9456 sichtbar)"
+   ],
+   "stichworte": [
+    "Prada Fur",
+    "Stole"
+   ]
+  },
+  "9494": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Steppweste Rot mit Dreieckslogo-Plakette, Gr. 44",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Schwarzes PRADA-Etikett"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Quilted Vest",
+    "Triangle Logo"
+   ]
+  },
+  "9491": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "America's Cup Sneaker Schwarz, Art. PR3163, Material Nevada + Bike, mit Originalkarton und Staubbeutel",
+   "era": "2006",
+   "jahr": "2006",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Kartonetikett 'Calzature Donna, Art. PR3163, Colour Nero, Group Nevada + Bike, Size 36' + Los 'C099 2006 01555 A'"
+   ],
+   "stichworte": [
+    "America's Cup",
+    "Prada Sneaker",
+    "2006",
+    "Luna Rossa",
+    "Boxed"
+   ]
+  },
+  "9493": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Stiefel aus Nylon und Leder mit roter Sohlenmarkierung, Gr. 37, mit Originalkarton",
+   "era": "frühe 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Linea-Rossa-Sohle, Innenetikett 37"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Nylon Boots",
+    "Y2K"
+   ]
+  },
+  "9463": {
+   "linie": "Prada Sport (Linea Rossa)",
+   "modell": "Mary-Jane-Pumps mit Klettriemen und rotem Tab, Art. 3P3050, Nappa Sport, Nero, TG 36",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Kartonetikett 'Calzature Donna, TG 36, Art. 3P3050, Group Nappa Sport'"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Mary Jane",
+    "Y2K Heels"
+   ]
+  },
+  "6193": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Bikerjacke aus beschichtetem Nylon, Art. SGH223, Made in Romania, Gr. 48",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Graues Etikett 'PRADA Art. SGH223, 100 % Nylon, resin coated'"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Biker",
+    "Linea Rossa"
+   ]
+  },
+  "9477": {
+   "linie": "Prada Luna Rossa (Team-Kollektion)",
+   "modell": "Sweatjacke Schwarz mit Luna-Rossa-Wimpel-Patch und Italienflagge, rotes Nackenetikett 'Luna Rossa'",
+   "era": "America's-Cup-Kampagnen 2007 (Valencia) / 2013 (San Francisco)",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Patch und Nackenetikett"
+   ],
+   "stichworte": [
+    "Luna Rossa",
+    "America's Cup",
+    "Prada Sailing",
+    "Team Wear"
+   ]
+  },
+  "9526": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Cord-Hemdjacke Khaki mit Steppfutter und Nylon-Ellbogenpatches, XXL",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Roter Tab, kleines rotes PRADA-Etikett"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Corduroy",
+    "Shirt Jacket"
+   ]
+  },
+  "9492": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Leichte Jacke Creme mit Netzfutter, Gr. 46",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Roter Tab am Ärmel"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Lightweight Jacket"
+   ]
+  },
+  "9436": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Zip-Hoodie Schwarz aus Baumwollsweat mit Nylon-Kapuze, Gr. M",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Rotes PRADA-Etikett (Generation 2000er)"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Zip Hoodie",
+    "Y2K"
+   ]
+  },
+  "9437": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Softshell-Blouson Schwarz mit Stehkragen, Gr. M",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Verblasstes rotes PRADA-Etikett"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Softshell"
+   ]
+  },
+  "9435": {
+   "linie": "Prada (Hauptlinie)",
+   "modell": "Melierter Cardigan mit bunten Noppen, Made in Italy, Gr. 44",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "'PRADA Milano'-Etikett"
+   ],
+   "stichworte": [
+    "Prada Knit",
+    "Cardigan"
+   ]
+  },
+  "9365": {
+   "linie": "Prada Sport (Linea Rossa), frühe Generation",
+   "modell": "Rippstrick-Zipjacke Lila mit Nylon-Stehkragen, Leder-Ellbogenpatches und rotem Zipper-Band, Metall-Plakette 'PRADA Made in Italy'",
+   "era": "ca. 1998–2003",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Metall-Plakettenetikett (späte 1990er/frühe 2000er)"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Late 90s",
+    "Knit Jacket",
+    "Archive"
+   ]
+  },
+  "6186": {
+   "linie": "Prada Sport (Linea Rossa)",
+   "modell": "T-Shirt Schwarz mit rotem Tab am Saum, XL, Made in Italy",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Rotes PRADA-Etikett 'Made in Italy'"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Tee"
+   ]
+  },
+  "6197": {
+   "linie": "Prada Sport (Linea Rossa)",
+   "modell": "Half-Zip-Poloshirt mit Gummi-Plakette, Made in Tunisia, Gr. S",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Gummi-Plakette, schwarzes Pflegeetikett"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Half Zip"
+   ]
+  },
+  "9523": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Nylon-Cap Schwarz mit rotem Tab und Riemenverschluss, Gr. M",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Roter Tab"
+   ],
+   "stichworte": [
+    "Prada Cap",
+    "Linea Rossa"
+   ]
+  },
+  "9455": {
+   "linie": "Prada Linea Rossa (Prada Sport)",
+   "modell": "Jacke aus gewachster Baumwolle mit Gürtel, Art. 280452 Mat. P2L, innen Namensschild 'Name / Tg. 42'",
+   "era": "frühe 2000er (ca. 2000–2004)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Etikettformat 'Art./Mat.' und Namensschild (typisch Prada Sport/Challenge um 2000–2004)"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Waxed Cotton",
+    "Y2K",
+    "Belted Jacket"
+   ]
+  },
+  "9465": {
+   "linie": "Prada Sport (Linea Rossa)",
+   "modell": "Feinstrick-Longsleeve aus Wolle mit Satinkante, Etikettgröße 46",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Rotes PRADA-Etikett, roter Tab"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Wool Top"
+   ]
+  },
+  "9422": {
+   "linie": "Prada (Hauptlinie)",
+   "modell": "Karierte Hose Braun/Blau, Gr. 46, Made in Italy",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Schwarzes 'PRADA Made in Italy'-Etikett"
+   ],
+   "stichworte": [
+    "Prada",
+    "Check Trousers"
+   ]
+  },
+  "9438": {
+   "linie": "Prada (Hauptlinie)",
+   "modell": "Tweed-Wickelrock Dunkelgrün, Gr. 42, Made in Italy",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Weißes 'PRADA Made in Italy'-Etikett (ältere Generation)"
+   ],
+   "stichworte": [
+    "Prada",
+    "Tweed Skirt"
+   ]
+  },
+  "9456": {
+   "linie": "Prada Sport (Linea Rossa)",
+   "modell": "Longsleeve Schwarz mit Cartoon-Applikation, XS",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Rotes PRADA-Etikett, roter Tab"
+   ],
+   "stichworte": [
+    "Prada Sport",
+    "Cartoon Patch",
+    "Y2K"
+   ]
+  },
+  "6196": {
+   "linie": "Miu Miu",
+   "modell": "Mantelkleid Dunkelgrün aus Baumwolle/Leinen mit Faltenrock-Saum, Gr. 40, Made in Italy",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "'miu miu'-Etikett"
+   ],
+   "stichworte": [
+    "Miu Miu",
+    "Coat Dress"
+   ]
+  },
+  "9418": {
+   "linie": "Balmain (Lizenz-/Prêt-à-porter-Linie)",
+   "modell": "Jacke aus Kunst-Lammfell Schwarz mit Gürtel",
+   "era": "späte 1990er / 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Kleines weißes Serifen-Etikett 'BALMAIN' (nicht das schwarze 'BALMAIN PARIS' der Decarnin-/Rousteing-Ära)"
+   ],
+   "stichworte": [
+    "Balmain Vintage",
+    "Faux Shearling",
+    "90s"
+   ]
+  },
+  "9420": {
+   "linie": "Balmain (Lizenz-/Prêt-à-porter-Linie)",
+   "modell": "Kurze Jacke aus Kunst-Lammfell mit Nieten, Gr. 40",
+   "era": "späte 1990er / 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Weißes Serifen-Etikett 'BALMAIN'"
+   ],
+   "stichworte": [
+    "Balmain Vintage",
+    "Studded",
+    "90s"
+   ]
+  },
+  "9458": {
+   "linie": "Balmain (Lizenz-/Prêt-à-porter-Linie)",
+   "modell": "Trenchcoat Schwarz, 100 % Polyester, Gr. L",
+   "era": "späte 1990er / 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Weißes Serifen-Etikett 'BALMAIN'"
+   ],
+   "stichworte": [
+    "Balmain Vintage",
+    "Trench"
+   ]
+  },
+  "9482": {
+   "linie": "Balmain (Lizenz-/Prêt-à-porter-Linie)",
+   "modell": "Mantel Braun mit Kunstfellkragen, Gr. 42",
+   "era": "späte 1990er / 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Weißes Serifen-Etikett 'BALMAIN'"
+   ],
+   "stichworte": [
+    "Balmain Vintage",
+    "Faux Fur Coat"
+   ]
+  },
+  "9442": {
+   "linie": "Balmain (Lizenz-/Prêt-à-porter-Linie)",
+   "modell": "Kunstfelljacke mit großem Kragen und Satinfutter, Gr. S",
+   "era": "späte 1990er / 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Weißes Serifen-Etikett 'BALMAIN'"
+   ],
+   "stichworte": [
+    "Balmain Vintage",
+    "Faux Fur"
+   ]
+  },
+  "9419": {
+   "linie": "Balmain (Lizenz-/Prêt-à-porter-Linie)",
+   "modell": "Jacke Braun in Veloursleder-Optik mit Kunstfellkragen",
+   "era": "späte 1990er / 2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Analog zu den übrigen Balmain-Lizenzteilen"
+   ],
+   "stichworte": [
+    "Balmain Vintage",
+    "Faux Fur"
+   ]
+  },
+  "9443": {
+   "linie": "Balmain (Lizenz-/Prêt-à-porter-Linie)",
+   "modell": "Winterjacke Braun",
+   "era": "späte 1990er / 2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Analog zu den übrigen Balmain-Lizenzteilen"
+   ],
+   "stichworte": [
+    "Balmain Vintage"
+   ]
+  },
+  "9363": {
+   "linie": "Pierre Balmain (Diffusionslinie 2011–2016)",
+   "modell": "Gesteppte Jacke Grau",
+   "era": "2011–2016",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Linie Pierre Balmain bestand 2011–2016"
+   ],
+   "stichworte": [
+    "Pierre Balmain",
+    "Quilted"
+   ]
+  },
+  "9434": {
+   "linie": "Pierre Balmain (Diffusionslinie 2011–2016)",
+   "modell": "Sweatshirt Grau",
+   "era": "2011–2016",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Linie Pierre Balmain bestand 2011–2016"
+   ],
+   "stichworte": [
+    "Pierre Balmain",
+    "Sweatshirt"
+   ]
+  },
+  "6188": {
+   "linie": "Christian Dior Beachwear (Lizenzlinie)",
+   "modell": "Blumenkleid mit Tulpen-Print Blau/Grün und Kordelzug-Taille, Gr. 3",
+   "era": "1980er (bis frühe 1990er)",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Etikett 'Christian Dior … Beachwear' (ältere Lizenzgeneration)"
+   ],
+   "stichworte": [
+    "Dior Vintage",
+    "80s",
+    "Beachwear",
+    "Tulip Print"
+   ]
+  },
+  "6200": {
+   "linie": "Dior Uniforme (Mitarbeiter-/Uniformlinie)",
+   "modell": "Stricktop Schwarz mit Bienen- und CD-Stickerei, F36/GB8/I40/D34/USA4, Made in Bulgaria",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Etikett 'CD UNIFORME'"
+   ],
+   "stichworte": [
+    "Dior Uniforme",
+    "Staff Uniform",
+    "Bee",
+    "Rare"
+   ]
+  },
+  "9488": {
+   "linie": "Dior Homme",
+   "modell": "Zip-Jacke Grau/Schwarz aus Baumwollsweat, Gr. 52",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Graues 'Dior'-Schriftzug-Etikett (ca. 2008–2018)"
+   ],
+   "stichworte": [
+    "Dior Homme",
+    "Track Jacket"
+   ]
+  },
+  "9495": {
+   "linie": "Dior Homme (Kris-Van-Assche-Ära)",
+   "modell": "Langarm-Poloshirt Marineblau mit Bienen-Stickerei, Gr. 46",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Graues 'Dior'-Etikett"
+   ],
+   "stichworte": [
+    "Dior Homme",
+    "Bee Polo"
+   ]
+  },
+  "9496": {
+   "linie": "Dior Homme (Kris-Van-Assche-Ära)",
+   "modell": "Langarm-Poloshirt Schwarz mit Bienen-Stickerei, Gr. 46",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Graues 'Dior'-Etikett"
+   ],
+   "stichworte": [
+    "Dior Homme",
+    "Bee Polo"
+   ]
+  },
+  "9474": {
+   "linie": "Jil Sander",
+   "modell": "Blazer Khaki aus Wolle, Gr. 40",
+   "era": "1990er/2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Weißes 'JIL SANDER'-Etikett"
+   ],
+   "stichworte": [
+    "Jil Sander",
+    "Minimalism",
+    "Blazer"
+   ]
+  },
+  "9475": {
+   "linie": "Jil Sander+ (Outdoor-Linie, seit 2019)",
+   "modell": "Cord-Weste Dunkelgrün, Gr. 38",
+   "era": "2019–2023",
+   "jahr": "",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Etikett 'JIL SANDER+'; Jil Sander+ wurde 2019 unter Lucie und Luke Meier eingeführt (Fashionunited, Textilwirtschaft, Hypebae)"
+   ],
+   "stichworte": [
+    "Jil Sander+",
+    "Meier",
+    "Outdoor",
+    "Corduroy"
+   ]
+  },
+  "9517": {
+   "linie": "Jil Sander",
+   "modell": "Blazer Schwarz, Gr. 38",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Weißes 'JIL SANDER'-Etikett"
+   ],
+   "stichworte": [
+    "Jil Sander",
+    "Minimalism"
+   ]
+  },
+  "9518": {
+   "linie": "Jil Sander",
+   "modell": "Technische Jacke Khaki mit Zippern, Gr. 38",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Weißes 'JIL SANDER'-Etikett"
+   ],
+   "stichworte": [
+    "Jil Sander",
+    "Technical Jacket"
+   ]
+  },
+  "9511": {
+   "linie": "Dsquared2",
+   "modell": "Asymmetrische Bikerjacke aus gewachster Baumwolle, Gr. 52",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Schwarzes DSQUARED2-Etikett, Katalog nennt frühe Kollektion"
+   ],
+   "stichworte": [
+    "Dsquared2",
+    "Moto",
+    "Waxed Cotton"
+   ]
+  },
+  "9512": {
+   "linie": "Dsquared2",
+   "modell": "Jacke Gelb mit 'Surf Camp'-Palmen-Patch und hellblauer Jersey-Kapuze, Gr. 50",
+   "era": "Surf-Kollektion (2010er)",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Patch 'Dsquared Camp … Hawaiian Surf'; Websuche ohne Treffer zum Jahr"
+   ],
+   "stichworte": [
+    "Dsquared2",
+    "Surf",
+    "Palm Patch"
+   ]
+  },
+  "6187": {
+   "linie": "Dsquared2",
+   "modell": "Leder-Bikerjacke Braun mit Zipper-Ärmeln, XL",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Kein Etikett fotografiert"
+   ],
+   "stichworte": [
+    "Dsquared2",
+    "Leather Biker"
+   ]
+  },
+  "9359": {
+   "linie": "Maison Martin Margiela with H&M",
+   "modell": "Asymmetrischer Rock Marineblau, Gr. 36",
+   "era": "November 2012",
+   "jahr": "2012",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Etikett mit Zahlen 0–23 und H&M (Designer-Kollaboration 2012)"
+   ],
+   "stichworte": [
+    "Margiela H&M",
+    "2012",
+    "Collab",
+    "Asymmetric"
+   ]
+  },
+  "9462": {
+   "linie": "Maison Martin Margiela with H&M",
+   "modell": "Taillierter Blazer Grau, Gr. 36",
+   "era": "November 2012",
+   "jahr": "2012",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Etikett mit Zahlen 0–23 und H&M"
+   ],
+   "stichworte": [
+    "Margiela H&M",
+    "2012",
+    "Collab"
+   ]
+  },
+  "9362": {
+   "linie": "MM6 Maison Margiela",
+   "modell": "Top Schwarz mit gesteppter Schulterpartie, Gr. M",
+   "era": "2015–2020er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Weißes 'MM6 Maison Margiela'-Etikett (ab 2015)"
+   ],
+   "stichworte": [
+    "MM6",
+    "Margiela",
+    "Quilted"
+   ]
+  },
+  "9487": {
+   "linie": "Céline (vor Phoebe Philo)",
+   "modell": "Rippstrick-Cardigan Rostorange mit Emaille-Knöpfen und Kettendetails, Gr. S",
+   "era": "1990er / frühe 2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Weißes 'CELINE Paris'-Etikett (ältere Generation)"
+   ],
+   "stichworte": [
+    "Celine Vintage",
+    "90s",
+    "Cardigan"
+   ]
+  },
+  "9538": {
+   "linie": "Gucci",
+   "modell": "Nadelstreifen-Blazer Schwarz mit einem Knopf, Etikettgröße 40, Made in Italy (Schnitt spricht für Damen)",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Schwarzes GUCCI-Etikett"
+   ],
+   "stichworte": [
+    "Gucci",
+    "Pinstripe",
+    "Blazer"
+   ]
+  },
+  "9479": {
+   "linie": "Alexander McQueen (Gucci-Group-Ära)",
+   "modell": "Jeansjacke Grau mit gesteppter Fütterung, Gr. 46",
+   "era": "ca. 2001–2010",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Weißes 'ALEXANDER McQUEEN'-Etikett (Generation frühe 2000er)"
+   ],
+   "stichworte": [
+    "McQueen",
+    "Denim Jacket",
+    "2000s"
+   ]
+  },
+  "9409": {
+   "linie": "Ottolinger",
+   "modell": "Mesh-Top mit Anzug-/Krawatten-Print und Leoparden-Einsätzen, XS, 90 % rec. Polyester, Made in Greece",
+   "era": "ca. 2020–2023",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Etikett OTTOLINGER"
+   ],
+   "stichworte": [
+    "Ottolinger",
+    "Mesh",
+    "Berlin",
+    "Trompe l'oeil"
+   ]
+  },
+  "9451": {
+   "linie": "Kiko Kostadinov",
+   "modell": "Architektonisch geschnittene Weste Braun, Gr. 46",
+   "era": "Frühjahr/Sommer 2022",
+   "jahr": "2022",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Katalogangabe SS 2022, Etikett KIKO KOSTADINOV"
+   ],
+   "stichworte": [
+    "Kiko Kostadinov",
+    "SS22",
+    "Vest"
+   ]
+  },
+  "9527": {
+   "linie": "Rick Owens DRKSHDW",
+   "modell": "Longsleeve Khaki, Stilcode DU16F8262-RN, Gr. M, Made in Italy",
+   "era": "Herbst/Winter 2016 (Kollektion 'Mastodon')",
+   "jahr": "2016",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Stilcode DU16F = DRKSHDW, Herbst 2016"
+   ],
+   "stichworte": [
+    "Rick Owens",
+    "DRKSHDW",
+    "FW16",
+    "Mastodon"
+   ]
+  },
+  "6240": {
+   "linie": "Hysteric Glamour (Novelty-Objekt)",
+   "modell": "Silberner Pop-up-Toaster mit 'ROCK'-Pin-up-Grafik, US-Stecker",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Grafik und Verarbeitung"
+   ],
+   "stichworte": [
+    "Hysteric Glamour",
+    "Toaster",
+    "Novelty",
+    "Japan"
+   ]
+  },
+  "9399": {
+   "linie": "Hysteric Glamour",
+   "modell": "Kurzarm-Cardigan Schwarz mit grünem Karo-Zierstreifen und Wappenstickerei, Gr. M",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Standard-Etikett"
+   ],
+   "stichworte": [
+    "Hysteric Glamour",
+    "Cardigan",
+    "Japan"
+   ]
+  },
+  "9467": {
+   "linie": "Ann Demeulemeester",
+   "modell": "Schnürstiefel mit Riemen und Schnalle, Gr. 38, mit grauem Originalkarton",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Originalkarton"
+   ],
+   "stichworte": [
+    "Ann Demeulemeester",
+    "Lace-up Boots",
+    "Antwerpen"
+   ]
+  },
+  "9508": {
+   "linie": "Ann Demeulemeester",
+   "modell": "T-Shirt Schwarz mit 'holy'-Print, Gr. S",
+   "era": "ca. 2014–2020",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Pflegeetikett mit EAC-Zeichen (ab 2013)"
+   ],
+   "stichworte": [
+    "Ann Demeulemeester",
+    "holy",
+    "Print Tee"
+   ]
+  },
+  "9466": {
+   "linie": "adidas Originals Blue (Muster/Sample)",
+   "modell": "WR Shell Parka Schwarz, Technical Apparel, Innenetikett 'Fall Winter 14/15 … Name / No'",
+   "era": "Herbst/Winter 2014/15",
+   "jahr": "2014",
+   "konfidenz": "hoch",
+   "quellen": [
+    "Innenetikett 'ORIGINALS TECHNICAL APPAREL, FALL WINTER 14/15, WR SHELL PARKA'"
+   ],
+   "stichworte": [
+    "adidas Originals Blue",
+    "Sample",
+    "FW14",
+    "Shell Parka"
+   ]
+  },
+  "9382": {
+   "linie": "Arc'teryx",
+   "modell": "Yoyo Rucksack Schwarz mit altem Arc'teryx-Logo und Kordelzug-Ösen (Modell eingestellt)",
+   "era": "1990er / frühe 2000er",
+   "jahr": "",
+   "konfidenz": "mittel",
+   "quellen": [
+    "Modellname Yoyo, alte Logo-Generation"
+   ],
+   "stichworte": [
+    "Arc'teryx Yoyo",
+    "Vintage Arc'teryx",
+    "90s Techwear"
+   ]
+  },
+  "6190": {
+   "linie": "Rundholz",
+   "modell": "Asymmetrische Tunika",
+   "era": "2010er/2020er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Katalog"
+   ],
+   "stichworte": [
+    "Rundholz",
+    "Avantgarde",
+    "Lagenlook"
+   ]
+  },
+  "6198": {
+   "linie": "Rundholz",
+   "modell": "Ballonkleid Schwarz",
+   "era": "2010er/2020er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Katalog"
+   ],
+   "stichworte": [
+    "Rundholz",
+    "Avantgarde",
+    "Lagenlook"
+   ]
+  },
+  "6199": {
+   "linie": "Rundholz",
+   "modell": "Asymmetrischer Cardigan Elfenbein",
+   "era": "2010er/2020er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Katalog"
+   ],
+   "stichworte": [
+    "Rundholz",
+    "Avantgarde",
+    "Lagenlook"
+   ]
+  },
+  "9472": {
+   "linie": "Rundholz",
+   "modell": "Langarm-Top Schwarz",
+   "era": "2010er/2020er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Katalog"
+   ],
+   "stichworte": [
+    "Rundholz",
+    "Avantgarde"
+   ]
+  },
+  "6191": {
+   "linie": "Giorgio Brato",
+   "modell": "Lange Weste mit Fellkragen",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Katalog"
+   ],
+   "stichworte": [
+    "Giorgio Brato",
+    "Leder",
+    "Italy"
+   ]
+  },
+  "9358": {
+   "linie": "Giorgio Brato",
+   "modell": "Lederjacke Braun",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Katalog"
+   ],
+   "stichworte": [
+    "Giorgio Brato",
+    "Leather",
+    "Italy"
+   ]
+  },
+  "9473": {
+   "linie": "Giorgio Brato",
+   "modell": "Lederjacke Schwarz",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Katalog"
+   ],
+   "stichworte": [
+    "Giorgio Brato",
+    "Leather",
+    "Italy"
+   ]
+  },
+  "9499": {
+   "linie": "Isaac Sellam Experience",
+   "modell": "Lederblazer Grau",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Katalog"
+   ],
+   "stichworte": [
+    "Isaac Sellam",
+    "Avantgarde Leather",
+    "Paris"
+   ]
+  },
+  "9513": {
+   "linie": "Isaac Sellam Experience",
+   "modell": "Hose Weiß",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Katalog"
+   ],
+   "stichworte": [
+    "Isaac Sellam",
+    "Avantgarde",
+    "Paris"
+   ]
+  },
+  "9400": {
+   "linie": "Isabel Marant",
+   "modell": "Kleid Schwarz",
+   "era": "2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Katalog"
+   ],
+   "stichworte": [
+    "Isabel Marant",
+    "Paris"
+   ]
+  },
+  "9469": {
+   "linie": "Armani Collezioni",
+   "modell": "Daunenjacke Grau",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Katalog"
+   ],
+   "stichworte": [
+    "Armani Collezioni",
+    "Down Jacket"
+   ]
+  },
+  "9522": {
+   "linie": "Moose Knuckles",
+   "modell": "Parka mit Lederdetails Schwarz",
+   "era": "2010er/2020er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Katalog"
+   ],
+   "stichworte": [
+    "Moose Knuckles",
+    "Parka",
+    "Canada"
+   ]
+  },
+  "9521": {
+   "linie": "Just Cavalli",
+   "modell": "Jacke Schwarz",
+   "era": "2000er/2010er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Katalog"
+   ],
+   "stichworte": [
+    "Just Cavalli",
+    "Roberto Cavalli"
+   ]
+  },
+  "9426": {
+   "linie": "Burberry",
+   "modell": "Nova-Check-Shorts",
+   "era": "2000er",
+   "jahr": "",
+   "konfidenz": "niedrig",
+   "quellen": [
+    "Katalog"
+   ],
+   "stichworte": [
+    "Burberry Nova Check",
+    "Y2K",
+    "Check"
+   ]
+  }
+ },
+ "zustand": {
+  "9398": "Vorne mittig im Print ein kleiner heller Punkt/Fleck (siehe Detailfoto).",
+  "9498": "Links neben dem Stencil-Print ein kleiner schwarzer Fleck (siehe Detailfoto).",
+  "9509": "Innen am Kragen eine dunkle Verfaerbung (siehe Detailfoto).",
+  "9438": "Helle Flecken/Spritzer im schwarzen Futter (siehe Detailfoto), aussen einwandfrei.",
+  "6240": "Lackabrieb und Kratzer auf der Oberseite, Klebereste an der Seite (siehe Fotos); Funktion nicht geprueft, US-Stecker."
+ },
+ "bild_ausschluss": {
+  "9412": [
+   "assets/img/9412/5.webp"
+  ],
+  "9456": [
+   "assets/img/9456/6.webp"
+  ]
+ },
+ "_bild_ausschluss_hinweis": "Galeriefotos, die zu einem anderen Artikel gehoeren (9412/5 = W&LT-Etikett der Shorts 9414, 9456/6 = Fellstola 9457); werden im Shop per Katalog-PR umgehaengt, bis dahin hier ausgeschlossen."
+}

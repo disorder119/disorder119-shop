@@ -30,6 +30,9 @@ BASE = Path(__file__).resolve().parent.parent
 ITEMS = BASE / "data" / "items.json"
 BILD_ORDNER = BASE / "assets" / "ebay"
 SITE_URL = "https://disorder119.com/"
+# Artikel-Research (Linie, Modell, Kollektion/Jahr, Konfidenz, Stichworte), Zustands-
+# Notizen aus der Fotodurchsicht und Galeriefotos, die nicht zum Artikel gehoeren.
+RECHERCHE_DATEI = BASE / "data" / "ebay_recherche.json"
 
 EBAY_PROVISION = 0.12
 EBAY_FIXGEBUEHR = 0.45
@@ -102,6 +105,52 @@ def lade_items():
     return json.loads(ITEMS.read_text(encoding="utf-8"))
 
 
+def lade_recherche() -> dict:
+    if RECHERCHE_DATEI.is_file():
+        return json.loads(RECHERCHE_DATEI.read_text(encoding="utf-8"))
+    return {}
+
+
+RECHERCHE = lade_recherche()
+
+
+def recherche(it) -> dict:
+    return RECHERCHE.get("artikel", {}).get(str(it["id"]), {})
+
+
+def konfidenz(it) -> str:
+    # "hoch (Modell) / mittel (Aera)" -> "hoch"
+    return str(recherche(it).get("konfidenz") or "").split(" ")[0].lower()
+
+
+def _jahr(it) -> int:
+    # Bei Zeitraeumen ("ca. 1999-2004") zaehlt das spaetere Jahr: so wird aus der fruehen
+    # Linea Rossa "Y2K" und nicht "90s".
+    r = recherche(it)
+    jahre = re.findall(r"(19[89]\d|20[012]\d)", str(r.get("jahr") or "") + " " + str(r.get("era") or ""))
+    return max(int(j) for j in jahre) if jahre else 0
+
+
+def jahrzehnt(it) -> str:
+    j = _jahr(it)
+    return f"{j // 10 * 10}er" if j else ""
+
+
+def ist_vintage(it) -> bool:
+    # eBay-Kaeufer suchen "Vintage" fuer Stuecke, die rund 20 Jahre und aelter sind.
+    j = _jahr(it)
+    return bool(j) and j <= 2006
+
+
+def zustand_hinweise(it) -> list[str]:
+    """Maengel aus dem Katalogtext plus Notizen aus der Fotodurchsicht."""
+    h = [x for x in _katalogtext(it)["hinweise"] if x]
+    z = str(RECHERCHE.get("zustand", {}).get(str(it["id"])) or "").strip()
+    if z and z.casefold() not in " ".join(h).casefold():
+        h.append(z)
+    return h
+
+
 def verfuegbar(items):
     return [it for it in items if str(it.get("public_status", "")).upper() == "AVAILABLE" and float(it.get("price") or 0) > 0]
 
@@ -122,18 +171,79 @@ def ebay_preis(shop_preis: float) -> int:
     return int(math.ceil(roh))
 
 
+# Linien-/Modellbegriffe aus dem Research, nach denen bei eBay gesucht wird; die
+# Reihenfolge ist die Prioritaet im Titel (80 Zeichen).
+_LINIEN_TOKENS = [
+    (r"Linea Rossa", "Linea Rossa"), (r"Prada Sport", "Prada Sport"), (r"Luna Rossa", "Luna Rossa"),
+    (r"Gaultier Jean's|JPG Jean's|JPG", "JPG Jean's"), (r"Soleil", "Soleil"), (r"Maille", "Maille"), (r"Classique", "Classique"),
+    (r"W&LT", "W&LT"), (r"DRKSHDW", "DRKSHDW"), (r"Jil Sander\+", "Jil Sander+"), (r"with H&M|x H&M", "x H&M"),
+    (r"Uniforme", "Uniforme"), (r"Beachwear", "Beachwear"), (r"Galliano", "Galliano"), (r"Demna", "Demna"),
+    (r"SNCF", "SNCF"), (r"Rive Gauche", "Rive Gauche"), (r"Dior Homme", "Dior Homme"), (r"Pierre Balmain", "Pierre Balmain"),
+    (r"Originals Blue", "Originals Blue"), (r"Kris Van Assche", "Kris Van Assche"),
+]
+
+
+def _saison_token(it) -> str:
+    r = recherche(it)
+    jahr = str(r.get("jahr") or "")
+    m = re.search(r"(19[89]\d|20[012]\d)", jahr)
+    if m and konfidenz(it) == "hoch" and "vermutlich" not in jahr:
+        era = str(r.get("era") or "")
+        kurz = m.group(1)[2:]
+        if re.search(r"Frühjahr/Sommer|\bSS\b", era):
+            return f"SS{kurz}"
+        if re.search(r"Herbst/Winter|\bFW\b|\bAW\b", era):
+            return f"FW{kurz}"
+        return m.group(1)
+    jz = jahrzehnt(it)
+    if jz == "2000er":
+        return "Y2K" if (_jahr(it) <= 2005 or "frühe 2000er" in str(r.get("era") or "")) else "2000er"
+    return {"1980er": "80s", "1990er": "90s"}.get(jz, "")
+
+
+def titel_tokens(it) -> list[str]:
+    """Zusatzbegriffe fuer den eBay-Titel in Prioritaet: Linie, wichtigstes Modell-Stichwort, Saison,
+    Groesse, weitere Stichworte, Vintage, Archive. Die Groesse steht vor den Nebenbegriffen, weil
+    Kaeufer nach ihr filtern; was nicht mehr in 80 Zeichen passt, faellt hinten weg."""
+    r = recherche(it)
+    basis = str(it.get("title") or "").casefold()
+    out = []
+    def passt(wort):
+        return wort and wort.casefold() not in basis and wort.casefold() not in " ".join(out).casefold()
+    linie = str(r.get("linie") or "")
+    for muster, token in _LINIEN_TOKENS:
+        if re.search(muster, linie, re.I) and passt(token):
+            out.append(token)
+            break
+    stichworte = [str(sw).strip() for sw in (r.get("stichworte") or [])]
+    stichworte = [sw for sw in stichworte if len(sw) <= 24
+                  and not re.fullmatch(r"(SS|FW|AW)?\s?\d{2,4}s?|Y2K|Vintage|Archive|Runway|Rare|Collab", sw, re.I)]
+    if stichworte and passt(stichworte[0]):
+        out.append(stichworte[0])
+    saison = _saison_token(it)
+    if passt(saison):
+        out.append(saison)
+    groesse = str(it.get("size") or "").split("/")[0].strip()
+    if groesse and groesse.casefold() not in EINHEITSGROESSE:
+        out.append("Gr. " + groesse)
+    for sw in stichworte[1:3]:
+        if passt(sw):
+            out.append(sw)
+    if ist_vintage(it) and passt("Vintage"):
+        out.append("Vintage")
+    if konfidenz(it) in ("hoch", "mittel") and 0 < _jahr(it) <= 2012 and passt("Archive"):
+        out.append("Archive")
+    return out
+
+
 def titel(it) -> str:
-    t = re.sub(r"\s+", " ", str(it.get("title") or "")).strip()
-    groesse = str(it.get("size") or "").strip()
-    teile = [t]
-    if groesse:
-        teile.append("Gr. " + groesse)
-    if "Designer" not in t:
-        teile.append("Designer Secondhand")
-    out = " ".join(teile)
-    while len(out) > MAX_TITEL and len(teile) > 1:
-        teile.pop()
-        out = " ".join(teile)
+    """eBay-Titel (max. 80 Zeichen): Katalogtitel (Marke Produktart Damen/Herren Farbe), dann die
+    Suchbegriffe aus dem Research, solange sie passen. Keine Fremdmarken, nichts Erfundenes."""
+    basis = re.sub(r"\s+", " ", str(it.get("title") or "")).strip()
+    out = basis
+    for tok in titel_tokens(it):
+        if len(out) + 1 + len(tok) <= MAX_TITEL:
+            out = out + " " + tok
     return out[:MAX_TITEL]
 
 
@@ -142,6 +252,21 @@ _WEGLASSEN = ("fotografie & passform", "maße der schneiderpuppe", "rechtliche h
               "diese maße dienen", "aus dem kuratierten archiv")
 _DETAIL_KEYS = ("Marke", "Modell", "Linie", "Kollektion", "Saison", "Farbe", "Größe", "Passform", "Schnitt", "Verschluss",
                 "Material", "Herstellungsland", "Länge", "Ärmel", "Muster", "Besonderheit", "Besonderheiten")
+
+
+def kollektion_text(it) -> str:
+    """Kollektion/Jahr fuer die Beschreibung: belegt ohne Zusatz, bei mittlerer Sicherheit mit
+    'vermutlich', bei niedriger gar nicht (dann bleibt nur die Linie)."""
+    r = recherche(it)
+    wert = str(r.get("era") or r.get("jahr") or "").strip()
+    if not wert:
+        return ""
+    k = konfidenz(it)
+    if k == "hoch":
+        return wert
+    if k == "mittel":
+        return wert if wert.casefold().startswith("vermutlich") else "vermutlich " + wert
+    return ""
 
 
 def _katalogtext(it) -> dict:
@@ -214,7 +339,12 @@ def beschreibung(it) -> str:
     """eBay-Beschreibung: kurzer Text, danach alles Wichtige als Stichpunkte (so wird es am Handy gelesen)."""
     e = html.escape
     kt = _katalogtext(it)
+    r = recherche(it)
     teile = [f"<h3>{e(titel(it))}</h3>"]
+    # Maengel zuerst: Was ein Kaeufer wissen muss, steht vor allem anderen.
+    maengel = [h for h in zustand_hinweise(it) if h and not re.search(r"neu mit (original)?etikett", h, re.I)]
+    if maengel:
+        teile.append("<p><b>Bitte beachten:</b> " + e(" ".join(maengel)) + "</p>")
     if kt["einleitung"]:
         teile.append("<p>" + e(kt["einleitung"][0]) + "</p>")
     punkte = []
@@ -225,8 +355,10 @@ def beschreibung(it) -> str:
     punkt("Marke", kt["details"].get("Marke") or it.get("brand"))
     punkt("Artikel", PRODUKTART_DE.get(str(it.get("product_type") or ""), ""))
     punkt("Für", ABTEILUNG_DE.get(str(it.get("department") or ""), ""))
-    for k in ("Linie", "Modell", "Kollektion", "Saison"):
-        punkt(k, kt["details"].get(k))
+    # Research geht vor Katalogangabe: Linie, Modell, Kollektion/Jahr (nur so sicher, wie belegt).
+    punkt("Linie", r.get("linie") or kt["details"].get("Linie"))
+    punkt("Modell", r.get("modell") or kt["details"].get("Modell"))
+    punkt("Kollektion / Jahr", kollektion_text(it) or kt["details"].get("Kollektion") or kt["details"].get("Saison"))
     groesse = str(it.get("size") or "").strip()
     eu, uk, us = schuhgroesse(it)
     if eu and (uk or us):
@@ -236,10 +368,14 @@ def beschreibung(it) -> str:
     for k in ("Passform", "Schnitt", "Länge", "Ärmel", "Verschluss", "Muster", "Material", "Herstellungsland", "Besonderheit", "Besonderheiten"):
         punkt(k, kt["details"].get(k))
     teile.append("<h4>Auf einen Blick</h4><ul>" + "".join(punkte) + "</ul>")
+    # Archiv-Hintergrund: nur was belegt ist, mit Quelle (Etikett, Datumscode, Kollektionsvergleich).
+    if r.get("quellen") and konfidenz(it) in ("hoch", "mittel"):
+        quelle = str(r["quellen"][0]).strip()
+        teile.append("<h4>Archiv-Hintergrund</h4><p>Belegt durch: " + e(quelle[:300]) + "</p>")
     zustand = [z for z in kt["zustand"] if z]
     if not zustand:
         zustand = ["Neu mit Originaletikett, ungetragen." if ist_neu(it) else "Gebrauchtes Einzelstück mit normalen, altersgemäßen Gebrauchsspuren."]
-    zustand += ["Hinweis: " + h for h in kt["hinweise"] if h]
+    zustand += ["Hinweis: " + h for h in maengel if h]
     zustand.append("Alle Besonderheiten sind auf den Fotos zu sehen – jedes Stück ist individuell fotografiert und geprüft.")
     teile.append("<h4>Zustand</h4><ul>" + "".join(f"<li>{e(z)}</li>" for z in zustand) + "</ul>")
     frei = float(it.get("price") or 0) >= VERSAND_FREI_AB
@@ -252,7 +388,10 @@ def beschreibung(it) -> str:
 
 
 def bild_pfade(it):
-    return [str(p) for p in (it.get("gallery") or []) if isinstance(p, str) and p.startswith("assets/img/")][:MAX_BILDER]
+    # Fotos, die laut Research zu einem anderen Artikel gehoeren, fallen weg (data/ebay_recherche.json,
+    # "bild_ausschluss"), bis der Katalog selbst korrigiert ist.
+    aus = set(RECHERCHE.get("bild_ausschluss", {}).get(str(it["id"]), []))
+    return [str(p) for p in (it.get("gallery") or []) if isinstance(p, str) and p.startswith("assets/img/") and p not in aus][:MAX_BILDER]
 
 
 # Hintergrund der eBay-Fotos: Weiss (eBay-Empfehlung), Schwarz (Shop-Optik) oder das
@@ -310,7 +449,7 @@ def zeile(it, basis, hintergrund, sku_zusatz=""):
 # Zustand, Versand, Ruecknahme - entsteht direkt als Angebot (VerifyAdd prueft nur).
 VOLL_HEADER = [
     "*Action(SiteID=Germany|Country=DE|Currency=EUR|Version=1193|CC=UTF-8)", "CustomLabel", "*Category", "*Title",
-    "*Description", "*ConditionID", "C:Marke", "C:Größe", "C:EU-Schuhgröße", "C:UK-Schuhgröße", "C:US-Schuhgröße", "C:Absatzhöhe",
+    "*Description", "*ConditionID", "ConditionDescription", "C:Marke", "C:Größe", "C:EU-Schuhgröße", "C:UK-Schuhgröße", "C:US-Schuhgröße", "C:Absatzhöhe",
     "C:Farbe", "C:Abteilung", "C:Produktart",
     "C:Stil", "C:Ärmellänge", "C:Außenmaterial", "C:Material", "C:Kleiderlänge", "C:Rocklänge", "C:Schrittlänge",
     "PicURL", "*Format", "*Duration", "*StartPrice", "*Quantity", "BestOfferEnabled", "*Location", "PostalCode",
@@ -490,10 +629,21 @@ def schrittlaenge(it) -> str:
     return "Regulär" if kat == "Pants" else ""
 
 
+def zustandsbeschreibung(it) -> str:
+    """eBay-Feld 'Zustandsbeschreibung' (steht oben im Angebot neben dem Zustand): Maengel aus dem
+    Katalog und aus der Fotodurchsicht, sonst der allgemeine Gebraucht-Hinweis. Max. 1000 Zeichen."""
+    kt = _katalogtext(it)
+    teile = [h for h in zustand_hinweise(it) if h and not re.search(r"neu mit (original)?etikett", h, re.I)]
+    teile += [z for z in kt["zustand"] if z]
+    if not teile:
+        teile = ["Neu mit Originaletikett, ungetragen." if ist_neu(it) else "Gebrauchtes Einzelstück mit normalen, altersgemäßen Gebrauchsspuren, siehe Fotos."]
+    return " ".join(teile)[:1000]
+
+
 def zeile_voll(it, basis, hintergrund, aktion="VerifyAdd", sku_zusatz=""):
     frei = float(it["price"]) >= VERSAND_FREI_AB
     return [
-        aktion, sku(it, sku_zusatz), kategorie(it) or "", titel(it), beschreibung(it), condition_id(it),
+        aktion, sku(it, sku_zusatz), kategorie(it) or "", titel(it), beschreibung(it), condition_id(it), zustandsbeschreibung(it),
         str(it.get("brand") or ""), ebay_groesse(it), *schuhgroesse(it), absatzhoehe(it), farbe(it),
         ABTEILUNG_DE.get(str(it.get("department") or ""), ""), PRODUKTART_DE.get(str(it.get("product_type") or ""), ""), STIL, aermel(it),
         material(it) if str(it.get("taxonomy_category") or "") in ("Jackets", "Coats", "Shoes", "Accessories") else "", material(it),
