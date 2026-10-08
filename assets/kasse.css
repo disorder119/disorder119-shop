@@ -488,6 +488,19 @@
   color: var(--text);
 }
 .kasse-karte__punkt:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+/* Echter Standort, wenn mehrere Orte an einer Adresse aufgefaechert sind */
+.kasse-karte__mitte {
+  position: absolute;
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--text);
+  border: 2px solid var(--ink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
 .kasse-karte__zoom { position: absolute; z-index: 3; left: 8px; top: 8px; display: grid; gap: 4px; }
 .kasse-karte__ebenen {
   position: absolute;
@@ -662,3 +675,18 @@
    Versand" unter den Versandarten (assets/kasse.js). */
 .kasse-lieferung { margin: 0; font-size: 0.82rem; line-height: 1.5; color: var(--text); }
 .kasse-frei { color: var(--text); }
+
+/* Am Handy laege der runde Ansicht-Knopf (ansicht.js) beim Scrollen ueber Feldern und
+   Hinweisen der Kasse - hier wird nur bezahlt, umschalten geht auf jeder anderen Seite. */
+@media (max-width: 759px) {
+  body .d119-ansicht { display: none; }
+}
+
+/* Schwarze Ansicht: ohne dunkles Farbschema malt der Browser nicht gewaehlte Radios als volle
+   weisse Scheibe - die wirkten "aktiver" als die gewaehlte Option. Die Wahl bekommt zusaetzlich
+   einen leichten Grund. */
+:root:not([data-theme]) .kasse-option input,
+:root:not([data-theme]) .kasse-ort input,
+:root:not([data-theme]) .kasse-konto input { color-scheme: dark; }
+.kasse-option:has(input:checked),
+.kasse-ort:has(input:checked) { background: var(--accent-soft); }

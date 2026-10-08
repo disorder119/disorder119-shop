@@ -774,18 +774,40 @@
     }
     aKarte.appendChild(flaeche);
     var gesperrt = gesperrtJetzt();
+    // Mehrere Orte an einer Adresse (z. B. Packstationen vor einer Filiale) lagen genau
+    // uebereinander, nur der oberste war anklickbar. Solche Gruppen stehen im Kreis um den
+    // echten Standort; ein kleiner Punkt in der Mitte zeigt, wo sie wirklich sind.
+    var gruppen = [];
     (abhol.orte || []).forEach(function (o, i) {
       if (!mitGeo(o)) return;
-      var p = el("button", "kasse-karte__punkt" + (o.typ === "packstation" ? "" : " kasse-karte__punkt--filiale"), String(i + 1));
-      p.type = "button";
-      p._ort = o;
-      p.style.left = Math.round(karteX(o.lng, z) - links) + "px";
-      p.style.top = Math.round(karteY(o.lat, z) - oben) + "px";
-      p.setAttribute("aria-label", (i + 1) + ": " + o.name + (o.strasse ? ", " + o.strasse : ""));
-      p.setAttribute("aria-pressed", String(gleicherOrt(abhol.ort, o)));
-      p.disabled = gesperrt;
-      p.addEventListener("click", function () { ortWaehlen(o, true); });
-      aKarte.appendChild(p);
+      var x = karteX(o.lng, z) - links, y = karteY(o.lat, z) - oben;
+      var g = gruppen.filter(function (g) { return Math.abs(g.x - x) < 20 && Math.abs(g.y - y) < 20; })[0];
+      if (!g) { g = { x: x, y: y, punkte: [] }; gruppen.push(g); }
+      g.punkte.push({ ort: o, nr: i + 1 });
+    });
+    gruppen.forEach(function (g) {
+      var n = g.punkte.length;
+      var radius = n > 1 ? Math.max(16, n * 30 / (2 * Math.PI)) : 0;
+      if (n > 1) {
+        var mitte = el("span", "kasse-karte__mitte");
+        mitte.style.left = Math.round(g.x) + "px";
+        mitte.style.top = Math.round(g.y) + "px";
+        aKarte.appendChild(mitte);
+      }
+      g.punkte.forEach(function (e, k) {
+        var o = e.ort;
+        var winkel = -Math.PI / 2 + k * 2 * Math.PI / n;
+        var p = el("button", "kasse-karte__punkt" + (o.typ === "packstation" ? "" : " kasse-karte__punkt--filiale"), String(e.nr));
+        p.type = "button";
+        p._ort = o;
+        p.style.left = Math.round(g.x + radius * Math.cos(winkel)) + "px";
+        p.style.top = Math.round(g.y + radius * Math.sin(winkel)) + "px";
+        p.setAttribute("aria-label", e.nr + ": " + o.name + (o.strasse ? ", " + o.strasse : ""));
+        p.setAttribute("aria-pressed", String(gleicherOrt(abhol.ort, o)));
+        p.disabled = gesperrt;
+        p.addEventListener("click", function () { ortWaehlen(o, true); });
+        aKarte.appendChild(p);
+      });
     });
     var zoom = el("div", "kasse-karte__zoom");
     [["+", "kartePlus", 1], ["−", "karteMinus", -1]].forEach(function (k) {
