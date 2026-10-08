@@ -681,3 +681,12 @@
 @media (max-width: 759px) {
   body .d119-ansicht { display: none; }
 }
+
+/* Schwarze Ansicht: ohne dunkles Farbschema malt der Browser nicht gewaehlte Radios als volle
+   weisse Scheibe - die wirkten "aktiver" als die gewaehlte Option. Die Wahl bekommt zusaetzlich
+   einen leichten Grund. */
+:root:not([data-theme]) .kasse-option input,
+:root:not([data-theme]) .kasse-ort input,
+:root:not([data-theme]) .kasse-konto input { color-scheme: dark; }
+.kasse-option:has(input:checked),
+.kasse-ort:has(input:checked) { background: var(--accent-soft); }
