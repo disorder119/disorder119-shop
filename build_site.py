@@ -2125,6 +2125,110 @@ def build_catalog_json():
     print(f"catalog.json geschrieben ({len(catalog)} Artikel, {len(ITEMS) - len(public_items)} DRAFT ausgeschlossen).")
 
 
+# ---------------------------------------------------------------- Merchant-Feed
+# Google Merchant Center (kostenlose Produktlistings im Shopping-Tab und in der
+# Suche): ein RSS-2.0-Feed mit Google-Attributen unter /feed/google-merchant.xml.
+# Versandkosten stehen nicht im Feed (sie haengen an der Paketgroesse), sondern
+# in den Versandeinstellungen des Merchant-Kontos.
+GOOGLE_CATEGORY = {
+    "Jackets": "Apparel & Accessories > Clothing > Outerwear > Coats & Jackets",
+    "Coats": "Apparel & Accessories > Clothing > Outerwear > Coats & Jackets",
+    "Tops": "Apparel & Accessories > Clothing > Shirts & Tops",
+    "Shirts": "Apparel & Accessories > Clothing > Shirts & Tops",
+    "Knitwear": "Apparel & Accessories > Clothing > Shirts & Tops",
+    "Pants": "Apparel & Accessories > Clothing > Pants",
+    "Skirts": "Apparel & Accessories > Clothing > Skirts",
+    "Dresses": "Apparel & Accessories > Clothing > Dresses",
+    "Shoes": "Apparel & Accessories > Shoes",
+    "Accessories": "Apparel & Accessories > Clothing Accessories",
+}
+GOOGLE_CATEGORY_BY_TYPE = {
+    "Shorts": "Apparel & Accessories > Clothing > Shorts",
+    "Swim Shorts": "Apparel & Accessories > Clothing > Swimwear",
+    "Underwear Shorts": "Apparel & Accessories > Clothing > Underwear & Socks > Underwear",
+    "Sleepwear": "Apparel & Accessories > Clothing > Sleepwear & Loungewear",
+    "Hat": "Apparel & Accessories > Clothing Accessories > Hats",
+    "Beanie": "Apparel & Accessories > Clothing Accessories > Hats",
+    "Cap": "Apparel & Accessories > Clothing Accessories > Hats",
+    "Belt": "Apparel & Accessories > Clothing Accessories > Belts",
+    "Scarf": "Apparel & Accessories > Clothing Accessories > Scarves & Shawls",
+    "Sunglasses": "Apparel & Accessories > Clothing Accessories > Sunglasses",
+    "Backpack": "Luggage & Bags > Backpacks",
+    "Bag": "Apparel & Accessories > Handbags, Wallets & Cases > Handbags",
+    "Wallet": "Apparel & Accessories > Handbags, Wallets & Cases > Wallets & Money Clips",
+}
+MERCHANT_FEED_PATH = BASE / "feed" / "google-merchant.xml"
+
+
+def merchant_category(it):
+    art = str(it.get("product_type") or "")
+    cat = it.get("taxonomy_category") or it.get("category") or ""
+    return GOOGLE_CATEGORY_BY_TYPE.get(art) or GOOGLE_CATEGORY.get(cat, "")
+
+
+def merchant_description(it):
+    from seo_text import description_snippet
+    text = str(it.get("desc_de") or it.get("desc") or "").strip()
+    auszug = description_snippet(text, 1500, display_name(it)) if text else ""
+    return auszug or meta_description(it, "de")
+
+
+def build_merchant_feed():
+    def tag(name, value):
+        return f"<{name}>{esc(str(value))}</{name}>"
+
+    frei_cents = versandkostenfrei_ab_cents()
+    entries = []
+    for it in ITEMS:
+        if it.get("public_status") != "AVAILABLE" or float(it.get("price") or 0) <= 0:
+            continue
+        gallery = [g for g in (it.get("gallery") or []) if (BASE / g).is_file()]
+        category = merchant_category(it)
+        if not gallery or not category:
+            continue
+        link = SITE_URL.rstrip("/") + "/artikel/" + str(it["id"]) + "/"
+        neu = bool(re.search(r"neu mit (original)?etikett", str(it.get("desc_de") or it.get("desc") or ""), re.I))
+        dep = str(it.get("department") or "")
+        felder = [
+            tag("g:id", it["id"]),
+            tag("g:title", (display_name(it) + " – Second Hand")[:150]),
+            tag("g:description", merchant_description(it)[:5000]),
+            tag("g:link", link),
+            tag("g:image_link", SITE_URL + gallery[0]),
+        ] + [tag("g:additional_image_link", SITE_URL + g) for g in gallery[1:11]] + [
+            tag("g:availability", "in_stock"),
+            tag("g:price", f'{float(it["price"]):.2f} EUR'),
+            tag("g:condition", "new" if neu else "used"),
+            tag("g:brand", it.get("brand") or "Disorder119"),
+            tag("g:identifier_exists", "no"),
+            tag("g:google_product_category", category),
+            tag("g:product_type", " > ".join(p for p in (
+                LANDING_DEP_LABEL.get(dep, {}).get("de", "") if "LANDING_DEP_LABEL" in globals() else {"Women": "Damen", "Men": "Herren"}.get(dep, ""),
+                cat_tr(it.get("taxonomy_category") or it.get("category") or "", "de"),
+                str(it.get("product_type") or "")) if p)),
+            tag("g:gender", {"Women": "female", "Men": "male"}.get(dep, "unisex")),
+            tag("g:age_group", "adult"),
+        ]
+        if it.get("size"):
+            felder.append(tag("g:size", str(it["size"]).split("/")[0].strip()[:100]))
+        if it.get("color"):
+            felder.append(tag("g:color", str(it["color"])[:100]))
+        if frei_cents and float(it["price"]) * 100 >= frei_cents:
+            felder.append("<g:shipping><g:country>DE</g:country><g:price>0.00 EUR</g:price></g:shipping>")
+        entries.append("<item>" + "".join(felder) + "</item>")
+    MERCHANT_FEED_PATH.parent.mkdir(parents=True, exist_ok=True)
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0"><channel>'
+        "<title>Disorder119 – Designer Second Hand &amp; Vintage</title>"
+        f"<link>{esc(SITE_URL)}</link>"
+        "<description>Kuratiertes Archiv für Designer-, Vintage- und Contemporary-Mode aus zweiter Hand.</description>\n"
+        + "\n".join(entries) + "\n</channel></rss>\n"
+    )
+    MERCHANT_FEED_PATH.write_text(xml, encoding="utf-8")
+    print(f"feed/google-merchant.xml geschrieben ({len(entries)} Artikel).")
+
+
 def build_thumbs():
     from PIL import Image
     THUMB_SIZE = (220, 293)
@@ -2172,6 +2276,7 @@ def main():
     build_widerruf_pages()
     build_articles()
     build_catalog_json()
+    build_merchant_feed()
     build_sitemap()
     if "--thumbs" in sys.argv:
         build_thumbs()
