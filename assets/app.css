@@ -2189,7 +2189,7 @@
     font-size: 0.66rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--text-faint);
+    color: var(--text-muted);
     text-align: center;
   }
 
@@ -3769,6 +3769,8 @@ img[data-d119-image-protected] {
 .cart-empty__weiter a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 .mode-rail-hint--unten { left: 16px; right: 16px; top: auto; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); max-width: none; justify-content: space-between; }
 .mode-rail-hint--unten .mode-rail-hint__text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Baukasten-Platzhalter: das Plus ist Schmuck und kein Text (axe: Name = sichtbarer Text). */
+.outfit-slot__frame--leer::before { content: "+"; }
 @media (max-width: 759px) {
   .footer__nav button, .footer__nav a, .footer__cart,
   .footer__legal button, .footer__legal a { min-height: 32px; display: inline-flex; align-items: center; }

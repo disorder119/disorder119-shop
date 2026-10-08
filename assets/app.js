@@ -3767,11 +3767,12 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
           "</div>" +
           '<button type="button" class="outfit-slot__remove" data-remove="' + key + '" aria-label="' + t("cartRemove") + '">✕</button>';
       } else {
-        slotAriaLabel = outfitSlotLabel(key) + ": " + t("outfitChoose");
+        // Name = sichtbarer Text (Beschriftung, Leerzeichen, Wert); das Plus kommt aus dem CSS.
+        slotAriaLabel = outfitSlotLabel(key) + " " + t("outfitChoose");
         row.innerHTML =
-          '<div class="outfit-slot__frame" data-slot="' + key + '" aria-hidden="true">+</div>' +
+          '<div class="outfit-slot__frame outfit-slot__frame--leer" data-slot="' + key + '" aria-hidden="true"></div>' +
           '<div class="outfit-slot__body" data-slot="' + key + '">' +
-            '<div class="outfit-slot__label">' + outfitSlotLabel(key) + "</div>" +
+            '<div class="outfit-slot__label">' + outfitSlotLabel(key) + "</div> " +
             '<div class="outfit-slot__value">' + t("outfitChoose") + "</div>" +
           "</div>";
       }
