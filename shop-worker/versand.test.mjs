@@ -24,6 +24,10 @@ import {
 import shopWorker from "./worker.js";
 import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 
+// Diese Tests pruefen die Packlink-Preise; der Shop selbst rechnet seit
+// dem 08.10.2026 mit festen Tarifen (versand.quelle "fest").
+const PACKLINK = Object.freeze({ VERSAND_QUELLE: "packlink" });
+
 const SHOP = "https://disorder119.com";
 const TEST_ADRESSE = { name: "Mara Beispiel", strasse: "Musterweg", hausnummer: "12", plz: "63739", ort: "Aschaffenburg", land: "DE" };
 
@@ -194,10 +198,10 @@ test("live Packlink prices are cached; without Packlink the fallback price appli
   versandCacheLeeren();
   const netz = fakeNetz();
   try {
-    const erste = await versandOptionen({}, "S");
+    const erste = await versandOptionen(PACKLINK, "S");
     assert.equal(erste.quelle, "packlink");
     assert.deepEqual(erste.optionen.map(o => [o.id, o.preisCents, o.carrier]), [["pl-S-20425", 559, "DPD"], ["pl-S-66666", 699, "GLS"], ["pl-S-55555", 1990, "DPD"]]);
-    await versandOptionen({}, "S");
+    await versandOptionen(PACKLINK, "S");
     assert.equal(netz.calls.filter(c => c.host === "api.packlink.com").length, 1);
     const anfrage = netz.calls[0];
     assert.equal(anfrage.path, "/v1/services");
@@ -207,7 +211,7 @@ test("live Packlink prices are cached; without Packlink the fallback price appli
   versandCacheLeeren();
   const aus = fakeNetz({ packlinkDown: true });
   try {
-    const ersatz = await versandOptionen({}, "L");
+    const ersatz = await versandOptionen(PACKLINK, "L");
     assert.equal(ersatz.quelle, "ersatz");
     assert.deepEqual(ersatz.optionen.map(o => [o.id, o.preisCents]), [["ersatz-L", PAKETE.L.ersatzCents]]);
   } finally {
@@ -219,16 +223,16 @@ test("the server checks option and price at checkout", async () => {
   versandCacheLeeren();
   const netz = fakeNetz();
   try {
-    const standard = await versandFuerBestellung({}, [ITEMS[0]]);
+    const standard = await versandFuerBestellung(PACKLINK, [ITEMS[0]]);
     assert.equal(standard.id, "pl-S-20425");
-    const express = await versandFuerBestellung({}, [ITEMS[0]], "pl-S-55555", 1990);
+    const express = await versandFuerBestellung(PACKLINK, [ITEMS[0]], "pl-S-55555", 1990);
     assert.equal(express.art, "express");
     assert.equal(express.preisCents, 1990);
     // UPS steht nicht zur Wahl, auch nicht per manipulierter Anfrage.
-    await assert.rejects(versandFuerBestellung({}, [ITEMS[0]], "pl-S-23655", 549), err => err.code === "VERSAND_OPTION_UNGUELTIG");
+    await assert.rejects(versandFuerBestellung(PACKLINK, [ITEMS[0]], "pl-S-23655", 549), err => err.code === "VERSAND_OPTION_UNGUELTIG");
 
     // Andere Paketgroesse als beim Artikel (Stiefel = Groß): Kennung passt nicht.
-    await assert.rejects(versandFuerBestellung({}, [ITEMS[1]], "pl-S-20425", 559), err => {
+    await assert.rejects(versandFuerBestellung(PACKLINK, [ITEMS[1]], "pl-S-20425", 559), err => {
       assert.ok(err instanceof VersandError);
       assert.equal(err.code, "VERSAND_OPTION_UNGUELTIG");
       assert.equal(err.status, 409);
@@ -237,24 +241,24 @@ test("the server checks option and price at checkout", async () => {
       return true;
     });
     // Preis im Browser manipuliert oder bei Packlink geaendert.
-    await assert.rejects(versandFuerBestellung({}, [ITEMS[0]], "pl-S-20425", 1), err => err.code === "VERSAND_PREIS_GEAENDERT");
+    await assert.rejects(versandFuerBestellung(PACKLINK, [ITEMS[0]], "pl-S-20425", 1), err => err.code === "VERSAND_PREIS_GEAENDERT");
 
     // Ab 99 EUR Warenwert: der guenstigste Standard kostet nichts, die
     // anderen Dienste nur den Aufpreis.
-    const frei = await versandFuerBestellung({}, [ITEMS[0]], "pl-S-20425", 0, 15000);
+    const frei = await versandFuerBestellung(PACKLINK, [ITEMS[0]], "pl-S-20425", 0, 15000);
     assert.equal(frei.preisCents, 0);
     assert.equal(frei.listenpreisCents, 559);
-    assert.equal((await versandFuerBestellung({}, [ITEMS[0]], "pl-S-66666", 140, 15000)).preisCents, 140);
-    assert.equal((await versandFuerBestellung({}, [ITEMS[0]], "pl-S-55555", 1431, 15000)).preisCents, 1431);
+    assert.equal((await versandFuerBestellung(PACKLINK, [ITEMS[0]], "pl-S-66666", 140, 15000)).preisCents, 140);
+    assert.equal((await versandFuerBestellung(PACKLINK, [ITEMS[0]], "pl-S-55555", 1431, 15000)).preisCents, 1431);
     // Wer den alten Preis gesehen hat, bekommt die neue Liste.
-    await assert.rejects(versandFuerBestellung({}, [ITEMS[0]], "pl-S-20425", 559, 15000), err => {
+    await assert.rejects(versandFuerBestellung(PACKLINK, [ITEMS[0]], "pl-S-20425", 559, 15000), err => {
       assert.equal(err.code, "VERSAND_PREIS_GEAENDERT");
       assert.deepEqual(err.versand.frei, { abCents: 9900, warenwertCents: 15000, erreicht: true, fehltCents: 0 });
       return true;
     });
     // Knapp darunter: voller Preis, 0 Cent wird abgelehnt.
-    assert.equal((await versandFuerBestellung({}, [ITEMS[3]], "pl-S-20425", 559, 9899)).preisCents, 559);
-    await assert.rejects(versandFuerBestellung({}, [ITEMS[3]], "pl-S-20425", 0, 9899), err => err.code === "VERSAND_PREIS_GEAENDERT");
+    assert.equal((await versandFuerBestellung(PACKLINK, [ITEMS[3]], "pl-S-20425", 559, 9899)).preisCents, 559);
+    await assert.rejects(versandFuerBestellung(PACKLINK, [ITEMS[3]], "pl-S-20425", 0, 9899), err => err.code === "VERSAND_PREIS_GEAENDERT");
   } finally {
     netz.restore();
   }
@@ -302,7 +306,7 @@ test("public options carry the expected delivery window", () => {
 test("GET /versand/optionen: size from the catalog, CORS only for the shop, strict ids", async () => {
   versandCacheLeeren();
   const netz = fakeNetz();
-  const env = { KATALOG_LADEN: async () => ITEMS };
+  const env = { VERSAND_QUELLE: "packlink", KATALOG_LADEN: async () => ITEMS };
   const abfrage = async (query, { origin = SHOP, extra = {} } = {}) => {
     const req = new Request(`https://api.disorder119.com/versand/optionen${query}`, { headers: origin ? { Origin: origin } : {} });
     const res = await handleVersandOptionen(req, { ...env, ...extra }, new URL(req.url), "req-test", origin);
@@ -350,7 +354,7 @@ test("create-order: chosen shipping goes into PayPal and the order, tampering is
   versandCacheLeeren();
   const netz = fakeNetz();
   const DB = sqliteD1(allMigrations());
-  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  const env = { VERSAND_QUELLE: "packlink", DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
   const bestellen = async (body, key) => {
     const req = new Request("https://api.disorder119.com/create-order", {
       method: "POST",
@@ -411,7 +415,7 @@ test("create-order: from 99 EUR the cheapest standard costs nothing, below it th
   versandCacheLeeren();
   const netz = fakeNetz();
   const DB = sqliteD1(allMigrations());
-  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  const env = { VERSAND_QUELLE: "packlink", DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
   const bestellen = async (body, key) => {
     const req = new Request("https://api.disorder119.com/create-order", {
       method: "POST",
@@ -454,7 +458,7 @@ test("create-order falls back to the configured price when Packlink is down", as
   versandCacheLeeren();
   const netz = fakeNetz({ packlinkDown: true });
   const DB = sqliteD1(allMigrations());
-  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  const env = { VERSAND_QUELLE: "packlink", DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
   try {
     const req = new Request("https://api.disorder119.com/create-order", {
       method: "POST",

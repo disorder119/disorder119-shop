@@ -130,9 +130,42 @@ async function angeboteFuer(env, paket) {
   return angebote;
 }
 
+// Feste Tarife (config/shop-config.json versand.quelle "fest"): DHL und DPD
+// zu Privatpreisen, das Etikett entsteht von Hand bzw. halbautomatisch.
+export function festeOptionen(paket, konfig = VERSAND) {
+  const p = paketFuer(paket);
+  return konfig.tarife.map(t => ({
+    id: `fest-${t.id}-${p.key}`,
+    art: t.art,
+    titel: t.titel,
+    preisCents: t.preise[p.key],
+    laufzeit: t.laufzeitTage ? (t.laufzeitTage === 1 ? "1 Tag" : `${t.laufzeitTage} Tage`) : "",
+    quelle: "fest",
+    packlinkServiceId: null,
+    carrier: t.carrier,
+    serviceName: t.titel,
+    paket: p.key,
+    abholstation: t.abholstation,
+    versichertBisCents: t.versichertBisCents,
+  })).sort((a, b) => a.preisCents - b.preisCents || a.id.localeCompare(b.id));
+}
+
+// Woher die Preise kommen: config/shop-config.json (versand.quelle). Der
+// Schalter VERSAND_QUELLE ("fest" | "packlink") am Worker ueberstimmt das,
+// etwa um ohne neuen Katalog-Build auf Packlink zurueckzugehen.
+export function versandQuelle(env, konfig = VERSAND) {
+  const q = String(env?.VERSAND_QUELLE || "").trim().toLowerCase();
+  return q === "fest" || q === "packlink" ? q : konfig.quelle;
+}
+
 // Optionen fuer eine Paketgroesse. Ohne Verbindung zu Packlink: Ersatzpreis.
 export async function versandOptionen(env, paket) {
   const p = paketFuer(paket);
+  if (versandQuelle(env) === "fest") {
+    const optionen = festeOptionen(p.key);
+    if (optionen.length) return { paket: p.key, quelle: "fest", optionen };
+    return { paket: p.key, quelle: "ersatz", optionen: [ersatzOption(p.key)] };
+  }
   try {
     const optionen = optionenAus(await angeboteFuer(env, p.key), p.key);
     if (optionen.length) return { paket: p.key, quelle: "packlink", optionen };
@@ -186,6 +219,10 @@ export function oeffentlicheOptionen(ergebnis, jetzt = new Date()) {
         laufzeit: o.laufzeit,
         tage,
         carrier: o.carrier,
+        // Nur DHL liefert an Packstation und Filiale.
+        abholstation: o.abholstation === true,
+        // Feste Tarife: bis zu welchem Warenwert der Paketdienst haftet.
+        ...(Number.isSafeInteger(o.versichertBisCents) && o.versichertBisCents > 0 ? { versichertBisCents: o.versichertBisCents } : {}),
         // Voraussichtlich bei der Kundschaft: { von, bis } als Datum.
         lieferung: lieferfenster(tage, jetzt),
       };
@@ -223,12 +260,13 @@ export async function versandFuerBestellung(env, items, gewaehlteId, gesehenCent
 // Die gewaehlte Versandart gehoert zur Bestellung - Admin-App und Etikett
 // greifen darauf zurueck. Ein zweiter Aufruf (Idempotenz) aendert nichts.
 export function versandWahlStatement(db, orderId, gewaehlt, now = new Date().toISOString()) {
+  const z = gewaehlt.zustellung && gewaehlt.zustellung.art !== "haustuer" ? gewaehlt.zustellung : null;
   return db.prepare(`INSERT OR IGNORE INTO order_versand
-      (order_id,option_id,art,quelle,packlink_service_id,carrier,service_name,paket,preis_cents,laufzeit,created_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+      (order_id,option_id,art,quelle,packlink_service_id,carrier,service_name,paket,preis_cents,laufzeit,created_at,zustellart,abholort_json)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .bind(String(orderId), gewaehlt.id, gewaehlt.art, gewaehlt.quelle, gewaehlt.packlinkServiceId,
       gewaehlt.carrier || null, gewaehlt.serviceName || null, gewaehlt.paket, gewaehlt.preisCents,
-      gewaehlt.laufzeit || null, now);
+      gewaehlt.laufzeit || null, now, z ? z.art : "haustuer", z ? JSON.stringify(z.abholort) : null);
 }
 
 export async function versandWahlLaden(env, orderId) {
@@ -248,6 +286,8 @@ export async function versandWahlLaden(env, orderId) {
     preisCents: Number(row.preis_cents),
     laufzeit: row.laufzeit || null,
     gewaehltAm: row.created_at,
+    zustellart: row.zustellart || "haustuer",
+    abholort: (() => { try { return row.abholort_json ? JSON.parse(row.abholort_json) : null; } catch { return null; } })(),
   };
 }
 

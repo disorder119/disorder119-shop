@@ -24,7 +24,7 @@
       fehltEmail: "Bitte gib eine gültige E-Mail-Adresse an.", appleCoupon: "Mit Gutschein bitte PayPal wählen; der Rabatt wird dort vor der Zahlung geprüft.",
       vorname: "Vorname", nachname: "Nachname", plz: "PLZ", ort: "Ort", strasse: "Straße",
       hausnummer: "Nr.", zusatz: "Adresszusatz (optional)",
-      landHinweis: "Wir liefern innerhalb Deutschlands, bezahlt wird mit PayPal oder Apple Pay. Lieferung an eine Packstation ist bald mit DHL möglich.",
+      landHinweis: "Wir liefern innerhalb Deutschlands mit DHL oder DPD, bezahlt wird mit PayPal oder Apple Pay. Mit DHL auch an eine Packstation oder Filiale.",
       agb: "AGB & Widerruf", datenschutz: "Datenschutz", impressum: "Impressum", widerruf: "Vertrag widerrufen",
       laedt: "Wird geladen …", leer: "Dein Warenkorb ist leer.", zumArchiv: "Zum Archiv",
       nichtMehr: "Nicht mehr verfügbar – wird nicht mitbestellt:", groesse: "Größe", paket: "Paket",
@@ -42,7 +42,7 @@
       anfrage: "Bestellung per E-Mail senden", betreff: "Bestellung Disorder119",
       fehltVorname: "Bitte gib deinen Vornamen an.", fehltNachname: "Bitte gib deinen Nachnamen an.",
       fehltPlz: "Bitte gib eine fünfstellige PLZ an.", fehltOrt: "Bitte gib den Ort an.", fehltStrasse: "Bitte gib die Straße an.",
-      fehltNummer: "Bitte gib die Hausnummer an.", packstation: "An eine Packstation oder Filiale können wir noch nicht liefern – das kommt bald mit DHL.",
+      fehltNummer: "Bitte gib die Hausnummer an.", packstation: "Für eine Packstation oder Filiale wähle unten bei Versand „An Packstation oder Filiale“ – das geht mit DHL.",
       plzUnbekannt: "Diese PLZ kennen wir nicht – bitte prüf sie noch einmal.", ortWaehlen: "Bitte wähle deinen Ort:",
       pruefen: "Bitte prüf die markierten Felder.", schonWeg: "Ein Stück ist gerade reserviert oder schon verkauft. Wir haben die Liste aktualisiert.",
       versandGeaendert: "Der Versandpreis hat sich gerade geändert. Bitte prüf die Übersicht und klick noch einmal auf PayPal.",
@@ -58,7 +58,21 @@
       dankeTextEingezogen: "Die Bestätigung mit Rechnung kommt an deine angegebene E-Mail-Adresse. Wir packen deine Stücke von Hand und verschicken sie innerhalb von 3 Werktagen.",
       konto: "Bestellung im Konto ansehen", weiter: "Weiter stöbern",
       mailAdresse: "Lieferadresse", mailVersand: "Versand", mailGesamt: "Gesamt", mailGruss: "Hallo! Ich möchte folgende Stücke bestellen:",
-      mailFrage: "Bitte bestätigt mir Verfügbarkeit und Zahlungsweg. Danke!"
+      mailFrage: "Bitte bestätigt mir Verfügbarkeit und Zahlungsweg. Danke!",
+      angaben: "Deine Angaben", zustWohin: "Wohin soll das Paket?", zustHaustuer: "An meine Adresse", zustAbholort: "An Packstation oder Filiale",
+      zustNurDhl: "mit DHL", nurHaustuer: "nur an die Haustür", versichert: "versichert bis {betrag}", abholSuche: "PLZ für die Suche",
+      abholSuchen: "Suchen", abholLaedt: "Suche Packstationen und Filialen …", abholKeine: "Hier haben wir keine Packstation oder Filiale gefunden. Probier eine andere PLZ oder gib die Nummer selbst ein.",
+      abholFehler: "Die Suche bei DHL klappt gerade nicht. Gib die Nummer der Packstation oder Filiale selbst ein oder lass an deine Adresse liefern.",
+      abholPlzFehlt: "Gib eine fünfstellige PLZ ein, dann zeigen wir dir Packstationen und Filialen in der Nähe.", abholOhneSuche: "Gib die Nummer deiner Packstation oder Filiale ein – du findest sie in der DHL-App oder auf dhl.de.", abholGefunden: "{n} Abholorte in der Nähe – wähle einen aus der Liste oder auf der Karte.",
+      abholWaehlen: "Bitte wähle eine Packstation oder Filiale.", abholPackstation: "Packstation", abholFiliale: "Filiale",
+      abholKarte: "Auf der Karte zeigen", abholKarteZu: "Karte ausblenden", abholKarteHinweis: "Die Karte lädt Kartenbilder von OpenStreetMap – dabei sieht der Kartendienst deine IP-Adresse.",
+      kartePlus: "Karte vergrößern", karteMinus: "Karte verkleinern", abholManuell: "Nummer selbst eingeben", abholArt: "Art",
+      abholNummer: "Nummer", abholUebernehmen: "Übernehmen", abholNummerFehlt: "Bitte gib die Nummer ein (bis zu 4 Ziffern).",
+      postnummer: "DHL-Postnummer", optional: "optional", postnummerHinweisP: "Pflicht an der Packstation: deine 6- bis 10-stellige Postnummer aus der DHL-App. Vor- und Nachname müssen zu deinem DHL-Konto passen.",
+      postnummerHinweisF: "Optional – in der Filiale holst du das Paket mit Ausweis ab.", fehltPostnummer: "Bitte gib deine DHL-Postnummer an (6 bis 10 Ziffern).",
+      postnummerUngueltig: "Die Postnummer hat 6 bis 10 Ziffern.", abholNurDhl: "An Packstation und Filiale liefert nur DHL. Bitte wähle DHL oder die Lieferung an deine Adresse.",
+      abholUnvollstaendig: "Bitte wähle die Packstation oder Filiale noch einmal aus.", adresseAbhol: "Für Packstation oder Filiale brauchen wir nur Namen und E-Mail – Straße und Hausnummer kannst du leer lassen.",
+      lieferungAn: "Lieferung an"
     },
     en: {
       titel: "Checkout", zurueck: "Cart", stuecke: "Your pieces", adresse: "Delivery address", versand: "Shipping",
@@ -66,7 +80,7 @@
       fehltEmail: "Please enter a valid email address.", appleCoupon: "For coupons, please choose PayPal; the discount is checked before payment.",
       vorname: "First name", nachname: "Last name", plz: "Postcode", ort: "Town", strasse: "Street",
       hausnummer: "No.", zusatz: "Address line 2 (optional)",
-      landHinweis: "We deliver within Germany; payment is made with PayPal or Apple Pay. Delivery to a DHL Packstation is coming soon.",
+      landHinweis: "We deliver within Germany with DHL or DPD; payment is made with PayPal or Apple Pay. With DHL also to a Packstation or post office.",
       agb: "Terms & withdrawal", datenschutz: "Privacy", impressum: "Legal notice", widerruf: "Withdraw from contract here",
       laedt: "Loading …", leer: "Your cart is empty.", zumArchiv: "To the archive",
       nichtMehr: "No longer available – not included:", groesse: "Size", paket: "parcel",
@@ -84,7 +98,7 @@
       anfrage: "Send order by e-mail", betreff: "Order Disorder119",
       fehltVorname: "Please enter your first name.", fehltNachname: "Please enter your last name.",
       fehltPlz: "Please enter a five-digit postcode.", fehltOrt: "Please enter the town.", fehltStrasse: "Please enter the street.",
-      fehltNummer: "Please enter the house number.", packstation: "We cannot deliver to a Packstation or post office yet – that is coming soon with DHL.",
+      fehltNummer: "Please enter the house number.", packstation: "For a Packstation or post office, choose “To a Packstation or post office” under Shipping below – available with DHL.",
       plzUnbekannt: "We don't know this postcode – please check it.", ortWaehlen: "Please pick your town:",
       pruefen: "Please check the highlighted fields.", schonWeg: "A piece has just been reserved or sold. We have updated the list.",
       versandGeaendert: "The shipping price has just changed. Please check the summary and click PayPal again.",
@@ -100,7 +114,21 @@
       dankeTextEingezogen: "The confirmation and invoice will be sent to the email address you entered. We pack your pieces by hand and ship within 3 working days.",
       konto: "View order in your account", weiter: "Keep browsing",
       mailAdresse: "Delivery address", mailVersand: "Shipping", mailGesamt: "Total", mailGruss: "Hello! I would like to order these pieces:",
-      mailFrage: "Please confirm availability and payment. Thank you!"
+      mailFrage: "Please confirm availability and payment. Thank you!",
+      angaben: "Your details", zustWohin: "Where should the parcel go?", zustHaustuer: "To my address", zustAbholort: "To a Packstation or post office",
+      zustNurDhl: "with DHL", nurHaustuer: "home delivery only", versichert: "insured up to {betrag}", abholSuche: "Postcode to search",
+      abholSuchen: "Search", abholLaedt: "Searching for Packstations and post offices …", abholKeine: "We found no Packstation or post office here. Try another postcode or enter the number yourself.",
+      abholFehler: "The DHL search is not working right now. Enter the Packstation or post office number yourself, or have the parcel delivered to your address.",
+      abholPlzFehlt: "Enter a five-digit postcode and we will show you Packstations and post offices nearby.", abholOhneSuche: "Enter the number of your Packstation or post office – you can find it in the DHL app or on dhl.de.", abholGefunden: "{n} pickup points nearby – choose one from the list or on the map.",
+      abholWaehlen: "Please choose a Packstation or post office.", abholPackstation: "Packstation", abholFiliale: "Post office",
+      abholKarte: "Show on map", abholKarteZu: "Hide map", abholKarteHinweis: "The map loads tiles from OpenStreetMap – the map service sees your IP address.",
+      kartePlus: "Zoom in", karteMinus: "Zoom out", abholManuell: "Enter the number yourself", abholArt: "Type", abholNummer: "Number",
+      abholUebernehmen: "Use this", abholNummerFehlt: "Please enter the number (up to 4 digits).", postnummer: "DHL Postnummer",
+      optional: "optional", postnummerHinweisP: "Required for a Packstation: your 6 to 10 digit Postnummer from the DHL app. First and last name must match your DHL account.",
+      postnummerHinweisF: "Optional – you collect the parcel at the post office with your ID.", fehltPostnummer: "Please enter your DHL Postnummer (6 to 10 digits).",
+      postnummerUngueltig: "The Postnummer has 6 to 10 digits.", abholNurDhl: "Only DHL delivers to Packstations and post offices. Please choose DHL or delivery to your address.",
+      abholUnvollstaendig: "Please choose the Packstation or post office again.", adresseAbhol: "For a Packstation or post office we only need your name and email – you can leave street and house number empty.",
+      lieferungAn: "Deliver to"
     },
     fr: {
       titel: "Commande", zurueck: "Panier", stuecke: "Tes pièces", adresse: "Adresse de livraison", versand: "Livraison",
@@ -108,7 +136,7 @@
       fehltEmail: "Saisis une adresse e-mail valide.", appleCoupon: "Pour utiliser un bon, choisis PayPal ; la réduction est vérifiée avant le paiement.",
       vorname: "Prénom", nachname: "Nom", plz: "Code postal", ort: "Ville", strasse: "Rue",
       hausnummer: "N°", zusatz: "Complément d'adresse (facultatif)",
-      landHinweis: "Nous livrons en Allemagne ; le paiement se fait avec PayPal ou Apple Pay. La livraison en Packstation DHL arrive bientôt.",
+      landHinweis: "Nous livrons en Allemagne avec DHL ou DPD ; le paiement se fait avec PayPal ou Apple Pay. Avec DHL aussi en Packstation ou bureau de poste.",
       agb: "CGV & rétractation", datenschutz: "Confidentialité", impressum: "Mentions légales", widerruf: "Se rétracter du contrat ici",
       laedt: "Chargement …", leer: "Ton panier est vide.", zumArchiv: "Vers l'archive",
       nichtMehr: "Plus disponible – non inclus :", groesse: "Taille", paket: "colis",
@@ -126,7 +154,7 @@
       anfrage: "Envoyer la commande par e-mail", betreff: "Commande Disorder119",
       fehltVorname: "Indique ton prénom.", fehltNachname: "Indique ton nom.",
       fehltPlz: "Indique un code postal à cinq chiffres.", fehltOrt: "Indique la ville.", fehltStrasse: "Indique la rue.",
-      fehltNummer: "Indique le numéro.", packstation: "Nous ne livrons pas encore en Packstation ni en bureau de poste – bientôt avec DHL.",
+      fehltNummer: "Indique le numéro.", packstation: "Pour une Packstation ou un bureau de poste, choisis « En Packstation ou bureau de poste » sous Livraison – possible avec DHL.",
       plzUnbekannt: "Nous ne connaissons pas ce code postal – vérifie-le.", ortWaehlen: "Choisis ta ville :",
       pruefen: "Vérifie les champs signalés.", schonWeg: "Une pièce vient d'être réservée ou vendue. Nous avons mis la liste à jour.",
       versandGeaendert: "Le prix de livraison vient de changer. Vérifie le récapitulatif et clique à nouveau sur PayPal.",
@@ -142,7 +170,22 @@
       dankeTextEingezogen: "La confirmation et la facture seront envoyées à l'adresse e-mail indiquée. Nous emballons tes pièces à la main et expédions sous 3 jours ouvrés.",
       konto: "Voir la commande dans ton compte", weiter: "Continuer",
       mailAdresse: "Adresse de livraison", mailVersand: "Livraison", mailGesamt: "Total", mailGruss: "Bonjour ! Je souhaite commander ces pièces :",
-      mailFrage: "Merci de me confirmer disponibilité et paiement !"
+      mailFrage: "Merci de me confirmer disponibilité et paiement !",
+      angaben: "Tes coordonnées", zustWohin: "Où livrer le colis ?", zustHaustuer: "À mon adresse", zustAbholort: "En Packstation ou bureau de poste",
+      zustNurDhl: "avec DHL", nurHaustuer: "à domicile uniquement", versichert: "assuré jusqu’à {betrag}", abholSuche: "Code postal pour la recherche",
+      abholSuchen: "Rechercher", abholLaedt: "Recherche des Packstations et bureaux de poste …", abholKeine: "Aucune Packstation ni bureau de poste trouvé ici. Essaie un autre code postal ou saisis le numéro toi-même.",
+      abholFehler: "La recherche DHL ne fonctionne pas pour le moment. Saisis toi-même le numéro de la Packstation ou du bureau de poste, ou fais livrer à ton adresse.",
+      abholPlzFehlt: "Saisis un code postal à cinq chiffres pour voir les Packstations et bureaux de poste à proximité.", abholOhneSuche: "Saisis le numéro de ta Packstation ou de ton bureau de poste – tu le trouves dans l’app DHL ou sur dhl.de.",
+      abholGefunden: "{n} points de retrait à proximité – choisis-en un dans la liste ou sur la carte.", abholWaehlen: "Choisis une Packstation ou un bureau de poste.",
+      abholPackstation: "Packstation", abholFiliale: "Bureau de poste", abholKarte: "Afficher sur la carte", abholKarteZu: "Masquer la carte",
+      abholKarteHinweis: "La carte charge des images d’OpenStreetMap – le service de carte voit ton adresse IP.", kartePlus: "Zoom avant",
+      karteMinus: "Zoom arrière", abholManuell: "Saisir le numéro toi-même", abholArt: "Type", abholNummer: "Numéro", abholUebernehmen: "Valider",
+      abholNummerFehlt: "Saisis le numéro (jusqu’à 4 chiffres).", postnummer: "Postnummer DHL", optional: "facultatif",
+      postnummerHinweisP: "Obligatoire pour une Packstation : ta Postnummer de 6 à 10 chiffres de l’app DHL. Prénom et nom doivent correspondre à ton compte DHL.",
+      postnummerHinweisF: "Facultatif – tu retires le colis au bureau de poste avec une pièce d’identité.", fehltPostnummer: "Saisis ta Postnummer DHL (6 à 10 chiffres).",
+      postnummerUngueltig: "La Postnummer compte 6 à 10 chiffres.", abholNurDhl: "Seul DHL livre en Packstation et en bureau de poste. Choisis DHL ou la livraison à ton adresse.",
+      abholUnvollstaendig: "Choisis à nouveau la Packstation ou le bureau de poste.", adresseAbhol: "Pour une Packstation ou un bureau de poste, il nous faut seulement ton nom et ton e-mail – rue et numéro peuvent rester vides.",
+      lieferungAn: "Livraison à"
     }
   };
   function t(k) { var s = TEXTE[LANG] || TEXTE.de; return s[k] != null ? s[k] : TEXTE.de[k]; }
@@ -287,6 +330,15 @@
   function paketName(d) { return d ? t("paket") + " " + (t("paket" + d.paket) || d.paketName) : ""; }
   // Ab 99 € Warenwert uebernimmt der Shop den guenstigsten Standard (Worker).
   function preisText(cents) { return Number(cents) === 0 ? t("kostenlos") : geld(cents); }
+  function geldRund(cents) {
+    var euro = Math.round((Number(cents) || 0) / 100);
+    return LANG === "en" ? "€" + euro : euro + " €";
+  }
+  // "DHL Paket" statt "DHL DHL Paket": den Paketdienst nur nennen, wenn der Titel ihn nicht schon traegt.
+  function versandName(o) {
+    if (!o) return "";
+    return o.carrier && String(o.titel || "").indexOf(o.carrier) !== 0 ? o.carrier + " " + (o.titel || "") : (o.titel || o.carrier || "");
+  }
   // "Mo., 12.10." - das Datum rechnet der Worker (shop-worker/lieferzeit.js).
   function datumKurz(iso) {
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
@@ -305,23 +357,51 @@
 
   function versandZeichnen() {
     var box = $("kasseVersand");
+    var fokus = document.activeElement && box.contains(document.activeElement) ? document.activeElement.name : "";
     box.textContent = "";
     box.setAttribute("aria-busy", "false");
     var d = zustand.versand;
     if (!d) { box.appendChild(el("p", "kasse-hinweis", t("versandFehlt"))); summeZeichnen(); return; }
+    var gesperrt = gesperrtJetzt();
+    // Packstation/Filiale nur, wenn ein Dienst sie anbietet (DHL).
+    var abholbar = d.optionen.some(kannAbholen);
+    if (!abholbar) abhol.art = "haustuer";
+    if (abhol.art === "abholort" && !kannAbholen(zustand.wahl)) zustand.wahl = d.optionen.filter(kannAbholen)[0];
+    if (abholbar) {
+      box.appendChild(el("p", "kasse-wohin__titel", t("zustWohin")));
+      var wohin = el("div", "kasse-wohin");
+      wohin.setAttribute("role", "radiogroup");
+      wohin.setAttribute("aria-label", t("zustWohin"));
+      [["haustuer", t("zustHaustuer"), ""], ["abholort", t("zustAbholort"), t("zustNurDhl")]].forEach(function (w) {
+        var label = el("label", "kasse-option kasse-option--wohin");
+        var radio = document.createElement("input");
+        radio.type = "radio"; radio.name = "kasseWohin"; radio.value = w[0];
+        radio.checked = abhol.art === w[0];
+        radio.disabled = gesperrt;
+        radio.addEventListener("change", function () { if (radio.checked) wohinSetzen(w[0]); });
+        var name = el("span", "kasse-option__name", w[1]);
+        if (w[2]) name.appendChild(el("small", "", w[2]));
+        label.appendChild(radio);
+        label.appendChild(name);
+        wohin.appendChild(label);
+      });
+      box.appendChild(wohin);
+    }
     var gruppe = el("div", "kasse-optionen");
     gruppe.setAttribute("role", "radiogroup");
     gruppe.setAttribute("aria-label", t("versand"));
-    var gesperrt = zustand.versuch && zustand.versuch.ablauf > Date.now();
     d.optionen.forEach(function (o) {
-      var label = el("label", "kasse-option");
+      var nurHaustuer = abhol.art === "abholort" && !kannAbholen(o);
+      var label = el("label", "kasse-option" + (nurHaustuer ? " kasse-option--aus" : ""));
       var radio = document.createElement("input");
       radio.type = "radio"; radio.name = "kasseVersand"; radio.value = o.id;
       radio.checked = !!zustand.wahl && zustand.wahl.id === o.id;
-      radio.disabled = !!gesperrt;
+      radio.disabled = gesperrt || nurHaustuer;
       radio.addEventListener("change", function () { zustand.wahl = o; versandZeichnen(); });
       var name = el("span", "kasse-option__name", o.titel);
-      var meta = [o.carrier, tage(o)].filter(Boolean).join(" · ");
+      var dienst = o.carrier && String(o.titel || "").indexOf(o.carrier) !== 0 ? o.carrier : "";
+      var meta = [dienst, tage(o), o.versichertBisCents ? tf("versichert", { betrag: geldRund(o.versichertBisCents) }) : "",
+        nurHaustuer ? t("nurHaustuer") : ""].filter(Boolean).join(" · ");
       if (meta) name.appendChild(el("small", "", meta));
       label.appendChild(radio);
       label.appendChild(name);
@@ -329,6 +409,11 @@
       gruppe.appendChild(label);
     });
     box.appendChild(gruppe);
+    formModus();
+    if (abhol.art === "abholort") {
+      box.appendChild(aPanel);
+      abholZeichnen();
+    }
     if (!zustand.wahl) box.appendChild(el("p", "kasse-hinweis", t("versandWahlFehlt")));
     var lieferung = lieferText(zustand.wahl);
     if (lieferung) box.appendChild(el("p", "kasse-lieferung", lieferung));
@@ -338,6 +423,10 @@
     }
     box.appendChild(el("p", "kasse-hinweis", paketName(d)));
     summeZeichnen();
+    if (fokus) {
+      var wieder = box.querySelector('input[name="' + fokus + '"]:checked');
+      if (wieder) wieder.focus();
+    }
   }
 
   // ---- Uebersicht
@@ -355,7 +444,8 @@
     }
     var ware = stueckeCents();
     zeile(t("zwischensumme") + " (" + zustand.stuecke.length + ")", geld(ware));
-    zeile(t("versandZeile") + (zustand.wahl ? " · " + [zustand.wahl.carrier, zustand.wahl.titel].filter(Boolean).join(" ") : ""), zustand.wahl ? preisText(zustand.wahl.preisCents) : "…");
+    zeile(t("versandZeile") + (zustand.wahl ? " · " + versandName(zustand.wahl) : ""), zustand.wahl ? preisText(zustand.wahl.preisCents) : "…");
+    if (abholung() && abhol.ort) zeile(t("lieferungAn"), abhol.ort.name + (abhol.ort.ort ? ", " + abhol.ort.ort : ""), "kasse-summe__ziel");
     zeile(t("gesamt"), zustand.wahl ? geld(ware + zustand.wahl.preisCents) : "…", "kasse-summe__gesamt");
     var code = "";
     try { code = String(localStorage.getItem(CODE_KEY) || "").trim().toUpperCase(); } catch (e) { code = ""; }
@@ -488,6 +578,373 @@
   });
   Object.keys(f).forEach(function (k) { f[k].addEventListener("input", function () { if (k !== "plz") feldFehler(f[k], ""); }); });
 
+  // ---- Zustellung: DHL liefert auch an Packstation oder Filiale. Die Orte
+  // sucht der Shop-Server bei DHL (shop-worker/abholorte.js) - an DHL gehen
+  // nur PLZ und Strasse. Die Karte laedt OpenStreetMap-Kacheln erst nach
+  // einem Klick (Datenschutz) und kommt ohne Bibliothek aus.
+  var abhol = { art: "haustuer", ort: null, orte: null, laedt: false, fehler: "", gesucht: "", karte: false, zoom: 0 };
+  var abholCache = {};
+  var abholAnfrage = 0;
+  function kannAbholen(o) { return !!(o && o.abholstation); }
+  function abholung() { return abhol.art === "abholort" && kannAbholen(zustand.wahl); }
+  function gleicherOrt(a, b) { return !!(a && b) && a.typ === b.typ && a.nummer === b.nummer && a.plz === b.plz; }
+  function ortTyp(o) { return t(o.typ === "packstation" ? "abholPackstation" : "abholFiliale"); }
+  function entfernung(m) {
+    if (typeof m !== "number" || !(m >= 0)) return "";
+    if (m < 1000) return Math.max(10, Math.round(m / 10) * 10) + " m";
+    var km = (m / 1000).toFixed(1);
+    return (LANG === "en" ? km : km.replace(".", ",")) + " km";
+  }
+  function feldBauen(klasse, text, feld) {
+    var huelle = el("label", "kasse-feld " + klasse);
+    huelle.appendChild(el("span", "", text));
+    huelle.appendChild(feld);
+    return huelle;
+  }
+  function eingabe(id, max, ziffern) {
+    var e = document.createElement("input");
+    e.type = "text"; e.id = id; e.maxLength = max; e.autocomplete = "off";
+    if (ziffern) e.inputMode = "numeric";
+    return e;
+  }
+  function gesperrtJetzt() { return !!(zustand.versuch && zustand.versuch.ablauf > Date.now()); }
+
+  var aPanel = el("div", "kasse-abholort");
+  var aPlz = eingabe("kAbholPlz", 5, true);
+  var aSuchKnopf = el("button", "kasse-chip", t("abholSuchen"));
+  aSuchKnopf.type = "button";
+  var aSuche = el("div", "kasse-abholort__suche");
+  aSuche.appendChild(feldBauen("kasse-feld--plz", t("abholSuche"), aPlz));
+  aSuche.appendChild(aSuchKnopf);
+  var aStatus = el("p", "kasse-hinweis kasse-abholort__status");
+  aStatus.setAttribute("role", "status");
+  var aKarteKnopf = el("button", "kasse-link", t("abholKarte"));
+  aKarteKnopf.type = "button";
+  aKarteKnopf.setAttribute("aria-expanded", "false");
+  var aKarteHinweis = el("p", "kasse-hinweis kasse-abholort__klein", t("abholKarteHinweis"));
+  var aKarte = el("div", "kasse-karte");
+  aKarte.hidden = true;
+  var aListe = el("div", "kasse-abholort__liste");
+  aListe.setAttribute("role", "radiogroup");
+  aListe.setAttribute("aria-label", t("zustAbholort"));
+  var aManuellKnopf = el("button", "kasse-link", t("abholManuell"));
+  aManuellKnopf.type = "button";
+  aManuellKnopf.setAttribute("aria-expanded", "false");
+  var aManuell = el("div", "kasse-abholort__manuell");
+  aManuell.hidden = true;
+  var mTyp = document.createElement("select");
+  mTyp.id = "kAbholArt";
+  [["packstation", t("abholPackstation")], ["filiale", t("abholFiliale")]].forEach(function (o) {
+    var opt = el("option", "", o[1]); opt.value = o[0]; mTyp.appendChild(opt);
+  });
+  var mNummer = eingabe("kAbholNummer", 4, true);
+  var mOrt = eingabe("kAbholOrt", 80, false);
+  var mKnopf = el("button", "kasse-chip", t("abholUebernehmen"));
+  mKnopf.type = "button";
+  aManuell.appendChild(feldBauen("kasse-feld--art", t("abholArt"), mTyp));
+  aManuell.appendChild(feldBauen("kasse-feld--nummer", t("abholNummer"), mNummer));
+  aManuell.appendChild(feldBauen("kasse-feld--ortklein", t("ort"), mOrt));
+  aManuell.appendChild(mKnopf);
+  var aPost = eingabe("kPostnummer", 14, true);
+  var aPostTitel = el("span", "", t("postnummer"));
+  var aPostHinweis = el("p", "kasse-hinweis kasse-abholort__klein");
+  var aPostFeld = el("label", "kasse-feld kasse-abholort__post");
+  aPostFeld.appendChild(aPostTitel);
+  aPostFeld.appendChild(aPost);
+  aPostFeld.appendChild(aPostHinweis);
+  var aWerkzeug = el("div", "kasse-abholort__werkzeug");
+  aWerkzeug.appendChild(aKarteKnopf);
+  aWerkzeug.appendChild(aManuellKnopf);
+  [aSuche, aStatus, aWerkzeug, aKarteHinweis, aKarte, aManuell, aListe, aPostFeld].forEach(function (e) { aPanel.appendChild(e); });
+
+  // Hinweis im Adressblock: Bei der Abholung reichen Name und E-Mail.
+  var aAdressHinweis = el("p", "kasse-hinweis kasse-feld--breit kasse-abholhinweis", t("adresseAbhol"));
+  aAdressHinweis.hidden = true;
+  $("kLand").parentNode.insertBefore(aAdressHinweis, $("kLand").nextSibling);
+
+  function formModus() {
+    var an = abholung();
+    $("kasseForm").classList.toggle("kasse-form--abholort", an);
+    aAdressHinweis.hidden = !an;
+    var titel = document.querySelector("#kasseAdresseTitel [data-t]");
+    if (titel) titel.textContent = t(an ? "angaben" : "adresse");
+    if (an) [f.plz, f.ort, f.strasse, f.nummer].forEach(function (x) { feldFehler(x, ""); });
+  }
+
+  function statusZeichnen() {
+    var text = abhol.laedt ? t("abholLaedt") : abhol.fehler ? t(abhol.fehler)
+      : abhol.orte && !abhol.orte.length ? t("abholKeine")
+      : abhol.orte ? tf("abholGefunden", { n: abhol.orte.length })
+      : t("abholPlzFehlt");
+    aStatus.textContent = text;
+    aStatus.classList.toggle("kasse-abholort__status--fehler", !!abhol.fehler && abhol.fehler !== "abholOhneSuche");
+  }
+  function listeZeichnen() {
+    aListe.textContent = "";
+    var orte = abhol.orte || [];
+    var eintraege = orte.map(function (o, i) { return { ort: o, nr: String(i + 1) }; });
+    // Ein selbst eingegebener (oder frueher gefundener) Ort bleibt sichtbar.
+    if (abhol.ort && !orte.some(function (o) { return gleicherOrt(o, abhol.ort); })) eintraege.unshift({ ort: abhol.ort, nr: "•" });
+    aListe.hidden = !eintraege.length;
+    var gesperrt = gesperrtJetzt();
+    eintraege.forEach(function (e) {
+      var o = e.ort;
+      var label = el("label", "kasse-ort");
+      var radio = document.createElement("input");
+      radio.type = "radio"; radio.name = "kasseAbholort"; radio.value = o.id || o.typ + "-" + o.nummer;
+      radio.checked = gleicherOrt(abhol.ort, o);
+      radio.disabled = gesperrt;
+      radio._ort = o;
+      radio.addEventListener("change", function () { if (radio.checked) ortWaehlen(o, false); });
+      var text = el("span", "kasse-ort__text");
+      text.appendChild(el("span", "kasse-ort__name", o.name));
+      var adresse = [o.strasse, [o.plz, o.ort].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+      text.appendChild(el("small", "", ortTyp(o) + (adresse ? " · " + adresse : "")));
+      label.appendChild(radio);
+      label.appendChild(el("span", "kasse-ort__nr" + (o.typ === "packstation" ? "" : " kasse-ort__nr--filiale"), e.nr));
+      label.appendChild(text);
+      label.appendChild(el("span", "kasse-ort__weg", entfernung(o.entfernungM)));
+      aListe.appendChild(label);
+    });
+  }
+  function postZeichnen() {
+    var filiale = !!abhol.ort && abhol.ort.typ === "filiale";
+    aPostTitel.textContent = t("postnummer") + (filiale ? " (" + t("optional") + ")" : "");
+    aPostHinweis.textContent = t(filiale ? "postnummerHinweisF" : "postnummerHinweisP");
+  }
+
+  // ---- Karte: Kacheln im Web-Mercator-Raster, Ausschnitt passt sich den Orten an.
+  var KACHEL = 256;
+  function karteX(lng, z) { return (lng + 180) / 360 * Math.pow(2, z) * KACHEL; }
+  function karteY(lat, z) {
+    var r = lat * Math.PI / 180;
+    return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z) * KACHEL;
+  }
+  function mitGeo(o) { return typeof o.lat === "number" && typeof o.lng === "number"; }
+  function karteZeichnen() {
+    var orte = (abhol.orte || []).filter(mitGeo);
+    aKarteKnopf.hidden = !orte.length;
+    aKarteHinweis.hidden = !orte.length || abhol.karte;
+    aKarteKnopf.textContent = t(abhol.karte ? "abholKarteZu" : "abholKarte");
+    aKarteKnopf.setAttribute("aria-expanded", String(abhol.karte && !!orte.length));
+    aKarte.textContent = "";
+    if (!abhol.karte || !orte.length) { aKarte.hidden = true; return; }
+    aKarte.hidden = false;
+    var breite = aKarte.clientWidth || 320;
+    var hoehe = aKarte.clientHeight || 260;
+    var lngs = orte.map(function (o) { return o.lng; });
+    var lats = orte.map(function (o) { return o.lat; });
+    var w = Math.min.apply(null, lngs), e = Math.max.apply(null, lngs);
+    var s = Math.min.apply(null, lats), n = Math.max.apply(null, lats);
+    var z = 17;
+    while (z > 9 && (karteX(e, z) - karteX(w, z) > breite - 60 || karteY(s, z) - karteY(n, z) > hoehe - 60)) z--;
+    z = Math.max(5, Math.min(18, z + abhol.zoom));
+    var cx = (karteX(w, z) + karteX(e, z)) / 2;
+    var cy = (karteY(n, z) + karteY(s, z)) / 2;
+    if (abhol.zoom > 0 && abhol.ort && mitGeo(abhol.ort)) { cx = karteX(abhol.ort.lng, z); cy = karteY(abhol.ort.lat, z); }
+    var links = cx - breite / 2, oben = cy - hoehe / 2;
+    var anzahl = Math.pow(2, z);
+    var flaeche = el("div", "kasse-karte__flaeche");
+    for (var tx = Math.floor(links / KACHEL); tx * KACHEL < links + breite; tx++) {
+      for (var ty = Math.floor(oben / KACHEL); ty * KACHEL < oben + hoehe; ty++) {
+        if (ty < 0 || ty >= anzahl) continue;
+        var img = document.createElement("img");
+        img.alt = ""; img.decoding = "async"; img.draggable = false;
+        img.src = "https://tile.openstreetmap.org/" + z + "/" + (((tx % anzahl) + anzahl) % anzahl) + "/" + ty + ".png";
+        img.style.left = Math.round(tx * KACHEL - links) + "px";
+        img.style.top = Math.round(ty * KACHEL - oben) + "px";
+        flaeche.appendChild(img);
+      }
+    }
+    aKarte.appendChild(flaeche);
+    var gesperrt = gesperrtJetzt();
+    (abhol.orte || []).forEach(function (o, i) {
+      if (!mitGeo(o)) return;
+      var p = el("button", "kasse-karte__punkt" + (o.typ === "packstation" ? "" : " kasse-karte__punkt--filiale"), String(i + 1));
+      p.type = "button";
+      p._ort = o;
+      p.style.left = Math.round(karteX(o.lng, z) - links) + "px";
+      p.style.top = Math.round(karteY(o.lat, z) - oben) + "px";
+      p.setAttribute("aria-label", (i + 1) + ": " + o.name + (o.strasse ? ", " + o.strasse : ""));
+      p.setAttribute("aria-pressed", String(gleicherOrt(abhol.ort, o)));
+      p.disabled = gesperrt;
+      p.addEventListener("click", function () { ortWaehlen(o, true); });
+      aKarte.appendChild(p);
+    });
+    var zoom = el("div", "kasse-karte__zoom");
+    [["+", "kartePlus", 1], ["−", "karteMinus", -1]].forEach(function (k) {
+      var b = el("button", "", k[0]);
+      b.type = "button";
+      b.setAttribute("aria-label", t(k[1]));
+      b.addEventListener("click", function () {
+        abhol.zoom = Math.max(-4, Math.min(4, abhol.zoom + k[2]));
+        karteZeichnen();
+        var neu = aKarte.querySelector(".kasse-karte__zoom button:nth-child(" + (k[2] > 0 ? 1 : 2) + ")");
+        if (neu) neu.focus();
+      });
+      zoom.appendChild(b);
+    });
+    aKarte.appendChild(zoom);
+    var quelle = el("a", "kasse-karte__quelle", "© OpenStreetMap");
+    quelle.href = "https://www.openstreetmap.org/copyright";
+    quelle.target = "_blank"; quelle.rel = "noopener";
+    aKarte.appendChild(quelle);
+  }
+  var karteUhr = 0;
+  window.addEventListener("resize", function () {
+    if (!abhol.karte || aKarte.hidden) return;
+    clearTimeout(karteUhr);
+    karteUhr = setTimeout(karteZeichnen, 200);
+  });
+
+  function sperrZeichnen() {
+    var gesperrt = gesperrtJetzt();
+    [aPlz, aPost, mNummer, mOrt].forEach(function (x) { x.readOnly = gesperrt; });
+    [aSuchKnopf, mKnopf, mTyp].forEach(function (x) { x.disabled = gesperrt; });
+  }
+  function abholZeichnen() {
+    statusZeichnen();
+    listeZeichnen();
+    karteZeichnen();
+    postZeichnen();
+    sperrZeichnen();
+  }
+
+  function ortWaehlen(o, vonKarte) {
+    abhol.ort = o;
+    if (abhol.fehler === "abholWaehlen") abhol.fehler = "";
+    var radios = aListe.querySelectorAll("input");
+    if (!Array.prototype.some.call(radios, function (r) { return gleicherOrt(r._ort, o); })) { listeZeichnen(); radios = aListe.querySelectorAll("input"); }
+    Array.prototype.forEach.call(radios, function (r) {
+      r.checked = gleicherOrt(r._ort, o);
+      if (r.checked && vonKarte) {
+        // Nur die Liste scrollen, nicht die Seite - die Karte bleibt im Blick.
+        var zeile = r.closest("label");
+        if (zeile.offsetTop < aListe.scrollTop || zeile.offsetTop + zeile.offsetHeight > aListe.scrollTop + aListe.clientHeight) {
+          aListe.scrollTop = Math.max(0, zeile.offsetTop - 8);
+        }
+      }
+    });
+    Array.prototype.forEach.call(aKarte.querySelectorAll(".kasse-karte__punkt"), function (p) {
+      p.setAttribute("aria-pressed", String(gleicherOrt(p._ort, o)));
+    });
+    statusZeichnen();
+    postZeichnen();
+    feldFehler(aPost, "");
+    summeZeichnen();
+  }
+
+  function abholSuchen(automatisch) {
+    var plz = aPlz.value.replace(/\D/g, "").slice(0, 5);
+    aPlz.value = plz;
+    if (!/^\d{5}$/.test(plz)) {
+      feldFehler(aPlz, automatisch ? "" : t("fehltPlz"));
+      statusZeichnen();
+      return;
+    }
+    feldFehler(aPlz, "");
+    // Die eigene Strasse hilft bei der Sortierung nach Entfernung - nur, wenn
+    // die Suche dieselbe PLZ wie die Adresse hat.
+    var strasse = plz === f.plz.value.trim() ? (f.strasse.value.trim() + " " + f.nummer.value.trim()).trim() : "";
+    var schluessel = plz + "|" + strasse.toLowerCase();
+    if (abhol.gesucht === schluessel && (abhol.laedt || abhol.orte)) return;
+    abhol.gesucht = schluessel;
+    abhol.zoom = 0;
+    if (abholCache[schluessel]) { abhol.orte = abholCache[schluessel]; abhol.fehler = ""; abhol.laedt = false; abholZeichnen(); return; }
+    var nr = ++abholAnfrage;
+    abhol.laedt = true; abhol.fehler = "";
+    statusZeichnen();
+    if (!WORKER) { abhol.laedt = false; abhol.fehler = "abholFehler"; abhol.gesucht = ""; manuellZeigen(true); abholZeichnen(); return; }
+    fetch(WORKER + "/versand/abholorte?plz=" + plz + (strasse ? "&strasse=" + encodeURIComponent(strasse) : ""))
+      .then(antwortLesen)
+      .then(function (daten) {
+        if (nr !== abholAnfrage) return;
+        abhol.laedt = false;
+        abhol.orte = Array.isArray(daten.orte) ? daten.orte : [];
+        abholCache[schluessel] = abhol.orte;
+        abholZeichnen();
+      }, function (e) {
+        if (nr !== abholAnfrage) return;
+        var code = (e && e.code) || "";
+        abhol.laedt = false; abhol.orte = null; abhol.gesucht = "";
+        // Ohne DHL-Zugang am Server: gleich die Nummer eingeben lassen, ohne Stoerungsmeldung.
+        abhol.fehler = code === "RATE_LIMITED" ? "zuSchnell" : code === "PLZ_UNGUELTIG" ? "fehltPlz"
+          : code === "ABHOLORTE_NICHT_EINGERICHTET" ? "abholOhneSuche" : "abholFehler";
+        if (abhol.fehler === "abholFehler" || abhol.fehler === "abholOhneSuche") manuellZeigen(true);
+        abholZeichnen();
+      });
+  }
+
+  function manuellZeigen(an) {
+    aManuell.hidden = !an;
+    aManuellKnopf.setAttribute("aria-expanded", String(an));
+    if (an && !mOrt.value && aPlz.value === f.plz.value.trim()) mOrt.value = f.ort.value.trim();
+  }
+  function manuellUebernehmen() {
+    var nummer = mNummer.value.replace(/\D/g, "");
+    var plz = aPlz.value.replace(/\D/g, "");
+    var ort = mOrt.value.trim();
+    var ok = true;
+    if (!/^\d{1,4}$/.test(nummer)) { feldFehler(mNummer, t("abholNummerFehlt")); ok = false; } else feldFehler(mNummer, "");
+    if (!/^\d{5}$/.test(plz)) { feldFehler(aPlz, t("fehltPlz")); ok = false; } else feldFehler(aPlz, "");
+    if (ort.length < 2) { feldFehler(mOrt, t("fehltOrt")); ok = false; } else feldFehler(mOrt, "");
+    if (!ok) return;
+    var typ = mTyp.value === "filiale" ? "filiale" : "packstation";
+    ortWaehlen({ id: "eigen-" + typ + "-" + nummer + "-" + plz, typ: typ, nummer: nummer,
+      name: (typ === "packstation" ? "Packstation " : "Postfiliale ") + nummer, strasse: "", plz: plz, ort: ort,
+      lat: null, lng: null, entfernungM: null }, false);
+  }
+
+  aPlz.addEventListener("input", function () {
+    aPlz.value = aPlz.value.replace(/\D/g, "").slice(0, 5);
+    aPlz.dataset.auto = "0";
+    feldFehler(aPlz, "");
+    if (aPlz.value.length === 5) abholSuchen(true);
+  });
+  aPlz.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); abholSuchen(false); } });
+  aSuchKnopf.addEventListener("click", function () { abholSuchen(false); });
+  aKarteKnopf.addEventListener("click", function () { abhol.karte = !abhol.karte; abhol.zoom = 0; karteZeichnen(); });
+  aManuellKnopf.addEventListener("click", function () { manuellZeigen(aManuell.hidden); if (!aManuell.hidden) mNummer.focus(); });
+  mKnopf.addEventListener("click", manuellUebernehmen);
+  [mNummer, mOrt].forEach(function (x) { x.addEventListener("input", function () { feldFehler(x, ""); }); });
+  mNummer.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); manuellUebernehmen(); } });
+  mOrt.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); manuellUebernehmen(); } });
+  aPost.addEventListener("input", function () { aPost.value = aPost.value.replace(/[^\d ]/g, "").slice(0, 14); feldFehler(aPost, ""); });
+  // PLZ der Adresse: wird zur Suche uebernommen, solange dort nichts Eigenes steht.
+  f.plz.addEventListener("input", function () {
+    if (!(aPlz.dataset.auto !== "0" || !aPlz.value) || f.plz.value.length !== 5) return;
+    aPlz.value = f.plz.value;
+    aPlz.dataset.auto = "1";
+    if (abhol.art === "abholort") abholSuchen(true);
+  });
+
+  function wohinSetzen(art) {
+    abhol.art = art;
+    if (art === "abholort") {
+      if (!kannAbholen(zustand.wahl)) zustand.wahl = zustand.versand.optionen.filter(kannAbholen)[0] || zustand.wahl;
+      if (!aPlz.value && /^\d{5}$/.test(f.plz.value)) { aPlz.value = f.plz.value; aPlz.dataset.auto = "1"; }
+    }
+    versandZeichnen();
+    if (art === "abholort") abholSuchen(true);
+  }
+
+  // Was an den Server geht: Packstation/Filiale mit Nummer, PLZ und Ort.
+  function zustellungDaten() {
+    if (!abholung() || !abhol.ort) return null;
+    var o = abhol.ort;
+    var daten = { art: o.typ, abholort: { typ: o.typ, nummer: o.nummer, name: o.name, strasse: o.strasse || "", plz: o.plz, ort: o.ort } };
+    var post = aPost.value.replace(/\s+/g, "");
+    if (post) daten.postnummer = post;
+    return daten;
+  }
+  // Fuer Anzeige und E-Mail: die Anschrift, an die das Paket geht.
+  function lieferziel() {
+    var z = zustellungDaten();
+    if (!z) return adresse();
+    return { name: adresse().name, strasse: z.art === "packstation" ? "Packstation" : "Postfiliale", hausnummer: z.abholort.nummer,
+      zusatz: z.postnummer ? "Postnummer " + z.postnummer : "", plz: z.abholort.plz, ort: z.abholort.ort, land: "DE" };
+  }
+
   function adresse() {
     return {
       name: (f.vorname.value.trim() + " " + f.nachname.value.trim()).trim(),
@@ -505,11 +962,24 @@
     pruef(f.email, f.email.validity.valid && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email.value.trim()), t("fehltEmail"));
     pruef(f.vorname, f.vorname.value.trim().length >= 1, t("fehltVorname"));
     pruef(f.nachname, f.nachname.value.trim().length >= 2, t("fehltNachname"));
-    pruef(f.plz, /^\d{5}$/.test(f.plz.value), t("fehltPlz"));
-    pruef(f.ort, f.ort.value.trim().length >= 2, t("fehltOrt"));
-    var packstation = /packstation|postfiliale|postfach|paketshop/i.test(f.strasse.value + " " + f.zusatz.value);
-    pruef(f.strasse, f.strasse.value.trim().length >= 2 && !packstation, packstation ? t("packstation") : t("fehltStrasse"));
-    pruef(f.nummer, /^\d{1,5}\s?[a-zA-Z]?(?:\s?[-/]\s?\d{1,5}[a-zA-Z]?)?$/.test(f.nummer.value.trim()), t("fehltNummer"));
+    if (abholung()) {
+      // Packstation/Filiale: Name und E-Mail genuegen, die Anschrift ist die des Abholorts.
+      [f.plz, f.ort, f.strasse, f.nummer].forEach(function (x) { feldFehler(x, ""); });
+      if (!abhol.ort) {
+        abhol.fehler = "abholWaehlen";
+        statusZeichnen();
+        fehler.push(aListe.querySelector("input:not(:disabled)") || aPlz);
+      }
+      var post = aPost.value.replace(/\s+/g, "");
+      var pflicht = !abhol.ort || abhol.ort.typ === "packstation";
+      pruef(aPost, /^\d{6,10}$/.test(post) || (!post && !pflicht), post ? t("postnummerUngueltig") : t("fehltPostnummer"));
+    } else {
+      pruef(f.plz, /^\d{5}$/.test(f.plz.value), t("fehltPlz"));
+      pruef(f.ort, f.ort.value.trim().length >= 2, t("fehltOrt"));
+      var packstation = /packstation|postfiliale|postfach|paketshop/i.test(f.strasse.value + " " + f.zusatz.value);
+      pruef(f.strasse, f.strasse.value.trim().length >= 2 && !packstation, packstation ? t("packstation") : t("fehltStrasse"));
+      pruef(f.nummer, /^\d{1,5}\s?[a-zA-Z]?(?:\s?[-/]\s?\d{1,5}[a-zA-Z]?)?$/.test(f.nummer.value.trim()), t("fehltNummer"));
+    }
     if (fehler.length) { melden(t("pruefen"), status); fehler[0].focus(); return false; }
     melden("", status);
     return true;
@@ -543,6 +1013,10 @@
     if (code === "PAYMENT_CONFIRMATION_PENDING") return t("wirdGeprueft");
     if (/^VERSAND_/.test(code)) return t("versandGeaendert");
     if (code === "PACKSTATION_NICHT_MOEGLICH") return t("packstation");
+    if (code === "ABHOLSTATION_NUR_DHL") return t("abholNurDhl");
+    if (code === "POSTNUMMER_FEHLT") return t("fehltPostnummer");
+    if (code === "POSTNUMMER_UNGUELTIG") return t("postnummerUngueltig");
+    if (code === "ABHOLORT_UNVOLLSTAENDIG" || code === "ZUSTELLUNG_UNGUELTIG") return t("abholUnvollstaendig");
     if (code === "NUR_DEUTSCHLAND") return t("nurDe");
     if (code === "ADRESSE_UNVOLLSTAENDIG") return t("pruefen");
     if (code === "EMAIL_REQUIRED") return t("fehltEmail");
@@ -556,6 +1030,7 @@
     versandZeichnen();
     Array.prototype.forEach.call($("kasseForm").elements, function (feld) { feld.readOnly = bis > Date.now(); });
     $("kKonto").disabled = bis > Date.now();
+    sperrZeichnen();
     if (bis > Date.now()) setTimeout(function () { sperren(0); }, Math.min(bis - Date.now() + 500, 2147483000));
   }
 
@@ -608,8 +1083,10 @@
         melden("", status);
         var wahl = zustand.wahl;
         var ids = zustand.stuecke.map(function (it) { return it.id; });
-        var inhalt = { itemIds: ids, adresse: adresse(), email: f.email.value.trim(), createAccount: $("kKonto").checked,
-          versand: wahl.id, versandPreisCents: wahl.preisCents };
+        var zustellung = zustellungDaten();
+        var inhalt = { itemIds: ids, adresse: zustellung ? { name: adresse().name, land: "DE" } : adresse(), email: f.email.value.trim(),
+          createAccount: $("kKonto").checked, versand: wahl.id, versandPreisCents: wahl.preisCents };
+        if (zustellung) inhalt.zustellung = zustellung;
         var fingerabdruck = JSON.stringify(inhalt);
         return schutz.then(function (S) {
           // Neuer Schluessel, sobald sich der Inhalt aendert - derselbe
@@ -731,13 +1208,13 @@
     knopf.type = "button";
     knopf.addEventListener("click", function () {
       if (!zustand.stuecke.length || !pruefen()) return;
-      var a = adresse();
+      var a = lieferziel();
       var zeilen = [t("mailGruss"), ""];
       zustand.stuecke.forEach(function (it) {
         zeilen.push("- " + (it.title || "") + (it.size ? " · " + t("groesse") + " " + it.size : "") + " · Art.-Nr. " + (it.article || it.id) + " · " + geld(Math.round(it.price * 100)));
       });
       zeilen.push("");
-      if (zustand.wahl) zeilen.push(t("mailVersand") + ": " + zustand.wahl.titel + (zustand.wahl.carrier ? " (" + zustand.wahl.carrier + ")" : "") + ", " + paketName(zustand.versand) + " – " + preisText(zustand.wahl.preisCents));
+      if (zustand.wahl) zeilen.push(t("mailVersand") + ": " + versandName(zustand.wahl) + ", " + paketName(zustand.versand) + " – " + preisText(zustand.wahl.preisCents));
       zeilen.push(t("mailGesamt") + ": " + geld(stueckeCents() + (zustand.wahl ? zustand.wahl.preisCents : 0)));
       zeilen.push("", t("email") + ": " + f.email.value.trim(), t("mailAdresse") + ":", a.name, a.strasse + " " + a.hausnummer);
       if (a.zusatz) zeilen.push(a.zusatz);

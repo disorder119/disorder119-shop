@@ -7,6 +7,40 @@
     "zielLand": "DE",
     "referenzPlz": "10115",
     "standardGroesse": "M",
+    "quelle": "fest",
+    "tarife": {
+      "_comment": "Feste Versandpreise im Checkout (Wunsch des Inhabers 08.10.2026: DHL und DPD zu Privatpreisen, Etikett von Hand bzw. halbautomatisch). Preise in Cent je Paketgroesse S/M/L, inklusive Versicherung des Paketdienstes. DHL Paket: 6,19 EUR bis 2 kg, 7,69 EUR bis 5 kg (dhl.de, Online-Frankierung). DPD: Groesse nach kuerzester + laengster Seite (S bis 50 cm 4,09 EUR, M bis 70 cm 5,78 EUR; dpd.de, Abgabe im Pickup Paketshop). Nur DHL liefert an Packstation und Filiale. quelle \"packlink\" schaltet zurueck auf Packlink-Preise.",
+      "liste": [
+        {
+          "id": "dhl",
+          "carrier": "DHL",
+          "titel": "DHL Paket",
+          "art": "standard",
+          "preise": {
+            "S": 619,
+            "M": 619,
+            "L": 769
+          },
+          "laufzeitTage": 2,
+          "abholstation": true,
+          "versichertBisCents": 50000
+        },
+        {
+          "id": "dpd",
+          "carrier": "DPD",
+          "titel": "DPD",
+          "art": "standard",
+          "preise": {
+            "S": 409,
+            "M": 578,
+            "L": 578
+          },
+          "laufzeitTage": 2,
+          "abholstation": false,
+          "versichertBisCents": 52000
+        }
+      ]
+    },
     "dienste": {
       "_comment": "Welche Paketdienste die Kundschaft im Checkout sieht (Wunsch des Inhabers 08.10.2026): nur Hermes, DPD, GLS und DHL, soweit Packlink sie anbietet - kein TNT, kein FedEx, kein UPS. Ein Name erlaubt auch Varianten wie \"DHL Paket\" oder \"Hermes Germany\"; die Sperrliste gilt zusaetzlich. Express nur, wenn einer dieser Dienste ihn bis expressMaxCents anbietet. In der privaten Admin-App stehen beim Etikett dieselben Dienste.",
       "erlaubt": [
