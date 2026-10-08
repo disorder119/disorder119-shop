@@ -167,7 +167,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       shipArrives: "Heute bestellt – voraussichtlich bei dir zwischen {von} und {bis}.",
       cartTrust: "Versand innerhalb Deutschlands · gesetzliches Widerrufsrecht (14 Tage)",
       shipParcelS: "bis 2 kg", shipParcelM: "bis 5 kg", shipParcelL: "bis 10 kg", shipParcelXL: "bis 20 kg", shipParcelXXL: "bis 31,5 kg",
-      cartWhatsapp: "Anfrage per WhatsApp senden", cartEmail: "Anfrage per E-Mail senden",
+      cartWhatsapp: "Anfrage per WhatsApp senden", cartEmail: "Anfrage per E-Mail senden", cartGmail: "In Gmail schreiben",
       paypalSoon: "Bald verfügbar", paypalSoonAria: "Bezahlen mit PayPal – bald verfügbar",
       cartConfigWarning: "Shop-Kontakt noch nicht eingerichtet: Trage in index.html bei SHOP_CONFIG deine WhatsApp-Nummer oder E-Mail-Adresse ein, damit Bestellanfragen bei dir ankommen.",
       cartNote: "Alle Artikel sind Einzelstücke. Nach deiner Anfrage bestätigen wir Verfügbarkeit, Gesamtpreis, Zahlungs- und Versandart. Erst mit dieser Bestätigung kommt der Kaufvertrag zustande. Für Verbraucher:innen gilt das gesetzliche 14-tägige Widerrufsrecht.",
@@ -315,7 +315,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       shipArrives: "Order today – expected to arrive between {von} and {bis}.",
       cartTrust: "Shipping within Germany · statutory 14-day right of withdrawal",
       shipParcelS: "up to 2 kg", shipParcelM: "up to 5 kg", shipParcelL: "up to 10 kg", shipParcelXL: "up to 20 kg", shipParcelXXL: "up to 31.5 kg",
-      cartWhatsapp: "Send request via WhatsApp", cartEmail: "Send request via e-mail",
+      cartWhatsapp: "Send request via WhatsApp", cartEmail: "Send request via e-mail", cartGmail: "Write in Gmail",
       paypalSoon: "Coming soon", paypalSoonAria: "Pay with PayPal – coming soon",
       cartConfigWarning: "Shop contact not set up yet: add your WhatsApp number or e-mail address to SHOP_CONFIG in index.html so order requests reach you.",
       cartNote: "All pieces are one-offs. After your enquiry we confirm availability, total price, payment and shipping method. The purchase contract is only formed with that confirmation. Consumers have the statutory 14-day right of withdrawal.",
@@ -464,7 +464,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       shipArrives: "Commande aujourd’hui – livraison prévue entre le {von} et le {bis}.",
       cartTrust: "Livraison en Allemagne · droit légal de rétractation (14 jours)",
       shipParcelS: "jusqu’à 2 kg", shipParcelM: "jusqu’à 5 kg", shipParcelL: "jusqu’à 10 kg", shipParcelXL: "jusqu’à 20 kg", shipParcelXXL: "jusqu’à 31,5 kg",
-      cartWhatsapp: "Envoyer la demande par WhatsApp", cartEmail: "Envoyer la demande par e-mail",
+      cartWhatsapp: "Envoyer la demande par WhatsApp", cartEmail: "Envoyer la demande par e-mail", cartGmail: "Écrire dans Gmail",
       paypalSoon: "Bientôt disponible", paypalSoonAria: "Payer avec PayPal – bientôt disponible",
       cartConfigWarning: "Le contact de la boutique n'est pas encore configuré : renseigne ton numéro WhatsApp ou ton adresse e-mail dans SHOP_CONFIG (index.html) pour recevoir les demandes de commande.",
       cartNote: "Toutes les pièces sont uniques. Après ta demande, nous confirmons la disponibilité, le prix total, le mode de paiement et l’expédition. Le contrat de vente n’est conclu qu’avec cette confirmation. Les consommateurs disposent du droit légal de rétractation de 14 jours.",
@@ -1124,6 +1124,9 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     }
     if (hasEmail) {
       footHtml += '<a class="cart-checkout-btn cart-checkout-btn--email" data-cart-inquiry="email" href="#">' + t("cartEmail") + '</a>';
+      // mailto: oeffnet das Mailprogramm des Geraets - wer Gmail im Browser nutzt,
+      // bekommt die vorgeschriebene Mail direkt dort (Entwurf, nichts wird gesendet).
+      footHtml += '<a class="cart-checkout-btn cart-checkout-btn--email cart-checkout-btn--gmail" data-cart-inquiry="gmail" target="_blank" rel="noopener" href="#">' + t("cartGmail") + '</a>';
     }
     if (!hasWhatsapp && !hasEmail) {
       footHtml += '<p class="cart-config-warning">' + t("cartConfigWarning") + '</p>';
@@ -1136,8 +1139,10 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       var encoded = encodeURIComponent(buildOrderText());
       var wa = foot.querySelector('[data-cart-inquiry="whatsapp"]');
       var email = foot.querySelector('[data-cart-inquiry="email"]');
+      var gmail = foot.querySelector('[data-cart-inquiry="gmail"]');
       if (wa) wa.href = "https://wa.me/" + SHOP_CONFIG.whatsappNumber + "?text=" + encoded;
       if (email) email.href = "mailto:" + SHOP_CONFIG.email + "?subject=" + encodeURIComponent(t("orderSubject")) + "&body=" + encoded;
+      if (gmail) gmail.href = "https://mail.google.com/mail/?view=cm&fs=1&to=" + encodeURIComponent(SHOP_CONFIG.email) + "&su=" + encodeURIComponent(t("orderSubject")) + "&body=" + encoded;
     }
     var messageInput = foot.querySelector("#cartOrderMessage");
     if (messageInput) messageInput.addEventListener("input", function () {

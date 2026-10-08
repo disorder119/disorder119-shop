@@ -1065,7 +1065,8 @@
     width: 82px;
     height: 108px;
     flex: 0 0 auto;
-    background: var(--mount);
+    /* Kein eigener Grund: das Foto steht direkt auf der Farbe des Warenkorbs. */
+    background: transparent;
     overflow: hidden;
   }
 
