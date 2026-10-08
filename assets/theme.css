@@ -39,8 +39,8 @@
    (foto_hell -> --d119-hell, 1.0 bis 1.25; ohne Messwert 1.08). Die
    Bilddateien bleiben unveraendert. */
 :root[data-theme="hell"] .plate__frame,
-:root[data-theme="hell"] .cart-line__frame,
 :root[data-theme="hell"] .kasse-stueck__bild { background: #ffffff; box-shadow: none; }
+:root[data-theme="hell"] .cart-line__frame { background: transparent; box-shadow: none; }
 :root[data-theme="hell"] .plate__frame img,
 :root[data-theme="hell"] .gallery__stage img,
 :root[data-theme="hell"] .gallery-thumb img,
