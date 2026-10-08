@@ -3,9 +3,9 @@
   "hashes": {
     "html_match": "5d5115070ec3adab92bdb5ced896d51b077dd207ecc4816f67a405f9ece707ab",
     "html_chaos": "13982d9bc9006ae522ce9462b90b1d5105beaef9ed78c52a295d38c6bc3b8ce1",
-    "html_baukasten": "3122e0517d245201aca2d9e5eec3c801fc44292dec5e1c8b76dcccd5741c0095",
+    "html_baukasten": "a2a0881666990e965c95a8bfccfec1dad0b4af3c85a7f3148821360a7afe98dd",
     "js_match": "0d745f4fb59dca83671c2275e1620e56e251d5138928faf89fb7d8b9cb046a17",
     "js_chaos": "173c2d8ae6041f6f7cf2791e60762b390c6e31f35c4c1bce84f5737e0ba5a7c0",
-    "js_baukasten": "1a865df88001fa51052ade151bcf6d33f11250245d24950b8941a6f07474c21c"
+    "js_baukasten": "4e2a659e63696e404b2eb8e987d95361ee6c0bf77204992e735683acd511a682"
   }
 }
