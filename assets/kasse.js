@@ -758,6 +758,10 @@
         if (ty < 0 || ty >= anzahl) continue;
         var img = document.createElement("img");
         img.alt = ""; img.decoding = "async"; img.draggable = false;
+        // Die Kasse schickt sonst keine Herkunft mit (meta referrer same-origin). OpenStreetMap
+        // sperrt Kacheln ohne Herkunft ("Access blocked"), und der Shop-Server prueft sie bei den
+        // Luftbildern. Nur die Shop-Adresse geht mit, nie die Seite mit dem Warenkorb.
+        img.referrerPolicy = "strict-origin-when-cross-origin";
         var spalte = ((tx % anzahl) + anzahl) % anzahl;
         img.src = ebene === "luftbild" ? WORKER + "/karte/luftbild/" + abhol.luftbild.land + "/" + z + "/" + ty + "/" + spalte
           : "https://tile.openstreetmap.org/" + z + "/" + spalte + "/" + ty + ".png";
