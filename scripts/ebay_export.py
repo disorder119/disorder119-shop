@@ -166,21 +166,30 @@ def bild_pfade(it):
     return [str(p) for p in (it.get("gallery") or []) if isinstance(p, str) and p.startswith("assets/img/")][:MAX_BILDER]
 
 
-def bild_urls(it, basis: str, weiss: bool) -> list[str]:
+# Hintergrund der eBay-Fotos: Weiss (eBay-Empfehlung), Schwarz (Shop-Optik) oder das
+# freigestellte Original (transparent; eBay legt es selbst auf Weiss).
+HINTERGRUENDE = {"weiss": ((255, 255, 255), "assets/ebay"), "schwarz": ((0, 0, 0), "assets/ebay_schwarz")}
+
+
+def bild_urls(it, basis: str, hintergrund) -> list[str]:
+    # hintergrund: "weiss" | "schwarz" | None (Original)
+    if hintergrund is True:
+        hintergrund = "weiss"
     urls = []
     for i, pfad in enumerate(bild_pfade(it)):
-        if weiss:
-            urls.append(f"{basis}assets/ebay/{it['id']}/{i}.webp")
+        if hintergrund in HINTERGRUENDE:
+            urls.append(f"{basis}{HINTERGRUENDE[hintergrund][1]}/{it['id']}/{i}.webp")
         else:
             urls.append(f"{basis}{pfad}")
     return urls
 
 
-def bilder_erzeugen(items, nur_fehlende=True) -> int:
+def bilder_erzeugen(items, nur_fehlende=True, hintergrund="weiss") -> int:
     from PIL import Image
+    farbe, ordner = HINTERGRUENDE[hintergrund]
     anzahl = 0
     for it in items:
-        ziel = BILD_ORDNER / str(it["id"])
+        ziel = BASE / ordner / str(it["id"])
         for i, pfad in enumerate(bild_pfade(it)):
             quelle = BASE / pfad
             out = ziel / f"{i}.webp"
@@ -188,19 +197,23 @@ def bilder_erzeugen(items, nur_fehlende=True) -> int:
                 continue
             ziel.mkdir(parents=True, exist_ok=True)
             im = Image.open(quelle).convert("RGBA")
-            # Freigestelltes Foto auf reinem Weiss - eBay empfiehlt weissen Grund.
-            weiss = Image.new("RGB", im.size, (255, 255, 255))
-            weiss.paste(im, mask=im.getchannel("A"))
-            weiss.save(out, "WEBP", quality=82, method=6)
+            # Freigestelltes Foto auf einfarbigen Grund legen.
+            grund = Image.new("RGB", im.size, farbe)
+            grund.paste(im, mask=im.getchannel("A"))
+            grund.save(out, "WEBP", quality=82, method=6)
             anzahl += 1
     return anzahl
 
 
-def zeile(it, basis, weiss):
+def sku(it, zusatz=""):
+    return str(it["id"]) + (" " + zusatz if zusatz else "")
+
+
+def zeile(it, basis, hintergrund, sku_zusatz=""):
     kat = kategorie(it)
     return [
-        "Draft", str(it["id"]), kat or "", titel(it), "", f"{ebay_preis(it['price'])}.00", "1",
-        "|".join(bild_urls(it, basis, weiss)), "3000", beschreibung(it), "FixedPrice",
+        "Draft", sku(it, sku_zusatz), kat or "", titel(it), "", f"{ebay_preis(it['price'])}.00", "1",
+        "|".join(bild_urls(it, basis, hintergrund)), "3000", beschreibung(it), "FixedPrice",
     ]
 
 
@@ -388,17 +401,17 @@ def schrittlaenge(it) -> str:
     return "Regulär" if kat == "Pants" else ""
 
 
-def zeile_voll(it, basis, weiss, aktion="VerifyAdd"):
+def zeile_voll(it, basis, hintergrund, aktion="VerifyAdd", sku_zusatz=""):
     frei = float(it["price"]) >= VERSAND_FREI_AB
     return [
-        aktion, str(it["id"]), kategorie(it) or "", titel(it), beschreibung(it), "3000",
+        aktion, sku(it, sku_zusatz), kategorie(it) or "", titel(it), beschreibung(it), "3000",
         str(it.get("brand") or ""), ebay_groesse(it), *schuhgroesse(it), absatzhoehe(it), farbe(it),
         ABTEILUNG_DE.get(str(it.get("department") or ""), ""), PRODUKTART_DE.get(str(it.get("product_type") or ""), ""), STIL, aermel(it),
         material(it) if str(it.get("taxonomy_category") or "") in ("Jackets", "Coats", "Shoes", "Accessories") else "", material(it),
         laenge(it) if str(it.get("taxonomy_category") or "") == "Dresses" else "",
         laenge(it) if str(it.get("taxonomy_category") or "") == "Skirts" else "",
         schrittlaenge(it) if str(it.get("department") or "") == "Men" else "",
-        "|".join(bild_urls(it, basis, weiss)), "FixedPrice", "GTC", f"{ebay_preis(it['price'])}.00", "1", "1",
+        "|".join(bild_urls(it, basis, hintergrund)), "FixedPrice", "GTC", f"{ebay_preis(it['price'])}.00", "1", "1",
         "Aschaffenburg", "63739", "3", "Flat", "DE_DHLPaket", "0.00" if frei else f"{VERSAND_CENTS:.2f}",
         "ReturnsAccepted", "Days_14", "Buyer",
     ]
@@ -412,6 +425,8 @@ def main(argv=None):
     p.add_argument("--alle-bilder", action="store_true", help="auch vorhandene Fotos neu erzeugen")
     p.add_argument("--bild-basis", default=SITE_URL, help="Basis-URL fuer die Fotos (Standard: Website)")
     p.add_argument("--originalbilder", action="store_true", help="Original-Fotos (transparent) statt weissem Grund verlinken")
+    p.add_argument("--hintergrund", choices=sorted(HINTERGRUENDE), default="weiss", help="Grundfarbe der erzeugten Fotos (Standard: weiss)")
+    p.add_argument("--sku-zusatz", default="", help="Zusatz hinter der Artikelnummer im SKU-Feld, z. B. 'schwarz' fuer Vergleichsentwuerfe")
     p.add_argument("--vollstaendig", choices=["VerifyAdd", "Add"], help="volle Angebots-Vorlage statt Entwurf (VerifyAdd prueft nur, Add stellt ein)")
     a = p.parse_args(argv)
     items = verfuegbar(lade_items())
@@ -427,22 +442,23 @@ def main(argv=None):
             print("Ohne Groesse (eBay-Pflichtmerkmal, werden ausgelassen):", ohne_groesse, file=sys.stderr)
             items = [it for it in items if hat_groesse(it)]
     if a.bilder:
-        print("Fotos erzeugt:", bilder_erzeugen(items, nur_fehlende=not a.alle_bilder))
+        print("Fotos erzeugt:", bilder_erzeugen(items, nur_fehlende=not a.alle_bilder, hintergrund=a.hintergrund))
     if a.csv:
         basis = a.bild_basis if a.bild_basis.endswith("/") else a.bild_basis + "/"
+        hintergrund = None if a.originalbilder else a.hintergrund
         ziel = Path(a.csv)
         with ziel.open("w", encoding="utf-8", newline="") as f:
             w = csv.writer(f, delimiter=";", quoting=csv.QUOTE_MINIMAL, lineterminator="\r\n")
             if a.vollstaendig:
                 w.writerow(VOLL_HEADER)
                 for it in items:
-                    w.writerow(zeile_voll(it, basis, not a.originalbilder, a.vollstaendig))
+                    w.writerow(zeile_voll(it, basis, hintergrund, a.vollstaendig, sku_zusatz=a.sku_zusatz))
             else:
                 for info in INFO:
                     f.write(info + "\r\n")
                 w.writerow(HEADER)
                 for it in items:
-                    w.writerow(zeile(it, basis, not a.originalbilder))
+                    w.writerow(zeile(it, basis, hintergrund, sku_zusatz=a.sku_zusatz))
         print(f"{len(items)} Entwuerfe -> {ziel}")
         for it in items[:8]:
             print(f"  {it['id']}: {titel(it)} | Kat {kategorie(it)} | Shop {it['price']} -> eBay {ebay_preis(it['price'])} EUR | {len(bild_pfade(it))} Fotos")
