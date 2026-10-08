@@ -965,7 +965,7 @@ export default {
 
     try {
       if (url.pathname === "/health" && request.method === "GET") {
-        return json({ ok: true, version: "commerce-foundation-v2", environment: isLive(env) ? "live" : "sandbox", dbReady: Boolean(env.DB), checkoutReady: Boolean(env.DB && env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET && env.PAYPAL_WEBHOOK_ID && env.GITHUB_TOKEN) }, 200, origin);
+        return json({ ok: true, version: "commerce-foundation-v2", environment: isLive(env) ? "live" : "sandbox", dbReady: Boolean(env.DB), checkoutReady: Boolean(env.DB && env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET && env.PAYPAL_WEBHOOK_ID && (env.GITHUB_TOKEN || istSandbox(env))) }, 200, origin);
       }
 
       const browserWrite = request.method !== "GET" && url.pathname !== "/paypal-webhook";

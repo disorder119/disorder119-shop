@@ -1,5 +1,6 @@
 import { MAX_RENTAL_DAYS, MAX_REQUEST_BYTES } from "./commerce-core.js";
 import { PASSKEY_ORIGINS, activePasskeyCount, resolveAdminSession } from "./admin-passkeys.js";
+import { istSandbox } from "./sandbox.js";
 
 export const BACKEND_HARDENING_VERSION = "backend-runtime-v3";
 export const ADMIN_ROLE_READER = "READER";
@@ -220,7 +221,8 @@ export function productionReadiness(env = {}) {
   const turnstile = Boolean(env.TURNSTILE_SECRET);
   const paypal = hasPaypalCore(env);
   const webhook = paypal && Boolean(env.PAYPAL_WEBHOOK_ID);
-  const catalogWrite = Boolean(env.GITHUB_TOKEN);
+  // Der Testshop schreibt nie in den echten Katalog (sandbox.js) - er braucht keinen GitHub-Schluessel.
+  const catalogWrite = Boolean(env.GITHUB_TOKEN) || istSandbox(env);
   const adminRbac = adminAuthReadiness(env);
   return {
     environment: live ? "live" : "sandbox",

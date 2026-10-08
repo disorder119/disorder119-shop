@@ -111,3 +111,14 @@ test("Mails im Testshop gehen nur ans eigene Postfach, Telegram mit TEST", async
     n.zurueck();
   }
 });
+
+test("Health: Testshop ist mit PayPal-Sandbox kassenbereit, ohne GitHub-Schluessel - der echte Shop nicht", async () => {
+  const db = sqliteD1(allMigrations());
+  const paypal = { PAYPAL_CLIENT_ID: "sb-id", PAYPAL_CLIENT_SECRET: "sb-secret", PAYPAL_WEBHOOK_ID: "WH-1" };
+  const health = async env => (await workerEntry.fetch(new Request("https://api-test.disorder119.com/health"), env, { waitUntil() {} })).json();
+  const test = await health({ DB: db, ...SANDBOX, ...paypal });
+  assert.equal(test.environment, "sandbox");
+  assert.equal(test.checkoutReady, true);
+  const live = await health({ DB: db, ...paypal, PAYPAL_ENVIRONMENT: "live" });
+  assert.equal(live.checkoutReady, false, "live braucht weiter den GitHub-Schluessel");
+});
