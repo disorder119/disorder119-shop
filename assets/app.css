@@ -1271,7 +1271,7 @@
     background: transparent;
     border: none;
     padding: 0;
-    color: var(--text-faint);
+    color: var(--text-muted);
     font-family: inherit;
     font-size: inherit;
     letter-spacing: inherit;
@@ -1280,7 +1280,7 @@
     cursor: pointer;
   }
 
-  .footer__legal button:hover, .footer__legal a:hover { color: var(--text-muted); }
+  .footer__legal button:hover, .footer__legal a:hover { color: var(--text); }
 
   /* ---------- Rechtliches (Impressum / AGB / Datenschutz) ---------- */
 
