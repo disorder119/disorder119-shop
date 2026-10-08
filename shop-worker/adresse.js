@@ -77,6 +77,18 @@ export async function orteZurPlz(env, plz) {
   return [...new Set((Array.isArray(liste) ? liste : []).map(o => safeText(o?.name, 80)).filter(Boolean))];
 }
 
+// Amtlicher Landesschluessel ("09" = Bayern) zur PLZ - fuer die Luftbilder der
+// Abholort-Karte (karte.js). null, wenn OpenPLZ nicht antwortet.
+export async function bundeslandZurPlz(env, plz) {
+  try {
+    const liste = await openplz(env, `/Localities?postalCode=${encodeURIComponent(plz)}`);
+    const schluessel = (Array.isArray(liste) ? liste : []).map(o => String(o?.federalState?.key || "")).find(k => /^\d{2}$/.test(k));
+    return schluessel || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function strassenZurPlz(env, plz, anfang) {
   const pfad = `/Streets?name=${encodeURIComponent(anfang)}&postalCode=${encodeURIComponent(plz)}&page=1&pageSize=20`;
   const liste = await openplz(env, pfad);

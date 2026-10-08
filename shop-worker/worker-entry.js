@@ -270,7 +270,7 @@ const worker = {
       if (isAbholorteRoute(url)) {
         return finish(await handleAbholorte(request, runtimeEnv, url, reqId, origin));
       }
-      // Luftbild-Kacheln fuer die Abholort-Karte (Esri, Schluessel bleibt am Server).
+      // Luftbild-Kacheln fuer die Abholort-Karte (amtliche Luftbilder der Laender).
       if (isKarteRoute(url)) {
         return finish(await handleKarte(request, runtimeEnv, url));
       }
