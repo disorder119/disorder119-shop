@@ -647,15 +647,15 @@ def cta_html(it, shop_config, home, lang):
     frei_ab = versandkostenfrei_ab_cents()
     if frei_ab and it.get("price", 0) * 100 >= frei_ab:
         ship_notes = {
-            "de": " Versand innerhalb Deutschlands kostenlos (günstigster Standardversand); andere Paketdienste und Express gegen Aufpreis – der genaue Betrag steht vor der Bestellung.",
-            "en": " Free shipping within Germany (cheapest standard service); other carriers and express at a surcharge – the exact amount is shown before you order.",
-            "fr": " Livraison gratuite en Allemagne (envoi standard le moins cher) ; autres transporteurs et express avec supplément – le montant exact est indiqué avant la commande.",
+            "de": " Versand innerhalb Deutschlands mit DHL kostenlos (auch an Packstation oder Filiale); Höherversicherung gegen Aufpreis – der genaue Betrag steht vor der Bestellung.",
+            "en": " Free DHL shipping within Germany (also to a Packstation or post office); higher insurance at a surcharge – the exact amount is shown before you order.",
+            "fr": " Livraison DHL gratuite en Allemagne (aussi en Packstation ou bureau de poste) ; assurance supérieure avec supplément – le montant exact est indiqué avant la commande.",
         }
     elif frei_ab:
         ship_notes = {
-            "de": " Zzgl. Versand je nach Paketgröße und Versandart (Standard oder Express), ab " + euro_text(frei_ab, "de") + " Warenwert kostenlos – der genaue Betrag steht vor der Bestellung.",
-            "en": " Plus shipping depending on parcel size and service (standard or express), free from " + euro_text(frei_ab, "en") + " goods value – the exact amount is shown before you order.",
-            "fr": " Livraison en sus selon la taille du colis et le mode d'envoi (standard ou express), gratuite dès " + euro_text(frei_ab, "fr") + " d'articles – le montant exact est indiqué avant la commande.",
+            "de": " Zzgl. DHL-Versand je nach Paketgewicht, ab " + euro_text(frei_ab, "de") + " Warenwert kostenlos – der genaue Betrag steht vor der Bestellung.",
+            "en": " Plus DHL shipping depending on parcel weight, free from " + euro_text(frei_ab, "en") + " goods value – the exact amount is shown before you order.",
+            "fr": " Livraison DHL en sus selon le poids du colis, gratuite dès " + euro_text(frei_ab, "fr") + " d'articles – le montant exact est indiqué avant la commande.",
         }
     else:
         ship_notes = {

@@ -130,8 +130,8 @@ async function angeboteFuer(env, paket) {
   return angebote;
 }
 
-// Feste Tarife (config/shop-config.json versand.quelle "fest"): DHL und DPD
-// zu Privatpreisen, das Etikett entsteht von Hand bzw. halbautomatisch.
+// Feste Tarife (config/shop-config.json versand.quelle "fest"): DHL zu
+// Privatpreisen je Paketklasse, das Etikett kommt als QR-Marke ueber die Admin-App.
 export function festeOptionen(paket, konfig = VERSAND) {
   const p = paketFuer(paket);
   return konfig.tarife.map(t => ({
@@ -147,6 +147,7 @@ export function festeOptionen(paket, konfig = VERSAND) {
     paket: p.key,
     abholstation: t.abholstation,
     versichertBisCents: t.versichertBisCents,
+    abWarenwertCents: t.abWarenwertCents,
   })).sort((a, b) => a.preisCents - b.preisCents || a.id.localeCompare(b.id));
 }
 
@@ -181,10 +182,14 @@ export async function versandOptionen(env, paket) {
 // guenstigsten Standard. Massgeblich ist der Warenwert vor einem Gutschein:
 // Der Gutschein wird erst nach dem Anlegen der Bestellung verrechnet und
 // aendert den Versand nicht (coupon-checkout.js).
-export function versandkostenfreiAnwenden(ergebnis, warenwertCents, konfig = VERSAND) {
+export function versandkostenfreiAnwenden(roh, warenwertCents, konfig = VERSAND) {
+  const wert = Number.isSafeInteger(warenwertCents) && warenwertCents > 0 ? warenwertCents : 0;
+  // Optionen, die erst ab einem Warenwert gelten (Hoeherversicherung ueber
+  // 500 EUR), sonst gar nicht anbieten.
+  const passend = roh.optionen.filter(o => !(o.abWarenwertCents > wert));
+  const ergebnis = passend.length === roh.optionen.length ? roh : { ...roh, optionen: passend };
   const grenze = konfig.versandkostenfrei;
   if (!grenze) return ergebnis;
-  const wert = Number.isSafeInteger(warenwertCents) && warenwertCents > 0 ? warenwertCents : 0;
   const erreicht = wert >= grenze.abCents;
   const standards = ergebnis.optionen.filter(o => o.art === "standard").map(o => o.preisCents);
   const basis = standards.length ? Math.min(...standards) : 0;

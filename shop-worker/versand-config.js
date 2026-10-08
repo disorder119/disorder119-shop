@@ -1,12 +1,13 @@
-// Versand-Konfiguration fuer den Worker: Paketgroessen, Ersatzpreise und die
-// Zuordnung Artikel -> Paketgroesse.
+// Versand-Konfiguration fuer den Worker: Paketklassen (DHL nach Gewicht),
+// Preise und die Schaetzung, welche Klasse eine Bestellung braucht.
 //
 // Einzige Quelle ist config/shop-config.json ("versand"). Der Worker bundelt
 // die Datei beim Deploy, build_site.py liest dieselbe Datei fuer Produktseiten
 // und Google-Daten - Masse und Preise stehen also nirgends ein zweites Mal.
 import shopConfig from "../config/shop-config.json" with { type: "json" };
 
-const GROESSEN = ["S", "M", "L"];
+// DHL-Paketklassen: S bis 2 kg, M bis 5 kg, L bis 10 kg, XL bis 20 kg, XXL bis 31,5 kg.
+export const GROESSEN = Object.freeze(["S", "M", "L", "XL", "XXL"]);
 
 function ganzzahl(wert, min, max) {
   return Number.isInteger(wert) && wert >= min && wert <= max;
@@ -31,13 +32,32 @@ export function versandKonfigurationPruefen(roh) {
       breite: p.breite,
       hoehe: p.hoehe,
       gewichtKg: Number(p.gewichtKg),
+      // Nur Klasse S (60 x 30 x 15 cm): was dicker ist, passt nicht hinein.
+      maxLiter: ganzzahl(p.maxLiter, 1, 500) ? p.maxLiter : null,
       ersatzCents: p.ersatzCents,
     });
   }
-  const standard = GROESSEN.includes(v.standardGroesse) ? v.standardGroesse : "M";
-  const nurGroessen = map => Object.freeze(Object.fromEntries(
-    Object.entries(map || {}).filter(([, g]) => GROESSEN.includes(g)),
+  const standard = GROESSEN.includes(v.standardGroesse) ? v.standardGroesse : "S";
+  // Schaetzung je Stueck: Gewicht (kg) und Volumen (Liter).
+  const sch = v.schaetzung && typeof v.schaetzung === "object" ? v.schaetzung : {};
+  const wert = x => (x && Number(x.kg) > 0 && Number(x.kg) <= 31.5 && Number(x.liter) > 0 && Number(x.liter) <= 500
+    ? Object.freeze({ kg: Number(x.kg), liter: Number(x.liter) }) : null);
+  const tabelle = map => Object.freeze(Object.fromEntries(
+    Object.entries(map || {}).map(([k, x]) => [k, wert(x)]).filter(([, x]) => x),
   ));
+  let schwerMuster = null;
+  if (sch.schwer && sch.schwer.muster) {
+    try { schwerMuster = new RegExp(String(sch.schwer.muster), "i"); } catch { throw new Error("VERSAND_SCHAETZUNG_MUSTER_UNGUELTIG"); }
+  }
+  const faktor = Number(sch.schwer && sch.schwer.faktor);
+  const schaetzung = Object.freeze({
+    verpackungKg: Number(sch.verpackungKg) >= 0 && Number(sch.verpackungKg) <= 5 ? Number(sch.verpackungKg) : 0.4,
+    standard: wert(sch.standard) || Object.freeze({ kg: 1, liter: 8 }),
+    schwerMuster,
+    schwerFaktor: faktor >= 1 && faktor <= 5 ? faktor : 1,
+    nachProdukttyp: tabelle(sch.nachProdukttyp),
+    nachKategorie: tabelle(sch.nachKategorie),
+  });
   const land = /^[A-Z]{2}$/.test(String(v.zielLand || "")) ? v.zielLand : "DE";
   const plz = /^\d{5}$/.test(String(v.referenzPlz || "")) ? v.referenzPlz : "10115";
   // Paketdienste fuer den Checkout. Fehlt die Erlaubt-Liste, sind alle
@@ -74,6 +94,8 @@ export function versandKonfigurationPruefen(roh) {
         laufzeitTage: ganzzahl(t.laufzeitTage, 1, 30) ? t.laufzeitTage : null,
         abholstation: t.abholstation === true,
         versichertBisCents: ganzzahl(t.versichertBisCents, 0, 10000000) ? t.versichertBisCents : null,
+        // Erst ab diesem Warenwert anbieten (Hoeherversicherung).
+        abWarenwertCents: ganzzahl(t.abWarenwertCents, 1, 100000000) ? t.abWarenwertCents : null,
       }));
     }
     if (!tarife.length) throw new Error("VERSAND_TARIFE_FEHLEN");
@@ -83,8 +105,7 @@ export function versandKonfigurationPruefen(roh) {
     tarife: Object.freeze(tarife),
     pakete: Object.freeze(pakete),
     standardGroesse: standard,
-    nachProdukttyp: nurGroessen(v.groesseNachProdukttyp),
-    nachKategorie: nurGroessen(v.groesseNachKategorie),
+    schaetzung,
     zielLand: land,
     referenzPlz: plz,
     dienste: Object.freeze({ erlaubt, ausgeschlossen, expressMaxCents }),
@@ -119,21 +140,40 @@ export function paketFuer(key) {
   return PAKETE[k] || PAKETE[VERSAND.standardGroesse];
 }
 
-// Groesse eines einzelnen Stuecks: zuerst die genaue Produktart (Stiefel,
-// Mantel), dann die Kategorie, sonst die Standardgroesse.
-export function groesseFuerArtikel(item = {}, konfig = VERSAND) {
-  return konfig.nachProdukttyp[String(item.product_type || "")]
-    || konfig.nachKategorie[String(item.taxonomy_category || item.category || "")]
-    || konfig.standardGroesse;
+// Gewicht und Volumen eines Stuecks: zuerst die genaue Produktart (Stiefel,
+// Mantel), dann die Kategorie, sonst der Standard. Leder, Fell, Daunen & Co.
+// im Titel machen es schwerer und dicker.
+export function schaetzeArtikel(item = {}, konfig = VERSAND) {
+  const s = konfig.schaetzung;
+  const basis = s.nachProdukttyp[String(item.product_type || "")]
+    || s.nachKategorie[String(item.taxonomy_category || item.category || "")]
+    || s.standard;
+  const schwer = s.schwerMuster && s.schwerMuster.test(String(item.title || "")) ? s.schwerFaktor : 1;
+  return { kg: basis.kg * schwer, liter: basis.liter * schwer };
 }
 
-// Ein Paket je Bestellung: das groesste Einzelstueck bestimmt die Groesse,
-// zwei Teile brauchen mindestens "M", ab drei Teilen wird es "L".
+// Ein Paket je Bestellung: alle Stuecke plus Verpackung. Die kleinste Klasse,
+// deren Gewicht reicht - Klasse S nur, wenn auch das Volumen hineinpasst.
+// Mehr als 31,5 kg passt in kein DHL-Paket; dann bleibt es bei XXL und der
+// Inhaber teilt auf (kommt bei hoechstens zehn Stuecken praktisch nie vor).
 export function paketFuerArtikel(items = [], konfig = VERSAND) {
   const liste = (Array.isArray(items) ? items : [items]).filter(Boolean);
   if (!liste.length) return konfig.standardGroesse;
-  let rang = Math.max(...liste.map(it => GROESSEN.indexOf(groesseFuerArtikel(it, konfig))));
-  if (liste.length >= 2) rang = Math.max(rang, 1);
-  if (liste.length >= 3) rang = 2;
-  return GROESSEN[Math.max(0, rang)];
+  let kg = konfig.schaetzung.verpackungKg;
+  let liter = 0;
+  for (const it of liste) {
+    const e = schaetzeArtikel(it, konfig);
+    kg += e.kg;
+    liter += e.liter;
+  }
+  for (const key of GROESSEN) {
+    const p = konfig.pakete[key];
+    if (kg <= p.gewichtKg + 1e-9 && (!p.maxLiter || liter <= p.maxLiter)) return key;
+  }
+  return GROESSEN[GROESSEN.length - 1];
+}
+
+// Fuer ein einzelnes Stueck (Produktseite).
+export function groesseFuerArtikel(item = {}, konfig = VERSAND) {
+  return paketFuerArtikel([item], konfig);
 }
