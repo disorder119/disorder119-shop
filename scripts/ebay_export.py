@@ -137,28 +137,117 @@ def titel(it) -> str:
     return out[:MAX_TITEL]
 
 
-def beschreibung(it) -> str:
-    text = str(it.get("desc_de") or it.get("desc") or "").strip()
+# Bloecke der Katalogtexte, die bei eBay nichts bringen (Puppenmasse, Rechtstext, Claim).
+_WEGLASSEN = ("fotografie & passform", "maße der schneiderpuppe", "rechtliche hinweise", "disorder119 steht für",
+              "diese maße dienen", "aus dem kuratierten archiv")
+_DETAIL_KEYS = ("Marke", "Modell", "Linie", "Kollektion", "Saison", "Farbe", "Größe", "Passform", "Schnitt", "Verschluss",
+                "Material", "Herstellungsland", "Länge", "Ärmel", "Muster", "Besonderheit", "Besonderheiten")
+
+
+def _katalogtext(it) -> dict:
+    """Zerlegt den Katalogtext in Einleitung, Detail-Paare, Zustand und Hinweise."""
+    text = str(it.get("desc_de") or it.get("desc") or "").replace("\r", "").strip()
     absaetze = [a.strip() for a in re.split(r"\n\s*\n", text) if a.strip()]
-    teile = []
+    einleitung, details, zustand, hinweise = [], {}, [], []
+    modus = None
     for a in absaetze:
-        zeilen = [html.escape(z.strip()) for z in a.split("\n") if z.strip()]
-        teile.append("<p>" + "<br>".join(zeilen) + "</p>")
-    fakten = []
-    for label, key in (("Marke", "brand"), ("Größe", "size"), ("Farbe", "color"), ("Zustand", "condition")):
-        wert = str(it.get(key) or "").strip()
-        if wert:
-            fakten.append(f"<li><b>{html.escape(label)}:</b> {html.escape(wert)}</li>")
+        zeilen = [z.strip() for z in a.split("\n") if z.strip()]
+        kopf = zeilen[0].rstrip(":").casefold()
+        if any(kopf.startswith(w) or a.casefold().startswith(w) for w in _WEGLASSEN):
+            modus = None
+            continue
+        if kopf in ("details", "zustand"):
+            modus = kopf
+            zeilen = zeilen[1:]
+            if not zeilen:
+                continue
+        if zeilen and zeilen[0].casefold().startswith("hinweis"):
+            hinweise.append(" ".join(zeilen).split(":", 1)[-1].strip())
+            continue
+        if modus == "details":
+            # Beide Schreibweisen: "Marke: Prada" und "Marke" / "Prada" in Folgezeilen.
+            i = 0
+            while i < len(zeilen):
+                z = zeilen[i]
+                if ":" in z:
+                    k, v = z.split(":", 1)
+                    if k.strip() in _DETAIL_KEYS and v.strip():
+                        details[k.strip()] = v.strip()
+                    elif k.strip() in _DETAIL_KEYS:
+                        werte = []
+                        while i + 1 < len(zeilen) and ":" not in zeilen[i + 1] and zeilen[i + 1] not in _DETAIL_KEYS:
+                            werte.append(zeilen[i + 1]); i += 1
+                        details[k.strip()] = ", ".join(werte)
+                elif z in _DETAIL_KEYS and i + 1 < len(zeilen):
+                    werte = []
+                    while i + 1 < len(zeilen) and zeilen[i + 1] not in _DETAIL_KEYS:
+                        werte.append(zeilen[i + 1]); i += 1
+                    details[z] = ", ".join(werte)
+                i += 1
+            continue
+        if modus == "zustand":
+            zustand.append(" ".join(zeilen))
+            modus = None
+            continue
+        # Alles andere ist Fliesstext; eine einzelne Titelzeile am Anfang und der
+        # automatisch erzeugte Faktensatz ("... Kategorie: Shoes. Groesse: 9. ...") fallen weg.
+        if len(zeilen) == 1 and len(zeilen[0]) < 70 and not einleitung and zeilen[0].casefold().startswith(str(it.get("brand") or "zzz").casefold()):
+            continue
+        if re.search(r"Kategorie:\s*\w+\.", a) and "Fehlende Angaben" in a:
+            continue
+        einleitung.append(" ".join(zeilen))
+    return dict(einleitung=einleitung, details=details, zustand=zustand, hinweise=hinweise)
+
+
+def ist_neu(it) -> bool:
+    # "neu mit Etikett" steht im Katalog nur als Hinweis im Text (keine Zustandsstufen im Shop).
+    text = (str(it.get("condition") or "") + " " + str(it.get("desc_de") or it.get("desc") or "")).casefold()
+    return bool(re.search(r"neu mit (original)?etikett", text))
+
+
+def condition_id(it) -> str:
+    # eBay: 1000 = Neu mit Etikett, 3000 = Gebraucht.
+    return "1000" if ist_neu(it) else "3000"
+
+
+def beschreibung(it) -> str:
+    """eBay-Beschreibung: kurzer Text, danach alles Wichtige als Stichpunkte (so wird es am Handy gelesen)."""
+    e = html.escape
+    kt = _katalogtext(it)
+    teile = [f"<h3>{e(titel(it))}</h3>"]
+    if kt["einleitung"]:
+        teile.append("<p>" + e(kt["einleitung"][0]) + "</p>")
+    punkte = []
+    def punkt(label, wert):
+        wert = str(wert or "").strip()
+        if wert and wert.casefold() not in ("nicht angegeben", "keine angabe", "-", "–", "keiner"):
+            punkte.append(f"<li><b>{e(label)}:</b> {e(wert)}</li>")
+    punkt("Marke", kt["details"].get("Marke") or it.get("brand"))
+    punkt("Artikel", PRODUKTART_DE.get(str(it.get("product_type") or ""), ""))
+    punkt("Für", ABTEILUNG_DE.get(str(it.get("department") or ""), ""))
+    for k in ("Linie", "Modell", "Kollektion", "Saison"):
+        punkt(k, kt["details"].get(k))
+    groesse = str(it.get("size") or "").strip()
     eu, uk, us = schuhgroesse(it)
     if eu and (uk or us):
-        herkunft = f"UK {uk}" if uk else f"US {us}"
-        fakten.append(f"<li><b>EU-Größe:</b> ca. {html.escape(eu)} (umgerechnet aus {herkunft}, Herstellerangabe)</li>")
-    if fakten:
-        teile.append("<ul>" + "".join(fakten) + "</ul>")
-    teile.append("<p>Gebrauchtes Einzelstück aus dem kuratierten Archiv von DISORDER119 – individuell fotografiert und geprüft. "
-                 "Normale, altersgemäße Gebrauchsspuren; Besonderheiten stehen in der Beschreibung und sind auf den Fotos zu sehen.</p>")
-    teile.append("<p>Versand innerhalb Deutschlands mit DHL, sorgfältig von Hand verpackt, innerhalb von 3 Werktagen. "
-                 "14 Tage Widerrufsrecht für Verbraucher. Kleinunternehmer gemäß § 19 UStG, keine Umsatzsteuer ausgewiesen.</p>")
+        groesse = f"{groesse} (Herstellerangabe {'UK ' + uk if uk else 'US ' + us}, entspricht ca. EU {eu})"
+    punkt("Größe", groesse)
+    punkt("Farbe", kt["details"].get("Farbe") or it.get("color"))
+    for k in ("Passform", "Schnitt", "Länge", "Ärmel", "Verschluss", "Muster", "Material", "Herstellungsland", "Besonderheit", "Besonderheiten"):
+        punkt(k, kt["details"].get(k))
+    teile.append("<h4>Auf einen Blick</h4><ul>" + "".join(punkte) + "</ul>")
+    zustand = [z for z in kt["zustand"] if z]
+    if not zustand:
+        zustand = ["Neu mit Originaletikett, ungetragen." if ist_neu(it) else "Gebrauchtes Einzelstück mit normalen, altersgemäßen Gebrauchsspuren."]
+    zustand += ["Hinweis: " + h for h in kt["hinweise"] if h]
+    zustand.append("Alle Besonderheiten sind auf den Fotos zu sehen – jedes Stück ist individuell fotografiert und geprüft.")
+    teile.append("<h4>Zustand</h4><ul>" + "".join(f"<li>{e(z)}</li>" for z in zustand) + "</ul>")
+    frei = float(it.get("price") or 0) >= VERSAND_FREI_AB
+    teile.append("<h4>Versand &amp; Rückgabe</h4><ul>"
+                 "<li>Versand mit DHL innerhalb von 3 Werktagen, sorgfältig von Hand verpackt" + (" – versandkostenfrei" if frei else "") + "</li>"
+                 "<li>14 Tage Widerrufsrecht für Verbraucher</li>"
+                 "<li>Kleinunternehmer gemäß § 19 UStG, keine Umsatzsteuer ausgewiesen</li>"
+                 "<li>Aus dem kuratierten Designer-Archiv von DISORDER119 (disorder119.com)</li></ul>")
     return "".join(teile)
 
 
@@ -213,7 +302,7 @@ def zeile(it, basis, hintergrund, sku_zusatz=""):
     kat = kategorie(it)
     return [
         "Draft", sku(it, sku_zusatz), kat or "", titel(it), "", f"{ebay_preis(it['price'])}.00", "1",
-        "|".join(bild_urls(it, basis, hintergrund)), "3000", beschreibung(it), "FixedPrice",
+        "|".join(bild_urls(it, basis, hintergrund)), condition_id(it), beschreibung(it), "FixedPrice",
     ]
 
 
@@ -404,7 +493,7 @@ def schrittlaenge(it) -> str:
 def zeile_voll(it, basis, hintergrund, aktion="VerifyAdd", sku_zusatz=""):
     frei = float(it["price"]) >= VERSAND_FREI_AB
     return [
-        aktion, sku(it, sku_zusatz), kategorie(it) or "", titel(it), beschreibung(it), "3000",
+        aktion, sku(it, sku_zusatz), kategorie(it) or "", titel(it), beschreibung(it), condition_id(it),
         str(it.get("brand") or ""), ebay_groesse(it), *schuhgroesse(it), absatzhoehe(it), farbe(it),
         ABTEILUNG_DE.get(str(it.get("department") or ""), ""), PRODUKTART_DE.get(str(it.get("product_type") or ""), ""), STIL, aermel(it),
         material(it) if str(it.get("taxonomy_category") or "") in ("Jackets", "Coats", "Shoes", "Accessories") else "", material(it),
