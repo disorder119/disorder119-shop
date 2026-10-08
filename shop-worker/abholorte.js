@@ -14,6 +14,7 @@
 // wie DHL sie verlangt: "Packstation 123" bzw. "Postfiliale 456", die
 // Postnummer im Adresszusatz.
 import { safeText } from "./commerce-core.js";
+import { luftbildBereit } from "./karte.js";
 
 const FINDER = "https://api.dhl.com/location-finder/v1/find-by-address";
 const CACHE_SEKUNDEN = 24 * 60 * 60;
@@ -59,12 +60,17 @@ export function abholortAus(eintrag) {
   if (!/^\d{5}$/.test(plz)) return null;
   const lat = Number(geo.latitude);
   const lng = Number(geo.longitude);
-  const name = safeText(eintrag.name || `${typ === "packstation" ? "Packstation" : "Postfiliale"} ${nummer}`, 100);
+  // So steht der Ort auf dem Etikett: "Packstation 162" bzw. "Postfiliale 503"
+  // (auch DHL-Paketshops). Bei Paketshops liefert DHL als Namen den Laden
+  // ("Kiosk Rana") - der kommt als Zusatz dazu.
+  const name = `${typ === "packstation" ? "Packstation" : "Postfiliale"} ${nummer}`;
+  const geschaeft = safeText(eintrag.name || "", 100).replace(/\s+/g, " ").trim();
   return {
     id: safeText(loc.ids?.[0]?.locationId || `${typ}-${nummer}-${plz}`, 60),
     typ,
     nummer,
     name,
+    ...(geschaeft && geschaeft.toLowerCase() !== name.toLowerCase() ? { geschaeft } : {}),
     strasse: safeText(adresse.streetAddress || "", 100),
     plz,
     ort: safeText(adresse.addressLocality || "", 80),
@@ -225,7 +231,8 @@ export async function handleAbholorte(request, env, url, reqId = crypto.randomUU
       if (r && r.success === false) throw new AbholortError("RATE_LIMITED", 429);
     }
     const daten = await abholorteSuchen(env, anfrageAus(url));
-    return new Response(JSON.stringify({ ok: true, ...daten }), { status: 200, headers: kopf(origin) });
+    // luftbild: ob die Kasse Luftbilder anbieten kann (karte.js, Esri-Schluessel am Server).
+    return new Response(JSON.stringify({ ok: true, ...daten, luftbild: luftbildBereit(env) }), { status: 200, headers: kopf(origin) });
   } catch (err) {
     const bekannt = err instanceof AbholortError;
     if (!bekannt) {

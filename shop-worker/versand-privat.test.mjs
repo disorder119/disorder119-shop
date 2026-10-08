@@ -17,6 +17,8 @@ const DHL_ANTWORT = {
       serviceTypes: ["parcel:pick-up", "letter-service"] },
     { name: "Briefkasten", distance: 20, location: { keywordId: "1", type: "letterbox" }, place: { address: { postalCode: "63739" } } },
     { name: "Paketshop ohne Abholung", distance: 30, location: { keywordId: "777", type: "servicepoint" }, place: { address: { postalCode: "63739" } }, serviceTypes: ["parcel:drop-off"] },
+    { name: "Kiosk/Telekommunikation Rana", distance: 554, location: { keywordId: "793", type: "servicepoint" },
+      place: { address: { postalCode: "63739", addressLocality: "Aschaffenburg", streetAddress: "Wermbachstr. 22" } }, serviceTypes: ["parcel:pick-up-unregistered"] },
     { name: "Packstation 162 doppelt", distance: 999, location: { keywordId: "162", type: "locker" }, place: { address: { postalCode: "63739", addressLocality: "Aschaffenburg" } } },
   ],
 };
@@ -54,9 +56,11 @@ test("feste Tarife brauchen kein Packlink; ab 99 EUR kostet der guenstigste Vers
 
 test("Abholorte aus der DHL-Antwort: Packstation und Filiale, sortiert, ohne Doppelte", () => {
   const orte = abholorteAus(DHL_ANTWORT);
-  assert.deepEqual(orte.map(o => [o.typ, o.nummer, o.name, o.entfernungM]), [
-    ["filiale", "503", "Postfiliale 503", 150],
-    ["packstation", "162", "Packstation 162", 412],
+  assert.deepEqual(orte.map(o => [o.typ, o.nummer, o.name, o.geschaeft, o.entfernungM]), [
+    ["filiale", "503", "Postfiliale 503", undefined, 150],
+    ["packstation", "162", "Packstation 162", undefined, 412],
+    // DHL-Paketshop: auf dem Etikett "Postfiliale 793", der Laden als Zusatz.
+    ["filiale", "793", "Postfiliale 793", "Kiosk/Telekommunikation Rana", 554],
   ]);
   assert.deepEqual({ ...orte[1] }, { id: "8003-4155690", typ: "packstation", nummer: "162", name: "Packstation 162", strasse: "Hanauer Str. 2", plz: "63739", ort: "Aschaffenburg", lat: 49.9761, lng: 9.1449, entfernungM: 412 });
   assert.deepEqual(abholorteAus(null), []);
@@ -79,7 +83,9 @@ test("GET /versand/abholorte: Schluessel bleibt am Server, nur PLZ und Strasse g
     const ok = await abfrage("?plz=63739&strasse=Nelseestra%C3%9Fe%2025");
     assert.equal(ok.status, 200);
     assert.equal(ok.cors, SHOP);
-    assert.equal(ok.daten.orte.length, 2);
+    assert.equal(ok.daten.orte.length, 3);
+    assert.equal(ok.daten.luftbild, false, "ohne ESRI_API_KEY keine Luftbilder");
+    assert.equal((await abfrage("?plz=63739", { DHL_PRIVAT_API_KEY: "dhl-test", ESRI_API_KEY: "esri-test" })).daten.luftbild, true);
     assert.equal(aufrufe[0].key, "dhl-test");
     const gesendet = new URL(aufrufe[0].url);
     assert.equal(gesendet.searchParams.get("postalCode"), "63739");
@@ -87,7 +93,7 @@ test("GET /versand/abholorte: Schluessel bleibt am Server, nur PLZ und Strasse g
     assert.equal(gesendet.searchParams.get("countryCode"), "DE");
     assert.ok(!JSON.stringify(ok.daten).includes("dhl-test"), "Schluessel nie in der Antwort");
 
-    assert.deepEqual((await abfrage("?plz=99999")).daten, { ok: true, orte: [] });
+    assert.deepEqual((await abfrage("?plz=99999")).daten, { ok: true, orte: [], luftbild: false });
     assert.equal((await abfrage("?plz=123")).status, 400);
     assert.equal((await abfrage("?plz=63739", {})).daten.error, "ABHOLORTE_NICHT_EINGERICHTET");
     assert.equal((await abfrage("?plz=63739", undefined, "https://evil.example")).status, 403);

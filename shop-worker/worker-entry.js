@@ -30,6 +30,7 @@ import { handleDhlQr, isDhlQrRoute } from "./dhl-qr.js";
 import { handlePacklink, handlePacklinkWebhook, isPacklinkRoute, isPacklinkWebhookRoute } from "./packlink.js";
 import { handleVersandOptionen, isVersandOptionenRoute } from "./versand.js";
 import { handleAbholorte, isAbholorteRoute } from "./abholorte.js";
+import { handleKarte, isKarteRoute } from "./karte.js";
 import { handleAdresse, isAdresseRoute } from "./adresse.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
@@ -268,6 +269,10 @@ const worker = {
       // DHL-Packstationen und -Filialen zur Adresse (oeffentlich, nur lesen).
       if (isAbholorteRoute(url)) {
         return finish(await handleAbholorte(request, runtimeEnv, url, reqId, origin));
+      }
+      // Luftbild-Kacheln fuer die Abholort-Karte (Esri, Schluessel bleibt am Server).
+      if (isKarteRoute(url)) {
+        return finish(await handleKarte(request, runtimeEnv, url));
       }
 
       if (isVersandOptionenRoute(url)) {
