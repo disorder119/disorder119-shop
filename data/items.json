@@ -864,14 +864,13 @@
     "brightness": 0.217,
     "public_status": "AVAILABLE",
     "data_quality_open": [
-      "size",
       "color"
     ],
     "department": "Men",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
-    "size_normalized": "Unknown",
-    "size_source": "unknown",
+    "size_normalized": "M",
+    "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
@@ -902,17 +901,15 @@
     "price_estimated": false,
     "brightness": 0.396,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "size"
-    ],
+    "data_quality_open": [],
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
     "department": "Men",
     "product_type": "Swim Shorts",
     "taxonomy_category": "Pants",
-    "size_normalized": "Unknown",
-    "size_source": "unknown",
+    "size_normalized": "L",
+    "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
@@ -1679,17 +1676,15 @@
     "price_estimated": false,
     "brightness": 0.5,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "size"
-    ],
+    "data_quality_open": [],
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
-    "size_normalized": "Unknown",
-    "size_source": "unknown",
+    "size_normalized": "S",
+    "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
@@ -1835,17 +1830,15 @@
     "price_estimated": false,
     "brightness": 0.345,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "size"
-    ],
+    "data_quality_open": [],
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
     "department": "Women",
     "product_type": "Blouse",
     "taxonomy_category": "Tops",
-    "size_normalized": "Unknown",
-    "size_source": "unknown",
+    "size_normalized": "XL",
+    "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
@@ -1877,14 +1870,13 @@
     "brightness": 0.405,
     "public_status": "AVAILABLE",
     "data_quality_open": [
-      "size",
       "color"
     ],
     "department": "Women",
     "product_type": "Cardigan",
     "taxonomy_category": "Knitwear",
-    "size_normalized": "Unknown",
-    "size_source": "unknown",
+    "size_normalized": "S",
+    "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
@@ -2034,14 +2026,13 @@
     "brightness": 0.383,
     "public_status": "AVAILABLE",
     "data_quality_open": [
-      "size",
       "color"
     ],
     "department": "Women",
     "product_type": "Tunic",
     "taxonomy_category": "Tops",
-    "size_normalized": "Unknown",
-    "size_source": "unknown",
+    "size_normalized": "One Size",
+    "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
@@ -6601,14 +6592,13 @@
     "brightness": 0.219,
     "public_status": "AVAILABLE",
     "data_quality_open": [
-      "size",
       "color"
     ],
     "department": "Women",
     "product_type": "Shorts",
     "taxonomy_category": "Pants",
-    "size_normalized": "Unknown",
-    "size_source": "unknown",
+    "size_normalized": "XL",
+    "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },

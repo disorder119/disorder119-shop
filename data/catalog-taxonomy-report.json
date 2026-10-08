@@ -56,7 +56,7 @@
     "Vest": 7,
     "Wallet": 1
   },
-  "missingSizeCount": 47,
+  "missingSizeCount": 40,
   "missingSize": [
     {
       "id": 6239,
@@ -67,16 +67,6 @@
       "id": 6238,
       "article": "2238",
       "title": "Yohji Yamamoto Sonnenbrille mit Logo-Bügeln"
-    },
-    {
-      "id": 6220,
-      "article": "2220",
-      "title": "Y-3 Oversized Cargohose Herren"
-    },
-    {
-      "id": 6219,
-      "article": "2219",
-      "title": "Prada Sport Nylon-Badeshorts Herren Braun"
     },
     {
       "id": 6208,
@@ -92,26 +82,6 @@
       "id": 6205,
       "article": "2205",
       "title": "Jean Paul Gaultier Schwanengürtel Damen"
-    },
-    {
-      "id": 6199,
-      "article": "2199",
-      "title": "Rundholz Asymmetrischer Cardigan Damen Elfenbein"
-    },
-    {
-      "id": 6195,
-      "article": "2195",
-      "title": "A.F. Vandevorst Bluse Damen Blau"
-    },
-    {
-      "id": 6194,
-      "article": "2194",
-      "title": "A.F. Vandevorst Cardigan mit Muster Damen"
-    },
-    {
-      "id": 6190,
-      "article": "2190",
-      "title": "Rundholz Asymmetrische Tunika Damen"
     },
     {
       "id": 6185,
@@ -162,11 +132,6 @@
       "id": 9457,
       "article": "98",
       "title": "Prada Fellstola Damen"
-    },
-    {
-      "id": 9426,
-      "article": "71",
-      "title": "Burberry Nova Check Shorts Damen"
     },
     {
       "id": 9390,
