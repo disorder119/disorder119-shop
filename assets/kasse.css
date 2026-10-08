@@ -468,8 +468,6 @@
   height: 256px;
   max-width: none;
   user-select: none;
-  /* Helle Kacheln gedaempft, damit die Karte zur schwarzen Kasse passt. */
-  filter: grayscale(1) brightness(0.82) contrast(1.05);
 }
 .kasse-karte__punkt {
   position: absolute;
@@ -482,14 +480,36 @@
 }
 .kasse-karte__punkt[aria-pressed="true"] {
   z-index: 2;
-  min-width: 30px;
-  height: 30px;
-  border-radius: 15px;
-  background: var(--accent-text);
-  color: var(--ink);
+  min-width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  border: 3px solid var(--text);
+  background: var(--ink);
+  color: var(--text);
 }
 .kasse-karte__punkt:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
 .kasse-karte__zoom { position: absolute; z-index: 3; left: 8px; top: 8px; display: grid; gap: 4px; }
+.kasse-karte__ebenen {
+  position: absolute;
+  z-index: 3;
+  right: 8px;
+  top: 8px;
+  display: flex;
+  border: 1px solid var(--rule-strong);
+  background: var(--ink);
+}
+.kasse-karte__ebenen button {
+  min-height: 32px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.kasse-karte__ebenen button[aria-pressed="true"] { color: var(--ink); background: var(--text); font-weight: 700; }
+.kasse-karte__ebenen button:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; }
 .kasse-karte__zoom button {
   width: 32px;
   height: 32px;

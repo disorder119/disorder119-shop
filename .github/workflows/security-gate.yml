@@ -72,7 +72,9 @@ jobs:
           node --check shop-worker/versand-config.js
           node --check shop-worker/adresse.js
           node --check assets/kasse.js
-          node --test shop-worker/packlink.test.mjs shop-worker/versand.test.mjs shop-worker/kasse.test.mjs
+          node --check shop-worker/abholorte.js
+          node --check shop-worker/karte.js
+          node --test shop-worker/packlink.test.mjs shop-worker/versand.test.mjs shop-worker/kasse.test.mjs shop-worker/versand-privat.test.mjs shop-worker/karte.test.mjs
 
       - name: Live-Besucher (Statistik und Telegram) pruefen
         run: |

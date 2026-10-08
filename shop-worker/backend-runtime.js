@@ -385,7 +385,8 @@ export async function finalizeRuntimeResponse(response, request, env, requestId,
   headers.set("X-Request-Id", requestId);
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "no-referrer");
-  headers.set("Cache-Control", "no-store");
+  // Kartenkacheln (karte.js) darf der Browser behalten - alles andere nie.
+  if (!(pathname.startsWith("/karte/") && out.ok)) headers.set("Cache-Control", "no-store");
   if (new URL(request.url).protocol === "https:") {
     headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   }

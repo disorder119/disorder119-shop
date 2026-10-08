@@ -66,7 +66,8 @@
       abholPlzFehlt: "Gib eine fünfstellige PLZ ein, dann zeigen wir dir Packstationen und Filialen in der Nähe.", abholOhneSuche: "Gib die Nummer deiner Packstation oder Filiale ein – du findest sie in der DHL-App oder auf dhl.de.", abholGefunden: "{n} Abholorte in der Nähe – wähle einen aus der Liste oder auf der Karte.",
       abholWaehlen: "Bitte wähle eine Packstation oder Filiale.", abholPackstation: "Packstation", abholFiliale: "Filiale",
       abholKarte: "Auf der Karte zeigen", abholKarteZu: "Karte ausblenden", abholKarteHinweis: "Die Karte lädt Kartenbilder von OpenStreetMap – dabei sieht der Kartendienst deine IP-Adresse.",
-      kartePlus: "Karte vergrößern", karteMinus: "Karte verkleinern", abholManuell: "Nummer selbst eingeben", abholArt: "Art",
+      kartePlus: "Karte vergrößern", karteMinus: "Karte verkleinern", karteLuftbild: "Luftbild", karteStrassen: "Karte",
+      abholKarteHinweisLuftbild: "Luftbilder holt unser Server bei Esri – ohne deine IP-Adresse. Die Straßenkarte kommt direkt von OpenStreetMap, das dabei deine IP-Adresse sieht.", abholManuell: "Nummer selbst eingeben", abholArt: "Art",
       abholNummer: "Nummer", abholUebernehmen: "Übernehmen", abholNummerFehlt: "Bitte gib die Nummer ein (bis zu 4 Ziffern).",
       postnummer: "DHL-Postnummer", optional: "optional", postnummerHinweisP: "Pflicht an der Packstation: deine 6- bis 10-stellige Postnummer aus der DHL-App. Vor- und Nachname müssen zu deinem DHL-Konto passen.",
       postnummerHinweisF: "Optional – in der Filiale holst du das Paket mit Ausweis ab.", fehltPostnummer: "Bitte gib deine DHL-Postnummer an (6 bis 10 Ziffern).",
@@ -122,7 +123,8 @@
       abholPlzFehlt: "Enter a five-digit postcode and we will show you Packstations and post offices nearby.", abholOhneSuche: "Enter the number of your Packstation or post office – you can find it in the DHL app or on dhl.de.", abholGefunden: "{n} pickup points nearby – choose one from the list or on the map.",
       abholWaehlen: "Please choose a Packstation or post office.", abholPackstation: "Packstation", abholFiliale: "Post office",
       abholKarte: "Show on map", abholKarteZu: "Hide map", abholKarteHinweis: "The map loads tiles from OpenStreetMap – the map service sees your IP address.",
-      kartePlus: "Zoom in", karteMinus: "Zoom out", abholManuell: "Enter the number yourself", abholArt: "Type", abholNummer: "Number",
+      kartePlus: "Zoom in", karteMinus: "Zoom out", karteLuftbild: "Aerial", karteStrassen: "Map",
+      abholKarteHinweisLuftbild: "Our server fetches aerial images from Esri – without your IP address. The street map comes directly from OpenStreetMap, which sees your IP address.", abholManuell: "Enter the number yourself", abholArt: "Type", abholNummer: "Number",
       abholUebernehmen: "Use this", abholNummerFehlt: "Please enter the number (up to 4 digits).", postnummer: "DHL Postnummer",
       optional: "optional", postnummerHinweisP: "Required for a Packstation: your 6 to 10 digit Postnummer from the DHL app. First and last name must match your DHL account.",
       postnummerHinweisF: "Optional – you collect the parcel at the post office with your ID.", fehltPostnummer: "Please enter your DHL Postnummer (6 to 10 digits).",
@@ -179,7 +181,8 @@
       abholGefunden: "{n} points de retrait à proximité – choisis-en un dans la liste ou sur la carte.", abholWaehlen: "Choisis une Packstation ou un bureau de poste.",
       abholPackstation: "Packstation", abholFiliale: "Bureau de poste", abholKarte: "Afficher sur la carte", abholKarteZu: "Masquer la carte",
       abholKarteHinweis: "La carte charge des images d’OpenStreetMap – le service de carte voit ton adresse IP.", kartePlus: "Zoom avant",
-      karteMinus: "Zoom arrière", abholManuell: "Saisir le numéro toi-même", abholArt: "Type", abholNummer: "Numéro", abholUebernehmen: "Valider",
+      karteMinus: "Zoom arrière", karteLuftbild: "Vue aérienne", karteStrassen: "Plan",
+      abholKarteHinweisLuftbild: "Notre serveur charge les vues aériennes chez Esri – sans ton adresse IP. Le plan vient directement d’OpenStreetMap, qui voit ton adresse IP.", abholManuell: "Saisir le numéro toi-même", abholArt: "Type", abholNummer: "Numéro", abholUebernehmen: "Valider",
       abholNummerFehlt: "Saisis le numéro (jusqu’à 4 chiffres).", postnummer: "Postnummer DHL", optional: "facultatif",
       postnummerHinweisP: "Obligatoire pour une Packstation : ta Postnummer de 6 à 10 chiffres de l’app DHL. Prénom et nom doivent correspondre à ton compte DHL.",
       postnummerHinweisF: "Facultatif – tu retires le colis au bureau de poste avec une pièce d’identité.", fehltPostnummer: "Saisis ta Postnummer DHL (6 à 10 chiffres).",
@@ -582,7 +585,9 @@
   // sucht der Shop-Server bei DHL (shop-worker/abholorte.js) - an DHL gehen
   // nur PLZ und Strasse. Die Karte laedt OpenStreetMap-Kacheln erst nach
   // einem Klick (Datenschutz) und kommt ohne Bibliothek aus.
-  var abhol = { art: "haustuer", ort: null, orte: null, laedt: false, fehler: "", gesucht: "", karte: false, zoom: 0 };
+  // luftbild: der Server kann Luftbilder liefern (Esri-Schluessel, shop-worker/karte.js);
+  // ebene: "luftbild" oder "karte" (Strassenkarte von OpenStreetMap).
+  var abhol = { art: "haustuer", ort: null, orte: null, laedt: false, fehler: "", gesucht: "", karte: false, zoom: 0, luftbild: false, ebene: "" };
   var abholCache = {};
   var abholAnfrage = 0;
   function kannAbholen(o) { return !!(o && o.abholstation); }
@@ -699,7 +704,7 @@
       var text = el("span", "kasse-ort__text");
       text.appendChild(el("span", "kasse-ort__name", o.name));
       var adresse = [o.strasse, [o.plz, o.ort].filter(Boolean).join(" ")].filter(Boolean).join(", ");
-      text.appendChild(el("small", "", ortTyp(o) + (adresse ? " · " + adresse : "")));
+      text.appendChild(el("small", "", [o.geschaeft, ortTyp(o), adresse].filter(Boolean).join(" · ")));
       label.appendChild(radio);
       label.appendChild(el("span", "kasse-ort__nr" + (o.typ === "packstation" ? "" : " kasse-ort__nr--filiale"), e.nr));
       label.appendChild(text);
@@ -725,6 +730,8 @@
     var orte = (abhol.orte || []).filter(mitGeo);
     aKarteKnopf.hidden = !orte.length;
     aKarteHinweis.hidden = !orte.length || abhol.karte;
+    aKarteHinweis.textContent = t(abhol.luftbild ? "abholKarteHinweisLuftbild" : "abholKarteHinweis");
+    var ebene = abhol.luftbild && abhol.ebene !== "karte" ? "luftbild" : "karte";
     aKarteKnopf.textContent = t(abhol.karte ? "abholKarteZu" : "abholKarte");
     aKarteKnopf.setAttribute("aria-expanded", String(abhol.karte && !!orte.length));
     aKarte.textContent = "";
@@ -738,19 +745,22 @@
     var s = Math.min.apply(null, lats), n = Math.max.apply(null, lats);
     var z = 17;
     while (z > 9 && (karteX(e, z) - karteX(w, z) > breite - 60 || karteY(s, z) - karteY(n, z) > hoehe - 60)) z--;
+    abhol.passend = z;
     z = Math.max(5, Math.min(18, z + abhol.zoom));
     var cx = (karteX(w, z) + karteX(e, z)) / 2;
     var cy = (karteY(n, z) + karteY(s, z)) / 2;
     if (abhol.zoom > 0 && abhol.ort && mitGeo(abhol.ort)) { cx = karteX(abhol.ort.lng, z); cy = karteY(abhol.ort.lat, z); }
     var links = cx - breite / 2, oben = cy - hoehe / 2;
     var anzahl = Math.pow(2, z);
-    var flaeche = el("div", "kasse-karte__flaeche");
+    var flaeche = el("div", "kasse-karte__flaeche kasse-karte__flaeche--" + ebene);
     for (var tx = Math.floor(links / KACHEL); tx * KACHEL < links + breite; tx++) {
       for (var ty = Math.floor(oben / KACHEL); ty * KACHEL < oben + hoehe; ty++) {
         if (ty < 0 || ty >= anzahl) continue;
         var img = document.createElement("img");
         img.alt = ""; img.decoding = "async"; img.draggable = false;
-        img.src = "https://tile.openstreetmap.org/" + z + "/" + (((tx % anzahl) + anzahl) % anzahl) + "/" + ty + ".png";
+        var spalte = ((tx % anzahl) + anzahl) % anzahl;
+        img.src = ebene === "luftbild" ? WORKER + "/karte/luftbild/" + z + "/" + ty + "/" + spalte
+          : "https://tile.openstreetmap.org/" + z + "/" + spalte + "/" + ty + ".png";
         img.style.left = Math.round(tx * KACHEL - links) + "px";
         img.style.top = Math.round(ty * KACHEL - oben) + "px";
         flaeche.appendChild(img);
@@ -785,9 +795,32 @@
       zoom.appendChild(b);
     });
     aKarte.appendChild(zoom);
-    var quelle = el("a", "kasse-karte__quelle", "© OpenStreetMap");
-    quelle.href = "https://www.openstreetmap.org/copyright";
-    quelle.target = "_blank"; quelle.rel = "noopener";
+    // Luftbild oder Strassenkarte - nur wenn der Server Luftbilder liefern kann.
+    if (abhol.luftbild) {
+      var ebenen = el("div", "kasse-karte__ebenen");
+      ebenen.setAttribute("role", "group");
+      [["luftbild", "karteLuftbild"], ["karte", "karteStrassen"]].forEach(function (k) {
+        var b = el("button", "", t(k[1]));
+        b.type = "button";
+        b.setAttribute("aria-pressed", String(ebene === k[0]));
+        b.addEventListener("click", function () {
+          abhol.ebene = k[0];
+          karteZeichnen();
+          var neu = aKarte.querySelector(".kasse-karte__ebenen button[aria-pressed=true]");
+          if (neu) neu.focus();
+        });
+        ebenen.appendChild(b);
+      });
+      aKarte.appendChild(ebenen);
+    }
+    var quelle;
+    if (ebene === "luftbild") {
+      quelle = el("span", "kasse-karte__quelle", "Luftbild © Esri, Maxar, Earthstar Geographics");
+    } else {
+      quelle = el("a", "kasse-karte__quelle", "© OpenStreetMap");
+      quelle.href = "https://www.openstreetmap.org/copyright";
+      quelle.target = "_blank"; quelle.rel = "noopener";
+    }
     aKarte.appendChild(quelle);
   }
   var karteUhr = 0;
@@ -828,6 +861,11 @@
     Array.prototype.forEach.call(aKarte.querySelectorAll(".kasse-karte__punkt"), function (p) {
       p.setAttribute("aria-pressed", String(gleicherOrt(p._ort, o)));
     });
+    // Aus der Liste gewaehlt und Karte offen: hineinzoomen, damit man das Haus erkennt.
+    if (!vonKarte && abhol.karte && !aKarte.hidden && mitGeo(o)) {
+      abhol.zoom = Math.max(abhol.zoom, 17 - (abhol.passend || 15));
+      karteZeichnen();
+    }
     statusZeichnen();
     postZeichnen();
     feldFehler(aPost, "");
@@ -850,7 +888,10 @@
     if (abhol.gesucht === schluessel && (abhol.laedt || abhol.orte)) return;
     abhol.gesucht = schluessel;
     abhol.zoom = 0;
-    if (abholCache[schluessel]) { abhol.orte = abholCache[schluessel]; abhol.fehler = ""; abhol.laedt = false; abholZeichnen(); return; }
+    if (abholCache[schluessel]) {
+      abhol.orte = abholCache[schluessel].orte; abhol.luftbild = abholCache[schluessel].luftbild;
+      abhol.fehler = ""; abhol.laedt = false; abholZeichnen(); return;
+    }
     var nr = ++abholAnfrage;
     abhol.laedt = true; abhol.fehler = "";
     statusZeichnen();
@@ -861,7 +902,8 @@
         if (nr !== abholAnfrage) return;
         abhol.laedt = false;
         abhol.orte = Array.isArray(daten.orte) ? daten.orte : [];
-        abholCache[schluessel] = abhol.orte;
+        abhol.luftbild = daten.luftbild === true && !!WORKER;
+        abholCache[schluessel] = { orte: abhol.orte, luftbild: abhol.luftbild };
         abholZeichnen();
       }, function (e) {
         if (nr !== abholAnfrage) return;
