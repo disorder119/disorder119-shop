@@ -8,10 +8,17 @@
     "referenzPlz": "10115",
     "standardGroesse": "M",
     "dienste": {
-      "_comment": "Welche Paketdienste die Kundschaft im Checkout sieht: alle, die Packlink anbietet, ausser den ausgeschlossenen (Wunsch des Inhabers 07.10.2026: kein UPS, kein Hermes). Ein Name sperrt auch Varianten wie \"UPS Standard\". Express nur, wenn ein erlaubter Dienst ihn bis expressMaxCents anbietet. In der privaten Admin-App stehen beim Etikett dieselben Dienste.",
+      "_comment": "Welche Paketdienste die Kundschaft im Checkout sieht (Wunsch des Inhabers 08.10.2026): nur Hermes, DPD, GLS und DHL, soweit Packlink sie anbietet - kein TNT, kein FedEx, kein UPS. Ein Name erlaubt auch Varianten wie \"DHL Paket\" oder \"Hermes Germany\"; die Sperrliste gilt zusaetzlich. Express nur, wenn einer dieser Dienste ihn bis expressMaxCents anbietet. In der privaten Admin-App stehen beim Etikett dieselben Dienste.",
+      "erlaubt": [
+        "HERMES",
+        "DPD",
+        "GLS",
+        "DHL"
+      ],
       "ausgeschlossen": [
         "UPS",
-        "HERMES"
+        "TNT",
+        "FEDEX"
       ],
       "expressMaxCents": 2500
     },

@@ -142,14 +142,38 @@ test("only the owner's carriers reach the checkout; express only up to the price
     { id: 5, carrier: "UPS", preisCents: 1428, express: true },
   ];
   const konfig = { dienste: { erlaubt: ["DPD", "DHL", "HERMES"], expressMaxCents: 2500 } };
+  // Guenstigster Express eines erlaubten Dienstes bis zur Grenze: DPD.
   assert.deepEqual(optionenAus(angebote, "M", konfig).map(o => [o.id, o.carrier]), [["pl-M-2", "DPD"], ["pl-M-4", "DPD"]]);
-  // "DHL" ist nicht "DHL Express"; ueber der Grenze gibt es kein Express.
+  // Ueber der Grenze gibt es kein Express, auch nicht von DHL Express.
   const teuer = { dienste: { erlaubt: ["DPD", "DHL", "HERMES"], expressMaxCents: 1500 } };
   assert.deepEqual(optionenAus(angebote, "M", teuer).map(o => o.id), ["pl-M-2"]);
-  // Die echte Konfiguration (Inhaber 07.10.2026): alles ausser UPS und Hermes.
-  for (const name of ["DPD", "DHL", "GLS", "DHL Express", "FedEx"]) assert.equal(dienstErlaubt(name), true, name);
-  for (const name of ["UPS", "UPS® Standard Service", "ups", "Hermes", "HERMES Germany"]) assert.equal(dienstErlaubt(name), false, name);
-  assert.equal(dienstErlaubt("Groups Logistics"), true);
+  // Die echte Konfiguration (Inhaber 08.10.2026): nur Hermes, DPD, GLS und DHL.
+  for (const name of ["DPD", "DHL", "GLS", "Hermes", "HERMES Germany", "DHL Paket", "DHL Express", "dpd"]) assert.equal(dienstErlaubt(name), true, name);
+  for (const name of ["UPS", "UPS® Standard Service", "ups", "TNT", "TNT Express", "FedEx", "FEDEX International Economy", "Groups Logistics", "", "GLSX"]) {
+    assert.equal(dienstErlaubt(name), false, name);
+  }
+});
+
+test("an allow list also admits carrier variants, the block list still wins", () => {
+  const angebote = [
+    { id: 1, carrier: "Hermes Germany", preisCents: 499, express: false },
+    { id: 2, carrier: "DHL Paket", preisCents: 619, express: false },
+    { id: 3, carrier: "TNT", preisCents: 2291, express: true },
+    { id: 4, carrier: "FedEx", preisCents: 1890, express: true },
+    { id: 5, carrier: "GLS", preisCents: 1050, express: false },
+    { id: 6, carrier: "DPD", preisCents: 785, express: false },
+    { id: 7, carrier: "DHL Express", preisCents: 2390, express: true },
+  ];
+  const konfig = { dienste: { erlaubt: ["HERMES", "DPD", "GLS", "DHL"], ausgeschlossen: ["UPS", "TNT", "FEDEX"], expressMaxCents: 2500 } };
+  assert.deepEqual(optionenAus(angebote, "M", konfig).map(o => [o.id, o.art, o.carrier]), [
+    ["pl-M-1", "standard", "Hermes Germany"],
+    ["pl-M-2", "standard", "DHL Paket"],
+    ["pl-M-6", "standard", "DPD"],
+    ["pl-M-5", "standard", "GLS"],
+    ["pl-M-7", "express", "DHL Express"],
+  ]);
+  const gesperrt = { dienste: { erlaubt: ["DHL"], ausgeschlossen: ["DHL EXPRESS"], expressMaxCents: 2500 } };
+  assert.deepEqual(optionenAus(angebote, "M", gesperrt).map(o => o.id), ["pl-M-2"]);
 });
 
 test("a block list removes UPS and Hermes, everything else reaches the checkout", () => {
