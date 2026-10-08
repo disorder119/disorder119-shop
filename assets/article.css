@@ -449,7 +449,8 @@ a { color: inherit; }
 
 .related__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  /* Hoechstens 300 px je Kachel: ein einzelnes Stueck ("Mehr von") fuellte sonst die ganze Breite. */
+  grid-template-columns: repeat(auto-fit, minmax(140px, 300px));
   gap: 18px;
 }
 
