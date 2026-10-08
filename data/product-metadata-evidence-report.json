@@ -9,7 +9,7 @@
     "description": 0
   },
   "unresolved_available": {
-    "size": 9,
+    "size": 2,
     "color": 27,
     "condition": 0
   },
@@ -63,16 +63,7 @@
       "title": "Y-3 Oversized Cargohose Herren",
       "brand": "Y-3",
       "missing": [
-        "size",
         "color"
-      ]
-    },
-    {
-      "id": 6219,
-      "title": "Prada Sport Nylon-Badeshorts Herren Braun",
-      "brand": "Prada",
-      "missing": [
-        "size"
       ]
     },
     {
@@ -156,14 +147,6 @@
       ]
     },
     {
-      "id": 6199,
-      "title": "Rundholz Asymmetrischer Cardigan Damen Elfenbein",
-      "brand": "Rundholz",
-      "missing": [
-        "size"
-      ]
-    },
-    {
       "id": 6197,
       "title": "Prada Sport Half-Zip-Poloshirt Herren",
       "brand": "Prada",
@@ -172,19 +155,10 @@
       ]
     },
     {
-      "id": 6195,
-      "title": "A.F. Vandevorst Bluse Damen Blau",
-      "brand": "A.F. Vandevorst",
-      "missing": [
-        "size"
-      ]
-    },
-    {
       "id": 6194,
       "title": "A.F. Vandevorst Cardigan mit Muster Damen",
       "brand": "A.F. Vandevorst",
       "missing": [
-        "size",
         "color"
       ]
     },
@@ -209,7 +183,6 @@
       "title": "Rundholz Asymmetrische Tunika Damen",
       "brand": "Rundholz",
       "missing": [
-        "size",
         "color"
       ]
     },
@@ -266,7 +239,6 @@
       "title": "Burberry Nova Check Shorts Damen",
       "brand": "Burberry",
       "missing": [
-        "size",
         "color"
       ]
     },
