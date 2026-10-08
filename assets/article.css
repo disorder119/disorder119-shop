@@ -614,11 +614,13 @@ img[data-d119-image-protected] {
 /* Zahlungslogos: Original von PayPal und Apple (assets/zahlung), gleich gross.
    Das Apple-Pay-Zeichen bringt seinen Rahmen mit; PayPal bekommt denselben. */
 .d119-zahlarten { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; }
-.d119-zahlarten__apple { display: block; width: auto; height: 32px; }
+/* Beide Zeichen gleich gross: 44 px hoch, PayPal im Seitenverhaeltnis des
+   Apple-Pay-Zeichens (166 x 106), damit der Schriftzug lesbar bleibt. */
+.d119-zahlarten__apple { display: block; width: auto; height: 44px; }
 .d119-zahlarten__paypal {
   display: flex; align-items: center; justify-content: center; box-sizing: border-box;
-  width: 50.0px; height: 32px; padding: 0 5px;
-  background: #ffffff; border: 1px solid rgb(0, 0, 0); border-radius: 4.5px;
+  width: 69px; height: 44px; padding: 0 7px;
+  background: #ffffff; border: 1px solid rgb(0, 0, 0); border-radius: 6px;
 }
 .d119-zahlarten__paypal img { display: block; width: 100%; height: auto; }
 

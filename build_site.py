@@ -604,7 +604,11 @@ def cta_html(it, shop_config, home, lang):
         # Vorschlaegen, Versandart und PayPal - derselbe Weg wie fuer mehrere
         # Stuecke aus dem Warenkorb (build_checkout_pages, assets/kasse.js).
         parts.append('<a class="btn btn--buy" id="buyNowBtn" href="' + home + 'kasse/?artikel=' + str(it["id"]) + '" data-i18n="buyNow">Jetzt kaufen</a>')
-    if shop_config.get("whatsappNumber") or shop_config.get("email"):
+    # Kundennachricht und Anfrage per WhatsApp/E-Mail nur noch, wenn online
+    # nicht bezahlt werden kann (Inhaber 08.10.2026: Produktseite ohne
+    # Anfrage-Knoepfe; Warenkorb und Kontakt bleiben).
+    anfrage_noetig = not (has_price and paypal_ready)
+    if anfrage_noetig and (shop_config.get("whatsappNumber") or shop_config.get("email")):
         message_copy = {
             "de": ("Kundennachricht", "optional", "Frage, Maße, Versandwunsch …"),
             "en": ("Customer message", "optional", "Question, measurements, shipping request …"),
@@ -616,22 +620,15 @@ def cta_html(it, shop_config, home, lang):
             + '<textarea id="articleOrderMessage" maxlength="500" placeholder="'
             + esc(message_copy[2]) + '"></textarea></label>'
         )
-    whatsapp_hidden = "" if shop_config.get("whatsappNumber") else ' style="display:none"'
-    email_hidden = "" if shop_config.get("email") else ' style="display:none"'
-    parts.append('<a class="btn btn--outline" id="inquireWhatsapp" target="_blank" rel="noopener" data-i18n="inquireWhatsapp"' + whatsapp_hidden + '>Anfrage per WhatsApp</a>')
-    parts.append('<a class="btn btn--outline" id="inquireEmail" data-i18n="inquireEmail"' + email_hidden + '>Anfrage per E-Mail</a>')
+    if anfrage_noetig:
+        whatsapp_hidden = "" if shop_config.get("whatsappNumber") else ' style="display:none"'
+        email_hidden = "" if shop_config.get("email") else ' style="display:none"'
+        parts.append('<a class="btn btn--outline" id="inquireWhatsapp" target="_blank" rel="noopener" data-i18n="inquireWhatsapp"' + whatsapp_hidden + '>Anfrage per WhatsApp</a>')
+        parts.append('<a class="btn btn--outline" id="inquireEmail" data-i18n="inquireEmail"' + email_hidden + '>Anfrage per E-Mail</a>')
     parts.append("</div>")
-    # Verlinkt auf die eigene Mieten-Kategorie mit ?item=<id> - app.js
-    # erkennt den Parameter beim Laden von /mieten/ und oeffnet die
-    # Anfrage direkt fuer genau dieses Stueck (siehe showMieten() in
-    # assets/app.js), statt nur auf die allgemeine Kategorie zu verweisen.
-    # Vorher gab es auf der Produktseite selbst ueberhaupt keinen Hinweis
-    # aufs Mieten - wer sich ein Stueck ansah, erfuhr nie, dass es auch
-    # ausleihbar ist.
-    parts.append(
-        '<a class="btn btn--outline btn--rental" href="' + home + 'mieten/?item=' + str(it["id"])
-        + '" data-i18n="rentalTeaser">Auch mietbar – Für Miete anfragen</a>'
-    )
+    # Kein "Auch mietbar"-Knopf mehr auf jeder Produktseite (Inhaber
+    # 08.10.2026): Der Mietbereich /mieten/ bleibt, /mieten/?item=<id>
+    # oeffnet die Anfrage weiter direkt fuer ein Stueck (assets/app.js).
     trust_notes = {
         "de": "Einzelstück · individuell fotografiert · gesetzliches Widerrufsrecht von 14 Tagen für Verbraucher:innen · gesetzliche Gewährleistungsrechte.",
         "en": "One-off piece · individually photographed · 14-day statutory withdrawal right for consumers · statutory warranty rights.",

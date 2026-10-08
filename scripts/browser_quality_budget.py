@@ -241,12 +241,11 @@ def audit_accessibility(product_path: str) -> list[dict[str, Any]]:
         dismiss_cookie_note(driver)
         reports.append(run_axe(driver, source, "cart-mobile"))
 
-        # Rental deep-link with its canonical modal actually open.
-        driver.get(urljoin(BASE_URL, product_path))
-        wait(driver, lambda d: bool(d.find_elements(By.CSS_SELECTOR, ".btn--rental")), "Mietlink")
-        rental_href = driver.find_element(By.CSS_SELECTOR, ".btn--rental").get_attribute("href")
-        if not rental_href:
-            fail("Produktdetail hat keinen Rental-V2-Link")
+        # Rental deep-link with its canonical modal actually open. Die
+        # Produktseite verlinkt nicht mehr aufs Mieten (Inhaber 08.10.2026);
+        # /mieten/?item=<id> bleibt der Weg dorthin.
+        artikel_id = product_path.strip("/").split("/")[-1]
+        rental_href = urljoin(BASE_URL, f"mieten/?item={artikel_id}")
         driver.get(rental_href)
         backdrop = wait(driver, lambda d: d.find_element(By.ID, "d119RentalV2Backdrop"), "Rental-V2-Backdrop")
         wait(driver, lambda d: backdrop.is_displayed() and "open" in (backdrop.get_attribute("class") or ""), "Rental V2 offen")
