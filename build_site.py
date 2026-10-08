@@ -1628,6 +1628,10 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
 
     out = tmpl
     out = out.replace("__ITEMLIST_JSONLD_BLOCK__", structured_block)
+    # Fusszeilen-Links auf alle Marken-/Kategorieseiten (nicht weiter unten
+    # einfuegen: apply_focus_three_hardening.py erwartet den Block ab
+    # __NEWSLETTER_VERSION__ unveraendert).
+    out = out.replace("__LANDING_LINKS__", landing_links_html(lang))
     out = out.replace("__HTML_LANG__", lang)
     out = out.replace("__CANONICAL_URL__", canonical)
     out = out.replace("__HREFLANG_TAGS__", hreflang_block(urls_by_lang))
@@ -1641,7 +1645,6 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     # als zusammenhaengenden Block.
     out = out.replace("__NEWSLETTER_VERSION__", NEWSLETTER_ASSET_VERSION)
     out = out.replace("__STATIC_PAGE_CONTENT__", static_content)
-    out = out.replace("__LANDING_LINKS__", landing_links_html(lang))
     initial_ssr_home = (lang == "de" and path_segment == "" and slug == "")
     out = out.replace("__CRITICAL_IMAGE_PRELOADS__", initial_archive_preloads() if initial_ssr_home else "")
     out = out.replace("__APP_SHELL_HIDDEN_CLASS__", "" if initial_ssr_home else " hidden")
