@@ -1,3 +1,4 @@
+import { istSandbox, sandboxTelegramText } from "./sandbox.js";
 import { safeText } from "./commerce-core.js";
 
 const TELEGRAM_API = "https://api.telegram.org";
@@ -152,6 +153,7 @@ export async function resolveTelegramChatId(env, reqId = crypto.randomUUID()) {
 
 export async function sendTelegramMessage(env, text, reqId = crypto.randomUUID()) {
   if (!telegramTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
+  if (istSandbox(env)) text = sandboxTelegramText(text);
   // Zeilenumbrueche bleiben erhalten, sonst klebt jede Meldung in einer Zeile.
   const cleanText = String(text ?? "")
     .replace(/\r\n?/g, "\n")

@@ -5,7 +5,9 @@
   // erlaubt keine anderen Herkuenfte). Lokale Vorschau und die Browser-Tests
   // der CI (127.0.0.1) laufen wie bisher ohne Server - sonst meldet jede
   // Seite CORS-Fehler in der Konsole. Laeuft vor app.js/article.js.
-  if (!/^(www\.)?disorder119\.com$/i.test(location.hostname)) {
+  // Der Testshop test.disorder119.com ist beim Ausliefern auf
+  // api-test.disorder119.com umgebogen (shop-worker/sandbox-edge.js).
+  if (!/^((www|test)\.)?disorder119\.com$/i.test(location.hostname)) {
     ["SHOP_CONFIG", "ARTICLE_SHOP_CONFIG"].forEach(function (name) {
       if (window[name] && typeof window[name] === "object") window[name].shopWorkerUrl = "";
     });

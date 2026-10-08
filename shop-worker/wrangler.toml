@@ -54,3 +54,36 @@ binding = "DB"
 database_name = "disorder119-shop"
 database_id = "ef1485f7-c816-414c-b7f0-9d92e6a3aa18"
 migrations_dir = "migrations"
+
+# ---------------------------------------------------------------- Testshop
+# Derselbe Code als eigener Worker fuer den Testshop (test.disorder119.com,
+# sandbox-edge.js): eigene D1-Datenbank, PayPal-Sandbox, SANDBOX="1" schaltet
+# die Schutzweichen in sandbox.js ein (kein Schreiben in den echten Katalog,
+# Mails nur an SANDBOX_MAIL_AN, Telegram mit "TEST"). Deploy:
+#   npx wrangler deploy --env sandbox
+# Secrets (PayPal-Sandbox, Telegram ...) traegt "12 - Testshop verbinden" ein.
+[env.sandbox]
+name = "disorder119-shop-worker-sandbox"
+routes = [{ pattern = "api-test.disorder119.com", custom_domain = true }]
+workers_dev = false
+preview_urls = false
+
+[env.sandbox.vars]
+ADMIN_SESSION_HOURS = "24"
+PAYPAL_ENVIRONMENT = "sandbox"
+DHL_PRIVAT_ENVIRONMENT = "sandbox"
+SANDBOX = "1"
+
+[env.sandbox.triggers]
+crons = ["*/15 * * * *"]
+
+[[env.sandbox.ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1191"
+simple = { limit = 20, period = 60 }
+
+[[env.sandbox.d1_databases]]
+binding = "DB"
+database_name = "disorder119-shop-sandbox"
+database_id = "abb212d3-5cce-4bab-8653-5bc58afb93d6"
+migrations_dir = "migrations"

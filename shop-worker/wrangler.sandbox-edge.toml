@@ -1,0 +1,23 @@
+name = "disorder119-testshop"
+main = "sandbox-edge.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+preview_urls = false
+
+# Testshop: spiegelt disorder119.com, biegt ihn auf api-test.disorder119.com
+# und die PayPal-Sandbox um. Passwort: Secret TESTSHOP_PASSWORT (Benutzer
+# "test"), eingetragen von "12 - Testshop verbinden".
+routes = [{ pattern = "test.disorder119.com", custom_domain = true }]
+
+[vars]
+# Oeffentliche Sandbox-Client-ID von PayPal (kein Geheimnis). Leer = "sb".
+PAYPAL_SANDBOX_CLIENT_ID = ""
+
+# Verkauft-Liste direkt vom Test-Server, ohne Umweg ueber das Internet.
+[[services]]
+binding = "API"
+service = "disorder119-shop-worker-sandbox"
+
+[observability]
+enabled = true
+head_sampling_rate = 1

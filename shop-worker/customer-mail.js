@@ -12,6 +12,7 @@ import { LEGAL_VERSION, CONTRACT_HTML } from "./legal-content.js";
 // Datenschutzerklaerung keine Datenuebermittlung in die USA stehen.
 import { safeText } from "./commerce-core.js";
 import { invoiceProfile, renderInvoice } from './tax-invoice.js';
+import { istSandbox, sandboxMail } from "./sandbox.js";
 
 const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
 
@@ -458,6 +459,11 @@ export function formatShippingConfirmation(order = {}, options = {}) {
 
 export async function sendMail(env, message = {}) {
   if (!mailTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
+  // Testshop: jede Mail nur an das eigene Postfach, Betreff mit [TEST].
+  if (istSandbox(env)) {
+    message = sandboxMail(env, message);
+    if (!message) return { sent: false, reason: "SANDBOX_NO_TARGET" };
+  }
   const to = normalizeEmail(message.to);
   if (!to) return { sent: false, reason: "INVALID_RECIPIENT" };
   const subject = safeText(message.subject || "", 200);
