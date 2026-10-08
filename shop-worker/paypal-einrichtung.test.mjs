@@ -137,3 +137,20 @@ test("the refund event list asks PayPal for at most 29 days, in PayPal's time fo
     pp.restore();
   }
 });
+
+test("after three refusals the server asks PayPal only once a week", async () => {
+  const DB = sqliteD1(allMigrations());
+  const pp = fakePaypal({ registrieren: { status: 403, body: { name: "NOT_AUTHORIZED", details: [{ issue: "INVALID_MERCHANT_INFO" }] } } });
+  const jetzt = Date.now();
+  const STUNDE = 60 * 60 * 1000;
+  try {
+    for (let tag = 0; tag < 3; tag++) assert.equal((await applePayDomainSicherstellen(LIVE(DB), jetzt + tag * 25 * STUNDE)).ok, false);
+    assert.deepEqual(await applePayDomainSicherstellen(LIVE(DB), jetzt + 4 * 25 * STUNDE), { uebersprungen: "SPAETER_ERNEUT" });
+    assert.equal((await applePayDomainSicherstellen(LIVE(DB), jetzt + 50 * STUNDE + 8 * 24 * STUNDE)).ok, false);
+    const fehler = protokoll(DB).filter(([typ]) => typ === "PAYPAL_APPLE_PAY_DOMAIN_FAILED");
+    assert.equal(fehler.length, 4);
+    assert.equal(fehler[0][1].listeStatus, 200);
+  } finally {
+    pp.restore();
+  }
+});

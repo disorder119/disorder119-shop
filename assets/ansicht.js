@@ -33,6 +33,11 @@
     knopf.setAttribute("aria-label", text);
     knopf.setAttribute("title", text);
     knopf.setAttribute("aria-pressed", a === "hell" ? "true" : "false");
+    // Textknoepfe in Menue und Fusszeile (data-ansicht-umschalten) zeigen denselben Stand.
+    Array.prototype.forEach.call(document.querySelectorAll("[data-ansicht-umschalten]"), function (b) {
+      b.textContent = text;
+      b.setAttribute("aria-pressed", a === "hell" ? "true" : "false");
+    });
   }
 
   function setzen(a) {
@@ -57,6 +62,10 @@
     knopf.className = "d119-ansicht";
     knopf.addEventListener("click", umschalten);
     document.body.appendChild(knopf);
+    var alternativen = document.querySelectorAll("[data-ansicht-umschalten]");
+    Array.prototype.forEach.call(alternativen, function (b) { b.addEventListener("click", umschalten); });
+    // Mit Alternative darf der runde Knopf am Handy weg (theme.css).
+    if (alternativen.length) document.body.classList.add("d119-ansicht-alternativ");
     knopfZeigen();
   }
 

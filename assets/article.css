@@ -651,3 +651,10 @@ img[data-d119-image-protected] {
 }
 @media (prefers-reduced-motion: reduce) { .d119-kaufleiste, .d119-kaufleiste--an { transition: none; } }
 @media print { .d119-kaufleiste { display: none !important; } }
+
+/* Schwarz/Weiss-Umschalter als Text in der Rechtszeile (ansicht.js); dazu alle
+   Links dort als brauchbare Tippflaechen. */
+.page-foot__recht a,
+.page-foot__recht .fuss-ansicht { min-height: 32px; display: inline-flex; align-items: center; }
+.page-foot__recht .fuss-ansicht { background: none; border: 0; padding: 0; font: inherit; color: var(--text-muted, rgba(242,239,231,.58)); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.page-foot__recht .fuss-ansicht:hover { color: var(--paper); }

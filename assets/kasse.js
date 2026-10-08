@@ -39,6 +39,7 @@
       rechtAnfrage: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Die Anfrage ist unverbindlich – wir bestätigen Verfügbarkeit und Gesamtpreis per E-Mail.",
       agbLink: "AGB und Widerrufsbelehrung", dsLink: "Datenschutz",
       paypalBald: "Bezahlen mit PayPal kommt in Kürze. Bis dahin schickst du uns die Bestellung per E-Mail – mit Adresse und Versandart, wir bestätigen sie dir.",
+      paypalFehlt: "PayPal konnte nicht geladen werden – bitte lade die Seite neu oder schalte einen Werbeblocker für diese Seite aus. Alternativ schickst du uns die Bestellung per E-Mail, wir bestätigen sie dir.",
       anfrage: "Bestellung per E-Mail senden", betreff: "Bestellung Disorder119",
       fehltVorname: "Bitte gib deinen Vornamen an.", fehltNachname: "Bitte gib deinen Nachnamen an.",
       fehltPlz: "Bitte gib eine fünfstellige PLZ an.", fehltOrt: "Bitte gib den Ort an.", fehltStrasse: "Bitte gib die Straße an.",
@@ -96,6 +97,7 @@
       rechtAnfrage: "Small business under § 19 UStG, so no VAT is charged. The request is non-binding – we confirm availability and the total by e-mail.",
       agbLink: "Terms and withdrawal", dsLink: "Privacy",
       paypalBald: "Paying with PayPal is coming soon. Until then, send us your order by e-mail – with address and shipping, and we will confirm it.",
+      paypalFehlt: "PayPal could not be loaded – please reload the page or pause your ad blocker for this site. Alternatively, send us your order by e-mail and we will confirm it.",
       anfrage: "Send order by e-mail", betreff: "Order Disorder119",
       fehltVorname: "Please enter your first name.", fehltNachname: "Please enter your last name.",
       fehltPlz: "Please enter a five-digit postcode.", fehltOrt: "Please enter the town.", fehltStrasse: "Please enter the street.",
@@ -153,6 +155,7 @@
       rechtAnfrage: "Micro-entreprise selon le § 19 UStG, pas de TVA. La demande est sans engagement – nous confirmons disponibilité et total par e-mail.",
       agbLink: "CGV et rétractation", dsLink: "Confidentialité",
       paypalBald: "Le paiement PayPal arrive bientôt. En attendant, envoie-nous ta commande par e-mail – avec adresse et livraison, nous la confirmons.",
+      paypalFehlt: "PayPal n’a pas pu être chargé – recharge la page ou désactive ton bloqueur de publicité pour ce site. Sinon, envoie-nous ta commande par e-mail, nous la confirmons.",
       anfrage: "Envoyer la commande par e-mail", betreff: "Commande Disorder119",
       fehltVorname: "Indique ton prénom.", fehltNachname: "Indique ton nom.",
       fehltPlz: "Indique un code postal à cinq chiffres.", fehltOrt: "Indique la ville.", fehltStrasse: "Indique la rue.",
@@ -1274,7 +1277,9 @@
   function anfrageEinrichten() {
     var ziel = $("kasseZahlen");
     ziel.textContent = "";
-    ziel.appendChild(el("p", "kasse-hinweis", t("paypalBald")));
+    // PayPal ist eingerichtet, das Skript kam aber nicht an (Werbeblocker,
+    // Netz): das ehrlich sagen statt "kommt in Kürze".
+    ziel.appendChild(el("p", "kasse-hinweis", t(PAYPAL_BEREIT ? "paypalFehlt" : "paypalBald")));
     if (!CFG.email) return;
     var knopf = el("button", "kasse-knopf kasse-knopf--hell kasse-knopf--breit", t("anfrage"));
     knopf.type = "button";

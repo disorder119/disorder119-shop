@@ -435,3 +435,11 @@ test("free standard shipping reads 'kostenlos' instead of 0,00 €", () => {
   assert.match(mail.html, /kostenlos/);
   assert.doesNotMatch(mail.text, /Versand · Standard \(DPD\): 0,00/);
 });
+
+test("fixed DHL tariffs name the chosen option instead of 'Standard (DHL)'", () => {
+  const mail = formatOrderConfirmation({ ...ORDER, versand: { art: "standard", carrier: "DHL", service_name: "DHL Paket mit Höherversicherung" } },
+    { contactEmail: "bestellung@disorder119.com", taxProfile: {mode:"small_business",confirmed:true,tax_number:"TEST-ONLY-123",seller:SELLER} });
+  assert.match(mail.text, /Versand · DHL Paket mit Höherversicherung:/);
+  assert.match(mail.html, /Versand · DHL Paket mit Höherversicherung/);
+  assert.doesNotMatch(mail.text, /Standard \(DHL\)/);
+});

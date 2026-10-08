@@ -1685,7 +1685,7 @@
 
   .swipe-card__size {
     font-size: 0.78rem;
-    color: var(--text-faint);
+    color: var(--text-muted);
   }
 
   .swipe-view__actions {
@@ -1715,7 +1715,7 @@
   .swipe-view__hint {
     font-size: 0.68rem;
     letter-spacing: 0.08em;
-    color: rgba(242, 239, 231, 0.4);
+    color: var(--text-muted);
   }
 
   .swipe-summary {
@@ -2361,7 +2361,7 @@
     font-size: 0.6rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--text-faint);
+    color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2395,7 +2395,7 @@
     color: var(--text-faint);
   }
 
-  .outfit-slot--empty .outfit-slot__value { color: var(--text-faint); }
+  .outfit-slot--empty .outfit-slot__value { color: var(--text-muted); }
 
   .outfit-slot--locked {
     opacity: 0.5;
@@ -3762,3 +3762,13 @@ img[data-d119-image-protected] {
   background: #ffffff; border: 1px solid rgb(0, 0, 0); border-radius: 5px;
 }
 .d119-zahlarten__paypal img { display: block; width: 100%; height: auto; }
+
+/* Durchsicht 08.10.2026: leerer Warenkorb fuehrt zurueck, Erstbesuch-Hinweis am
+   Handy im Fluss, Fusszeilen-Links als brauchbare Tippflaechen. */
+.cart-empty__weiter { margin: 14px 0 0; text-align: center; font-size: 0.82rem; }
+.cart-empty__weiter a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.mode-rail-hint--zeile { position: static; max-width: none; margin: 10px 16px 0; transform: none; justify-content: space-between; }
+@media (max-width: 759px) {
+  .footer__nav button, .footer__nav a, .footer__cart,
+  .footer__legal button, .footer__legal a { min-height: 32px; display: inline-flex; align-items: center; }
+}

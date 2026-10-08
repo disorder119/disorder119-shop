@@ -157,7 +157,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       soldArchiveBadge: "SOLD — DISORDER119 ARCHIVE",
       inCartRemove: "Im Warenkorb ✓ — entfernen", addToCart: "In den Warenkorb",
       removeFromCartAria: "Aus Warenkorb entfernen",
-      cartHeading: "Warenkorb", cartAria: "Warenkorb", cartEmpty: "Dein Warenkorb ist leer.",
+      cartHeading: "Warenkorb", cartAria: "Warenkorb", cartEmpty: "Dein Warenkorb ist leer.", cartEmptyLink: "Weiter stöbern",
       cartItemsRemovedSold: "Inzwischen verkauft und aus dem Warenkorb entfernt: {items}.",
       cartRemove: "Entfernen", cartTotal: "Gesamt", cartSubtotal: "Zwischensumme", cartShipping: "Versand (DE)",
       shipTitle: "Versand innerhalb Deutschlands", shipLine: "Versand", shipParcel: "Paket", shipLoading: "wird berechnet …",
@@ -305,7 +305,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       soldArchiveBadge: "SOLD — DISORDER119 ARCHIVE",
       inCartRemove: "In cart ✓ — remove", addToCart: "Add to cart",
       removeFromCartAria: "Remove from cart",
-      cartHeading: "Cart", cartAria: "Cart", cartEmpty: "Your cart is empty.",
+      cartHeading: "Cart", cartAria: "Cart", cartEmpty: "Your cart is empty.", cartEmptyLink: "Keep browsing",
       cartItemsRemovedSold: "Sold in the meantime and removed from your cart: {items}.",
       cartRemove: "Remove", cartTotal: "Total", cartSubtotal: "Subtotal", cartShipping: "Shipping (DE)",
       shipTitle: "Shipping within Germany", shipLine: "Shipping", shipParcel: "parcel", shipLoading: "calculating …",
@@ -454,7 +454,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       soldArchiveBadge: "SOLD — DISORDER119 ARCHIVE",
       inCartRemove: "Dans le panier ✓ — retirer", addToCart: "Ajouter au panier",
       removeFromCartAria: "Retirer du panier",
-      cartHeading: "Panier", cartAria: "Panier", cartEmpty: "Ton panier est vide.",
+      cartHeading: "Panier", cartAria: "Panier", cartEmpty: "Ton panier est vide.", cartEmptyLink: "Continuer à explorer",
       cartItemsRemovedSold: "Entre-temps vendu(s) et retiré(s) du panier : {items}.",
       cartRemove: "Retirer", cartTotal: "Total", cartSubtotal: "Sous-total", cartShipping: "Livraison (DE)",
       shipTitle: "Livraison en Allemagne", shipLine: "Livraison", shipParcel: "colis", shipLoading: "calcul en cours …",
@@ -1062,7 +1062,12 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     if (consumeNotice) cartRemovedNotice = null;
 
     if (!cart.length) {
-      body.innerHTML = noticeHtml + '<p class="cart-empty">' + t("cartEmpty") + '</p>';
+      var sprache = String(document.documentElement.lang || "de").slice(0, 2);
+      body.innerHTML = noticeHtml + '<p class="cart-empty">' + t("cartEmpty") + '</p>' +
+        '<p class="cart-empty__weiter"><a href="' + (sprache === "en" || sprache === "fr" ? "/" + sprache + "/" : "/") + '">' + t("cartEmptyLink") + '</a></p>';
+      // Das Archiv liegt direkt unter dem Warenkorb: Schliessen reicht, kein Neuladen.
+      var weiter = body.querySelector(".cart-empty__weiter a");
+      if (weiter) weiter.addEventListener("click", function (e) { e.preventDefault(); closeCart(); });
       foot.innerHTML = "";
       cartKasseZeichnen(0, 0, false);
       return;
@@ -2461,6 +2466,17 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   var modeHintTimer = null;
 
   function positionModeRailHint() {
+    // Handy: als Zeile im Fluss ueber dem Kopfbereich - schwebend verdeckte der
+    // Hinweis dort die Ueberschrift.
+    if (window.innerWidth < 760 || modeRailHint.classList.contains("mode-rail-hint--zeile")) {
+      if (!modeRailHint.classList.contains("mode-rail-hint--zeile")) {
+        modeRailHint.classList.add("mode-rail-hint--zeile");
+        appShell.insertBefore(modeRailHint, appShell.firstChild);
+      }
+      modeRailHint.style.left = "";
+      modeRailHint.style.top = "";
+      return;
+    }
     // Leiste ist jetzt eine fest fixierte Zeile ganz oben - Hinweis erscheint
     // darunter, zentriert unter dem Match-Button.
     var firstBtn = modeRail.querySelector(".mode-rail__btn[data-mode-view='swipe']") || modeRail;
@@ -3755,7 +3771,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       } else {
         slotAriaLabel = outfitSlotLabel(key) + ": " + t("outfitChoose");
         row.innerHTML =
-          '<div class="outfit-slot__frame" data-slot="' + key + '">+</div>' +
+          '<div class="outfit-slot__frame" data-slot="' + key + '" aria-hidden="true">+</div>' +
           '<div class="outfit-slot__body" data-slot="' + key + '">' +
             '<div class="outfit-slot__label">' + outfitSlotLabel(key) + "</div>" +
             '<div class="outfit-slot__value">' + t("outfitChoose") + "</div>" +

@@ -115,6 +115,10 @@ function versandBezeichnung(order) {
   const v = order.versand || {};
   const art = v.art === "express" ? "Express" : v.art === "standard" ? "Standard" : "";
   const carrier = safeText(v.carrier || "", 40);
+  // Feste Tarife tragen den Namen der gewaehlten Option ("DHL Paket",
+  // "DHL Paket mit Hoeherversicherung") - der sagt mehr als "Standard (DHL)".
+  const name = safeText(v.service_name || v.serviceName || "", 60);
+  if (name && carrier && name.toUpperCase().startsWith(carrier.toUpperCase())) return `Versand · ${name}`;
   if (!art) return "Versand (Deutschland)";
   return `Versand · ${art}${carrier ? ` (${carrier})` : ""}`;
 }
@@ -574,7 +578,7 @@ export async function loadOrderForConfirmation(env, orderId) {
     FROM order_items WHERE order_id=? ORDER BY id`).bind(String(orderId)).all();
   let versand = null;
   try {
-    versand = await env.DB.prepare("SELECT art,carrier FROM order_versand WHERE order_id=? LIMIT 1").bind(String(orderId)).first();
+    versand = await env.DB.prepare("SELECT art,carrier,service_name FROM order_versand WHERE order_id=? LIMIT 1").bind(String(orderId)).first();
   } catch { versand = null; }
   const contact = await env.DB.prepare(`SELECT email,recipient_name,given_name,surname,
       address_line1,address_line2,postal_code,city,region,country_code
