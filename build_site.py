@@ -1179,10 +1179,7 @@ LANDING_COPY = {
         "all_title": "Designer {cat} Second Hand & Vintage | Disorder119",
         "all_h1": "Designer-{cat} – Second Hand & Vintage",
         "all_desc": "{n} kuratierte Designer-{cat} aus zweiter Hand von {detail}. Individuell fotografiert, geprüft und sofort bestellbar.",
-        "intro": "Jedes Stück im Archiv von Disorder119 ist ein Einzelstück: individuell fotografiert, auf Zustand geprüft und sofort bestellbar. Preise von {min} bis {max}, Versand mit DHL{frei}.",
-        "sizes": "Vorhandene Größen: {sizes}.",
-        "brands_heading": "Marken in dieser Auswahl", "categories_heading": "Kategorien", "more_brands_heading": "Weitere Marken im Archiv",
-        "count": "{n} Stücke", "free_from": ", versandkostenfrei ab {frei}",
+        "lead": "{n} Einzelstücke · Second Hand & Vintage · individuell fotografiert und geprüft",
         "footer_brands": "Marken", "footer_categories": "Kategorien",
     },
     "en": {
@@ -1198,10 +1195,7 @@ LANDING_COPY = {
         "all_title": "Pre-Owned Designer {cat} | Disorder119",
         "all_h1": "Designer {cat} – pre-owned & vintage",
         "all_desc": "{n} curated pre-owned designer {cat} by {detail}. Individually photographed, checked and ready to order.",
-        "intro": "Every piece in the Disorder119 archive is a one-off: individually photographed, condition-checked and ready to order. Prices from {min} to {max}, shipped with DHL{frei}.",
-        "sizes": "Available sizes: {sizes}.",
-        "brands_heading": "Brands in this selection", "categories_heading": "Categories", "more_brands_heading": "More brands in the archive",
-        "count": "{n} pieces", "free_from": ", free shipping from {frei}",
+        "lead": "{n} one-off pieces · pre-owned & vintage · individually photographed and checked",
         "footer_brands": "Brands", "footer_categories": "Categories",
     },
     "fr": {
@@ -1217,10 +1211,7 @@ LANDING_COPY = {
         "all_title": "{cat} de créateurs seconde main & vintage | Disorder119",
         "all_h1": "{cat} de créateurs – seconde main & vintage",
         "all_desc": "{n} {cat} de créateurs sélectionnés de seconde main, par {detail}. Photographiés individuellement, contrôlés et disponibles immédiatement.",
-        "intro": "Chaque pièce de l’archive Disorder119 est unique : photographiée individuellement, contrôlée et disponible immédiatement. Prix de {min} à {max}, expédition DHL{frei}.",
-        "sizes": "Tailles disponibles : {sizes}.",
-        "brands_heading": "Marques dans cette sélection", "categories_heading": "Catégories", "more_brands_heading": "Autres marques de l’archive",
-        "count": "{n} pièces", "free_from": ", livraison offerte dès {frei}",
+        "lead": "{n} pièces uniques · seconde main & vintage · photographiées et contrôlées individuellement",
         "footer_brands": "Marques", "footer_categories": "Catégories",
     },
 }
@@ -1323,57 +1314,35 @@ def landing_texts(spec, lang):
     return cp["all_title"].format(**fmt), cp["all_h1"].format(**fmt), cp["all_desc"].format(**fmt)
 
 
-def landing_related_html(spec, lang):
-    cp = LANDING_COPY[lang]
-    specs = landing_specs()
-    by_segment = {s["segment"]: s for s in specs}
-    parts = []
+def landing_parts(spec, lang):
+    """Kopfzeile (H1 + eine Zeile), serverseitiges Raster und Vorlade-Links.
 
-    def group(heading, chosen):
-        links = [f'<a href="{esc(landing_url(s, lang))}">{esc(landing_label(s, lang))}</a>' for s in chosen if s is not spec]
-        if links:
-            parts.append(f'<h2>{esc(heading)}</h2><p class="landing__links">' + " · ".join(links) + "</p>")
-
-    if spec["kind"] == "brand":
-        combos = {(it.get("department"), it.get("taxonomy_category") or it.get("category")) for it in spec["items"]}
-        cat_pages = [s for s in specs if s["kind"] == "category" and (s["department"], s["category"]) in combos
-                     or (s["kind"] == "category" and not s["department"] and any(c == s["category"] for _, c in combos))]
-        group(cp["categories_heading"], cat_pages)
-        group(cp["more_brands_heading"], [s for s in specs if s["kind"] == "brand"])
-    else:
-        brands = {str(it.get("brand") or "") for it in spec["items"]}
-        group(cp["brands_heading"], [s for s in specs if s["kind"] == "brand" and s["brand"] in brands])
-        siblings = [s for s in specs if s["kind"] in ("department", "category") and s["segment"] != spec["segment"]
-                    and (s["department"] == spec["department"] or not spec["department"] or s["kind"] == "department")]
-        group(cp["categories_heading"], siblings)
-    return "".join(parts)
-
-
-def landing_content_html(spec, lang):
+    Bewusst knapp (Wunsch des Inhabers, 08.10.2026): kein Textkasten, keine
+    Linklisten - nur Ueberschrift, eine Zeile und die Stuecke. Die Seite ist
+    sonst der normale Katalog mit vorgewaehltem Filter; Google bekommt Titel,
+    Beschreibung, H1, alle Produktlinks und das Schema."""
     cp = LANDING_COPY[lang]
     title_tag, h1, desc = landing_texts(spec, lang)
     items = spec["items"]
-    prices = [float(it.get("price") or 0) for it in items if float(it.get("price") or 0) > 0]
-    frei_cents = versandkostenfrei_ab_cents()
-    intro = cp["intro"].format(
-        min=fmt_price_de(min(prices)) if prices else "", max=fmt_price_de(max(prices)) if prices else "",
-        frei=cp["free_from"].format(frei=euro_text(frei_cents, lang)) if frei_cents else "",
-    )
-    sizes = sorted({str(it.get("size_normalized") or it.get("size") or "").strip() for it in items}
-                   - {"", "Unknown", "Other", "Dimensions"})
-    sizes_line = ("<p>" + esc(cp["sizes"].format(sizes=", ".join(size_tr(s, lang) for s in sizes[:14]))) + "</p>") if sizes else ""
-    cards = "".join(initial_archive_card_html(it, lang, lazy=True) for it in items)
     attrs = (f' data-landing-kind="{esc(spec["kind"])}" data-landing-brand="{esc(spec["brand"])}"'
              f' data-landing-department="{esc(spec["department"])}" data-landing-category="{esc(spec["category"])}"'
              f' data-landing-label="{esc(landing_label(spec, lang))}"')
-    return (
-        f'<div class="static-page landing"{attrs}><div class="legal-panel landing__panel">'
-        f"<h1>{esc(h1)}</h1><p class=\"landing__lead\">{esc(desc)}</p><p>{esc(intro)}</p>{sizes_line}"
-        f"<p class=\"landing__count\">{esc(cp['count'].format(n=len(items)))}</p>"
-        + landing_related_html(spec, lang)
-        + "</div></div>"
-        + f'<div class="grid landing-grid" data-landing-static="1" aria-label="{esc(h1)}">{cards}</div>'
-    )
+    header = (f'<section class="landing"{attrs}><h1 class="landing__title">{esc(h1)}</h1>'
+              f'<p class="landing__lead">{esc(cp["lead"].format(n=len(items)))}</p></section>')
+    # Die ersten beiden Kacheln sind der LCP-Kandidat (eager + Vorladen), der Rest lazy.
+    cards = "".join(initial_archive_card_html(it, lang, lazy=(i >= 2)) for i, it in enumerate(items))
+    preloads = []
+    for it in items[:2]:
+        mobil = grid_thumb_path(it)
+        gallery = it.get("gallery") or []
+        original = gallery[0] if gallery else ""
+        kandidat = display_path(original) if original else ""
+        breit = kandidat if (kandidat and (BASE / kandidat).is_file()) else original
+        if mobil:
+            preloads.append('<link rel="preload" as="image" href="/' + esc(mobil) + '" media="(max-width: 600px)" fetchpriority="high">')
+        if breit:
+            preloads.append('<link rel="preload" as="image" href="/' + esc(breit) + '" media="(min-width: 601px)" fetchpriority="high">')
+    return dict(header=header, grid=cards, preloads="\n".join(preloads))
 
 
 def landing_jsonld(spec, lang, canonical, title_tag, desc):
@@ -1452,8 +1421,8 @@ def build_landing_pages():
             canonical = SITE_URL.rstrip("/") + landing_url(spec, lang)
             out = render_bundle_page(
                 lang, spec["segment"], title_tag, desc, shop_config,
-                static_content=landing_content_html(spec, lang),
                 structured_extra=landing_jsonld(spec, lang, canonical, title_tag, desc), slug="landing",
+                landing=landing_parts(spec, lang),
             )
             out_dir = BASE / lang_home(lang).strip("/") / spec["segment"].rstrip("/")
             out_dir.mkdir(parents=True, exist_ok=True)
@@ -1600,7 +1569,7 @@ def product_data_gap_html(it, lang):
 
 def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
                         include_item_list=False, robots=None, static_content="",
-                        canonical_path_segment=None, slug="", structured_extra=None):
+                        canonical_path_segment=None, slug="", structured_extra=None, landing=None):
     tmpl = (BASE / "index_template.html").read_text(encoding="utf-8")
     canonical_segment = path_segment if canonical_path_segment is None else canonical_path_segment
     urls_by_lang = {l: SITE_URL.rstrip("/") + lang_home(l) + canonical_segment for l in LANGS}
@@ -1632,6 +1601,19 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     # einfuegen: apply_focus_three_hardening.py erwartet den Block ab
     # __NEWSLETTER_VERSION__ unveraendert).
     out = out.replace("__LANDING_LINKS__", landing_links_html(lang))
+    if landing:
+        # Landingpage: Katalog sofort sichtbar (wie die deutsche Startseite),
+        # Kopfzeile mit H1 nach dem Masthead, alle Stuecke serverseitig im
+        # Raster, Wortmarke als <p> - genau eine H1 je Seite. Die Platzhalter
+        # werden hier gesetzt; der Block weiter unten findet sie dann nicht mehr.
+        out = out.replace("__LANDING_HEADER__", landing["header"])
+        out = out.replace("__CRITICAL_IMAGE_PRELOADS__", landing["preloads"])
+        out = out.replace("__APP_SHELL_HIDDEN_CLASS__", "")
+        out = out.replace("__SSR_GRID_ATTR__", ' data-ssr-initial="1"')
+        out = out.replace("__SSR_INITIAL_GRID__", landing["grid"])
+        out = re.sub(r'<h1 class="wordmark"(.*?)</h1>', r'<p class="wordmark"\1</p>', out, count=1, flags=re.S)
+    else:
+        out = out.replace("__LANDING_HEADER__", "")
     out = out.replace("__HTML_LANG__", lang)
     out = out.replace("__CANONICAL_URL__", canonical)
     out = out.replace("__HREFLANG_TAGS__", hreflang_block(urls_by_lang))

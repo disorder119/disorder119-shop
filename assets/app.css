@@ -1359,23 +1359,29 @@
     max-width: 640px;
   }
 
-  /* Landingpages (Marke/Bereich/Kategorie): Textkopf wie die Infoseiten,
-     darunter das statische Raster, das app.js durch das lebendige ersetzt. */
-  .landing { padding-bottom: 0; }
-  .landing .legal-panel { max-width: 720px; }
-  .landing h1 {
+  /* Landingpages (Marke/Bereich/Kategorie): nur eine Ueberschrift und eine
+     Zeile zwischen Masthead und Katalogleiste - kein Textkasten. */
+  .landing {
+    padding: clamp(18px, 3vw, 28px) clamp(16px, 4vw, 24px) 0;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .landing__title {
     font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-weight: 800;
     text-transform: uppercase;
-    font-size: clamp(1.5rem, 3.4vw, 2.1rem);
+    font-size: clamp(1.4rem, 3.2vw, 2rem);
     line-height: 1.05;
-    margin-bottom: 14px;
+    margin: 0 0 6px;
     text-wrap: balance;
   }
-  .landing .landing__lead { color: var(--text); font-size: 0.95rem; }
-  .landing .landing__count { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; }
-  .landing .landing__links a { margin-right: 2px; }
-  .landing-grid { padding: 0 clamp(16px, 4vw, 24px) clamp(24px, 6vw, 64px); }
+  .landing__lead {
+    margin: 0;
+    font-size: 0.74rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
   .footer__landing { font-size: 0.78rem; line-height: 1.7; color: var(--text-muted); max-width: 980px; margin: 10px auto 0; padding: 0 16px; }
   .footer__landing p { margin: 2px 0; }
   .footer__landing a { color: var(--text-muted); text-decoration: none; }
