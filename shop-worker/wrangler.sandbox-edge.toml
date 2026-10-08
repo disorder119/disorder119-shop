@@ -11,7 +11,7 @@ routes = [{ pattern = "test.disorder119.com", custom_domain = true }]
 
 [vars]
 # Oeffentliche Sandbox-Client-ID von PayPal (kein Geheimnis). Leer = "sb".
-PAYPAL_SANDBOX_CLIENT_ID = ""
+PAYPAL_SANDBOX_CLIENT_ID = "BAAUt2jf-KwSQW24uq9VNOHZ-NU3czvSZLyGYLKj2kaXFgoRGyk2lcfM-8JE2qskiQ4kaTJIt2vS6Yzo7g"
 
 # Verkauft-Liste direkt vom Test-Server, ohne Umweg ueber das Internet.
 [[services]]
