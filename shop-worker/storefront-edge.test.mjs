@@ -5,6 +5,10 @@ import edge,{publicPath,publicCatalog,seitenaufruf} from './storefront-edge.js';
 test('publication allows real shop, language, image, PWA and Apple Pay paths',()=>{
   for(const path of ['/','/en/','/fr/agb/','/artikel/119/index.html','/artikel/119.html','/kasse/','/assets/img/test/0.webp','/assets/legal-content.js','/manifest.webmanifest','/.well-known/apple-developer-merchantid-domain-association']) assert.equal(publicPath(path),true,path);
 });
+test('publication allows the generated brand and category landing pages',()=>{
+  for(const path of ['/marke/prada/','/marke/jean-paul-gaultier/index.html','/en/marke/y-3/','/damen/','/herren/jacken/','/fr/damen/schuhe/','/accessoires/']) assert.equal(publicPath(path),true,path);
+  for(const path of ['/marke/','/marke/Prada/','/marke/prada/extra/','/damen/jacken/x/','/accessoires/tasche/','/marke/..%2f/','/herren/a.b/']) assert.equal(publicPath(path),false,path);
+});
 test('publication rejects backend sources, drafts metadata, configuration and traversal',()=>{
   for(const path of ['/shop-worker/worker.js','/shop-worker/wrangler.toml','/.git/config','/config/shop-config.json','/data/catalog-taxonomy-report.json','/admin/index.html','/scripts/example.py','/assets/a.test.js','/assets/%252e%252e/secret.js','/assets/a\\b.js']) assert.equal(publicPath(path),false,path);
 });

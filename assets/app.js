@@ -2186,14 +2186,33 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   var CHAOS_PATH = langHome(LANG) + "chaos/";
   var OUTFIT_PATH = langHome(LANG) + "baukasten/";
   var MIETEN_PATH = langHome(LANG) + "mieten/";
+  // Landingpages (/marke/<slug>/, /damen/, /herren/jacken/, /accessoires/):
+  // echte Seiten aus build_site.py mit statischem Text und Raster. Hier wird
+  // der normale Katalog mit vorgewaehltem Filter eingeblendet; Marke/Bereich/
+  // Kategorie stehen als data-landing-* am statischen Seiteninhalt, die URL
+  // bleibt die der Landingpage.
+  var LANDING = (function () {
+    var el = document.querySelector("[data-landing-kind]");
+    if (!el) return null;
+    return {
+      kind: el.getAttribute("data-landing-kind") || "",
+      brand: el.getAttribute("data-landing-brand") || "",
+      department: el.getAttribute("data-landing-department") || "",
+      category: el.getAttribute("data-landing-category") || "",
+      label: el.getAttribute("data-landing-label") || ""
+    };
+  })();
+  var LANDING_PATH = LANDING ? location.pathname : null;
   function isCatalogPath(path) {
-    return path === CLASSIC_PATH || path === SWIPE_PATH || path === CHAOS_PATH || path === OUTFIT_PATH || path === MIETEN_PATH;
+    return path === CLASSIC_PATH || path === SWIPE_PATH || path === CHAOS_PATH || path === OUTFIT_PATH || path === MIETEN_PATH
+      || (LANDING_PATH !== null && path === LANDING_PATH);
   }
   function modeFromPath(path) {
     if (path === SWIPE_PATH) return "swipe";
     if (path === CHAOS_PATH) return "chaos";
     if (path === OUTFIT_PATH) return "outfit";
     if (path === MIETEN_PATH) return "mieten";
+    if (LANDING_PATH !== null && path === LANDING_PATH) return "landing";
     return "classic";
   }
   function pathForMode(mode) {
@@ -2201,6 +2220,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     if (mode === "chaos") return CHAOS_PATH;
     if (mode === "outfit") return OUTFIT_PATH;
     if (mode === "mieten") return MIETEN_PATH;
+    if (mode === "landing" && LANDING_PATH !== null) return LANDING_PATH;
     return CLASSIC_PATH;
   }
   // true nur auf der eigenen Mieten/Ausleihen-Kategorieseite - steuert, ob
@@ -2223,6 +2243,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     // (der Browser macht das nur bei einem echten Seitenaufruf) - ohne das
     // haette der Tab/Verlaufseintrag nach einem In-Page-Wechsel weiterhin
     // den Titel der vorher besuchten Seite.
+    if (mode === "landing") return; // Titel/Canonical kommen fertig aus build_site.py
     document.title = t(MODE_TITLE_KEY[mode]);
     var canonicalEl = document.querySelector('link[rel="canonical"]');
     if (canonicalEl) canonicalEl.href = location.origin + pathForMode(mode);
@@ -2240,6 +2261,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     else if (mode === "chaos") showChaos();
     else if (mode === "outfit") showOutfit();
     else if (mode === "mieten") showMieten();
+    else if (mode === "landing") showLanding();
     else showClassic();
     suppressModePush = false;
   });
@@ -2543,6 +2565,55 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     state.catalogLabelText = t("mietenCatalogHeading");
     render();
     pushModePath(MIETEN_PATH);
+  }
+
+  // Landingpage: Katalog mit vorgewaehltem Filter (Marke per Suche wie beim
+  // Markenklick auf einer Kachel, Bereich/Kategorie ueber die Facetten), das
+  // statische Raster aus build_site.py weicht dem lebendigen Raster, der
+  // Text darueber bleibt stehen. Die Adresse bleibt die der Landingpage.
+  function showLanding() {
+    swipeView.classList.add("hidden");
+    chaosView.classList.add("hidden");
+    outfitView.classList.add("hidden");
+    outfitPicker.classList.remove("open");
+    appShell.classList.remove("hidden");
+    syncModeRail("classic");
+    RENTAL_CATALOG_MODE = false;
+    var staticGrid = document.querySelector("[data-landing-static]");
+    if (staticGrid) staticGrid.parentNode.removeChild(staticGrid);
+    if (LANDING) {
+      state.status = "Verfügbar";
+      state.neu = false;
+      state.category = "all"; state.categoryGroup = null;
+      state.department = ""; state.productType = ""; state.brand = ""; state.size = ""; state.color = ""; state.condition = "";
+      state.priceMin = null; state.priceMax = null;
+      state.catalogLabelKey = ""; state.catalogLabelCategory = ""; state.catalogLabelText = "";
+      if (LANDING.kind === "brand" && LANDING.brand) {
+        searchInputEl.value = LANDING.brand;
+        state.query = normalizeText(LANDING.brand);
+        state.catalogLabelText = LANDING.brand;
+      } else {
+        searchInputEl.value = "";
+        state.query = "";
+      }
+      if (LANDING.department) {
+        state.department = LANDING.department;
+        if (filterDepartmentEl) filterDepartmentEl.value = LANDING.department;
+      }
+      if (LANDING.category) {
+        state.category = LANDING.category;
+        state.catalogLabelCategory = LANDING.category;
+      }
+      Array.prototype.forEach.call(statusChipsEl.children, function (c) {
+        c.setAttribute("aria-pressed", c.getAttribute("data-i18n") === "statusAvailable" ? "true" : "false");
+      });
+      Array.prototype.forEach.call(categoryChipsEl.children, function (c) {
+        var pressed = LANDING.category ? c.getAttribute("data-cat") === LANDING.category : c === allCatBtn;
+        c.setAttribute("aria-pressed", pressed ? "true" : "false");
+      });
+    }
+    render();
+    pushModePath(LANDING_PATH);
   }
 
   // ---- Swipe-Minigame ----
@@ -4140,6 +4211,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     else if (initialMode === "chaos") showChaos();
     else if (initialMode === "outfit") showOutfit();
     else if (initialMode === "mieten") showMieten();
+    else if (initialMode === "landing") showLanding();
     else showClassic();
     suppressModePush = false;
     // ?item= Deep-Links werden ausschliesslich von Rental V2 verarbeitet. // AUDIT_PERFECT_RENTAL_DEEPLINK

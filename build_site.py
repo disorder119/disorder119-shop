@@ -22,6 +22,7 @@ import html
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 BASE = Path(__file__).parent
@@ -927,6 +928,7 @@ def build_page(it, shop_config, lang):
   <div data-d119-newsletter data-quelle="artikel"></div>
   <p data-i18n="footerNote">Disorder119 · Kuratiertes Archiv für Designer-, Vintage- und Contemporary-Mode. Jedes Stück wird einzeln ausgewählt, fotografiert und beschrieben.</p>
   <p><a href="{home}" data-i18n="footerFullArchive">Zum vollständigen Archiv</a></p>
+{landing_item_links_html(it, lang)}
   {artikel_recht_nav(home, lang)}
 </div>
 <div class="lightbox" id="lightbox">
@@ -1144,6 +1146,322 @@ def static_page_content_html(slug, lang, shop_config):
     return '<div class="static-page"><div class="legal-panel">' + html + "</div></div>"
 
 
+# ---------------------------------------------------------------- Landingpages
+# Marken- und Kategorieseiten (/marke/prada/, /damen/, /herren/jacken/,
+# /accessoires/): echte, serverseitig gerenderte Seiten mit Ueberschrift,
+# Text, vollstaendigem Produktraster und Links untereinander - das, was Google
+# fuer Suchbegriffe wie "Prada Second Hand" oder "Designer Jacken Damen"
+# braucht; bisher gab es dafuer keine einzige eigene Adresse. Mit JavaScript
+# blendet assets/app.js auf diesen Seiten den normalen Katalog mit
+# vorgewaehltem Filter ein und entfernt das statische Raster (siehe LANDING
+# dort); ohne JavaScript bleibt das statische Raster stehen.
+LANDING_MIN_ITEMS = 3
+LANDING_DEPARTMENT_SLUGS = {"damen": "Women", "herren": "Men"}
+LANDING_CATEGORY_SLUGS = {
+    "jacken": "Jackets", "maentel": "Coats", "tops": "Tops", "shirts": "Shirts", "strick": "Knitwear",
+    "hosen": "Pants", "roecke": "Skirts", "kleider": "Dresses", "schuhe": "Shoes", "accessoires": "Accessories",
+}
+LANDING_DEP_LABEL = {
+    "Women": {"de": "Damen", "en": "Women", "fr": "Femme"},
+    "Men": {"de": "Herren", "en": "Men", "fr": "Homme"},
+}
+LANDING_COPY = {
+    "de": {
+        "brand_title": "{brand} Second Hand & Vintage | Disorder119",
+        "brand_h1": "{brand} Second Hand & Vintage",
+        "brand_desc": "{n} kuratierte {brand}-Einzelstücke aus zweiter Hand: {detail}. Individuell fotografiert, auf Zustand geprüft und sofort bestellbar.",
+        "department_title": "Designer {dep}mode Second Hand & Vintage | Disorder119",
+        "department_h1": "Designer-{dep}mode aus zweiter Hand",
+        "department_desc": "{n} kuratierte Designer-Einzelstücke für {dep} von {detail}. Second Hand und Vintage, individuell fotografiert und geprüft.",
+        "category_title": "Designer {cat} {dep} Second Hand & Vintage | Disorder119",
+        "category_h1": "Designer-{cat} für {dep} – Second Hand & Vintage",
+        "category_desc": "{n} kuratierte Designer-{cat} für {dep} aus zweiter Hand von {detail}. Individuell fotografiert, geprüft und sofort bestellbar.",
+        "all_title": "Designer {cat} Second Hand & Vintage | Disorder119",
+        "all_h1": "Designer-{cat} – Second Hand & Vintage",
+        "all_desc": "{n} kuratierte Designer-{cat} aus zweiter Hand von {detail}. Individuell fotografiert, geprüft und sofort bestellbar.",
+        "intro": "Jedes Stück im Archiv von Disorder119 ist ein Einzelstück: individuell fotografiert, auf Zustand geprüft und sofort bestellbar. Preise von {min} bis {max}, Versand mit DHL{frei}.",
+        "sizes": "Vorhandene Größen: {sizes}.",
+        "brands_heading": "Marken in dieser Auswahl", "categories_heading": "Kategorien", "more_brands_heading": "Weitere Marken im Archiv",
+        "count": "{n} Stücke", "free_from": ", versandkostenfrei ab {frei}",
+        "footer_brands": "Marken", "footer_categories": "Kategorien",
+    },
+    "en": {
+        "brand_title": "{brand} Pre-Owned & Vintage | Disorder119",
+        "brand_h1": "{brand} pre-owned & vintage",
+        "brand_desc": "{n} curated pre-owned {brand} pieces: {detail}. Individually photographed, condition-checked and ready to order.",
+        "department_title": "Pre-Owned Designer Fashion for {dep} | Disorder119",
+        "department_h1": "Pre-owned designer fashion for {dep}",
+        "department_desc": "{n} curated designer pieces for {dep} by {detail}. Second hand and vintage, individually photographed and checked.",
+        "category_title": "Pre-Owned Designer {cat} for {dep} | Disorder119",
+        "category_h1": "Designer {cat} for {dep} – pre-owned & vintage",
+        "category_desc": "{n} curated pre-owned designer {cat} for {dep} by {detail}. Individually photographed, checked and ready to order.",
+        "all_title": "Pre-Owned Designer {cat} | Disorder119",
+        "all_h1": "Designer {cat} – pre-owned & vintage",
+        "all_desc": "{n} curated pre-owned designer {cat} by {detail}. Individually photographed, checked and ready to order.",
+        "intro": "Every piece in the Disorder119 archive is a one-off: individually photographed, condition-checked and ready to order. Prices from {min} to {max}, shipped with DHL{frei}.",
+        "sizes": "Available sizes: {sizes}.",
+        "brands_heading": "Brands in this selection", "categories_heading": "Categories", "more_brands_heading": "More brands in the archive",
+        "count": "{n} pieces", "free_from": ", free shipping from {frei}",
+        "footer_brands": "Brands", "footer_categories": "Categories",
+    },
+    "fr": {
+        "brand_title": "{brand} seconde main & vintage | Disorder119",
+        "brand_h1": "{brand} seconde main & vintage",
+        "brand_desc": "{n} pièces {brand} sélectionnées de seconde main : {detail}. Photographiées individuellement, contrôlées et disponibles immédiatement.",
+        "department_title": "Mode de créateurs {dep} seconde main & vintage | Disorder119",
+        "department_h1": "Mode de créateurs {dep} de seconde main",
+        "department_desc": "{n} pièces de créateurs sélectionnées pour {dep} par {detail}. Seconde main et vintage, photographiées individuellement et contrôlées.",
+        "category_title": "{cat} de créateurs {dep} seconde main & vintage | Disorder119",
+        "category_h1": "{cat} de créateurs {dep} – seconde main & vintage",
+        "category_desc": "{n} {cat} de créateurs sélectionnés pour {dep}, de seconde main, par {detail}. Photographiés individuellement, contrôlés et disponibles immédiatement.",
+        "all_title": "{cat} de créateurs seconde main & vintage | Disorder119",
+        "all_h1": "{cat} de créateurs – seconde main & vintage",
+        "all_desc": "{n} {cat} de créateurs sélectionnés de seconde main, par {detail}. Photographiés individuellement, contrôlés et disponibles immédiatement.",
+        "intro": "Chaque pièce de l’archive Disorder119 est unique : photographiée individuellement, contrôlée et disponible immédiatement. Prix de {min} à {max}, expédition DHL{frei}.",
+        "sizes": "Tailles disponibles : {sizes}.",
+        "brands_heading": "Marques dans cette sélection", "categories_heading": "Catégories", "more_brands_heading": "Autres marques de l’archive",
+        "count": "{n} pièces", "free_from": ", livraison offerte dès {frei}",
+        "footer_brands": "Marques", "footer_categories": "Catégories",
+    },
+}
+
+
+def brand_slug(brand):
+    s = str(brand or "").casefold()
+    for a, b in (("ä", "ae"), ("ö", "oe"), ("ü", "ue"), ("ß", "ss"), ("&", " and ")):
+        s = s.replace(a, b)
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+
+
+def _landing_sort(items):
+    return sorted(items, key=lambda it: it.get("brightness") if isinstance(it.get("brightness"), (int, float)) else 0.5, reverse=True)
+
+
+_LANDING_SPECS = None
+
+
+def landing_specs():
+    """Alle Landingpages mit ihren Artikeln; nur Seiten mit genug Stuecken."""
+    global _LANDING_SPECS
+    if _LANDING_SPECS is not None:
+        return _LANDING_SPECS
+    available = [it for it in ITEMS if it.get("public_status") == "AVAILABLE"]
+    specs = []
+    by_brand = {}
+    for it in available:
+        brand = str(it.get("brand") or "").strip()
+        if brand:
+            by_brand.setdefault(brand, []).append(it)
+    for brand, items in sorted(by_brand.items(), key=lambda kv: (-len(kv[1]), kv[0].casefold())):
+        if len(items) >= LANDING_MIN_ITEMS and brand_slug(brand):
+            specs.append({"kind": "brand", "segment": "marke/" + brand_slug(brand) + "/", "brand": brand,
+                          "department": "", "category": "", "items": _landing_sort(items)})
+    for slug, dep in LANDING_DEPARTMENT_SLUGS.items():
+        dep_items = [it for it in available if it.get("department") == dep]
+        if len(dep_items) >= LANDING_MIN_ITEMS:
+            specs.append({"kind": "department", "segment": slug + "/", "brand": "", "department": dep, "category": "",
+                          "items": _landing_sort(dep_items)})
+        for cslug, cat in LANDING_CATEGORY_SLUGS.items():
+            cat_items = [it for it in dep_items if (it.get("taxonomy_category") or it.get("category")) == cat]
+            if len(cat_items) >= LANDING_MIN_ITEMS:
+                specs.append({"kind": "category", "segment": slug + "/" + cslug + "/", "brand": "", "department": dep,
+                              "category": cat, "items": _landing_sort(cat_items)})
+    accessoires = [it for it in available if (it.get("taxonomy_category") or it.get("category")) == "Accessories"]
+    if len(accessoires) >= LANDING_MIN_ITEMS:
+        specs.append({"kind": "category", "segment": "accessoires/", "brand": "", "department": "", "category": "Accessories",
+                      "items": _landing_sort(accessoires)})
+    _LANDING_SPECS = specs
+    return specs
+
+
+def landing_label(spec, lang):
+    """Kurzer Name der Seite (Fusszeile, verwandte Links, Katalogueberschrift)."""
+    if spec["kind"] == "brand":
+        return spec["brand"]
+    dep = LANDING_DEP_LABEL.get(spec["department"], {}).get(lang, "")
+    if spec["kind"] == "department":
+        return dep
+    cat = cat_tr(spec["category"], lang)
+    if not dep:
+        return cat
+    return (cat + " " + dep.lower()) if lang == "fr" else (dep + " " + cat)
+
+
+def landing_url(spec, lang):
+    return lang_home(lang) + spec["segment"]
+
+
+def _landing_detail(spec, lang, limit=5):
+    """'Jacken (12), Schuhe (9)' bei Marken; 'Prada, Jean Paul Gaultier' bei Kategorien."""
+    counts = {}
+    for it in spec["items"]:
+        key = (it.get("taxonomy_category") or it.get("category") or "") if spec["kind"] == "brand" else str(it.get("brand") or "")
+        if key:
+            counts[key] = counts.get(key, 0) + 1
+    top = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
+    if spec["kind"] == "brand":
+        return ", ".join(f"{cat_tr(k, lang)} ({n})" for k, n in top)
+    return ", ".join(k for k, _ in top)
+
+
+def landing_texts(spec, lang):
+    cp = LANDING_COPY[lang]
+    n = len(spec["items"])
+    detail = _landing_detail(spec, lang)
+    dep = LANDING_DEP_LABEL.get(spec["department"], {}).get(lang, "")
+    if spec["kind"] == "brand":
+        fmt = dict(brand=spec["brand"], n=n, detail=detail)
+        return cp["brand_title"].format(**fmt), cp["brand_h1"].format(**fmt), cp["brand_desc"].format(**fmt)
+    if spec["kind"] == "department":
+        fmt = dict(dep=dep, n=n, detail=detail)
+        return cp["department_title"].format(**fmt), cp["department_h1"].format(**fmt), cp["department_desc"].format(**fmt)
+    cat = cat_tr(spec["category"], lang)
+    fmt = dict(cat=cat, dep=dep, n=n, detail=detail)
+    if dep:
+        return cp["category_title"].format(**fmt), cp["category_h1"].format(**fmt), cp["category_desc"].format(**fmt)
+    return cp["all_title"].format(**fmt), cp["all_h1"].format(**fmt), cp["all_desc"].format(**fmt)
+
+
+def landing_related_html(spec, lang):
+    cp = LANDING_COPY[lang]
+    specs = landing_specs()
+    by_segment = {s["segment"]: s for s in specs}
+    parts = []
+
+    def group(heading, chosen):
+        links = [f'<a href="{esc(landing_url(s, lang))}">{esc(landing_label(s, lang))}</a>' for s in chosen if s is not spec]
+        if links:
+            parts.append(f'<h2>{esc(heading)}</h2><p class="landing__links">' + " · ".join(links) + "</p>")
+
+    if spec["kind"] == "brand":
+        combos = {(it.get("department"), it.get("taxonomy_category") or it.get("category")) for it in spec["items"]}
+        cat_pages = [s for s in specs if s["kind"] == "category" and (s["department"], s["category"]) in combos
+                     or (s["kind"] == "category" and not s["department"] and any(c == s["category"] for _, c in combos))]
+        group(cp["categories_heading"], cat_pages)
+        group(cp["more_brands_heading"], [s for s in specs if s["kind"] == "brand"])
+    else:
+        brands = {str(it.get("brand") or "") for it in spec["items"]}
+        group(cp["brands_heading"], [s for s in specs if s["kind"] == "brand" and s["brand"] in brands])
+        siblings = [s for s in specs if s["kind"] in ("department", "category") and s["segment"] != spec["segment"]
+                    and (s["department"] == spec["department"] or not spec["department"] or s["kind"] == "department")]
+        group(cp["categories_heading"], siblings)
+    return "".join(parts)
+
+
+def landing_content_html(spec, lang):
+    cp = LANDING_COPY[lang]
+    title_tag, h1, desc = landing_texts(spec, lang)
+    items = spec["items"]
+    prices = [float(it.get("price") or 0) for it in items if float(it.get("price") or 0) > 0]
+    frei_cents = versandkostenfrei_ab_cents()
+    intro = cp["intro"].format(
+        min=fmt_price_de(min(prices)) if prices else "", max=fmt_price_de(max(prices)) if prices else "",
+        frei=cp["free_from"].format(frei=euro_text(frei_cents, lang)) if frei_cents else "",
+    )
+    sizes = sorted({str(it.get("size_normalized") or it.get("size") or "").strip() for it in items}
+                   - {"", "Unknown", "Other", "Dimensions"})
+    sizes_line = ("<p>" + esc(cp["sizes"].format(sizes=", ".join(size_tr(s, lang) for s in sizes[:14]))) + "</p>") if sizes else ""
+    cards = "".join(initial_archive_card_html(it, lang, lazy=True) for it in items)
+    attrs = (f' data-landing-kind="{esc(spec["kind"])}" data-landing-brand="{esc(spec["brand"])}"'
+             f' data-landing-department="{esc(spec["department"])}" data-landing-category="{esc(spec["category"])}"'
+             f' data-landing-label="{esc(landing_label(spec, lang))}"')
+    return (
+        f'<div class="static-page landing"{attrs}><div class="legal-panel landing__panel">'
+        f"<h1>{esc(h1)}</h1><p class=\"landing__lead\">{esc(desc)}</p><p>{esc(intro)}</p>{sizes_line}"
+        f"<p class=\"landing__count\">{esc(cp['count'].format(n=len(items)))}</p>"
+        + landing_related_html(spec, lang)
+        + "</div></div>"
+        + f'<div class="grid landing-grid" data-landing-static="1" aria-label="{esc(h1)}">{cards}</div>'
+    )
+
+
+def landing_jsonld(spec, lang, canonical, title_tag, desc):
+    home = SITE_URL.rstrip("/") + lang_home(lang)
+    crumbs = [{"@type": "ListItem", "position": 1, "name": {"de": "Archiv", "en": "Archive", "fr": "Archive"}[lang], "item": home}]
+    if spec["kind"] == "category" and spec["department"]:
+        dep_spec = next((s for s in landing_specs() if s["kind"] == "department" and s["department"] == spec["department"]), None)
+        if dep_spec:
+            crumbs.append({"@type": "ListItem", "position": 2, "name": landing_label(dep_spec, lang),
+                           "item": SITE_URL.rstrip("/") + landing_url(dep_spec, lang)})
+    crumbs.append({"@type": "ListItem", "position": len(crumbs) + 1, "name": landing_label(spec, lang), "item": canonical})
+    page = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "@id": canonical + "#webpage",
+        "url": canonical,
+        "name": title_tag,
+        "description": desc,
+        "inLanguage": lang,
+        "isPartOf": {"@id": SITE_URL + "#website"},
+        "publisher": {"@id": SITE_URL + "#store"},
+        "mainEntity": {
+            "@type": "ItemList",
+            "numberOfItems": len(spec["items"]),
+            "itemListElement": [
+                {"@type": "ListItem", "position": i + 1, "name": display_name(it), "url": home + "artikel/" + str(it["id"]) + "/"}
+                for i, it in enumerate(spec["items"])
+            ],
+        },
+    }
+    crumb = {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": crumbs}
+    return [json.dumps(page, ensure_ascii=False), json.dumps(crumb, ensure_ascii=False)]
+
+
+def landing_links_html(lang):
+    """Fusszeilen-Block auf jeder Seite: alle Marken- und Kategorieseiten, damit
+    Google sie von ueberall erreicht (interne Verlinkung)."""
+    cp = LANDING_COPY[lang]
+    specs = landing_specs()
+    if not specs:
+        return ""
+    brands = " · ".join(f'<a href="{esc(landing_url(s, lang))}">{esc(landing_label(s, lang))}</a>' for s in specs if s["kind"] == "brand")
+    cats = " · ".join(f'<a href="{esc(landing_url(s, lang))}">{esc(landing_label(s, lang))}</a>' for s in specs if s["kind"] != "brand")
+    return (f'<p><span class="footer__landing-label">{esc(cp["footer_brands"])}:</span> {brands}</p>'
+            f'<p><span class="footer__landing-label">{esc(cp["footer_categories"])}:</span> {cats}</p>')
+
+
+def landing_links_for_item(it, lang):
+    """(href, label) der Marken- und Kategorieseite eines Artikels fuer die Produktseite."""
+    links = []
+    for s in landing_specs():
+        if s["kind"] == "brand" and s["brand"] == str(it.get("brand") or "").strip():
+            links.append((landing_url(s, lang), landing_label(s, lang)))
+    cat = it.get("taxonomy_category") or it.get("category")
+    for s in landing_specs():
+        if s["kind"] == "category" and s["category"] == cat and (s["department"] == it.get("department") or not s["department"]):
+            links.append((landing_url(s, lang), landing_label(s, lang)))
+            break
+    return links
+
+
+def landing_item_links_html(it, lang):
+    links = landing_links_for_item(it, lang)
+    if not links:
+        return ""
+    return ('  <p class="article-landing-links">'
+            + " · ".join(f'<a href="{esc(href)}">{esc(label)}</a>' for href, label in links) + "</p>")
+
+
+def build_landing_pages():
+    shop_config = get_shop_config()
+    n = 0
+    for spec in landing_specs():
+        for lang in LANGS:
+            title_tag, h1, desc = landing_texts(spec, lang)
+            canonical = SITE_URL.rstrip("/") + landing_url(spec, lang)
+            out = render_bundle_page(
+                lang, spec["segment"], title_tag, desc, shop_config,
+                static_content=landing_content_html(spec, lang),
+                structured_extra=landing_jsonld(spec, lang, canonical, title_tag, desc), slug="landing",
+            )
+            out_dir = BASE / lang_home(lang).strip("/") / spec["segment"].rstrip("/")
+            out_dir.mkdir(parents=True, exist_ok=True)
+            (out_dir / "index.html").write_text(out, encoding="utf-8")
+            n += 1
+    print(f"{n} Landingpages geschrieben ({len(landing_specs())} Seiten x {len(LANGS)} Sprachen).")
+
+
 # FOCUS3_MOBILE_SSR_LCP
 # The classic German homepage is the primary mobile landing page. Its first
 # two default cards are emitted in the initial HTML and their images are
@@ -1176,7 +1494,9 @@ def initial_archive_alt(it):
     return (brand + " " + title).strip()
 
 
-def initial_archive_card_html(it, lang):
+def initial_archive_card_html(it, lang, lazy=False):
+    # lazy=True: Karte im statischen Raster einer Landingpage (viele Karten,
+    # nicht der LCP-Kandidat) - Bilder erst beim Scrollen laden.
     ph = META_PHRASES[lang]
     home = lang_home(lang)
     gallery = it.get("gallery") or []
@@ -1205,7 +1525,8 @@ def initial_archive_card_html(it, lang):
         picture = (
             '<picture>' + source
             + '<img src="/' + esc(desktop) + '" alt="' + esc(initial_archive_alt(it))
-            + '" loading="eager" fetchpriority="high" decoding="sync">'  # FOCUS3_MEASURED_LCP_FOLLOWUP
+            + ('" loading="lazy" decoding="async">' if lazy else
+               '" loading="eager" fetchpriority="high" decoding="sync">')  # FOCUS3_MEASURED_LCP_FOLLOWUP
             + '</picture>'
         )
     return (
@@ -1279,7 +1600,7 @@ def product_data_gap_html(it, lang):
 
 def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
                         include_item_list=False, robots=None, static_content="",
-                        canonical_path_segment=None, slug=""):
+                        canonical_path_segment=None, slug="", structured_extra=None):
     tmpl = (BASE / "index_template.html").read_text(encoding="utf-8")
     canonical_segment = path_segment if canonical_path_segment is None else canonical_path_segment
     urls_by_lang = {l: SITE_URL.rstrip("/") + lang_home(l) + canonical_segment for l in LANGS}
@@ -1290,6 +1611,9 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
         public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
         structured.append(site_entities_jsonld(shop_config))
         structured.append(item_list_jsonld(public_items, lang))
+    elif structured_extra is not None:
+        # Landingpages bringen CollectionPage + Breadcrumb selbst mit.
+        structured.extend(structured_extra)
     elif robots != "noindex,follow":
         structured.append(webpage_jsonld(title_tag, desc_text, canonical, lang, slug))
         if path_segment:
@@ -1317,6 +1641,7 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     # als zusammenhaengenden Block.
     out = out.replace("__NEWSLETTER_VERSION__", NEWSLETTER_ASSET_VERSION)
     out = out.replace("__STATIC_PAGE_CONTENT__", static_content)
+    out = out.replace("__LANDING_LINKS__", landing_links_html(lang))
     initial_ssr_home = (lang == "de" and path_segment == "" and slug == "")
     out = out.replace("__CRITICAL_IMAGE_PRELOADS__", initial_archive_preloads() if initial_ssr_home else "")
     out = out.replace("__APP_SHELL_HIDDEN_CLASS__", "" if initial_ssr_home else " hidden")
@@ -1892,6 +2217,7 @@ def build_sitemap():
         [("", None)]
         + [("artikel/" + str(it["id"]) + "/", it) for it in public_items]
         + [(slug + "/", None) for slug in indexable_specials]
+        + [(spec["segment"], None) for spec in landing_specs()]
     )
 
     def url_entry(lang, segment, item=None):
@@ -2166,6 +2492,7 @@ def main():
     clean_old_flat_article_files()
     build_index()
     build_special_pages()
+    build_landing_pages()
     build_account_pages()
     build_newsletter_pages()
     build_checkout_pages()

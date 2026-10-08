@@ -4,6 +4,7 @@
 // (no public address); this Worker stores nothing itself.
 const PAGES = new Set(['agb','baukasten','cart','chaos','datenschutz','faq','impressum','kasse','konto','match','mieten','newsletter','ueber-uns','universe','widerruf']);
 const ROOT_FILES = new Set(['index.html','404.html','offline.html','robots.txt','sitemap.xml','manifest.webmanifest','sw.js','favicon.ico']);
+const LANDING_ROOTS = new Set(['marke','damen','herren','accessoires']);
 const FIELDS = new Set(['id','article','title','brand','price','price_estimated','public_status','status','category','size','color','condition','brightness','gallery','look','department','product_type','taxonomy_category','size_normalized','rental_price','grid_image','hover_image','foto_hell']);
 // Gestaltete Fehlerseite fuer Adressen, die es im Shop nicht gibt. Steht hier
 // fertig im Worker: der Ursprung wird fuer solche Pfade nie gefragt.
@@ -27,6 +28,14 @@ export function publicPath(pathname) {
   if (parts[0] === 'en' || parts[0] === 'fr') parts.shift();
   if (!parts.length || (parts.length===1 && ROOT_FILES.has(parts[0]))) return true;
   if (parts[0]==='artikel') return /^\d+(?:\.html)?$/.test(parts[1]||'') && (parts.length===2 || (parts.length===3 && parts[2]==='index.html'));
+  // Landingpages aus build_site.py: /marke/<slug>/, /damen/, /herren/<kategorie>/, /accessoires/
+  if (LANDING_ROOTS.has(parts[0])) {
+    const rest = parts.slice(1).filter(part=>part!=='index.html');
+    if (rest.length>1 || !rest.every(part=>/^[a-z0-9-]{1,40}$/.test(part))) return false;
+    if (parts[0]==='marke') return rest.length===1;
+    if (parts[0]==='accessoires') return rest.length===0;
+    return true;
+  }
   return PAGES.has(parts[0]) && (parts.length===1 || (parts.length===2 && parts[1]==='index.html'));
 }
 
