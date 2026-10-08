@@ -9,10 +9,11 @@
 // PLZ und Strasse, nie Name oder E-Mail der Kundin.
 //
 // Dazu die Pruefung beim Bestellen: Wer an eine Packstation oder Filiale
-// bestellt, schickt Nummer, PLZ und Ort des Abholorts und (bei der
-// Packstation Pflicht) die DHL-Postnummer. Daraus wird die Lieferadresse,
-// wie DHL sie verlangt: "Packstation 123" bzw. "Postfiliale 456", die
-// Postnummer im Adresszusatz.
+// bestellt, schickt Nummer, PLZ und Ort des Abholorts und die DHL-Postnummer.
+// Die ist an beiden Pflicht - die DHL-Online-Frankierung (dhl-qr.js) nimmt
+// Packstation und Postfiliale nur mit Postnummer an. Daraus wird die
+// Lieferadresse: "Packstation 123" bzw. "Postfiliale 456", die Postnummer im
+// Adresszusatz.
 import { safeText } from "./commerce-core.js";
 import { bundeslandZurPlz } from "./adresse.js";
 import { landAusSchluessel, luftbildFuer } from "./karte.js";
@@ -179,8 +180,8 @@ export function zustellungAus(roh) {
   }
   const postnummer = String(roh.postnummer ?? "").replace(/\s+/g, "");
   if (postnummer && !/^\d{6,10}$/.test(postnummer)) throw new AbholortError("POSTNUMMER_UNGUELTIG", 422);
-  if (art === "packstation" && !postnummer) throw new AbholortError("POSTNUMMER_FEHLT", 422);
-  return { art, abholort, postnummer: postnummer || null };
+  if (!postnummer) throw new AbholortError("POSTNUMMER_FEHLT", 422);
+  return { art, abholort, postnummer };
 }
 
 // Lieferadresse fuer PayPal, Bestellung und Etikett, wie DHL sie verlangt.

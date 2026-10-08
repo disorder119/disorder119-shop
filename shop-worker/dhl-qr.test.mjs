@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { dhlText, handleDhlQr, receiverAddress, splitStreet } from "./dhl-qr.js";
+import { assertReceiver, dhlText, handleDhlQr, receiverAddress, splitStreet } from "./dhl-qr.js";
 import { handleAdminRequest } from "./admin-api.js";
 import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 
@@ -106,6 +106,25 @@ test("names and streets are made safe for DHL's Latin-1 franking", () => {
   assert.deepEqual(splitStreet("Packstation 150"), { street: "Packstation", streetNumber: "150" });
   assert.deepEqual(splitStreet("Musterweg"), { street: "Musterweg", streetNumber: "" });
   assert.equal(receiverAddress({ given_name: "Maria", surname: "Müller", address_line1: "Weg 1" }).name2, "Maria Müller");
+});
+
+test("Packstation and Postfiliale use DHL's pickup format: name1 name, name2 Postnummer", () => {
+  const packstation = { recipient_name: "Maria Müller", address_line1: "Packstation 162", address_line2: "Postnummer 12345678", postal_code: "63739", city: "Aschaffenburg" };
+  assert.deepEqual(receiverAddress(packstation), {
+    name1: "Maria Müller", name2: "12345678", street: "Packstation", streetNumber: "162", plz: "63739", city: "Aschaffenburg", country: "DEU",
+  });
+  assert.doesNotThrow(() => assertReceiver(receiverAddress(packstation)));
+  const filiale = { ...packstation, address_line1: "Postfiliale 503", address_line2: "Postnummer 1234 5678 90" };
+  assert.deepEqual(receiverAddress(filiale), {
+    name1: "Maria Müller", name2: "1234567890", street: "Postfiliale", streetNumber: "503", plz: "63739", city: "Aschaffenburg", country: "DEU",
+  });
+  // Alte Filial-Bestellung ohne Postnummer: die Admin-App fragt sie nach.
+  const ohne = receiverAddress({ ...filiale, address_line2: "" });
+  assert.equal(ohne.name2, "");
+  assert.throws(() => assertReceiver(ohne), err => err.code === "ADRESSE_UNVOLLSTAENDIG" && err.detail === "Postnummer");
+  assert.equal(receiverAddress({ ...filiale, address_line2: "" }, { postnummer: "87654321" }).name2, "87654321");
+  // Haustuer bleibt beim bisherigen Format mit dem Namen in name2.
+  assert.equal(receiverAddress({ ...packstation, address_line1: "Nelseestraße 25", address_line2: "" }).name1, undefined);
 });
 
 test("only domestic, trackable DHL products are offered, cheapest first", async () => {

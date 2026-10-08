@@ -86,20 +86,40 @@ export function senderAddress(env) {
   };
 }
 
+// Packstation und Postfiliale adressiert DHL anders als die Haustuer (Doku
+// "Parcel DE Private Shipping"): Name in name1, Postnummer in name2, als Strasse
+// fest "Packstation" bzw. "Postfiliale", die Nummer des Abholorts als Hausnummer.
+const ABHOLORT_STRASSE = /^(packstation|postfiliale)$/i;
+
+export function istAbholort(receiver = {}) {
+  return ABHOLORT_STRASSE.test(String(receiver.street || ""));
+}
+
 // Vorschlag aus der Bestellung; die Admin-App darf jedes Feld ueberschreiben.
+// Die Kasse speichert eine Abholort-Bestellung als "Packstation 162" mit dem
+// Zusatz "Postnummer 12345678" - daraus wird hier das DHL-Format.
 export function receiverAddress(contact = {}, override = {}) {
   const name = override.name ?? (contact.recipient_name
     || [contact.given_name, contact.surname].filter(Boolean).join(" "));
   const split = splitStreet(contact.address_line1 || "");
-  const receiver = {
-    name2: dhlText(name, 50),
-    street: dhlText(override.street ?? split.street, 50),
-    streetNumber: dhlText(override.streetNumber ?? split.streetNumber, 10),
-    plz: dhlText(override.plz ?? contact.postal_code, 5),
-    city: dhlText(override.city ?? contact.city, 40),
-    country: "DEU",
-  };
+  const street = dhlText(override.street ?? split.street, 50);
+  const streetNumber = dhlText(override.streetNumber ?? split.streetNumber, 10);
+  const plz = dhlText(override.plz ?? contact.postal_code, 5);
+  const city = dhlText(override.city ?? contact.city, 40);
   const zusatz = dhlText(override.addressAddition ?? contact.address_line2, 50);
+  if (ABHOLORT_STRASSE.test(street)) {
+    const postnummer = String(override.postnummer ?? (/\b(\d{6,10})\b/.exec(zusatz.replace(/(\d)\s+(?=\d)/g, "$1")) || [])[1] ?? "").replace(/\s+/g, "");
+    return {
+      name1: dhlText(name, 50),
+      name2: /^\d{6,10}$/.test(postnummer) ? postnummer : "",
+      street: /^packstation$/i.test(street) ? "Packstation" : "Postfiliale",
+      streetNumber,
+      plz,
+      city,
+      country: "DEU",
+    };
+  }
+  const receiver = { name2: dhlText(name, 50), street, streetNumber, plz, city, country: "DEU" };
   if (zusatz) receiver.addressAddition1 = zusatz;
   return receiver;
 }
@@ -109,9 +129,15 @@ export function assertReceiver(receiver, countryCode = "DE") {
     throw new DhlQrError("NUR_INLANDSVERSAND", 409, "Die QR-Marke ist für Sendungen innerhalb Deutschlands.");
   }
   const fehlend = [];
-  if (!receiver.name2) fehlend.push("Name");
-  if (!receiver.street) fehlend.push("Straße");
-  if (!receiver.streetNumber) fehlend.push("Hausnummer");
+  if (istAbholort(receiver)) {
+    if (!receiver.name1) fehlend.push("Name");
+    if (!/^\d{6,10}$/.test(receiver.name2 || "")) fehlend.push("Postnummer");
+    if (!/^\d{1,4}$/.test(receiver.streetNumber || "")) fehlend.push(receiver.street + "-Nummer");
+  } else {
+    if (!receiver.name2) fehlend.push("Name");
+    if (!receiver.street) fehlend.push("Straße");
+    if (!receiver.streetNumber) fehlend.push("Hausnummer");
+  }
   if (!/^\d{5}$/.test(receiver.plz)) fehlend.push("PLZ");
   if (!receiver.city) fehlend.push("Ort");
   if (fehlend.length) throw new DhlQrError("ADRESSE_UNVOLLSTAENDIG", 409, fehlend.join(", "));

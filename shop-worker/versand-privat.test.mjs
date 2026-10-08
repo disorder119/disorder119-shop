@@ -135,9 +135,11 @@ test("Zustellung an Packstation oder Filiale: Pruefung und Lieferadresse wie DHL
   assert.deepEqual(abholadresse("Maria Müller", packstation), {
     name: "Maria Müller", strasse: "Packstation", hausnummer: "162", zusatz: "Postnummer 12345678", plz: "63739", ort: "Aschaffenburg", land: "DE",
   });
-  const filiale = zustellungAus({ art: "filiale", abholort: { ...ort, nummer: "503", name: "Postfiliale 503" } });
+  // Auch an der Filiale Pflicht: ohne Postnummer nimmt DHL die Marke nicht an.
+  assert.equal(fehler({ art: "filiale", abholort: { ...ort, nummer: "503", name: "Postfiliale 503" } }), "POSTNUMMER_FEHLT");
+  const filiale = zustellungAus({ art: "filiale", abholort: { ...ort, nummer: "503", name: "Postfiliale 503" }, postnummer: "87654321" });
   assert.deepEqual(abholadresse("Maria Müller", filiale), {
-    name: "Maria Müller", strasse: "Postfiliale", hausnummer: "503", zusatz: "", plz: "63739", ort: "Aschaffenburg", land: "DE",
+    name: "Maria Müller", strasse: "Postfiliale", hausnummer: "503", zusatz: "Postnummer 87654321", plz: "63739", ort: "Aschaffenburg", land: "DE",
   });
   assert.throws(() => abholadresse("Maria", filiale), err => err.code === "ADRESSE_UNVOLLSTAENDIG");
 });
