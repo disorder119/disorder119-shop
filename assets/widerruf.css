@@ -19,7 +19,7 @@
   font-size: 0.8rem;
   letter-spacing: normal;
   text-transform: none;
-  color: var(--text-faint, var(--text-muted));
+  color: var(--text-muted);
   line-height: 1.45;
 }
 

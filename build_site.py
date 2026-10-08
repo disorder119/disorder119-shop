@@ -793,20 +793,20 @@ def build_page(it, shop_config, lang):
     product_nav_copy = {
         "de": {
             "prev": "← Vorheriger", "archive": "Zum Archiv", "next": "Nächster →",
-            "prev_aria": "Zum vorherigen Artikel", "archive_aria": "Zum Archiv",
-            "next_aria": "Zum nächsten Artikel", "nav_aria": "Artikelnavigation",
+            "prev_aria": "Vorheriger Artikel", "archive_aria": "Zum Archiv",
+            "next_aria": "Nächster Artikel", "nav_aria": "Artikelnavigation",
             "menu_aria": "Archiv öffnen",
         },
         "en": {
             "prev": "← Previous", "archive": "To archive", "next": "Next →",
-            "prev_aria": "Go to previous item", "archive_aria": "Go to archive",
-            "next_aria": "Go to next item", "nav_aria": "Item navigation",
+            "prev_aria": "Previous item", "archive_aria": "To archive",
+            "next_aria": "Next item", "nav_aria": "Item navigation",
             "menu_aria": "Open archive",
         },
         "fr": {
             "prev": "← Précédent", "archive": "Vers l’archive", "next": "Suivant →",
-            "prev_aria": "Voir l’article précédent", "archive_aria": "Voir l’archive",
-            "next_aria": "Voir l’article suivant", "nav_aria": "Navigation des articles",
+            "prev_aria": "Article précédent", "archive_aria": "Vers l’archive",
+            "next_aria": "Article suivant", "nav_aria": "Navigation des articles",
             "menu_aria": "Ouvrir l’archive",
         },
     }[lang]
@@ -1533,11 +1533,16 @@ ARTIKEL_RECHT_LINKS = {
 }
 
 
+ANSICHT_KNOPF_TEXT = {"de": "Weiße Ansicht", "en": "White view", "fr": "Affichage blanc"}
+
+
 def artikel_recht_nav(home, lang):
     beschriftung, links = ARTIKEL_RECHT_LINKS[lang]
     rest = "".join(f'<a href="{home}{pfad}">{esc(text)}</a>' for pfad, text in links)
+    # Schwarz/Weiss-Umschalter als Text (ansicht.js) - am Handy ersetzt er den runden Knopf.
+    ansicht = f'<button type="button" class="fuss-ansicht" data-ansicht-umschalten aria-pressed="false">{esc(ANSICHT_KNOPF_TEXT[lang])}</button>'
     return (f'<nav class="page-foot__recht" aria-label="{esc(beschriftung)}">'
-            f'<a class="fuss-widerruf" href="{home}widerruf/">{esc(WIDERRUF_LINK_TEXT[lang])}</a>{rest}</nav>')
+            f'<a class="fuss-widerruf" href="{home}widerruf/">{esc(WIDERRUF_LINK_TEXT[lang])}</a>{rest}{ansicht}</nav>')
 
 WIDERRUF_SEITE = {
     "de": {

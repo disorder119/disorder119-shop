@@ -256,8 +256,11 @@
   font-size: 0.82rem;
 }
 
-.konto-fuss a { color: var(--text-muted); }
-.konto-fuss a:hover { color: var(--text); }
+.konto-fuss a,
+.konto-fuss .fuss-ansicht { color: var(--text-muted); min-height: 32px; display: inline-flex; align-items: center; }
+.konto-fuss a:hover,
+.konto-fuss .fuss-ansicht:hover { color: var(--text); }
+.konto-fuss .fuss-ansicht { background: none; border: 0; padding: 0; font: inherit; text-decoration: underline; cursor: pointer; }
 
 @media (max-width: 520px) {
   .bestellung__teile img { width: 60px; height: 80px; }

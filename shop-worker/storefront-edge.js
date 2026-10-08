@@ -5,6 +5,15 @@
 const PAGES = new Set(['agb','baukasten','cart','chaos','datenschutz','faq','impressum','kasse','konto','match','mieten','newsletter','ueber-uns','universe','widerruf']);
 const ROOT_FILES = new Set(['index.html','404.html','offline.html','robots.txt','sitemap.xml','manifest.webmanifest','sw.js','favicon.ico']);
 const FIELDS = new Set(['id','article','title','brand','price','price_estimated','public_status','status','category','size','color','condition','brightness','gallery','look','department','product_type','taxonomy_category','size_normalized','rental_price','grid_image','hover_image','foto_hell']);
+// Gestaltete Fehlerseite fuer Adressen, die es im Shop nicht gibt. Steht hier
+// fertig im Worker: der Ursprung wird fuer solche Pfade nie gefragt.
+const SEITE_404='<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Seite nicht gefunden – Disorder119</title>'
++'<style>html{background:#000;color:#f2efe7;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 20px;box-sizing:border-box}'
++'.marke{position:absolute;top:20px;left:50%;transform:translateX(-50%);font-weight:800;letter-spacing:.035em;color:#f2efe7;text-decoration:none;font-size:.92rem}.code{font-size:clamp(4rem,16vw,8rem);font-weight:800;letter-spacing:-.02em;line-height:1;margin:0 0 8px}'
++'h1{font-size:clamp(1.1rem,3vw,1.4rem);font-weight:700;margin:0 0 12px}p{max-width:440px;color:rgba(242,239,231,.62);font-size:.9rem;line-height:1.6;margin:0 0 28px}.knoepfe{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}'
++'.knoepfe a{display:inline-block;padding:12px 22px;font-size:.76rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;border:1px solid #f2efe7;color:#f2efe7}.knoepfe a.leise{border-color:rgba(242,239,231,.28);color:rgba(242,239,231,.62)}</style></head>'
++'<body><a class="marke" href="/">DISORDER119</a><div class="code" aria-hidden="true">404</div><h1>Seite nicht gefunden</h1><p>Diese Adresse gibt es nicht – vielleicht ist der Link unvollständig oder das Stück ist nicht mehr im Archiv.</p>'
++'<div class="knoepfe"><a href="/">Zum Archiv</a><a class="leise" href="/en/">English</a><a class="leise" href="/fr/">Français</a></div></body></html>';
 
 export function publicPath(pathname) {
   let decoded;
@@ -76,8 +85,10 @@ export default {
     const url=new URL(request.url);
     const fail=(status,message)=>new Response(request.method==='HEAD'?null:message,{status,headers:storefrontHeaders(new Response(null,{headers:{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'}}))});
     if (!['disorder119.com','www.disorder119.com'].includes(url.hostname)) return fail(404,'Nicht gefunden.');
+    // Unverschluesselt aufgerufen (Cloudflare leitet nicht selbst um): sofort auf HTTPS.
+    if (url.protocol==='http:') { url.protocol='https:'; return new Response(null,{status:301,headers:storefrontHeaders(new Response(null,{headers:{Location:url.toString(),'Cache-Control':'no-store'}}))}); }
     if (!['GET','HEAD'].includes(request.method)) return fail(405,'Methode nicht erlaubt.');
-    if (!publicPath(url.pathname)) return fail(404,'Nicht gefunden.');
+    if (!publicPath(url.pathname)) return new Response(request.method==='HEAD'?null:SEITE_404,{status:404,headers:storefrontHeaders(new Response(null,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}}))});
     const filtered=['/data/catalog.json','/data/items.json'].includes(url.pathname);
     const originRequest=new Request(request,{method:filtered?'GET':request.method});
     if(filtered) {

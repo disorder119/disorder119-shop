@@ -50,7 +50,14 @@ export async function applePayDomainSicherstellen(env, now = Date.now()) {
   const letzte = await env.DB.prepare(`SELECT event_type,created_at FROM audit_events
     WHERE entity_type='paypal' AND entity_id='apple-pay-domain' ORDER BY created_at DESC LIMIT 1`).first();
   if (letzte?.event_type === ERFOLG) return { ok: true, bereits: true };
-  if (letzte && Number(now) - Date.parse(letzte.created_at) < TAG_MS) return { uebersprungen: "SPAETER_ERNEUT" };
+  // Nach drei Fehlschlaegen nur noch woechentlich: Apple Pay laeuft dann meist
+  // laengst ueber die Freigabe im PayPal-Konto, und das Protokoll soll nicht
+  // jeden Tag denselben Eintrag bekommen.
+  if (letzte) {
+    const fehlschlaege = Number((await env.DB.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE entity_type='paypal' AND entity_id='apple-pay-domain' AND event_type=?`).bind(FEHLER).first())?.n || 0);
+    if (Number(now) - Date.parse(letzte.created_at) < (fehlschlaege >= 3 ? 7 * TAG_MS : TAG_MS)) return { uebersprungen: "SPAETER_ERNEUT" };
+  }
 
   const token = await paypalToken(env);
   const base = paypalApiBase(env);
@@ -58,7 +65,8 @@ export async function applePayDomainSicherstellen(env, now = Date.now()) {
 
   // Erst nachsehen - vielleicht ist die Domain schon im Dashboard eingetragen.
   const liste = await fetch(`${base}/v1/customer/wallet-domains?provider_type=APPLE_PAY&page=1&page_size=50`, { headers: kopf });
-  if (liste.ok && domainNamen(await liste.json().catch(() => ({}))).includes(APPLE_PAY_DOMAIN)) {
+  const listeDaten = liste.ok ? await liste.json().catch(() => ({})) : {};
+  if (liste.ok && domainNamen(listeDaten).includes(APPLE_PAY_DOMAIN)) {
     await protokoll(env.DB, ERFOLG, { domain: APPLE_PAY_DOMAIN, bereits: true });
     return { ok: true, bereits: true };
   }
@@ -77,7 +85,8 @@ export async function applePayDomainSicherstellen(env, now = Date.now()) {
   await protokoll(env.DB, FEHLER, {
     domain: APPLE_PAY_DOMAIN, paypalStatus: res.status, grund,
     debugId: safeText(antwort?.debug_id || res.headers.get("paypal-debug-id") || "", 120) || null,
-    hinweis: "Apple Pay in der PayPal-App (Live) aktivieren; der Server versucht es morgen erneut.",
+    listeStatus: liste.status, listeDomains: domainNamen(listeDaten).length,
+    hinweis: "Apple Pay in der PayPal-App (Live) aktivieren; der Server versucht es morgen erneut, nach drei Fehlschlägen wöchentlich.",
   });
   return { ok: false, paypalStatus: res.status, grund };
 }

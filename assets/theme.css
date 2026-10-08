@@ -146,7 +146,7 @@ html:root[data-theme="hell"] .lang-switch__btn[aria-current="true"] { background
   border: 1px solid rgba(var(--d119-schrift-rgb), 0.3);
 }
 :root[data-theme] .swipe-view__hint {
-  color: rgba(var(--d119-schrift-rgb), 0.4);
+  color: rgba(var(--d119-schrift-rgb), 0.58);
 }
 :root[data-theme] .view-enter-btn {
   border: 1px solid rgba(var(--d119-schrift-rgb), 0.3);
@@ -333,6 +333,12 @@ html:root[data-theme="hell"] .lang-switch__btn[aria-current="true"] { background
 :root[data-theme] .lightbox__photo-nav {
   background: rgba(var(--d119-grund-rgb), .48);
 }
+}
+
+/* Am Handy liegt der runde Knopf ueber Text und Feldern. Hat die Seite eine
+   Alternative (Menue, Fusszeile: data-ansicht-umschalten), bleibt er weg. */
+@media (max-width: 759px) {
+  body.d119-ansicht-alternativ .d119-ansicht { display: none; }
 }
 
 /* Im Warenkorb ohne Schlagschatten (bewusst hinter der Sammelregel weiter oben): der Rahmen schneidet ihn ab, und der Rest

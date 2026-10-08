@@ -86,3 +86,19 @@ test('a failing or missing visit counter never breaks the page',async()=>{
   response=await edge.fetch(seite('/'),{},{},html);
   assert.equal(response.status,200);
 });
+
+test('plain http is redirected to https before anything else',async()=>{
+  let calls=0;
+  const response=await edge.fetch(new Request('http://disorder119.com/artikel/119/?a=1'),{},{},async()=>{calls++;return new Response('x');});
+  assert.equal(response.status,301);assert.equal(response.headers.get('Location'),'https://disorder119.com/artikel/119/?a=1');assert.equal(calls,0);
+  assert.match(response.headers.get('Strict-Transport-Security'),/max-age/);
+});
+test('an unknown address gets the designed 404 page without asking the origin',async()=>{
+  let calls=0;
+  const response=await edge.fetch(new Request('https://disorder119.com/gibtsnicht/'),{},{},async()=>{calls++;return new Response('x');});
+  assert.equal(response.status,404);assert.equal(calls,0);
+  assert.match(response.headers.get('Content-Type'),/text\/html/);
+  const body=await response.text();assert.match(body,/<html lang="de">/);assert.match(body,/Seite nicht gefunden/);assert.match(body,/href="\/"/);
+  const kopf=await edge.fetch(new Request('https://disorder119.com/gibtsnicht/',{method:'HEAD'}),{},{},async()=>{calls++;return new Response('x');});
+  assert.equal(kopf.status,404);assert.equal(await kopf.text(),'');assert.equal(calls,0);
+});

@@ -447,9 +447,11 @@ a { color: inherit; }
   margin: 24px 0 16px;
 }
 
+/* Kacheln wachsen bis 300 px und brechen um: ein einzelnes Stueck ("Mehr von")
+   fuellte als Rasterzelle sonst die ganze Breite. */
 .related__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 18px;
 }
 
@@ -457,6 +459,8 @@ a { color: inherit; }
   text-decoration: none;
   color: inherit;
   display: block;
+  flex: 1 1 140px;
+  max-width: 300px;
 }
 
 .related-card__frame {
@@ -651,3 +655,10 @@ img[data-d119-image-protected] {
 }
 @media (prefers-reduced-motion: reduce) { .d119-kaufleiste, .d119-kaufleiste--an { transition: none; } }
 @media print { .d119-kaufleiste { display: none !important; } }
+
+/* Schwarz/Weiss-Umschalter als Text in der Rechtszeile (ansicht.js); dazu alle
+   Links dort als brauchbare Tippflaechen. */
+.page-foot__recht a,
+.page-foot__recht .fuss-ansicht { min-height: 32px; display: inline-flex; align-items: center; }
+.page-foot__recht .fuss-ansicht { background: none; border: 0; padding: 0; font: inherit; color: var(--text-muted, rgba(242,239,231,.58)); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.page-foot__recht .fuss-ansicht:hover { color: var(--paper); }

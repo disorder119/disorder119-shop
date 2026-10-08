@@ -659,13 +659,19 @@
   border-top: 1px solid var(--rule);
 }
 
-.kasse-fuss a {
+.kasse-fuss a,
+.kasse-fuss .fuss-ansicht {
   font-size: 0.74rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
   text-decoration: none;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
 }
+.kasse-fuss .fuss-ansicht { background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer; }
+.kasse-fuss .fuss-ansicht:hover { color: var(--text); }
 
 @media (prefers-reduced-motion: reduce) {
   .kasse-vorschlaege { scroll-behavior: auto; }
