@@ -343,6 +343,191 @@
 .kasse-option__name small { margin-left: 8px; font-size: 0.78rem; color: var(--text-muted); }
 .kasse-option__preis { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 700; }
 
+/* Wohin? An die Haustuer oder (nur DHL) an Packstation/Filiale */
+.kasse-wohin__titel {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.kasse-wohin { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.kasse-option--wohin { grid-template-columns: auto minmax(0, 1fr); }
+.kasse-option--wohin small { display: block; margin: 2px 0 0; }
+.kasse-option--aus { opacity: 0.45; cursor: not-allowed; }
+.kasse-option--aus .kasse-option__preis { font-weight: 400; }
+
+.kasse-abholort {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 14px;
+  border: 1px solid var(--rule-strong);
+  background: var(--surface);
+}
+.kasse-abholort__suche { display: flex; align-items: flex-end; gap: 8px; }
+.kasse-abholort__suche .kasse-feld { flex: 0 1 180px; }
+.kasse-abholort__suche .kasse-chip { padding: 11px 14px; }
+.kasse-abholort__status { min-height: 1.2em; }
+.kasse-abholort__status--fehler { color: #e39a8e; }
+.kasse-abholort__klein { font-size: 0.74rem; }
+.kasse-abholort__werkzeug { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.kasse-abholort__werkzeug [hidden] { display: none; }
+
+.kasse-link {
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--text);
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.kasse-link:hover,
+.kasse-link:focus-visible { color: var(--accent-text); }
+
+.kasse-abholort__liste {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  max-height: 330px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.kasse-abholort__liste[hidden] { display: none; }
+.kasse-ort {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  background: var(--ink);
+  cursor: pointer;
+}
+.kasse-ort:has(input:checked) { border-color: var(--accent-text); }
+.kasse-ort input { margin: 0; accent-color: var(--accent-text); }
+.kasse-ort:has(input:disabled) { cursor: default; }
+.kasse-ort__nr,
+.kasse-karte__punkt {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--text);
+}
+.kasse-ort__nr--filiale,
+.kasse-karte__punkt--filiale { background: var(--text-muted); }
+.kasse-ort__text { display: grid; gap: 2px; min-width: 0; }
+.kasse-ort__name { font-weight: 700; overflow-wrap: anywhere; }
+.kasse-ort__text small { font-size: 0.76rem; color: var(--text-muted); overflow-wrap: anywhere; }
+.kasse-ort__weg { font-size: 0.78rem; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.kasse-abholort__manuell { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.kasse-abholort__manuell[hidden] { display: none; }
+.kasse-abholort__manuell .kasse-feld--art { flex: 0 1 150px; }
+.kasse-abholort__manuell .kasse-feld--nummer { flex: 0 1 100px; }
+.kasse-abholort__manuell .kasse-feld--ortklein { flex: 1 1 160px; }
+.kasse-abholort__manuell .kasse-chip { padding: 11px 14px; }
+.kasse-feld select {
+  font-family: inherit;
+  font-size: 1rem;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  border-radius: 0;
+  padding: 10px 8px;
+  width: 100%;
+}
+.kasse-feld select:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; }
+.kasse-abholort__post { grid-column: auto; }
+
+/* Karte: OpenStreetMap-Kacheln, erst nach Klick geladen */
+.kasse-karte {
+  position: relative;
+  height: 280px;
+  overflow: hidden;
+  border: 1px solid var(--rule-strong);
+  background: #2a2a2a;
+}
+.kasse-karte[hidden] { display: none; }
+.kasse-karte__flaeche { position: absolute; inset: 0; }
+.kasse-karte__flaeche img {
+  position: absolute;
+  width: 256px;
+  height: 256px;
+  max-width: none;
+  user-select: none;
+  /* Helle Kacheln gedaempft, damit die Karte zur schwarzen Kasse passt. */
+  filter: grayscale(1) brightness(0.82) contrast(1.05);
+}
+.kasse-karte__punkt {
+  position: absolute;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--ink);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  font-family: inherit;
+}
+.kasse-karte__punkt[aria-pressed="true"] {
+  z-index: 2;
+  min-width: 30px;
+  height: 30px;
+  border-radius: 15px;
+  background: var(--accent-text);
+  color: var(--ink);
+}
+.kasse-karte__punkt:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.kasse-karte__zoom { position: absolute; z-index: 3; left: 8px; top: 8px; display: grid; gap: 4px; }
+.kasse-karte__zoom button {
+  width: 32px;
+  height: 32px;
+  font: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--text);
+  background: var(--ink);
+  border: 1px solid var(--rule-strong);
+  cursor: pointer;
+}
+.kasse-karte__zoom button:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; }
+.kasse-karte__quelle {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  bottom: 0;
+  padding: 2px 6px;
+  font-size: 0.68rem;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* Bei Lieferung an Packstation/Filiale reichen Name und E-Mail. */
+.kasse-abholhinweis[hidden] { display: none; }
+.kasse-form--abholort .kasse-feld--strasse,
+.kasse-form--abholort .kasse-feld--nr,
+.kasse-form--abholort #kZusatz { opacity: 0.55; }
+
+.kasse-summe__ziel dd { text-align: right; overflow-wrap: anywhere; }
+
+@media (max-width: 520px) {
+  .kasse-wohin { grid-template-columns: minmax(0, 1fr); }
+  .kasse-karte { height: 240px; }
+  .kasse-ort { grid-template-columns: auto auto minmax(0, 1fr); }
+  .kasse-ort__weg { grid-column: 3; }
+}
+
 /* ---------------------------------------------------------------- Uebersicht */
 
 .kasse-summe {

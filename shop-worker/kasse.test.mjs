@@ -104,7 +104,7 @@ test("opted-in paid order keeps checkout email and sends one verified-account li
     return original(url, init);
   };
   const DB = sqliteD1(allMigrations());
-  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret",
+  const env = { VERSAND_QUELLE: "packlink", DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret",
     MAIL_API_KEY: "test-key", MAIL_FROM: "shop@example.com" };
   try {
     const created = await post(env, "/create-order", { itemIds: [9428, 9427], adresse: ADRESSE,
@@ -143,7 +143,7 @@ test("checkout with two pieces: one PayPal order with the checkout address, both
   versandCacheLeeren();
   const netz = fakeNetz();
   const DB = sqliteD1(allMigrations());
-  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  const env = { VERSAND_QUELLE: "packlink", DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
   try {
     const ohneEmail = await post(env, "/create-order", { itemIds: [9428], adresse: ADRESSE, email: null }, "k-email-fehlt-000001");
     assert.equal(ohneEmail.status, 422);
@@ -217,7 +217,7 @@ test("a PayPal order created before the switch (intent CAPTURE) is still capture
   versandCacheLeeren();
   const netz = fakeNetz({ intent: "CAPTURE" });
   const DB = sqliteD1(allMigrations());
-  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  const env = { VERSAND_QUELLE: "packlink", DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
   try {
     const angelegt = await post(env, "/create-order",
       { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 0 }, "k-kasse-alt-0000001");
@@ -239,7 +239,7 @@ test("checkout: a sold piece stops the whole order, nothing stays reserved", asy
   versandCacheLeeren();
   const netz = fakeNetz();
   const DB = sqliteD1(allMigrations());
-  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  const env = { VERSAND_QUELLE: "packlink", DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
   try {
     const weg = await post(env, "/create-order", { itemIds: [9428, 6210], adresse: ADRESSE }, "k-kasse-00000000002");
     assert.equal(weg.status, 409);
@@ -313,4 +313,52 @@ test("address suggestions: town for a postcode, streets for a prefix, strict inp
   assert.equal(strassennameAus("Hauptstr."), "Hauptstraße");
   assert.equal(strassennameAus("Am Markt"), "Am Markt");
   assert.equal(strassennameAus("Neue Str."), "Neue Straße");
+});
+
+test("create-order: DHL an Packstation zu festen Preisen, DPD nur an die Haustuer", async () => {
+  versandCacheLeeren();
+  const netz = fakeNetz();
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  const packstation = { art: "packstation", postnummer: "12345678",
+    abholort: { nummer: "162", name: "Packstation 162", strasse: "Hanauer Str. 2", plz: "63739", ort: "Aschaffenburg" } };
+  try {
+    // DPD stellt nicht an Packstationen zu.
+    const dpd = await post(env, "/create-order",
+      { itemIds: [9427], adresse: { name: "Maria Müller" }, zustellung: packstation, versand: "fest-dpd-M", versandPreisCents: 578 }, "k-privat-00000000001");
+    assert.equal(dpd.status, 422);
+    assert.equal(dpd.data.error, "ABHOLSTATION_NUR_DHL");
+    const ohnePostnummer = await post(env, "/create-order",
+      { itemIds: [9427], adresse: { name: "Maria Müller" }, zustellung: { ...packstation, postnummer: "" }, versand: "fest-dhl-M", versandPreisCents: 619 }, "k-privat-00000000002");
+    assert.equal(ohnePostnummer.data.error, "POSTNUMMER_FEHLT");
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations").get().n, 0);
+
+    const angelegt = await post(env, "/create-order",
+      { itemIds: [9427], adresse: { name: "Maria Müller" }, zustellung: packstation, versand: "fest-dhl-M", versandPreisCents: 619 }, "k-privat-00000000003");
+    assert.equal(angelegt.status, 200, JSON.stringify(angelegt.data));
+    assert.equal(angelegt.data.shipping, "6.19");
+    assert.equal(angelegt.data.total, "96.19");
+    assert.equal(angelegt.data.versand.carrier, "DHL");
+    const paypal = netz.calls.find(c => c.host === "api-m.sandbox.paypal.com" && c.path === "/v2/checkout/orders");
+    assert.deepEqual(paypal.body.purchase_units[0].shipping.address, {
+      address_line_1: "Packstation 162", address_line_2: "Postnummer 12345678", admin_area_2: "Aschaffenburg", postal_code: "63739", country_code: "DE",
+    });
+    assert.equal(netz.calls.filter(c => c.host === "api.packlink.com").length, 0, "feste Preise ohne Packlink");
+    const wahl = DB.raw.prepare("SELECT quelle,carrier,paket,preis_cents,zustellart,abholort_json FROM order_versand").get();
+    assert.deepEqual({ ...wahl, abholort_json: JSON.parse(wahl.abholort_json) }, {
+      quelle: "fest", carrier: "DHL", paket: "M", preis_cents: 619, zustellart: "packstation",
+      abholort_json: { typ: "packstation", nummer: "162", name: "Packstation 162", strasse: "Hanauer Str. 2", plz: "63739", ort: "Aschaffenburg" },
+    });
+    const kontakt = DB.raw.prepare("SELECT recipient_name,address_line1,address_line2,postal_code,city FROM order_contact_snapshots").get();
+    assert.deepEqual({ ...kontakt }, { recipient_name: "Maria Müller", address_line1: "Packstation 162", address_line2: "Postnummer 12345678", postal_code: "63739", city: "Aschaffenburg" });
+
+    // Haustuer mit DPD wie bisher (eigene Datenbank: der PayPal-Nachbau
+    // vergibt immer dieselbe Bestellnummer).
+    const haustuer = await post({ ...env, DB: sqliteD1(allMigrations()) }, "/create-order",
+      { itemIds: [9428], adresse: ADRESSE, versand: "fest-dpd-S", versandPreisCents: 0 }, "k-privat-00000000004");
+    assert.equal(haustuer.status, 200, JSON.stringify(haustuer.data));
+    assert.equal(haustuer.data.shipping, "0.00", "ab 99 EUR uebernimmt der Shop den guenstigsten Versand");
+  } finally {
+    netz.restore();
+  }
 });

@@ -56,7 +56,31 @@ export function versandKonfigurationPruefen(roh) {
     if (typeof f !== "object" || !ganzzahl(f.abCents, 1, 10000000)) throw new Error("VERSAND_VERSANDKOSTENFREI_UNGUELTIG");
     versandkostenfrei = Object.freeze({ abCents: f.abCents });
   }
+  // Feste Tarife (quelle "fest"): je Paketdienst ein Preis pro Paketgroesse.
+  const quelle = v.quelle === "fest" ? "fest" : "packlink";
+  const tarife = [];
+  if (quelle === "fest") {
+    const liste = Array.isArray(v.tarife?.liste) ? v.tarife.liste : [];
+    for (const t of liste) {
+      const id = String(t?.id || "");
+      if (!/^[a-z0-9-]{2,20}$/.test(id) || tarife.some(x => x.id === id)) throw new Error("VERSAND_TARIF_UNGUELTIG");
+      if (!GROESSEN.every(g => ganzzahl(t.preise?.[g], 1, 100000))) throw new Error(`VERSAND_TARIF_PREIS_${id}`);
+      tarife.push(Object.freeze({
+        id,
+        carrier: String(t.carrier || "").trim(),
+        titel: String(t.titel || t.carrier || id),
+        art: t.art === "express" ? "express" : "standard",
+        preise: Object.freeze({ ...t.preise }),
+        laufzeitTage: ganzzahl(t.laufzeitTage, 1, 30) ? t.laufzeitTage : null,
+        abholstation: t.abholstation === true,
+        versichertBisCents: ganzzahl(t.versichertBisCents, 0, 10000000) ? t.versichertBisCents : null,
+      }));
+    }
+    if (!tarife.length) throw new Error("VERSAND_TARIFE_FEHLEN");
+  }
   return Object.freeze({
+    quelle,
+    tarife: Object.freeze(tarife),
     pakete: Object.freeze(pakete),
     standardGroesse: standard,
     nachProdukttyp: nurGroessen(v.groesseNachProdukttyp),

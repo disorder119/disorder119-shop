@@ -29,6 +29,7 @@ import { handleVersand, istVersandRoute } from "./dhl.js";
 import { handleDhlQr, isDhlQrRoute } from "./dhl-qr.js";
 import { handlePacklink, handlePacklinkWebhook, isPacklinkRoute, isPacklinkWebhookRoute } from "./packlink.js";
 import { handleVersandOptionen, isVersandOptionenRoute } from "./versand.js";
+import { handleAbholorte, isAbholorteRoute } from "./abholorte.js";
 import { handleAdresse, isAdresseRoute } from "./adresse.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
@@ -264,6 +265,11 @@ const worker = {
       await guardRuntimeRequest(request, runtimeEnv, url);
 
       // Versandoptionen fuer Produktseite und Warenkorb: oeffentlich, nur lesen.
+      // DHL-Packstationen und -Filialen zur Adresse (oeffentlich, nur lesen).
+      if (isAbholorteRoute(url)) {
+        return finish(await handleAbholorte(request, runtimeEnv, url, reqId, origin));
+      }
+
       if (isVersandOptionenRoute(url)) {
         return finish(await handleVersandOptionen(request, runtimeEnv, url, reqId, origin));
       }

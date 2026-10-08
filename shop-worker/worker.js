@@ -13,6 +13,7 @@ import {
 import { branchHead, createCommit, fastForward, readRepoFile } from "./github-datei.js";
 import { istSandbox, sandboxKatalogLaden, sandboxVerkauft } from "./sandbox.js";
 import { VersandError, versandFuerBestellung, versandWahlStatement } from "./versand.js";
+import { AbholortError, abholadresse, zustellungAus } from "./abholorte.js";
 import { captureStatements, recordVerifiedRefund } from './tax-evidence.js';
 import { normalizeEmail } from './customer-mail.js';
 import { autorisierungAus, autorisierungVerwerfen, reservierungFelder } from "./zahlung.js";
@@ -208,8 +209,8 @@ async function findItems(env, ids) {
 }
 
 // Lieferadresse aus der Kasse (assets/kasse.js). Versendet wird nur innerhalb
-// Deutschlands, und an Packstationen erst, wenn DHL angebunden ist - DPD und
-// UPS stellen dort nicht zu.
+// Deutschlands. Packstation und Filiale gehen nicht ueber die Strasse, sondern
+// ueber die Zustellung (abholorte.js) - nur mit DHL, DPD stellt dort nicht zu.
 export function lieferadresseAus(roh) {
   if (roh === undefined || roh === null) return null;
   if (typeof roh !== "object" || Array.isArray(roh)) throw new PublicError("ADRESSE_UNVOLLSTAENDIG", 422);
@@ -1024,13 +1025,25 @@ export default {
         const items = await findItems(env, ids);
         const centsList = items.map(assertCatalogItemForSale);
         const cents = centsList.reduce((summe, c) => summe + c, 0);
-        const adresse = lieferadresseAus(body.adresse);
+        // Haustuer: die eingegebene Anschrift. Packstation/Filiale (nur DHL):
+        // die Anschrift des Abholorts mit Postnummer (abholorte.js).
+        let zustellung;
+        let adresse;
+        try {
+          zustellung = zustellungAus(body.zustellung);
+          adresse = zustellung.art === "haustuer" ? lieferadresseAus(body.adresse) : abholadresse(body.adresse?.name, zustellung);
+        } catch (err) {
+          if (err instanceof AbholortError) throw new PublicError(err.code, err.status);
+          throw err;
+        }
         if (!adresse) throw new PublicError("ADRESSE_UNVOLLSTAENDIG", 422);
         // Versandart und -preis prueft der Server selbst (versand.js). Weicht
         // der Preis von dem ab, den die Kundschaft gesehen hat, gibt es 409
         // mit der aktuellen Liste - noch bevor etwas reserviert wird. Ab dem
         // Warenwert in versand.versandkostenfrei kostet der Standard 0 Cent.
-        const versand = await versandFuerBestellung(env, items, body.versand, body.versandPreisCents, cents);
+        const gewaehlt = await versandFuerBestellung(env, items, body.versand, body.versandPreisCents, cents);
+        if (zustellung.art !== "haustuer" && !gewaehlt.abholstation) throw new PublicError("ABHOLSTATION_NUR_DHL", 422);
+        const versand = { ...gewaehlt, zustellung };
         const shippingCents = versand.preisCents;
         const reservations = await reserveAll(env, items, key, reqId);
         let providerOrder;
