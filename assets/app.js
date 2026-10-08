@@ -2466,17 +2466,15 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   var modeHintTimer = null;
 
   function positionModeRailHint() {
-    // Handy: als Zeile im Fluss ueber dem Kopfbereich - schwebend verdeckte der
-    // Hinweis dort die Ueberschrift.
-    if (window.innerWidth < 760 || modeRailHint.classList.contains("mode-rail-hint--zeile")) {
-      if (!modeRailHint.classList.contains("mode-rail-hint--zeile")) {
-        modeRailHint.classList.add("mode-rail-hint--zeile");
-        appShell.insertBefore(modeRailHint, appShell.firstChild);
-      }
+    // Handy: als Hinweis ueber den Knoepfen am unteren Rand (bleibt schwebend,
+    // verschiebt also nichts). Oben verdeckte er die Ueberschrift.
+    if (window.innerWidth < 760) {
+      modeRailHint.classList.add("mode-rail-hint--unten");
       modeRailHint.style.left = "";
       modeRailHint.style.top = "";
       return;
     }
+    modeRailHint.classList.remove("mode-rail-hint--unten");
     // Leiste ist jetzt eine fest fixierte Zeile ganz oben - Hinweis erscheint
     // darunter, zentriert unter dem Match-Button.
     var firstBtn = modeRail.querySelector(".mode-rail__btn[data-mode-view='swipe']") || modeRail;
