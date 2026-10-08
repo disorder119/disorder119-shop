@@ -41,9 +41,6 @@
 :root[data-theme="hell"] .plate__frame,
 :root[data-theme="hell"] .kasse-stueck__bild { background: #ffffff; box-shadow: none; }
 :root[data-theme="hell"] .cart-line__frame { background: transparent; box-shadow: none; }
-/* Im Warenkorb ohne Schlagschatten: der Rahmen schneidet ihn ab, und der Rest
-   sah wie ein grauer Kasten hinter dem Foto aus. */
-:root[data-theme="hell"] .cart-line__frame img { filter: brightness(var(--d119-hell, 1.08)) contrast(1.06) saturate(1.22); }
 :root[data-theme="hell"] .plate__frame img,
 :root[data-theme="hell"] .gallery__stage img,
 :root[data-theme="hell"] .gallery-thumb img,
@@ -337,3 +334,7 @@ html:root[data-theme="hell"] .lang-switch__btn[aria-current="true"] { background
   background: rgba(var(--d119-grund-rgb), .48);
 }
 }
+
+/* Im Warenkorb ohne Schlagschatten (bewusst hinter der Sammelregel weiter oben): der Rahmen schneidet ihn ab, und der Rest
+   sah wie ein grauer Kasten hinter dem Foto aus. */
+:root[data-theme="hell"] .cart-line__frame img { filter: brightness(var(--d119-hell, 1.08)) contrast(1.06) saturate(1.22); }
