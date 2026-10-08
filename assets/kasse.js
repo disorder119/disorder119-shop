@@ -70,7 +70,7 @@
       abholKarteHinweisLuftbild: "Die amtlichen Luftbilder holt unser Server beim Vermessungsamt deines Bundeslands – ohne deine IP-Adresse. Die Straßenkarte kommt direkt von OpenStreetMap, das dabei deine IP-Adresse sieht.", abholManuell: "Nummer selbst eingeben", abholArt: "Art",
       abholNummer: "Nummer", abholUebernehmen: "Übernehmen", abholNummerFehlt: "Bitte gib die Nummer ein (bis zu 4 Ziffern).",
       postnummer: "DHL-Postnummer", optional: "optional", postnummerHinweisP: "Pflicht an der Packstation: deine 6- bis 10-stellige Postnummer aus der DHL-App. Vor- und Nachname müssen zu deinem DHL-Konto passen.",
-      postnummerHinweisF: "Optional – in der Filiale holst du das Paket mit Ausweis ab.", fehltPostnummer: "Bitte gib deine DHL-Postnummer an (6 bis 10 Ziffern).",
+      postnummerHinweisF: "Pflicht auch an der Filiale: deine 6- bis 10-stellige Postnummer aus der DHL-App. Abholen kannst du mit Ausweis.", fehltPostnummer: "Bitte gib deine DHL-Postnummer an (6 bis 10 Ziffern).",
       postnummerUngueltig: "Die Postnummer hat 6 bis 10 Ziffern.", abholNurDhl: "An Packstation und Filiale liefert nur DHL. Bitte wähle DHL oder die Lieferung an deine Adresse.",
       abholUnvollstaendig: "Bitte wähle die Packstation oder Filiale noch einmal aus.", adresseAbhol: "Für Packstation oder Filiale brauchen wir nur Namen und E-Mail – Straße und Hausnummer kannst du leer lassen.",
       lieferungAn: "Lieferung an"
@@ -127,7 +127,7 @@
       abholKarteHinweisLuftbild: "Our server fetches the official aerial images from your state's survey office – without your IP address. The street map comes directly from OpenStreetMap, which sees your IP address.", abholManuell: "Enter the number yourself", abholArt: "Type", abholNummer: "Number",
       abholUebernehmen: "Use this", abholNummerFehlt: "Please enter the number (up to 4 digits).", postnummer: "DHL Postnummer",
       optional: "optional", postnummerHinweisP: "Required for a Packstation: your 6 to 10 digit Postnummer from the DHL app. First and last name must match your DHL account.",
-      postnummerHinweisF: "Optional – you collect the parcel at the post office with your ID.", fehltPostnummer: "Please enter your DHL Postnummer (6 to 10 digits).",
+      postnummerHinweisF: "Required for a post office too: your 6 to 10 digit Postnummer from the DHL app. Bring your ID to collect.", fehltPostnummer: "Please enter your DHL Postnummer (6 to 10 digits).",
       postnummerUngueltig: "The Postnummer has 6 to 10 digits.", abholNurDhl: "Only DHL delivers to Packstations and post offices. Please choose DHL or delivery to your address.",
       abholUnvollstaendig: "Please choose the Packstation or post office again.", adresseAbhol: "For a Packstation or post office we only need your name and email – you can leave street and house number empty.",
       lieferungAn: "Deliver to"
@@ -185,7 +185,7 @@
       abholKarteHinweisLuftbild: "Notre serveur charge les vues aériennes officielles auprès du service cadastral de ton Land – sans ton adresse IP. Le plan vient directement d’OpenStreetMap, qui voit ton adresse IP.", abholManuell: "Saisir le numéro toi-même", abholArt: "Type", abholNummer: "Numéro", abholUebernehmen: "Valider",
       abholNummerFehlt: "Saisis le numéro (jusqu’à 4 chiffres).", postnummer: "Postnummer DHL", optional: "facultatif",
       postnummerHinweisP: "Obligatoire pour une Packstation : ta Postnummer de 6 à 10 chiffres de l’app DHL. Prénom et nom doivent correspondre à ton compte DHL.",
-      postnummerHinweisF: "Facultatif – tu retires le colis au bureau de poste avec une pièce d’identité.", fehltPostnummer: "Saisis ta Postnummer DHL (6 à 10 chiffres).",
+      postnummerHinweisF: "Obligatoire aussi au bureau de poste : ta Postnummer de 6 à 10 chiffres de l’app DHL. Retrait avec une pièce d’identité.", fehltPostnummer: "Saisis ta Postnummer DHL (6 à 10 chiffres).",
       postnummerUngueltig: "La Postnummer compte 6 à 10 chiffres.", abholNurDhl: "Seul DHL livre en Packstation et en bureau de poste. Choisis DHL ou la livraison à ton adresse.",
       abholUnvollstaendig: "Choisis à nouveau la Packstation ou le bureau de poste.", adresseAbhol: "Pour une Packstation ou un bureau de poste, il nous faut seulement ton nom et ton e-mail – rue et numéro peuvent rester vides.",
       lieferungAn: "Livraison à"
@@ -716,7 +716,7 @@
   }
   function postZeichnen() {
     var filiale = !!abhol.ort && abhol.ort.typ === "filiale";
-    aPostTitel.textContent = t("postnummer") + (filiale ? " (" + t("optional") + ")" : "");
+    aPostTitel.textContent = t("postnummer");
     aPostHinweis.textContent = t(filiale ? "postnummerHinweisF" : "postnummerHinweisP");
   }
 
@@ -1043,8 +1043,8 @@
         fehler.push(aListe.querySelector("input:not(:disabled)") || aPlz);
       }
       var post = aPost.value.replace(/\s+/g, "");
-      var pflicht = !abhol.ort || abhol.ort.typ === "packstation";
-      pruef(aPost, /^\d{6,10}$/.test(post) || (!post && !pflicht), post ? t("postnummerUngueltig") : t("fehltPostnummer"));
+      // Pflicht an Packstation und Filiale - DHL frankiert beide nur mit Postnummer.
+      pruef(aPost, /^\d{6,10}$/.test(post), post ? t("postnummerUngueltig") : t("fehltPostnummer"));
     } else {
       pruef(f.plz, /^\d{5}$/.test(f.plz.value), t("fehltPlz"));
       pruef(f.ort, f.ort.value.trim().length >= 2, t("fehltOrt"));
