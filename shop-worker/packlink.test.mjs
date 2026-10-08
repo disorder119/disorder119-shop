@@ -161,8 +161,8 @@ test("admin offers work without an API key: every safe home-delivery carrier, ch
     assert.equal(anfrage.query.get("from[zip]"), "63739");
     assert.equal(anfrage.query.get("to[zip]"), "10115");
     assert.equal(anfrage.query.get("to[country]"), "DE");
-    assert.equal(anfrage.query.get("packages[0][weight]"), "1");
-    assert.equal(anfrage.query.get("packages[0][length]"), "35");
+    assert.equal(anfrage.query.get("packages[0][weight]"), "2");
+    assert.equal(anfrage.query.get("packages[0][length]"), "60");
   } finally {
     fake.restore();
   }
@@ -198,7 +198,7 @@ test("draft -> payment in Packlink -> tracking number and label on the order", a
     const post = fake.calls.find(c => c.method === "POST");
     assert.equal(post.headers.Authorization, "packlink-test-key");
     assert.equal(post.body.service_id, 23655);
-    assert.deepEqual(post.body.packages, [{ width: 30, height: 15, length: 40, weight: 2 }]);
+    assert.deepEqual(post.body.packages, [{ width: 40, height: 30, length: 60, weight: 5 }]);
     assert.equal(post.body.content_second_hand, true);
     assert.equal(post.body.contentvalue, 90);
     assert.equal(post.body.shipment_custom_reference, "D119-2026-0001");
@@ -334,7 +334,7 @@ test("buying a label: one /v1/orders call, no customer email or phone, label str
     assert.equal(kauf.body.shipments.length, 1);
     const sendung = kauf.body.shipments[0];
     assert.equal(sendung.service_id, 20955);
-    assert.deepEqual(sendung.packages, [{ width: 30, height: 15, length: 40, weight: 2 }]);
+    assert.deepEqual(sendung.packages, [{ width: 40, height: 30, length: 60, weight: 5 }]);
     assert.equal(sendung.from.zip_code, "63739");
     assert.equal(sendung.to.surname, "Müller");
     assert.equal("email" in sendung.to, false);
@@ -584,7 +584,7 @@ test("webhook drives the order: label -> shipped (mail once) -> delivered, never
     // Die Admin-App bekommt die Wahl aus dem Checkout mit.
     const offen = await call(env, "/admin/versand/o1/packlink");
     assert.equal(offen.data.wahl.serviceId, 23655);
-    assert.equal(offen.data.wahl.paketName, "Mittel");
+    assert.equal(offen.data.wahl.paketName, "bis 5 kg");
     assert.equal(offen.data.wahl.art, "standard");
     assert.equal(offen.data.wahl.auslandsadresse, false);
     const angebote = await call(env, "/admin/versand/o1/packlink/angebote");

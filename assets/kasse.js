@@ -24,11 +24,11 @@
       fehltEmail: "Bitte gib eine gültige E-Mail-Adresse an.", appleCoupon: "Mit Gutschein bitte PayPal wählen; der Rabatt wird dort vor der Zahlung geprüft.",
       vorname: "Vorname", nachname: "Nachname", plz: "PLZ", ort: "Ort", strasse: "Straße",
       hausnummer: "Nr.", zusatz: "Adresszusatz (optional)",
-      landHinweis: "Wir liefern innerhalb Deutschlands mit DHL oder DPD, bezahlt wird mit PayPal oder Apple Pay. Mit DHL auch an eine Packstation oder Filiale.",
+      landHinweis: "Wir liefern innerhalb Deutschlands mit DHL – an die Haustür, an eine Packstation oder in eine Filiale. Bezahlt wird mit PayPal oder Apple Pay.",
       agb: "AGB & Widerruf", datenschutz: "Datenschutz", impressum: "Impressum", widerruf: "Vertrag widerrufen",
       laedt: "Wird geladen …", leer: "Dein Warenkorb ist leer.", zumArchiv: "Zum Archiv",
       nichtMehr: "Nicht mehr verfügbar – wird nicht mitbestellt:", groesse: "Größe", paket: "Paket",
-      paketS: "klein", paketM: "mittel", paketL: "groß", tag1: "1 Werktag", tageN: "{n} Werktage",
+      paketS: "bis 2 kg", paketM: "bis 5 kg", paketL: "bis 10 kg", paketXL: "bis 20 kg", paketXXL: "bis 31,5 kg", tag1: "1 Werktag", tageN: "{n} Werktage",
       versandLaedt: "Versand wird berechnet …", versandFehlt: "Der Versandpreis ist gerade nicht abrufbar. Bitte lade die Seite gleich neu.",
       versandWahlFehlt: "Dein gewählter Versanddienst ist nicht mehr verfügbar. Bitte wähle eine neue Versandart.",
       zwischensumme: "Stücke", versandZeile: "Versand", gesamt: "Gesamt", kostenlos: "kostenlos",
@@ -81,11 +81,11 @@
       fehltEmail: "Please enter a valid email address.", appleCoupon: "For coupons, please choose PayPal; the discount is checked before payment.",
       vorname: "First name", nachname: "Last name", plz: "Postcode", ort: "Town", strasse: "Street",
       hausnummer: "No.", zusatz: "Address line 2 (optional)",
-      landHinweis: "We deliver within Germany with DHL or DPD; payment is made with PayPal or Apple Pay. With DHL also to a Packstation or post office.",
+      landHinweis: "We deliver within Germany with DHL – to your door, to a Packstation or to a post office. Payment is made with PayPal or Apple Pay.",
       agb: "Terms & withdrawal", datenschutz: "Privacy", impressum: "Legal notice", widerruf: "Withdraw from contract here",
       laedt: "Loading …", leer: "Your cart is empty.", zumArchiv: "To the archive",
       nichtMehr: "No longer available – not included:", groesse: "Size", paket: "parcel",
-      paketS: "small", paketM: "medium", paketL: "large", tag1: "1 working day", tageN: "{n} working days",
+      paketS: "up to 2 kg", paketM: "up to 5 kg", paketL: "up to 10 kg", paketXL: "up to 20 kg", paketXXL: "up to 31.5 kg", tag1: "1 working day", tageN: "{n} working days",
       versandLaedt: "Calculating shipping …", versandFehlt: "The shipping price is not available right now. Please reload the page in a moment.",
       versandWahlFehlt: "Your selected carrier is no longer available. Please choose another shipping option.",
       zwischensumme: "Pieces", versandZeile: "Shipping", gesamt: "Total", kostenlos: "free",
@@ -138,11 +138,11 @@
       fehltEmail: "Saisis une adresse e-mail valide.", appleCoupon: "Pour utiliser un bon, choisis PayPal ; la réduction est vérifiée avant le paiement.",
       vorname: "Prénom", nachname: "Nom", plz: "Code postal", ort: "Ville", strasse: "Rue",
       hausnummer: "N°", zusatz: "Complément d'adresse (facultatif)",
-      landHinweis: "Nous livrons en Allemagne avec DHL ou DPD ; le paiement se fait avec PayPal ou Apple Pay. Avec DHL aussi en Packstation ou bureau de poste.",
+      landHinweis: "Nous livrons en Allemagne avec DHL – à domicile, en Packstation ou en bureau de poste. Le paiement se fait avec PayPal ou Apple Pay.",
       agb: "CGV & rétractation", datenschutz: "Confidentialité", impressum: "Mentions légales", widerruf: "Se rétracter du contrat ici",
       laedt: "Chargement …", leer: "Ton panier est vide.", zumArchiv: "Vers l'archive",
       nichtMehr: "Plus disponible – non inclus :", groesse: "Taille", paket: "colis",
-      paketS: "petit", paketM: "moyen", paketL: "grand", tag1: "1 jour ouvré", tageN: "{n} jours ouvrés",
+      paketS: "jusqu’à 2 kg", paketM: "jusqu’à 5 kg", paketL: "jusqu’à 10 kg", paketXL: "jusqu’à 20 kg", paketXXL: "jusqu’à 31,5 kg", tag1: "1 jour ouvré", tageN: "{n} jours ouvrés",
       versandLaedt: "Calcul de la livraison …", versandFehlt: "Le prix de livraison n'est pas disponible pour le moment. Recharge la page dans un instant.",
       versandWahlFehlt: "Le transporteur choisi n'est plus disponible. Choisis un autre mode de livraison.",
       zwischensumme: "Pièces", versandZeile: "Livraison", gesamt: "Total", kostenlos: "gratuite",
@@ -335,7 +335,9 @@
   function preisText(cents) { return Number(cents) === 0 ? t("kostenlos") : geld(cents); }
   function geldRund(cents) {
     var euro = Math.round((Number(cents) || 0) / 100);
-    return LANG === "en" ? "€" + euro : euro + " €";
+    // Tausendertrennung je Sprache: 2.500 € / €2,500 / 2 500 €.
+    var text = String(euro).replace(/\B(?=(\d{3})+(?!\d))/g, LANG === "en" ? "," : LANG === "fr" ? " " : ".");
+    return LANG === "en" ? "€" + text : text + " €";
   }
   // "DHL Paket" statt "DHL DHL Paket": den Paketdienst nur nennen, wenn der Titel ihn nicht schon traegt.
   function versandName(o) {
@@ -375,7 +377,7 @@
       var wohin = el("div", "kasse-wohin");
       wohin.setAttribute("role", "radiogroup");
       wohin.setAttribute("aria-label", t("zustWohin"));
-      [["haustuer", t("zustHaustuer"), ""], ["abholort", t("zustAbholort"), t("zustNurDhl")]].forEach(function (w) {
+      [["haustuer", t("zustHaustuer"), ""], ["abholort", t("zustAbholort"), ""]].forEach(function (w) {
         var label = el("label", "kasse-option kasse-option--wohin");
         var radio = document.createElement("input");
         radio.type = "radio"; radio.name = "kasseWohin"; radio.value = w[0];

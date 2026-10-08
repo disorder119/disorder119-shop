@@ -24,12 +24,16 @@ const DHL_ANTWORT = {
   ],
 };
 
-test("feste Tarife: DHL und DPD zu Privatpreisen je Paketgroesse, nur DHL an Abholstationen", () => {
-  const kurz = paket => festeOptionen(paket).map(o => [o.id, o.carrier, o.preisCents, o.abholstation]);
-  assert.deepEqual(kurz("S"), [["fest-dpd-S", "DPD", 409, false], ["fest-dhl-S", "DHL", 619, true]]);
-  assert.deepEqual(kurz("M"), [["fest-dpd-M", "DPD", 578, false], ["fest-dhl-M", "DHL", 619, true]]);
-  assert.deepEqual(kurz("L"), [["fest-dpd-L", "DPD", 578, false], ["fest-dhl-L", "DHL", 769, true]]);
-  assert.ok(festeOptionen("M").every(o => o.quelle === "fest" && o.laufzeit === "2 Tage" && o.versichertBisCents >= 50000));
+test("feste Tarife: nur DHL zu Privatpreisen je Gewichtsklasse, Hoeherversicherung nur an die Haustuer", () => {
+  const kurz = paket => festeOptionen(paket).map(o => [o.id, o.carrier, o.preisCents, o.abholstation, o.versichertBisCents]);
+  assert.deepEqual(kurz("S"), [["fest-dhl-S", "DHL", 619, true, 50000], ["fest-dhl-versichert-S", "DHL", 1318, false, 250000]]);
+  assert.deepEqual(festeOptionen("M").map(o => o.preisCents), [769, 1468]);
+  assert.deepEqual(festeOptionen("L").map(o => o.preisCents), [1049, 1748]);
+  assert.deepEqual(festeOptionen("XL").map(o => o.preisCents), [1899, 2598]);
+  assert.deepEqual(festeOptionen("XXL").map(o => o.preisCents), [2399, 3098]);
+  assert.ok(festeOptionen("M").every(o => o.quelle === "fest" && o.carrier === "DHL" && o.laufzeit === "2 Tage"));
+  // Die Hoeherversicherung kostet ueberall genau 6,99 EUR mehr.
+  for (const k of ["S", "M", "L", "XL", "XXL"]) { const [a, b] = festeOptionen(k); assert.equal(b.preisCents - a.preisCents, 699, k); }
   assert.equal(versandQuelle({}), "fest");
   assert.equal(versandQuelle({ VERSAND_QUELLE: "packlink" }), "packlink");
 });
@@ -41,14 +45,20 @@ test("feste Tarife brauchen kein Packlink; ab 99 EUR kostet der guenstigste Vers
   try {
     const ergebnis = await versandOptionen({}, "M");
     assert.equal(ergebnis.quelle, "fest");
+    // 150 EUR: DHL kostenlos, keine Hoeherversicherung (erst ueber 500 EUR).
     const frei = versandkostenfreiAnwenden(ergebnis, 15000);
-    assert.deepEqual(frei.optionen.map(o => [o.carrier, o.preisCents]), [["DPD", 0], ["DHL", 41]]);
+    assert.deepEqual(frei.optionen.map(o => [o.id, o.preisCents]), [["fest-dhl-M", 0]]);
     const unter = versandkostenfreiAnwenden(ergebnis, 9899);
-    assert.deepEqual(unter.optionen.map(o => o.preisCents), [578, 619]);
-    // Die Kasse zeigt "versichert bis 500 €" und bietet Packstation nur bei DHL an.
+    assert.deepEqual(unter.optionen.map(o => o.preisCents), [769]);
+    // 600 EUR: Hoeherversicherung waehlbar, kostet nur den Aufpreis.
+    const teuer = versandkostenfreiAnwenden(ergebnis, 60000);
+    assert.deepEqual(teuer.optionen.map(o => [o.id, o.preisCents, o.versichertBisCents]), [["fest-dhl-M", 0, 50000], ["fest-dhl-versichert-M", 699, 250000]]);
+    assert.deepEqual(versandkostenfreiAnwenden(ergebnis, 50000).optionen.length, 1, "genau 500 EUR deckt die normale Haftung");
+    // Die Kasse zeigt "versichert bis 500 €", Packstation geht.
     const kasse = oeffentlicheOptionen(unter, new Date("2026-10-08T10:00:00Z"));
     assert.deepEqual(kasse.optionen.map(o => [o.carrier, o.abholstation, o.versichertBisCents, o.tage]),
-      [["DPD", false, 52000, 2], ["DHL", true, 50000, 2]]);
+      [["DHL", true, 50000, 2]]);
+    assert.equal(kasse.paketName, "bis 5 kg");
     assert.ok(kasse.optionen.every(o => o.lieferung && o.lieferung.von && o.lieferung.bis));
   } finally {
     globalThis.fetch = original;

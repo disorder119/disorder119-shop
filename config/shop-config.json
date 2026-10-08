@@ -3,13 +3,13 @@
   "whatsappNumber": "",
   "email": "disorder119shop@gmail.com",
   "versand": {
-    "_comment": "Einzige Quelle fuer Versand: Paketgroessen (cm/kg) und Ersatzpreise in Cent, falls Packlink gerade keine Preise liefert. Der Worker (shop-worker/versand-config.js) bundelt diese Datei, build_site.py liest sie fuer Produktseiten und Google-Daten. Die echten Preise kommen live von Packlink; der Ersatzpreis gilt nur ohne Verbindung.",
+    "_comment": "Einzige Quelle fuer Versand. Seit 08.10.2026 nur DHL zu Privatpreisen (Wunsch des Inhabers). Paketklassen nach DHL-Gewicht: S bis 2 kg (60x30x15 cm), M bis 5 kg, L bis 10 kg, XL bis 20 kg, XXL bis 31,5 kg. Welche Klasse eine Bestellung braucht, schaetzt der Worker aus Gewicht und Volumen der Stuecke (versand.schaetzung, shop-worker/versand-config.js). build_site.py liest denselben Block. ersatzCents gilt nur, falls quelle wieder \"packlink\" ist und Packlink nicht antwortet.",
     "zielLand": "DE",
     "referenzPlz": "10115",
-    "standardGroesse": "M",
+    "standardGroesse": "S",
     "quelle": "fest",
     "tarife": {
-      "_comment": "Feste Versandpreise im Checkout (Wunsch des Inhabers 08.10.2026: DHL und DPD zu Privatpreisen, Etikett von Hand bzw. halbautomatisch). Preise in Cent je Paketgroesse S/M/L, inklusive Versicherung des Paketdienstes. DHL Paket: 6,19 EUR bis 2 kg, 7,69 EUR bis 5 kg (dhl.de, Online-Frankierung). DPD: Groesse nach kuerzester + laengster Seite (S bis 50 cm 4,09 EUR, M bis 70 cm 5,78 EUR; dpd.de, Abgabe im Pickup Paketshop). Nur DHL liefert an Packstation und Filiale. quelle \"packlink\" schaltet zurueck auf Packlink-Preise.",
+      "_comment": "Feste Versandpreise im Checkout (Inhaber 08.10.2026: nur DHL, Privatpreise der Online-Frankierung, Etikett ueber die Admin-App als QR-Marke). Preise in Cent je Paketklasse. DHL Paket: 2 kg 6,19 / 5 kg 7,69 / 10 kg 10,49 / 20 kg 18,99 / 31,5 kg 23,99 EUR, Haftung bis 500 EUR eingeschlossen. Hoeherversicherung bis 2.500 EUR: +6,99 EUR (DHL Transportversicherung), nur an die Haustuer und erst ab 500 EUR Warenwert (abWarenwertCents). quelle \"packlink\" schaltet zurueck auf Packlink-Preise.",
       "liste": [
         {
           "id": "dhl",
@@ -18,31 +18,36 @@
           "art": "standard",
           "preise": {
             "S": 619,
-            "M": 619,
-            "L": 769
+            "M": 769,
+            "L": 1049,
+            "XL": 1899,
+            "XXL": 2399
           },
           "laufzeitTage": 2,
           "abholstation": true,
           "versichertBisCents": 50000
         },
         {
-          "id": "dpd",
-          "carrier": "DPD",
-          "titel": "DPD",
+          "id": "dhl-versichert",
+          "carrier": "DHL",
+          "titel": "DHL Paket mit Höherversicherung",
           "art": "standard",
           "preise": {
-            "S": 409,
-            "M": 578,
-            "L": 578
+            "S": 1318,
+            "M": 1468,
+            "L": 1748,
+            "XL": 2598,
+            "XXL": 3098
           },
           "laufzeitTage": 2,
           "abholstation": false,
-          "versichertBisCents": 52000
+          "versichertBisCents": 250000,
+          "abWarenwertCents": 50001
         }
       ]
     },
     "dienste": {
-      "_comment": "Welche Paketdienste die Kundschaft im Checkout sieht (Wunsch des Inhabers 08.10.2026): nur Hermes, DPD, GLS und DHL, soweit Packlink sie anbietet - kein TNT, kein FedEx, kein UPS. Ein Name erlaubt auch Varianten wie \"DHL Paket\" oder \"Hermes Germany\"; die Sperrliste gilt zusaetzlich. Express nur, wenn einer dieser Dienste ihn bis expressMaxCents anbietet. In der privaten Admin-App stehen beim Etikett dieselben Dienste.",
+      "_comment": "Gilt nur fuer quelle \"packlink\" (Rueckfall) und den Packlink-Reiter der Admin-App: Hermes, DPD, GLS und DHL, kein TNT, FedEx oder UPS. Im Checkout gibt es seit 08.10.2026 nur DHL (versand.tarife).",
       "erlaubt": [
         "HERMES",
         "DPD",
@@ -62,54 +67,295 @@
     },
     "pakete": {
       "S": {
-        "name": "Klein",
-        "beispiel": "Shirt, Top, Rock, Accessoire",
-        "laenge": 35,
-        "breite": 25,
-        "hoehe": 8,
-        "gewichtKg": 1,
-        "ersatzCents": 590
-      },
-      "M": {
-        "name": "Mittel",
-        "beispiel": "Jacke, Hose, Kleid, Schuhe",
-        "laenge": 40,
+        "name": "bis 2 kg",
+        "beispiel": "Shirt, Top, Rock, Kleid, Hose, Strick, leichte Jacke, Sneaker, Accessoire",
+        "laenge": 60,
         "breite": 30,
         "hoehe": 15,
         "gewichtKg": 2,
-        "ersatzCents": 850
+        "maxLiter": 22,
+        "ersatzCents": 619
+      },
+      "M": {
+        "name": "bis 5 kg",
+        "beispiel": "Mantel, Lederjacke, Felljacke, Stiefel, mehrere Teile",
+        "laenge": 60,
+        "breite": 40,
+        "hoehe": 30,
+        "gewichtKg": 5,
+        "ersatzCents": 769
       },
       "L": {
-        "name": "Groß",
-        "beispiel": "Mantel, Stiefel, mehrere Teile",
-        "laenge": 50,
-        "breite": 40,
-        "hoehe": 20,
-        "gewichtKg": 5,
-        "ersatzCents": 990
+        "name": "bis 10 kg",
+        "beispiel": "viele Teile, schwere Maentel",
+        "laenge": 80,
+        "breite": 50,
+        "hoehe": 40,
+        "gewichtKg": 10,
+        "ersatzCents": 1049
+      },
+      "XL": {
+        "name": "bis 20 kg",
+        "beispiel": "sehr grosse Bestellung",
+        "laenge": 120,
+        "breite": 60,
+        "hoehe": 60,
+        "gewichtKg": 20,
+        "ersatzCents": 1899
+      },
+      "XXL": {
+        "name": "bis 31,5 kg",
+        "beispiel": "sehr grosse Bestellung",
+        "laenge": 120,
+        "breite": 60,
+        "hoehe": 60,
+        "gewichtKg": 31.5,
+        "ersatzCents": 2399
       }
     },
-    "groesseNachProdukttyp": {
-      "Boots": "L",
-      "Coat": "L",
-      "Trench Coat": "L",
-      "Toaster": "L",
-      "Design Object": "L",
-      "Bag": "M",
-      "Backpack": "M"
-    },
-    "groesseNachKategorie": {
-      "Tops": "S",
-      "Shirts": "S",
-      "Skirts": "S",
-      "Accessories": "S",
-      "Dresses": "M",
-      "Knitwear": "M",
-      "Pants": "M",
-      "Jackets": "M",
-      "Shoes": "M",
-      "Coats": "L",
-      "Objects": "L"
+    "schaetzung": {
+      "_comment": "Geschaetztes Gewicht (kg) und Volumen (Liter, gefaltet bzw. im Schuhkarton) je Stueck: zuerst nach Produktart, dann nach Kategorie, sonst standard. Woerter wie Leder, Fell, Daunen im Titel machen ein Stueck schwerer und dicker (schwer.faktor). Dazu kommt einmal die Verpackung. Die Bestellung bekommt die kleinste Paketklasse, deren Gewicht reicht - Klasse S nur, wenn auch das Volumen in den 2-kg-Karton (60x30x15) passt.",
+      "verpackungKg": 0.4,
+      "standard": {
+        "kg": 1,
+        "liter": 8
+      },
+      "schwer": {
+        "muster": "leder|leather|fell|pelz|\\bfur\\b|daunen|(?<!button-)\\bdown\\b|puffer|stepp|shearling|teddy|(?<!baum)woll|\\bwool\\b|parka",
+        "faktor": 1.6
+      },
+      "nachProdukttyp": {
+        "T-Shirt": {
+          "kg": 0.25,
+          "liter": 2
+        },
+        "Tank Top": {
+          "kg": 0.2,
+          "liter": 1
+        },
+        "Polo Shirt": {
+          "kg": 0.3,
+          "liter": 2
+        },
+        "Long Sleeve": {
+          "kg": 0.35,
+          "liter": 2
+        },
+        "Shirt": {
+          "kg": 0.35,
+          "liter": 2
+        },
+        "Blouse": {
+          "kg": 0.3,
+          "liter": 2
+        },
+        "Tunic": {
+          "kg": 0.35,
+          "liter": 2
+        },
+        "Top": {
+          "kg": 0.3,
+          "liter": 2
+        },
+        "Sleepwear": {
+          "kg": 0.3,
+          "liter": 2
+        },
+        "Set": {
+          "kg": 0.6,
+          "liter": 4
+        },
+        "Knit Top": {
+          "kg": 0.4,
+          "liter": 3
+        },
+        "Cardigan": {
+          "kg": 0.7,
+          "liter": 5
+        },
+        "Sweater": {
+          "kg": 0.8,
+          "liter": 6
+        },
+        "Sweatshirt": {
+          "kg": 0.7,
+          "liter": 6
+        },
+        "Vest": {
+          "kg": 0.5,
+          "liter": 4
+        },
+        "Blazer": {
+          "kg": 1,
+          "liter": 7
+        },
+        "Jacket": {
+          "kg": 1.2,
+          "liter": 9
+        },
+        "Bomber Jacket": {
+          "kg": 1.3,
+          "liter": 10
+        },
+        "Biker Jacket": {
+          "kg": 2,
+          "liter": 10
+        },
+        "Coat": {
+          "kg": 2,
+          "liter": 15
+        },
+        "Trench Coat": {
+          "kg": 1.6,
+          "liter": 12
+        },
+        "Trousers": {
+          "kg": 0.8,
+          "liter": 4
+        },
+        "Jeans": {
+          "kg": 0.8,
+          "liter": 4
+        },
+        "Shorts": {
+          "kg": 0.35,
+          "liter": 2
+        },
+        "Swim Shorts": {
+          "kg": 0.25,
+          "liter": 2
+        },
+        "Underwear Shorts": {
+          "kg": 0.15,
+          "liter": 1
+        },
+        "Skirt": {
+          "kg": 0.4,
+          "liter": 3
+        },
+        "Dress": {
+          "kg": 0.6,
+          "liter": 4
+        },
+        "Sneakers": {
+          "kg": 1.4,
+          "liter": 10
+        },
+        "Shoes": {
+          "kg": 1.3,
+          "liter": 9
+        },
+        "Loafers": {
+          "kg": 1.1,
+          "liter": 8
+        },
+        "Heels": {
+          "kg": 0.9,
+          "liter": 7
+        },
+        "Sandals": {
+          "kg": 0.7,
+          "liter": 6
+        },
+        "Boots": {
+          "kg": 2.4,
+          "liter": 18
+        },
+        "Sunglasses": {
+          "kg": 0.3,
+          "liter": 1
+        },
+        "Beanie": {
+          "kg": 0.15,
+          "liter": 1
+        },
+        "Cap": {
+          "kg": 0.2,
+          "liter": 3
+        },
+        "Hat": {
+          "kg": 0.3,
+          "liter": 8
+        },
+        "Belt": {
+          "kg": 0.35,
+          "liter": 1
+        },
+        "Scarf": {
+          "kg": 0.3,
+          "liter": 2
+        },
+        "Wallet": {
+          "kg": 0.2,
+          "liter": 1
+        },
+        "Bag": {
+          "kg": 1,
+          "liter": 12
+        },
+        "Backpack": {
+          "kg": 1,
+          "liter": 12
+        },
+        "Toaster": {
+          "kg": 3,
+          "liter": 20
+        },
+        "Design Object": {
+          "kg": 2.5,
+          "liter": 18
+        }
+      },
+      "nachKategorie": {
+        "Tops": {
+          "kg": 0.3,
+          "liter": 2
+        },
+        "Shirts": {
+          "kg": 0.3,
+          "liter": 2
+        },
+        "Skirts": {
+          "kg": 0.4,
+          "liter": 3
+        },
+        "Dresses": {
+          "kg": 0.6,
+          "liter": 4
+        },
+        "Pants": {
+          "kg": 0.8,
+          "liter": 4
+        },
+        "Knitwear": {
+          "kg": 0.7,
+          "liter": 5
+        },
+        "Jackets": {
+          "kg": 1.3,
+          "liter": 9
+        },
+        "Coats": {
+          "kg": 2,
+          "liter": 14
+        },
+        "Shoes": {
+          "kg": 1.4,
+          "liter": 10
+        },
+        "Accessories": {
+          "kg": 0.3,
+          "liter": 2
+        },
+        "Bags": {
+          "kg": 1,
+          "liter": 12
+        },
+        "Objects": {
+          "kg": 3,
+          "liter": 20
+        }
+      }
     }
   },
   "paypalClientId": "BAAcvD8X1aHIk42UUDAMZkYZ2i5gKLPCXZDBzbWjsh-axJ_6551l-FXgDdboqGtmZSidZbGWon2cQ_SuaI",

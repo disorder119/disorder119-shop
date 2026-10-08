@@ -314,14 +314,13 @@ def test_product_cart_and_rental(driver) -> None:
         fail("Warenkorb mischt Preis-auf-Anfrage mit 0,00 EUR")
     assert_no_horizontal_overflow(driver, "Warenkorb mobile")
 
-    # Product-detail deep link must land in the one canonical Rental V2 flow.
+    # Die Produktseite wirbt nicht mehr fuers Mieten (Inhaber 08.10.2026); der
+    # Deep-Link /mieten/?item=<id> muss aber weiter im Rental-V2-Dialog landen.
     driver.get(href)
-    rental_link = driver.find_element(By.CSS_SELECTOR, ".btn--rental")
-    rental_href = rental_link.get_attribute("href")
-    if not rental_href or f"/mieten/?item={item_id}" not in rental_href:
-        fail(f"Produkt -> Mieten Deep-Link falsch: {rental_href!r}")
-    rental_link.click()
-    wait(driver, lambda d: "/mieten/" in d.current_url, "Produkt -> Mieten Navigation")
+    if driver.find_elements(By.CSS_SELECTOR, ".btn--rental"):
+        fail("Produktseite zeigt wieder den Mieten-Hinweis")
+    driver.get(urljoin(BASE_URL, f"mieten/?item={item_id}"))
+    wait(driver, lambda d: "/mieten/" in d.current_url, "Mieten Deep-Link")
     backdrop = wait(driver, EC.presence_of_element_located((By.ID, "d119RentalV2Backdrop")), "Rental V2 Backdrop")
     wait(driver, lambda d: "open" in (backdrop.get_attribute("class") or ""), "Rental V2 automatisch offen")
     if not backdrop.is_displayed():

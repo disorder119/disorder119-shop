@@ -108,7 +108,7 @@ test("opted-in paid order keeps checkout email and sends one verified-account li
     MAIL_API_KEY: "test-key", MAIL_FROM: "shop@example.com" };
   try {
     const created = await post(env, "/create-order", { itemIds: [9428, 9427], adresse: ADRESSE,
-      email: "Kundin@Example.com", createAccount: true, versand: "pl-M-20425", versandPreisCents: 0 }, "k-konto-0000000001");
+      email: "Kundin@Example.com", createAccount: true, versand: "pl-S-20425", versandPreisCents: 0 }, "k-konto-0000000001");
     assert.equal(created.status, 200, JSON.stringify(created.data));
     const paid = await post({ ...env, GITHUB_TOKEN: "" }, "/capture-order", { orderId: created.data.id }, "k-konto-zahlung-001");
     assert.equal(paid.status, 200, JSON.stringify(paid.data));
@@ -156,7 +156,7 @@ test("checkout with two pieces: one PayPal order with the checkout address, both
     // Zwei Teile brauchen mindestens das mittlere Paket (Nachbau: DPD 5,59
     // EUR). Ab 99 EUR Warenwert uebernimmt der Shop den guenstigsten Standard.
     const angelegt = await post(env, "/create-order",
-      { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 0 }, "k-kasse-00000000001");
+      { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-S-20425", versandPreisCents: 0 }, "k-kasse-00000000001");
     assert.equal(angelegt.status, 200, JSON.stringify(angelegt.data));
     assert.deepEqual(angelegt.data.itemIds, [9428, 9427]);
     assert.equal(angelegt.data.itemPrice, "240.00");
@@ -186,7 +186,7 @@ test("checkout with two pieces: one PayPal order with the checkout address, both
     const kontakt = DB.raw.prepare("SELECT source_provider,email,account_requested,recipient_name,address_line1,postal_code,city FROM order_contact_snapshots").get();
     assert.deepEqual({ ...kontakt }, { source_provider: "CHECKOUT", email: "kundin@example.com", account_requested: 0,
       recipient_name: "Maria Müller", address_line1: "Nelseestraße 25a", postal_code: "63739", city: "Aschaffenburg" });
-    assert.equal(DB.raw.prepare("SELECT paket FROM order_versand").get().paket, "M");
+    assert.equal(DB.raw.prepare("SELECT paket FROM order_versand").get().paket, "S"); // T-Shirt und Jeans: 1,45 kg
 
     // Bezahlt: beide Stuecke PAID, beide Reservierungen verbraucht. Ohne
     // GitHub-Schluessel scheitert nur der Katalog-Abgleich - je Stueck vermerkt.
@@ -220,7 +220,7 @@ test("a PayPal order created before the switch (intent CAPTURE) is still capture
   const env = { VERSAND_QUELLE: "packlink", DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
   try {
     const angelegt = await post(env, "/create-order",
-      { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 0 }, "k-kasse-alt-0000001");
+      { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-S-20425", versandPreisCents: 0 }, "k-kasse-alt-0000001");
     assert.equal(angelegt.status, 200, JSON.stringify(angelegt.data));
     const bezahlt = await post({ ...env, GITHUB_TOKEN: "" }, "/capture-order", { orderId: "PAYPAL-MULTI-1" }, "k-zahlung-alt-00001");
     assert.equal(bezahlt.status, 200, JSON.stringify(bezahlt.data));
@@ -247,9 +247,9 @@ test("checkout: a sold piece stops the whole order, nothing stays reserved", asy
     assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations WHERE status='RESERVED'").get().n, 0);
 
     // Schon reserviertes Stueck in einer zweiten Bestellung: die erste Reservierung wird zurueckgenommen.
-    const erste = await post(env, "/create-order", { itemIds: [9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 559 }, "k-kasse-00000000003");
+    const erste = await post(env, "/create-order", { itemIds: [9427], adresse: ADRESSE, versand: "pl-S-20425", versandPreisCents: 559 }, "k-kasse-00000000003");
     assert.equal(erste.status, 200, JSON.stringify(erste.data));
-    const zweite = await post(env, "/create-order", { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-M-20425", versandPreisCents: 0 }, "k-kasse-00000000004");
+    const zweite = await post(env, "/create-order", { itemIds: [9428, 9427], adresse: ADRESSE, versand: "pl-S-20425", versandPreisCents: 0 }, "k-kasse-00000000004");
     assert.equal(zweite.status, 409);
     assert.equal(zweite.data.error, "ITEM_UNAVAILABLE");
     const aktiv = DB.raw.prepare("SELECT idempotency_key FROM reservations WHERE status='RESERVED'").all();
@@ -315,7 +315,7 @@ test("address suggestions: town for a postcode, streets for a prefix, strict inp
   assert.equal(strassennameAus("Neue Str."), "Neue Straße");
 });
 
-test("create-order: DHL an Packstation zu festen Preisen, DPD nur an die Haustuer", async () => {
+test("create-order: nur DHL zu festen Preisen, auch an Packstation; Hoeherversicherung erst ueber 500 EUR", async () => {
   versandCacheLeeren();
   const netz = fakeNetz();
   const DB = sqliteD1(allMigrations());
@@ -323,18 +323,22 @@ test("create-order: DHL an Packstation zu festen Preisen, DPD nur an die Haustue
   const packstation = { art: "packstation", postnummer: "12345678",
     abholort: { nummer: "162", name: "Packstation 162", strasse: "Hanauer Str. 2", plz: "63739", ort: "Aschaffenburg" } };
   try {
-    // DPD stellt nicht an Packstationen zu.
+    // DPD gibt es nicht mehr; die Hoeherversicherung erst ueber 500 EUR (Jeans: 90 EUR).
     const dpd = await post(env, "/create-order",
-      { itemIds: [9427], adresse: { name: "Maria Müller" }, zustellung: packstation, versand: "fest-dpd-M", versandPreisCents: 578 }, "k-privat-00000000001");
-    assert.equal(dpd.status, 422);
-    assert.equal(dpd.data.error, "ABHOLSTATION_NUR_DHL");
+      { itemIds: [9427], adresse: { name: "Maria Müller" }, zustellung: packstation, versand: "fest-dpd-S", versandPreisCents: 409 }, "k-privat-00000000001");
+    assert.equal(dpd.status, 409);
+    assert.equal(dpd.data.error, "VERSAND_OPTION_UNGUELTIG");
+    assert.deepEqual(dpd.data.versand.optionen.map(o => [o.id, o.preisCents]), [["fest-dhl-S", 619]]);
+    const versichert = await post(env, "/create-order",
+      { itemIds: [9427], adresse: ADRESSE, versand: "fest-dhl-versichert-S", versandPreisCents: 1318 }, "k-privat-00000000005");
+    assert.equal(versichert.data.error, "VERSAND_OPTION_UNGUELTIG");
     const ohnePostnummer = await post(env, "/create-order",
-      { itemIds: [9427], adresse: { name: "Maria Müller" }, zustellung: { ...packstation, postnummer: "" }, versand: "fest-dhl-M", versandPreisCents: 619 }, "k-privat-00000000002");
+      { itemIds: [9427], adresse: { name: "Maria Müller" }, zustellung: { ...packstation, postnummer: "" }, versand: "fest-dhl-S", versandPreisCents: 619 }, "k-privat-00000000002");
     assert.equal(ohnePostnummer.data.error, "POSTNUMMER_FEHLT");
     assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations").get().n, 0);
 
     const angelegt = await post(env, "/create-order",
-      { itemIds: [9427], adresse: { name: "Maria Müller" }, zustellung: packstation, versand: "fest-dhl-M", versandPreisCents: 619 }, "k-privat-00000000003");
+      { itemIds: [9427], adresse: { name: "Maria Müller" }, zustellung: packstation, versand: "fest-dhl-S", versandPreisCents: 619 }, "k-privat-00000000003");
     assert.equal(angelegt.status, 200, JSON.stringify(angelegt.data));
     assert.equal(angelegt.data.shipping, "6.19");
     assert.equal(angelegt.data.total, "96.19");
@@ -346,16 +350,15 @@ test("create-order: DHL an Packstation zu festen Preisen, DPD nur an die Haustue
     assert.equal(netz.calls.filter(c => c.host === "api.packlink.com").length, 0, "feste Preise ohne Packlink");
     const wahl = DB.raw.prepare("SELECT quelle,carrier,paket,preis_cents,zustellart,abholort_json FROM order_versand").get();
     assert.deepEqual({ ...wahl, abholort_json: JSON.parse(wahl.abholort_json) }, {
-      quelle: "fest", carrier: "DHL", paket: "M", preis_cents: 619, zustellart: "packstation",
+      quelle: "fest", carrier: "DHL", paket: "S", preis_cents: 619, zustellart: "packstation",
       abholort_json: { typ: "packstation", nummer: "162", name: "Packstation 162", strasse: "Hanauer Str. 2", plz: "63739", ort: "Aschaffenburg" },
     });
     const kontakt = DB.raw.prepare("SELECT recipient_name,address_line1,address_line2,postal_code,city FROM order_contact_snapshots").get();
     assert.deepEqual({ ...kontakt }, { recipient_name: "Maria Müller", address_line1: "Packstation 162", address_line2: "Postnummer 12345678", postal_code: "63739", city: "Aschaffenburg" });
 
-    // Haustuer mit DPD wie bisher (eigene Datenbank: der PayPal-Nachbau
-    // vergibt immer dieselbe Bestellnummer).
+    // Haustuer (eigene Datenbank: der PayPal-Nachbau vergibt immer dieselbe Bestellnummer).
     const haustuer = await post({ ...env, DB: sqliteD1(allMigrations()) }, "/create-order",
-      { itemIds: [9428], adresse: ADRESSE, versand: "fest-dpd-S", versandPreisCents: 0 }, "k-privat-00000000004");
+      { itemIds: [9428], adresse: ADRESSE, versand: "fest-dhl-S", versandPreisCents: 0 }, "k-privat-00000000004");
     assert.equal(haustuer.status, 200, JSON.stringify(haustuer.data));
     assert.equal(haustuer.data.shipping, "0.00", "ab 99 EUR uebernimmt der Shop den guenstigsten Versand");
   } finally {

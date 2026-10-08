@@ -175,7 +175,7 @@ def validate_and_report() -> None:
     if not isinstance(versand, dict) or not isinstance(versand.get("pakete"), dict):
         fail("config/shop-config.json: Feld 'versand' mit 'pakete' fehlt.")
     else:
-        for key in ("S", "M", "L"):
+        for key in ("S", "M", "L", "XL", "XXL"):
             paket = versand["pakete"].get(key)
             if not isinstance(paket, dict):
                 fail(f"config/shop-config.json: versand.pakete.{key} fehlt.")
@@ -187,12 +187,22 @@ def validate_and_report() -> None:
             gewicht = paket.get("gewichtKg")
             if not isinstance(gewicht, (int, float)) or isinstance(gewicht, bool) or not 0 < gewicht <= 31.5:
                 fail(f"config/shop-config.json: versand.pakete.{key}.gewichtKg muss zwischen 0 und 31,5 kg liegen.")
-        for zuordnung in ("groesseNachProdukttyp", "groesseNachKategorie"):
-            for art, groesse in (versand.get(zuordnung) or {}).items():
-                if groesse not in ("S", "M", "L"):
-                    fail(f"config/shop-config.json: versand.{zuordnung}.{art} muss S, M oder L sein.")
-        if versand.get("standardGroesse") not in ("S", "M", "L"):
-            fail("config/shop-config.json: versand.standardGroesse muss S, M oder L sein.")
+        # Schaetzung je Stueck (Gewicht in kg, Volumen in Litern), daraus die DHL-Klasse.
+        schaetzung = versand.get("schaetzung")
+        if not isinstance(schaetzung, dict):
+            fail("config/shop-config.json: versand.schaetzung fehlt.")
+        else:
+            tabellen = [("standard", {"": schaetzung.get("standard")})]
+            tabellen += [(name, schaetzung.get(name) or {}) for name in ("nachProdukttyp", "nachKategorie")]
+            for name, tabelle in tabellen:
+                for art, wert in tabelle.items():
+                    kg = wert.get("kg") if isinstance(wert, dict) else None
+                    liter = wert.get("liter") if isinstance(wert, dict) else None
+                    if not isinstance(kg, (int, float)) or isinstance(kg, bool) or not 0 < kg <= 31.5 \
+                            or not isinstance(liter, (int, float)) or isinstance(liter, bool) or not 0 < liter <= 500:
+                        fail(f"config/shop-config.json: versand.schaetzung.{name}.{art} braucht kg (0-31,5) und liter (0-500).")
+        if versand.get("standardGroesse") not in ("S", "M", "L", "XL", "XXL"):
+            fail("config/shop-config.json: versand.standardGroesse muss S, M, L, XL oder XXL sein.")
         dienste = versand.get("dienste")
         if dienste is not None:
             # Entweder eine Erlaubt-Liste oder eine Sperrliste ("ausgeschlossen").

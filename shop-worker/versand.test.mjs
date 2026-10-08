@@ -77,8 +77,9 @@ function fakeNetz({ packlinkDown = false } = {}) {
 }
 
 test("the shop config is the single source for package sizes and fallback prices", () => {
-  assert.deepEqual(Object.keys(PAKETE), ["S", "M", "L"]);
-  for (const key of ["S", "M", "L"]) {
+  assert.deepEqual(Object.keys(PAKETE), ["S", "M", "L", "XL", "XXL"]);
+  assert.deepEqual(Object.values(PAKETE).map(p => p.gewichtKg), [2, 5, 10, 20, 31.5], "DHL-Gewichtsklassen");
+  for (const key of Object.keys(PAKETE)) {
     const roh = shopConfig.versand.pakete[key];
     assert.equal(PAKETE[key].laenge, roh.laenge);
     assert.equal(PAKETE[key].gewichtKg, roh.gewichtKg);
@@ -92,15 +93,20 @@ test("the shop config is the single source for package sizes and fallback prices
   assert.equal(paketFuer("x").key, VERSAND.standardGroesse);
 });
 
-test("package size comes from product type first, then category", () => {
-  assert.equal(groesseFuerArtikel(ITEMS[0]), "S");
-  assert.equal(groesseFuerArtikel(ITEMS[1]), "L"); // Boots, obwohl Kategorie Shoes = M
-  assert.equal(groesseFuerArtikel(ITEMS[2]), "M");
-  assert.equal(groesseFuerArtikel({}), VERSAND.standardGroesse);
-  assert.equal(paketFuerArtikel([ITEMS[0]]), "S");
-  assert.equal(paketFuerArtikel([ITEMS[0], ITEMS[0]]), "M"); // zwei Teile passen nicht ins kleine Paket
-  assert.equal(paketFuerArtikel([ITEMS[0], ITEMS[0], ITEMS[0]]), "L");
-  assert.equal(paketFuerArtikel([ITEMS[0], ITEMS[1]]), "L");
+test("package class comes from estimated weight and volume (DHL 2/5/10/20/31,5 kg)", () => {
+  assert.equal(groesseFuerArtikel(ITEMS[0]), "S"); // T-Shirt
+  assert.equal(groesseFuerArtikel(ITEMS[1]), "M"); // Stiefel: 2,4 kg plus Karton
+  assert.equal(groesseFuerArtikel(ITEMS[2]), "S"); // normale Jacke
+  assert.equal(groesseFuerArtikel({ ...ITEMS[2], title: "Dior Lederjacke Herren" }), "M"); // Leder ist schwerer
+  assert.equal(groesseFuerArtikel({ ...ITEMS[2], title: "Balmain Kunstfelljacke Damen" }), "M");
+  assert.equal(groesseFuerArtikel({ ...ITEMS[0], title: "Helmut Lang Baumwollhemd" }), "S", "Baumwolle ist keine Wolle");
+  assert.equal(groesseFuerArtikel({}), "S");
+  assert.equal(paketFuerArtikel([ITEMS[0], ITEMS[0], ITEMS[0]]), "S"); // drei Shirts
+  assert.equal(paketFuerArtikel([ITEMS[0], ITEMS[1]]), "M");
+  assert.equal(paketFuerArtikel([ITEMS[2], ITEMS[2]]), "M"); // zwei Jacken: 2,8 kg
+  assert.equal(paketFuerArtikel(Array(3).fill({ product_type: "Hat" })), "M", "leicht, aber zu dick fuer den 2-kg-Karton");
+  assert.equal(paketFuerArtikel(Array(6).fill(ITEMS[2])), "L");
+  assert.equal(paketFuerArtikel(Array(10).fill({ product_type: "Coat" })), "XXL");
   assert.equal(paketFuerArtikel([]), VERSAND.standardGroesse);
 });
 
@@ -231,12 +237,12 @@ test("the server checks option and price at checkout", async () => {
     // UPS steht nicht zur Wahl, auch nicht per manipulierter Anfrage.
     await assert.rejects(versandFuerBestellung(PACKLINK, [ITEMS[0]], "pl-S-23655", 549), err => err.code === "VERSAND_OPTION_UNGUELTIG");
 
-    // Andere Paketgroesse als beim Artikel (Stiefel = Groß): Kennung passt nicht.
+    // Andere Paketklasse als beim Artikel (Stiefel = bis 5 kg): Kennung passt nicht.
     await assert.rejects(versandFuerBestellung(PACKLINK, [ITEMS[1]], "pl-S-20425", 559), err => {
       assert.ok(err instanceof VersandError);
       assert.equal(err.code, "VERSAND_OPTION_UNGUELTIG");
       assert.equal(err.status, 409);
-      assert.equal(err.versand.paket, "L");
+      assert.equal(err.versand.paket, "M");
       assert.ok(err.versand.optionen.length >= 1);
       return true;
     });
@@ -317,7 +323,7 @@ test("GET /versand/optionen: size from the catalog, CORS only for the shop, stri
     assert.equal(eins.status, 200, JSON.stringify(eins.data));
     assert.equal(eins.cors, SHOP);
     assert.equal(eins.data.paket, "S");
-    assert.equal(eins.data.paketName, "Klein");
+    assert.equal(eins.data.paketName, "bis 2 kg");
     // 150 EUR: der guenstigste Standard ist kostenlos, der Rest kostet den Aufpreis.
     assert.deepEqual(eins.data.optionen.map(o => [o.id, o.titel, o.preis, o.carrier]), [["pl-S-20425", "Standard", "0.00", "DPD"], ["pl-S-66666", "Standard", "1.40", "GLS"], ["pl-S-55555", "Express", "14.31", "DPD"]]);
     assert.deepEqual(eins.data.frei, { abCents: 9900, warenwertCents: 15000, erreicht: true, fehltCents: 0 });
@@ -334,10 +340,12 @@ test("GET /versand/optionen: size from the catalog, CORS only for the shop, stri
     // Zwei Stuecke zusammen ueber der Grenze.
     assert.equal((await abfrage("?artikel=9403,9428")).data.frei.erreicht, true);
 
+    // T-Shirt und Jacke: 1,85 kg mit Karton - passt ins 2-kg-Paket.
     const zwei = await abfrage("?artikel=9428,9402");
-    assert.equal(zwei.data.paket, "M");
+    assert.equal(zwei.data.paket, "S");
+    assert.equal((await abfrage("?artikel=9428,9401")).data.paket, "M", "mit Stiefeln: bis 5 kg");
     const unbekannt = await abfrage("?artikel=9428,1");
-    assert.equal(unbekannt.data.paket, "M");
+    assert.equal(unbekannt.data.paket, "S");
 
     assert.equal((await abfrage("?artikel=abc")).status, 400);
     assert.equal((await abfrage("?artikel=")).status, 400);
