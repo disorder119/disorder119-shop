@@ -18,6 +18,7 @@ import {
   readRepoFile,
   recentCommits,
 } from "./github-datei.js";
+import { istSandbox, sandboxWiederVerfuegbar } from "./sandbox.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -192,6 +193,7 @@ export async function saveCatalog(env, body = {}) {
 // Main-Waechter zurueck. Nur Stuecke, die im Katalog auf SOLD stehen; ein
 // Entwurf oder ein schon verfuegbares Stueck bleibt, wie es ist.
 export async function artikelWiederVerfuegbar(env, itemIds, anlass = "") {
+  if (istSandbox(env)) return sandboxWiederVerfuegbar(env, itemIds);
   if (!env.GITHUB_TOKEN) throw new KatalogError("KATALOG_NICHT_EINGERICHTET", 503);
   const ids = [...new Set((Array.isArray(itemIds) ? itemIds : []).map(id => String(id)).filter(id => /^\d{1,9}$/.test(id)))];
   if (!ids.length) return { ok: true, geaendert: [] };

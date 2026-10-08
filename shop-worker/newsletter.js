@@ -27,6 +27,7 @@ import { privateIpHash } from "./privacy-security.js";
 import { SHOP_URL, escapeHtml, mailTransportReady, normalizeEmail, sendMail } from "./customer-mail.js";
 import { issueRewardCoupon, normalizeCouponCode } from "./game-rewards.js";
 import { absatz, artikelRaster, artikelStreifen, codeBox, kleingedruckt, knopf, mailRahmen, neuesteArtikel, shopHome } from "./mail-design.js";
+import { istSandbox } from "./sandbox.js";
 
 const SHOP_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -259,6 +260,8 @@ export function entwurfMail(artikel) {
 export const BREVO_LIST_NAME = "Newsletter DISORDER119";
 
 async function brevoContacts(env, path, body, method = "POST") {
+  // Testshop: die echte Newsletter-Liste bei Brevo bleibt unberuehrt.
+  if (istSandbox(env)) return null;
   const response = await fetch(`${BREVO_CONTACTS}${path}`, {
     method,
     headers: { "api-key": String(env.MAIL_API_KEY), "Content-Type": "application/json", Accept: "application/json" },
@@ -556,6 +559,7 @@ const BREVO_KAMPAGNEN = "https://api.brevo.com/v3/emailCampaigns";
 
 export async function createCampaignDraft(env, { anzahl = 6, betreff = "" } = {}, now = new Date()) {
   if (!mailTransportReady(env)) throw new NewsletterError("NEWSLETTER_MAIL_NOT_CONFIGURED", 503);
+  if (istSandbox(env)) throw new NewsletterError("IM_TESTSHOP_NICHT_MOEGLICH", 409);
   const artikel = await neuesteArtikel(Math.max(2, Math.min(12, Number(anzahl) || 6)), "de");
   if (!artikel.length) throw new NewsletterError("KEINE_ARTIKEL", 503);
   const list = await ensureListId(env);

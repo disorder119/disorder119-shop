@@ -205,6 +205,23 @@ Zwei Quellen landen in `besucher_ereignisse` (`besucher.js`), beide mit taeglich
 
 Reihenfolge beim Ausrollen: Migration `0034_besucher_server.sql`, dann dieser Worker, dann `npx wrangler deploy -c wrangler.storefront.toml` (die Dienstbindung braucht den Shop-Worker).
 
+## Testshop (Sandbox)
+
+**test.disorder119.com** (`sandbox-edge.js`, `wrangler.sandbox-edge.toml`) spiegelt die echte Seite und biegt sie beim Ausliefern auf **api-test.disorder119.com** um: denselben Code wie hier, deployt mit `npx wrangler deploy --env sandbox` (eigene D1 `disorder119-shop-sandbox`, `PAYPAL_ENVIRONMENT=sandbox`, `SANDBOX=1`).
+
+- Zugang nur mit Passwort (HTTP Basic, Benutzer `test`, Secret `TESTSHOP_PASSWORT`), `noindex`, gelbes TESTSHOP-Band.
+- PayPal-Client-ID → `PAYPAL_SANDBOX_CLIENT_ID` (Variable der Testseite), Turnstile → Testschlüssel von Cloudflare.
+- `sandbox.js` schützt den echten Shop:
+  - Herkunft test.disorder119.com wird intern als disorder119.com behandelt.
+  - Gelesen wird der öffentliche Katalog von main, Verkäufe stehen nur in `sandbox_verkauft` (Migration 0035). Es wird nie auf GitHub geschrieben.
+  - Mails gehen nur an `SANDBOX_MAIL_AN` bzw. `MAIL_REPLY_TO`, mit `[TEST]` im Betreff.
+  - Telegram-Meldungen beginnen mit „🧪 TEST“.
+  - Newsletter-Kontakte bei Brevo bleiben unberührt.
+- Secrets trägt `12 - Testshop verbinden` ein: Passwort, PayPal-Sandbox, Admin-Schlüssel, optional Brevo und Telegram.
+- Die Admin-App spricht mit `?testshop=1` mit dem Test-Server.
+
+Ausrollen: Migrationen auf beide Datenbanken (`--env sandbox` für die Test-D1), dann `deploy`, `deploy --env sandbox` und `deploy -c wrangler.sandbox-edge.toml`.
+
 ## Hintergrundjobs (Cron) und Selbstheilung
 
 `wrangler.toml` startet den Worker alle 15 Minuten (`[triggers] crons`). `scheduled()` in `worker-entry.js` gleicht offene PayPal-Zahlungen ab und gibt abgelaufene Reservierungen frei, holt direkt in PayPal ausgeloeste Erstattungen nach, pflegt die Betriebswarnungen, raeumt die Besucherstatistik auf und registriert einmalig die Apple-Pay-Domain bei PayPal (`paypal-einrichtung.js`, `POST /v1/customer/wallet-domains`; nach einem Fehler hoechstens ein Versuch pro Tag, Ergebnis im Audit unter `paypal/apple-pay-domain`). Fehlt am PayPal-Webhook das Ereignis `PAYMENT.CAPTURE.REFUNDED`, ergaenzt der Erstattungsabgleich es selbst (Audit `paypal_webhook/refunds`); der Knopf in der Admin-App bleibt als Ersatzweg. Dieselben Jobs laufen weiterhin auch beim Oeffnen der Admin-App.

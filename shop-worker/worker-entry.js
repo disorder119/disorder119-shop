@@ -34,6 +34,7 @@ import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
 import { handleIncomingEmail, handlePostfach, isPostfachRoute } from "./postfach.js";
 import { besucherAufraeumen, entsperrtMelden, handleBesucher, istBesucherRoute } from "./besucher.js";
+import { istSandbox, testshopFetch } from "./sandbox.js";
 import { applePayDomainSicherstellen } from "./paypal-einrichtung.js";
 import { handleNewsletter, isNewsletterRoute } from "./newsletter.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
@@ -229,8 +230,18 @@ function couponRuntimeError(error) {
   return new RuntimeGuardError("COUPON_APPLY_FAILED", 502);
 }
 
-export default {
+// Anfragen, die der Testshop schon uebersetzt hat (sandbox.js).
+const TESTSHOP_INNEN = new WeakSet();
+
+const worker = {
   async fetch(request, env, ctx) {
+    // Testshop (api-test.disorder119.com): Herkunft rein und raus uebersetzen.
+    if (istSandbox(env) && !TESTSHOP_INNEN.has(request)) {
+      return testshopFetch(request, env, anfrage => {
+        TESTSHOP_INNEN.add(anfrage);
+        return worker.fetch(anfrage, env, ctx);
+      });
+    }
     const url = new URL(request.url);
     const origin = request.headers.get("Origin");
     const reqId = requestId(request);
@@ -515,3 +526,5 @@ export default {
     return handleIncomingEmail(message, env, ctx);
   },
 };
+
+export default worker;

@@ -11,6 +11,7 @@ import {
   safeText,
 } from "./commerce-core.js";
 import { branchHead, createCommit, fastForward, readRepoFile } from "./github-datei.js";
+import { istSandbox, sandboxKatalogLaden, sandboxVerkauft } from "./sandbox.js";
 import { VersandError, versandFuerBestellung, versandWahlStatement } from "./versand.js";
 import { captureStatements, recordVerifiedRefund } from './tax-evidence.js';
 import { normalizeEmail } from './customer-mail.js';
@@ -173,6 +174,8 @@ function ghHeaders(env) {
 }
 
 async function loadItems(env) {
+  // Testshop: oeffentlicher Katalog ohne Schluessel, Verkauftes aus D1.
+  if (istSandbox(env)) return sandboxKatalogLaden(env);
   ghHeaders(env); // ohne GITHUB_TOKEN: CATALOG_BACKEND_NOT_CONFIGURED wie bisher
   // Ueber den Blob statt die Contents-API: items.json ist groesser als die
   // 1 MiB, bis zu der GitHub dort noch Inhalt mitschickt (github-datei.js).
@@ -643,6 +646,8 @@ async function verifyPaypalWebhook(env, headers, body) {
 // build_site.py - bis auf den Zeilenumbruch am Dateiende, der deshalb
 // erhalten bleibt.
 export async function markCatalogSold(env, itemId) {
+  // Testshop: nie in den echten Katalog schreiben.
+  if (istSandbox(env)) return sandboxVerkauft(env, itemId);
   ghHeaders(env); // ohne GITHUB_TOKEN: CATALOG_BACKEND_NOT_CONFIGURED
   const repo = { owner: CONFIG.githubOwner, repo: CONFIG.githubRepo, branch: CONFIG.githubBranch };
   for (let attempt = 0; attempt < 4; attempt++) {

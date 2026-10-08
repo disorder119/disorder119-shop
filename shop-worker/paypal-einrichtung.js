@@ -15,8 +15,12 @@
 //     Zugangsdaten.
 import { safeText } from "./commerce-core.js";
 import { paypalApiBase, paypalToken } from "./erstattung.js";
+import { istSandbox } from "./sandbox.js";
 
 export const APPLE_PAY_DOMAIN = "disorder119.com";
+const APPLE_PAY_DOMAIN_LIVE = APPLE_PAY_DOMAIN;
+// Der Testshop meldet seine eigene Adresse in der PayPal-Sandbox an.
+export const APPLE_PAY_DOMAIN_TEST = "test.disorder119.com";
 const TAG_MS = 24 * 60 * 60 * 1000;
 const ERFOLG = "PAYPAL_APPLE_PAY_DOMAIN_REGISTERED";
 const FEHLER = "PAYPAL_APPLE_PAY_DOMAIN_FAILED";
@@ -40,7 +44,9 @@ function schonRegistriert(antwort) {
 
 export async function applePayDomainSicherstellen(env, now = Date.now()) {
   if (!env?.DB || !env.PAYPAL_CLIENT_ID || !env.PAYPAL_CLIENT_SECRET) return { uebersprungen: "PAYPAL_NOT_CONFIGURED" };
-  if (String(env.PAYPAL_ENVIRONMENT || "").toLowerCase() !== "live") return { uebersprungen: "NOT_LIVE" };
+  const testshop = istSandbox(env);
+  if (!testshop && String(env.PAYPAL_ENVIRONMENT || "").toLowerCase() !== "live") return { uebersprungen: "NOT_LIVE" };
+  const APPLE_PAY_DOMAIN = testshop ? APPLE_PAY_DOMAIN_TEST : APPLE_PAY_DOMAIN_LIVE;
   const letzte = await env.DB.prepare(`SELECT event_type,created_at FROM audit_events
     WHERE entity_type='paypal' AND entity_id='apple-pay-domain' ORDER BY created_at DESC LIMIT 1`).first();
   if (letzte?.event_type === ERFOLG) return { ok: true, bereits: true };
