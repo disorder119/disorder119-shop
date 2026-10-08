@@ -68,22 +68,23 @@ export function versandKonfigurationPruefen(roh) {
   });
 }
 
-// Ein gesperrter Name trifft auch Varianten: "UPS" sperrt "UPS® Standard",
-// aber nicht "GROUPS" (davor und dahinter darf kein Buchstabe stehen).
+// Ein Name trifft auch Varianten: "UPS" sperrt "UPS® Standard", aber nicht
+// "GROUPS" (davor und dahinter darf kein Buchstabe stehen).
 function namePasst(name, gesperrt) {
   const muster = gesperrt.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp("(^|[^A-Z0-9])" + muster + "(?![A-Z0-9])").test(name);
 }
 
 // Darf die Kundschaft diesen Paketdienst im Checkout sehen? Die Sperrliste
-// gilt immer; eine Erlaubt-Liste muss genau passen ("DHL" ist nicht
-// "DHL Express").
+// gilt immer. Eine Erlaubt-Liste trifft wie die Sperrliste auch Varianten:
+// "DHL" erlaubt "DHL Paket" und "DHL Express", "HERMES" erlaubt
+// "Hermes Germany" - Packlink haengt oft den Dienstnamen an.
 export function dienstErlaubt(carrier, konfig = VERSAND) {
   const name = String(carrier || "").trim().toUpperCase();
   const d = konfig.dienste || {};
   if ((d.ausgeschlossen || []).some(gesperrt => namePasst(name, gesperrt))) return false;
   if (!d.erlaubt) return true;
-  return d.erlaubt.includes(name);
+  return d.erlaubt.some(erlaubt => namePasst(name, erlaubt));
 }
 
 export const VERSAND = versandKonfigurationPruefen(shopConfig);
