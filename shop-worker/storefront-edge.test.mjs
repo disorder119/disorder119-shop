@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import edge,{publicPath,publicCatalog,seitenaufruf} from './storefront-edge.js';
 
 test('publication allows real shop, language, image, PWA and Apple Pay paths',()=>{
-  for(const path of ['/','/en/','/fr/agb/','/artikel/119/index.html','/artikel/119.html','/kasse/','/assets/img/test/0.webp','/assets/legal-content.js','/manifest.webmanifest','/.well-known/apple-developer-merchantid-domain-association']) assert.equal(publicPath(path),true,path);
+  for(const path of ['/','/en/','/fr/agb/','/artikel/119/index.html','/artikel/119.html','/kasse/','/assets/img/test/0.webp','/assets/legal-content.js','/manifest.webmanifest','/.well-known/apple-developer-merchantid-domain-association','/feed/google-merchant.xml']) assert.equal(publicPath(path),true,path);
+  for(const path of ['/feed/','/feed/google-merchant.json','/feed/x/y.xml']) assert.equal(publicPath(path),false,path);
 });
 test('publication rejects backend sources, drafts metadata, configuration and traversal',()=>{
   for(const path of ['/shop-worker/worker.js','/shop-worker/wrangler.toml','/.git/config','/config/shop-config.json','/data/catalog-taxonomy-report.json','/admin/index.html','/scripts/example.py','/assets/a.test.js','/assets/%252e%252e/secret.js','/assets/a\\b.js']) assert.equal(publicPath(path),false,path);

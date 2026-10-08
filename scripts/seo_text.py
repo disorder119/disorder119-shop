@@ -101,6 +101,10 @@ TYPE_SYNONYMS = {
 }
 _LANG_INDEX = {"de": 0, "en": 1, "fr": 2}
 SIZE_WORD = {"de": "Gr.", "en": "Size", "fr": "Taille"}
+# Suchintention: Wer ein Designerstueck gebraucht sucht, tippt "Second Hand"
+# oder "Vintage" dazu. Das Wort steht nur im Seitentitel (Browser-Tab, Google),
+# nicht auf der Seite, und kommt vor der Groesse, weil es die Suche trifft.
+SECONDHAND_WORD = {"de": "Second Hand", "en": "Pre-Owned", "fr": "Seconde main"}
 
 # Einleitungssaetze, die in fast jeder Beschreibung stehen und nichts ueber
 # das Stueck aussagen.
@@ -152,6 +156,14 @@ def seo_title(name: str, product_type: str | None, size_label: str, lang: str) -
     basis = name.strip()
     if not _type_already_named(basis, product_type):
         basis = f"{basis} {type_label(product_type, lang)}".strip()
+    secondhand = SECONDHAND_WORD[lang]
+    if _norm(secondhand) not in _norm(basis) and _norm("Vintage") not in _norm(basis):
+        mit_secondhand = f"{basis} – {secondhand}"
+        # Google zeigt rund 60 Zeichen, wertet aber den ganzen Titel: das
+        # Suchwort darf deshalb etwas ueber die Anzeigebreite hinausgehen,
+        # Marke und Produktart stehen ohnehin vorn.
+        if len(mit_secondhand) + len(TITLE_SUFFIX) <= TITLE_MAX + 15:
+            basis = mit_secondhand
     if size_label:
         mit_groesse = f"{basis} · {SIZE_WORD[lang]} {size_label}"
         if len(mit_groesse) + len(TITLE_SUFFIX) <= TITLE_MAX:

@@ -27,6 +27,8 @@ export function publicPath(pathname) {
   if (parts[0] === 'en' || parts[0] === 'fr') parts.shift();
   if (!parts.length || (parts.length===1 && ROOT_FILES.has(parts[0]))) return true;
   if (parts[0]==='artikel') return /^\d+(?:\.html)?$/.test(parts[1]||'') && (parts.length===2 || (parts.length===3 && parts[2]==='index.html'));
+  // Produkt-Feed fuer Google Merchant Center (build_site.py: feed/google-merchant.xml)
+  if (parts[0]==='feed') return parts.length===2 && /^[a-z0-9-]+\.xml$/.test(parts[1]);
   return PAGES.has(parts[0]) && (parts.length===1 || (parts.length===2 && parts[1]==='index.html'));
 }
 
