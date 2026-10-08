@@ -647,9 +647,9 @@ def cta_html(it, shop_config, home, lang):
     frei_ab = versandkostenfrei_ab_cents()
     if frei_ab and it.get("price", 0) * 100 >= frei_ab:
         ship_notes = {
-            "de": " Versand innerhalb Deutschlands mit DHL kostenlos (auch an Packstation oder Filiale); Höherversicherung gegen Aufpreis – der genaue Betrag steht vor der Bestellung.",
-            "en": " Free DHL shipping within Germany (also to a Packstation or post office); higher insurance at a surcharge – the exact amount is shown before you order.",
-            "fr": " Livraison DHL gratuite en Allemagne (aussi en Packstation ou bureau de poste) ; assurance supérieure avec supplément – le montant exact est indiqué avant la commande.",
+            "de": " Versand innerhalb Deutschlands mit DHL kostenlos (auch an Packstation oder Filiale); ab 500 € Warenwert auf Wunsch bis 2.500 € versichert – der genaue Betrag steht vor der Bestellung.",
+            "en": " Free DHL shipping within Germany (also to a Packstation or post office); from €500 goods value optionally insured up to €2,500 – the exact amount is shown before you order.",
+            "fr": " Livraison DHL gratuite en Allemagne (aussi en Packstation ou bureau de poste) ; dès 500 € d'articles, assurance jusqu’à 2 500 € en option – le montant exact est indiqué avant la commande.",
         }
     elif frei_ab:
         ship_notes = {
