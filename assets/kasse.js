@@ -67,7 +67,7 @@
       abholWaehlen: "Bitte wähle eine Packstation oder Filiale.", abholPackstation: "Packstation", abholFiliale: "Filiale",
       abholKarte: "Auf der Karte zeigen", abholKarteZu: "Karte ausblenden", abholKarteHinweis: "Die Karte lädt Kartenbilder von OpenStreetMap – dabei sieht der Kartendienst deine IP-Adresse.",
       kartePlus: "Karte vergrößern", karteMinus: "Karte verkleinern", karteLuftbild: "Luftbild", karteStrassen: "Karte",
-      abholKarteHinweisLuftbild: "Luftbilder holt unser Server bei Esri – ohne deine IP-Adresse. Die Straßenkarte kommt direkt von OpenStreetMap, das dabei deine IP-Adresse sieht.", abholManuell: "Nummer selbst eingeben", abholArt: "Art",
+      abholKarteHinweisLuftbild: "Die amtlichen Luftbilder holt unser Server beim Vermessungsamt deines Bundeslands – ohne deine IP-Adresse. Die Straßenkarte kommt direkt von OpenStreetMap, das dabei deine IP-Adresse sieht.", abholManuell: "Nummer selbst eingeben", abholArt: "Art",
       abholNummer: "Nummer", abholUebernehmen: "Übernehmen", abholNummerFehlt: "Bitte gib die Nummer ein (bis zu 4 Ziffern).",
       postnummer: "DHL-Postnummer", optional: "optional", postnummerHinweisP: "Pflicht an der Packstation: deine 6- bis 10-stellige Postnummer aus der DHL-App. Vor- und Nachname müssen zu deinem DHL-Konto passen.",
       postnummerHinweisF: "Optional – in der Filiale holst du das Paket mit Ausweis ab.", fehltPostnummer: "Bitte gib deine DHL-Postnummer an (6 bis 10 Ziffern).",
@@ -124,7 +124,7 @@
       abholWaehlen: "Please choose a Packstation or post office.", abholPackstation: "Packstation", abholFiliale: "Post office",
       abholKarte: "Show on map", abholKarteZu: "Hide map", abholKarteHinweis: "The map loads tiles from OpenStreetMap – the map service sees your IP address.",
       kartePlus: "Zoom in", karteMinus: "Zoom out", karteLuftbild: "Aerial", karteStrassen: "Map",
-      abholKarteHinweisLuftbild: "Our server fetches aerial images from Esri – without your IP address. The street map comes directly from OpenStreetMap, which sees your IP address.", abholManuell: "Enter the number yourself", abholArt: "Type", abholNummer: "Number",
+      abholKarteHinweisLuftbild: "Our server fetches the official aerial images from your state's survey office – without your IP address. The street map comes directly from OpenStreetMap, which sees your IP address.", abholManuell: "Enter the number yourself", abholArt: "Type", abholNummer: "Number",
       abholUebernehmen: "Use this", abholNummerFehlt: "Please enter the number (up to 4 digits).", postnummer: "DHL Postnummer",
       optional: "optional", postnummerHinweisP: "Required for a Packstation: your 6 to 10 digit Postnummer from the DHL app. First and last name must match your DHL account.",
       postnummerHinweisF: "Optional – you collect the parcel at the post office with your ID.", fehltPostnummer: "Please enter your DHL Postnummer (6 to 10 digits).",
@@ -182,7 +182,7 @@
       abholPackstation: "Packstation", abholFiliale: "Bureau de poste", abholKarte: "Afficher sur la carte", abholKarteZu: "Masquer la carte",
       abholKarteHinweis: "La carte charge des images d’OpenStreetMap – le service de carte voit ton adresse IP.", kartePlus: "Zoom avant",
       karteMinus: "Zoom arrière", karteLuftbild: "Vue aérienne", karteStrassen: "Plan",
-      abholKarteHinweisLuftbild: "Notre serveur charge les vues aériennes chez Esri – sans ton adresse IP. Le plan vient directement d’OpenStreetMap, qui voit ton adresse IP.", abholManuell: "Saisir le numéro toi-même", abholArt: "Type", abholNummer: "Numéro", abholUebernehmen: "Valider",
+      abholKarteHinweisLuftbild: "Notre serveur charge les vues aériennes officielles auprès du service cadastral de ton Land – sans ton adresse IP. Le plan vient directement d’OpenStreetMap, qui voit ton adresse IP.", abholManuell: "Saisir le numéro toi-même", abholArt: "Type", abholNummer: "Numéro", abholUebernehmen: "Valider",
       abholNummerFehlt: "Saisis le numéro (jusqu’à 4 chiffres).", postnummer: "Postnummer DHL", optional: "facultatif",
       postnummerHinweisP: "Obligatoire pour une Packstation : ta Postnummer de 6 à 10 chiffres de l’app DHL. Prénom et nom doivent correspondre à ton compte DHL.",
       postnummerHinweisF: "Facultatif – tu retires le colis au bureau de poste avec une pièce d’identité.", fehltPostnummer: "Saisis ta Postnummer DHL (6 à 10 chiffres).",
@@ -585,7 +585,7 @@
   // sucht der Shop-Server bei DHL (shop-worker/abholorte.js) - an DHL gehen
   // nur PLZ und Strasse. Die Karte laedt OpenStreetMap-Kacheln erst nach
   // einem Klick (Datenschutz) und kommt ohne Bibliothek aus.
-  // luftbild: der Server kann Luftbilder liefern (Esri-Schluessel, shop-worker/karte.js);
+  // luftbild: { land, quelle } - amtliche Luftbilder des Bundeslands (shop-worker/karte.js) oder null;
   // ebene: "luftbild" oder "karte" (Strassenkarte von OpenStreetMap).
   var abhol = { art: "haustuer", ort: null, orte: null, laedt: false, fehler: "", gesucht: "", karte: false, zoom: 0, luftbild: false, ebene: "" };
   var abholCache = {};
@@ -746,7 +746,7 @@
     var z = 17;
     while (z > 9 && (karteX(e, z) - karteX(w, z) > breite - 60 || karteY(s, z) - karteY(n, z) > hoehe - 60)) z--;
     abhol.passend = z;
-    z = Math.max(5, Math.min(18, z + abhol.zoom));
+    z = Math.max(ebene === "luftbild" ? 13 : 5, Math.min(18, z + abhol.zoom));
     var cx = (karteX(w, z) + karteX(e, z)) / 2;
     var cy = (karteY(n, z) + karteY(s, z)) / 2;
     if (abhol.zoom > 0 && abhol.ort && mitGeo(abhol.ort)) { cx = karteX(abhol.ort.lng, z); cy = karteY(abhol.ort.lat, z); }
@@ -759,7 +759,7 @@
         var img = document.createElement("img");
         img.alt = ""; img.decoding = "async"; img.draggable = false;
         var spalte = ((tx % anzahl) + anzahl) % anzahl;
-        img.src = ebene === "luftbild" ? WORKER + "/karte/luftbild/" + z + "/" + ty + "/" + spalte
+        img.src = ebene === "luftbild" ? WORKER + "/karte/luftbild/" + abhol.luftbild.land + "/" + z + "/" + ty + "/" + spalte
           : "https://tile.openstreetmap.org/" + z + "/" + spalte + "/" + ty + ".png";
         img.style.left = Math.round(tx * KACHEL - links) + "px";
         img.style.top = Math.round(ty * KACHEL - oben) + "px";
@@ -815,7 +815,8 @@
     }
     var quelle;
     if (ebene === "luftbild") {
-      quelle = el("span", "kasse-karte__quelle", "Luftbild © Esri, Maxar, Earthstar Geographics");
+      // Quellenvermerk, wie ihn das Vermessungsamt des Landes verlangt (vom Server).
+      quelle = el("span", "kasse-karte__quelle", abhol.luftbild.quelle);
     } else {
       quelle = el("a", "kasse-karte__quelle", "© OpenStreetMap");
       quelle.href = "https://www.openstreetmap.org/copyright";
@@ -902,7 +903,8 @@
         if (nr !== abholAnfrage) return;
         abhol.laedt = false;
         abhol.orte = Array.isArray(daten.orte) ? daten.orte : [];
-        abhol.luftbild = daten.luftbild === true && !!WORKER;
+        // { land, quelle } - amtliche Luftbilder des Bundeslands der PLZ, sonst nur Strassenkarte.
+        abhol.luftbild = WORKER && daten.luftbild && /^[A-Z]{2}$/.test(daten.luftbild.land) && daten.luftbild.quelle ? daten.luftbild : null;
         abholCache[schluessel] = { orte: abhol.orte, luftbild: abhol.luftbild };
         abholZeichnen();
       }, function (e) {

@@ -14,7 +14,8 @@
 // wie DHL sie verlangt: "Packstation 123" bzw. "Postfiliale 456", die
 // Postnummer im Adresszusatz.
 import { safeText } from "./commerce-core.js";
-import { luftbildBereit } from "./karte.js";
+import { bundeslandZurPlz } from "./adresse.js";
+import { landAusSchluessel, luftbildFuer } from "./karte.js";
 
 const FINDER = "https://api.dhl.com/location-finder/v1/find-by-address";
 const CACHE_SEKUNDEN = 24 * 60 * 60;
@@ -230,9 +231,12 @@ export async function handleAbholorte(request, env, url, reqId = crypto.randomUU
       const r = await env.RATE_LIMITER.limit({ key: `abholorte:${ip}` });
       if (r && r.success === false) throw new AbholortError("RATE_LIMITED", 429);
     }
-    const daten = await abholorteSuchen(env, anfrageAus(url));
-    // luftbild: ob die Kasse Luftbilder anbieten kann (karte.js, Esri-Schluessel am Server).
-    return new Response(JSON.stringify({ ok: true, ...daten, luftbild: luftbildBereit(env) }), { status: 200, headers: kopf(origin) });
+    const anfrage = anfrageAus(url);
+    const daten = await abholorteSuchen(env, anfrage);
+    // luftbild: { land, quelle } fuer die amtlichen Luftbilder des Bundeslands
+    // der gesuchten PLZ (karte.js) - oder false, dann nur die Strassenkarte.
+    const luftbild = daten.orte.length ? luftbildFuer(landAusSchluessel(await bundeslandZurPlz(env, anfrage.plz))) : false;
+    return new Response(JSON.stringify({ ok: true, ...daten, luftbild }), { status: 200, headers: kopf(origin) });
   } catch (err) {
     const bekannt = err instanceof AbholortError;
     if (!bekannt) {
