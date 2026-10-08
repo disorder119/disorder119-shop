@@ -63,7 +63,7 @@
       zustNurDhl: "mit DHL", nurHaustuer: "nur an die Haustür", versichert: "versichert bis {betrag}", abholSuche: "PLZ für die Suche",
       abholSuchen: "Suchen", abholLaedt: "Suche Packstationen und Filialen …", abholKeine: "Hier haben wir keine Packstation oder Filiale gefunden. Probier eine andere PLZ oder gib die Nummer selbst ein.",
       abholFehler: "Die Suche bei DHL klappt gerade nicht. Gib die Nummer der Packstation oder Filiale selbst ein oder lass an deine Adresse liefern.",
-      abholPlzFehlt: "Gib eine fünfstellige PLZ ein, dann zeigen wir dir Packstationen und Filialen in der Nähe.", abholGefunden: "{n} Abholorte in der Nähe – wähle einen aus der Liste oder auf der Karte.",
+      abholPlzFehlt: "Gib eine fünfstellige PLZ ein, dann zeigen wir dir Packstationen und Filialen in der Nähe.", abholOhneSuche: "Gib die Nummer deiner Packstation oder Filiale ein – du findest sie in der DHL-App oder auf dhl.de.", abholGefunden: "{n} Abholorte in der Nähe – wähle einen aus der Liste oder auf der Karte.",
       abholWaehlen: "Bitte wähle eine Packstation oder Filiale.", abholPackstation: "Packstation", abholFiliale: "Filiale",
       abholKarte: "Auf der Karte zeigen", abholKarteZu: "Karte ausblenden", abholKarteHinweis: "Die Karte lädt Kartenbilder von OpenStreetMap – dabei sieht der Kartendienst deine IP-Adresse.",
       kartePlus: "Karte vergrößern", karteMinus: "Karte verkleinern", abholManuell: "Nummer selbst eingeben", abholArt: "Art",
@@ -119,7 +119,7 @@
       zustNurDhl: "with DHL", nurHaustuer: "home delivery only", versichert: "insured up to {betrag}", abholSuche: "Postcode to search",
       abholSuchen: "Search", abholLaedt: "Searching for Packstations and post offices …", abholKeine: "We found no Packstation or post office here. Try another postcode or enter the number yourself.",
       abholFehler: "The DHL search is not working right now. Enter the Packstation or post office number yourself, or have the parcel delivered to your address.",
-      abholPlzFehlt: "Enter a five-digit postcode and we will show you Packstations and post offices nearby.", abholGefunden: "{n} pickup points nearby – choose one from the list or on the map.",
+      abholPlzFehlt: "Enter a five-digit postcode and we will show you Packstations and post offices nearby.", abholOhneSuche: "Enter the number of your Packstation or post office – you can find it in the DHL app or on dhl.de.", abholGefunden: "{n} pickup points nearby – choose one from the list or on the map.",
       abholWaehlen: "Please choose a Packstation or post office.", abholPackstation: "Packstation", abholFiliale: "Post office",
       abholKarte: "Show on map", abholKarteZu: "Hide map", abholKarteHinweis: "The map loads tiles from OpenStreetMap – the map service sees your IP address.",
       kartePlus: "Zoom in", karteMinus: "Zoom out", abholManuell: "Enter the number yourself", abholArt: "Type", abholNummer: "Number",
@@ -175,7 +175,7 @@
       zustNurDhl: "avec DHL", nurHaustuer: "à domicile uniquement", versichert: "assuré jusqu’à {betrag}", abholSuche: "Code postal pour la recherche",
       abholSuchen: "Rechercher", abholLaedt: "Recherche des Packstations et bureaux de poste …", abholKeine: "Aucune Packstation ni bureau de poste trouvé ici. Essaie un autre code postal ou saisis le numéro toi-même.",
       abholFehler: "La recherche DHL ne fonctionne pas pour le moment. Saisis toi-même le numéro de la Packstation ou du bureau de poste, ou fais livrer à ton adresse.",
-      abholPlzFehlt: "Saisis un code postal à cinq chiffres pour voir les Packstations et bureaux de poste à proximité.",
+      abholPlzFehlt: "Saisis un code postal à cinq chiffres pour voir les Packstations et bureaux de poste à proximité.", abholOhneSuche: "Saisis le numéro de ta Packstation ou de ton bureau de poste – tu le trouves dans l’app DHL ou sur dhl.de.",
       abholGefunden: "{n} points de retrait à proximité – choisis-en un dans la liste ou sur la carte.", abholWaehlen: "Choisis une Packstation ou un bureau de poste.",
       abholPackstation: "Packstation", abholFiliale: "Bureau de poste", abholKarte: "Afficher sur la carte", abholKarteZu: "Masquer la carte",
       abholKarteHinweis: "La carte charge des images d’OpenStreetMap – le service de carte voit ton adresse IP.", kartePlus: "Zoom avant",
@@ -677,7 +677,7 @@
       : abhol.orte ? tf("abholGefunden", { n: abhol.orte.length })
       : t("abholPlzFehlt");
     aStatus.textContent = text;
-    aStatus.classList.toggle("kasse-abholort__status--fehler", !!abhol.fehler);
+    aStatus.classList.toggle("kasse-abholort__status--fehler", !!abhol.fehler && abhol.fehler !== "abholOhneSuche");
   }
   function listeZeichnen() {
     aListe.textContent = "";
@@ -867,8 +867,10 @@
         if (nr !== abholAnfrage) return;
         var code = (e && e.code) || "";
         abhol.laedt = false; abhol.orte = null; abhol.gesucht = "";
-        abhol.fehler = code === "RATE_LIMITED" ? "zuSchnell" : code === "PLZ_UNGUELTIG" ? "fehltPlz" : "abholFehler";
-        if (abhol.fehler === "abholFehler") manuellZeigen(true);
+        // Ohne DHL-Zugang am Server: gleich die Nummer eingeben lassen, ohne Stoerungsmeldung.
+        abhol.fehler = code === "RATE_LIMITED" ? "zuSchnell" : code === "PLZ_UNGUELTIG" ? "fehltPlz"
+          : code === "ABHOLORTE_NICHT_EINGERICHTET" ? "abholOhneSuche" : "abholFehler";
+        if (abhol.fehler === "abholFehler" || abhol.fehler === "abholOhneSuche") manuellZeigen(true);
         abholZeichnen();
       });
   }
