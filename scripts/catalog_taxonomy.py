@@ -32,7 +32,7 @@ DEPARTMENT_OVERRIDES = {
     9534: "Men",    # title: Prada Sneaker Herren
     9524: "Women",  # title: Prada Bomberjacke Damen Schwarz
     9520: "Women",  # description explicitly describes feminine tailoring
-    9538: "Men",    # title: Gucci Nadelstreifen-Blazer Herren Schwarz
+    9538: "Women",  # Gucci Nadelstreifen-Blazer, Etikett 40 = Damenblazer (Nutzer 09.10.2026)
     9496: "Men",    # title: Dior Langarm-Poloshirt Herren Schwarz
     9495: "Men",    # companion Dior polo, label size 46
     9463: "Women",  # Prada Heels
