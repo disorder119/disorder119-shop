@@ -3,10 +3,10 @@
   "totalItems": 239,
   "reviewedItems": 239,
   "departmentCounts": {
-    "Men": 55,
+    "Men": 54,
     "Objects": 1,
     "Unisex": 24,
-    "Women": 159
+    "Women": 160
   },
   "productTypeCounts": {
     "Accessory": 1,
@@ -259,7 +259,7 @@
       "title": "Balmain Kunstfelljacke Damen"
     }
   ],
-  "sizeConflictCount": 48,
+  "sizeConflictCount": 47,
   "sizeConflicts": [
     {
       "id": 9524,
@@ -274,13 +274,6 @@
       "title": "Isaac Sellam Experience Hose Damen Weiß",
       "structuredSize": "S",
       "descriptionLabelSize": "Nicht eindeutig lesbar"
-    },
-    {
-      "id": 9538,
-      "article": "161",
-      "title": "Gucci Nadelstreifen-Blazer Herren Schwarz",
-      "structuredSize": "M",
-      "descriptionLabelSize": "40"
     },
     {
       "id": 9510,
