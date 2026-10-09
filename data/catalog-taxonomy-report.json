@@ -22,7 +22,7 @@
     "Cap": 3,
     "Cardigan": 5,
     "Coat": 2,
-    "Dress": 18,
+    "Dress": 17,
     "Hat": 3,
     "Heels": 1,
     "Jacket": 48,
@@ -48,7 +48,7 @@
     "T-Shirt": 7,
     "Tank Top": 3,
     "Toaster": 1,
-    "Top": 22,
+    "Top": 23,
     "Trench Coat": 1,
     "Trousers": 15,
     "Tunic": 1,
@@ -306,7 +306,7 @@
     {
       "id": 9506,
       "article": "145",
-      "title": "Yves Saint Laurent Rive Gauche Seidenkleid Damen Bunt",
+      "title": "Yves Saint Laurent Rive Gauche Seidentop Damen Bunt",
       "structuredSize": "S / 36 / 8",
       "descriptionLabelSize": "36"
     },
@@ -377,15 +377,15 @@
       "id": 9455,
       "article": "90",
       "title": "Prada Jacke mit Gürtel Damen Schwarz",
-      "structuredSize": "52",
+      "structuredSize": "42",
       "descriptionLabelSize": "IT 42"
     },
     {
-      "id": 9440,
-      "article": "85",
-      "title": "Prada Langarm-Poloshirt mit Felloptik-Kragen Damen Grau",
-      "structuredSize": "M",
-      "descriptionLabelSize": "L"
+      "id": 9441,
+      "article": "86",
+      "title": "Prada Langarm-Poloshirt mit Felloptik-Kragen Damen Schwarz",
+      "structuredSize": "L",
+      "descriptionLabelSize": "M"
     },
     {
       "id": 9422,
