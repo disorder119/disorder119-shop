@@ -396,13 +396,16 @@ def bild_pfade(it):
 
 # Hintergrund der eBay-Fotos: Weiss (eBay-Empfehlung), Schwarz (Shop-Optik) oder das
 # freigestellte Original (transparent; eBay legt es selbst auf Weiss).
-HINTERGRUENDE = {"weiss": ((255, 255, 255), "assets/ebay"), "schwarz": ((0, 0, 0), "assets/ebay_schwarz")}
+# Entscheidung 09.10.2026: Hellgrau (236) fuer alle Hauptbilder - weisse und hellblaue Teile loesen sich
+# auf Weiss auf, schwarze auf Schwarz; Hellgrau traegt beides und wirkt im eBay-Raster wie Weiss.
+HINTERGRUENDE = {"hellgrau": ((236, 236, 236), "assets/ebay"), "weiss": ((255, 255, 255), "assets/ebay_weiss"),
+                 "schwarz": ((0, 0, 0), "assets/ebay_schwarz")}
 
 
 def bild_urls(it, basis: str, hintergrund) -> list[str]:
-    # hintergrund: "weiss" | "schwarz" | None (Original)
+    # hintergrund: "hellgrau" | "weiss" | "schwarz" | None (Original)
     if hintergrund is True:
-        hintergrund = "weiss"
+        hintergrund = "hellgrau"
     urls = []
     for i, pfad in enumerate(bild_pfade(it)):
         if hintergrund in HINTERGRUENDE:
@@ -412,7 +415,7 @@ def bild_urls(it, basis: str, hintergrund) -> list[str]:
     return urls
 
 
-def bilder_erzeugen(items, nur_fehlende=True, hintergrund="weiss") -> int:
+def bilder_erzeugen(items, nur_fehlende=True, hintergrund="hellgrau") -> int:
     from PIL import Image
     farbe, ordner = HINTERGRUENDE[hintergrund]
     anzahl = 0
@@ -660,11 +663,11 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--csv", help="Entwurfs-CSV schreiben")
     p.add_argument("--ids", nargs="*", type=int, help="nur diese Artikelnummern")
-    p.add_argument("--bilder", action="store_true", help="Fotos auf weissem Grund nach assets/ebay/ erzeugen")
+    p.add_argument("--bilder", action="store_true", help="Fotos auf einfarbigem Grund erzeugen (Standard hellgrau nach assets/ebay/)")
     p.add_argument("--alle-bilder", action="store_true", help="auch vorhandene Fotos neu erzeugen")
     p.add_argument("--bild-basis", default=SITE_URL, help="Basis-URL fuer die Fotos (Standard: Website)")
-    p.add_argument("--originalbilder", action="store_true", help="Original-Fotos (transparent) statt weissem Grund verlinken")
-    p.add_argument("--hintergrund", choices=sorted(HINTERGRUENDE), default="weiss", help="Grundfarbe der erzeugten Fotos (Standard: weiss)")
+    p.add_argument("--originalbilder", action="store_true", help="Original-Fotos (transparent) statt einfarbigem Grund verlinken")
+    p.add_argument("--hintergrund", choices=sorted(HINTERGRUENDE), default="hellgrau", help="Grundfarbe der erzeugten Fotos (Standard: hellgrau)")
     p.add_argument("--sku-zusatz", default="", help="Zusatz hinter der Artikelnummer im SKU-Feld, z. B. 'schwarz' fuer Vergleichsentwuerfe")
     p.add_argument("--vollstaendig", choices=["VerifyAdd", "Add"], help="volle Angebots-Vorlage statt Entwurf (VerifyAdd prueft nur, Add stellt ein)")
     a = p.parse_args(argv)

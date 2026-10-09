@@ -38,9 +38,12 @@ nur die Nennung disorder119.com als Herkunft.
 
 ## 4. Fotos
 
-Erstes Foto auf Weiß (eBay-Empfehlung, bessere Sichtbarkeit in der Galerie, Voraussetzung für
-Google-Shopping-Anzeigen von eBay). Alle Detailfotos mitgeben (bis 12), Etikett- und
-Mängelfotos immer dabei. Kein Text, keine Rahmen im Bild.
+Alle Freisteller auf hellgrauem Grund (RGB 236, Ordner `assets/ebay/`), Detailfotos bleiben
+Originalfotos. Entscheidung 09.10.2026 nach Vergleich Weiß / Hellgrau / Schwarz: Auf Weiß lösen
+sich weiße und hellblaue Teile auf, auf Schwarz die schwarzen; Hellgrau trägt beide und wirkt im
+eBay-Raster praktisch wie Weiß (eBay akzeptiert es als neutralen Hintergrund). Alle Detailfotos
+mitgeben (bis 12), Etikett- und Mängelfotos immer dabei. Kein Text, keine Rahmen im Bild.
+Neu erzeugen: `python scripts/ebay_export.py --bilder --alle-bilder` (Standard hellgrau).
 
 ## 5. Preis, Format, Konditionen
 
