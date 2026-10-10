@@ -252,6 +252,13 @@ def repair_page(item: dict, public_items: list[dict], lang: str) -> None:
     text = text[:match.start()] + replacement + text[match.end():]
     text = replace_related(text, related_sections(item, public_items, lang))
     page.write_text(text, encoding="utf-8")
+    if str(item.get('url_slug',item['id'])) != str(item['id']):
+        # Legacy fallbacks must not retain stale related links to removed drafts.
+        legacy=article_dir(lang,int(item['id']))/'index.html'
+        if legacy.exists():
+            prefix='/' if lang=='de' else '/'+lang+'/'
+            redirected=text.replace('<head>','<head><meta name="robots" content="noindex,follow"><meta http-equiv="refresh" content="0;url='+prefix+'artikel/'+str(item['url_slug'])+'/">',1)
+            legacy.write_text(redirected,encoding='utf-8')
 
 
 def main() -> None:
