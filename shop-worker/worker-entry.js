@@ -17,6 +17,7 @@ import { handleAdminCommerceMetrics } from "./admin-commerce-metrics.js";
 import { handleAdminRentalGroups } from "./admin-rental-groups.js";
 import { handleAdminCases } from "./admin-cases.js";
 import { handleAdminSystem } from "./admin-system.js";
+import { handleAdminParcels, isAdminParcelsRoute, refreshManualParcels } from "./admin-parcels.js";
 import { handleAdminAlerts } from "./admin-alerts.js";
 import { handleAdminNotifications } from "./admin-notifications.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
@@ -315,6 +316,10 @@ const worker = {
         return finish(await handleAdminSystem(request, runtimeEnv, url, reqId, origin));
       }
 
+      if (isAdminParcelsRoute(url)) {
+        return finish(await handleAdminParcels(request, runtimeEnv, url, reqId, origin));
+      }
+
       if (url.pathname === "/admin/alerts/sync") {
         return finish(await handleAdminAlerts(request, runtimeEnv, url, reqId, origin));
       }
@@ -530,6 +535,9 @@ const worker = {
     );
     await runBackground(ctx, besucherAufraeumen(env, scheduledTime), "besucher_cleanup_failed", reqId);
     await runBackground(ctx, applePayDomainSicherstellen(env, scheduledTime), "apple_pay_domain_failed", reqId);
+    // Nur bereits aktivierte, offene Pakete nachfragen; keine Registrierungen.
+    // Die bestehende Viertelstunden-Pflege haelt die gespeicherte Ansicht aktuell.
+    await runBackground(ctx, refreshManualParcels(env), "parcel_tracking_refresh_failed", reqId);
   },
 
   // Cloudflare Email Routing: kontakt@disorder119.com -> Postfach + Kopie ins Gmail.

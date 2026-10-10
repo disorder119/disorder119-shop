@@ -257,3 +257,41 @@ Mindestens erforderlich:
 - Erst danach `shopWorkerUrl`, Client-ID und Feature-Flags bewusst aktivieren.
 
 Die detaillierte Zielarchitektur steht in `shop-worker/COMMERCE_ARCHITECTURE.md`.
+
+## Private Pakete aus Vinted und anderen Bestellungen
+
+Die installierbare Admin-App fasst eigene Eingangssendungen, Retouren und
+bestehende Shop-Ausgangssendungen unter **Pakete** zusammen. Eine Sendungsnummer
+oder ein erkannter Tracking-Link reicht zum Hinzufuegen; eine Bezeichnung wie
+"Vintage-Jacke" hilft beim Wiederfinden. Direkte Links zum Paketdienst bleiben
+auch ohne konfigurierten Tracking-Anbieter nutzbar.
+
+`/admin/parcels` nutzt dieselbe Passkey-/Session-/RBAC-Schicht wie die uebrige
+Admin-API. Lesen liefert sofort den gespeicherten Stand aus D1 und wartet nicht
+auf 17TRACK. Neue Registrierungen bei 17TRACK erfolgen ausschliesslich nach der
+Aktivierung durch die Nutzerin oder den Nutzer. Normale Aktualisierungen fragen
+nur bereits registrierte Sendungen ab; abgeschlossene oder abgelaufene Sendungen
+werden bei der automatischen Pflege ausgelassen. Die bestehende Pflege alle
+15 Minuten fragt hoechstens 40 offene Sendungen ab, mit einer Mindestpause von
+fuenf Minuten pro Sendung. Bei Anbieterproblemen bleibt der zuletzt gespeicherte
+Stand sichtbar. Es werden nur Sendungsnummer und gegebenenfalls Carrier-Code an
+17TRACK geschickt, keine Adressdaten.
+
+Vor dem Veroeffentlichen:
+
+1. D1-Migrationen bis `0038_parcel_tracker.sql` anwenden. Die bisherige Feature-
+   Migration `0031_parcel_tracker.sql` wurde fuer den aktuellen `main`-Stand
+   umnummeriert, da `0031` dort bereits belegt ist. Die neue Migration verwendet
+   `IF NOT EXISTS` und erhaelt eine gegebenenfalls schon vorhandene Pakettabelle.
+2. Fuer automatische Statusabfragen optional `TRACK17_API_KEY` als Worker-Secret
+   setzen. Ohne Schluessel bleiben Paketverwaltung und direkte Tracking-Links
+   verfuegbar; die Hintergrundpflege fragt keinen Anbieter ab.
+3. Den Shop-API-Worker veroeffentlichen, danach die Admin-App aus ihrem eigenen
+   Repository bauen und veroeffentlichen. Ein GitHub-Merge allein veroeffentlicht
+   die Admin-App nicht.
+
+API: `GET/POST /admin/parcels`, `PATCH/DELETE /admin/parcels/:id`,
+`POST /admin/parcels/:id/17track/register`, `POST /admin/parcels/:id/refresh`,
+`POST /admin/parcels/refresh` und die optionale Quota-Abfrage
+`GET /admin/parcels/quota`. Manuelle Sendungen liegen in `parcel_tracker_manual`;
+Shop-Sendungen nutzen weiterhin die bestehende `shipments`-Pipeline.
