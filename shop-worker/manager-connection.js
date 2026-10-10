@@ -2,6 +2,7 @@
 // Only hashes of bearer tokens/codes persist. No checkout/provider side effects.
 import {resolveAdminSession} from './admin-passkeys.js';
 import {prepareDataset} from './tax-dataset-stream.js';
+import {prepareTaxDatasetV3} from './tax-ready-dataset-v3.js';
 
 const ORIGINS=new Set(['https://admin.disorder119.com','http://localhost:8765','http://127.0.0.1:8765']);
 const SCOPE='shop_dataset_read';
@@ -118,7 +119,9 @@ export async function handleManagerConnection(request,env,url){
   if(path==='/manager/dataset.zip'&&request.method==='GET'){
    await rate(request,env,'dataset');const value=url.searchParams.get('jahr');
    if(!/^20\d{2}$/.test(value||'')||Number(value)<2020||Number(value)>now.getUTCFullYear()+1)fail('MANAGER_YEAR_INVALID');
-   const dataset=await prepareDataset(env,Number(value));
+   const format=url.searchParams.get('format')||'v2';
+   if(!['v2','v3'].includes(format))fail('MANAGER_FORMAT_INVALID');
+   const dataset=await (format==='v3'?prepareTaxDatasetV3:prepareDataset)(env,Number(value));
    return new Response(dataset.stream(),{headers:{'Content-Type':'application/zip','Content-Disposition':`attachment; filename="disorder119-shop-${value}.zip"`,'Cache-Control':'no-store'}});
   }
   fail('MANAGER_ROUTE_NOT_ALLOWED',405);
