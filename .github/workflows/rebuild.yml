@@ -281,6 +281,11 @@ jobs:
       - name: Shop, SEO, Katalog und geschuetzte Modi pruefen
         run: python scripts/validate_shop.py
 
+      - name: Artikelnummern-URLs und alte Produktverweise pruefen
+        run: |
+          python scripts/test_catalog_number_urls.py
+          node --test shop-worker/storefront-edge.test.mjs
+
       - name: Commerce-, Mietpreis- und Security-Invarianten pruefen
         run: python scripts/validate_commerce.py
 

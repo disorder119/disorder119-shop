@@ -462,7 +462,7 @@ def related_card_html(x, lang):
             if x.get("price", 0) > 0
             else '<span class="related-card__price" data-price-on-request>' + esc(ph["price_on_request"]) + '</span>'
         )
-    href = lang_home(lang) + "artikel/" + str(x["id"]) + "/"
+    href = lang_home(lang) + "artikel/" + str(x.get("url_slug", x["id"])) + "/"
     return (
         '<a class="related-card" href="' + href + '">'
         '<div class="related-card__frame">'
@@ -671,7 +671,7 @@ def cta_html(it, shop_config, home, lang):
 def json_ld(it, lang):
     status = it.get("public_status") or "DRAFT"
     sold = status == "SOLD"
-    url = SITE_URL.rstrip("/") + lang_home(lang) + "artikel/" + str(it["id"]) + "/"
+    url = SITE_URL.rstrip("/") + lang_home(lang) + "artikel/" + str(it.get("url_slug", it["id"])) + "/"
     desc_field = {"de": it.get("desc_de") or it.get("desc"), "en": it.get("desc_en"), "fr": it.get("desc_fr")}[lang]
     data = {
         "@context": "https://schema.org",
@@ -724,7 +724,7 @@ def json_ld(it, lang):
 
 def breadcrumb_json_ld(it, lang):
     home_url = SITE_URL.rstrip("/") + lang_home(lang)
-    product_url = home_url + "artikel/" + str(it["id"]) + "/"
+    product_url = home_url + "artikel/" + str(it.get("url_slug", it["id"])) + "/"
     labels = {"de": "Archiv", "en": "Archive", "fr": "Archive"}
     data = {
         "@context": "https://schema.org",
@@ -779,12 +779,12 @@ def build_page(it, shop_config, lang):
     hell = foto_hell(grid_thumb_path(it))
     gallery_attr = f' style="--d119-hell:{hell}"' if hell else ""
     home = lang_home(lang)
-    canonical = SITE_URL.rstrip("/") + home + "artikel/" + str(it["id"]) + "/"
+    canonical = SITE_URL.rstrip("/") + home + "artikel/" + str(it.get("url_slug", it["id"])) + "/"
     hreflang_links = "\n".join(
         '<link rel="alternate" hreflang="' + l + '" href="'
-        + SITE_URL.rstrip("/") + lang_home(l) + "artikel/" + str(it["id"]) + '/">'
+        + SITE_URL.rstrip("/") + lang_home(l) + "artikel/" + str(it.get("url_slug", it["id"])) + '/">'
         for l in LANGS
-    ) + '\n<link rel="alternate" hreflang="x-default" href="' + SITE_URL.rstrip("/") + lang_home("de") + "artikel/" + str(it["id"]) + '/">'
+    ) + '\n<link rel="alternate" hreflang="x-default" href="' + SITE_URL.rstrip("/") + lang_home("de") + "artikel/" + str(it.get("url_slug", it["id"])) + '/">'
     og_locale_alternates = "\n".join(
         '<meta property="og:locale:alternate" content="' + OG_LOCALES[l] + '">'
         for l in LANGS if l != lang
@@ -820,6 +820,7 @@ def build_page(it, shop_config, lang):
     article_data = {
         "id": it["id"],
         "article": it.get("article"),
+        "url_slug": it.get("url_slug", str(it["id"])),
         "title": it["title"],
         "brand": it.get("brand"),
         "size": it.get("size"),
@@ -881,6 +882,7 @@ def build_page(it, shop_config, lang):
 <link rel="preload" as="style" href="/assets/theme.css?v={THEME_CSS_VERSION}" onload="this.onload=null;this.rel='stylesheet'">
 <script src="/assets/ansicht.js" defer></script>
 <script>try{{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}}catch(e){{}}</script>
+<script src="/assets/catalog-number-links.js" defer></script>
 </head>
 <body>
 <div class="page-head">
@@ -888,9 +890,9 @@ def build_page(it, shop_config, lang):
   <a class="page-head__brand" href="{home}">DISORDER119</a>
   <div class="page-head__right">
     <div class="lang-switch" id="langSwitch" role="group" aria-label="Sprache wählen">
-      <a class="lang-switch__btn" data-lang="de" href="/artikel/{it['id']}/">DE</a>
-      <a class="lang-switch__btn" data-lang="en" href="/en/artikel/{it['id']}/">EN</a>
-      <a class="lang-switch__btn" data-lang="fr" href="/fr/artikel/{it['id']}/">FR</a>
+      <a class="lang-switch__btn" data-lang="de" href="/artikel/{it.get('url_slug', it['id'])}/">DE</a>
+      <a class="lang-switch__btn" data-lang="en" href="/en/artikel/{it.get('url_slug', it['id'])}/">EN</a>
+      <a class="lang-switch__btn" data-lang="fr" href="/fr/artikel/{it.get('url_slug', it['id'])}/">FR</a>
     </div>
     <a class="page-head__back" href="{home}" data-i18n="backToArchive">← Zum Archiv</a>
     <a class="page-head__cart" id="pageHeadCart" href="{home}cart/"><span data-i18n="cartLink">Warenkorb</span><span class="page-head__cart-count" id="pageHeadCartCount"></span></a>
@@ -1098,7 +1100,7 @@ def page_breadcrumb_jsonld(title, canonical, lang):
 def item_list_jsonld(public_items, lang):
     home = SITE_URL.rstrip("/") + lang_home(lang)
     entries = [
-        {"@type": "ListItem", "position": i + 1, "url": home + "artikel/" + str(it["id"]) + "/"}
+        {"@type": "ListItem", "position": i + 1, "url": home + "artikel/" + str(it.get("url_slug", it["id"])) + "/"}
         for i, it in enumerate(public_items)
     ]
     data = {"@context": "https://schema.org", "@type": "ItemList", "name": "Disorder119 — Archiv-Katalog", "itemListElement": entries}
@@ -1210,7 +1212,7 @@ def initial_archive_card_html(it, lang):
         )
     return (
         '<a class="plate" data-ssr-item-id="' + str(it["id"]) + '" href="'
-        + home + 'artikel/' + str(it["id"]) + '/">'
+        + home + 'artikel/' + str(it.get("url_slug", it["id"])) + '/">'
         + '<div class="plate__frame">' + picture + '</div>'
         + '<div class="plate__body">'
         + '<button type="button" class="plate__brand" data-brand-filter>'
@@ -1833,9 +1835,13 @@ def build_articles():
     for it in ITEMS:
         for lang in LANGS:
             page = build_page(it, shop_config, lang)
-            item_dir = article_dir(lang, it["id"])
+            item_dir = article_dir(lang, it.get("url_slug", it["id"]))
             item_dir.mkdir(parents=True, exist_ok=True)
             (item_dir / "index.html").write_text(page, encoding="utf-8")
+            if str(it.get("url_slug",it["id"])) != str(it["id"]):
+                # Keep previous product IDs usable; the edge emits a 301.
+                legacy_dir=article_dir(lang,it["id"]); legacy_dir.mkdir(parents=True,exist_ok=True)
+                (legacy_dir / "index.html").write_text(page.replace('<head>','<head><meta name="robots" content="noindex,follow"><meta http-equiv="refresh" content="0;url='+lang_home(lang)+'artikel/'+str(it['url_slug'])+'/">',1),encoding='utf-8')
             if lang == "de" and it.get("public_status") != "SOLD":
                 de_pages_by_id[it["id"]] = page
             count += 1
@@ -1890,7 +1896,7 @@ def build_sitemap():
     ]
     page_specs = (
         [("", None)]
-        + [("artikel/" + str(it["id"]) + "/", it) for it in public_items]
+        + [("artikel/" + str(it.get("url_slug", it["id"])) + "/", it) for it in public_items]
         + [(slug + "/", None) for slug in indexable_specials]
     )
 
@@ -1942,7 +1948,7 @@ CATALOG_PATH = BASE / "data" / "catalog.json"
 # (dort direkt von build_page() aus ITEMS gerendert, nicht ueber diese
 # JSON-Datei), nicht fuer alle 237 Artikel im Grid-Payload.
 CATALOG_FIELDS = [
-    "id", "article", "title", "brand", "price", "price_estimated",
+    "id", "article", "url_slug", "title", "brand", "price", "price_estimated",
     "public_status", "status", "category", "size", "color", "condition",
     "brightness", "gallery", "look",
     "department", "product_type", "taxonomy_category", "size_normalized",
@@ -2186,7 +2192,7 @@ def build_merchant_feed():
         category = merchant_category(it)
         if not gallery or not category:
             continue
-        link = SITE_URL.rstrip("/") + "/artikel/" + str(it["id"]) + "/"
+        link = SITE_URL.rstrip("/") + "/artikel/" + str(it.get("url_slug", it["id"])) + "/"
         neu = bool(re.search(r"neu mit (original)?etikett", str(it.get("desc_de") or it.get("desc") or ""), re.I))
         dep = str(it.get("department") or "")
         felder = [

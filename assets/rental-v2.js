@@ -785,7 +785,7 @@
       var daily = dailyCents(item), dep = depositCents(item), rent = daily !== null && days ? daily * days : null;
       lines.push((index + 1) + ". " + itemName(item));
       lines.push("   Art.-Nr.: " + (item.article || item.id));
-      lines.push("   URL: " + window.location.origin + HOME + "artikel/" + item.id + "/");
+      lines.push("   URL: " + window.location.origin + HOME + "artikel/" + (item.url_slug || item.id) + "/");
       lines.push("   " + t("rent") + ": " + (rent === null ? t("onRequest") : money(rent)) + (daily === null ? "" : " (" + money(daily) + " / " + (LANG === "de" ? "Tag" : LANG === "fr" ? "jour" : "day") + ")"));
       lines.push("   " + t("deposit") + ": " + (dep === null ? t("onRequest") : money(dep)));
     });

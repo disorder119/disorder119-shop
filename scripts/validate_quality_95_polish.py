@@ -46,7 +46,7 @@ def main() -> None:
     # Purchase enquiry completeness, including an optional customer note.
     require("QUALITY95_CART_MESSAGE" in app and "QUALITY95_CART_LINK_REFRESH" in app, "optionale Kundennachricht im Warenkorb fehlt")
     require("cartOrderMessage.trim()" in app and "purchaseMessageLabel()" in app, "Kundennachricht wird nicht in Kaufanfrage übernommen")
-    require('rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + it.id + "/")' in app, "Produkt-URL fehlt in Warenkorbanfrage")
+    require('rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + (it.url_slug || it.id) + "/")' in app, "Produkt-URL fehlt in Warenkorbanfrage")
     require('it.article || it.id' in app, "interne Artikelnummer fehlt in Warenkorbanfrage")
     require("QUALITY95_CART_MESSAGE_STYLE" in app_css, "Warenkorb-Nachrichtenfeld ist nicht sauber scoped")
     require("QUALITY95_ARTICLE_MESSAGE" in article and "function ensureArticleMessageField" in article, "optionale Kundennachricht auf Produktseite fehlt")

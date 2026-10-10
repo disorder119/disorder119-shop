@@ -47,8 +47,8 @@ def patch_app() -> None:
     patch(
         path,
         '''      if (it.size) rows.push(t("factSize") + ": " + trSize(it.size));\n      rows.push(fmtPrice(it.price));\n      return rows.join("\\n");''',
-        '''      if (it.size) rows.push(t("factSize") + ": " + trSize(it.size));\n      rows.push(fmtPrice(it.price));\n      rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + it.id + "/");\n      return rows.join("\\n");''',
-        'rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + it.id + "/")',
+        '''      if (it.size) rows.push(t("factSize") + ": " + trSize(it.size));\n      rows.push(fmtPrice(it.price));\n      rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + (it.url_slug || it.id) + "/");\n      return rows.join("\\n");''',
+        'rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + (it.url_slug || it.id) + "/")',
     )
 
     patch(
@@ -91,8 +91,8 @@ def patch_rental_v2() -> None:
     patch(
         path,
         '''      lines.push("   Art.-Nr.: " + (item.article || item.id));\n      lines.push("   " + t("rent") + ": " + (rent === null ? t("onRequest") : money(rent)) + (daily === null ? "" : " (" + money(daily) + " / " + (LANG === "de" ? "Tag" : LANG === "fr" ? "jour" : "day") + ")"));''',
-        '''      lines.push("   Art.-Nr.: " + (item.article || item.id));\n      lines.push("   URL: " + window.location.origin + HOME + "artikel/" + item.id + "/");\n      lines.push("   " + t("rent") + ": " + (rent === null ? t("onRequest") : money(rent)) + (daily === null ? "" : " (" + money(daily) + " / " + (LANG === "de" ? "Tag" : LANG === "fr" ? "jour" : "day") + ")"));''',
-        'lines.push("   URL: " + window.location.origin + HOME + "artikel/" + item.id + "/")',
+        '''      lines.push("   Art.-Nr.: " + (item.article || item.id));\n      lines.push("   URL: " + window.location.origin + HOME + "artikel/" + (item.url_slug || item.id) + "/");\n      lines.push("   " + t("rent") + ": " + (rent === null ? t("onRequest") : money(rent)) + (daily === null ? "" : " (" + money(daily) + " / " + (LANG === "de" ? "Tag" : LANG === "fr" ? "jour" : "day") + ")"));''',
+        'lines.push("   URL: " + window.location.origin + HOME + "artikel/" + (item.url_slug || item.id) + "/")',
     )
 
     patch(

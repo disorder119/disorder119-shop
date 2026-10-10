@@ -1,3 +1,4 @@
+import { ARTICLE_NUMBER_ROUTES } from './catalog-number-routes.js';
 // Edge route in front of the existing static origin. No database or secrets.
 // Catalog source files stay intact in Git; only the public response is filtered.
 // Page views are handed to the shop Worker through the BESUCH service binding
@@ -5,7 +6,7 @@
 const PAGES = new Set(['agb','baukasten','cart','chaos','datenschutz','faq','impressum','kasse','konto','match','mieten','newsletter','ueber-uns','universe','widerruf']);
 // google7945c4dc594a9a9c.html: Inhaberschaft fuer die Google Search Console (Konto disorder119shop), muss dauerhaft erreichbar bleiben.
 const ROOT_FILES = new Set(['index.html','404.html','offline.html','robots.txt','sitemap.xml','manifest.webmanifest','sw.js','favicon.ico','google7945c4dc594a9a9c.html']);
-const FIELDS = new Set(['id','article','title','brand','price','price_estimated','public_status','status','category','size','color','condition','brightness','gallery','look','department','product_type','taxonomy_category','size_normalized','rental_price','grid_image','hover_image','foto_hell']);
+const FIELDS = new Set(['id','article','url_slug','title','brand','price','price_estimated','public_status','status','category','size','color','condition','brightness','gallery','look','department','product_type','taxonomy_category','size_normalized','rental_price','grid_image','hover_image','foto_hell']);
 // Gestaltete Fehlerseite fuer Adressen, die es im Shop nicht gibt. Steht hier
 // fertig im Worker: der Ursprung wird fuer solche Pfade nie gefragt.
 const SEITE_404='<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Seite nicht gefunden – Disorder119</title>'
@@ -91,6 +92,11 @@ export default {
     // Unverschluesselt aufgerufen (Cloudflare leitet nicht selbst um): sofort auf HTTPS.
     if (url.protocol==='http:') { url.protocol='https:'; return new Response(null,{status:301,headers:storefrontHeaders(new Response(null,{headers:{Location:url.toString(),'Cache-Control':'no-store'}}))}); }
     if (!['GET','HEAD'].includes(request.method)) return fail(405,'Methode nicht erlaubt.');
+    const legacy=url.pathname.match(/^(\/(?:en\/|fr\/)?artikel\/)(\d+)(?:\/index\.html|\/|\.html)?$/);
+    if(legacy && ARTICLE_NUMBER_ROUTES[legacy[2]]) {
+      url.pathname=legacy[1]+ARTICLE_NUMBER_ROUTES[legacy[2]]+'/';
+      return new Response(null,{status:301,headers:storefrontHeaders(new Response(null,{headers:{Location:url.toString(),'Cache-Control':'public, max-age=300'}}))});
+    }
     if (!publicPath(url.pathname)) return new Response(request.method==='HEAD'?null:SEITE_404,{status:404,headers:storefrontHeaders(new Response(null,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}}))});
     const filtered=['/data/catalog.json','/data/items.json'].includes(url.pathname);
     const originRequest=new Request(request,{method:filtered?'GET':request.method});
