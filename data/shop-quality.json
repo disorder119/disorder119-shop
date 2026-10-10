@@ -1,11 +1,11 @@
 {
   "summary": {
     "items_total": 239,
-    "catalog_public": 235,
-    "available": 156,
+    "catalog_public": 236,
+    "available": 157,
     "reserved": 0,
     "sold": 79,
-    "draft": 4
+    "draft": 3
   },
   "quality": {
     "missing_size": {

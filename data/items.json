@@ -28,6 +28,7 @@
     "brightness": 0.196,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "238",
     "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
@@ -35,8 +36,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "38",
-    "url_slug": "238"
+    "label_size": "38"
   },
   {
     "id": 6240,
@@ -68,14 +68,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "237",
     "department": "Objects",
     "product_type": "Toaster",
     "taxonomy_category": "Objects",
     "size_normalized": "Dimensions",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "237"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6239,
@@ -110,14 +110,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "236",
     "department": "Women",
     "product_type": "Sunglasses",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "236"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6238,
@@ -148,14 +148,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "235",
     "department": "Unisex",
     "product_type": "Sunglasses",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "high",
-    "taxonomy_reviewed": true,
-    "url_slug": "235"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6237,
@@ -188,14 +188,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "234",
     "department": "Men",
     "product_type": "Loafers",
     "taxonomy_category": "Shoes",
     "size_normalized": "9",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "234"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6236,
@@ -229,14 +229,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "233",
     "department": "Women",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 36",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "233"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6235,
@@ -270,14 +270,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "232",
     "department": "Men",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 39.5",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "232"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6234,
@@ -311,14 +311,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "231",
     "department": "Women",
     "product_type": "Shoes",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 41",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "231"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6233,
@@ -353,14 +353,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "230",
     "department": "Men",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 41",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "230"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6232,
@@ -394,14 +394,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "229",
     "department": "Women",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 37.5",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "229"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6231,
@@ -435,14 +435,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "228",
     "department": "Men",
     "product_type": "Boots",
     "taxonomy_category": "Shoes",
     "size_normalized": "9",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "228"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6230,
@@ -475,14 +475,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "227",
     "department": "Women",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 38.5",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "227"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6229,
@@ -516,14 +516,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "226",
     "department": "Women",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 36",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "226"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6228,
@@ -556,14 +556,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "225",
     "department": "Men",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "US 9",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "225"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6227,
@@ -598,14 +598,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "224",
     "department": "Men",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "6",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "224"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6226,
@@ -640,14 +640,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "223",
     "department": "Women",
     "product_type": "Boots",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 40",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "223"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6225,
@@ -680,14 +680,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "222",
     "department": "Men",
     "product_type": "Boots",
     "taxonomy_category": "Shoes",
     "size_normalized": "7.5",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "222"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6224,
@@ -724,14 +724,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "221",
     "department": "Women",
     "product_type": "Boots",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 38",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "221"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6223,
@@ -766,14 +766,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "220",
     "department": "Women",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 37",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "220"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6222,
@@ -807,14 +807,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "219",
     "department": "Men",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "8.5",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "219"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6221,
@@ -845,14 +845,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "218",
     "department": "Women",
     "product_type": "Sandals",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 38",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "218"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6220,
@@ -887,14 +887,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "217",
     "department": "Men",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "217"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6219,
@@ -927,14 +927,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "216",
     "department": "Men",
     "product_type": "Swim Shorts",
     "taxonomy_category": "Pants",
     "size_normalized": "L",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "216"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6218,
@@ -966,14 +966,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "215",
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "215"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6217,
@@ -1004,14 +1004,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "214",
     "department": "Unisex",
     "product_type": "Beanie",
     "taxonomy_category": "Accessories",
     "size_normalized": "One Size",
     "size_source": "structured",
     "taxonomy_confidence": "high",
-    "taxonomy_reviewed": true,
-    "url_slug": "214"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6216,
@@ -1042,14 +1042,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "213",
     "department": "Unisex",
     "product_type": "Beanie",
     "taxonomy_category": "Accessories",
     "size_normalized": "One Size",
     "size_source": "structured",
     "taxonomy_confidence": "high",
-    "taxonomy_reviewed": true,
-    "url_slug": "213"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6215,
@@ -1081,14 +1081,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "212",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "L",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "212"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6214,
@@ -1124,14 +1124,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "211",
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
     "size_normalized": "L",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "211"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6213,
@@ -1161,14 +1161,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "210",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "210"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6212,
@@ -1198,14 +1198,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "209",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "L",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "209"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6211,
@@ -1239,14 +1239,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "208",
     "department": "Unisex",
     "product_type": "Cap",
     "taxonomy_category": "Accessories",
     "size_normalized": "Adjustable",
     "size_source": "structured",
     "taxonomy_confidence": "high",
-    "taxonomy_reviewed": true,
-    "url_slug": "208"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6210,
@@ -1280,14 +1280,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "207",
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "207"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6209,
@@ -1320,14 +1320,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "206",
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "XXL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "206"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6208,
@@ -1363,14 +1363,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "205",
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "205"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6207,
@@ -1403,14 +1403,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "204",
     "department": "Unisex",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "204"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6206,
@@ -1443,14 +1443,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "203",
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
     "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "203"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6205,
@@ -1482,14 +1482,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "202",
     "department": "Women",
     "product_type": "Belt",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "202"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6204,
@@ -1522,14 +1522,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "201",
     "department": "Men",
     "product_type": "Vest",
     "taxonomy_category": "Jackets",
     "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "201"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6203,
@@ -1563,14 +1563,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "200",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "200"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6202,
@@ -1605,14 +1605,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "199",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "199"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6201,
@@ -1644,14 +1644,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "198",
     "department": "Men",
     "product_type": "Long Sleeve",
     "taxonomy_category": "Shirts",
     "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "198"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6200,
@@ -1684,14 +1684,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "197",
     "department": "Women",
     "product_type": "Knit Top",
     "taxonomy_category": "Knitwear",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "197"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6199,
@@ -1722,14 +1722,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "196",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "196"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6198,
@@ -1760,14 +1760,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "195",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "195"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6197,
@@ -1800,14 +1800,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "194",
     "department": "Men",
     "product_type": "Polo Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "194"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6196,
@@ -1840,14 +1840,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "193",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
     "size_normalized": "XS",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "193"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6195,
@@ -1880,14 +1880,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "192",
     "department": "Women",
     "product_type": "Blouse",
     "taxonomy_category": "Tops",
     "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "192"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6194,
@@ -1919,14 +1919,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "191",
     "department": "Women",
     "product_type": "Cardigan",
     "taxonomy_category": "Knitwear",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "191"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6193,
@@ -1960,14 +1960,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "190",
     "department": "Men",
     "product_type": "Biker Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "190"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6192,
@@ -2001,14 +2001,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "189",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "189"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6191,
@@ -2040,14 +2040,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "188",
     "department": "Women",
     "product_type": "Vest",
     "taxonomy_category": "Jackets",
     "size_normalized": "46",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "188"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6190,
@@ -2079,14 +2079,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "187",
     "department": "Women",
     "product_type": "Tunic",
     "taxonomy_category": "Tops",
     "size_normalized": "One Size",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "187"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6189,
@@ -2121,14 +2121,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "186",
     "department": "Men",
     "product_type": "T-Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "186"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6188,
@@ -2158,14 +2158,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "185",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
     "size_normalized": "3",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "185"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6187,
@@ -2205,14 +2205,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "184",
     "department": "Men",
     "product_type": "Biker Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "184"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6186,
@@ -2245,14 +2245,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "183",
     "department": "Men",
     "product_type": "T-Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "183"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6185,
@@ -2287,14 +2287,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "182",
     "department": "Unisex",
     "product_type": "Hat",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "high",
-    "taxonomy_reviewed": true,
-    "url_slug": "182"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6184,
@@ -2326,14 +2326,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "181",
     "department": "Unisex",
     "product_type": "Hat",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "high",
-    "taxonomy_reviewed": true,
-    "url_slug": "181"
+    "taxonomy_reviewed": true
   },
   {
     "id": 6042,
@@ -2366,14 +2366,14 @@
       "size",
       "color"
     ],
+    "url_slug": "6042",
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "6042"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9523,
@@ -2405,6 +2405,7 @@
     "brightness": 0.458,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "179",
     "department": "Unisex",
     "product_type": "Cap",
     "taxonomy_category": "Accessories",
@@ -2412,8 +2413,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "high",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "179"
+    "label_size": "M"
   },
   {
     "id": 9526,
@@ -2445,6 +2445,7 @@
     "brightness": 0.387,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "178",
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -2452,8 +2453,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "XXL",
-    "url_slug": "178"
+    "label_size": "XXL"
   },
   {
     "id": 9525,
@@ -2488,14 +2488,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "177",
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "177"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9519,
@@ -2528,6 +2528,7 @@
     "brightness": 0.382,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "176",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
@@ -2535,8 +2536,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "XL",
-    "url_slug": "176"
+    "label_size": "XL"
   },
   {
     "id": 9531,
@@ -2570,14 +2570,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "175",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
     "size_normalized": "L",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "175"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9536,
@@ -2609,14 +2609,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "174",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
     "size_normalized": "L",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "174"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9527,
@@ -2647,6 +2647,7 @@
     "brightness": 0.408,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "173",
     "department": "Unisex",
     "product_type": "Long Sleeve",
     "taxonomy_category": "Shirts",
@@ -2654,8 +2655,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "173"
+    "label_size": "M"
   },
   {
     "id": 9535,
@@ -2688,14 +2688,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "172",
     "department": "Women",
     "product_type": "Sandals",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 40",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "172"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9534,
@@ -2725,14 +2725,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "171",
     "department": "Men",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 42",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "171"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9524,
@@ -2762,6 +2762,7 @@
     "brightness": 0.447,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "170",
     "department": "Women",
     "product_type": "Bomber Jacket",
     "taxonomy_category": "Jackets",
@@ -2769,8 +2770,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "S",
-    "url_slug": "170"
+    "label_size": "S"
   },
   {
     "id": 9533,
@@ -2801,14 +2801,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "169",
     "department": "Unisex",
     "product_type": "Sandals",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 28",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "169"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9522,
@@ -2841,6 +2841,7 @@
     "brightness": 0.269,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "168",
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -2848,8 +2849,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "168"
+    "label_size": "M"
   },
   {
     "id": 9521,
@@ -2885,6 +2885,7 @@
       "color": "explicit-title-color",
       "condition": "explicit-labeled-source-text"
     },
+    "url_slug": "167",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -2892,8 +2893,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "42",
-    "url_slug": "167"
+    "label_size": "42"
   },
   {
     "id": 9520,
@@ -2922,6 +2922,7 @@
     "brightness": 0.467,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "166",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -2929,8 +2930,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "XS",
-    "url_slug": "166"
+    "label_size": "XS"
   },
   {
     "id": 9518,
@@ -2963,6 +2963,7 @@
     "brightness": 0.355,
     "public_status": "SOLD",
     "data_quality_open": [],
+    "url_slug": "165",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -2970,8 +2971,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "38",
-    "url_slug": "165"
+    "label_size": "38"
   },
   {
     "id": 9532,
@@ -3002,14 +3002,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "164",
     "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "XS",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "164"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9517,
@@ -3039,6 +3039,7 @@
     "brightness": 0.238,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "163",
     "department": "Women",
     "product_type": "Blazer",
     "taxonomy_category": "Jackets",
@@ -3046,8 +3047,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "38",
-    "url_slug": "163"
+    "label_size": "38"
   },
   {
     "id": 9516,
@@ -3075,6 +3075,7 @@
     "brightness": 0.474,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "162",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
@@ -3082,8 +3083,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "L",
-    "url_slug": "162"
+    "label_size": "L"
   },
   {
     "id": 9515,
@@ -3112,6 +3112,7 @@
     "brightness": 0.373,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "161",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
@@ -3119,8 +3120,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "L",
-    "url_slug": "161"
+    "label_size": "L"
   },
   {
     "id": 9514,
@@ -3149,6 +3149,7 @@
     "brightness": 0.438,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "160",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
@@ -3156,8 +3157,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "L",
-    "url_slug": "160"
+    "label_size": "L"
   },
   {
     "id": 9513,
@@ -3190,6 +3190,7 @@
     "brightness": 0.475,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "159",
     "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
@@ -3197,8 +3198,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "Nicht eindeutig lesbar",
-    "url_slug": "159"
+    "label_size": "Nicht eindeutig lesbar"
   },
   {
     "id": 9538,
@@ -3229,6 +3229,7 @@
     "brightness": 0.263,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "158",
     "department": "Women",
     "product_type": "Blazer",
     "taxonomy_category": "Jackets",
@@ -3236,8 +3237,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "40",
-    "url_slug": "158"
+    "label_size": "40"
   },
   {
     "id": 9512,
@@ -3270,6 +3270,7 @@
     "brightness": 0.457,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "157",
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -3277,8 +3278,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "50",
-    "url_slug": "157"
+    "label_size": "50"
   },
   {
     "id": 9511,
@@ -3310,6 +3310,7 @@
     "brightness": 0.258,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "156",
     "department": "Men",
     "product_type": "Biker Jacket",
     "taxonomy_category": "Jackets",
@@ -3317,8 +3318,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "52",
-    "url_slug": "156"
+    "label_size": "52"
   },
   {
     "id": 9530,
@@ -3349,14 +3349,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "155",
     "department": "Men",
     "product_type": "T-Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "L",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "155"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9529,
@@ -3388,14 +3388,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "154",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "XS",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "154"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9510,
@@ -3424,6 +3424,7 @@
     "brightness": 0.316,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "153",
     "department": "Women",
     "product_type": "Vest",
     "taxonomy_category": "Jackets",
@@ -3431,8 +3432,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "3",
-    "url_slug": "153"
+    "label_size": "3"
   },
   {
     "id": 9509,
@@ -3465,6 +3465,7 @@
     "brightness": 0.479,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "152",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -3472,8 +3473,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "48",
-    "url_slug": "152"
+    "label_size": "48"
   },
   {
     "id": 9508,
@@ -3502,6 +3502,7 @@
     "brightness": 0.179,
     "public_status": "SOLD",
     "data_quality_open": [],
+    "url_slug": "151",
     "department": "Women",
     "product_type": "T-Shirt",
     "taxonomy_category": "Shirts",
@@ -3509,8 +3510,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "S (F36 / I40)",
-    "url_slug": "151"
+    "label_size": "S (F36 / I40)"
   },
   {
     "id": 9528,
@@ -3543,14 +3543,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "150",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
     "size_normalized": "L",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "150"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9507,
@@ -3583,14 +3583,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "149",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
     "size_normalized": "XS",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "149"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9500,
@@ -3622,6 +3622,7 @@
     "brightness": 0.352,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "148",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -3629,8 +3630,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "44",
-    "url_slug": "148"
+    "label_size": "44"
   },
   {
     "id": 9505,
@@ -3665,14 +3665,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "147",
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "147"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9498,
@@ -3704,6 +3704,7 @@
     "brightness": 0.489,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "146",
     "department": "Men",
     "product_type": "Shirt",
     "taxonomy_category": "Shirts",
@@ -3711,8 +3712,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M/L (geschätzt)",
-    "url_slug": "146"
+    "label_size": "M/L (geschätzt)"
   },
   {
     "id": 9496,
@@ -3743,6 +3743,7 @@
     "brightness": 0.334,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "145",
     "department": "Men",
     "product_type": "Polo Shirt",
     "taxonomy_category": "Shirts",
@@ -3750,8 +3751,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "46",
-    "url_slug": "145"
+    "label_size": "46"
   },
   {
     "id": 9495,
@@ -3781,6 +3781,7 @@
     "brightness": 0.375,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "144",
     "department": "Men",
     "product_type": "Polo Shirt",
     "taxonomy_category": "Shirts",
@@ -3788,8 +3789,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "46",
-    "url_slug": "144"
+    "label_size": "46"
   },
   {
     "id": 9503,
@@ -3823,14 +3823,14 @@
       "size",
       "color"
     ],
+    "url_slug": "143",
     "department": "Women",
     "product_type": "Sweatshirt",
     "taxonomy_category": "Knitwear",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "143"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9506,
@@ -3858,6 +3858,7 @@
     "brightness": 0.468,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "142",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
@@ -3865,8 +3866,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "36",
-    "url_slug": "142"
+    "label_size": "36"
   },
   {
     "id": 9504,
@@ -3901,14 +3901,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "141",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "141"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9499,
@@ -3938,6 +3938,7 @@
     "brightness": 0.459,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "140",
     "department": "Women",
     "product_type": "Blazer",
     "taxonomy_category": "Jackets",
@@ -3945,8 +3946,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "42",
-    "url_slug": "140"
+    "label_size": "42"
   },
   {
     "id": 9497,
@@ -3979,6 +3979,7 @@
     "brightness": 0.166,
     "public_status": "SOLD",
     "data_quality_open": [],
+    "url_slug": "139",
     "department": "Women",
     "product_type": "Belt",
     "taxonomy_category": "Accessories",
@@ -3986,8 +3987,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "80",
-    "url_slug": "139"
+    "label_size": "80"
   },
   {
     "id": 9501,
@@ -4021,14 +4021,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "138",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "138"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9486,
@@ -4060,14 +4060,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "137",
     "department": "Unisex",
     "product_type": "Cap",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "high",
-    "taxonomy_reviewed": true,
-    "url_slug": "137"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9494,
@@ -4098,6 +4098,7 @@
     "brightness": 0.467,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "136",
     "department": "Women",
     "product_type": "Vest",
     "taxonomy_category": "Jackets",
@@ -4105,8 +4106,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "44",
-    "url_slug": "136"
+    "label_size": "44"
   },
   {
     "id": 9485,
@@ -4137,14 +4137,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "135",
     "department": "Women",
     "product_type": "Boots",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 39",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "135"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9493,
@@ -4174,6 +4174,7 @@
     "brightness": 0.215,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "134",
     "department": "Women",
     "product_type": "Boots",
     "taxonomy_category": "Shoes",
@@ -4181,8 +4182,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "39",
-    "url_slug": "134"
+    "label_size": "39"
   },
   {
     "id": 9492,
@@ -4216,14 +4216,14 @@
     "brightness": 0.481,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "133",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "46",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "133"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9491,
@@ -4253,14 +4253,14 @@
     "brightness": 0.402,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "132",
     "department": "Women",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 36",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "132"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9484,
@@ -4291,14 +4291,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "131",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "131"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9490,
@@ -4328,14 +4328,14 @@
     "brightness": 0.172,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "130",
     "department": "Unisex",
     "product_type": "Sleepwear",
     "taxonomy_category": "Tops",
     "size_normalized": "One Size",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "130"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9489,
@@ -4368,6 +4368,7 @@
     "brightness": 0.313,
     "public_status": "SOLD",
     "data_quality_open": [],
+    "url_slug": "129",
     "department": "Women",
     "product_type": "Set",
     "taxonomy_category": "Tops",
@@ -4375,8 +4376,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "Nicht angegeben, geschätzt ca. S",
-    "url_slug": "129"
+    "label_size": "Nicht angegeben, geschätzt ca. S"
   },
   {
     "id": 9488,
@@ -4407,6 +4407,7 @@
     "brightness": 0.373,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "128",
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -4414,8 +4415,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "52",
-    "url_slug": "128"
+    "label_size": "52"
   },
   {
     "id": 9487,
@@ -4446,6 +4446,7 @@
     "brightness": 0.495,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "127",
     "department": "Women",
     "product_type": "Cardigan",
     "taxonomy_category": "Knitwear",
@@ -4453,8 +4454,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "S",
-    "url_slug": "127"
+    "label_size": "S"
   },
   {
     "id": 9482,
@@ -4485,14 +4485,14 @@
     "brightness": 0.314,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "126",
     "department": "Women",
     "product_type": "Coat",
     "taxonomy_category": "Coats",
     "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "126"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9483,
@@ -4523,14 +4523,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "125",
     "department": "Women",
     "product_type": "Belt",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "125"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9481,
@@ -4565,14 +4565,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "124",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "124"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9472,
@@ -4601,6 +4601,7 @@
     "brightness": 0.277,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "123",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
@@ -4608,8 +4609,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "Small",
-    "url_slug": "123"
+    "label_size": "Small"
   },
   {
     "id": 9471,
@@ -4638,14 +4638,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "122",
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "122"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9480,
@@ -4674,6 +4674,7 @@
     "brightness": 0.161,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "121",
     "department": "Women",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
@@ -4681,8 +4682,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "EU 36",
-    "url_slug": "121"
+    "label_size": "EU 36"
   },
   {
     "id": 9479,
@@ -4713,6 +4713,7 @@
     "brightness": 0.519,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "120",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -4720,8 +4721,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "46",
-    "url_slug": "120"
+    "label_size": "46"
   },
   {
     "id": 9478,
@@ -4751,6 +4751,7 @@
     "brightness": 0.492,
     "public_status": "SOLD",
     "data_quality_open": [],
+    "url_slug": "119",
     "department": "Men",
     "product_type": "Tank Top",
     "taxonomy_category": "Shirts",
@@ -4758,8 +4759,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "XL",
-    "url_slug": "119"
+    "label_size": "XL"
   },
   {
     "id": 9477,
@@ -4790,14 +4790,14 @@
     "brightness": 0.318,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "118",
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "118"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9470,
@@ -4829,14 +4829,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "117",
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
     "size_normalized": "L",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "117"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9476,
@@ -4865,6 +4865,7 @@
     "brightness": 0.339,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "116",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
@@ -4872,8 +4873,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "116"
+    "label_size": "M"
   },
   {
     "id": 9475,
@@ -4903,6 +4903,7 @@
     "brightness": 0.358,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "115",
     "department": "Women",
     "product_type": "Vest",
     "taxonomy_category": "Jackets",
@@ -4910,8 +4911,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "38",
-    "url_slug": "115"
+    "label_size": "38"
   },
   {
     "id": 9474,
@@ -4941,6 +4941,7 @@
     "brightness": 0.388,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "114",
     "department": "Women",
     "product_type": "Blazer",
     "taxonomy_category": "Jackets",
@@ -4948,8 +4949,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "40",
-    "url_slug": "114"
+    "label_size": "40"
   },
   {
     "id": 9473,
@@ -4982,14 +4982,14 @@
     "brightness": 0.215,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "113",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "113"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9469,
@@ -5020,6 +5020,7 @@
     "brightness": 0.339,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "112",
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -5027,8 +5028,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "52",
-    "url_slug": "112"
+    "label_size": "52"
   },
   {
     "id": 9468,
@@ -5058,6 +5058,7 @@
     "brightness": 0.442,
     "public_status": "SOLD",
     "data_quality_open": [],
+    "url_slug": "111",
     "department": "Women",
     "product_type": "Tank Top",
     "taxonomy_category": "Shirts",
@@ -5065,8 +5066,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "40",
-    "url_slug": "111"
+    "label_size": "40"
   },
   {
     "id": 9467,
@@ -5095,14 +5095,14 @@
     "brightness": 0.308,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "110",
     "department": "Women",
     "product_type": "Boots",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 38",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "110"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9410,
@@ -5133,6 +5133,7 @@
     "brightness": 0.41,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "109",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -5140,8 +5141,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "109"
+    "label_size": "M"
   },
   {
     "id": 9466,
@@ -5173,6 +5173,7 @@
     "brightness": 0.278,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "108",
     "department": "Unisex",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -5180,8 +5181,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "108"
+    "label_size": "M"
   },
   {
     "id": 9465,
@@ -5212,14 +5212,14 @@
     "brightness": 0.465,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "107",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "48",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "107"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9461,
@@ -5254,14 +5254,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "106",
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "106"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9464,
@@ -5293,14 +5293,14 @@
       "size",
       "color"
     ],
+    "url_slug": "105",
     "department": "Men",
     "product_type": "Loafers",
     "taxonomy_category": "Shoes",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "105"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9463,
@@ -5329,6 +5329,7 @@
     "brightness": 0.153,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "104",
     "department": "Women",
     "product_type": "Heels",
     "taxonomy_category": "Shoes",
@@ -5336,8 +5337,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "36",
-    "url_slug": "104"
+    "label_size": "36"
   },
   {
     "id": 9537,
@@ -5367,14 +5367,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "103",
     "department": "Unisex",
     "product_type": "Wallet",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "high",
-    "taxonomy_reviewed": true,
-    "url_slug": "103"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9462,
@@ -5403,14 +5403,14 @@
     "brightness": 0.342,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "102",
     "department": "Women",
     "product_type": "Blazer",
     "taxonomy_category": "Jackets",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "102"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9459,
@@ -5443,14 +5443,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "101",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "L",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "101"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9458,
@@ -5481,6 +5481,7 @@
     "brightness": 0.234,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "100",
     "department": "Women",
     "product_type": "Trench Coat",
     "taxonomy_category": "Coats",
@@ -5488,8 +5489,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "L",
-    "url_slug": "100"
+    "label_size": "L"
   },
   {
     "id": 9451,
@@ -5523,14 +5523,14 @@
     "brightness": 0.484,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "99",
     "department": "Men",
     "product_type": "Vest",
     "taxonomy_category": "Jackets",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "99"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9460,
@@ -5563,14 +5563,14 @@
       "size",
       "color"
     ],
+    "url_slug": "98",
     "department": "Men",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "98"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9447,
@@ -5600,14 +5600,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "97",
     "department": "Women",
     "product_type": "Boots",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 39",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "97"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9446,
@@ -5640,14 +5640,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "96",
     "department": "Men",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "8",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "96"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9457,
@@ -5677,14 +5677,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "95",
     "department": "Women",
     "product_type": "Scarf",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "95"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9456,
@@ -5714,6 +5714,7 @@
     "brightness": 0.234,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "94",
     "department": "Women",
     "product_type": "Long Sleeve",
     "taxonomy_category": "Shirts",
@@ -5721,8 +5722,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "XS",
-    "url_slug": "94"
+    "label_size": "XS"
   },
   {
     "id": 9445,
@@ -5755,14 +5755,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "93",
     "department": "Women",
     "product_type": "Joggers",
     "taxonomy_category": "Pants",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "93"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9442,
@@ -5795,6 +5795,7 @@
     "brightness": 0.491,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "92",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -5802,8 +5803,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "S",
-    "url_slug": "92"
+    "label_size": "S"
   },
   {
     "id": 9419,
@@ -5835,6 +5835,7 @@
     "brightness": 0.424,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "91",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -5842,8 +5843,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "EU 38",
-    "url_slug": "91"
+    "label_size": "EU 38"
   },
   {
     "id": 9454,
@@ -5876,6 +5876,7 @@
     "brightness": 0.457,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "90",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -5883,8 +5884,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "38",
-    "url_slug": "90"
+    "label_size": "38"
   },
   {
     "id": 9444,
@@ -5917,14 +5917,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "89",
     "department": "Women",
     "product_type": "Coat",
     "taxonomy_category": "Coats",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "89"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9448,
@@ -5957,14 +5957,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "88",
     "department": "Men",
     "product_type": "Sweatshirt",
     "taxonomy_category": "Knitwear",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "88"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9455,
@@ -5997,6 +5997,7 @@
     "brightness": 0.21,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "87",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -6004,8 +6005,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "IT 42",
-    "url_slug": "87"
+    "label_size": "IT 42"
   },
   {
     "id": 9449,
@@ -6037,14 +6037,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "86",
     "department": "Unisex",
     "product_type": "Sweater",
     "taxonomy_category": "Knitwear",
     "size_normalized": "L",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "86"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9425,
@@ -6077,14 +6077,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "85",
     "department": "Men",
     "product_type": "Sweater",
     "taxonomy_category": "Knitwear",
     "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "85"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9423,
@@ -6117,14 +6117,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "84",
     "department": "Men",
     "product_type": "Long Sleeve",
     "taxonomy_category": "Shirts",
     "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "84"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9441,
@@ -6153,6 +6153,7 @@
     "brightness": 0.369,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "83",
     "department": "Women",
     "product_type": "Polo Shirt",
     "taxonomy_category": "Shirts",
@@ -6160,8 +6161,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "83"
+    "label_size": "M"
   },
   {
     "id": 9440,
@@ -6190,6 +6190,7 @@
     "brightness": 0.403,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "82",
     "department": "Women",
     "product_type": "Polo Shirt",
     "taxonomy_category": "Shirts",
@@ -6197,8 +6198,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "L",
-    "url_slug": "82"
+    "label_size": "L"
   },
   {
     "id": 9438,
@@ -6228,14 +6228,14 @@
     "brightness": 0.205,
     "public_status": "SOLD",
     "data_quality_open": [],
+    "url_slug": "81",
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "81"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9424,
@@ -6269,14 +6269,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "80",
     "department": "Men",
     "product_type": "Suit",
     "taxonomy_category": "Jackets",
     "size_normalized": "L",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "80"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9439,
@@ -6305,6 +6305,7 @@
     "brightness": 0.347,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "79",
     "department": "Unisex",
     "product_type": "Scarf",
     "taxonomy_category": "Accessories",
@@ -6312,8 +6313,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "high",
     "taxonomy_reviewed": true,
-    "label_size": "One Size",
-    "url_slug": "79"
+    "label_size": "One Size"
   },
   {
     "id": 9422,
@@ -6343,6 +6343,7 @@
     "brightness": 0.182,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "78",
     "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
@@ -6350,8 +6351,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "IT 46",
-    "url_slug": "78"
+    "label_size": "IT 46"
   },
   {
     "id": 9436,
@@ -6384,6 +6384,7 @@
     "brightness": 0.34,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "77",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -6391,8 +6392,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "77"
+    "label_size": "M"
   },
   {
     "id": 9435,
@@ -6422,6 +6422,7 @@
     "brightness": 0.417,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "76",
     "department": "Women",
     "product_type": "Cardigan",
     "taxonomy_category": "Knitwear",
@@ -6429,8 +6430,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "44",
-    "url_slug": "76"
+    "label_size": "44"
   },
   {
     "id": 9434,
@@ -6459,6 +6459,7 @@
     "brightness": 0.374,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "75",
     "department": "Men",
     "product_type": "Sweatshirt",
     "taxonomy_category": "Knitwear",
@@ -6466,8 +6467,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "48",
-    "url_slug": "75"
+    "label_size": "48"
   },
   {
     "id": 9433,
@@ -6498,14 +6498,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "74",
     "department": "Unisex",
     "product_type": "Bag",
     "taxonomy_category": "Accessories",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "high",
-    "taxonomy_reviewed": true,
-    "url_slug": "74"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9432,
@@ -6534,6 +6534,7 @@
     "brightness": 0.156,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "73",
     "department": "Women",
     "product_type": "Underwear Shorts",
     "taxonomy_category": "Pants",
@@ -6541,8 +6542,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "S",
-    "url_slug": "73"
+    "label_size": "S"
   },
   {
     "id": 9431,
@@ -6571,6 +6571,7 @@
     "brightness": 0.157,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "72",
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
@@ -6578,8 +6579,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "S",
-    "url_slug": "72"
+    "label_size": "S"
   },
   {
     "id": 9430,
@@ -6612,6 +6612,7 @@
     "brightness": 0.407,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "71",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -6619,8 +6620,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "42",
-    "url_slug": "71"
+    "label_size": "42"
   },
   {
     "id": 9428,
@@ -6650,6 +6650,7 @@
     "brightness": 0.382,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "70",
     "department": "Women",
     "product_type": "T-Shirt",
     "taxonomy_category": "Shirts",
@@ -6657,8 +6658,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "36",
-    "url_slug": "70"
+    "label_size": "36"
   },
   {
     "id": 9429,
@@ -6687,15 +6687,15 @@
     "brightness": 0.187,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "69",
     "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "M",
     "size_source": "structured",
-    "taxonomy_confidence": "explicit",
+    "taxonomy_confidence": "high",
     "taxonomy_reviewed": true,
-    "label_size": "38",
-    "url_slug": "69"
+    "label_size": "38"
   },
   {
     "id": 9427,
@@ -6726,6 +6726,7 @@
     "brightness": 0.187,
     "public_status": "DRAFT",
     "data_quality_open": [],
+    "url_slug": "9427",
     "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
@@ -6733,8 +6734,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "38",
-    "url_slug": "9427"
+    "label_size": "38"
   },
   {
     "id": 9426,
@@ -6765,14 +6765,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "68",
     "department": "Women",
     "product_type": "Shorts",
     "taxonomy_category": "Pants",
     "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "68"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9418,
@@ -6802,6 +6802,7 @@
     "brightness": 0.28,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "67",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -6809,8 +6810,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "EU 40",
-    "url_slug": "67"
+    "label_size": "EU 40"
   },
   {
     "id": 9443,
@@ -6841,6 +6841,7 @@
     "brightness": 0.18,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "66",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -6848,8 +6849,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "38",
-    "url_slug": "66"
+    "label_size": "38"
   },
   {
     "id": 9420,
@@ -6879,6 +6879,7 @@
     "brightness": 0.365,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "65",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -6886,8 +6887,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "40",
-    "url_slug": "65"
+    "label_size": "40"
   },
   {
     "id": 9421,
@@ -6918,14 +6918,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "64",
     "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "64"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9404,
@@ -6955,6 +6955,7 @@
     "brightness": 0.404,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "63",
     "department": "Unisex",
     "product_type": "Belt",
     "taxonomy_category": "Accessories",
@@ -6962,8 +6963,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "high",
     "taxonomy_reviewed": true,
-    "label_size": "One Size",
-    "url_slug": "63"
+    "label_size": "One Size"
   },
   {
     "id": 9400,
@@ -6995,6 +6995,7 @@
     "brightness": 0.266,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "62",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
@@ -7002,8 +7003,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "0",
-    "url_slug": "62"
+    "label_size": "0"
   },
   {
     "id": 9403,
@@ -7034,6 +7034,7 @@
     "brightness": 0.287,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "61",
     "department": "Women",
     "product_type": "Blouse",
     "taxonomy_category": "Tops",
@@ -7041,8 +7042,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "61"
+    "label_size": "M"
   },
   {
     "id": 9409,
@@ -7074,6 +7074,7 @@
     "brightness": 0.365,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "60",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
@@ -7081,8 +7082,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "XS",
-    "url_slug": "60"
+    "label_size": "XS"
   },
   {
     "id": 9398,
@@ -7112,6 +7112,7 @@
     "brightness": 0.361,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "59",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
@@ -7119,8 +7120,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "S",
-    "url_slug": "59"
+    "label_size": "S"
   },
   {
     "id": 9406,
@@ -7148,6 +7148,7 @@
     "brightness": 0.444,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "58",
     "department": "Women",
     "product_type": "Tank Top",
     "taxonomy_category": "Shirts",
@@ -7155,8 +7156,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "S",
-    "url_slug": "58"
+    "label_size": "S"
   },
   {
     "id": 9383,
@@ -7186,6 +7186,7 @@
     "brightness": 0.278,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "57",
     "department": "Men",
     "product_type": "Long Sleeve",
     "taxonomy_category": "Shirts",
@@ -7193,8 +7194,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "L",
-    "url_slug": "57"
+    "label_size": "L"
   },
   {
     "id": 9390,
@@ -7226,14 +7226,14 @@
       "size",
       "color"
     ],
+    "url_slug": "56",
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "56"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9395,
@@ -7266,14 +7266,14 @@
       "size",
       "color"
     ],
+    "url_slug": "55",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "55"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9385,
@@ -7304,14 +7304,14 @@
       "size",
       "color"
     ],
+    "url_slug": "54",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "54"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9396,
@@ -7342,14 +7342,14 @@
       "size",
       "color"
     ],
+    "url_slug": "53",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "53"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9399,
@@ -7378,6 +7378,7 @@
     "brightness": 0.49,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "52",
     "department": "Women",
     "product_type": "Cardigan",
     "taxonomy_category": "Knitwear",
@@ -7385,8 +7386,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "52"
+    "label_size": "M"
   },
   {
     "id": 9401,
@@ -7415,6 +7415,7 @@
     "brightness": 0.319,
     "public_status": "SOLD",
     "data_quality_open": [],
+    "url_slug": "51",
     "department": "Women",
     "product_type": "Long Sleeve",
     "taxonomy_category": "Shirts",
@@ -7422,8 +7423,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "51"
+    "label_size": "M"
   },
   {
     "id": 9405,
@@ -7451,6 +7451,7 @@
     "brightness": 0.467,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "50",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
@@ -7458,8 +7459,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "S",
-    "url_slug": "50"
+    "label_size": "S"
   },
   {
     "id": 9411,
@@ -7492,14 +7492,14 @@
       "size",
       "color"
     ],
+    "url_slug": "49",
     "department": "Men",
     "product_type": "T-Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "49"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9388,
@@ -7532,14 +7532,14 @@
       "size",
       "color"
     ],
+    "url_slug": "48",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "48"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9392,
@@ -7572,14 +7572,14 @@
       "size",
       "color"
     ],
+    "url_slug": "47",
     "department": "Women",
     "product_type": "Blazer",
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "47"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9437,
@@ -7613,14 +7613,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "46",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "46"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9382,
@@ -7648,6 +7648,7 @@
     "brightness": 0.289,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "45",
     "department": "Unisex",
     "product_type": "Backpack",
     "taxonomy_category": "Accessories",
@@ -7655,8 +7656,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "high",
     "taxonomy_reviewed": true,
-    "label_size": "One Size",
-    "url_slug": "45"
+    "label_size": "One Size"
   },
   {
     "id": 9389,
@@ -7685,6 +7685,7 @@
     "brightness": 0.359,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "44",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -7692,8 +7693,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "44"
+    "label_size": "M"
   },
   {
     "id": 9386,
@@ -7725,14 +7725,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "43",
     "department": "Unisex",
     "product_type": "Hat",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "high",
-    "taxonomy_reviewed": true,
-    "url_slug": "43"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9402,
@@ -7760,14 +7760,14 @@
       "size",
       "color"
     ],
+    "url_slug": "9402",
     "department": "Women",
     "product_type": "Blouse",
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "9402"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9416,
@@ -7798,6 +7798,7 @@
     "brightness": 0.45,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "42",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -7805,8 +7806,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "XS",
-    "url_slug": "42"
+    "label_size": "XS"
   },
   {
     "id": 9393,
@@ -7837,14 +7837,14 @@
       "size",
       "color"
     ],
+    "url_slug": "41",
     "department": "Unisex",
     "product_type": "Sweatshirt",
     "taxonomy_category": "Knitwear",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "41"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9407,
@@ -7876,6 +7876,7 @@
     "brightness": 0.188,
     "public_status": "SOLD",
     "data_quality_open": [],
+    "url_slug": "40",
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
@@ -7883,8 +7884,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "40"
+    "label_size": "M"
   },
   {
     "id": 9415,
@@ -7917,14 +7917,14 @@
       "size",
       "color"
     ],
+    "url_slug": "39",
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "39"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9394,
@@ -7959,14 +7959,14 @@
       "size",
       "color"
     ],
+    "url_slug": "38",
     "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "38"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9413,
@@ -7994,6 +7994,7 @@
     "brightness": 0.24,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "37",
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
@@ -8001,8 +8002,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M (Tag: W26)",
-    "url_slug": "37"
+    "label_size": "M (Tag: W26)"
   },
   {
     "id": 9414,
@@ -8031,6 +8031,7 @@
     "brightness": 0.213,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "36",
     "department": "Women",
     "product_type": "Shorts",
     "taxonomy_category": "Pants",
@@ -8038,8 +8039,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "36"
+    "label_size": "M"
   },
   {
     "id": 9408,
@@ -8070,6 +8070,7 @@
     "brightness": 0.228,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "35",
     "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
@@ -8077,8 +8078,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "30",
-    "url_slug": "35"
+    "label_size": "30"
   },
   {
     "id": 9391,
@@ -8109,14 +8109,14 @@
       "size",
       "color"
     ],
+    "url_slug": "34",
     "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "34"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9417,
@@ -8148,6 +8148,7 @@
     "brightness": 0.258,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "33",
     "department": "Women",
     "product_type": "Vest",
     "taxonomy_category": "Jackets",
@@ -8155,8 +8156,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "S",
-    "url_slug": "33"
+    "label_size": "S"
   },
   {
     "id": 9412,
@@ -8186,6 +8186,7 @@
     "brightness": 0.308,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "32",
     "department": "Men",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
@@ -8193,8 +8194,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "32"
+    "label_size": "M"
   },
   {
     "id": 9387,
@@ -8228,14 +8228,14 @@
       "size",
       "color"
     ],
+    "url_slug": "31",
     "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "31"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9384,
@@ -8266,14 +8266,14 @@
       "size",
       "color"
     ],
+    "url_slug": "30",
     "department": "Men",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "30"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9397,
@@ -8305,14 +8305,14 @@
       "size",
       "color"
     ],
+    "url_slug": "29",
     "department": "Men",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "29"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9366,
@@ -8344,14 +8344,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "28",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "28"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9362,
@@ -8379,6 +8379,7 @@
     "brightness": 0.477,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "27",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
@@ -8386,8 +8387,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "27"
+    "label_size": "M"
   },
   {
     "id": 9502,
@@ -8418,14 +8418,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "22",
     "department": "Unisex",
     "product_type": "Bag",
     "taxonomy_category": "Accessories",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "high",
-    "taxonomy_reviewed": true,
-    "url_slug": "22"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9371,
@@ -8458,14 +8458,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "21",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "S",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "21"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9375,
@@ -8501,14 +8501,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "20",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "20"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9369,
@@ -8542,14 +8542,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "19",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "19"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9378,
@@ -8579,6 +8579,7 @@
     "brightness": 0.517,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "18",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
@@ -8586,8 +8587,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "18"
+    "label_size": "M"
   },
   {
     "id": 9374,
@@ -8618,14 +8618,14 @@
       "size",
       "color"
     ],
+    "url_slug": "9374",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "9374"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9367,
@@ -8659,14 +8659,14 @@
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
+    "url_slug": "17",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "17"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9377,
@@ -8696,6 +8696,7 @@
     "brightness": 0.445,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "16",
     "department": "Women",
     "product_type": "Dress",
     "taxonomy_category": "Dresses",
@@ -8703,8 +8704,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "16"
+    "label_size": "M"
   },
   {
     "id": 9370,
@@ -8735,14 +8735,14 @@
       "size",
       "color"
     ],
+    "url_slug": "15",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "15"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9373,
@@ -8774,14 +8774,14 @@
       "size",
       "color"
     ],
+    "url_slug": "14",
     "department": "Unisex",
     "product_type": "T-Shirt",
     "taxonomy_category": "Shirts",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "14"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9381,
@@ -8809,6 +8809,7 @@
     "brightness": 0.37,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "13",
     "department": "Men",
     "product_type": "Polo Shirt",
     "taxonomy_category": "Shirts",
@@ -8816,8 +8817,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "13"
+    "label_size": "M"
   },
   {
     "id": 9376,
@@ -8849,14 +8849,14 @@
       "size",
       "color"
     ],
+    "url_slug": "12",
     "department": "Men",
     "product_type": "Suit",
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "12"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9365,
@@ -8890,6 +8890,7 @@
       "color": "explicit-title-color",
       "condition": "explicit-labeled-source-text"
     },
+    "url_slug": "11",
     "department": "Women",
     "product_type": "Cardigan",
     "taxonomy_category": "Knitwear",
@@ -8897,8 +8898,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "11"
+    "label_size": "M"
   },
   {
     "id": 9368,
@@ -8931,14 +8931,14 @@
       "size",
       "color"
     ],
+    "url_slug": "10",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
     "size_normalized": "Unknown",
     "size_source": "unknown",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "10"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9360,
@@ -8967,6 +8967,7 @@
     "brightness": 0.353,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "9",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -8974,8 +8975,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "S",
-    "url_slug": "9"
+    "label_size": "S"
   },
   {
     "id": 9379,
@@ -9004,6 +9004,7 @@
     "brightness": 0.274,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "8",
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -9011,8 +9012,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "8"
+    "label_size": "M"
   },
   {
     "id": 9380,
@@ -9041,6 +9041,7 @@
     "brightness": 0.271,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "7",
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -9048,8 +9049,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "7"
+    "label_size": "M"
   },
   {
     "id": 9361,
@@ -9078,6 +9078,7 @@
     "brightness": 0.232,
     "public_status": "SOLD",
     "data_quality_open": [],
+    "url_slug": "6",
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
@@ -9085,8 +9086,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "EUR 36",
-    "url_slug": "6"
+    "label_size": "EUR 36"
   },
   {
     "id": 9359,
@@ -9116,6 +9116,7 @@
     "brightness": 0.38,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "5",
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
@@ -9123,8 +9124,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "EUR 36",
-    "url_slug": "5"
+    "label_size": "EUR 36"
   },
   {
     "id": 9358,
@@ -9154,6 +9154,7 @@
     "brightness": 0.313,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "4",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -9161,8 +9162,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "One Size",
-    "url_slug": "4"
+    "label_size": "One Size"
   },
   {
     "id": 9364,
@@ -9191,6 +9191,7 @@
     "brightness": 0.434,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "3",
     "department": "Women",
     "product_type": "Sweater",
     "taxonomy_category": "Knitwear",
@@ -9198,8 +9199,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "38",
-    "url_slug": "3"
+    "label_size": "38"
   },
   {
     "id": 9363,
@@ -9226,6 +9226,7 @@
     "brightness": 0.415,
     "public_status": "AVAILABLE",
     "data_quality_open": [],
+    "url_slug": "2",
     "department": "Women",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
@@ -9233,8 +9234,7 @@
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "M",
-    "url_slug": "2"
+    "label_size": "M"
   },
   {
     "id": 9372,
@@ -9263,14 +9263,14 @@
     "data_quality_open": [
       "color"
     ],
+    "url_slug": "1",
     "department": "Women",
     "product_type": "Sneakers",
     "taxonomy_category": "Shoes",
     "size_normalized": "EU 38",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "1"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9539,
@@ -9299,14 +9299,14 @@
     "brightness": 0.5,
     "public_status": "DRAFT",
     "data_quality_open": [],
+    "url_slug": "9539",
     "department": "Women",
     "product_type": "Top",
     "taxonomy_category": "Tops",
     "size_normalized": "M",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
-    "taxonomy_reviewed": true,
-    "url_slug": "9539"
+    "taxonomy_reviewed": true
   },
   {
     "id": 9999,
@@ -9331,13 +9331,13 @@
     "brightness": 0.1,
     "public_status": "SOLD",
     "data_quality_open": [],
+    "url_slug": "9999",
     "department": "Unisex",
     "product_type": "Accessory",
     "taxonomy_category": "Accessories",
     "size_normalized": "One Size",
     "size_source": "structured",
     "taxonomy_confidence": "high",
-    "taxonomy_reviewed": true,
-    "url_slug": "9999"
+    "taxonomy_reviewed": true
   }
 ]
