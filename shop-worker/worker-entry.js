@@ -17,6 +17,7 @@ import { handleAdminCommerceMetrics } from "./admin-commerce-metrics.js";
 import { handleAdminRentalGroups } from "./admin-rental-groups.js";
 import { handleAdminCases } from "./admin-cases.js";
 import { handleAdminSystem } from "./admin-system.js";
+import { handleAdminParcels, isAdminParcelsRoute } from "./admin-parcels.js";
 import { handleAdminAlerts } from "./admin-alerts.js";
 import { handleAdminNotifications } from "./admin-notifications.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
@@ -313,6 +314,10 @@ const worker = {
 
       if (url.pathname === "/admin/system") {
         return finish(await handleAdminSystem(request, runtimeEnv, url, reqId, origin));
+      }
+
+      if (isAdminParcelsRoute(url)) {
+        return finish(await handleAdminParcels(request, runtimeEnv, url, reqId, origin));
       }
 
       if (url.pathname === "/admin/alerts/sync") {
