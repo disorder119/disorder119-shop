@@ -76,6 +76,12 @@ jobs:
           node --check shop-worker/karte.js
           node --test shop-worker/packlink.test.mjs shop-worker/versand.test.mjs shop-worker/kasse.test.mjs shop-worker/versand-privat.test.mjs shop-worker/karte.test.mjs
 
+      - name: Private Pakete und Tracking-Links pruefen
+        run: |
+          node --check shop-worker/admin-parcels.js
+          node --check shop-worker/tracking-input.js
+          node --test shop-worker/admin-parcels.test.mjs shop-worker/tracking-input.test.mjs
+
       - name: Live-Besucher (Statistik und Telegram) pruefen
         run: |
           node --check shop-worker/besucher.js
@@ -112,3 +118,4 @@ jobs:
 
       - name: Privacy and storefront security regressions
         run: node --test shop-worker/privacy-security.test.mjs shop-worker/admin-privacy.test.mjs shop-worker/visitor-consent.test.mjs shop-worker/storefront-edge.test.mjs shop-worker/legal-content.test.mjs
+
