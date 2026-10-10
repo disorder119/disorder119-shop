@@ -16,6 +16,7 @@ def validate(items, manifest):
         item=by_id.get(row['shop_id'])
         if item is None: errors.append(f'Mapped product missing: {row["shop_id"]}')
         elif item.get('article')!=row['article']: errors.append(f'Product {row["shop_id"]}: expected article {row["article"]}, found {item.get("article")}')
+        elif item.get('url_slug',row['article'])!=row['article']: errors.append(f'Product {row["shop_id"]}: canonical URL does not match confirmed article number')
     return errors
 
 def main():

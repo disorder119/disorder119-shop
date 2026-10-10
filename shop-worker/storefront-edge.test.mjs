@@ -2,6 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import edge,{publicPath,publicCatalog,seitenaufruf} from './storefront-edge.js';
 
+test('legacy product identities redirect to confirmed numbers and preserve language/query',async()=>{
+  for(const [old,target] of [['/artikel/6184/','/artikel/181/'],['/artikel/9429/','/artikel/69/'],['/en/artikel/9472/?from=archive','/en/artikel/123/?from=archive'],['/fr/artikel/6241.html','/fr/artikel/238/']]) {
+    let calls=0;const r=await edge.fetch(new Request('https://disorder119.com'+old),{},{},async()=>{calls++;return new Response('bad');});
+    assert.equal(r.status,301);assert.equal(r.headers.get('Location'),'https://disorder119.com'+target);assert.equal(calls,0);
+  }
+});
+test('canonical numbers are served without redirect loops; unknown legacy IDs retain identity',async()=>{
+  for(const path of ['/artikel/181/','/artikel/238/','/artikel/9374/']) {
+    const r=await edge.fetch(new Request('https://disorder119.com'+path),{},{},async()=>new Response('original'));
+    assert.equal(r.status,200);assert.equal(await r.text(),'original');
+  }
+});
+
 test('publication allows real shop, language, image, PWA and Apple Pay paths',()=>{
   for(const path of ['/','/en/','/fr/agb/','/artikel/119/index.html','/artikel/119.html','/kasse/','/assets/img/test/0.webp','/assets/legal-content.js','/manifest.webmanifest','/.well-known/apple-developer-merchantid-domain-association','/feed/google-merchant.xml']) assert.equal(publicPath(path),true,path);
   for(const path of ['/feed/','/feed/google-merchant.json','/feed/x/y.xml']) assert.equal(publicPath(path),false,path);

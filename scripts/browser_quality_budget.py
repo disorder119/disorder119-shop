@@ -144,7 +144,7 @@ def representative_product_path() -> str:
         item_id = item.get("id")
         public_status = str(item.get("public_status") or "").upper()
         if item_id and public_status in {"AVAILABLE", "RESERVED", "SOLD"}:
-            return f"artikel/{item_id}/"
+            return f"artikel/{item.get('url_slug',item_id)}/"
     fail("Kein oeffentliches Produkt in data/items.json gefunden")
     raise AssertionError  # pragma: no cover
 

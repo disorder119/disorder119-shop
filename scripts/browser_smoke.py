@@ -284,10 +284,14 @@ def test_product_cart_and_rental(driver) -> None:
     item_match = re.search(r"/artikel/(\d+)/", urlparse(href).path)
     if not item_match:
         fail(f"Produkt-ID nicht aus URL lesbar: {href}")
-    item_id = int(item_match.group(1))
+    route_number = int(item_match.group(1))
 
     driver.get(href)
     wait(driver, EC.presence_of_element_located((By.CSS_SELECTOR, ".product .info h1")), "Produktdetail")
+    identity = driver.execute_script("return {id: window.ARTICLE_ITEM.id, route: window.ARTICLE_ITEM.url_slug || String(window.ARTICLE_ITEM.id)}")
+    if str(identity['route']) != str(route_number):
+        fail('Produktadresse stimmt nicht mit der kanonischen Artikelnummer überein')
+    item_id = int(identity['id'])
     gallery_main = wait(driver, EC.presence_of_element_located((By.ID, "galleryMain")), "Produkt-Hauptbild")
     assert_product_image_protected(driver, gallery_main, "Produkt-Hauptbild")
     # Trigger the same registered click handler without depending on decoded

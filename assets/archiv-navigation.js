@@ -711,7 +711,7 @@
       liste.forEach(function (it) {
         var li = el("li", "");
         var karte = el(kopie ? "span" : "a", "d119-verkauft__karte");
-        if (!kopie) karte.href = home + "artikel/" + it.id + "/";
+        if (!kopie) karte.href = home + "artikel/" + (it.url_slug || it.id) + "/";
         var bild = el("span", "d119-verkauft__bild");
         var img = document.createElement("img");
         img.src = vorschauPfad(it);

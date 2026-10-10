@@ -334,12 +334,13 @@ def validate_and_report() -> None:
 
     # Generierte Produktseiten muessen fuer jeden nicht-DRAFT Artikel existieren.
     for item_id in sorted(expected_catalog):
-        page = BASE / "artikel" / str(item_id) / "index.html"
+        slug=by_id[item_id].get("url_slug",str(item_id))
+        page = BASE / "artikel" / str(slug) / "index.html"
         if not page.is_file():
             severe.append(f"Produktseite fehlt: artikel/{item_id}/index.html")
             continue
         html = page.read_text(encoding="utf-8", errors="replace")
-        if f'https://disorder119.com/artikel/{item_id}/' not in html:
+        if f'https://disorder119.com/artikel/{slug}/' not in html:
             severe.append(f"Artikel {item_id}: Canonical/URL fehlt auf Produktseite")
         if '"@type": "Product"' not in html:
             severe.append(f"Artikel {item_id}: Product JSON-LD fehlt")

@@ -54,7 +54,7 @@ def main() -> None:
     # niemals in 0,00 EUR umdeuten.
     require('t("orderArticleAbbrev") + (it.article || it.id)' in app,
             "Kaufanfrage aus dem Warenkorb enthält keine Artikelnummer.")
-    require('rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + it.id + "/")' in app,
+    require('rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + (it.url_slug || it.id) + "/")' in app,
             "Kaufanfrage aus dem Warenkorb enthält keine Artikel-URL.")
     require('rows.push(fmtPriceDisplay(it.price));' in app and 'AUDIT_PERFECT_CART_TOTAL' in app,
             "Warenkorb behandelt Preis-auf-Anfrage nicht konsistent.")
@@ -65,7 +65,7 @@ def main() -> None:
             "Miet-Drawer zeigt die Artikelnummer weiterhin sichtbar.")
     require('lines.push("   Art.-Nr.: " + (item.article || item.id))' in rental,
             "Multi-Rental-Anfrage enthält nicht jede Artikelnummer.")
-    require('lines.push("   URL: " + window.location.origin + HOME + "artikel/" + item.id + "/")' in rental,
+    require('lines.push("   URL: " + window.location.origin + HOME + "artikel/" + (item.url_slug || item.id) + "/")' in rental,
             "Multi-Rental-Anfrage enthält keine Artikel-URL.")
     require('if (state.message) lines.push(t("message") + ": " + state.message);' in rental,
             "Kundennachricht fehlt in Multi-Rental-Anfrage.")

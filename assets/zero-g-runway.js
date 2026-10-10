@@ -55,7 +55,7 @@
     return state.items;
   }
   function imageUrl(item) { var value=item&&item.grid_image?String(item.grid_image):(item&&item.gallery&&item.gallery[0]?String(item.gallery[0]):""); if(!value)return""; if(/^https?:\/\//i.test(value))return value; return "/"+value.replace(/^\/+/,""); }
-  function articleUrl(item) { return item&&item.id ? "/artikel/"+encodeURIComponent(String(item.id))+"/" : "#"; }
+  function articleUrl(item) { return item&&(item.url_slug || item.id) ? "/artikel/"+encodeURIComponent(String((item.url_slug || item.id)))+"/" : "#"; }
   function universeReady() { var view=document.getElementById("chaosView"); return !!(view&&!view.classList.contains("hidden")&&!view.classList.contains("chaos-view--game")&&!state.active&&(!state.root||state.root.hidden)); }
   function stopNativeGame() { var native=document.getElementById("chaosGame"); if(native&&!native.hidden){var back=document.getElementById("chaosGameBack"); if(back)back.click();} }
   function installSelectionGuard() {

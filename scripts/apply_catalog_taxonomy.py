@@ -186,7 +186,7 @@ def enrich_product_pages(items: list[dict]) -> tuple[int, list[str]]:
     for item in items:
         item_id = int(item["id"])
         for lang in LANGS:
-            path = article_path(lang, item_id)
+            path = article_path(lang, int(item.get('url_slug',item_id)))
             if not path.exists():
                 missing.append(str(path.relative_to(BASE)))
                 continue

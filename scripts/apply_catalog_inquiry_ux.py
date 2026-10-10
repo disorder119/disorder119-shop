@@ -13,7 +13,8 @@ BASE = Path(__file__).resolve().parents[1]
 def patch(path: str, old: str, new: str, marker: str) -> None:
     target = BASE / path
     text = target.read_text(encoding="utf-8")
-    if marker in text:
+    markers=(marker,) if isinstance(marker,str) else marker
+    if any(candidate in text for candidate in markers):
         return
     if old not in text:
         raise SystemExit(f"FEHLER: erwarteter Quellblock fehlt in {path}: {marker}")
@@ -47,8 +48,8 @@ def patch_app() -> None:
     patch(
         path,
         '''      if (it.size) rows.push(t("factSize") + ": " + trSize(it.size));\n      rows.push(fmtPrice(it.price));\n      return rows.join("\\n");''',
-        '''      if (it.size) rows.push(t("factSize") + ": " + trSize(it.size));\n      rows.push(fmtPrice(it.price));\n      rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + it.id + "/");\n      return rows.join("\\n");''',
-        'rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + it.id + "/")',
+        '''      if (it.size) rows.push(t("factSize") + ": " + trSize(it.size));\n      rows.push(fmtPrice(it.price));\n      rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + (it.url_slug || it.id) + "/");\n      return rows.join("\\n");''',
+        'rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + (it.url_slug || it.id) + "/")',
     )
 
     patch(
@@ -91,8 +92,8 @@ def patch_rental_v2() -> None:
     patch(
         path,
         '''      lines.push("   Art.-Nr.: " + (item.article || item.id));\n      lines.push("   " + t("rent") + ": " + (rent === null ? t("onRequest") : money(rent)) + (daily === null ? "" : " (" + money(daily) + " / " + (LANG === "de" ? "Tag" : LANG === "fr" ? "jour" : "day") + ")"));''',
-        '''      lines.push("   Art.-Nr.: " + (item.article || item.id));\n      lines.push("   URL: " + window.location.origin + HOME + "artikel/" + item.id + "/");\n      lines.push("   " + t("rent") + ": " + (rent === null ? t("onRequest") : money(rent)) + (daily === null ? "" : " (" + money(daily) + " / " + (LANG === "de" ? "Tag" : LANG === "fr" ? "jour" : "day") + ")"));''',
-        'lines.push("   URL: " + window.location.origin + HOME + "artikel/" + item.id + "/")',
+        '''      lines.push("   Art.-Nr.: " + (item.article || item.id));\n      lines.push("   URL: " + window.location.origin + HOME + "artikel/" + (item.url_slug || item.id) + "/");\n      lines.push("   " + t("rent") + ": " + (rent === null ? t("onRequest") : money(rent)) + (daily === null ? "" : " (" + money(daily) + " / " + (LANG === "de" ? "Tag" : LANG === "fr" ? "jour" : "day") + ")"));''',
+        'lines.push("   URL: " + window.location.origin + HOME + "artikel/" + (item.url_slug || item.id) + "/")',
     )
 
     patch(
@@ -113,7 +114,7 @@ def patch_rental_picker() -> None:
         path,
         '''      return normalize([item.brand, item.title, item.article, item.category, item.size].join(" ")).indexOf(q) >= 0;''',
         '''      return normalize([item.brand, item.title, item.article, item.id, item.category, item.size].join(" ")).indexOf(q) >= 0;''',
-        "item.article, item.id, item.category",
+        ("item.article, item.id, item.category", "item.article, item.id, itemCategory(item), item.size"),
     )
 
     patch(

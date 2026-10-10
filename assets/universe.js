@@ -395,7 +395,7 @@
   }
   function openItem(it) {
     if (!it || !it.id) return;
-    location.href = PREFIX + "artikel/" + encodeURIComponent(it.id) + "/";
+    location.href = PREFIX + "artikel/" + encodeURIComponent((it.url_slug || it.id)) + "/";
   }
   function tap(x, y, pointerType) {
     var now = performance.now(), hit = hitTest(x, y);

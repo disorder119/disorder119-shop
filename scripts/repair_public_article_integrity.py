@@ -166,7 +166,7 @@ def related_card(item: dict, lang: str) -> str:
     gallery = item.get("gallery") or []
     hero = card_image(gallery)
     return (
-        f'<a class="related-card" href="{prefix}artikel/{item["id"]}/">'
+        f'<a class="related-card" href="{prefix}artikel/{item.get("url_slug",item["id"])}/">'
         '<div class="related-card__frame">'
         f'<img src="/{html.escape(hero, quote=True)}" alt="{html.escape(display_name(item), quote=True)}" loading="lazy" decoding="async" width="220" height="293" />'
         + price + "</div>"
@@ -218,7 +218,7 @@ def replace_related(text: str, sections: str) -> str:
 
 
 def repair_page(item: dict, public_items: list[dict], lang: str) -> None:
-    page = article_dir(lang, int(item["id"])) / "index.html"
+    page = article_dir(lang, int(item.get("url_slug",item["id"]))) / "index.html"
     if not page.exists():
         raise SystemExit(f"FEHLER: öffentliche Produktseite fehlt: {page.relative_to(BASE)}")
     text = page.read_text(encoding="utf-8")
@@ -252,6 +252,13 @@ def repair_page(item: dict, public_items: list[dict], lang: str) -> None:
     text = text[:match.start()] + replacement + text[match.end():]
     text = replace_related(text, related_sections(item, public_items, lang))
     page.write_text(text, encoding="utf-8")
+    if str(item.get('url_slug',item['id'])) != str(item['id']):
+        # Legacy fallbacks must not retain stale related links to removed drafts.
+        legacy=article_dir(lang,int(item['id']))/'index.html'
+        if legacy.exists():
+            prefix='/' if lang=='de' else '/'+lang+'/'
+            redirected=text.replace('<head>','<head><meta name="robots" content="noindex,follow"><meta http-equiv="refresh" content="0;url='+prefix+'artikel/'+str(item['url_slug'])+'/">',1)
+            legacy.write_text(redirected,encoding='utf-8')
 
 
 def main() -> None:
@@ -262,7 +269,7 @@ def main() -> None:
     removed = 0
     for item in drafts:
         for lang in LANGS:
-            path = article_dir(lang, int(item["id"]))
+            path = article_dir(lang, int(item.get("url_slug",item["id"])))
             if path.exists():
                 shutil.rmtree(path)
                 removed += 1

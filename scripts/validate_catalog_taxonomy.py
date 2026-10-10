@@ -47,6 +47,7 @@ def tr_category(category: str, lang: str) -> str:
 def main() -> None:
     items = json.loads(ITEMS_PATH.read_text(encoding="utf-8"))
     by_id = {int(item["id"]): item for item in items}
+    by_route = {int(item.get('url_slug',item['id'])): item for item in items}
     if len(by_id) != len(items):
         fail("doppelte Item-ID in data/items.json")
 
@@ -156,7 +157,7 @@ def main() -> None:
     for item in items:
         for lang in ("de", "en", "fr"):
             root = BASE if lang == "de" else BASE / lang
-            page = root / "artikel" / str(item["id"]) / "index.html"
+            page = root / "artikel" / str(item.get('url_slug',item['id'])) / "index.html"
             if item.get("public_status") == "DRAFT":
                 if page.exists():
                     fail(f"DRAFT-Produktseite ist öffentlich vorhanden: {page.relative_to(BASE)}")
@@ -207,7 +208,7 @@ def main() -> None:
             page_foot = page_html.find('<div class="page-foot">')
             if related_start >= 0 and page_foot > related_start:
                 for linked_id_s in RELATED_LINK_RE.findall(page_html[related_start:page_foot]):
-                    linked = by_id.get(int(linked_id_s))
+                    linked = by_route.get(int(linked_id_s))
                     if not linked:
                         fail(f"Related-Link auf unbekannten Artikel {linked_id_s} in {page.relative_to(BASE)}")
                     if linked.get("public_status") == "DRAFT":
@@ -218,7 +219,7 @@ def main() -> None:
                     category_section_start = page_html.rfind('<div class="related">', related_start, category_marker)
                     category_html = page_html[category_section_start:page_foot]
                     for linked_id_s in RELATED_LINK_RE.findall(category_html):
-                        linked = by_id[int(linked_id_s)]
+                        linked = by_route[int(linked_id_s)]
                         if linked.get("taxonomy_category") != item.get("taxonomy_category"):
                             fail(
                                 f"falsche ähnliche Kategorie auf {page.relative_to(BASE)}: "

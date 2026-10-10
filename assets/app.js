@@ -1024,7 +1024,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       var rows = [name, t("orderArticleAbbrev") + (it.article || it.id)];
       if (it.size) rows.push(t("factSize") + ": " + trSize(it.size));
       rows.push(fmtPriceDisplay(it.price));
-      rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + it.id + "/");
+      rows.push("URL: " + location.origin + langHome(LANG) + "artikel/" + (it.url_slug || it.id) + "/");
       return rows.join("\n");
     }).filter(Boolean);
     var hasUnknownPrice = cart.some(function (id) {
@@ -1863,7 +1863,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       // eben unsichtbar), diese Katalog-Ansichten liegen aber jetzt auf
       // echten eigenen Pfaden wie /chaos/ - ein relativer Link haette sich
       // dort falsch aufgeloest (".../chaos/artikel/123/" statt "/artikel/123/").
-      plate.href = langHome(LANG) + "artikel/" + it.id + "/";
+      plate.href = langHome(LANG) + "artikel/" + (it.url_slug || it.id) + "/";
       if (animateEntry && idx >= 2 && idx < animateCount) {
         plate.classList.add("plate--enter");
         plate.style.transitionDelay = (idx * 20) + "ms";
@@ -2106,7 +2106,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     // geoeffnet werden (echte eigene URLs, keine reinen Client-Zustaende
     // mehr) - eine relative Aufloesung haette dort z.B. ".../chaos/artikel/
     // 123/" ergeben (404) statt der echten Artikel-URL.
-    var shareUrl = location.origin + langHome(LANG) + "artikel/" + currentItem.id + "/";
+    var shareUrl = location.origin + langHome(LANG) + "artikel/" + (currentItem.url_slug || currentItem.id) + "/";
     var shareTitle = (currentItem.brand ? currentItem.brand + " — " : "") + currentItem.title;
     var shareText = shareTitle + " bei Disorder119";
     if (navigator.share) {
