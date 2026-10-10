@@ -86,6 +86,11 @@ jobs:
       - name: Python Syntax pruefen
         run: python -m py_compile build_site.py scripts/*.py
 
+      - name: Bestaetigte Artikelnummern gegen feste Produkt-IDs pruefen
+        run: |
+          python scripts/validate_catalog_number_links.py
+          python scripts/test_catalog_number_links.py
+
       - name: Verifizierte Katalog-Quellfehler reparieren
         run: python scripts/repair_catalog_source_integrity.py
 

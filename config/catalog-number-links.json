@@ -1,0 +1,947 @@
+{
+  "version": 1,
+  "confirmed_on": "2026-10-10",
+  "description": "Confirmed catalog article numbers. Product IDs and image paths are permanent identities; historical order and invoice snapshots retain their original numbers.",
+  "links": [
+    {
+      "shop_id": 9372,
+      "article": "1"
+    },
+    {
+      "shop_id": 9363,
+      "article": "2"
+    },
+    {
+      "shop_id": 9364,
+      "article": "3"
+    },
+    {
+      "shop_id": 9358,
+      "article": "4"
+    },
+    {
+      "shop_id": 9359,
+      "article": "5"
+    },
+    {
+      "shop_id": 9361,
+      "article": "6"
+    },
+    {
+      "shop_id": 9380,
+      "article": "7"
+    },
+    {
+      "shop_id": 9379,
+      "article": "8"
+    },
+    {
+      "shop_id": 9360,
+      "article": "9"
+    },
+    {
+      "shop_id": 9368,
+      "article": "10"
+    },
+    {
+      "shop_id": 9365,
+      "article": "11"
+    },
+    {
+      "shop_id": 9376,
+      "article": "12"
+    },
+    {
+      "shop_id": 9381,
+      "article": "13"
+    },
+    {
+      "shop_id": 9373,
+      "article": "14"
+    },
+    {
+      "shop_id": 9370,
+      "article": "15"
+    },
+    {
+      "shop_id": 9377,
+      "article": "16"
+    },
+    {
+      "shop_id": 9367,
+      "article": "17"
+    },
+    {
+      "shop_id": 9378,
+      "article": "18"
+    },
+    {
+      "shop_id": 9369,
+      "article": "19"
+    },
+    {
+      "shop_id": 9375,
+      "article": "20"
+    },
+    {
+      "shop_id": 9371,
+      "article": "21"
+    },
+    {
+      "shop_id": 9502,
+      "article": "22"
+    },
+    {
+      "shop_id": 9362,
+      "article": "27"
+    },
+    {
+      "shop_id": 9366,
+      "article": "28"
+    },
+    {
+      "shop_id": 9397,
+      "article": "29"
+    },
+    {
+      "shop_id": 9384,
+      "article": "30"
+    },
+    {
+      "shop_id": 9387,
+      "article": "31"
+    },
+    {
+      "shop_id": 9412,
+      "article": "32"
+    },
+    {
+      "shop_id": 9417,
+      "article": "33"
+    },
+    {
+      "shop_id": 9391,
+      "article": "34"
+    },
+    {
+      "shop_id": 9408,
+      "article": "35"
+    },
+    {
+      "shop_id": 9414,
+      "article": "36"
+    },
+    {
+      "shop_id": 9413,
+      "article": "37"
+    },
+    {
+      "shop_id": 9394,
+      "article": "38"
+    },
+    {
+      "shop_id": 9415,
+      "article": "39"
+    },
+    {
+      "shop_id": 9407,
+      "article": "40"
+    },
+    {
+      "shop_id": 9393,
+      "article": "41"
+    },
+    {
+      "shop_id": 9416,
+      "article": "42"
+    },
+    {
+      "shop_id": 9386,
+      "article": "43"
+    },
+    {
+      "shop_id": 9389,
+      "article": "44"
+    },
+    {
+      "shop_id": 9382,
+      "article": "45"
+    },
+    {
+      "shop_id": 9437,
+      "article": "46"
+    },
+    {
+      "shop_id": 9392,
+      "article": "47"
+    },
+    {
+      "shop_id": 9388,
+      "article": "48"
+    },
+    {
+      "shop_id": 9411,
+      "article": "49"
+    },
+    {
+      "shop_id": 9405,
+      "article": "50"
+    },
+    {
+      "shop_id": 9401,
+      "article": "51"
+    },
+    {
+      "shop_id": 9399,
+      "article": "52"
+    },
+    {
+      "shop_id": 9396,
+      "article": "53"
+    },
+    {
+      "shop_id": 9385,
+      "article": "54"
+    },
+    {
+      "shop_id": 9395,
+      "article": "55"
+    },
+    {
+      "shop_id": 9390,
+      "article": "56"
+    },
+    {
+      "shop_id": 9383,
+      "article": "57"
+    },
+    {
+      "shop_id": 9406,
+      "article": "58"
+    },
+    {
+      "shop_id": 9398,
+      "article": "59"
+    },
+    {
+      "shop_id": 9409,
+      "article": "60"
+    },
+    {
+      "shop_id": 9403,
+      "article": "61"
+    },
+    {
+      "shop_id": 9400,
+      "article": "62"
+    },
+    {
+      "shop_id": 9404,
+      "article": "63"
+    },
+    {
+      "shop_id": 9421,
+      "article": "64"
+    },
+    {
+      "shop_id": 9420,
+      "article": "65"
+    },
+    {
+      "shop_id": 9443,
+      "article": "66"
+    },
+    {
+      "shop_id": 9418,
+      "article": "67"
+    },
+    {
+      "shop_id": 9426,
+      "article": "68"
+    },
+    {
+      "shop_id": 9429,
+      "article": "69"
+    },
+    {
+      "shop_id": 9428,
+      "article": "70"
+    },
+    {
+      "shop_id": 9430,
+      "article": "71"
+    },
+    {
+      "shop_id": 9431,
+      "article": "72"
+    },
+    {
+      "shop_id": 9432,
+      "article": "73"
+    },
+    {
+      "shop_id": 9433,
+      "article": "74"
+    },
+    {
+      "shop_id": 9434,
+      "article": "75"
+    },
+    {
+      "shop_id": 9435,
+      "article": "76"
+    },
+    {
+      "shop_id": 9436,
+      "article": "77"
+    },
+    {
+      "shop_id": 9422,
+      "article": "78"
+    },
+    {
+      "shop_id": 9439,
+      "article": "79"
+    },
+    {
+      "shop_id": 9424,
+      "article": "80"
+    },
+    {
+      "shop_id": 9438,
+      "article": "81"
+    },
+    {
+      "shop_id": 9440,
+      "article": "82"
+    },
+    {
+      "shop_id": 9441,
+      "article": "83"
+    },
+    {
+      "shop_id": 9423,
+      "article": "84"
+    },
+    {
+      "shop_id": 9425,
+      "article": "85"
+    },
+    {
+      "shop_id": 9449,
+      "article": "86"
+    },
+    {
+      "shop_id": 9455,
+      "article": "87"
+    },
+    {
+      "shop_id": 9448,
+      "article": "88"
+    },
+    {
+      "shop_id": 9444,
+      "article": "89"
+    },
+    {
+      "shop_id": 9454,
+      "article": "90"
+    },
+    {
+      "shop_id": 9419,
+      "article": "91"
+    },
+    {
+      "shop_id": 9442,
+      "article": "92"
+    },
+    {
+      "shop_id": 9445,
+      "article": "93"
+    },
+    {
+      "shop_id": 9456,
+      "article": "94"
+    },
+    {
+      "shop_id": 9457,
+      "article": "95"
+    },
+    {
+      "shop_id": 9446,
+      "article": "96"
+    },
+    {
+      "shop_id": 9447,
+      "article": "97"
+    },
+    {
+      "shop_id": 9460,
+      "article": "98"
+    },
+    {
+      "shop_id": 9451,
+      "article": "99"
+    },
+    {
+      "shop_id": 9458,
+      "article": "100"
+    },
+    {
+      "shop_id": 9459,
+      "article": "101"
+    },
+    {
+      "shop_id": 9462,
+      "article": "102"
+    },
+    {
+      "shop_id": 9537,
+      "article": "103"
+    },
+    {
+      "shop_id": 9463,
+      "article": "104"
+    },
+    {
+      "shop_id": 9464,
+      "article": "105"
+    },
+    {
+      "shop_id": 9461,
+      "article": "106"
+    },
+    {
+      "shop_id": 9465,
+      "article": "107"
+    },
+    {
+      "shop_id": 9466,
+      "article": "108"
+    },
+    {
+      "shop_id": 9410,
+      "article": "109"
+    },
+    {
+      "shop_id": 9467,
+      "article": "110"
+    },
+    {
+      "shop_id": 9468,
+      "article": "111"
+    },
+    {
+      "shop_id": 9469,
+      "article": "112"
+    },
+    {
+      "shop_id": 9473,
+      "article": "113"
+    },
+    {
+      "shop_id": 9474,
+      "article": "114"
+    },
+    {
+      "shop_id": 9475,
+      "article": "115"
+    },
+    {
+      "shop_id": 9476,
+      "article": "116"
+    },
+    {
+      "shop_id": 9470,
+      "article": "117"
+    },
+    {
+      "shop_id": 9477,
+      "article": "118"
+    },
+    {
+      "shop_id": 9478,
+      "article": "119"
+    },
+    {
+      "shop_id": 9479,
+      "article": "120"
+    },
+    {
+      "shop_id": 9480,
+      "article": "121"
+    },
+    {
+      "shop_id": 9471,
+      "article": "122"
+    },
+    {
+      "shop_id": 9472,
+      "article": "123"
+    },
+    {
+      "shop_id": 9481,
+      "article": "124"
+    },
+    {
+      "shop_id": 9483,
+      "article": "125"
+    },
+    {
+      "shop_id": 9482,
+      "article": "126"
+    },
+    {
+      "shop_id": 9487,
+      "article": "127"
+    },
+    {
+      "shop_id": 9488,
+      "article": "128"
+    },
+    {
+      "shop_id": 9489,
+      "article": "129"
+    },
+    {
+      "shop_id": 9490,
+      "article": "130"
+    },
+    {
+      "shop_id": 9484,
+      "article": "131"
+    },
+    {
+      "shop_id": 9491,
+      "article": "132"
+    },
+    {
+      "shop_id": 9492,
+      "article": "133"
+    },
+    {
+      "shop_id": 9493,
+      "article": "134"
+    },
+    {
+      "shop_id": 9485,
+      "article": "135"
+    },
+    {
+      "shop_id": 9494,
+      "article": "136"
+    },
+    {
+      "shop_id": 9486,
+      "article": "137"
+    },
+    {
+      "shop_id": 9501,
+      "article": "138"
+    },
+    {
+      "shop_id": 9497,
+      "article": "139"
+    },
+    {
+      "shop_id": 9499,
+      "article": "140"
+    },
+    {
+      "shop_id": 9504,
+      "article": "141"
+    },
+    {
+      "shop_id": 9506,
+      "article": "142"
+    },
+    {
+      "shop_id": 9503,
+      "article": "143"
+    },
+    {
+      "shop_id": 9495,
+      "article": "144"
+    },
+    {
+      "shop_id": 9496,
+      "article": "145"
+    },
+    {
+      "shop_id": 9498,
+      "article": "146"
+    },
+    {
+      "shop_id": 9505,
+      "article": "147"
+    },
+    {
+      "shop_id": 9500,
+      "article": "148"
+    },
+    {
+      "shop_id": 9507,
+      "article": "149"
+    },
+    {
+      "shop_id": 9528,
+      "article": "150"
+    },
+    {
+      "shop_id": 9508,
+      "article": "151"
+    },
+    {
+      "shop_id": 9509,
+      "article": "152"
+    },
+    {
+      "shop_id": 9510,
+      "article": "153"
+    },
+    {
+      "shop_id": 9529,
+      "article": "154"
+    },
+    {
+      "shop_id": 9530,
+      "article": "155"
+    },
+    {
+      "shop_id": 9511,
+      "article": "156"
+    },
+    {
+      "shop_id": 9512,
+      "article": "157"
+    },
+    {
+      "shop_id": 9538,
+      "article": "158"
+    },
+    {
+      "shop_id": 9513,
+      "article": "159"
+    },
+    {
+      "shop_id": 9514,
+      "article": "160"
+    },
+    {
+      "shop_id": 9515,
+      "article": "161"
+    },
+    {
+      "shop_id": 9516,
+      "article": "162"
+    },
+    {
+      "shop_id": 9517,
+      "article": "163"
+    },
+    {
+      "shop_id": 9532,
+      "article": "164"
+    },
+    {
+      "shop_id": 9518,
+      "article": "165"
+    },
+    {
+      "shop_id": 9520,
+      "article": "166"
+    },
+    {
+      "shop_id": 9521,
+      "article": "167"
+    },
+    {
+      "shop_id": 9522,
+      "article": "168"
+    },
+    {
+      "shop_id": 9533,
+      "article": "169"
+    },
+    {
+      "shop_id": 9524,
+      "article": "170"
+    },
+    {
+      "shop_id": 9534,
+      "article": "171"
+    },
+    {
+      "shop_id": 9535,
+      "article": "172"
+    },
+    {
+      "shop_id": 9527,
+      "article": "173"
+    },
+    {
+      "shop_id": 9536,
+      "article": "174"
+    },
+    {
+      "shop_id": 9531,
+      "article": "175"
+    },
+    {
+      "shop_id": 9519,
+      "article": "176"
+    },
+    {
+      "shop_id": 9525,
+      "article": "177"
+    },
+    {
+      "shop_id": 9526,
+      "article": "178"
+    },
+    {
+      "shop_id": 9523,
+      "article": "179"
+    },
+    {
+      "shop_id": 6184,
+      "article": "181"
+    },
+    {
+      "shop_id": 6185,
+      "article": "182"
+    },
+    {
+      "shop_id": 6186,
+      "article": "183"
+    },
+    {
+      "shop_id": 6187,
+      "article": "184"
+    },
+    {
+      "shop_id": 6188,
+      "article": "185"
+    },
+    {
+      "shop_id": 6189,
+      "article": "186"
+    },
+    {
+      "shop_id": 6190,
+      "article": "187"
+    },
+    {
+      "shop_id": 6191,
+      "article": "188"
+    },
+    {
+      "shop_id": 6192,
+      "article": "189"
+    },
+    {
+      "shop_id": 6193,
+      "article": "190"
+    },
+    {
+      "shop_id": 6194,
+      "article": "191"
+    },
+    {
+      "shop_id": 6195,
+      "article": "192"
+    },
+    {
+      "shop_id": 6196,
+      "article": "193"
+    },
+    {
+      "shop_id": 6197,
+      "article": "194"
+    },
+    {
+      "shop_id": 6198,
+      "article": "195"
+    },
+    {
+      "shop_id": 6199,
+      "article": "196"
+    },
+    {
+      "shop_id": 6200,
+      "article": "197"
+    },
+    {
+      "shop_id": 6201,
+      "article": "198"
+    },
+    {
+      "shop_id": 6202,
+      "article": "199"
+    },
+    {
+      "shop_id": 6203,
+      "article": "200"
+    },
+    {
+      "shop_id": 6204,
+      "article": "201"
+    },
+    {
+      "shop_id": 6205,
+      "article": "202"
+    },
+    {
+      "shop_id": 6206,
+      "article": "203"
+    },
+    {
+      "shop_id": 6207,
+      "article": "204"
+    },
+    {
+      "shop_id": 6208,
+      "article": "205"
+    },
+    {
+      "shop_id": 6209,
+      "article": "206"
+    },
+    {
+      "shop_id": 6210,
+      "article": "207"
+    },
+    {
+      "shop_id": 6211,
+      "article": "208"
+    },
+    {
+      "shop_id": 6212,
+      "article": "209"
+    },
+    {
+      "shop_id": 6213,
+      "article": "210"
+    },
+    {
+      "shop_id": 6214,
+      "article": "211"
+    },
+    {
+      "shop_id": 6215,
+      "article": "212"
+    },
+    {
+      "shop_id": 6216,
+      "article": "213"
+    },
+    {
+      "shop_id": 6217,
+      "article": "214"
+    },
+    {
+      "shop_id": 6218,
+      "article": "215"
+    },
+    {
+      "shop_id": 6219,
+      "article": "216"
+    },
+    {
+      "shop_id": 6220,
+      "article": "217"
+    },
+    {
+      "shop_id": 6221,
+      "article": "218"
+    },
+    {
+      "shop_id": 6222,
+      "article": "219"
+    },
+    {
+      "shop_id": 6223,
+      "article": "220"
+    },
+    {
+      "shop_id": 6224,
+      "article": "221"
+    },
+    {
+      "shop_id": 6225,
+      "article": "222"
+    },
+    {
+      "shop_id": 6226,
+      "article": "223"
+    },
+    {
+      "shop_id": 6227,
+      "article": "224"
+    },
+    {
+      "shop_id": 6228,
+      "article": "225"
+    },
+    {
+      "shop_id": 6229,
+      "article": "226"
+    },
+    {
+      "shop_id": 6230,
+      "article": "227"
+    },
+    {
+      "shop_id": 6231,
+      "article": "228"
+    },
+    {
+      "shop_id": 6232,
+      "article": "229"
+    },
+    {
+      "shop_id": 6233,
+      "article": "230"
+    },
+    {
+      "shop_id": 6234,
+      "article": "231"
+    },
+    {
+      "shop_id": 6235,
+      "article": "232"
+    },
+    {
+      "shop_id": 6236,
+      "article": "233"
+    },
+    {
+      "shop_id": 6237,
+      "article": "234"
+    },
+    {
+      "shop_id": 6238,
+      "article": "235"
+    },
+    {
+      "shop_id": 6239,
+      "article": "236"
+    },
+    {
+      "shop_id": 6240,
+      "article": "237"
+    },
+    {
+      "shop_id": 6241,
+      "article": "238"
+    }
+  ],
+  "excluded_shop_ids": [
+    6042,
+    9427,
+    9402,
+    9374,
+    9539,
+    9999
+  ]
+}
