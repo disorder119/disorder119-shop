@@ -331,6 +331,8 @@ export async function prepareTaxDatasetV3(env, year) {
     requested_year: Number(year),
     generated_at: new Date().toISOString(),
     timezone: 'Europe/Berlin',
+    document_encoding: { ...base.manifest.document_encoding },
+    counts: { ...base.manifest.counts },
     review_required: true,
     v3_counts: Object.fromEntries(Object.entries(tables).map(([name, rows]) => [name, rows.length])),
     derived_counts: {
@@ -347,7 +349,9 @@ export async function prepareTaxDatasetV3(env, year) {
     for await (const entry of base.entries()) {
       if (entry.path === 'manifest.json') continue;
       const bytes = typeof entry.content === 'string' ? encoder.encode(entry.content) : entry.content;
-      manifest.files.push({ path: entry.path, sha256: await digestBytes(bytes), bytes: bytes.length });
+      const originalSpec = base.manifest.files[base.manifest.files.length - 1];
+      if (!originalSpec || originalSpec.path !== entry.path) throw new Error('TAX_V3_ORIGINAL_MANIFEST_MISSING');
+      manifest.files.push({ ...originalSpec, path: entry.path, sha256: await digestBytes(bytes), bytes: bytes.length });
       yield entry;
     }
     for (const [path, content] of Object.entries(extraFiles)) {

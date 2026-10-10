@@ -98,6 +98,17 @@ test('verified ZIP export is GET-only and never generates business records',asyn
  assert.equal(e.DB.raw.prepare('SELECT COUNT(*) AS n FROM audit_events').get().n,before);
  assert.equal((await call(e,'/manager/dataset.zip?jahr=2099',undefined,{token:g.access_token})).response.status,400);
 });
+
+test('same read-only grant can request complete v3; unknown format is rejected',async()=>{
+ const e=env(),g=await paired(e);
+ try{
+  const result=await call(e,'/manager/dataset.zip?jahr=2026&format=v3',undefined,{token:g.access_token});
+  assert.equal(result.response.status,200);
+  assert.equal(result.response.headers.get('Content-Type'),'application/zip');
+  assert.ok((await result.response.arrayBuffer()).byteLength>0);
+  assert.equal((await call(e,'/manager/dataset.zip?jahr=2026&format=unknown',undefined,{token:g.access_token})).response.status,400);
+ }finally{e.DB.raw.close();}
+});
 test('native starts and exports require functioning rate limiter',async()=>{
  const e=env();e.RATE_LIMITER=null;assert.equal((await start(e)).response.status,503);
  e.RATE_LIMITER={limit:async()=>({success:false})};assert.equal((await start(e)).response.status,429);
