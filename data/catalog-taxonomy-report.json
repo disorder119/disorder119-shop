@@ -60,37 +60,37 @@
   "missingSize": [
     {
       "id": 6239,
-      "article": "2239",
+      "article": "236",
       "title": "Yohji Yamamoto Cat-Eye-Sonnenbrille Damen Dunkelblau"
     },
     {
       "id": 6238,
-      "article": "2238",
+      "article": "235",
       "title": "Yohji Yamamoto Sonnenbrille mit Logo-Bügeln"
     },
     {
       "id": 6208,
-      "article": "2208",
+      "article": "205",
       "title": "Prada Challenge Funktionsjacke Herren Dunkelblau"
     },
     {
       "id": 6207,
-      "article": "2207",
+      "article": "204",
       "title": "Yves Saint Laurent Leder-Winterjacke Unisex Schwarz"
     },
     {
       "id": 6205,
-      "article": "2205",
+      "article": "202",
       "title": "Jean Paul Gaultier Schwanengürtel Damen"
     },
     {
       "id": 6185,
-      "article": "2185",
+      "article": "182",
       "title": "Yohji Yamamoto Wollhut"
     },
     {
       "id": 6184,
-      "article": "2184",
+      "article": "181",
       "title": "Y-3 Strohhut"
     },
     {
@@ -100,77 +100,77 @@
     },
     {
       "id": 9503,
-      "article": "146",
+      "article": "143",
       "title": "Dior Sweatshirt mit Bienen-Patch Damen"
     },
     {
       "id": 9486,
-      "article": "140",
+      "article": "137",
       "title": "Y-3 Cap mit Bändern"
     },
     {
       "id": 9483,
-      "article": "128",
+      "article": "125",
       "title": "A.F. Vandevorst Gürtel Damen"
     },
     {
       "id": 9464,
-      "article": "108",
+      "article": "105",
       "title": "Prada Loafer Herren"
     },
     {
       "id": 9537,
-      "article": "106",
+      "article": "103",
       "title": "Y-3 Geldbörse"
     },
     {
       "id": 9460,
-      "article": "101",
+      "article": "98",
       "title": "Prada Metallic-Sneaker Herren"
     },
     {
       "id": 9457,
-      "article": "98",
+      "article": "95",
       "title": "Prada Fellstola Damen"
     },
     {
       "id": 9390,
-      "article": "59",
+      "article": "56",
       "title": "Jean Paul Gaultier Maxirock mit Perlenknöpfen Damen"
     },
     {
       "id": 9395,
-      "article": "58",
+      "article": "55",
       "title": "Rundholz Langes Top Damen"
     },
     {
       "id": 9385,
-      "article": "57",
+      "article": "54",
       "title": "Rundholz Jacke Damen"
     },
     {
       "id": 9396,
-      "article": "56",
+      "article": "53",
       "title": "Rundholz Kleid Damen"
     },
     {
       "id": 9411,
-      "article": "52",
+      "article": "49",
       "title": "Raf Simons T-Shirt mit Print Herren"
     },
     {
       "id": 9388,
-      "article": "51",
+      "article": "48",
       "title": "Jean Paul Gaultier Kurze Jacke Damen"
     },
     {
       "id": 9392,
-      "article": "50",
+      "article": "47",
       "title": "Alexander McQueen Blazer Damen"
     },
     {
       "id": 9386,
-      "article": "46",
+      "article": "43",
       "title": "Jean Paul Gaultier Hut"
     },
     {
@@ -180,37 +180,37 @@
     },
     {
       "id": 9393,
-      "article": "44",
+      "article": "41",
       "title": "Oakley Sweatshirt Unisex"
     },
     {
       "id": 9415,
-      "article": "42",
+      "article": "39",
       "title": "Walter Van Beirendonck Jeansrock Damen"
     },
     {
       "id": 9394,
-      "article": "41",
+      "article": "38",
       "title": "Ottolinger Hose Damen"
     },
     {
       "id": 9391,
-      "article": "37",
+      "article": "34",
       "title": "Maison Margiela Hose Damen"
     },
     {
       "id": 9387,
-      "article": "34",
+      "article": "31",
       "title": "Jean Paul Gaultier Gestreifte Hose Damen"
     },
     {
       "id": 9384,
-      "article": "33",
+      "article": "30",
       "title": "Walter Van Beirendonck Jeans Herren"
     },
     {
       "id": 9397,
-      "article": "32",
+      "article": "29",
       "title": "Walter Van Beirendonck Patchwork-Hose Herren"
     },
     {
@@ -263,147 +263,147 @@
   "sizeConflicts": [
     {
       "id": 9524,
-      "article": "173",
+      "article": "170",
       "title": "Prada Bomberjacke Damen Schwarz",
       "structuredSize": "XS",
       "descriptionLabelSize": "S"
     },
     {
       "id": 9513,
-      "article": "162",
+      "article": "159",
       "title": "Isaac Sellam Experience Hose Damen Weiß",
       "structuredSize": "S",
       "descriptionLabelSize": "Nicht eindeutig lesbar"
     },
     {
       "id": 9510,
-      "article": "156",
+      "article": "153",
       "title": "Balenciaga SNCF Weste Damen Schwarz",
       "structuredSize": "M / 38 / 10",
       "descriptionLabelSize": "3"
     },
     {
       "id": 9508,
-      "article": "154",
+      "article": "151",
       "title": "Ann Demeulemeester Holy T-Shirt Damen Schwarz",
       "structuredSize": "S",
       "descriptionLabelSize": "S (F36 / I40)"
     },
     {
       "id": 9498,
-      "article": "149",
+      "article": "146",
       "title": "Helmut Lang Gestreiftes Hemd Herren Hellblau",
       "structuredSize": "L",
       "descriptionLabelSize": "M/L (geschätzt)"
     },
     {
       "id": 9506,
-      "article": "145",
+      "article": "142",
       "title": "Yves Saint Laurent Rive Gauche Seidentop Damen Bunt",
       "structuredSize": "S / 36 / 8",
       "descriptionLabelSize": "36"
     },
     {
       "id": 9497,
-      "article": "142",
+      "article": "139",
       "title": "Dior Monogramm-Gürtel Damen",
       "structuredSize": "80cm",
       "descriptionLabelSize": "80"
     },
     {
       "id": 9493,
-      "article": "137",
+      "article": "134",
       "title": "Prada Stiefel Damen Schwarz",
       "structuredSize": "37",
       "descriptionLabelSize": "39"
     },
     {
       "id": 9489,
-      "article": "132",
+      "article": "129",
       "title": "Dior I Love Dior Set Damen Schwarz",
       "structuredSize": "S / 36 / 8",
       "descriptionLabelSize": "Nicht angegeben, geschätzt ca. S"
     },
     {
       "id": 9487,
-      "article": "130",
+      "article": "127",
       "title": "Celine Cardigan Damen Orange",
       "structuredSize": "S / 36 / 8",
       "descriptionLabelSize": "S"
     },
     {
       "id": 9472,
-      "article": "126",
+      "article": "123",
       "title": "Rundholz Langarm-Top Damen Schwarz",
       "structuredSize": "S / 36 / 8",
       "descriptionLabelSize": "Small"
     },
     {
       "id": 9480,
-      "article": "124",
+      "article": "121",
       "title": "Y-3 Klett-Sneaker Damen Schwarz",
       "structuredSize": "36",
       "descriptionLabelSize": "EU 36"
     },
     {
       "id": 9469,
-      "article": "115",
+      "article": "112",
       "title": "Armani Collezioni Daunenjacke Herren Grau",
       "structuredSize": "L",
       "descriptionLabelSize": "52"
     },
     {
       "id": 9410,
-      "article": "112",
+      "article": "109",
       "title": "Prada Kapuzenjacke mit Strand-Print Damen",
       "structuredSize": "M / 38 / 10",
       "descriptionLabelSize": "M"
     },
     {
       "id": 9419,
-      "article": "94",
+      "article": "91",
       "title": "Balmain Jacke mit Kunstfellkragen Damen Braun",
       "structuredSize": "38",
       "descriptionLabelSize": "EU 38"
     },
     {
       "id": 9455,
-      "article": "90",
+      "article": "87",
       "title": "Prada Jacke mit Gürtel Damen Schwarz",
       "structuredSize": "42",
       "descriptionLabelSize": "IT 42"
     },
     {
       "id": 9441,
-      "article": "86",
+      "article": "83",
       "title": "Prada Langarm-Poloshirt mit Felloptik-Kragen Damen Schwarz",
       "structuredSize": "L",
       "descriptionLabelSize": "M"
     },
     {
       "id": 9422,
-      "article": "81",
+      "article": "78",
       "title": "Prada Karierte Hose Damen Braun",
       "structuredSize": "M",
       "descriptionLabelSize": "IT 46"
     },
     {
       "id": 9435,
-      "article": "79",
+      "article": "76",
       "title": "Prada Melierter Cardigan Damen",
       "structuredSize": "M / 38 / 10",
       "descriptionLabelSize": "44"
     },
     {
       "id": 9432,
-      "article": "76",
+      "article": "73",
       "title": "Jean Paul Gaultier Unterhose Damen Lila",
       "structuredSize": "S / 36 / 8",
       "descriptionLabelSize": "S"
     },
     {
       "id": 9429,
-      "article": "72",
+      "article": "69",
       "title": "Jean Paul Gaultier Jeans Damen Grau",
       "structuredSize": "M / 38 / 10",
       "descriptionLabelSize": "38"
@@ -417,112 +417,112 @@
     },
     {
       "id": 9418,
-      "article": "70",
+      "article": "67",
       "title": "Balmain Kunstfelljacke mit Gürtel Damen Schwarz",
       "structuredSize": "40",
       "descriptionLabelSize": "EU 40"
     },
     {
       "id": 9404,
-      "article": "66",
+      "article": "63",
       "title": "Jean Paul Gaultier Denim-Gürtel Blau",
       "structuredSize": "Größenverstellbar",
       "descriptionLabelSize": "One Size"
     },
     {
       "id": 9400,
-      "article": "65",
+      "article": "62",
       "title": "Isabel Marant Kleid Damen Schwarz",
       "structuredSize": "M / 38 / 10",
       "descriptionLabelSize": "0"
     },
     {
       "id": 9403,
-      "article": "64",
+      "article": "61",
       "title": "Jean Paul Gaultier Mesh-Bluse Damen Bunt",
       "structuredSize": "M / 38 / 10",
       "descriptionLabelSize": "M"
     },
     {
       "id": 9409,
-      "article": "63",
+      "article": "60",
       "title": "Ottolinger Mesh-Top mit Print Damen",
       "structuredSize": "XS / 34 / 6",
       "descriptionLabelSize": "XS"
     },
     {
       "id": 9398,
-      "article": "62",
+      "article": "59",
       "title": "Comme des Garçons Union-Jack-Top Damen",
       "structuredSize": "S / 36 / 8",
       "descriptionLabelSize": "S"
     },
     {
       "id": 9406,
-      "article": "61",
+      "article": "58",
       "title": "Jean Paul Gaultier Mesh-Tanktop Damen Weiß",
       "structuredSize": "S / 36 / 8",
       "descriptionLabelSize": "S"
     },
     {
       "id": 9399,
-      "article": "55",
+      "article": "52",
       "title": "Hysteric Glamour Kurzarm-Cardigan Damen Schwarz",
       "structuredSize": "M / 38 / 10",
       "descriptionLabelSize": "M"
     },
     {
       "id": 9405,
-      "article": "53",
+      "article": "50",
       "title": "Jean Paul Gaultier Mesh-Top Damen Bunt",
       "structuredSize": "S / 36 / 8",
       "descriptionLabelSize": "S"
     },
     {
       "id": 9389,
-      "article": "47",
+      "article": "44",
       "title": "Jean Paul Gaultier Military-Jacke Damen Schwarz",
       "structuredSize": "M / 38 / 10",
       "descriptionLabelSize": "M"
     },
     {
       "id": 9416,
-      "article": "45",
+      "article": "42",
       "title": "Y-3 Zip-Hoodie Damen Schwarz",
       "structuredSize": "XS / 34 / 6",
       "descriptionLabelSize": "XS"
     },
     {
       "id": 9407,
-      "article": "43",
+      "article": "40",
       "title": "Walter Van Beirendonck Asymmetrischer Jeansrock Damen Blau",
       "structuredSize": "M / 38 / 10",
       "descriptionLabelSize": "M"
     },
     {
       "id": 9413,
-      "article": "40",
+      "article": "37",
       "title": "Walter Van Beirendonck Jeansrock Damen Blau",
       "structuredSize": "M / 38 / 10",
       "descriptionLabelSize": "M (Tag: W26)"
     },
     {
       "id": 9414,
-      "article": "39",
+      "article": "36",
       "title": "Walter Van Beirendonck Jeans-Shorts Damen Blau",
       "structuredSize": "M / 38 / 10",
       "descriptionLabelSize": "M"
     },
     {
       "id": 9408,
-      "article": "38",
+      "article": "35",
       "title": "Jean Paul Gaultier Hose Damen Grau",
       "structuredSize": "Sonstige",
       "descriptionLabelSize": "30"
     },
     {
       "id": 9417,
-      "article": "36",
+      "article": "33",
       "title": "Y-3 Zip-Weste Damen Schwarz",
       "structuredSize": "S / 36 / 8",
       "descriptionLabelSize": "S"
@@ -595,7 +595,7 @@
   "legacyCategoryMismatches": [
     {
       "id": 6240,
-      "article": "2240",
+      "article": "237",
       "title": "Hysteric Glamour Pop-Up Toaster",
       "legacyCategory": "Accessories",
       "taxonomyCategory": "Objects",
@@ -603,7 +603,7 @@
     },
     {
       "id": 6201,
-      "article": "2201",
+      "article": "198",
       "title": "Walter Van Beirendonck Don't Worry Longsleeve Herren",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
@@ -611,7 +611,7 @@
     },
     {
       "id": 6194,
-      "article": "2194",
+      "article": "191",
       "title": "A.F. Vandevorst Cardigan mit Muster Damen",
       "legacyCategory": "Jackets",
       "taxonomyCategory": "Knitwear",
@@ -619,7 +619,7 @@
     },
     {
       "id": 9527,
-      "article": "176",
+      "article": "173",
       "title": "Rick Owens DRKSHDW Longsleeve Unisex Khaki",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
@@ -627,7 +627,7 @@
     },
     {
       "id": 9516,
-      "article": "165",
+      "article": "162",
       "title": "Jean Paul Gaultier Soleil Mesh-Top Damen Weiß",
       "legacyCategory": "Dresses",
       "taxonomyCategory": "Tops",
@@ -635,7 +635,7 @@
     },
     {
       "id": 9515,
-      "article": "164",
+      "article": "161",
       "title": "Jean Paul Gaultier Soleil Mesh-Top Damen Schwarz",
       "legacyCategory": "Dresses",
       "taxonomyCategory": "Tops",
@@ -643,7 +643,7 @@
     },
     {
       "id": 9508,
-      "article": "154",
+      "article": "151",
       "title": "Ann Demeulemeester Holy T-Shirt Damen Schwarz",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
@@ -651,7 +651,7 @@
     },
     {
       "id": 9496,
-      "article": "148",
+      "article": "145",
       "title": "Dior Langarm-Poloshirt Herren Schwarz",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
@@ -659,7 +659,7 @@
     },
     {
       "id": 9503,
-      "article": "146",
+      "article": "143",
       "title": "Dior Sweatshirt mit Bienen-Patch Damen",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Knitwear",
@@ -667,7 +667,7 @@
     },
     {
       "id": 9487,
-      "article": "130",
+      "article": "127",
       "title": "Celine Cardigan Damen Orange",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Knitwear",
@@ -675,7 +675,7 @@
     },
     {
       "id": 9468,
-      "article": "114",
+      "article": "111",
       "title": "Ann Demeulemeester Tanktop Damen Schwarz",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
@@ -683,7 +683,7 @@
     },
     {
       "id": 9463,
-      "article": "107",
+      "article": "104",
       "title": "Prada Pumps Damen Schwarz",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shoes",
@@ -691,7 +691,7 @@
     },
     {
       "id": 9462,
-      "article": "105",
+      "article": "102",
       "title": "Maison Margiela x H&M Blazer Damen Grau",
       "legacyCategory": "Skirts",
       "taxonomyCategory": "Jackets",
@@ -699,7 +699,7 @@
     },
     {
       "id": 9456,
-      "article": "97",
+      "article": "94",
       "title": "Prada Longsleeve Damen Schwarz",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
@@ -707,7 +707,7 @@
     },
     {
       "id": 9448,
-      "article": "91",
+      "article": "88",
       "title": "Raf Simons Sweatshirt Herren Grau",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Knitwear",
@@ -715,7 +715,7 @@
     },
     {
       "id": 9449,
-      "article": "89",
+      "article": "86",
       "title": "Yves Saint Laurent Kaschmirpullover Unisex",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Knitwear",
@@ -723,7 +723,7 @@
     },
     {
       "id": 9423,
-      "article": "87",
+      "article": "84",
       "title": "Y-3 Longsleeve Herren Weiß",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
@@ -731,7 +731,7 @@
     },
     {
       "id": 9435,
-      "article": "79",
+      "article": "76",
       "title": "Prada Melierter Cardigan Damen",
       "legacyCategory": "Jackets",
       "taxonomyCategory": "Knitwear",
@@ -739,7 +739,7 @@
     },
     {
       "id": 9434,
-      "article": "78",
+      "article": "75",
       "title": "Pierre Balmain Sweatshirt Herren Grau",
       "legacyCategory": "Objects",
       "taxonomyCategory": "Knitwear",
@@ -747,7 +747,7 @@
     },
     {
       "id": 9400,
-      "article": "65",
+      "article": "62",
       "title": "Isabel Marant Kleid Damen Schwarz",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Dresses",
@@ -755,7 +755,7 @@
     },
     {
       "id": 9406,
-      "article": "61",
+      "article": "58",
       "title": "Jean Paul Gaultier Mesh-Tanktop Damen Weiß",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
@@ -763,7 +763,7 @@
     },
     {
       "id": 9383,
-      "article": "60",
+      "article": "57",
       "title": "Balenciaga Speedhunters Longsleeve Herren Schwarz",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
@@ -771,7 +771,7 @@
     },
     {
       "id": 9385,
-      "article": "57",
+      "article": "54",
       "title": "Rundholz Jacke Damen",
       "legacyCategory": "Objects",
       "taxonomyCategory": "Jackets",
@@ -779,7 +779,7 @@
     },
     {
       "id": 9399,
-      "article": "55",
+      "article": "52",
       "title": "Hysteric Glamour Kurzarm-Cardigan Damen Schwarz",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Knitwear",
@@ -787,7 +787,7 @@
     },
     {
       "id": 9401,
-      "article": "54",
+      "article": "51",
       "title": "Jean Paul Gaultier Spider-Longsleeve Damen Schwarz",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
@@ -795,7 +795,7 @@
     },
     {
       "id": 9411,
-      "article": "52",
+      "article": "49",
       "title": "Raf Simons T-Shirt mit Print Herren",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Shirts",
@@ -803,7 +803,7 @@
     },
     {
       "id": 9386,
-      "article": "46",
+      "article": "43",
       "title": "Jean Paul Gaultier Hut",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Accessories",
@@ -811,7 +811,7 @@
     },
     {
       "id": 9393,
-      "article": "44",
+      "article": "41",
       "title": "Oakley Sweatshirt Unisex",
       "legacyCategory": "Tops",
       "taxonomyCategory": "Knitwear",
