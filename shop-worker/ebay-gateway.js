@@ -225,7 +225,9 @@ export async function handleEbayGateway(request,env,url=new URL(request.url),{fe
     // the database commit; outage/missing migration causes retry, not lost mail.
     await env.DB.prepare(`INSERT INTO ebay_privacy_notifications(id,event_at,received_at,deadline,status,envelope)
       VALUES(?,?,?,?, 'PENDING',?) ON CONFLICT(id) DO NOTHING`).bind(notice.id,notice.eventDate,new Date(now).toISOString(),privacyDeadline(notice.eventDate),envelope).run();
-    return new Response(null,{status:204,headers:secureHeaders});
+    // eBay permits 200/201/202/204. A JSON 200 also works with portal clients
+    // that mishandle a successful empty 204 body. Receipt is not resolution.
+    return json({received:true});
   } catch(e) {
     const code=e.status?(e.code||e.message):'EBAY_GATEWAY_UNAVAILABLE';
     // Diagnose the live protocol without logging identity, headers or query/code.

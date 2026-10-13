@@ -43,7 +43,7 @@ test('missing schema is not acknowledged',async()=>{
  assert.equal((await call(e)).status,503);
 });
 test('valid signature creates durable encrypted single receipt, preserving eBay identities only inside ciphertext',async()=>{
- const e=env(),message=fixture();assert.equal((await call(e,{message})).status,204);assert.equal((await call(e,{message})).status,204);
+ const e=env(),message=fixture();assert.equal((await call(e,{message})).status,200);assert.equal((await call(e,{message})).status,200);
  const rows=e.DB.raw.prepare('SELECT * FROM ebay_privacy_notifications').all();assert.equal(rows.length,1);
  assert.equal(rows[0].status,'PENDING');assert.equal(rows[0].deadline,'2026-11-12T12:00:00.000Z');
  for(const identity of Object.values(message.notification.data))assert.equal(JSON.stringify(rows).includes(identity),false);
@@ -57,11 +57,11 @@ test('valid signature creates durable encrypted single receipt, preserving eBay 
  assert.throws(()=>e.DB.raw.prepare("UPDATE operations_tasks SET status='DONE' WHERE id=?").run(task.id),/ebay_privacy_resolution_required/);
 });
 test('SDK canonicalization handles formatted JSON while preserving semantic signature',async()=>{
- assert.equal((await call(env(),{raw:JSON.stringify(fixture(),null,2)})).status,204);
+ assert.equal((await call(env(),{raw:JSON.stringify(fixture(),null,2)})).status,200);
 });
 test('official manual/raw-byte signature supports whitespace and escaped JSON',async()=>{
  const raw=JSON.stringify(fixture(),null,2),signature=Buffer.from(JSON.stringify({alg:'ECDSA',digest:'SHA1',kid:'fixture-key',signature:sign('SHA1',Buffer.from(raw),ec.privateKey).toString('base64')})).toString('base64');
- assert.equal((await call(env(),{raw,signature})).status,204);
+ assert.equal((await call(env(),{raw,signature})).status,200);
 });
 test('request cannot choose a weaker/wrong signature algorithm',async()=>{
  for(const change of [{alg:'none'},{digest:'MD5'}]){
@@ -93,7 +93,7 @@ test('default fetch preserves the Workers receiver and supports runtimes without
   AbortSignal.timeout=undefined;
   globalThis.fetch=function(...args){assert.equal(this,globalThis);return provider()(...args);};
   const message=fixture(),request=new Request(EBAY_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-EBAY-SIGNATURE':header(message)},body:JSON.stringify(message)});
-  assert.equal((await handleEbayGateway(request,env(),new URL(EBAY_ENDPOINT),{now})).status,204);
+  assert.equal((await handleEbayGateway(request,env(),new URL(EBAY_ENDPOINT),{now})).status,200);
  }finally{globalThis.fetch=originalFetch;AbortSignal.timeout=originalTimeout;}
 });
 test('upstream redirect is rejected without forwarding authorization',async()=>{
@@ -110,11 +110,11 @@ for(const mutate of [m=>m.metadata.topic='OTHER',m=>m.metadata.schemaVersion='9.
 });
 test('initial signed publication may have attempt count zero',async()=>{
  const message=fixture();message.notification.publishAttemptCount=0;
- assert.equal((await call(env(),{message})).status,204);
+ assert.equal((await call(env(),{message})).status,200);
 });
 test('signed eBay notification IDs are opaque strings and need not be UUIDs',async()=>{
  const message=fixture();message.notification.notificationId='account-deletion-test-event';
- assert.equal((await call(env(),{message})).status,204);
+ assert.equal((await call(env(),{message})).status,200);
 });
 test('wrong content type, too large streamed body and browser-origin POST fail closed',async()=>{
  assert.equal((await call(env(),{headers:{'Content-Type':'text/plain'}})).status,415);
@@ -169,5 +169,5 @@ test('owner resolves only after explicit documented review; read token/origin ca
 for(const curve of ['secp384r1','secp521r1'])test('standard ECC curve and DER long-length support: '+curve,async()=>{
  const other=generateKeyPairSync('ec',{namedCurve:curve});const e=env();
  const fetcher=async(url,options)=>url.endsWith('/fixture-key')?Response.json({key:other.publicKey.export({type:'spki',format:'pem'})}):provider()(url,options);
- assert.equal((await call(e,{signature:header(fixture(),other.privateKey),fetcher})).status,204);
+ assert.equal((await call(e,{signature:header(fixture(),other.privateKey),fetcher})).status,200);
 });
