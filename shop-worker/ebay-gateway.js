@@ -72,9 +72,10 @@ async function boundedBytes(response, limit, timeout = 4000) {
   for (const part of parts) { bytes.set(part, offset); offset += part.length; } return bytes;
 }
 async function providerJson(url, options, fetcher, stage) {
-  let response;
-  try { response = await fetcher(url, {...options, headers:{'User-Agent':'Disorder119-Notification-Gateway/1.0',...options.headers}, redirect:'error', signal:AbortSignal.timeout(4000)}); }
+  let response;const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),4000);
+  try { response = await fetcher(url, {...options, headers:{'User-Agent':'Disorder119-Notification-Gateway/1.0',...options.headers}, redirect:'manual', signal:controller.signal}); }
   catch(e) { fail('EBAY_'+stage+'_TRANSPORT_'+(['TypeError','TimeoutError','AbortError'].includes(e.name)?e.name.toUpperCase():'ERROR'), 503); }
+  finally {clearTimeout(timer);}
   if (!response.ok) fail('EBAY_'+stage+'_HTTP_'+response.status, 503);
   try { return JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(await boundedBytes(response, 16384))); }
   catch { fail('EBAY_'+stage+'_RESPONSE_INVALID', 503); }
@@ -166,7 +167,7 @@ async function encryptNotice(value, publicPem) {
 }
 
 export function isEbayRoute(url) {return ['/ebay/return','/ebay/account-deletion','/admin/ebay/privacy-requests'].includes(url.pathname);}
-export async function handleEbayGateway(request,env,url=new URL(request.url),{fetcher=fetch,now=Date.now()}={}) {
+export async function handleEbayGateway(request,env,url=new URL(request.url),{fetcher=globalThis.fetch.bind(globalThis),now=Date.now()}={}) {
   try {
     if(url.pathname==='/ebay/return')return await returnPage(request);
     if(url.pathname==='/admin/ebay/privacy-requests'){

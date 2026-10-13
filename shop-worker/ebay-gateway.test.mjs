@@ -83,9 +83,23 @@ test('signature by another key fails',async()=>{
 });
 test('token and public key are cached, requests are confined to fixed eBay application-token/key endpoints',async()=>{
  const e=env(),calls=[];await call(e,{fetcher:provider(calls)});await call(e,{fetcher:provider(calls)});
- assert.equal(calls.length,2);assert.match(calls[0].options.body,/grant_type=client_credentials/);assert.equal(calls[0].options.redirect,'error');
+ assert.equal(calls.length,2);assert.match(calls[0].options.body,/grant_type=client_credentials/);assert.equal(calls[0].options.redirect,'manual');
  assert.equal(calls[1].options.headers.Authorization,'Bearer synthetic-app-token');
  assert.equal(calls.some(c=>/sell\//.test(c.url)),false);
+});
+test('default fetch preserves the Workers receiver and supports runtimes without AbortSignal.timeout',async()=>{
+ const originalFetch=globalThis.fetch,originalTimeout=AbortSignal.timeout;
+ try{
+  AbortSignal.timeout=undefined;
+  globalThis.fetch=function(...args){assert.equal(this,globalThis);return provider()(...args);};
+  const message=fixture(),request=new Request(EBAY_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-EBAY-SIGNATURE':header(message)},body:JSON.stringify(message)});
+  assert.equal((await handleEbayGateway(request,env(),new URL(EBAY_ENDPOINT),{now})).status,204);
+ }finally{globalThis.fetch=originalFetch;AbortSignal.timeout=originalTimeout;}
+});
+test('upstream redirect is rejected without forwarding authorization',async()=>{
+ const e=env(),calls=[];
+ const r=await call(e,{fetcher:async(url,options)=>{calls.push({url,options});return new Response(null,{status:302,headers:{Location:'https://attacker.example/'}});}});
+ assert.equal(r.status,503);assert.equal(calls.length,1);assert.equal(calls[0].options.redirect,'manual');
 });
 test('upstream outage or redirect not acknowledged; raw errors and credentials not leaked',async()=>{
  const e=env(),r=await call(e,{fetcher:async()=>{throw Error(e.EBAY_CLIENT_SECRET);}});
