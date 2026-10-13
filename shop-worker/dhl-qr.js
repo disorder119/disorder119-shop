@@ -245,17 +245,19 @@ export async function createMark(env, orderId, body = {}) {
   // und erst, wenn das Geld eingezogen ist (zahlung.js).
   const sperre = await versandSperre(db, order.id);
   if (sperre) throw new DhlQrError(sperre.code, 409, sperre.text);
+  // A missing product/address/provider setup is not an instruction to charge
+  // the buyer. Validate local prerequisites before any capture attempt.
+  const produkt = safeText(body.produkt, 40);
+  if (!/^[A-Z0-9.]{3,40}$/.test(produkt)) throw new DhlQrError("PRODUKT_FEHLT", 400);
+  const receiver = receiverAddress(order, body.empfaenger || {});
+  assertReceiver(receiver, order.country_code);
+  if (!dhlQrReady(env)) throw new DhlQrError('DHL_QR_NICHT_EINGERICHTET',503);
   try {
     await zahlungSicherstellen(env, order.id, crypto.randomUUID(), { anlass: "VERSAND" });
   } catch (err) {
     if (err instanceof ZahlungFehler) throw new DhlQrError(err.code, err.status, err.text);
     throw err;
   }
-
-  const produkt = safeText(body.produkt, 40);
-  if (!/^[A-Z0-9.]{3,40}$/.test(produkt)) throw new DhlQrError("PRODUKT_FEHLT", 400);
-  const receiver = receiverAddress(order, body.empfaenger || {});
-  assertReceiver(receiver, order.country_code);
 
   const response = await dhl(env, "/shopping-carts/pre-paid", {
     method: "POST",
