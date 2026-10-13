@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertReceiver, dhlText, handleDhlQr, receiverAddress, splitStreet } from "./dhl-qr.js";
+import { assertReceiver, dhlText, handleDhlQr, receiverAddress, splitStreet, safeDhlCheckoutUrl } from "./dhl-qr.js";
 import { handleAdminRequest } from "./admin-api.js";
 import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 
@@ -9,6 +9,12 @@ const TOKEN = "admin-schluessel-dieser-anfrage";
 const CART_ID = "ABCDEF123456";
 const TRACKING = "00340434161094042557";
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...new Array(600).fill(7)]);
+
+test('DHL checkout rejects lookalike hosts, credentials and insecure URLs', () => {
+  for (const url of ['https://www.dhl.de/send-parcel/init','https://dhl.com/pay']) assert.equal(safeDhlCheckoutUrl(url),true);
+  for (const url of ['https://evildhl.com/pay','https://dhl.de.evil.example/pay','https://dhl.de@evil.example/pay',
+    'http://dhl.de/pay','https://x@y.dhl.de/pay','https://www.dhl.de:8443/pay','invalid']) assert.equal(safeDhlCheckoutUrl(url),false,url);
+});
 
 function seed(contact = {}) {
   const DB = sqliteD1(allMigrations());

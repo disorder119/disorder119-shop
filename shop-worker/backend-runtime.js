@@ -232,6 +232,9 @@ export function productionReadiness(env = {}) {
     checkoutReady: database && paypal && catalogWrite && (!live || (rateLimiter && turnstile)),
     webhookReady: database && webhook && catalogWrite,
     adminRbacReady: adminRbac.productionRbacReady,
+    dhlQrConfigured: Boolean(env.DHL_PRIVAT_API_KEY),
+    dhlEnvironment: String(env.DHL_PRIVAT_ENVIRONMENT || 'sandbox').toLowerCase() === 'live' ? 'live' : 'sandbox',
+    dhlLiveConfigured: Boolean(env.DHL_PRIVAT_API_KEY) && String(env.DHL_PRIVAT_ENVIRONMENT || 'sandbox').toLowerCase() === 'live',
   };
 }
 
@@ -251,7 +254,7 @@ const LARGE_BODY_ROUTES = Object.freeze({
   "/admin/katalog/speichern": 8 * 1024 * 1024,
 });
 
-async function assertRequestBodySize(request, limit = MAX_REQUEST_BYTES) {
+export async function assertRequestBodySize(request, limit = MAX_REQUEST_BYTES, timeoutMs = 10000) {
   if (!REQUEST_BODY_METHODS.has(request.method) || !request.body) return;
 
   const header = request.headers.get("Content-Length");
@@ -269,16 +272,29 @@ async function assertRequestBodySize(request, limit = MAX_REQUEST_BYTES) {
   if (!probe.body) return;
   const reader = probe.body.getReader();
   let total = 0;
+  const deadline = Date.now() + timeoutMs;
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      let timer;
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) throw new RuntimeGuardError('REQUEST_BODY_TIMEOUT', 408);
+      let chunk;
+      try {
+        chunk = await Promise.race([reader.read(), new Promise((_,reject) => {
+          timer = setTimeout(() => reject(new RuntimeGuardError('REQUEST_BODY_TIMEOUT',408)), remaining);
+        })]);
+      } finally { clearTimeout(timer); }
+      const { done, value } = chunk;
       if (done) break;
       total += value?.byteLength || 0;
       if (total > limit) {
-        reader.cancel().catch(() => {});
         throw new RuntimeGuardError("REQUEST_TOO_LARGE", 413);
       }
     }
+  } catch (error) {
+    reader.cancel().catch(() => {});
+    request.body.cancel().catch(() => {});
+    throw error;
   } finally {
     try { reader.releaseLock(); } catch {}
   }
@@ -314,7 +330,20 @@ function assertLiveControls(env, rawPathname) {
 export async function guardRuntimeRequest(request, env, url = new URL(request.url)) {
   const pathname = url.pathname;
   assertMethod(request, pathname);
-  await assertRequestBodySize(request, LARGE_BODY_ROUTES[pathname.replace(/\/+$/, "")] || MAX_REQUEST_BYTES);
+  assertLiveControls(env, pathname);
+  // Reject abusive public writes before cloning/reading their body. Provider
+  // callbacks retain their own verification and limiter, and authenticated
+  // Admin work keeps its route-specific controls.
+  if (REQUEST_BODY_METHODS.has(request.method) && (!pathname.startsWith('/admin/') || pathname.startsWith('/admin/auth/'))
+      && pathname !== '/paypal-webhook' && !/^\/packlink\/webhook\/[^/]{1,200}$/.test(pathname)) {
+    if (env.RATE_LIMITER?.limit) {
+      const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+      const result = await env.RATE_LIMITER.limit({key:'body-ingress:'+ip});
+      if (!result?.success) throw new RuntimeGuardError('RATE_LIMITED',429);
+    }
+  }
+  const large = LARGE_BODY_ROUTES[pathname.replace(/\/+$/, '')];
+  await assertRequestBodySize(request, large || MAX_REQUEST_BYTES, large ? 30000 : 10000);
 
   if (pathname === "/rental-requests" && request.method === "GET") {
     await authorizeAdminRequest(request, env, ADMIN_ROLE_READER);
@@ -323,7 +352,6 @@ export async function guardRuntimeRequest(request, env, url = new URL(request.ur
     await authorizeAdminRequest(request, env, ADMIN_ROLE_OWNER);
   }
 
-  assertLiveControls(env, pathname);
 }
 
 function baseSecurityHeaders(requestId) {
@@ -387,6 +415,9 @@ export async function finalizeRuntimeResponse(response, request, env, requestId,
   headers.set("X-Request-Id", requestId);
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "no-referrer");
+  if (!headers.has('Content-Security-Policy') && !/text\/html/i.test(headers.get('Content-Type') || '')) {
+    headers.set('Content-Security-Policy',"default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
+  }
   // Kartenkacheln (karte.js) darf der Browser behalten - alles andere nie.
   if (!(pathname.startsWith("/karte/") && out.ok)) headers.set("Cache-Control", "no-store");
   if (new URL(request.url).protocol === "https:") {
