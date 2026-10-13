@@ -248,3 +248,26 @@ test("without a DHL key or the admin's request key nothing happens", async () =>
   const stranger = await call(envWith(seed()), "/admin/versand/o1/qr", { bearer: "falsch" });
   assert.equal(stranger.status, 401);
 });
+
+test('invalid DHL setup does not attempt to capture an authorized payment', async () => {
+  const cases = [
+    {body:{},error:'PRODUKT_FEHLT'},
+    {contact:{address_line1:'Musterweg'},body:{produkt:'PAK02'},error:'ADRESSE_UNVOLLSTAENDIG'},
+    {contact:{country_code:'AT',postal_code:'1010',city:'Wien'},body:{produkt:'PAK02'},error:'NUR_INLANDSVERSAND'},
+    {env:{DHL_PRIVAT_API_KEY:''},body:{produkt:'PAK02'},error:'DHL_QR_NICHT_EINGERICHTET'},
+  ];
+  for (const c of cases) {
+    const DB=seed(c.contact);
+    DB.raw.exec("UPDATE payments SET status='AUTHORIZED',provider_payment_id=NULL,authorization_id='AUTH1'");
+    const original=globalThis.fetch;let externalCalls=0;
+    globalThis.fetch=async()=>{externalCalls++;throw new Error('Provider call must not occur for invalid input');};
+    try {
+      const result=await call(envWith(DB,c.env),'/admin/versand/o1/qr',{method:'POST',body:c.body});
+      assert.equal(DB.raw.prepare("SELECT capture_attempts FROM payments WHERE id='pay1'").get().capture_attempts,0,c.error);
+      assert.equal(externalCalls,0,c.error);
+      assert.equal(result.data.error,c.error);
+      assert.equal(DB.raw.prepare("SELECT status FROM payments WHERE id='pay1'").get().status,'AUTHORIZED');
+      assert.equal(DB.raw.prepare('SELECT COUNT(*) AS n FROM dhl_qr_marken').get().n,0);
+    } finally {globalThis.fetch=original;DB.raw.close();}
+  }
+});
