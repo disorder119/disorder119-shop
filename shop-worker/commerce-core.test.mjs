@@ -402,7 +402,7 @@ test("live human writes fail closed without abuse controls", async () => {
   await assert.doesNotReject(() => guardRuntimeRequest(request, {
     PAYPAL_ENVIRONMENT: "live",
     DB: {},
-    RATE_LIMITER: { limit() {} },
+    RATE_LIMITER: { limit() { return { success: true }; } },
     TURNSTILE_SECRET: "configured",
   }));
 });
@@ -417,7 +417,7 @@ test("live account login fails closed without bot protection, also with a traili
       body: "{}",
     });
     await assert.rejects(
-      () => guardRuntimeRequest(request(), { PAYPAL_ENVIRONMENT: "live", DB: {}, RATE_LIMITER: { limit() {} } }),
+      () => guardRuntimeRequest(request(), { PAYPAL_ENVIRONMENT: "live", DB: {}, RATE_LIMITER: { limit() { return { success: true }; } } }),
       err => err instanceof RuntimeGuardError && err.code === "LIVE_BACKEND_NOT_READY",
       `${pfad} ohne Turnstile-Secret muss gesperrt sein`,
     );
@@ -429,7 +429,7 @@ test("live account login fails closed without bot protection, also with a traili
     await assert.doesNotReject(() => guardRuntimeRequest(request(), {
       PAYPAL_ENVIRONMENT: "live",
       DB: {},
-      RATE_LIMITER: { limit() {} },
+      RATE_LIMITER: { limit() { return { success: true }; } },
       TURNSTILE_SECRET: "configured",
     }));
   }
@@ -444,7 +444,7 @@ test("live checkout refuses partial provider or catalog configuration", async ()
   const base = {
     PAYPAL_ENVIRONMENT: "live",
     DB: {},
-    RATE_LIMITER: { limit() {} },
+    RATE_LIMITER: { limit() { return { success: true }; } },
     TURNSTILE_SECRET: "configured",
   };
   await assert.rejects(() => guardRuntimeRequest(request, base), /LIVE_BACKEND_NOT_READY/);
@@ -508,7 +508,7 @@ test("public readiness exposes booleans, not secrets", () => {
   const ready = productionReadiness({
     PAYPAL_ENVIRONMENT: "live",
     DB: {},
-    RATE_LIMITER: { limit() {} },
+    RATE_LIMITER: { limit() { return { success: true }; } },
     TURNSTILE_SECRET: "turnstile-secret",
     PAYPAL_CLIENT_ID: "paypal-id",
     PAYPAL_CLIENT_SECRET: "paypal-secret",

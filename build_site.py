@@ -2134,8 +2134,8 @@ def build_catalog_json():
 # ---------------------------------------------------------------- Merchant-Feed
 # Google Merchant Center (kostenlose Produktlistings im Shopping-Tab und in der
 # Suche): ein RSS-2.0-Feed mit Google-Attributen unter /feed/google-merchant.xml.
-# Versandkosten stehen nicht im Feed (sie haengen an der Paketgroesse), sondern
-# in den Versandeinstellungen des Merchant-Kontos.
+# Feste Versandpreise stammen aus derselben Konfiguration wie der Checkout.
+# Dynamische Anbieter brauchen weiterhin die Merchant-Versandeinstellungen.
 GOOGLE_CATEGORY = {
     "Jackets": "Apparel & Accessories > Clothing > Outerwear > Coats & Jackets",
     "Coats": "Apparel & Accessories > Clothing > Outerwear > Coats & Jackets",
@@ -2180,10 +2180,12 @@ def merchant_description(it):
 
 
 def build_merchant_feed():
+    from merchant_shipping import merchant_shipping_cents
     def tag(name, value):
         return f"<{name}>{esc(str(value))}</{name}>"
 
     frei_cents = versandkostenfrei_ab_cents()
+    shipping_config = json.loads(SHOP_CONFIG_PATH.read_text(encoding='utf-8'))
     entries = []
     for it in ITEMS:
         if it.get("public_status") != "AVAILABLE" or float(it.get("price") or 0) <= 0:
@@ -2219,8 +2221,12 @@ def build_merchant_feed():
             felder.append(tag("g:size", str(it["size"]).split("/")[0].strip()[:100]))
         if it.get("color"):
             felder.append(tag("g:color", str(it["color"])[:100]))
-        if frei_cents and float(it["price"]) * 100 >= frei_cents:
-            felder.append("<g:shipping><g:country>DE</g:country><g:price>0.00 EUR</g:price></g:shipping>")
+        shipping_cents = merchant_shipping_cents(it, shipping_config)
+        if shipping_cents is None and frei_cents and float(it['price']) * 100 >= frei_cents:
+            shipping_cents = 0
+        if shipping_cents is not None:
+            felder.append('<g:shipping><g:country>DE</g:country><g:service>DHL Standard</g:service>'
+                          + tag('g:price', f'{shipping_cents / 100:.2f} EUR') + '</g:shipping>')
         entries.append("<item>" + "".join(felder) + "</item>")
     MERCHANT_FEED_PATH.parent.mkdir(parents=True, exist_ok=True)
     xml = (

@@ -190,6 +190,8 @@ export function buildShipping(v2, extra) {
         paket: null, label_cost_cents: l.price_cents == null ? null : Number(l.price_cents), state: l.state,
         payment_state: etikettZahlstatus('DHL', l.state), tracking_number: l.shipment_number || null,
         created_at: l.created_at, paid_at: l.paid_at || null,
+        payment_date_basis: 'provider_state_observed_at',
+        payment_date_confirmed: false,
       })),
     ].map(label => ({
       ...label,
@@ -351,12 +353,19 @@ export function smallBusinessCheck(tables, year, yearSummary) {
 // Pruefungen, die erst mit den abgeleiteten Sichten moeglich sind.
 export function vorgangIssues(transactions, shipping, corrections, ledgerEvents) {
   const issues = [];
-  const versandGebucht = new Set((ledgerEvents || [])
-    .filter(e => e.event_type === 'SHIPPING_EXPENSE' && e.order_id)
-    .map(e => e.order_id));
+  const booked = (ledgerEvents || []).filter(e => e.event_type === 'SHIPPING_EXPENSE' && e.direction === 'OUT');
   for (const s of shipping) {
-    if (s.label_cost_paid_cents > 0 && !versandGebucht.has(s.order_id)) {
+    const orderCosts = booked.filter(e => e.order_id === s.order_id);
+    if (s.label_cost_paid_cents > 0 && !orderCosts.length) {
       issues.push({ code: 'SHIPPING_LABEL_EXPENSE_UNBOOKED', reference: s.order_id, message: 'Bezahltes Versandetikett ohne verknüpfte Versandausgabe; Packlink-/DHL-Abrechnung als SHIPPING_EXPENSE mit dieser Bestellung erfassen.' });
+    }
+    if (s.label_cost_paid_cents > 0 && orderCosts.length && summe(orderCosts) !== s.label_cost_paid_cents) {
+      issues.push({ code: 'SHIPPING_EXPENSE_AMOUNT_MISMATCH', reference: s.order_id,
+        message: 'Bezahlte Etikettenkosten und erfasste Versandausgaben haben verschiedene Summen. Anbieterreferenzen und Abrechnung einzeln prüfen.' });
+    }
+    if (s.labels.some(l => l.provider === 'DHL' && l.payment_state === 'PAID')) {
+      issues.push({ code: 'DHL_PAYMENT_DATE_REVIEW', reference: s.order_id,
+        message: 'DHL-Zahlstatus wurde bestätigt; paid_at ist der Erkennungszeitpunkt. Tatsächliches Zahlungsdatum und endgültigen Betrag mit der DHL-Abrechnung abgleichen.' });
     }
     if (s.label_cost_unclear) {
       issues.push({ code: 'SHIPPING_LABEL_COST_UNCLEAR', reference: s.order_id, message: 'Etikettenkauf ohne klaren Zahlstatus oder Preis; in Packlink/DHL prüfen.' });

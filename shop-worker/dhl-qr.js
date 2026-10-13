@@ -149,6 +149,8 @@ async function dhl(env, path, { method = "GET", body, accept = "application/json
   if (!dhlQrReady(env)) throw new DhlQrError("DHL_QR_NICHT_EINGERICHTET", 503);
   const res = await fetch(`${apiBase(env)}${path}`, {
     method,
+    redirect: 'error',
+    signal: AbortSignal.timeout(15000),
     headers: {
       "dhl-api-key": env.DHL_PRIVAT_API_KEY,
       Accept: accept,
@@ -167,6 +169,14 @@ async function dhl(env, path, { method = "GET", body, accept = "application/json
     throw new DhlQrError("DHL_FEHLER", 502, detail || `HTTP ${res.status}`);
   }
   return res;
+}
+
+export function safeDhlCheckoutUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.username && !url.password && !url.port &&
+      /^(?:[a-z0-9-]+\.)*dhl\.(?:de|com)$/.test(url.hostname);
+  } catch { return false; }
 }
 
 export async function listProducts(env) {
@@ -263,7 +273,7 @@ export async function createMark(env, orderId, body = {}) {
   const cart = (await response.json())?.shoppingcart || {};
   const cartId = safeText(cart.shoppingCartId, 12);
   const entryUrl = String(cart.download?.entryUrl || "");
-  if (!/^[A-Za-z0-9]{12}$/.test(cartId) || !/^https:\/\/[a-z0-9.-]*dhl\.(de|com)\//.test(entryUrl)) {
+  if (!/^[A-Za-z0-9]{12}$/.test(cartId) || !safeDhlCheckoutUrl(entryUrl)) {
     throw new DhlQrError("DHL_ANTWORT_UNGUELTIG", 502);
   }
   const price = (cart.items?.[0]?.prices || []).reduce((sum, p) => sum + Math.round(Number(p.amount || 0) * 100), 0);
@@ -393,7 +403,7 @@ export async function handleDhlQr(request, env, url, reqId = crypto.randomUUID()
 
     const path = url.pathname.replace(/\/+$/, "");
     if (path === "/admin/versand/dhl-produkte" && request.method === "GET") {
-      return new Response(JSON.stringify({ ok: true, produkte: await listProducts(env) }), { status: 200, headers: headers(origin) });
+      return new Response(JSON.stringify({ ok: true, environment: apiBase(env) === API.live ? 'live' : 'sandbox', produkte: await listProducts(env) }), { status: 200, headers: headers(origin) });
     }
     const match = /^\/admin\/versand\/([^/]+)\/qr$/.exec(path);
     const orderId = decodeURIComponent(match[1]);

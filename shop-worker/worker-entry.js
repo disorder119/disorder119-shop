@@ -253,6 +253,7 @@ const worker = {
       // Face-ID-/Windows-Hello-Anmeldung der Admin-App: muss ohne Sitzung
       // erreichbar sein und prueft Herkunft und Berechtigung selbst.
       if (isManagerRoute(url)) {
+        await guardRuntimeRequest(request, env, url);
         return finish(await handleManagerConnection(request, env, url));
       }
       if (isAdminAuthRoute(url)) {

@@ -20,6 +20,9 @@ ADMIN_SESSION_HOURS = "24"
 # Echte Zahlungen: PayPal-Live-API, Turnstile und Ratenbegrenzer sind damit
 # Pflicht (backend-runtime.js). Zurueck in den Testmodus: "sandbox".
 PAYPAL_ENVIRONMENT = "live"
+# DHL-Schluessel allein schaltet nicht auf Produktion. Labelkauf bleibt eine
+# ausdrueckliche Admin-Aktion mit Zahlung im DHL-Frontend.
+DHL_PRIVAT_ENVIRONMENT = "live"
 
 # Produktionsfehler muessen nachtraeglich ueber Request-ID und strukturierte Logs
 # untersuchbar bleiben. Bei wachsendem Traffic kann die Sampling-Rate bewusst
