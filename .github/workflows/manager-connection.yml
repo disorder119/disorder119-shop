@@ -16,4 +16,4 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24'
-      - run: node --test shop-worker/manager-connection.test.mjs shop-worker/admin-passkeys.test.mjs shop-worker/tax-dataset-stream.test.mjs
+      - run: node --test shop-worker/manager-connection.test.mjs shop-worker/admin-passkeys.test.mjs shop-worker/tax-dataset-stream.test.mjs shop-worker/tax-dataset-v3-originals.test.mjs shop-worker/tax-export-consistency.test.mjs shop-worker/manager-export-contract.test.mjs

@@ -12,13 +12,16 @@ const queries={...QUERIES,
  invoices:'SELECT id,order_id,rechnungsnummer,ausgestellt_am,waehrung,warenwert_cents,versand_cents,gesamt_cents,pruefsumme,erstellt_am,document_type,html_sha256,tax_profile_json,length(CAST(html AS BLOB)) AS html_bytes,length(CAST(text AS BLOB)) AS text_bytes FROM rechnungen ORDER BY id',
  confirmations:'SELECT order_id,subject,html_sha256,text_sha256,created_at,length(CAST(html AS BLOB)) AS html_bytes,length(CAST(text AS BLOB)) AS text_bytes,length(CAST(invoice_json AS BLOB)) AS invoice_json_bytes FROM order_confirmation_archive ORDER BY order_id'};
 
-export async function prepareDataset(env,year){
+export async function prepareDataset(env,year,{snapshotGroups={}}={}){
  const names=Object.keys(queries),generated_at=new Date().toISOString();
- const result=await env.DB.batch(names.map(name=>env.DB.prepare(queries[name]+' LIMIT 10001')));
- const tables={};let metadataBytes=0;
- for(let i=0;i<names.length;i++){
+ const definitions=names.map(name=>({name,group:null,sql:queries[name]}));
+ for(const [group,groupQueries]of Object.entries(snapshotGroups))for(const [name,sql]of Object.entries(groupQueries))definitions.push({name,group,sql});
+ const result=await env.DB.batch(definitions.map(({sql})=>env.DB.prepare(sql+' LIMIT 10001')));
+ const tables={},extensions=Object.fromEntries(Object.keys(snapshotGroups).map(group=>[group,{}]));let metadataBytes=0;
+ for(let i=0;i<definitions.length;i++){
   if(result[i]?.success===false||!Array.isArray(result[i]?.results))throw new Error('EXPORT_SNAPSHOT_FAILED');
-  tables[names[i]]=result[i].results;if(result[i].results.length>10000)throw new Error('EXPORT_METADATA_ROW_LIMIT');
+  const {name,group}=definitions[i];(group===null?tables:extensions[group])[name]=result[i].results;
+  if(result[i].results.length>10000)throw new Error('EXPORT_METADATA_ROW_LIMIT');
   metadataBytes+=encoder.encode(JSON.stringify(result[i].results)).length;
   if(metadataBytes>32*1024*1024)throw new Error('EXPORT_METADATA_SIZE_LIMIT');
  }
@@ -66,5 +69,5 @@ export async function prepareDataset(env,year){
   // A cancelled/failed export never receives its manifest or ZIP end record.
   yield {path:'manifest.json',content:JSON.stringify(manifest)};
  }
- return {manifest,files,summary,ledger,issues,stream:()=>zipStream(entries()),entries};
+ return {manifest,files,summary,ledger,issues,extensions,stream:()=>zipStream(entries()),entries};
 }

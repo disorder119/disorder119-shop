@@ -24,6 +24,7 @@ import sys
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
+from browser_product_selection import rental_item_id
 
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
@@ -244,8 +245,7 @@ def audit_accessibility(product_path: str) -> list[dict[str, Any]]:
         # Rental deep-link with its canonical modal actually open. Die
         # Produktseite verlinkt nicht mehr aufs Mieten (Inhaber 08.10.2026);
         # /mieten/?item=<id> bleibt der Weg dorthin.
-        artikel_id = product_path.strip("/").split("/")[-1]
-        rental_href = urljoin(BASE_URL, f"mieten/?item={artikel_id}")
+        rental_href = urljoin(BASE_URL, f"mieten/?item={rental_item_id()}")
         driver.get(rental_href)
         backdrop = wait(driver, lambda d: d.find_element(By.ID, "d119RentalV2Backdrop"), "Rental-V2-Backdrop")
         wait(driver, lambda d: backdrop.is_displayed() and "open" in (backdrop.get_attribute("class") or ""), "Rental V2 offen")

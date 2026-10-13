@@ -525,3 +525,9 @@ test("previously issued seven-day admin sessions expire at the new 24-hour cap",
   env.DB.raw.prepare("UPDATE admin_sessions SET created_at=?,expires_at=?").run(new Date(Date.now()-25*3600000).toISOString(),new Date(Date.now()+6*86400000).toISOString());
   assert.equal(await resolveAdminSession(request('/admin/orders',{method:'GET',cookie}),env),null);
 });
+
+test('malformed admin session expiry never authorizes private operations',async()=>{
+ const env=freshEnv(),{cookie}=await setupFirstDevice(env);
+ env.DB.raw.prepare("UPDATE admin_sessions SET expires_at='invalid-date'").run();
+ assert.equal(await resolveAdminSession(request('/admin/orders',{method:'GET',cookie}),env),null);
+});

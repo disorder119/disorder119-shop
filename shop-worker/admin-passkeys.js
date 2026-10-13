@@ -385,7 +385,8 @@ async function lookupSession(request, env, token) {
   const row = await env.DB.prepare(`SELECT s.id,s.passkey_id,s.expires_at,s.created_at,s.last_seen_at,p.name
       FROM admin_sessions s JOIN admin_passkeys p ON p.id=s.passkey_id
       WHERE s.id=? AND s.revoked_at IS NULL AND p.revoked_at IS NULL LIMIT 1`).bind(id).first();
-  if (!row || new Date(String(row.expires_at)).getTime() <= Date.now()) return null;
+  const expires=row?Date.parse(String(row.expires_at)):NaN;
+  if (!row || !Number.isFinite(expires) || expires <= Date.now()) return null;
   const now = Date.now();
   const created = Date.parse(String(row.created_at || ""));
   if (!Number.isFinite(created) || now - created >= sessionHours(env) * 3_600_000) return null;

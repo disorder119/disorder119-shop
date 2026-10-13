@@ -304,7 +304,7 @@ export async function handleBuchhaltung(request, env, url, reqId = crypto.random
       // Kleinunternehmer-Grenzen. Fehlt die v3-Datenbasis, bleibt v2 unberuehrt.
       let v3=null,v3Fehler=null;
       try{v3=await taxReadyYearOverview(env,jahr,ledger);}catch(err){v3Fehler=safeText(err?.message||'TAX_V3_UNAVAILABLE',80);}
-      return json({ok:true,jahr,basis:'provider_cash_events',einnahmenCents:sum('capture'),erstattungenCents:sum('refund'),gebuehrenCents:sum('fee'),saldoCents:sum('capture')-sum('refund')-sum('fee'),ungeklaert:ledger.filter(e=>e.blocks.length).length,issues:JSON.parse(dataset.files['issues.json']),reviewRequired:true,hinweis:'Nur belegte Shop-Zahlungsereignisse; kein endgültiger Gewinn und keine Prüfung der Kleinunternehmergrenzen über alle Geschäftskonten.',v3:v3?{basis:'verified_provider_evidence_plus_private_cash_ledger',summary:v3.summary,kleinunternehmer:v3.kleinunternehmer}:null,v3Fehler},200,origin);
+      return json({ok:true,jahr,basis:'provider_cash_events',einnahmenCents:sum('capture'),erstattungenCents:sum('refund'),gebuehrenCents:sum('fee'),saldoCents:sum('capture')-sum('refund')-sum('fee'),ungeklaert:ledger.filter(e=>e.blocks.length).length,issues:[...JSON.parse(dataset.files['issues.json']),...(v3?.issues||[])],reviewRequired:true,hinweis:'Nur belegte Shop-Zahlungsereignisse; kein endgültiger Gewinn und keine Prüfung der Kleinunternehmergrenzen über alle Geschäftskonten.',v3:v3?{basis:'verified_provider_evidence_plus_private_cash_ledger',summary:v3.summary,kleinunternehmer:v3.kleinunternehmer}:null,v3Fehler},200,origin);
     }
 
     if (pfad === "/admin/buchhaltung/bestellungen.csv") {
