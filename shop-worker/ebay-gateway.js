@@ -73,11 +73,11 @@ async function boundedBytes(response, limit, timeout = 4000) {
 }
 async function providerJson(url, options, fetcher, stage) {
   let response;
-  try { response = await fetcher(url, {...options, redirect:'error', signal:AbortSignal.timeout(4000)}); }
-  catch { fail('EBAY_KEY_SERVICE_UNAVAILABLE', 503); }
+  try { response = await fetcher(url, {...options, headers:{'User-Agent':'Disorder119-Notification-Gateway/1.0',...options.headers}, redirect:'error', signal:AbortSignal.timeout(4000)}); }
+  catch(e) { fail('EBAY_'+stage+'_TRANSPORT_'+(['TypeError','TimeoutError','AbortError'].includes(e.name)?e.name.toUpperCase():'ERROR'), 503); }
   if (!response.ok) fail('EBAY_'+stage+'_HTTP_'+response.status, 503);
   try { return JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(await boundedBytes(response, 16384))); }
-  catch { fail('EBAY_KEY_SERVICE_UNAVAILABLE', 503); }
+  catch { fail('EBAY_'+stage+'_RESPONSE_INVALID', 503); }
 }
 async function publicKey(kid, env, fetcher, now) {
   if (!env.EBAY_CLIENT_ID || !env.EBAY_CLIENT_SECRET) fail('EBAY_NOTIFICATION_KEYS_NOT_CONFIGURED', 503);
@@ -92,7 +92,7 @@ async function publicKey(kid, env, fetcher, now) {
       method:'POST', headers:{'Authorization':'Basic '+btoa(identity+':'+env.EBAY_CLIENT_SECRET),'Content-Type':'application/x-www-form-urlencoded'},
       body:new URLSearchParams({grant_type:'client_credentials',scope:'https://api.ebay.com/oauth/api_scope'}).toString(),
     }, fetcher, 'TOKEN');
-    if (typeof token.access_token !== 'string' || !token.access_token || /[\r\n]/.test(token.access_token) || !Number.isFinite(token.expires_in) || token.expires_in <= 120) fail('EBAY_KEY_SERVICE_UNAVAILABLE',503);
+    if (typeof token.access_token !== 'string' || !token.access_token || /[\r\n]/.test(token.access_token) || !Number.isFinite(token.expires_in) || token.expires_in <= 120) fail('EBAY_TOKEN_RESPONSE_INVALID',503);
     state.token=token.access_token; state.until=now+token.expires_in*1000;
   }
   const key = await providerJson('https://api.ebay.com/commerce/notification/v1/public_key/'+encodeURIComponent(kid), {
