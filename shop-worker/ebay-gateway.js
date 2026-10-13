@@ -9,7 +9,8 @@ import { authorizeAdminRequest } from './backend-runtime.js';
 export const EBAY_ENDPOINT = 'https://api.disorder119.com/ebay/account-deletion';
 export const EBAY_RETURN = 'https://api.disorder119.com/ebay/return';
 const enc = new TextEncoder();
-const UUID = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
+// eBay documents notificationId as an opaque string, not a UUID constraint.
+const validNoticeId=value=>typeof value==='string'&&value.length>0&&value.length<=256&&value.trim()===value&&!/[\x00-\x1f\x7f]/.test(value);
 const cache = new Map();
 const secureHeaders = {
   'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer',
@@ -71,13 +72,14 @@ async function boundedBytes(response, limit, timeout = 4000) {
   const bytes = new Uint8Array(size); let offset = 0;
   for (const part of parts) { bytes.set(part, offset); offset += part.length; } return bytes;
 }
-async function providerJson(url, options, fetcher) {
-  let response;
-  try { response = await fetcher(url, {...options, redirect:'error', signal:AbortSignal.timeout(4000)}); }
-  catch { fail('EBAY_KEY_SERVICE_UNAVAILABLE', 503); }
-  if (!response.ok) fail('EBAY_KEY_SERVICE_UNAVAILABLE', 503);
+async function providerJson(url, options, fetcher, stage) {
+  let response;const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),4000);
+  try { response = await fetcher(url, {...options, headers:{'User-Agent':'Disorder119-Notification-Gateway/1.0',...options.headers}, redirect:'manual', signal:controller.signal}); }
+  catch(e) { fail('EBAY_'+stage+'_TRANSPORT_'+(['TypeError','TimeoutError','AbortError'].includes(e.name)?e.name.toUpperCase():'ERROR'), 503); }
+  finally {clearTimeout(timer);}
+  if (!response.ok) fail('EBAY_'+stage+'_HTTP_'+response.status, 503);
   try { return JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(await boundedBytes(response, 16384))); }
-  catch { fail('EBAY_KEY_SERVICE_UNAVAILABLE', 503); }
+  catch { fail('EBAY_'+stage+'_RESPONSE_INVALID', 503); }
 }
 async function publicKey(kid, env, fetcher, now) {
   if (!env.EBAY_CLIENT_ID || !env.EBAY_CLIENT_SECRET) fail('EBAY_NOTIFICATION_KEYS_NOT_CONFIGURED', 503);
@@ -91,13 +93,13 @@ async function publicKey(kid, env, fetcher, now) {
     const token = await providerJson('https://api.ebay.com/identity/v1/oauth2/token', {
       method:'POST', headers:{'Authorization':'Basic '+btoa(identity+':'+env.EBAY_CLIENT_SECRET),'Content-Type':'application/x-www-form-urlencoded'},
       body:new URLSearchParams({grant_type:'client_credentials',scope:'https://api.ebay.com/oauth/api_scope'}).toString(),
-    }, fetcher);
-    if (typeof token.access_token !== 'string' || !token.access_token || /[\r\n]/.test(token.access_token) || !Number.isFinite(token.expires_in) || token.expires_in <= 120) fail('EBAY_KEY_SERVICE_UNAVAILABLE',503);
+    }, fetcher, 'TOKEN');
+    if (typeof token.access_token !== 'string' || !token.access_token || /[\r\n]/.test(token.access_token) || !Number.isFinite(token.expires_in) || token.expires_in <= 120) fail('EBAY_TOKEN_RESPONSE_INVALID',503);
     state.token=token.access_token; state.until=now+token.expires_in*1000;
   }
   const key = await providerJson('https://api.ebay.com/commerce/notification/v1/public_key/'+encodeURIComponent(kid), {
     headers:{Authorization:'Bearer '+state.token,Accept:'application/json'},
-  },fetcher);
+  },fetcher, 'PUBLIC_KEY');
   if (typeof key.key !== 'string' || key.key.length>4096) fail('EBAY_PUBLIC_KEY_INVALID',503);
   if (state.keys.size >= 100) state.keys.delete(state.keys.keys().next().value);
   state.keys.set(kid,{value:key.key,until:now+3600000}); return key.key;
@@ -144,13 +146,17 @@ async function verify(message, raw, header, env, fetcher, now) {
 }
 function notification(message, now) {
   const n=message?.notification;
-  if(message?.metadata?.topic!=='MARKETPLACE_ACCOUNT_DELETION'||message.metadata.schemaVersion!=='1.0'||message.metadata.deprecated===true||!UUID.test(n?.notificationId||''))fail('EBAY_NOTIFICATION_INVALID');
-  for(const field of ['eventDate','publishDate'])if(typeof n[field]!=='string'||!Number.isFinite(Date.parse(n[field]))||Date.parse(n[field])>now+300000)fail('EBAY_NOTIFICATION_INVALID');
-  if(!Number.isInteger(n.publishAttemptCount)||n.publishAttemptCount<1||!n.data||typeof n.data!=='object'||Array.isArray(n.data))fail('EBAY_NOTIFICATION_INVALID');
+  if(message?.metadata?.topic!=='MARKETPLACE_ACCOUNT_DELETION')fail('EBAY_NOTIFICATION_TOPIC_INVALID');
+  if(message.metadata.schemaVersion!=='1.0'||message.metadata.deprecated===true)fail('EBAY_NOTIFICATION_SCHEMA_INVALID');
+  if(!validNoticeId(n?.notificationId))fail('EBAY_NOTIFICATION_ID_INVALID');
+  for(const field of ['eventDate','publishDate'])if(typeof n[field]!=='string'||!Number.isFinite(Date.parse(n[field]))||Date.parse(n[field])>now+300000)fail('EBAY_NOTIFICATION_DATE_INVALID');
+  // Delivery counters can start at zero on the initial/test publication.
+  if(!Number.isInteger(n.publishAttemptCount)||n.publishAttemptCount<0)fail('EBAY_NOTIFICATION_ATTEMPT_INVALID');
+  if(!n.data||typeof n.data!=='object'||Array.isArray(n.data))fail('EBAY_NOTIFICATION_DATA_INVALID');
   const data={};for(const field of ['username','userId','eiasToken']) {
-    if(n.data[field]!==undefined){if(typeof n.data[field]!=='string'||!n.data[field]||n.data[field].length>2048||/[\x00-\x1f\x7f]/.test(n.data[field]))fail('EBAY_NOTIFICATION_INVALID');data[field]=n.data[field];}
+    if(n.data[field]!==undefined){if(typeof n.data[field]!=='string'||!n.data[field]||n.data[field].length>2048||/[\x00-\x1f\x7f]/.test(n.data[field]))fail('EBAY_NOTIFICATION_IDENTITY_INVALID');data[field]=n.data[field];}
   }
-  if(!Object.keys(data).length)fail('EBAY_NOTIFICATION_INVALID');
+  if(!Object.keys(data).length)fail('EBAY_NOTIFICATION_IDENTITY_MISSING');
   return {id:n.notificationId,eventDate:new Date(n.eventDate).toISOString(),data};
 }
 async function encryptNotice(value, publicPem) {
@@ -166,7 +172,7 @@ async function encryptNotice(value, publicPem) {
 }
 
 export function isEbayRoute(url) {return ['/ebay/return','/ebay/account-deletion','/admin/ebay/privacy-requests'].includes(url.pathname);}
-export async function handleEbayGateway(request,env,url=new URL(request.url),{fetcher=fetch,now=Date.now()}={}) {
+export async function handleEbayGateway(request,env,url=new URL(request.url),{fetcher=globalThis.fetch.bind(globalThis),now=Date.now()}={}) {
   try {
     if(url.pathname==='/ebay/return')return await returnPage(request);
     if(url.pathname==='/admin/ebay/privacy-requests'){
@@ -181,7 +187,7 @@ export async function handleEbayGateway(request,env,url=new URL(request.url),{fe
         let body;
         try{body=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await boundedBytes(request,4096)));}
         catch(e){if(e.status)throw e;fail('INVALID_JSON');}
-        if(!body||body.confirm!==true||!UUID.test(body.id||'')||!['DELETED','NO_DATA','LEGAL_RETENTION'].includes(body.action)||typeof body.note!=='string'||body.note.trim().length<30||body.note.length>2000||/[\x00-\x1f]/.test(body.note))fail('EBAY_PRIVACY_REVIEW_REQUIRED');
+        if(!body||body.confirm!==true||!validNoticeId(body.id)||!['DELETED','NO_DATA','LEGAL_RETENTION'].includes(body.action)||typeof body.note!=='string'||body.note.trim().length<30||body.note.length>2000||/[\x00-\x1f]/.test(body.note))fail('EBAY_PRIVACY_REVIEW_REQUIRED');
         // Explicit owner attestation after local review; this does not pretend
         // to erase data on an offline PC. Keep no identities after resolution.
         const result=await env.DB.prepare("UPDATE ebay_privacy_notifications SET status=?,resolved_at=?,resolution_note=?,envelope='' WHERE id=? AND status='PENDING'")
@@ -219,6 +225,15 @@ export async function handleEbayGateway(request,env,url=new URL(request.url),{fe
     // the database commit; outage/missing migration causes retry, not lost mail.
     await env.DB.prepare(`INSERT INTO ebay_privacy_notifications(id,event_at,received_at,deadline,status,envelope)
       VALUES(?,?,?,?, 'PENDING',?) ON CONFLICT(id) DO NOTHING`).bind(notice.id,notice.eventDate,new Date(now).toISOString(),privacyDeadline(notice.eventDate),envelope).run();
-    return new Response(null,{status:204,headers:secureHeaders});
-  } catch(e) {return json({error:e.status?(e.code||e.message):'EBAY_GATEWAY_UNAVAILABLE'},e.status||503);}
+    // eBay permits 200/201/202/204. A JSON 200 also works with portal clients
+    // that mishandle a successful empty 204 body. Receipt is not resolution.
+    return json({received:true});
+  } catch(e) {
+    const code=e.status?(e.code||e.message):'EBAY_GATEWAY_UNAVAILABLE';
+    // Diagnose the live protocol without logging identity, headers or query/code.
+    console.warn(JSON.stringify({event:'ebay_gateway_failure',status:e.status||503,
+      code:/^[A-Z][A-Z_0-9]{1,80}$/.test(code)?code:'EBAY_GATEWAY_UNAVAILABLE',
+      exception:e.name==='NotSupportedError'?'NotSupportedError':undefined}));
+    return json({error:code},e.status||503);
+  }
 }
