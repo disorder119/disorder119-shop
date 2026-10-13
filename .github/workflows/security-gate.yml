@@ -28,7 +28,9 @@ jobs:
           node-version: "22"
 
       - name: Getrackte Secrets blockieren
-        run: python scripts/security_scan.py
+        run: |
+          python scripts/security_scan.py
+          python scripts/test_security_scan.py
 
       - name: Security-Code Syntax pruefen
         run: |

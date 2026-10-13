@@ -58,20 +58,37 @@ function providerEventType(kind) {
 
 // The existing v2 ledger is the authoritative source for provider-confirmed
 // PayPal cash. Manual v3 rows may cover bank/Vinted/cash or historical cases.
-// If a manual row explicitly carries the same provider reference and mapped
-// event type, it replaces the provider row in the combined view, never doubles it.
+// A manual duplicate may add account metadata only when its financial facts
+// agree. Conflicting manual rows stay in the raw export and never replace proof.
+function providerKey(row,type=row.event_type){return `${String(row.provider||'').toUpperCase()}|${row.provider_reference||''}|${type}`;}
+function sameProviderFacts(manual,provider,mapped){
+  return Number(manual.amount_cents)===Number(provider.amount_cents)&&manual.currency===provider.currency&&
+    manual.direction===mapped.direction&&bookDate(manual.occurred_at||manual.value_date)===provider.book_date&&
+    (!manual.order_id||manual.order_id===provider.order_id);
+}
+function providerConflicts(manualRows,providerRows){
+  const issues=[];
+  for(const provider of providerRows){
+    const mapped=providerEventType(provider.kind);
+    if(!mapped||!provider.book_date||(provider.blocks||[]).length)continue;
+    const matches=manualRows.filter(row=>row.provider_reference&&providerKey(row)===providerKey(provider,mapped.event_type));
+    if(matches.length&&(matches.length!==1||!sameProviderFacts(matches[0],provider,mapped)))issues.push({
+      code:'PROVIDER_LEDGER_CONFLICT',reference:provider.id,
+      message:'Manuelle Provider-Kopie widerspricht dem Zahlungsnachweis oder ist mehrfach vorhanden. Originalnachweis bleibt maßgeblich; Rohangaben separat prüfen.'});
+  }
+  return issues;
+}
 export function combineAccountingLedger(manualRows = [], providerRows = []) {
   const manual = manualRows.map(row => ({ ...row, source: row.source || 'private_accounting_ledger' }));
-  const manualKeys = new Set(manual
-    .filter(row => row.provider && row.provider_reference)
-    .map(row => `${String(row.provider).toUpperCase()}|${row.provider_reference}|${row.event_type}`));
+  const suppressed=new Set();
   const provider = [];
   for (const row of providerRows) {
     if (Array.isArray(row.blocks) && row.blocks.length) continue;
     const mapped = providerEventType(row.kind);
     if (!mapped || !row.book_date) continue;
-    const key = `${String(row.provider || '').toUpperCase()}|${row.provider_reference || ''}|${mapped.event_type}`;
-    if (manualKeys.has(key)) continue;
+    const matches=manual.filter(candidate=>candidate.provider_reference&&providerKey(candidate)===providerKey(row,mapped.event_type));
+    if(matches.length===1&&sameProviderFacts(matches[0],row,mapped))continue;
+    for(const candidate of matches)suppressed.add(candidate.id);
     provider.push({
       id: `provider:${row.id}`,
       account_id: null,
@@ -96,7 +113,7 @@ export function combineAccountingLedger(manualRows = [], providerRows = []) {
       source: row.source || 'verified_provider_event',
     });
   }
-  return [...provider, ...manual];
+  return [...provider, ...manual.filter(row=>!suppressed.has(row.id))];
 }
 
 export function validateAccountingSnapshot(tables, year) {
@@ -245,18 +262,6 @@ async function loadV3Tables(env) {
   return tables;
 }
 
-async function loadVorgangTables(env) {
-  const names = Object.keys(VORGANG_QUERIES);
-  const result = await env.DB.batch(names.map(name => env.DB.prepare(`${VORGANG_QUERIES[name]} LIMIT ${MAX_ROWS + 1}`)));
-  const tables = {};
-  names.forEach((name, index) => {
-    if (result[index]?.success === false || !Array.isArray(result[index]?.results)) throw new Error('TAX_V3_SNAPSHOT_FAILED');
-    if (result[index].results.length > MAX_ROWS) throw new Error('TAX_V3_ROW_LIMIT');
-    tables[name] = result[index].results;
-  });
-  return tables;
-}
-
 function v2Tabelle(base, name) {
   const text = base.files?.[`data/${name}.json`];
   return text ? JSON.parse(text) : [];
@@ -269,13 +274,13 @@ export async function taxReadyYearOverview(env, year, providerLedger = []) {
   const summary = buildAccountingYearSummary(tables, year, providerLedger);
   const kleinunternehmer = smallBusinessCheck(tables, year, y => (Number(y) === Number(year)
     ? summary : buildAccountingYearSummary(tables, y, providerLedger)));
-  return { summary, kleinunternehmer };
+  return { summary, kleinunternehmer, issues:providerConflicts(tables.ledger_events,providerLedger) };
 }
 
 export async function prepareTaxDatasetV3(env, year) {
-  const base = await prepareDataset(env, year);
-  const tables = await loadV3Tables(env);
-  const extra = await loadVorgangTables(env);
+  const base = await prepareDataset(env, year, {snapshotGroups:{accounting:V3_QUERIES,operations:VORGANG_QUERIES}});
+  const tables = base.extensions.accounting;
+  const extra = base.extensions.operations;
   const v2 = {
     orders: v2Tabelle(base, 'orders'),
     payments: v2Tabelle(base, 'payments'),
@@ -291,6 +296,7 @@ export async function prepareTaxDatasetV3(env, year) {
     ? summary : buildAccountingYearSummary(tables, y, ledgerV2)));
   const privateIssues = [
     ...validateAccountingSnapshot(tables, year),
+    ...providerConflicts(tables.ledger_events,ledgerV2),
     ...vorgangIssues(transactions, shipping, corrections, tables.ledger_events),
     ...smallBusiness.warnings,
   ];
@@ -329,7 +335,7 @@ export async function prepareTaxDatasetV3(env, year) {
     source_id: 'disorder119.com',
     scope: 'full_history_plus_tax_ready_2026',
     requested_year: Number(year),
-    generated_at: new Date().toISOString(),
+    generated_at: base.manifest.generated_at,
     timezone: 'Europe/Berlin',
     document_encoding: { ...base.manifest.document_encoding },
     counts: { ...base.manifest.counts },
