@@ -2149,6 +2149,7 @@ GOOGLE_CATEGORY = {
     "Accessories": "Apparel & Accessories > Clothing Accessories",
 }
 GOOGLE_CATEGORY_BY_TYPE = {
+    "Toaster": "Home & Garden > Kitchen & Dining > Kitchen Appliances > Toasters & Grills > Toasters",
     "Shorts": "Apparel & Accessories > Clothing > Shorts",
     "Swim Shorts": "Apparel & Accessories > Clothing > Swimwear",
     "Underwear Shorts": "Apparel & Accessories > Clothing > Underwear & Socks > Underwear",
