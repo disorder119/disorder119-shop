@@ -105,11 +105,15 @@ test('upstream outage or redirect not acknowledged; raw errors and credentials n
  const e=env(),r=await call(e,{fetcher:async()=>{throw Error(e.EBAY_CLIENT_SECRET);}});
  assert.equal(r.status,503);assert.equal((await r.text()).includes(e.EBAY_CLIENT_SECRET),false);
 });
-for(const mutate of [m=>m.metadata.topic='OTHER',m=>m.metadata.schemaVersion='9.0',m=>m.metadata.deprecated=true,m=>m.notification.notificationId='not-an-id',m=>m.notification.eventDate='invalid',m=>m.notification.publishDate='2099-01-01',m=>m.notification.publishAttemptCount=-1,m=>m.notification.data={},m=>m.notification.data.userId='x'.repeat(2049)])test('signed invalid schema is rejected '+mutate.toString().slice(0,80),async()=>{
+for(const mutate of [m=>m.metadata.topic='OTHER',m=>m.metadata.schemaVersion='9.0',m=>m.metadata.deprecated=true,m=>m.notification.notificationId='',m=>m.notification.eventDate='invalid',m=>m.notification.publishDate='2099-01-01',m=>m.notification.publishAttemptCount=-1,m=>m.notification.data={},m=>m.notification.data.userId='x'.repeat(2049)])test('signed invalid schema is rejected '+mutate.toString().slice(0,80),async()=>{
  const message=fixture();mutate(message);assert.equal((await call(env(),{message})).status,400);
 });
 test('initial signed publication may have attempt count zero',async()=>{
  const message=fixture();message.notification.publishAttemptCount=0;
+ assert.equal((await call(env(),{message})).status,204);
+});
+test('signed eBay notification IDs are opaque strings and need not be UUIDs',async()=>{
+ const message=fixture();message.notification.notificationId='account-deletion-test-event';
  assert.equal((await call(env(),{message})).status,204);
 });
 test('wrong content type, too large streamed body and browser-origin POST fail closed',async()=>{

@@ -9,7 +9,8 @@ import { authorizeAdminRequest } from './backend-runtime.js';
 export const EBAY_ENDPOINT = 'https://api.disorder119.com/ebay/account-deletion';
 export const EBAY_RETURN = 'https://api.disorder119.com/ebay/return';
 const enc = new TextEncoder();
-const UUID = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
+// eBay documents notificationId as an opaque string, not a UUID constraint.
+const validNoticeId=value=>typeof value==='string'&&value.length>0&&value.length<=256&&value.trim()===value&&!/[\x00-\x1f\x7f]/.test(value);
 const cache = new Map();
 const secureHeaders = {
   'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer',
@@ -147,7 +148,7 @@ function notification(message, now) {
   const n=message?.notification;
   if(message?.metadata?.topic!=='MARKETPLACE_ACCOUNT_DELETION')fail('EBAY_NOTIFICATION_TOPIC_INVALID');
   if(message.metadata.schemaVersion!=='1.0'||message.metadata.deprecated===true)fail('EBAY_NOTIFICATION_SCHEMA_INVALID');
-  if(!UUID.test(n?.notificationId||''))fail('EBAY_NOTIFICATION_ID_INVALID');
+  if(!validNoticeId(n?.notificationId))fail('EBAY_NOTIFICATION_ID_INVALID');
   for(const field of ['eventDate','publishDate'])if(typeof n[field]!=='string'||!Number.isFinite(Date.parse(n[field]))||Date.parse(n[field])>now+300000)fail('EBAY_NOTIFICATION_DATE_INVALID');
   // Delivery counters can start at zero on the initial/test publication.
   if(!Number.isInteger(n.publishAttemptCount)||n.publishAttemptCount<0)fail('EBAY_NOTIFICATION_ATTEMPT_INVALID');
@@ -186,7 +187,7 @@ export async function handleEbayGateway(request,env,url=new URL(request.url),{fe
         let body;
         try{body=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await boundedBytes(request,4096)));}
         catch(e){if(e.status)throw e;fail('INVALID_JSON');}
-        if(!body||body.confirm!==true||!UUID.test(body.id||'')||!['DELETED','NO_DATA','LEGAL_RETENTION'].includes(body.action)||typeof body.note!=='string'||body.note.trim().length<30||body.note.length>2000||/[\x00-\x1f]/.test(body.note))fail('EBAY_PRIVACY_REVIEW_REQUIRED');
+        if(!body||body.confirm!==true||!validNoticeId(body.id)||!['DELETED','NO_DATA','LEGAL_RETENTION'].includes(body.action)||typeof body.note!=='string'||body.note.trim().length<30||body.note.length>2000||/[\x00-\x1f]/.test(body.note))fail('EBAY_PRIVACY_REVIEW_REQUIRED');
         // Explicit owner attestation after local review; this does not pretend
         // to erase data on an offline PC. Keep no identities after resolution.
         const result=await env.DB.prepare("UPDATE ebay_privacy_notifications SET status=?,resolved_at=?,resolution_note=?,envelope='' WHERE id=? AND status='PENDING'")
