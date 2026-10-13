@@ -145,13 +145,17 @@ async function verify(message, raw, header, env, fetcher, now) {
 }
 function notification(message, now) {
   const n=message?.notification;
-  if(message?.metadata?.topic!=='MARKETPLACE_ACCOUNT_DELETION'||message.metadata.schemaVersion!=='1.0'||message.metadata.deprecated===true||!UUID.test(n?.notificationId||''))fail('EBAY_NOTIFICATION_INVALID');
-  for(const field of ['eventDate','publishDate'])if(typeof n[field]!=='string'||!Number.isFinite(Date.parse(n[field]))||Date.parse(n[field])>now+300000)fail('EBAY_NOTIFICATION_INVALID');
-  if(!Number.isInteger(n.publishAttemptCount)||n.publishAttemptCount<1||!n.data||typeof n.data!=='object'||Array.isArray(n.data))fail('EBAY_NOTIFICATION_INVALID');
+  if(message?.metadata?.topic!=='MARKETPLACE_ACCOUNT_DELETION')fail('EBAY_NOTIFICATION_TOPIC_INVALID');
+  if(message.metadata.schemaVersion!=='1.0'||message.metadata.deprecated===true)fail('EBAY_NOTIFICATION_SCHEMA_INVALID');
+  if(!UUID.test(n?.notificationId||''))fail('EBAY_NOTIFICATION_ID_INVALID');
+  for(const field of ['eventDate','publishDate'])if(typeof n[field]!=='string'||!Number.isFinite(Date.parse(n[field]))||Date.parse(n[field])>now+300000)fail('EBAY_NOTIFICATION_DATE_INVALID');
+  // Delivery counters can start at zero on the initial/test publication.
+  if(!Number.isInteger(n.publishAttemptCount)||n.publishAttemptCount<0)fail('EBAY_NOTIFICATION_ATTEMPT_INVALID');
+  if(!n.data||typeof n.data!=='object'||Array.isArray(n.data))fail('EBAY_NOTIFICATION_DATA_INVALID');
   const data={};for(const field of ['username','userId','eiasToken']) {
-    if(n.data[field]!==undefined){if(typeof n.data[field]!=='string'||!n.data[field]||n.data[field].length>2048||/[\x00-\x1f\x7f]/.test(n.data[field]))fail('EBAY_NOTIFICATION_INVALID');data[field]=n.data[field];}
+    if(n.data[field]!==undefined){if(typeof n.data[field]!=='string'||!n.data[field]||n.data[field].length>2048||/[\x00-\x1f\x7f]/.test(n.data[field]))fail('EBAY_NOTIFICATION_IDENTITY_INVALID');data[field]=n.data[field];}
   }
-  if(!Object.keys(data).length)fail('EBAY_NOTIFICATION_INVALID');
+  if(!Object.keys(data).length)fail('EBAY_NOTIFICATION_IDENTITY_MISSING');
   return {id:n.notificationId,eventDate:new Date(n.eventDate).toISOString(),data};
 }
 async function encryptNotice(value, publicPem) {
