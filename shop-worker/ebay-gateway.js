@@ -71,11 +71,11 @@ async function boundedBytes(response, limit, timeout = 4000) {
   const bytes = new Uint8Array(size); let offset = 0;
   for (const part of parts) { bytes.set(part, offset); offset += part.length; } return bytes;
 }
-async function providerJson(url, options, fetcher) {
+async function providerJson(url, options, fetcher, stage) {
   let response;
   try { response = await fetcher(url, {...options, redirect:'error', signal:AbortSignal.timeout(4000)}); }
   catch { fail('EBAY_KEY_SERVICE_UNAVAILABLE', 503); }
-  if (!response.ok) fail('EBAY_KEY_SERVICE_UNAVAILABLE', 503);
+  if (!response.ok) fail('EBAY_'+stage+'_HTTP_'+response.status, 503);
   try { return JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(await boundedBytes(response, 16384))); }
   catch { fail('EBAY_KEY_SERVICE_UNAVAILABLE', 503); }
 }
@@ -91,13 +91,13 @@ async function publicKey(kid, env, fetcher, now) {
     const token = await providerJson('https://api.ebay.com/identity/v1/oauth2/token', {
       method:'POST', headers:{'Authorization':'Basic '+btoa(identity+':'+env.EBAY_CLIENT_SECRET),'Content-Type':'application/x-www-form-urlencoded'},
       body:new URLSearchParams({grant_type:'client_credentials',scope:'https://api.ebay.com/oauth/api_scope'}).toString(),
-    }, fetcher);
+    }, fetcher, 'TOKEN');
     if (typeof token.access_token !== 'string' || !token.access_token || /[\r\n]/.test(token.access_token) || !Number.isFinite(token.expires_in) || token.expires_in <= 120) fail('EBAY_KEY_SERVICE_UNAVAILABLE',503);
     state.token=token.access_token; state.until=now+token.expires_in*1000;
   }
   const key = await providerJson('https://api.ebay.com/commerce/notification/v1/public_key/'+encodeURIComponent(kid), {
     headers:{Authorization:'Bearer '+state.token,Accept:'application/json'},
-  },fetcher);
+  },fetcher, 'PUBLIC_KEY');
   if (typeof key.key !== 'string' || key.key.length>4096) fail('EBAY_PUBLIC_KEY_INVALID',503);
   if (state.keys.size >= 100) state.keys.delete(state.keys.keys().next().value);
   state.keys.set(kid,{value:key.key,until:now+3600000}); return key.key;
@@ -220,5 +220,12 @@ export async function handleEbayGateway(request,env,url=new URL(request.url),{fe
     await env.DB.prepare(`INSERT INTO ebay_privacy_notifications(id,event_at,received_at,deadline,status,envelope)
       VALUES(?,?,?,?, 'PENDING',?) ON CONFLICT(id) DO NOTHING`).bind(notice.id,notice.eventDate,new Date(now).toISOString(),privacyDeadline(notice.eventDate),envelope).run();
     return new Response(null,{status:204,headers:secureHeaders});
-  } catch(e) {return json({error:e.status?(e.code||e.message):'EBAY_GATEWAY_UNAVAILABLE'},e.status||503);}
+  } catch(e) {
+    const code=e.status?(e.code||e.message):'EBAY_GATEWAY_UNAVAILABLE';
+    // Diagnose the live protocol without logging identity, headers or query/code.
+    console.warn(JSON.stringify({event:'ebay_gateway_failure',status:e.status||503,
+      code:/^[A-Z][A-Z_0-9]{1,80}$/.test(code)?code:'EBAY_GATEWAY_UNAVAILABLE',
+      exception:e.name==='NotSupportedError'?'NotSupportedError':undefined}));
+    return json({error:code},e.status||503);
+  }
 }
