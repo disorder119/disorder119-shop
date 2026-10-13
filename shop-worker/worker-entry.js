@@ -1,4 +1,5 @@
 import { handleAdminPrivacy } from "./admin-privacy.js";
+import { handleEbayGateway, isEbayRoute } from "./ebay-gateway.js";
 import shopWorker, { reconcilePurchasePayments } from "./worker.js";
 import {
   handleAdminRequest,
@@ -250,6 +251,10 @@ const worker = {
     const finish = response => finalizeRuntimeResponse(response, request, env, reqId, url.pathname);
 
     try {
+      if (isEbayRoute(url)) {
+        await guardRuntimeRequest(request, env, url);
+        return finish(await handleEbayGateway(request, env, url));
+      }
       // Face-ID-/Windows-Hello-Anmeldung der Admin-App: muss ohne Sitzung
       // erreichbar sein und prueft Herkunft und Berechtigung selbst.
       if (isManagerRoute(url)) {
