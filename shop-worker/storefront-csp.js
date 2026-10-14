@@ -7,6 +7,8 @@ const FIXED_HASHES = new Set([
   'sha256-adB3ntKA48b1299SdcHAjgBM7WhtN/c2X23gzk/Tagw=',
   'sha256-MURkrZQ80ZiFRpks5SsuCmLixZM48+sYmB+gmGxiaNo=',
   'sha256-wDhdVYQT+G+8RpdwzF2cann5fSlD07dD8GFtl8iA6uU=',
+  // Canonical German rental terms; English and French are covered above.
+  'sha256-COC97sYN8yQat/31P5cwDA3oKJ/A28TYJzRHLOhjmNg=',
 ]);
 const BOOT_FILES = new Set(['app.js','catalog-filter-simplify.js','archiv-navigation.js','rental-v2.js','rental-v2-ui.js','rental-v2-picker.js']);
 const BOOT_PREFIX = '/* FOCUS3_MOBILE_RUNTIME_AFTER_LCP */(function(){var s=';

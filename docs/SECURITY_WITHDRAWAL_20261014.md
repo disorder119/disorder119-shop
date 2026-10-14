@@ -8,7 +8,7 @@ behind whitespace, newlines and byte-order marks.
 
 ## Storefront script authorization
 
-`shop-worker/storefront-csp.js` authorizes five reviewed fixed bootstraps and
+`shop-worker/storefront-csp.js` authorizes six reviewed fixed bootstraps and
 strict JSON assignments to six existing public configuration variables. It does
 not authorize arbitrary scripts from the origin. The existing deferred loader
 is accepted only with its exact reviewed function body and approved local asset
