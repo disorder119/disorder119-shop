@@ -2136,14 +2136,16 @@ def build_catalog_json():
     catalog = []
     for it in public_items:
         row = {k: it.get(k) for k in CATALOG_FIELDS if k in it}
-        if it.get("public_status") == "SOLD" and "price" in row:
-            # Verkaufte Stuecke ohne Preis ausliefern (Inhaber 14.10.2026),
-            # wie schon auf der Produktseite (article_data "price": 0).
-            row["price"] = 0
-            row.pop("price_estimated", None)
         row["grid_image"] = grid_thumb_path(it)
         catalog.append(row)
     for row, it in zip(catalog, public_items):
+        if it.get("public_status") == "SOLD" and "price" in row:
+            # Verkaufte Stuecke ohne Preis ausliefern (Inhaber 14.10.2026),
+            # wie schon auf der Produktseite (article_data "price": 0).
+            # Steht bewusst hier und nicht in der Schleife darueber: die ist
+            # Anker fuer scripts/apply_focus_three_hardening.py.
+            row["price"] = 0
+            row.pop("price_estimated", None)
         hover = hover_image_path(it)
         if hover:
             row["hover_image"] = hover
