@@ -342,7 +342,12 @@ def validate_and_report() -> None:
         html = page.read_text(encoding="utf-8", errors="replace")
         if f'https://disorder119.com/artikel/{slug}/' not in html:
             severe.append(f"Artikel {item_id}: Canonical/URL fehlt auf Produktseite")
-        if '"@type": "Product"' not in html:
+        # Verkaufte Stuecke tragen bewusst keine Product-Auszeichnung (Inhaber
+        # 14.10.2026: nicht im Merchant Center, kein Preis); alle anderen schon.
+        if by_id[item_id].get("public_status") == "SOLD":
+            if '"@type": "Product"' in html:
+                severe.append(f"Artikel {item_id}: verkauft, aber noch Product JSON-LD")
+        elif '"@type": "Product"' not in html:
             severe.append(f"Artikel {item_id}: Product JSON-LD fehlt")
 
     # Technische SEO-Invarianten: Homepage-Entitaeten, Produkt-Metadaten,
@@ -364,7 +369,8 @@ def validate_and_report() -> None:
         if needle not in home_html:
             severe.append(f"Homepage: {label} fehlt")
 
-    sample_public = next((it for it in items if (it.get("public_status") or "DRAFT") != "DRAFT"), None)
+    # Stichprobe aus den kaufbaren Teilen: verkaufte haben keine Product-Auszeichnung mehr.
+    sample_public = next((it for it in items if (it.get("public_status") or "DRAFT") not in {"DRAFT", "SOLD"}), None)
     if sample_public:
         sample_path = BASE / "artikel" / str(sample_public["id"]) / "index.html"
         sample_html = sample_path.read_text(encoding="utf-8", errors="replace")
