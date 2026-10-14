@@ -37,7 +37,7 @@ RECHERCHE_DATEI = BASE / "data" / "ebay_recherche.json"
 EBAY_PROVISION = 0.12
 EBAY_FIXGEBUEHR = 0.45
 SPIELRAUM = 0.10          # Luft fuer Preisvorschlaege, 10 %
-MAX_BILDER = 12
+MAX_BILDER = 24  # eBay erlaubt bis zu 24 Fotos
 MAX_TITEL = 80
 
 HEADER = [
