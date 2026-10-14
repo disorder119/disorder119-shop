@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
+import { publicPath } from './storefront-edge.js';
 import { isDataScript, isBootstrapScript, inlineScriptHashes, scriptHash, paymentSdkUrl,
   paypalNonceHandler, secureHtml, boundedHtml, MAX_HTML_BYTES } from './storefront-csp.js';
 
@@ -69,7 +70,7 @@ test('all published HTML bootstraps are covered without authorizing executable i
       if(['.git','node_modules','shop-worker','scripts','docs','tools','config','assets','data'].includes(entry.name))continue;
       const p=join(dir,entry.name);
       if(entry.isDirectory())await walk(p);
-      else if(entry.name.endsWith('.html')&&!entry.name.endsWith('_template.html'))files.push(p);
+      else if(entry.name.endsWith('.html') && publicPath('/'+relative(root,p).split(sep).join('/')))files.push(p);
     }
   }
   await walk(root);
