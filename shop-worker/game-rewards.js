@@ -316,6 +316,18 @@ export async function findValidCoupon(env, value) {
   return row;
 }
 
+// Ein Code, der schon fuer genau diese Bestellung reserviert oder dort
+// eingeloest ist - fuer eine andere Bestellung bleibt er ungueltig.
+export async function findCouponHeldByOrder(env, value, orderId) {
+  const code = normalizeCouponCode(value);
+  if (!code || !orderId) return null;
+  const db = requireDb(env);
+  const row = await db.prepare(`SELECT * FROM reward_coupons WHERE code_hash=?
+      AND ((status='RESERVED' AND reserved_order_id=?) OR (status='REDEEMED' AND redeemed_order_id=?)) LIMIT 1`)
+    .bind(await sha256Hex(code), String(orderId), String(orderId)).first();
+  return row || null;
+}
+
 async function validateCoupon(request, env, origin) {
   await rateLimit(request, env, "coupon");
   const body = await readJson(request);

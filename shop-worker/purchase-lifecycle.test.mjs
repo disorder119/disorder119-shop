@@ -181,6 +181,113 @@ test("capture claim prevents an admin cancellation while PayPal responds", async
   } finally { globalThis.fetch = original; }
 });
 
+// Kasse ruft /capture-order; PayPal antwortet mit dem, was `paypal` fuer den
+// Pfad liefert (Response oder Fehler zum Werfen).
+async function bezahlen(env, paypal, key = "synthetic-capture-decline-01") {
+  const original = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async url => {
+    const path = new URL(String(url)).pathname;
+    calls.push(path);
+    if (path === "/v1/oauth2/token") return Response.json({ access_token: "synthetic-token" });
+    const antwort = paypal(path);
+    if (antwort instanceof Error) throw antwort;
+    if (antwort) return antwort;
+    throw new Error(`unexpected request ${path}`);
+  };
+  try {
+    const request = new Request("https://api.disorder119.com/capture-order", {
+      method: "POST", headers: { Origin: shopOrigin, "Content-Type": "application/json", "Idempotency-Key": key },
+      body: JSON.stringify({ orderId: "PAYPAL-SYNTHETIC-1" }),
+    });
+    const response = await shopWorker.fetch(request, env);
+    return { status: response.status, body: await response.json(), calls };
+  } finally { globalThis.fetch = original; }
+}
+
+const abgelehnt = issue => Response.json({ name: "UNPROCESSABLE_ENTITY", details: [{ issue }] }, { status: 422 });
+
+test("a card declined at authorize hands the claim back: same key retries, the piece is not locked for hours", async () => {
+  const { DB, env } = fixture();
+  const erst = await bezahlen(env, path => path.endsWith("/authorize") ? abgelehnt("INSTRUMENT_DECLINED") : null);
+  assert.equal(erst.status, 422, JSON.stringify(erst.body));
+  assert.equal(erst.body.error, "PAYMENT_DECLINED");
+  // Bei PayPal ist nichts reserviert: die Zahlung ist wieder offen, die
+  // eigene Reservierung gilt bis zu ihrem normalen Ende weiter.
+  assert.equal(DB.raw.prepare("SELECT status FROM payments").get().status, "CREATED");
+  assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders").get().status, "PAYMENT_PENDING");
+  assert.deepEqual(DB.raw.prepare("SELECT status FROM reservations ORDER BY id").all().map(x => x.status), ["RESERVED", "RESERVED"]);
+  const ereignis = DB.raw.prepare("SELECT metadata_json FROM audit_events WHERE event_type='PAYMENT_DECLINED'").get();
+  assert.deepEqual(JSON.parse(ereignis.metadata_json), { issue: "INSTRUMENT_DECLINED", status: 422, schritt: "authorize" });
+
+  // Die Kasse nutzt fuer dieselbe PayPal-Bestellung denselben Schluessel:
+  // nach einer anderen Zahlungsquelle klappt der zweite Versuch.
+  const zweit = await bezahlen(env, path => path.endsWith("/authorize") ? Response.json(authorization(), { status: 201 }) : null);
+  assert.equal(zweit.status, 200, JSON.stringify(zweit.body));
+  assert.equal(zweit.body.zahlung, "RESERVIERT");
+  assert.equal(DB.raw.prepare("SELECT status FROM payments").get().status, "AUTHORIZED");
+  assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders").get().status, "PAID");
+});
+
+test("capture-order before PayPal approval cannot stretch the 15-minute hold", async () => {
+  const { DB, env } = fixture();
+  const frueh = await bezahlen(env, path => path.endsWith("/authorize") ? abgelehnt("ORDER_NOT_APPROVED") : null);
+  assert.equal(frueh.status, 422, JSON.stringify(frueh.body));
+  assert.equal(frueh.body.error, "PAYMENT_DECLINED");
+  assert.equal(DB.raw.prepare("SELECT status FROM payments").get().status, "CREATED");
+  // Die Reservierung laeuft ab wie bei jeder nie bezahlten Kasse: Stueck frei,
+  // ohne vier Stunden auf den Abgleich zu warten.
+  DB.raw.prepare("UPDATE reservations SET expires_at=?").run(new Date(Date.now() - 1000).toISOString());
+  await expirePurchaseReservations(env);
+  assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders").get().status, "CANCELLED");
+  assert.equal(DB.raw.prepare("SELECT status FROM payments").get().status, "CANCELLED");
+  assert.deepEqual(DB.raw.prepare("SELECT status FROM inventory ORDER BY id").all().map(x => x.status), ["AVAILABLE", "AVAILABLE"]);
+});
+
+test("an old CAPTURE-intent order declined at capture is handed back as well", async () => {
+  const { DB, env } = fixture();
+  const antwort = await bezahlen(env, path => {
+    if (path.endsWith("/authorize")) return abgelehnt("ACTION_DOES_NOT_MATCH_INTENT");
+    if (path.endsWith("/capture")) return abgelehnt("INSTRUMENT_DECLINED");
+    return null;
+  });
+  assert.equal(antwort.status, 422, JSON.stringify(antwort.body));
+  assert.equal(antwort.body.error, "PAYMENT_DECLINED");
+  assert.equal(DB.raw.prepare("SELECT status FROM payments").get().status, "CREATED");
+  const ereignis = DB.raw.prepare("SELECT metadata_json FROM audit_events WHERE event_type='PAYMENT_DECLINED'").get();
+  assert.equal(JSON.parse(ereignis.metadata_json).schritt, "capture");
+});
+
+test("uncertain PayPal answers keep the claim locked until reconciliation", async () => {
+  const unsicher = {
+    "authorize 500": path => path.endsWith("/authorize") ? Response.json({ name: "INTERNAL_SERVER_ERROR" }, { status: 500 }) : null,
+    "authorize 503 ohne Inhalt": path => path.endsWith("/authorize") ? new Response("", { status: 503 }) : null,
+    "Netzfehler": path => path.endsWith("/authorize") ? new Error("network connection lost") : null,
+    "422 ohne Grund": path => path.endsWith("/authorize") ? Response.json({ name: "UNPROCESSABLE_ENTITY" }, { status: 422 }) : null,
+    "schon eingezogen": path => {
+      if (path.endsWith("/authorize")) return abgelehnt("ACTION_DOES_NOT_MATCH_INTENT");
+      if (path.endsWith("/capture")) return abgelehnt("ORDER_ALREADY_CAPTURED");
+      return null;
+    },
+    "Abbuchung 502": path => {
+      if (path.endsWith("/authorize")) return abgelehnt("ACTION_DOES_NOT_MATCH_INTENT");
+      if (path.endsWith("/capture")) return Response.json({ name: "BAD_GATEWAY" }, { status: 502 });
+      return null;
+    },
+  };
+  for (const [fall, paypal] of Object.entries(unsicher)) {
+    const { DB, env } = fixture();
+    const antwort = await bezahlen(env, paypal);
+    assert.equal(antwort.status, 500, `${fall}: ${JSON.stringify(antwort.body)}`);
+    assert.equal(DB.raw.prepare("SELECT status FROM payments").get().status, "PENDING", fall);
+    DB.raw.prepare("UPDATE reservations SET expires_at=?").run(new Date(Date.now() - 1000).toISOString());
+    await expirePurchaseReservations(env);
+    assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders").get().status, "PAYMENT_PENDING", fall);
+    assert.deepEqual(DB.raw.prepare("SELECT status FROM inventory ORDER BY id").all().map(x => x.status), ["PAYMENT_PENDING", "PAYMENT_PENDING"], fall);
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM audit_events WHERE event_type='PAYMENT_DECLINED'").get().n, 0, fall);
+  }
+});
+
 test("reconciliation confirms an interrupted authorization from PayPal", async () => {
   const { DB, env } = fixture({ expired: true });
   DB.raw.prepare("UPDATE payments SET status='PENDING',updated_at=? WHERE id='payment-1'")

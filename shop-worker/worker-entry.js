@@ -48,6 +48,7 @@ import {
   applyCouponToCreatedOrder,
   assertCouponUsable,
   couponCodeFromCreateRequest,
+  idempotencyKeyFromCreateRequest,
   redeemCouponAfterPayment,
 } from "./coupon-checkout.js";
 import {
@@ -420,7 +421,11 @@ const worker = {
       if (shouldInspectCreate && requestCopy) {
         try {
           couponCode = await couponCodeFromCreateRequest(requestCopy.clone());
-          if (couponCode) await assertCouponUsable(runtimeEnv, couponCode);
+          // Mit Schluessel: ein Wiederholungsaufruf bekommt seine Bestellung
+          // samt dort reserviertem Code zurueck, statt am Code zu scheitern.
+          if (couponCode) {
+            await assertCouponUsable(runtimeEnv, couponCode, await idempotencyKeyFromCreateRequest(requestCopy.clone()));
+          }
         } catch (error) {
           throw couponRuntimeError(error);
         }
