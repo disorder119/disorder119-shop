@@ -1,9 +1,15 @@
 // Gutschein im Browser (assets/shop-promos.js + assets/kasse.js): Ein
-// eingeloester oder abgelehnter Code darf spaetere Kaeufe nicht blockieren.
+// eingeloester oder abgelehnter Code darf spaetere Kaeufe nicht blockieren -
+// ein Code, den nur eine offene Bestellung haelt, darf dabei nicht verloren gehen.
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
+import worker from "./worker-entry.js";
+import { assertCouponUsable, CouponCheckoutError } from "./coupon-checkout.js";
+import { claimCouponForOrder, issueRewardCoupon } from "./game-rewards.js";
+import { versandCacheLeeren } from "./versand.js";
+import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 
 const PROMOS = fs.readFileSync(new URL("../assets/shop-promos.js", import.meta.url), "utf8");
 const KASSE = fs.readFileSync(new URL("../assets/kasse.js", import.meta.url), "utf8");
@@ -36,7 +42,10 @@ function element(tag = "div") {
   };
 }
 
-function seite({ store = {}, antworten = {}, search = "" } = {}) {
+// Jede Seite bekommt eigene Schluessel - wie D119Schutz nach einem Neuladen.
+let schluesselNr = 0;
+
+function seite({ store = {}, antworten = {}, search = "", felder = {} } = {}) {
   const speicher = new Map(Object.entries(store));
   const anfragen = [];
   const ids = new Map();
@@ -52,6 +61,7 @@ function seite({ store = {}, antworten = {}, search = "" } = {}) {
     createElement: element, createTextNode: text => ({ textContent: String(text) }),
     addEventListener() {}, removeEventListener() {},
   };
+  for (const [id, wert] of Object.entries(felder)) document.getElementById(id).value = wert;
   const localStorage = {
     getItem: k => (speicher.has(k) ? speicher.get(k) : null),
     setItem: (k, v) => { speicher.set(k, String(v)); },
@@ -65,7 +75,7 @@ function seite({ store = {}, antworten = {}, search = "" } = {}) {
     const pfad = ziel.startsWith(WORKER) ? new URL(ziel).pathname : ziel;
     const antwort = antworten[pfad];
     if (!antwort) return new Response("{}", { status: 404 });
-    return antwort();
+    return antwort(ziel, init);
   }
   const kontext = {
     document, localStorage, fetch, Response, URL, URLSearchParams, console,
@@ -75,7 +85,7 @@ function seite({ store = {}, antworten = {}, search = "" } = {}) {
     MutationObserver: class { observe() {} disconnect() {} },
     SHOP_CONFIG: { shopWorkerUrl: WORKER, paypalClientId: "test", features: { paypalCheckout: true }, email: "shop@example.com" },
     KASSE_LANG: "de",
-    D119Schutz: { schluessel: zweck => `${zweck}:${anfragen.length}-0000000000000000`, waechter: () => ({ token: () => Promise.resolve("token") }) },
+    D119Schutz: { schluessel: zweck => `${zweck}:${++schluesselNr}-0000000000000000`, waechter: () => ({ token: () => Promise.resolve("token") }) },
   };
   kontext.window = kontext;
   kontext.paypal = { Buttons(zahlung) { kontext.zahlung = zahlung; return { render() { return Promise.resolve(); } }; } };
@@ -103,15 +113,19 @@ test("rejected coupon (COUPON_INVALID_OR_USED) is forgotten in both keys, the ne
   assert.equal(Object.hasOwn(s.anfragen[1].body, "couponCode"), false);
 });
 
-test("other checkout errors keep the coupon", async () => {
+test("other checkout errors keep the coupon, also COUPON_RESERVED (held by an open order)", async () => {
+  let createAntwort = json({ error: "ITEM_UNAVAILABLE" }, 409);
   const s = seite({
-    store: { [CODE_KEY]: "D119-NEWS" },
-    antworten: { "/create-order": json({ error: "ITEM_UNAVAILABLE" }, 409), "/capture-order": json({ error: "RESERVATION_EXPIRED" }, 409) },
+    store: { [CODE_KEY]: "D119-SPIEL", [REWARD_KEY]: spielcode("D119-SPIEL") },
+    antworten: { "/create-order": () => createAntwort(), "/capture-order": json({ error: "RESERVATION_EXPIRED" }, 409) },
   });
   s.laden(PROMOS);
   await s.kontext.fetch(`${WORKER}/create-order`, { method: "POST", body: "{}" });
   await s.kontext.fetch(`${WORKER}/capture-order`, { method: "POST", body: "{}" });
-  assert.equal(s.speicher.get(CODE_KEY), "D119-NEWS");
+  createAntwort = json({ error: "COUPON_RESERVED", requestId: "r3" }, 409);
+  await s.kontext.fetch(`${WORKER}/create-order`, { method: "POST", body: "{}" });
+  assert.equal(s.speicher.get(CODE_KEY), "D119-SPIEL");
+  assert.equal(JSON.parse(s.speicher.get(REWARD_KEY)).code, "D119-SPIEL");
 });
 
 test("after a successful payment the redeemed code is removed; a different unused game code stays", async () => {
@@ -190,4 +204,136 @@ test("checkout page: paying with a coupon removes it, the next visit starts clea
   assert.equal(s.speicher.get(CODE_KEY), "D119-NEWS", "bis zur Zahlung bleibt der Code");
   await zahlung.onApprove({ orderID: "PAYPAL-2" });
   assert.equal(s.speicher.has(CODE_KEY), false);
+});
+
+// Der Server unterscheidet: Haelt eine offene, nicht bezahlte Bestellung den
+// Code, ist er nur voruebergehend belegt (COUPON_RESERVED) und wird nach
+// Ablauf der Reservierung wieder frei. Nur unbekannt, eingeloest (REDEEMED)
+// oder gesperrt (VOID) ist endgueltig (COUPON_INVALID_OR_USED).
+test("server tells a coupon held by an open order (COUPON_RESERVED) apart from a finally unusable one", async () => {
+  const DB = sqliteD1(allMigrations());
+  const env = { DB };
+  const [offen, abgelaufen, eingeloest, gesperrt, unbekannt] = [
+    await issueRewardCoupon(DB, {}), await issueRewardCoupon(DB, {}), await issueRewardCoupon(DB, {}),
+    await issueRewardCoupon(DB, {}), await issueRewardCoupon(DB, {}),
+  ];
+  const spaeter = new Date(Date.now() + 10 * 60_000).toISOString();
+  const vorbei = new Date(Date.now() - 1000).toISOString();
+  const setzen = (sql, ...werte) => DB.raw.prepare(sql).run(...werte);
+  setzen("UPDATE reward_coupons SET status='RESERVED',reserved_order_id='o-offen',reserved_until=? WHERE id=?", spaeter, offen.id);
+  setzen("UPDATE reward_coupons SET status='RESERVED',reserved_order_id='o-alt',reserved_until=? WHERE id=?", vorbei, abgelaufen.id);
+  setzen("UPDATE reward_coupons SET status='REDEEMED',redeemed_order_id='o-bezahlt',redeemed_at=? WHERE id=?", vorbei, eingeloest.id);
+  setzen("UPDATE reward_coupons SET status='VOID' WHERE id=?", gesperrt.id);
+  setzen("DELETE FROM reward_coupons WHERE id=?", unbekannt.id);
+
+  const pruefen = code => assertCouponUsable(env, code).then(() => "OK", fehler => {
+    assert.ok(fehler instanceof CouponCheckoutError);
+    assert.equal(fehler.status, 409);
+    return fehler.code;
+  });
+  assert.equal(await pruefen(offen.code), "COUPON_RESERVED");
+  assert.equal(await pruefen(abgelaufen.code), "OK", "abgelaufene Reservierung: wieder einloesbar");
+  assert.equal(await pruefen(eingeloest.code), "COUPON_INVALID_OR_USED");
+  assert.equal(await pruefen(gesperrt.code), "COUPON_INVALID_OR_USED");
+  assert.equal(await pruefen(unbekannt.code), "COUPON_INVALID_OR_USED");
+
+  // Wettlauf (Vorpruefung bestanden, eine andere Bestellung war schneller):
+  // dieselbe Unterscheidung beim Reservieren selbst.
+  await assert.rejects(claimCouponForOrder(env, offen.code, "o-zweit", 15000), e => e.code === "COUPON_RESERVED" && e.status === 409);
+  await assert.rejects(claimCouponForOrder(env, eingeloest.code, "o-zweit", 15000), e => e.code === "COUPON_INVALID_OR_USED" && e.status === 409);
+  const halter = DB.raw.prepare("SELECT status,reserved_order_id FROM reward_coupons WHERE id=?").get(offen.id);
+  assert.deepEqual({ ...halter }, { status: "RESERVED", reserved_order_id: "o-offen" });
+});
+
+// Nachbau fuer den echten worker-entry: Shop-Katalog (Versand), GitHub
+// (data/items.json) und PayPal (anlegen, Betrag korrigieren). Jede
+// PayPal-Bestellung bekommt eine neue ID.
+const SERVER_STUECK = { ...STUECK, taxonomy_category: "Tops", product_type: "T-Shirt" };
+const KUNDIN = { kEmail: "kundin@example.com", kVorname: "Maria", kNachname: "Müller", kStrasse: "Nelseestraße", kNummer: "25a", kPlz: "63739", kOrt: "Aschaffenburg" };
+
+function workerNetz() {
+  const original = globalThis.fetch;
+  const patches = [];
+  let paypalNr = 0;
+  globalThis.fetch = async (url, init = {}) => {
+    const u = new URL(String(url));
+    const method = init.method || "GET";
+    if (u.host === "disorder119.com" && u.pathname === "/data/catalog.json") return Response.json([SERVER_STUECK]);
+    if (u.host === "api.github.com") {
+      if (u.pathname.endsWith("/contents/data")) return Response.json([{ name: "items.json", type: "file", sha: "a".repeat(40) }]);
+      if (u.pathname.endsWith(`/git/blobs/${"a".repeat(40)}`)) return new Response(JSON.stringify([SERVER_STUECK]));
+    }
+    if (u.host === "api-m.sandbox.paypal.com") {
+      if (u.pathname === "/v1/oauth2/token") return Response.json({ access_token: "paypal-test-token" });
+      if (u.pathname === "/v2/checkout/orders" && method === "POST") return Response.json({ id: `PAYPAL-${++paypalNr}`, status: "CREATED" }, { status: 201 });
+      if (u.pathname.startsWith("/v2/checkout/orders/") && method === "PATCH") {
+        patches.push(JSON.parse(init.body)[0].value);
+        return new Response(null, { status: 204 });
+      }
+    }
+    return new Response("{}", { status: 404 });
+  };
+  return { patches, restore() { globalThis.fetch = original; } };
+}
+
+test("checkout page reloaded while the own open order holds the coupon: the code stays and the later order is still discounted", async () => {
+  versandCacheLeeren();
+  const netz = workerNetz();
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  const { code } = await issueRewardCoupon(DB, {});
+  // Die Kasse spricht mit dem echten worker-entry (D1 = sqlite).
+  const anWorker = (ziel, init = {}) => worker.fetch(new Request(ziel, {
+    method: init.method || "GET", headers: { ...(init.headers || {}), Origin: "https://disorder119.com" }, body: init.body,
+  }), env);
+  const antworten = { "/data/catalog.json": json([STUECK]), "/versand/optionen": anWorker, "/create-order": anWorker };
+  const oeffnen = async store => {
+    const s = seite({ search: "?artikel=9428", store, antworten, felder: KUNDIN });
+    s.laden(PROMOS);
+    s.laden(KASSE);
+    await ruhe();
+    assert.ok(s.kontext.zahlung, "PayPal-Knopf eingerichtet");
+    return s;
+  };
+  const gutscheinZeile = () => ({ ...DB.raw.prepare("SELECT status,reserved_order_id FROM reward_coupons").get() });
+  try {
+    // 1. Klick: Bestellung mit Gutschein angelegt, der Code ist fuer sie reserviert.
+    const erste = await oeffnen({ [CODE_KEY]: code, [REWARD_KEY]: spielcode(code) });
+    assert.equal(await erste.kontext.zahlung.createOrder(), "PAYPAL-1");
+    const ersteBestellung = DB.raw.prepare("SELECT id FROM commerce_orders").get().id;
+    assert.deepEqual(gutscheinZeile(), { status: "RESERVED", reserved_order_id: ersteBestellung });
+
+    // Seite neu geladen: neuer Schluessel, der Code haengt noch an der eigenen
+    // offenen Bestellung. Er darf dabei nicht verloren gehen (Spielcode: einzige Kopie).
+    const zweite = await oeffnen(Object.fromEntries(erste.speicher));
+    const fehler = await zweite.kontext.zahlung.createOrder().then(() => null, e => e);
+    assert.equal(fehler?.code, "COUPON_RESERVED");
+    zweite.kontext.zahlung.onError(fehler);
+    assert.equal(zweite.speicher.get(CODE_KEY), code, "Code bleibt im Browser");
+    assert.equal(JSON.parse(zweite.speicher.get(REWARD_KEY)).code, code, "Spielcode bleibt im Browser");
+    assert.equal(zweite.document.getElementById("kasseStatus").textContent,
+      "Dein Gutschein ist gerade noch für eine offene, nicht bezahlte Bestellung reserviert – zum Beispiel nach einem geschlossenen PayPal-Fenster. Er bleibt gespeichert und ist nach spätestens 25 Minuten wieder frei. Versuch es dann bitte noch einmal.");
+    assert.equal(zweite.document.getElementById("kasseGutschein").hidden, false, "Hinweis 'wird verrechnet' bleibt");
+    assert.deepEqual(gutscheinZeile(), { status: "RESERVED", reserved_order_id: ersteBestellung });
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM commerce_orders").get().n, 1);
+
+    // Stueck (15 min) und Gutschein (22 min) sind wieder frei: der naechste
+    // Klick bestellt mit dem Gutschein - 150 EUR Ware werden zu 135 EUR.
+    const vorbei = new Date(Date.now() - 1000).toISOString();
+    DB.raw.prepare("UPDATE reservations SET expires_at=?").run(vorbei);
+    DB.raw.prepare("UPDATE reward_coupons SET reserved_until=?").run(vorbei);
+    assert.equal(await zweite.kontext.zahlung.createOrder(), "PAYPAL-2");
+    const letzte = zweite.anfragen.filter(a => a.ziel.endsWith("/create-order")).at(-1);
+    assert.equal(letzte.body.couponCode, code);
+    assert.equal(netz.patches.length, 2, "beide Bestellungen rabattiert");
+    const betrag = netz.patches.at(-1);
+    assert.equal(betrag.breakdown ? betrag.breakdown.item_total.value : betrag.value, "135.00");
+    const neu = DB.raw.prepare("SELECT id,subtotal_cents FROM commerce_orders WHERE status='PAYMENT_PENDING'").get();
+    assert.equal(neu.subtotal_cents, 13500);
+    assert.deepEqual(gutscheinZeile(), { status: "RESERVED", reserved_order_id: neu.id });
+    assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders WHERE id=?").get(ersteBestellung).status, "CANCELLED");
+    assert.equal(zweite.speicher.get(CODE_KEY), code, "bis zur Zahlung bleibt der Code");
+  } finally {
+    netz.restore();
+  }
 });

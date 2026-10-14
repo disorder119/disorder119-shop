@@ -36,6 +36,7 @@
       lieferung: "Heute bestellt – voraussichtlich bei dir zwischen {von} und {bis}.", zahlart: "Mit PayPal-Käuferschutz",
       gutschein: "Gutschein {code} wird beim Bezahlen verrechnet.",
       gutscheinWeg: "Dein Gutschein ist ungültig oder schon eingelöst – wir haben ihn entfernt. Klick bitte noch einmal auf PayPal, dann bezahlst du ohne Gutschein.",
+      gutscheinReserviert: "Dein Gutschein ist gerade noch für eine offene, nicht bezahlte Bestellung reserviert – zum Beispiel nach einem geschlossenen PayPal-Fenster. Er bleibt gespeichert und ist nach spätestens 25 Minuten wieder frei. Versuch es dann bitte noch einmal.",
       recht: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Versand innerhalb von 3 Werktagen; die angezeigte Lieferzeit gilt ab Bestellung. Mit dem PayPal-Knopf und deiner Bestätigung bei PayPal bestellst du zahlungspflichtig. PayPal reserviert den Betrag – abgebucht wird erst mit dem Versand, spätestens drei Tage nach der Bestellung.",
       rechtAnfrage: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Die Anfrage ist unverbindlich – wir bestätigen Verfügbarkeit und Gesamtpreis per E-Mail.",
       agbLink: "AGB und Widerrufsbelehrung", dsLink: "Datenschutz",
@@ -95,6 +96,7 @@
       lieferung: "Order today – expected to arrive between {von} and {bis}.", zahlart: "With PayPal Buyer Protection",
       gutschein: "Coupon {code} is applied when you pay.",
       gutscheinWeg: "Your coupon is invalid or has already been used – we have removed it. Please click PayPal again to pay without the coupon.",
+      gutscheinReserviert: "Your coupon is still reserved for an open, unpaid order – for example after closing the PayPal window. It stays saved and will be free again within 25 minutes at the latest. Please try again then.",
       recht: "Small business under § 19 UStG, so no VAT is charged. Shipped within 3 working days; the delivery time shown counts from your order. With the PayPal button and your confirmation at PayPal you place a binding order. PayPal reserves the amount – it is only charged when we ship, at the latest three days after your order.",
       rechtAnfrage: "Small business under § 19 UStG, so no VAT is charged. The request is non-binding – we confirm availability and the total by e-mail.",
       agbLink: "Terms and withdrawal", dsLink: "Privacy",
@@ -154,6 +156,7 @@
       lieferung: "Commande aujourd’hui – livraison prévue entre le {von} et le {bis}.", zahlart: "Avec la Protection des achats PayPal",
       gutschein: "Le bon {code} est déduit au paiement.",
       gutscheinWeg: "Ton bon est invalide ou a déjà été utilisé – nous l'avons retiré. Clique à nouveau sur PayPal pour payer sans bon.",
+      gutscheinReserviert: "Ton bon est encore réservé pour une commande ouverte non payée – par exemple après avoir fermé la fenêtre PayPal. Il reste enregistré et sera de nouveau disponible dans 25 minutes au plus tard. Réessaie ensuite.",
       recht: "Micro-entreprise selon le § 19 UStG, pas de TVA. Expédition sous 3 jours ouvrés ; le délai de livraison indiqué court à partir de la commande. Avec le bouton PayPal et ta confirmation chez PayPal, tu passes une commande ferme. PayPal réserve le montant – il n'est débité qu'à l'expédition, au plus tard trois jours après la commande.",
       rechtAnfrage: "Micro-entreprise selon le § 19 UStG, pas de TVA. La demande est sans engagement – nous confirmons disponibilité et total par e-mail.",
       agbLink: "CGV et rétractation", dsLink: "Confidentialité",
@@ -1101,6 +1104,7 @@
     if (/^TURNSTILE_|^schutz_/.test(code)) return t("botCheck");
     if (code === "RATE_LIMITED") return t("zuSchnell");
     if (code === "COUPON_INVALID_OR_USED") return t("gutscheinWeg");
+    if (code === "COUPON_RESERVED") return t("gutscheinReserviert");
     if (code === "ITEM_UNAVAILABLE" || code === "ITEM_NOT_FOUND" || code === "PRICE_ON_REQUEST") return t("schonWeg");
     return t("fehler");
   }

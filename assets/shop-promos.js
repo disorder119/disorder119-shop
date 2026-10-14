@@ -32,12 +32,14 @@
     } catch (_) {}
     return clean;
   }
-  // Ein eingeloester oder abgelehnter Code darf nicht im Browser bleiben: Der
-  // Fetch-Wrapper unten haengt ihn sonst an jede weitere Bestellung, und der
-  // Server lehnt jede davon mit COUPON_INVALID_OR_USED ab. Der Spielcode
-  // faellt mit weg, wenn es derselbe Code ist - sonst schriebe couponForm ihn
-  // beim naechsten Oeffnen des Warenkorbs zurueck. Ein anderer, noch
-  // unbenutzter Spielcode bleibt erhalten.
+  // Ein eingeloester oder endgueltig abgelehnter Code darf nicht im Browser
+  // bleiben: Der Fetch-Wrapper unten haengt ihn sonst an jede weitere
+  // Bestellung, und der Server lehnt jede davon mit COUPON_INVALID_OR_USED ab
+  // (unbekannt, eingeloest oder gesperrt). Der Spielcode faellt mit weg, wenn
+  // es derselbe Code ist - sonst schriebe couponForm ihn beim naechsten Oeffnen
+  // des Warenkorbs zurueck. Ein anderer, noch unbenutzter Spielcode bleibt
+  // erhalten. COUPON_RESERVED (eine offene Bestellung haelt den Code noch, er
+  // wird danach wieder frei) loescht nichts - oft ist es die einzige Kopie.
   function forgetCode(code) {
     var used = cleanCode(code);
     if (!used) return;
@@ -191,8 +193,9 @@
         init = Object.assign({}, init, { body: JSON.stringify(payload) });
       }
     } catch (_) {}
-    // Abgelehnt (ungueltig oder schon eingeloest): vergessen, bevor die Kasse
-    // die Antwort sieht - der naechste Versuch geht dann ohne Code.
+    // Endgueltig abgelehnt (ungueltig oder schon eingeloest): vergessen, bevor
+    // die Kasse die Antwort sieht - der naechste Versuch geht dann ohne Code.
+    // Nur voruebergehend belegt (COUPON_RESERVED): Code behalten.
     return nativeFetch(input, init).then(function (response) {
       if (!response || response.ok || typeof response.clone !== "function") return response;
       return response.clone().json().then(function (data) {

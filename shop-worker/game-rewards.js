@@ -328,6 +328,24 @@ export async function findCouponHeldByOrder(env, value, orderId) {
   return row || null;
 }
 
+// Warum ein Code gerade nicht einloesbar ist. Haelt ihn eine offene, nicht
+// bezahlte Bestellung, ist er nur voruebergehend belegt: COUPON_RESERVED,
+// nach Ablauf der Reservierung wieder einloesbar - die Kasse behaelt ihn.
+// Unbekannt, eingeloest (REDEEMED) oder gesperrt (VOID) ist endgueltig.
+async function couponRejectionForHash(db, hash) {
+  const row = await db.prepare("SELECT status,reserved_until FROM reward_coupons WHERE code_hash=? LIMIT 1").bind(hash).first();
+  const nowIso = new Date().toISOString();
+  return row?.status === "RESERVED" && row.reserved_until && row.reserved_until > nowIso
+    ? "COUPON_RESERVED"
+    : "COUPON_INVALID_OR_USED";
+}
+
+export async function couponRejectionCode(env, value) {
+  const code = normalizeCouponCode(value);
+  if (!code) return "COUPON_INVALID_OR_USED";
+  return couponRejectionForHash(requireDb(env), await sha256Hex(code));
+}
+
 async function validateCoupon(request, env, origin) {
   await rateLimit(request, env, "coupon");
   const body = await readJson(request);
@@ -354,7 +372,7 @@ export async function claimCouponForOrder(env, value, orderId, subtotalCents) {
     WHERE code_hash=? AND status='ACTIVE'`)
     .bind(String(orderId), reservedUntil, hash).run();
 
-  if (!result.meta?.changes) throw new GameRewardError("COUPON_INVALID_OR_USED", 409);
+  if (!result.meta?.changes) throw new GameRewardError(await couponRejectionForHash(db, hash), 409);
 
   const row = await db.prepare("SELECT * FROM reward_coupons WHERE code_hash=?").bind(hash).first();
   const money = discountForSubtotal(subtotalCents, row.discount_bps);

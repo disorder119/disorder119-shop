@@ -1,5 +1,6 @@
 import {
   claimCouponForOrder,
+  couponRejectionCode,
   findCouponHeldByOrder,
   findValidCoupon,
   normalizeCouponCode,
@@ -88,7 +89,9 @@ export async function assertCouponUsable(env, code, idempotencyKey = "") {
   if (row) return row;
   const orderId = await replayedOrderId(env, idempotencyKey);
   const held = orderId ? await findCouponHeldByOrder(env, code, orderId) : null;
-  if (!held) throw new CouponCheckoutError("COUPON_INVALID_OR_USED", 409);
+  // COUPON_RESERVED (eine offene Bestellung haelt den Code noch) laesst die
+  // Kasse den Code behalten, nur COUPON_INVALID_OR_USED ist endgueltig.
+  if (!held) throw new CouponCheckoutError(await couponRejectionCode(env, code), 409);
   return held;
 }
 
