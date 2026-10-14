@@ -1,5 +1,6 @@
 import {
   claimCouponForOrder,
+  findCouponHeldByOrder,
   findValidCoupon,
   normalizeCouponCode,
   releaseCouponClaim,
@@ -54,11 +55,41 @@ export async function couponCodeFromCreateRequest(request) {
   return code;
 }
 
-export async function assertCouponUsable(env, code) {
+// Schluessel wie in worker.js: Kopfzeile Idempotency-Key, sonst im Inhalt.
+export async function idempotencyKeyFromCreateRequest(request) {
+  const header = request.headers.get("Idempotency-Key");
+  if (header) return header;
+  try {
+    const body = await request.json();
+    return typeof body?.idempotencyKey === "string" ? body.idempotencyKey : "";
+  } catch {
+    return "";
+  }
+}
+
+// Bestellung, die create-order unter diesem Schluessel schon erfolgreich
+// angelegt hat (worker.js liefert sie beim Wiederholungsaufruf erneut aus).
+async function replayedOrderId(env, idempotencyKey) {
+  if (!env?.DB || !idempotencyKey) return null;
+  const row = await env.DB.prepare(`SELECT resource_id FROM idempotency_keys
+    WHERE scope='create-order' AND idempotency_key=? AND response_json IS NOT NULL AND expires_at>?`)
+    .bind(String(idempotencyKey), new Date().toISOString()).first();
+  return row?.resource_id ? String(row.resource_id) : null;
+}
+
+// Wiederholt die Kasse create-order mit demselben Schluessel (etwa nach einem
+// geschlossenen PayPal-Fenster), ist der Code schon fuer die urspruengliche
+// Bestellung reserviert. Fuer genau diese Bestellung bleibt er gueltig - der
+// Replay liefert sie unveraendert, applyCouponToCreatedOrder erkennt den
+// Code. Weicht der Inhalt ab, lehnt worker.js den Schluessel ohnehin ab.
+export async function assertCouponUsable(env, code, idempotencyKey = "") {
   if (!code) return null;
   const row = await findValidCoupon(env, code);
-  if (!row) throw new CouponCheckoutError("COUPON_INVALID_OR_USED", 409);
-  return row;
+  if (row) return row;
+  const orderId = await replayedOrderId(env, idempotencyKey);
+  const held = orderId ? await findCouponHeldByOrder(env, code, orderId) : null;
+  if (!held) throw new CouponCheckoutError("COUPON_INVALID_OR_USED", 409);
+  return held;
 }
 
 function paypalBase(env) {

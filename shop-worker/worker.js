@@ -557,14 +557,41 @@ async function createPaypalOrder(env, items, itemCents, shippingCents, idempoten
   return res.json();
 }
 
+// Eindeutige Absagen von PayPal beim Reservieren bzw. Einziehen: die Kundin
+// hat (noch) nicht freigegeben, oder ihre Zahlungsquelle wurde abgelehnt. Bei
+// PayPal ist dann nichts reserviert und nichts eingezogen. Alles andere - 5xx,
+// Zeitueberschreitung, unbekannte Gruende, ORDER_ALREADY_CAPTURED - bleibt
+// unsicher und damit gesperrt, bis der Abgleich bei PayPal nachgesehen hat.
+const PAYPAL_ABSAGEN = new Set([
+  "ORDER_NOT_APPROVED", "INSTRUMENT_DECLINED", "PAYER_ACTION_REQUIRED", "TRANSACTION_REFUSED",
+  "PAYER_CANNOT_PAY", "PAYER_ACCOUNT_RESTRICTED", "PAYER_ACCOUNT_LOCKED_OR_CLOSED",
+  "REDIRECT_PAYER_FOR_ALTERNATE_FUNDING",
+]);
+
+class PaypalAbsage extends Error {
+  constructor(schritt, status, issue) {
+    super(`paypal_${schritt}_${status}_${issue}`);
+    this.schritt = schritt;
+    this.status = status;
+    this.issue = issue;
+  }
+}
+
+async function paypalIssue(res) {
+  const body = await res.json().catch(() => ({}));
+  return safeText(body?.details?.[0]?.issue || "", 80);
+}
+
 async function capturePaypalOrder(env, providerOrderId, idempotency) {
   const token = await paypalAccessToken(env);
   const res = await fetch(`${paypalApiBase(env)}/v2/checkout/orders/${encodeURIComponent(providerOrderId)}/capture`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "PayPal-Request-Id": idempotency },
   });
-  if (!res.ok) throw new Error(`paypal_capture_${res.status}`);
-  return res.json();
+  if (res.ok) return res.json();
+  const issue = await paypalIssue(res);
+  if (res.status === 422 && PAYPAL_ABSAGEN.has(issue)) throw new PaypalAbsage("capture", res.status, issue);
+  throw new Error(`paypal_capture_${res.status}${issue ? `_${issue}` : ""}`);
 }
 
 async function readPaypalOrder(env, providerOrderId) {
@@ -591,14 +618,35 @@ async function authorizePaypalOrder(env, providerOrderId, paymentId) {
     },
   });
   if (res.ok) return res.json();
-  const body = await res.json().catch(() => ({}));
-  const issue = safeText(body?.details?.[0]?.issue || "", 80);
+  const issue = await paypalIssue(res);
   if (res.status === 422 && issue === "ACTION_DOES_NOT_MATCH_INTENT") {
     return capturePaypalOrder(env, providerOrderId, `capture:${paymentId}`);
   }
   // Schon reserviert (Wiederholung nach einem Timeout): den Stand abholen.
   if (res.status === 422 && issue === "ORDER_ALREADY_AUTHORIZED") return readPaypalOrder(env, providerOrderId);
+  if (res.status === 422 && PAYPAL_ABSAGEN.has(issue)) throw new PaypalAbsage("authorize", res.status, issue);
   throw new Error(`paypal_authorize_${res.status}${issue ? `_${issue}` : ""}`);
+}
+
+// PayPal hat eindeutig abgesagt (PaypalAbsage): die Zahlung geht zurueck auf
+// CREATED, als haette es den Versuch nie gegeben. Die Stuecke haelt dann nur
+// noch die eigene Reservierung bis zu ihrem normalen Ende (danach gibt
+// expirePurchaseReservations sie frei, die Admin-App kann stornieren), und die
+// Kundin kann mit einer anderen Zahlungsquelle erneut bezahlen. Zurueckgenommen
+// wird nur der eigene Claim (gleicher Zeitstempel). Auch der Schluessel dieses
+// Versuchs wird wieder frei: die Kasse nutzt fuer dieselbe PayPal-Bestellung
+// denselben Schluessel.
+async function claimZuruecknehmen(env, paymentId, claimedAt, key, reqId, absage) {
+  const db = requireDb(env);
+  const now = new Date().toISOString();
+  await db.batch([
+    db.prepare("UPDATE payments SET status='CREATED',updated_at=? WHERE id=? AND status='PENDING' AND updated_at=?")
+      .bind(now, paymentId, claimedAt),
+    db.prepare(`DELETE FROM idempotency_keys WHERE scope='capture-order' AND idempotency_key=?
+      AND resource_id=? AND response_json IS NULL`).bind(key, reqId),
+  ]);
+  await audit(env, "payment", paymentId, "PAYMENT_DECLINED", reqId,
+    { issue: absage.issue, status: absage.status, schritt: absage.schritt }, "PAYMENT_PROVIDER");
 }
 
 function capturePayment(capture) {
@@ -1101,7 +1149,16 @@ export default {
         // Dieser Schluessel gehoert zur PayPal-Bestellung, nicht zum Browser-
         // Retry. Auch nach einem Timeout reserviert PayPal nur einmal. Das
         // Geld wird erst beim Versand eingezogen (zahlung.js).
-        const providerOrder = await authorizePaypalOrder(env, providerOrderId, payment.id);
+        let providerOrder;
+        try {
+          providerOrder = await authorizePaypalOrder(env, providerOrderId, payment.id);
+        } catch (err) {
+          // Nur eine eindeutige Absage gibt den Claim zurueck - jeder andere
+          // Fehler laesst die Zahlung PENDING, bis der Abgleich PayPal fragt.
+          if (!(err instanceof PaypalAbsage)) throw err;
+          await claimZuruecknehmen(env, payment.id, now, key, reqId, err);
+          throw new PublicError("PAYMENT_DECLINED", 422);
+        }
         const completed = await completePayment(env, providerOrderId, providerOrder, reqId);
         await markAllSold(env, completed, reqId);
         const response = { ok: true, orderId: completed.commerce_order_id, orderNumber: completed.order_number,
