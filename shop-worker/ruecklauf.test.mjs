@@ -492,6 +492,117 @@ test("the withdrawal function needs the confirmation step and the shop's own ori
   }
 });
 
+// Die oeffentliche Funktion ordnet nur ueber Bestellnummer UND passende
+// E-Mail-Adresse zu. Eine mitgeschickte orderId (interne ID oder Nummer),
+// eingegangenAt oder anleitungSenden zaehlt dort nicht.
+test("the public form ignores orderId: no foreign order is touched and no foreign address comes back", async () => {
+  const DB = sqliteD1(allMigrations());
+  seed(DB, { status: "DELIVERED" });
+  const netz = fakeNetz();
+  try {
+    for (const orderId of ["o1", NUMMER]) {
+      const nurId = await widerrufen(DB, { orderId, bestaetigt: true });
+      assert.equal(nurId.status, 400, JSON.stringify(nurId.data));
+      assert.doesNotMatch(JSON.stringify(nurId.data), /kundin@example\.test|Kim Beispiel/);
+    }
+    assert.equal(wert(DB, "SELECT COUNT(*) AS n FROM widerrufe").n, 0);
+
+    const res = await widerrufen(DB, {
+      orderId: "o1", name: "Angreifer", email: "Angreifer@Example.test", bestellnummer: "irgendwas",
+      nachricht: "Bitte sofort stornieren", eingegangenAt: "2026-01-01T00:00:00.000Z", anleitungSenden: true, bestaetigt: true,
+    });
+    assert.equal(res.status, 200, JSON.stringify(res.data));
+    assert.equal(res.data.email, "angreifer@example.test");
+    assert.doesNotMatch(JSON.stringify(res.data), /kundin@example\.test|Kim Beispiel|Testjacke/);
+
+    const w = wert(DB, "SELECT * FROM widerrufe");
+    assert.equal(w.order_id, null);
+    assert.equal(w.email, "angreifer@example.test");
+    assert.equal(w.bestellnummer_eingabe, "irgendwas");
+    assert.notEqual(w.eingegangen_at, "2026-01-01T00:00:00.000Z");
+    assert.equal(wert(DB, "SELECT status FROM commerce_orders").status, "DELIVERED");
+    assert.equal(wert(DB, "SELECT status FROM inventory").status, "DELIVERED");
+    assert.equal(wert(DB, "SELECT COUNT(*) AS n FROM returns").n, 0);
+    // Keine Mail an die Kundin, keine fremden Stuecke in der Bestaetigung.
+    assert.equal(kundenmails(netz).length, 0);
+    const mail = netz.mails.find(m => m.to[0].email === "angreifer@example.test");
+    assert.ok(mail, "Eingangsbestaetigung an die eingegebene Adresse fehlt");
+    assert.doesNotMatch(mail.textContent, /Testjacke|kundin@example\.test|Kim Beispiel/);
+    assert.match(netz.telegram[0].text, /keiner Bestellung zugeordnet/);
+  } finally {
+    netz.restore();
+  }
+});
+
+test("a foreign orderId on the public form does not block shipping of a paid order", async () => {
+  const DB = sqliteD1(allMigrations());
+  seed(DB, { status: "PAID" });
+  const netz = fakeNetz();
+  try {
+    const res = await widerrufen(DB, {
+      orderId: NUMMER, name: "Angreifer", email: "angreifer@example.test", bestellnummer: NUMMER, umfang: "GANZ", bestaetigt: true,
+    });
+    assert.equal(res.status, 200, JSON.stringify(res.data));
+    assert.equal(res.data.email, "angreifer@example.test");
+    assert.equal(wert(DB, "SELECT order_id FROM widerrufe").order_id, null);
+    const detail = await call(DB, "/admin/orders/o1");
+    assert.equal(detail.data.versandSperre, null);
+    assert.equal(detail.data.widerrufe.length, 0);
+    assert.equal(kundenmails(netz).length, 0);
+  } finally {
+    netz.restore();
+  }
+});
+
+test("matching order number and e-mail still assign the withdrawal, whatever orderId the form sends", async () => {
+  const DB = sqliteD1(allMigrations());
+  seed(DB, { status: "DELIVERED" });
+  const netz = fakeNetz();
+  try {
+    const res = await widerrufen(DB, {
+      orderId: "gibt-es-nicht", name: "Kim Beispiel", email: "kundin@example.test", bestellnummer: NUMMER, umfang: "GANZ", bestaetigt: true,
+    });
+    assert.equal(res.status, 200, JSON.stringify(res.data));
+    assert.equal(res.data.email, "kundin@example.test");
+    const w = wert(DB, "SELECT * FROM widerrufe");
+    assert.equal(w.order_id, "o1");
+    assert.equal(w.quelle, "WEBSITE");
+    assert.equal(wert(DB, "SELECT status FROM commerce_orders").status, "RETURN_REQUESTED");
+    assert.equal(wert(DB, "SELECT status FROM returns").status, "AUTHORIZED");
+    assert.ok(kundenmails(netz)[0].textContent.includes("Testjacke"));
+  } finally {
+    netz.restore();
+  }
+});
+
+test("account and admin still record the withdrawal for the order they name", async () => {
+  const konto = sqliteD1(allMigrations());
+  seed(konto, { status: "DELIVERED" });
+  const admin = sqliteD1(allMigrations());
+  seed(admin, { status: "DELIVERED" });
+  const netz = fakeNetz();
+  try {
+    const ausKonto = await widerrufAusKonto(ENV(konto), "o1", "konto");
+    assert.equal(ausKonto.widerruf.order_id, "o1");
+    assert.equal(ausKonto.widerruf.quelle, "KONTO");
+    assert.equal(ausKonto.widerruf.email, "kundin@example.test");
+    assert.equal(ausKonto.widerruf.name, "Kim Beispiel");
+    assert.equal(wert(konto, "SELECT status FROM commerce_orders").status, "RETURN_REQUESTED");
+    assert.equal(wert(konto, "SELECT status FROM returns").status, "AUTHORIZED");
+
+    const eingang = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+    const res = await call(admin, "/admin/orders/o1/ruecksendung", "POST", { eingegangenAt: eingang, anleitungSenden: false });
+    assert.equal(res.status, 200, JSON.stringify(res.data));
+    const w = wert(admin, "SELECT * FROM widerrufe");
+    assert.equal(w.order_id, "o1");
+    assert.equal(w.quelle, "ADMIN");
+    assert.equal(w.eingegangen_at, eingang);
+    assert.equal(wert(admin, "SELECT status FROM commerce_orders").status, "RETURN_REQUESTED");
+  } finally {
+    netz.restore();
+  }
+});
+
 test("declarations can neither be changed nor deleted", async () => {
   const DB = sqliteD1(allMigrations());
   seed(DB, { status: "DELIVERED" });

@@ -3,9 +3,11 @@ import test from "node:test";
 import {
   formatSaleMessage,
   formatTelegramTestMessage,
+  sendTelegramMessage,
   sendTelegramTest,
   telegramNotificationReady,
   telegramTransportReady,
+  telegramZeile,
 } from "./notifications.js";
 
 function telegramLinkDb() {
@@ -167,4 +169,26 @@ test("sendTelegramTest returns TARGET_NOT_CONNECTED before @joelb119 starts the 
 test("sendTelegramTest fails closed when Telegram is not configured", async () => {
   const result = await sendTelegramTest({}, "req-test-2");
   assert.deepEqual(result, { sent: false, reason: "NOT_CONFIGURED" });
+});
+
+test("telegramZeile keeps foreign text on one line, without control or bidi characters", () => {
+  assert.equal(telegramZeile("Rechnung\r\n\nDISORDER119 — NEUES ADMIN-GERÄT\tok"), "Rechnung DISORDER119 — NEUES ADMIN-GERÄT ok");
+  assert.equal(telegramZeile("a\u2028b\u0085c\u2029d\u202ee"), "a b c d e");
+  assert.equal(telegramZeile("x".repeat(200), 10), `${"x".repeat(9)}…`);
+  assert.equal(telegramZeile(null), "");
+});
+
+test("only line feeds separate Telegram lines: NEL and Unicode line separators become spaces", async () => {
+  const originalFetch = globalThis.fetch;
+  let seenBody = null;
+  globalThis.fetch = async (url, options) => {
+    seenBody = JSON.parse(String(options?.body || "{}"));
+    return Response.json({ ok: true, result: { message_id: 1 } });
+  };
+  try {
+    await sendTelegramMessage({ TELEGRAM_BOT_TOKEN: "bot", TELEGRAM_CHAT_ID: "42" }, "Kopf\nBetreff: a\u2028b\u0085c\u2029d\r\nEnde");
+    assert.equal(seenBody.text, "Kopf\nBetreff: a b c d\nEnde");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

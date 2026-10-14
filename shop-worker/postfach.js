@@ -9,7 +9,7 @@
 // (RFC 2047), multipart, quoted-printable und base64 reicht für Kundenmails.
 // Anhänge werden nur mit Namen vermerkt, nicht gespeichert.
 
-import { sendTelegramMessage, telegramTransportReady } from "./notifications.js";
+import { sendTelegramMessage, telegramTransportReady, telegramZeile } from "./notifications.js";
 
 const ADMIN_ORIGINS = Object.freeze(["https://admin.disorder119.com"]);
 const MAX_ROH_BYTES = 2 * 1024 * 1024;
@@ -59,12 +59,16 @@ function qpBytes(text, kopf = false) {
   return new Uint8Array(out);
 }
 
-// "=?UTF-8?B?...?=" und "=?iso-8859-1?Q?...?=" in Kopfzeilen
+// "=?UTF-8?B?...?=" und "=?iso-8859-1?Q?...?=" in Kopfzeilen. Eine Kopfzeile
+// bleibt einzeilig: was die Kodierung an CR/LF, NEL, Unicode-Zeilentrennern
+// oder anderen Steuerzeichen mitbringt ("=0A", B-kodiertes CR/LF), wird zum
+// Leerzeichen.
 export function kopfDekodieren(wert) {
   return String(wert || "")
     .replace(/\?=\s+=\?/g, "?==?")
     .replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (_, charset, art, inhalt) =>
-      dekodieren(art.toUpperCase() === "B" ? base64Bytes(inhalt) : qpBytes(inhalt, true), charset));
+      dekodieren(art.toUpperCase() === "B" ? base64Bytes(inhalt) : qpBytes(inhalt, true), charset))
+    .replace(/[\u0000-\u001f\u007f\u0085\u2028\u2029]/g, " ");
 }
 
 function kopfTeilen(block) {
@@ -205,7 +209,11 @@ export async function handleIncomingEmail(message, env, ctx) {
       gespeichert = true;
     }
     if (telegramTransportReady(env)) {
-      const text = `📬 Neue Mail an ${message.to}\nVon: ${mail.vonName ? `${mail.vonName} <${mail.vonEmail}>` : mail.vonEmail}\nBetreff: ${mail.betreff}`;
+      // Absender und Betreff kommen von aussen: je eine Zeile, gekuerzt, der
+      // Betreff in Anfuehrungszeichen - so sieht er nie wie eine eigene Meldung aus.
+      const absender = telegramZeile(mail.vonEmail, 120);
+      const von = mail.vonName ? `${telegramZeile(mail.vonName, 80)} <${absender}>` : absender;
+      const text = `📬 Neue Mail an ${telegramZeile(message.to, 120)}\nVon: ${von}\nBetreff: „${telegramZeile(mail.betreff, 120)}“`;
       const senden = sendTelegramMessage(env, text).catch(() => {});
       if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(senden); else await senden;
     }

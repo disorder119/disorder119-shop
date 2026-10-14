@@ -172,6 +172,19 @@ export function widerrufView(row, extra = {}) {
 
 // ------------------------------------------------------------- Erfassen
 
+// Was die oeffentliche Widerrufsfunktion annimmt. orderId, eingegangenAt und
+// anleitungSenden gehoeren nur Konto und Admin: Ueber die Website wird
+// ausschliesslich mit Bestellnummer UND passender E-Mail-Adresse zugeordnet.
+const WEBSITE_FELDER = Object.freeze(["name", "email", "bestellnummer", "umfang", "teile", "nachricht", "sprache"]);
+
+function websiteEingabe(eingabe) {
+  const out = {};
+  for (const feld of WEBSITE_FELDER) {
+    if (Object.prototype.hasOwnProperty.call(eingabe || {}, feld)) out[feld] = eingabe[feld];
+  }
+  return out;
+}
+
 // eingabe (Website): { name, email, bestellnummer, umfang, teile, nachricht, sprache }
 // eingabe (Konto/Admin): { orderId, umfang?, teile?, nachricht?, eingegangenAt? (nur Admin), anleitungSenden? }
 // deps: { statusSetzen(orderId, status, { actor, nurInventar }) }
@@ -180,12 +193,13 @@ export async function widerrufErfassen(env, eingabe = {}, { quelle = "WEBSITE", 
   if (!db) throw new WiderrufFehler("DATENBANK_FEHLT", 503);
   if (!["WEBSITE", "KONTO", "ADMIN"].includes(quelle)) throw new WiderrufFehler("QUELLE_UNBEKANNT", 400);
   const actor = quelle === "ADMIN" ? "ADMIN" : "CUSTOMER";
+  if (quelle === "WEBSITE") eingabe = websiteEingabe(eingabe);
 
   let order = null;
   let name;
   let email;
   let nummer;
-  if (eingabe.orderId) {
+  if (quelle !== "WEBSITE" && eingabe.orderId) {
     order = await bestellungMitKontakt(db, safeText(eingabe.orderId, 80));
     if (!order) throw new WiderrufFehler("BESTELLUNG_NICHT_GEFUNDEN", 404);
     name = safeText(eingabe.name || order.recipient_name || "", 120).trim();
@@ -443,7 +457,8 @@ export async function handleWiderruf(request, env, url, reqId = crypto.randomUUI
       vorgang: widerrufView(row).vorgang,
       eingegangenAt: row.eingegangen_at,
       eingegangen: berlinZeit(row.eingegangen_at),
-      email: row.email,
+      // Nur die eingegebene Adresse, nie Kontaktdaten aus der Bestellung.
+      email: normalizeEmail(body.email),
       bestaetigungGesendet: Boolean(row.bestaetigung_gesendet_at),
     }, 200, origin);
   } catch (err) {

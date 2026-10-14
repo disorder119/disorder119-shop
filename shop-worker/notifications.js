@@ -151,13 +151,27 @@ export async function resolveTelegramChatId(env, reqId = crypto.randomUUID()) {
   return discoverTelegramChatId(env, username, reqId);
 }
 
+// Fremdtext (Mail-Betreff, Absender ...) fuer genau eine Zeile einer
+// Telegram-Meldung: ohne Zeilenumbrueche, Steuer- und Richtungszeichen und
+// gekuerzt. Sonst schreibt ein Betreff wie "Rechnung=0ADISORDER119 — NEUES
+// ADMIN-GERÄT" eigene Zeilen, die wie ein echter Alarm aussehen.
+export function telegramZeile(value, max = 120) {
+  const text = String(value ?? "")
+    .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length > max ? `${text.slice(0, Math.max(0, max - 1)).trimEnd()}…` : text;
+}
+
 export async function sendTelegramMessage(env, text, reqId = crypto.randomUUID()) {
   if (!telegramTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
   if (istSandbox(env)) text = sandboxTelegramText(text);
   // Zeilenumbrueche bleiben erhalten, sonst klebt jede Meldung in einer Zeile.
+  // Nur "\n" trennt Zeilen; NEL und die Unicode-Zeilentrenner werden wie die
+  // uebrigen Steuerzeichen zu Leerzeichen.
   const cleanText = String(text ?? "")
     .replace(/\r\n?/g, "\n")
-    .replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, " ")
+    .replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u2028\u2029]/g, " ")
     .trim()
     .slice(0, 4096);
   if (!cleanText) return { sent: false, reason: "EMPTY_MESSAGE" };
