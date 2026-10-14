@@ -140,7 +140,8 @@ test("create-order replay with a coupon returns the original order; another orde
     // Eine andere Bestellung (neuer Schluessel) bekommt den reservierten Code nicht.
     const fremd = await kasse(env, "/create-order", bestellung, "k-gutschein-0000000002");
     assert.equal(fremd.status, 409, JSON.stringify(fremd.data));
-    assert.equal(fremd.data.error, "COUPON_INVALID_OR_USED");
+    // Eine offene Bestellung haelt ihn: voruebergehend belegt, die Kasse behaelt den Code.
+    assert.equal(fremd.data.error, "COUPON_RESERVED");
     // Gleicher Schluessel mit anderem Inhalt bleibt eine abgelehnte Wiederverwendung.
     const anders = await kasse(env, "/create-order", { ...bestellung, createAccount: true }, "k-gutschein-0000000001");
     assert.equal(anders.status, 409, JSON.stringify(anders.data));

@@ -60,7 +60,7 @@ jobs:
         run: node --test shop-worker/notifications.test.mjs shop-worker/admin-notifications.test.mjs shop-worker/customer-mail.test.mjs shop-worker/customer-account.test.mjs
 
       - name: Game- und Gutschein-Regressionen pruefen
-        run: node --test shop-worker/game-rewards.test.mjs shop-worker/coupon-checkout.test.mjs shop-worker/buchhaltung.test.mjs shop-worker/dhl.test.mjs
+        run: node --test shop-worker/game-rewards.test.mjs shop-worker/coupon-checkout.test.mjs shop-worker/kasse-gutschein.test.mjs shop-worker/buchhaltung.test.mjs shop-worker/dhl.test.mjs
 
       - name: Steuerexport, Originalarchiv und Rechnungen pruefen
         run: node --test shop-worker/tax-dataset.test.mjs shop-worker/tax-ready-2026.test.mjs shop-worker/tax-ready-vorgaenge.test.mjs shop-worker/merchant-shipping.test.mjs shop-worker/request-resource-guards.test.mjs

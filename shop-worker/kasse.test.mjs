@@ -7,6 +7,7 @@ import { adresseCacheLeeren, handleAdresse, strassennameAus } from "./adresse.js
 import { versandCacheLeeren } from "./versand.js";
 import { snapshotPaypalOrder } from "./admin-api.js";
 import { sendRequestedAccountLink } from "./customer-account.js";
+import { handleRentalBundle } from "./rental-bundle.js";
 import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 
 const SHOP = "https://disorder119.com";
@@ -18,6 +19,10 @@ const ITEMS = [
   { id: 9428, article: "9428", brand: "Jean Paul Gaultier", title: "Jean Paul Gaultier T-Shirt mit Print Damen Blau", price: 150, public_status: "AVAILABLE", taxonomy_category: "Tops", product_type: "T-Shirt" },
   { id: 9427, article: "9427", brand: "Jean Paul Gaultier", title: "Jean Paul Gaultier Jeans Damen Marineblau", price: 90, public_status: "AVAILABLE", taxonomy_category: "Pants", product_type: "Trousers" },
   { id: 6210, article: "6210", brand: "Prada", title: "Prada Sport Fleecejacke Herren Schwarz", price: 229, public_status: "SOLD", taxonomy_category: "Jackets", product_type: "Jacket" },
+  // Nie freigegebener Entwurf mit Preis (wie 9427 in data/items.json) und ein
+  // Stueck ohne Status: beide nicht kaufbar und nicht mietbar.
+  { id: 9426, article: "72", brand: "Jean Paul Gaultier", title: "Jean Paul Gaultier Jeans Damen Marineblau", price: 75, public_status: "DRAFT", taxonomy_category: "Pants", product_type: "Trousers" },
+  { id: 9425, article: "71", brand: "Jean Paul Gaultier", title: "Jean Paul Gaultier Rock Damen Schwarz", price: 60, taxonomy_category: "Skirts", product_type: "Skirt" },
 ];
 const ADRESSE = { name: "Maria Müller", strasse: "Nelseestraße", hausnummer: "25a", zusatz: "Hinterhaus", plz: "63739", ort: "Aschaffenburg", land: "DE" };
 
@@ -166,7 +171,8 @@ test("checkout with two pieces: one PayPal order with the checkout address, both
     const paypal = netz.calls.find(c => c.host === "api-m.sandbox.paypal.com" && c.path === "/v2/checkout/orders");
     const unit = paypal.body.purchase_units[0];
     assert.equal(unit.custom_id, "9428,9427");
-    assert.match(unit.description, /^2 Teile: /);
+    // Die Marke steht schon im Titel - kein "Jean Paul Gaultier Jean Paul Gaultier ...".
+    assert.equal(unit.description, "2 Teile: Jean Paul Gaultier T-Shirt mit Print Damen Blau, Jean Paul Gaultier Jeans Damen Marineblau");
     assert.equal(unit.amount.value, "240.00");
     assert.deepEqual(unit.shipping, {
       type: "SHIPPING",
@@ -179,8 +185,10 @@ test("checkout with two pieces: one PayPal order with the checkout address, both
 
     const order = DB.raw.prepare("SELECT id,subtotal_cents,shipping_cents,total_cents FROM commerce_orders").get();
     assert.deepEqual({ ...order, id: undefined }, { id: undefined, subtotal_cents: 24000, shipping_cents: 0, total_cents: 24000 });
-    const zeilen = DB.raw.prepare("SELECT item_id,unit_price_cents FROM order_items WHERE order_id=? ORDER BY rowid").all(order.id);
+    const zeilen = DB.raw.prepare("SELECT item_id,unit_price_cents,title_snapshot FROM order_items WHERE order_id=? ORDER BY rowid").all(order.id);
     assert.deepEqual(zeilen.map(z => [z.item_id, z.unit_price_cents]), [[9428, 15000], [9427, 9000]]);
+    // Der Name landet unveraenderlich in Rechnung, Mails und Steuerexport.
+    assert.deepEqual(zeilen.map(z => z.title_snapshot), ["Jean Paul Gaultier T-Shirt mit Print Damen Blau", "Jean Paul Gaultier Jeans Damen Marineblau"]);
     const reservierungen = DB.raw.prepare("SELECT idempotency_key,status FROM reservations ORDER BY idempotency_key").all();
     assert.deepEqual(reservierungen.map(r => [r.idempotency_key, r.status]), [["k-kasse-00000000001#9427", "RESERVED"], ["k-kasse-00000000001#9428", "RESERVED"]]);
     const kontakt = DB.raw.prepare("SELECT source_provider,email,account_requested,recipient_name,address_line1,postal_code,city FROM order_contact_snapshots").get();
@@ -361,6 +369,60 @@ test("create-order: nur DHL zu festen Preisen, auch an Packstation; Hoeherversic
       { itemIds: [9428], adresse: ADRESSE, versand: "fest-dhl-S", versandPreisCents: 0 }, "k-privat-00000000004");
     assert.equal(haustuer.status, 200, JSON.stringify(haustuer.data));
     assert.equal(haustuer.data.shipping, "0.00", "ab 99 EUR uebernimmt der Shop den guenstigsten Versand");
+  } finally {
+    netz.restore();
+  }
+});
+
+test("checkout sells only AVAILABLE pieces: a priced DRAFT or a piece without status is refused, nothing reserved", async () => {
+  versandCacheLeeren();
+  const netz = fakeNetz();
+  const DB = sqliteD1(allMigrations());
+  const env = { VERSAND_QUELLE: "packlink", DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  try {
+    const entwurf = await post(env, "/create-order", { itemIds: [9426], adresse: ADRESSE, versand: "pl-S-20425", versandPreisCents: 559 }, "k-entwurf-00000000001");
+    assert.equal(entwurf.status, 409, JSON.stringify(entwurf.data));
+    assert.equal(entwurf.data.error, "ITEM_UNAVAILABLE");
+    const ohneStatus = await post(env, "/create-order", { itemIds: [9425], adresse: ADRESSE, versand: "pl-S-20425", versandPreisCents: 559 }, "k-entwurf-00000000002");
+    assert.equal(ohneStatus.status, 409, JSON.stringify(ohneStatus.data));
+    assert.equal(ohneStatus.data.error, "ITEM_UNAVAILABLE");
+    const gemischt = await post(env, "/create-order", { itemIds: [9428, 9426], adresse: ADRESSE, versand: "pl-S-20425", versandPreisCents: 0 }, "k-entwurf-00000000003");
+    assert.equal(gemischt.status, 409, JSON.stringify(gemischt.data));
+    assert.equal(gemischt.data.error, "ITEM_UNAVAILABLE");
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations").get().n, 0);
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM commerce_orders").get().n, 0);
+    assert.equal(netz.calls.filter(c => c.host === "api-m.sandbox.paypal.com").length, 0, "keine PayPal-Bestellung");
+  } finally {
+    netz.restore();
+  }
+});
+
+test("rental: a DRAFT can be neither quoted, requested nor booked in a bundle", async () => {
+  const netz = fakeNetz();
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, GITHUB_TOKEN: "gh-test" };
+  const tag = n => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+  const start = tag(10);
+  const end = tag(12);
+  try {
+    const verfuegbar = await post(env, "/rental-quote", { itemId: 9428, start, end }, "k-miete-angebot-0001");
+    assert.equal(verfuegbar.status, 200, JSON.stringify(verfuegbar.data));
+    const angebot = await post(env, "/rental-quote", { itemId: 9426, start, end }, "k-miete-angebot-0002");
+    assert.equal(angebot.status, 409, JSON.stringify(angebot.data));
+    assert.equal(angebot.data.error, "ITEM_UNAVAILABLE");
+    const anfrage = await post(env, "/rental-request", { itemId: 9426, start, end }, "k-miete-anfrage-00001");
+    assert.equal(anfrage.status, 409, JSON.stringify(anfrage.data));
+    assert.equal(anfrage.data.error, "ITEM_UNAVAILABLE");
+    const res = await handleRentalBundle(new Request("https://api.disorder119.com/rental-bundle", {
+      method: "POST",
+      headers: { Origin: SHOP, "Content-Type": "application/json", "Idempotency-Key": "k-miete-paket-000001" },
+      body: JSON.stringify({ itemIds: [9426], start, end, termsVersion: "2026-09", termsAcceptedAt: new Date().toISOString() }),
+    }), env, new URL("https://api.disorder119.com/rental-bundle"), "req-miete-paket", SHOP);
+    const paket = await res.json();
+    assert.equal(res.status, 409, JSON.stringify(paket));
+    assert.equal(paket.error, "ITEM_UNAVAILABLE");
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM rental_reservations").get().n, 0);
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM rental_groups").get().n, 0);
   } finally {
     netz.restore();
   }

@@ -12,6 +12,8 @@ import {
   canTransitionInventory,
   canTransitionOrder,
   canTransitionRental,
+  catalogDisplayName,
+  catalogItemAvailable,
   isValidIdempotencyKey,
   money,
   parsePriceToCents,
@@ -122,7 +124,7 @@ test("price-on-request remains price-on-request", () => {
 test("sold products cannot be newly rented", () => {
   assert.throws(
     () => rentalQuoteFromItem({ id: 1, price: 125, public_status: "SOLD" }, "2026-09-05", "2026-09-06"),
-    /ITEM_SOLD/
+    /ITEM_UNAVAILABLE/
   );
 });
 
@@ -555,4 +557,48 @@ test("worker entrypoint cannot bypass runtime or admin RBAC guards", () => {
   assert.match(entry, /guardRuntimeRequest\(request, runtimeEnv, url\)/);
   assert.match(entry, /finalizeRuntimeResponse/);
   assert.match(entry, /runtimeErrorResponse/);
+});
+
+test("only AVAILABLE pieces can be bought or rented - drafts and unknown states are refused", () => {
+  // Positivliste: DRAFT (nie freigegeben, etwa die Doppelung 9427), SOLD und
+  // jeder andere oder fehlende Status gelten als nicht verfuegbar.
+  for (const public_status of ["DRAFT", "SOLD", "RESERVED", "available", "", undefined]) {
+    const item = { id: 9427, price: 75, public_status };
+    assert.equal(catalogItemAvailable(item), false, String(public_status));
+    assert.throws(() => rentalQuoteFromItem(item, "2026-09-05", "2026-09-06", "2026-09-01"), /ITEM_UNAVAILABLE/);
+  }
+  assert.equal(catalogItemAvailable(null), false);
+  assert.equal(catalogItemAvailable({ id: 9431, price: 90, public_status: "AVAILABLE" }), true);
+});
+
+test("order names carry the brand once - same rule as display_name in build_site.py", () => {
+  // Seit dem Titelschema "Marke Produktart Damen Farbe" beginnt der Titel mit
+  // der Marke; Rechnung, PayPal und Mails duerfen sie nicht verdoppeln.
+  assert.equal(catalogDisplayName({ brand: "Jean Paul Gaultier", title: "Jean Paul Gaultier Rock Damen Schwarz" }), "Jean Paul Gaultier Rock Damen Schwarz");
+  assert.equal(catalogDisplayName({ brand: "Balmain", title: "Pierre Balmain Sweatshirt Herren Grau" }), "Pierre Balmain Sweatshirt Herren Grau");
+  assert.equal(catalogDisplayName({ brand: "Luna Rossa", title: "Prada Luna Rossa Sweatjacke Herren Schwarz" }), "Prada Luna Rossa Sweatjacke Herren Schwarz");
+  assert.equal(catalogDisplayName({ brand: "A.F. Vandevorst", title: "a.f. vandevorst Top Damen Grau" }), "a.f. vandevorst Top Damen Grau");
+  assert.equal(catalogDisplayName({ brand: "Prada", title: "Reversible Jacket" }), "Prada Reversible Jacket");
+  assert.equal(catalogDisplayName({ brand: "Prada", title: "Pradamus Jacke" }), "Prada Pradamus Jacke", "nur ganze Woerter zaehlen");
+  assert.equal(catalogDisplayName({ brand: "", title: " Jacke " }), "Jacke");
+  assert.equal(catalogDisplayName({ brand: "Prada" }), "Prada");
+
+  // Jeder echte Titel aus data/items.json ergibt genau den Namen, den
+  // display_name() in build_site.py fuer die Shopseite baut.
+  const itemsPath = path.join(here, "..", "data", "items.json");
+  const items = JSON.parse(fs.readFileSync(itemsPath, "utf8"));
+  const python = [
+    "import ast, json, re, sys",
+    "src = open(sys.argv[1], encoding='utf-8').read()",
+    "fn = next(n for n in ast.parse(src).body if isinstance(n, ast.FunctionDef) and n.name == 'display_name')",
+    "ns = {'re': re}",
+    "exec(compile(ast.Module(body=[fn], type_ignores=[]), 'build_site.py', 'exec'), ns)",
+    "items = json.load(open(sys.argv[2], encoding='utf-8'))",
+    "print(json.dumps([ns['display_name'](it) for it in items]))",
+  ].join("\n");
+  const erwartet = JSON.parse(execFileSync("python3", ["-c", python, path.join(here, "..", "build_site.py"), itemsPath], { encoding: "utf8" }));
+  assert.ok(items.length > 100);
+  assert.deepEqual(items.map(catalogDisplayName), erwartet);
+  const doppelt = items.filter(it => it.brand && catalogDisplayName(it).toLowerCase().startsWith(`${it.brand} ${it.brand}`.toLowerCase()));
+  assert.deepEqual(doppelt.map(it => it.id), []);
 });

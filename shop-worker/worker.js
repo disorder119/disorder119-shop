@@ -3,6 +3,8 @@ import {
   MAX_REQUEST_BYTES,
   RESERVATION_TTL_SECONDS,
   canTransitionRental,
+  catalogDisplayName,
+  catalogItemAvailable,
   isValidIdempotencyKey,
   money,
   parsePriceToCents,
@@ -262,9 +264,11 @@ function paypalCustomId(itemIds) {
   return itemIds.map(String).join(",");
 }
 
+// Nur AVAILABLE ist kaufbar (Positivliste): ein nie freigegebener Entwurf
+// (DRAFT) mit Preis waere sonst ueber eine gebaute Anfrage zu kaufen.
 function assertCatalogItemForSale(item) {
   if (!item) throw new PublicError("ITEM_NOT_FOUND", 404);
-  if (String(item.public_status || "").toUpperCase() === "SOLD") throw new PublicError("ITEM_UNAVAILABLE", 409);
+  if (!catalogItemAvailable(item)) throw new PublicError("ITEM_UNAVAILABLE", 409);
   const cents = parsePriceToCents(item.price);
   if (cents === null) throw new PublicError("PRICE_ON_REQUEST", 409);
   return cents;
@@ -394,7 +398,7 @@ async function reserveForPurchase(env, item, key, reqId) {
   const statements = await db.batch([
     db.prepare(`INSERT INTO reservations (id,inventory_id,kind,status,idempotency_key,expires_at,created_at)
       SELECT ?,id,'PURCHASE','RESERVED',?,?,? FROM inventory
-      WHERE id=? AND status='AVAILABLE' AND catalog_status!='SOLD'
+      WHERE id=? AND status='AVAILABLE' AND catalog_status='AVAILABLE'
       AND NOT EXISTS (SELECT 1 FROM rental_reservations rr WHERE rr.inventory_id=inventory.id AND rr.status IN ('RESERVED','PAYMENT_PENDING','CONFIRMED','ACTIVE','RETURN_DUE'))`)
       .bind(reservationId, key, expires, now.toISOString(), inv.id),
     db.prepare(`UPDATE inventory SET status='RESERVED',updated_at=?,version=version+1
@@ -449,7 +453,7 @@ async function createRentalReservation(env, item, quote, body, key, reqId) {
   const db = requireDb(env);
   const inv = await ensureInventory(env, item);
   await cleanupExpired(env, inv.id);
-  if (["PAID","PREPARING","SHIPPED","DELIVERED","RETURN_REQUESTED"].includes(inv.status) || inv.catalog_status === "SOLD") {
+  if (["PAID","PREPARING","SHIPPED","DELIVERED","RETURN_REQUESTED"].includes(inv.status) || inv.catalog_status !== "AVAILABLE") {
     throw new PublicError("ITEM_UNAVAILABLE", 409);
   }
   const existingSale = await db.prepare("SELECT 1 AS yes FROM reservations WHERE inventory_id=? AND status='RESERVED' AND expires_at>? LIMIT 1")
@@ -505,7 +509,7 @@ async function paypalAccessToken(env) {
 // (SET_PROVIDED_ADDRESS) - Versandpreis und Adresse passen so immer zusammen.
 async function createPaypalOrder(env, items, itemCents, shippingCents, idempotency, adresse = null) {
   const token = await paypalAccessToken(env);
-  const titel = items.map(item => `${item.brand || ""} ${item.title || ""}`.trim());
+  const titel = items.map(catalogDisplayName);
   const unit = {
     custom_id: paypalCustomId(items.map(item => item.id)),
     description: (items.length === 1 ? titel[0] : `${items.length} Teile: ${titel.join(", ")}`).slice(0, 127),
@@ -748,7 +752,7 @@ async function createOrderRecords(env, items, centsList, versand, reservations, 
       VALUES (?,?,?,'PAYMENT_PENDING',?,?,?,?,?,?)`).bind(orderId, orderNumber, reservations[0].reservationId, CURRENCY, cents, shippingCents, totalCents, key, now),
     ...items.map((item, i) => db.prepare(`INSERT INTO order_items
       (id,order_id,inventory_id,item_id,article_no,title_snapshot,unit_price_cents,quantity,currency,bild)
-      VALUES (?,?,?,?,?,?,?,1,?,?)`).bind(crypto.randomUUID(), orderId, reservations[i].inventoryId, Number(item.id), String(item.article || item.id), `${item.brand || ""} ${item.title || ""}`.trim(), centsList[i], CURRENCY, vorschaubild(item))),
+      VALUES (?,?,?,?,?,?,?,1,?,?)`).bind(crypto.randomUUID(), orderId, reservations[i].inventoryId, Number(item.id), String(item.article || item.id), catalogDisplayName(item), centsList[i], CURRENCY, vorschaubild(item))),
     db.prepare(`INSERT INTO payments
       (id,order_id,provider,provider_order_id,status,amount_cents,currency,idempotency_key,created_at)
       VALUES (?,?,'PAYPAL',?,'CREATED',?,?,?,?)`).bind(paymentId, orderId, providerOrder.id, totalCents, CURRENCY, `paypal-create:${key}`, now),
@@ -1028,7 +1032,7 @@ export default {
         let quote;
         try { quote = rentalQuoteFromItem(item, String(body.start || ""), String(body.end || "")); }
         catch (err) {
-          if (err.message === "ITEM_SOLD") throw new PublicError("ITEM_UNAVAILABLE", 409);
+          if (err.message === "ITEM_UNAVAILABLE") throw new PublicError("ITEM_UNAVAILABLE", 409);
           if (err.message === "INVALID_RENTAL_DATES" || err.message === "RENTAL_DATE_IN_PAST") throw new PublicError("INVALID_RENTAL_DATES", 400); // RUNTIME_AUDIT_SERVER_DATE_MAP
           throw err;
         }
@@ -1049,7 +1053,7 @@ export default {
         let quote;
         try { quote = rentalQuoteFromItem(item, String(body.start || ""), String(body.end || "")); }
         catch (err) {
-          if (err.message === "ITEM_SOLD") throw new PublicError("ITEM_UNAVAILABLE", 409);
+          if (err.message === "ITEM_UNAVAILABLE") throw new PublicError("ITEM_UNAVAILABLE", 409);
           if (err.message === "INVALID_RENTAL_DATES" || err.message === "RENTAL_DATE_IN_PAST") throw new PublicError("INVALID_RENTAL_DATES", 400); // RUNTIME_AUDIT_SERVER_DATE_MAP
           throw err;
         }
