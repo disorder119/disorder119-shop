@@ -94,6 +94,26 @@ export function rentalDailyPriceCents(salePriceCents) {
 // Versandkosten: keine Pauschale mehr. Der Betrag haengt an Paketgroesse und
 // gewaehlter Versandart und kommt aus shop-worker/versand.js.
 
+// Kaufen und mieten laesst sich nur, was oeffentlich zum Verkauf steht - eine
+// Positivliste wie in der Kasse (assets/kasse.js): DRAFT (nie freigegeben),
+// SOLD und jeder andere oder fehlende Status gelten als nicht verfuegbar.
+export function catalogItemAvailable(item) {
+  return item?.public_status === "AVAILABLE";
+}
+
+// Name eines Stuecks fuer Bestellung, Rechnung, Mails und PayPal - dieselbe
+// Regel wie display_name() in build_site.py: Steht die Marke schon im Titel
+// ("Jean Paul Gaultier Rock Damen Schwarz", "Pierre Balmain Sweatshirt"),
+// wird sie nicht noch einmal vorangestellt. [\p{L}\p{N}_] entspricht dem
+// Unicode-\w von Python.
+export function catalogDisplayName(item) {
+  const brand = String(item?.brand || "");
+  const title = String(item?.title || "");
+  const marke = brand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (brand && new RegExp(`(?<![\\p{L}\\p{N}_])${marke}(?![\\p{L}\\p{N}_])`, "iu").test(title)) return title;
+  return `${brand} ${title}`.trim();
+}
+
 export function money(cents) {
   if (!Number.isSafeInteger(cents) || cents < 0) return null;
   return (cents / 100).toFixed(2);
@@ -115,7 +135,7 @@ export function rentalDayCount(startDate, endDate) {
 
 export function rentalQuoteFromItem(item, startDate, endDate, todayDate = new Date().toISOString().slice(0, 10)) {
   if (!item || typeof item !== "object") throw new Error("UNKNOWN_ITEM");
-  if (String(item.public_status || "").toUpperCase() === "SOLD") throw new Error("ITEM_SOLD");
+  if (!catalogItemAvailable(item)) throw new Error("ITEM_UNAVAILABLE");
   const days = rentalDayCount(startDate, endDate);
   if (!days) throw new Error("INVALID_RENTAL_DATES");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(todayDate || "")) || String(startDate) < String(todayDate)) throw new Error("RENTAL_DATE_IN_PAST"); // RUNTIME_AUDIT_SERVER_NO_PAST

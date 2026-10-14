@@ -21,13 +21,31 @@
       return raw && raw.code ? raw : null;
     } catch (_) { return null; }
   }
+  function cleanCode(code) {
+    return String(code || "").trim().toUpperCase().replace(/\s+/g, "").slice(0, 40);
+  }
   function saveCode(code) {
-    var clean = String(code || "").trim().toUpperCase().replace(/\s+/g, "").slice(0, 40);
+    var clean = cleanCode(code);
     try {
       if (clean) localStorage.setItem(CODE_KEY, clean);
       else localStorage.removeItem(CODE_KEY);
     } catch (_) {}
     return clean;
+  }
+  // Ein eingeloester oder abgelehnter Code darf nicht im Browser bleiben: Der
+  // Fetch-Wrapper unten haengt ihn sonst an jede weitere Bestellung, und der
+  // Server lehnt jede davon mit COUPON_INVALID_OR_USED ab. Der Spielcode
+  // faellt mit weg, wenn es derselbe Code ist - sonst schriebe couponForm ihn
+  // beim naechsten Oeffnen des Warenkorbs zurueck. Ein anderer, noch
+  // unbenutzter Spielcode bleibt erhalten.
+  function forgetCode(code) {
+    var used = cleanCode(code);
+    if (!used) return;
+    try {
+      if (cleanCode(localStorage.getItem(CODE_KEY)) === used) localStorage.removeItem(CODE_KEY);
+      var reward = earnedReward();
+      if (reward && cleanCode(reward.code) === used) localStorage.removeItem(REWARD_KEY);
+    } catch (_) {}
   }
   function language() {
     var value = String(document.documentElement.lang || "de").toLowerCase();
@@ -156,6 +174,13 @@
   window.fetch = function (input, init) {
     var target = typeof input === "string" ? input : (input && input.url ? input.url : "");
     var code = codeValue();
+    // Bezahlt: der mitgeschickte Code ist jetzt eingeloest.
+    if (code && target && /\/capture-order(?:\?|$)/.test(target)) {
+      return nativeFetch(input, init).then(function (response) {
+        if (response && response.ok) forgetCode(code);
+        return response;
+      });
+    }
     if (!code || !target || !/\/create-order(?:\?|$)/.test(target) || !init || typeof init.body !== "string") {
       return nativeFetch(input, init);
     }
@@ -166,7 +191,15 @@
         init = Object.assign({}, init, { body: JSON.stringify(payload) });
       }
     } catch (_) {}
-    return nativeFetch(input, init);
+    // Abgelehnt (ungueltig oder schon eingeloest): vergessen, bevor die Kasse
+    // die Antwort sieht - der naechste Versuch geht dann ohne Code.
+    return nativeFetch(input, init).then(function (response) {
+      if (!response || response.ok || typeof response.clone !== "function") return response;
+      return response.clone().json().then(function (data) {
+        if (data && data.error === "COUPON_INVALID_OR_USED") forgetCode(code);
+        return response;
+      }, function () { return response; });
+    });
   };
 
   function boot() {

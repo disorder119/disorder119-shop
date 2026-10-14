@@ -2,6 +2,7 @@ import {
   CURRENCY,
   MAX_REQUEST_BYTES,
   RESERVATION_TTL_SECONDS,
+  catalogItemAvailable,
   isValidIdempotencyKey,
   money,
   parsePriceToCents,
@@ -232,7 +233,7 @@ async function preflightAvailability(env, items, start, end) {
   for (let i = 0; i < results.length; i++) {
     const row = results[i]?.results?.[0];
     if (!row) throw new BundleError("ITEM_NOT_FOUND", 404);
-    if (String(row.catalog_status || "").toUpperCase() === "SOLD") throw new BundleError("ITEM_UNAVAILABLE", 409);
+    if (row.catalog_status !== "AVAILABLE") throw new BundleError("ITEM_UNAVAILABLE", 409);
     if (!["AVAILABLE", "RESERVED"].includes(String(row.status || "").toUpperCase())) throw new BundleError("ITEM_UNAVAILABLE", 409);
     if (Number(row.saleHeld || 0)) throw new BundleError("ITEM_UNAVAILABLE", 409);
     if (Number(row.datesHeld || 0)) throw new BundleError("RENTAL_DATES_UNAVAILABLE", 409);
@@ -286,7 +287,7 @@ async function createAtomicBundle(env, items, quotes, body, key, reqId) {
        expires_at,purpose,message,created_at,group_id,deposit_cents,delivery_method,postal_text,risk_notes,terms_version,terms_language,terms_accepted_at,updated_at)
       SELECT ?,i.id,?,?,?,?,?,?,?,'RESERVED',?,?,?,?,?,?,?,?,?,?,?,?,?,?
       FROM inventory i
-      WHERE i.id=? AND i.status IN ('AVAILABLE','RESERVED') AND i.catalog_status!='SOLD'
+      WHERE i.id=? AND i.status IN ('AVAILABLE','RESERVED') AND i.catalog_status='AVAILABLE'
       AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.inventory_id=i.id AND r.status='RESERVED' AND r.expires_at>?)`).bind(
         rentalId, body.start, body.end, quote.days, quote.dailyPriceCents, quote.totalPriceCents, CURRENCY, quote.priceOnRequest ? 1 : 0,
         childKey, holdExpires, purpose, message, nowIso, groupId, deposit, delivery, postal, risk, termsVersion, termsLanguage, termsAcceptedAt, nowIso,
@@ -378,12 +379,13 @@ export async function handleRentalBundle(request, env, url, reqId, origin = null
     const itemMap = new Map((Array.isArray(allItems) ? allItems : []).map(item => [String(item.id), item]));
     const items = ids.map(id => itemMap.get(id));
     if (items.some(item => !item)) throw new BundleError("ITEM_NOT_FOUND", 404);
-    if (items.some(item => String(item.public_status || "").toUpperCase() === "SOLD")) throw new BundleError("ITEM_UNAVAILABLE", 409);
+    // Nur AVAILABLE ist mietbar (Positivliste) - kein DRAFT, kein SOLD.
+    if (items.some(item => !catalogItemAvailable(item))) throw new BundleError("ITEM_UNAVAILABLE", 409);
 
     const quotes = items.map(item => {
       try { return rentalQuoteFromItem(item, String(body.start || ""), String(body.end || "")); }
       catch (err) {
-        if (err.message === "ITEM_SOLD") throw new BundleError("ITEM_UNAVAILABLE", 409);
+        if (err.message === "ITEM_UNAVAILABLE") throw new BundleError("ITEM_UNAVAILABLE", 409);
         if (err.message === "INVALID_RENTAL_DATES" || err.message === "RENTAL_DATE_IN_PAST") throw new BundleError("INVALID_RENTAL_DATES", 400); // RUNTIME_AUDIT_BUNDLE_DATE_MAP
         throw err;
       }
