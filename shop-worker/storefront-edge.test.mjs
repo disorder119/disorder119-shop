@@ -34,7 +34,8 @@ test('static body is preserved and payment-compatible security headers are prese
   const response=await edge.fetch(new Request('https://disorder119.com/kasse/'),{}, {},async()=>new Response(html,{headers:{'Content-Type':'text/html'}}));
   assert.equal(await response.text(),html);
   assert.match(response.headers.get('Content-Security-Policy'),/frame-ancestors 'none'/);
-  assert.match(response.headers.get('Content-Security-Policy-Report-Only'),/paypal/);
+  assert.match(response.headers.get('Content-Security-Policy'),/paypal/);
+  assert.equal(response.headers.get('Content-Security-Policy-Report-Only'),null);
   assert.equal(response.headers.get('X-Content-Type-Options'),'nosniff');
   assert.match(response.headers.get('Permissions-Policy'),/payment=\(self/);
 });

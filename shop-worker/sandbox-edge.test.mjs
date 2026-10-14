@@ -38,6 +38,11 @@ test("Seiten zeigen auf Test-Server, PayPal-Sandbox und Turnstile-Testschluessel
   assert.match(html, /TESTSHOP · PayPal-Sandbox/);
   assert.equal(res.headers.get("X-Robots-Tag"), "noindex, nofollow");
   assert.equal(res.headers.get("Cache-Control"), "no-store");
+  const csp=res.headers.get('Content-Security-Policy');
+  assert.match(csp,/connect-src 'self' https:\/\/api-test\.disorder119\.com/);
+  assert.doesNotMatch(csp,/https:\/\/api\.disorder119\.com/);
+  assert.match(csp,/nonce-/);
+  assert.match(csp,/script-src .*sha256-/);
   // Ohne eigene Sandbox-ID: PayPals allgemeine Sandbox-Kennung, nie die Live-ID.
   assert.ok(umbiegen(seite, {}, true).includes("client-id=sb&"));
 });

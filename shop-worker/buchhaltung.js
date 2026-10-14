@@ -115,7 +115,7 @@ export function csvFeld(wert) {
   const text = String(wert ?? "");
   // Ein Feld, das mit =, +, - oder @ beginnt, wuerde Excel als Formel
   // ausfuehren. Ein vorangestelltes Hochkomma macht daraus sicher Text.
-  const entschaerft = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+  const entschaerft = /^(?:[\t\r\n]|[\u0000-\u0020\u00a0\u2000-\u200f\ufeff]*[=+\-@])/.test(text) ? `'${text}` : text;
   return `"${entschaerft.replace(/"/g, '""')}"`;
 }
 

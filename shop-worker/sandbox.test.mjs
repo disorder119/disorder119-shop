@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import workerEntry from "./worker-entry.js";
+import { productionReadiness } from "./backend-runtime.js";
 import { sendMail } from "./customer-mail.js";
 import { sendTelegramMessage } from "./notifications.js";
 import {
@@ -112,13 +113,14 @@ test("Mails im Testshop gehen nur ans eigene Postfach, Telegram mit TEST", async
   }
 });
 
-test("Health: Testshop ist mit PayPal-Sandbox kassenbereit, ohne GitHub-Schluessel - der echte Shop nicht", async () => {
+test("Readiness bleibt privat: Sandbox braucht keinen GitHub-Schluessel, Live schon", async () => {
   const db = sqliteD1(allMigrations());
   const paypal = { PAYPAL_CLIENT_ID: "sb-id", PAYPAL_CLIENT_SECRET: "sb-secret", PAYPAL_WEBHOOK_ID: "WH-1" };
   const health = async env => (await workerEntry.fetch(new Request("https://api-test.disorder119.com/health"), env, { waitUntil() {} })).json();
   const test = await health({ DB: db, ...SANDBOX, ...paypal });
-  assert.equal(test.environment, "sandbox");
-  assert.equal(test.checkoutReady, true);
+  assert.deepEqual(test,{ok:true});
+  assert.equal(productionReadiness({DB:db,...SANDBOX,...paypal}).checkoutReady,true);
   const live = await health({ DB: db, ...paypal, PAYPAL_ENVIRONMENT: "live" });
-  assert.equal(live.checkoutReady, false, "live braucht weiter den GitHub-Schluessel");
+  assert.deepEqual(live,{ok:true});
+  assert.equal(productionReadiness({DB:db,...paypal,PAYPAL_ENVIRONMENT:'live'}).checkoutReady,false,"live braucht weiter den GitHub-Schluessel");
 });
