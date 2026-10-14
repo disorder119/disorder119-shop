@@ -681,7 +681,9 @@ def json_ld(it, lang):
         "url": url,
         "image": [SITE_URL + g for g in it.get("gallery") or []],
         "description": (desc_field or meta_description(it, lang))[:500],
-        "sku": it.get("article") or str(it["id"]),
+        # Dieselbe ID wie im Merchant-Feed (g:id), damit Google Feed-Eintrag und
+        # Produktseite als ein Produkt erkennt.
+        "sku": merchant_id(it),
         "brand": {"@type": "Brand", "name": it.get("brand") or "Disorder119"},
         "seller": {"@id": SITE_URL + "#store"},
     }
@@ -716,10 +718,29 @@ def json_ld(it, lang):
                 "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility",
             },
         }
-        # Keine shippingDetails: Der Versandpreis haengt an Paketgroesse und
-        # Versandart und kommt live von Packlink (shop-worker/versand.js). Eine
-        # feste Zahl hier koennte bei Google anders aussehen als die Kasse.
+        # shippingDetails nur, wo der Versand sicher kostenlos ist (ab der
+        # Grenze aus config/shop-config.json). Darunter haengt der Preis an
+        # Paketgroesse und Versandart und kommt live aus der Kasse; eine feste
+        # Zahl koennte bei Google anders aussehen als dort.
+        frei_ab = versandkostenfrei_ab_cents()
+        if frei_ab and it["price"] * 100 >= frei_ab:
+            data["offers"]["shippingDetails"] = {
+                "@type": "OfferShippingDetails",
+                "shippingRate": {"@type": "MonetaryAmount", "value": "0.00", "currency": "EUR"},
+                "shippingDestination": {"@type": "DefinedRegion", "addressCountry": "DE"},
+            }
     return json.dumps(data, ensure_ascii=False)
+
+
+def product_json_ld_tag(it, lang):
+    """Product-Auszeichnung als <script>-Tag. Verkaufte Stuecke bekommen keine
+    (Inhaber 14.10.2026: verkaufte Teile nicht im Merchant Center und ohne
+    Preis). Ohne Angebot meldet die Search Console sonst zudem einen kritischen
+    Fehler bei Produkt-Snippets; Google legt aus diesen Seiten so auch keine
+    "gefundenen Produkte" mehr an."""
+    if (it.get("public_status") or "DRAFT") == "SOLD":
+        return ""
+    return '<script type="application/ld+json">' + json_ld(it, lang) + "</script>"
 
 
 def breadcrumb_json_ld(it, lang):
@@ -877,7 +898,7 @@ def build_page(it, shop_config, lang):
 <meta name="twitter:image" content="{SITE_URL}{esc(hero)}">
 <meta name="twitter:image:alt" content="{esc(name)}">
 <script type="application/ld+json">{site_entities_jsonld(shop_config)}</script>
-<script type="application/ld+json">{json_ld(it, lang)}</script>
+{product_json_ld_tag(it, lang)}
 <script type="application/ld+json">{breadcrumb_json_ld(it, lang)}</script>
 <link rel="preload" as="style" href="/assets/theme.css?v={THEME_CSS_VERSION}" onload="this.onload=null;this.rel='stylesheet'">
 <script src="/assets/ansicht.js" defer></script>
@@ -2115,6 +2136,11 @@ def build_catalog_json():
     catalog = []
     for it in public_items:
         row = {k: it.get(k) for k in CATALOG_FIELDS if k in it}
+        if it.get("public_status") == "SOLD" and "price" in row:
+            # Verkaufte Stuecke ohne Preis ausliefern (Inhaber 14.10.2026),
+            # wie schon auf der Produktseite (article_data "price": 0).
+            row["price"] = 0
+            row.pop("price_estimated", None)
         row["grid_image"] = grid_thumb_path(it)
         catalog.append(row)
     for row, it in zip(catalog, public_items):
@@ -2167,6 +2193,17 @@ GOOGLE_CATEGORY_BY_TYPE = {
 MERCHANT_FEED_PATH = BASE / "feed" / "google-merchant.xml"
 
 
+def merchant_id(it):
+    """Produkt-ID fuer Google = Artikelnummer (Inhaber 14.10.2026: Merchant Center
+    mit denselben Nummern wie Excel, Manager und eBay). Nur wenn die Nummer auch
+    die Adresse der Produktseite ist; alte Doppel (verkauft/Entwurf mit Shop-ID
+    als Adresse) behalten ihre Shop-ID, damit keine ID zweimal vorkommt."""
+    nummer = str(it.get("article") or "").strip()
+    if nummer and str(it.get("url_slug", "")) == nummer:
+        return nummer
+    return str(it["id"])
+
+
 def merchant_category(it):
     art = str(it.get("product_type") or "")
     cat = it.get("taxonomy_category") or it.get("category") or ""
@@ -2199,7 +2236,7 @@ def build_merchant_feed():
         neu = bool(re.search(r"neu mit (original)?etikett", str(it.get("desc_de") or it.get("desc") or ""), re.I))
         dep = str(it.get("department") or "")
         felder = [
-            tag("g:id", it["id"]),
+            tag("g:id", merchant_id(it)),
             tag("g:title", (display_name(it) + " – Second Hand")[:150]),
             tag("g:description", merchant_description(it)[:5000]),
             tag("g:link", link),
