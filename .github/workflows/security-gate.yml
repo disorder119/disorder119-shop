@@ -115,3 +115,12 @@ jobs:
 
       - name: Privacy and storefront security regressions
         run: node --test shop-worker/privacy-security.test.mjs shop-worker/admin-privacy.test.mjs shop-worker/visitor-consent.test.mjs shop-worker/storefront-edge.test.mjs shop-worker/legal-content.test.mjs
+
+      # Alle Worker-Tests per Glob: neue Testdateien laufen ohne Eintrag hier
+      # automatisch mit. merchant-shipping.test.mjs (python) und
+      # commerce-core.test.mjs (python3) nutzen das oben eingerichtete Python.
+      # Laeuft auch, wenn ein Schritt davor rot ist, damit eine Regression
+      # nicht die uebrigen verdeckt.
+      - name: Alle Worker-Tests pruefen (shop-worker/*.test.mjs)
+        if: ${{ !cancelled() }}
+        run: node --test shop-worker/*.test.mjs
