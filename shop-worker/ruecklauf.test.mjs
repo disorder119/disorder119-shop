@@ -362,7 +362,10 @@ test("goodwill refund: part of the price, reason required, order stays as it is"
 
 // -------------------------------------------------------------- Widerruf
 
-test("online withdrawal of a delivered order: receipt with content, date and time; return prepared", async () => {
+test("online withdrawal of a delivered order: receipt with content, date and time; return prepared", async t => {
+  // Feste Uhr, zwei Tage nach der Zustellung (NOW): Eingang und Betreff
+  // haengen sonst am echten Datum und der Test wuerde ab 2027 rot.
+  t.mock.timers.enable({ apis: ["Date"], now: new Date("2026-10-02T09:15:30.000Z") });
   const DB = sqliteD1(allMigrations());
   seed(DB, { status: "DELIVERED" });
   const netz = fakeNetz();
@@ -373,7 +376,8 @@ test("online withdrawal of a delivered order: receipt with content, date and tim
     });
     assert.equal(res.status, 200, JSON.stringify(res.data));
     assert.match(res.data.vorgang, /^[0-9A-F]{8}$/);
-    assert.match(res.data.eingegangen, /^\d\d\.\d\d\.2026, \d\d:\d\d:\d\d MES?Z$/);
+    assert.equal(res.data.eingegangenAt, "2026-10-02T09:15:30.000Z");
+    assert.equal(res.data.eingegangen, "02.10.2026, 11:15:30 MESZ");
     assert.equal(res.data.bestaetigungGesendet, true);
 
     const w = wert(DB, "SELECT * FROM widerrufe");
@@ -387,7 +391,7 @@ test("online withdrawal of a delivered order: receipt with content, date and tim
     assert.equal(wert(DB, "SELECT status FROM returns").status, "AUTHORIZED");
 
     const mail = kundenmails(netz)[0];
-    assert.match(mail.subject, /^Eingangsbestätigung: dein Widerruf vom \d\d\.\d\d\.2026$/);
+    assert.equal(mail.subject, "Eingangsbestätigung: dein Widerruf vom 02.10.2026");
     for (const teil of ["Name: Kim Beispiel", "E-Mail: kundin@example.test", `Bestellung: ${NUMMER}`,
       "Erklärung: Widerruf des ganzen Vertrags", "Nachricht: Passt leider nicht.", `Eingegangen: ${res.data.eingegangen}`,
       "Nelseestraße 25", "63739 Aschaffenburg", "Testjacke"]) {
