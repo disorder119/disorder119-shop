@@ -378,7 +378,7 @@ export function runtimeErrorResponse(err, requestId, origin = null) {
   return new Response(JSON.stringify({ error: code, requestId }), { status, headers });
 }
 
-async function augmentHealth(response, env) {
+async function augmentPrivateDiagnostics(response, env) {
   if (!response.ok || !(response.headers.get("Content-Type") || "").includes("application/json")) return response;
   try {
     const data = await response.clone().json();
@@ -402,7 +402,9 @@ async function augmentHealth(response, env) {
 
 export async function finalizeRuntimeResponse(response, request, env, requestId, pathname) {
   let out = response;
-  if (pathname === "/health") out = await augmentHealth(out, env);
+  // Detailed configuration belongs behind the existing Admin authorization.
+  // A public health request must never disclose secret/binding availability.
+  if (pathname === "/admin/system") out = await augmentPrivateDiagnostics(out, env);
   const headers = new Headers(out.headers);
   // Die Admin-App schickt ihr Sitzungs-Cookie mit (credentials: "include").
   // Das erlaubt der Browser nur mit dieser Freigabe - und nur fuer genau die

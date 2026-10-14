@@ -1,4 +1,5 @@
 import { ARTICLE_NUMBER_ROUTES } from './catalog-number-routes.js';
+import { contentSecurityPolicy, secureHtml } from './storefront-csp.js';
 // Edge route in front of the existing static origin. No database or secrets.
 // Catalog source files stay intact in Git; only the public response is filtered.
 // Page views are handed to the shop Worker through the BESUCH service binding
@@ -77,7 +78,7 @@ export function storefrontHeaders(response) {
   headers.set('X-Frame-Options','DENY');
   headers.set('Referrer-Policy','strict-origin-when-cross-origin');
   headers.set('Permissions-Policy','camera=(), microphone=(), geolocation=(), payment=(self "https://www.paypal.com" "https://www.sandbox.paypal.com")');
-  headers.set('Content-Security-Policy',"object-src 'none'; base-uri 'self'; frame-ancestors 'none'; upgrade-insecure-requests");
+  headers.set('Content-Security-Policy',contentSecurityPolicy());
   // Observe a stricter policy first: payment and Apple Pay must be accepted
   // in real supported browsers before script restrictions become blocking.
   headers.set('Content-Security-Policy-Report-Only',"default-src 'self'; script-src 'self' https://*.paypal.com https://*.paypalobjects.com https://applepay.cdn-apple.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.paypal.com https://*.paypalobjects.com https://tile.openstreetmap.org https://api.disorder119.com; font-src 'self' data:; connect-src 'self' https://api.disorder119.com https://*.paypal.com https://*.paypalobjects.com https://challenges.cloudflare.com https://apple-pay-gateway.apple.com; frame-src https://*.paypal.com https://*.paypalobjects.com https://challenges.cloudflare.com; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
@@ -100,6 +101,11 @@ export default {
     if (!publicPath(url.pathname)) return new Response(request.method==='HEAD'?null:SEITE_404,{status:404,headers:storefrontHeaders(new Response(null,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}}))});
     const filtered=['/data/catalog.json','/data/items.json'].includes(url.pathname);
     const originRequest=new Request(request,{method:filtered?'GET':request.method});
+    // Fresh HTML carries fresh payment nonces; a 304 must not combine an old
+    // cached body with a new CSP. Static images/scripts retain their caching.
+    if (!/\.[a-z0-9]+$/i.test(url.pathname) || /\.html$/i.test(url.pathname)) {
+      for(const name of ['If-None-Match','If-Modified-Since','Range'])originRequest.headers.delete(name);
+    }
     if(filtered) {
       originRequest.headers.delete('If-None-Match');
       originRequest.headers.delete('If-Modified-Since');
@@ -116,6 +122,10 @@ export default {
       return new Response(request.method==='HEAD'?null:body,{status:200,headers});
     }
     besuchMelden(request,url,response.status,env,ctx);
+    if(request.method==='GET' && /text\/html/i.test(headers.get('Content-Type')||'') && response.status!==304) {
+      try { return await secureHtml(response,headers); }
+      catch { return fail(502,'Website vorübergehend nicht erreichbar.'); }
+    }
     return new Response(request.method==='HEAD'?null:response.body,{status:response.status,statusText:response.statusText,headers});
   }
 };

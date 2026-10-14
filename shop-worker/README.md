@@ -228,7 +228,7 @@ Ausrollen: Migrationen auf beide Datenbanken (`--env sandbox` für die Test-D1),
 
 ## Health, Logs und Fehler
 
-`GET /health` liefert nur nicht-sensible Readiness-Informationen. `adminRbacReady` bewertet ausschliesslich, ob `ADMIN_READ_TOKEN` und `ADMIN_WRITE_TOKEN` gemeinsam gesetzt sind; dieser Status haengt nicht vom PayPal-Modus ab. Die privaten `/admin/system`- und `/admin/insights`-Routen liefern nur nach Admin-Autorisierung zusaetzliche Betriebsinformationen.
+`GET /health` bestätigt ausschließlich mit `{ "ok": true }`, dass der Worker antwortet. Konfiguration, Bindungen und Verfügbarkeit von Zugangsdaten werden dort nicht veröffentlicht. Die geschützte Route `/admin/system` enthält nach Admin-Autorisierung `backendHardening` mit der Readiness-Diagnose; `adminRbacReady` bewertet dort, ob `ADMIN_READ_TOKEN` und `ADMIN_WRITE_TOKEN` gemeinsam gesetzt sind. `/admin/insights` bleibt ebenfalls geschützt.
 
 `/admin/system` meldet den erkannten D1-Schemastand, fehlende Pflicht-Tabellen/-Spalten, die vier Pflicht-Trigger aus `0008_backend_hardening.sql` und die nicht-sensitiven Konfigurationsflags. Fuer den Cron-Scheduler wird kein positiver Deploymentstatus erfunden: Ohne externe Cloudflare-Konfiguration bleibt dessen Status unbekannt.
 

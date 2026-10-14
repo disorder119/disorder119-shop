@@ -10,6 +10,7 @@
 // Nur mit Passwort (HTTP Basic, Secret TESTSHOP_PASSWORT), nie fuer Suchmaschinen.
 // Gespeichert wird hier nichts. Die echte Seite bleibt unveraendert.
 
+import { secureHtml } from './storefront-csp.js';
 const LIVE = "https://disorder119.com";
 const API_LIVE = "https://api.disorder119.com";
 const API_TEST = "https://api-test.disorder119.com";
@@ -120,7 +121,12 @@ export default {
       const text = umbiegen(await antwort.text(), env, html);
       kopf.delete("Content-Length"); kopf.delete("Content-Encoding"); kopf.delete("ETag");
       if (html) kopf.set("Cache-Control", "no-store");
-      return new Response(request.method === "HEAD" ? null : text, { status: antwort.status, headers: kopf });
+      const result = new Response(request.method === "HEAD" ? null : text, { status: antwort.status, headers: kopf });
+      if(html && request.method!=='HEAD') {
+        try { return await secureHtml(result,kopf,API_TEST); }
+        catch { return textAntwort('Testseite vorübergehend nicht erreichbar.',502); }
+      }
+      return result;
     }
     return new Response(request.method === "HEAD" ? null : antwort.body, { status: antwort.status, statusText: antwort.statusText, headers: kopf });
   },

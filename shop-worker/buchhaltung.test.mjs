@@ -45,6 +45,9 @@ test("a CSV field cannot smuggle a formula into the spreadsheet", () => {
   assert.equal(csvFeld("+49"), "\"'+49\"");
   assert.equal(csvFeld("-5"), "\"'-5\"");
   assert.equal(csvFeld("@cmd"), "\"'@cmd\"");
+  for(const value of ['\n=1+1',' \t=1+1','\ufeff=1+1','\u200b@SUM(1,2)']) {
+    assert.equal(csvFeld(value),`"'${value}"`);
+  }
   assert.equal(csvFeld('Titel mit "Zitat"'), '"Titel mit ""Zitat"""');
   assert.equal(csvFeld("Prada Jacke"), '"Prada Jacke"');
 });

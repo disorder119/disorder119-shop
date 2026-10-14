@@ -529,10 +529,10 @@ test("public readiness exposes booleans, not secrets", () => {
   assert.equal(JSON.stringify(ready).includes("writer-secret"), false);
 });
 
-test("runtime responses carry request correlation and hardened health metadata", async () => {
+test("runtime responses carry request correlation and protected diagnostic metadata", async () => {
   const req = new Request("https://worker.example/health");
   const source = new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
-  const out = await finalizeRuntimeResponse(source, req, {}, "req-test-1", "/health");
+  const out = await finalizeRuntimeResponse(source, req, {}, "req-test-1", "/admin/system");
   assert.equal(out.headers.get("X-Request-Id"), "req-test-1");
   assert.match(out.headers.get("Strict-Transport-Security") || "", /max-age=31536000/);
   const data = await out.json();
