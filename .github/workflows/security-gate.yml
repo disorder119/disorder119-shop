@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   security:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Repo auschecken
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -50,6 +50,8 @@ jobs:
           node --check shop-worker/admin-passkeys.js
           node --check shop-worker/admin-katalog.js
           node --check shop-worker/github-datei.js
+          node --check shop-worker/offene-halte.js
+          node --check shop-worker/kontingent.js
           node --check assets/ios-zoom-lock.js
           node --check assets/universe-upgrade.js
           node --check assets/zero-g-runway.js

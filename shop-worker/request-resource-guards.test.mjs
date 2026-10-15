@@ -27,3 +27,11 @@ test('provider callbacks do not share the public browser write bucket', async ()
   const request=new Request('https://api.disorder119.com/paypal-webhook',{method:'POST',body:'{}'});
   await guardRuntimeRequest(request,{RATE_LIMITER:{limit:async()=>{throw new Error('callback used browser limiter');}}});
 });
+
+test('rental quotes use their own per-connection limiter instead of the shared write bucket', async () => {
+  const quote=()=>new Request('https://api.disorder119.com/rental-quote',{method:'POST',body:'{}',headers:{'CF-Connecting-IP':'192.0.2.9','Content-Type':'application/json'}});
+  const voll={limit:async()=>({success:false})};
+  await guardRuntimeRequest(quote(),{RATE_LIMITER:voll,QUOTE_LIMITER:{limit:async()=>({success:true})}});
+  // Ohne QUOTE_LIMITER bleibt der gemeinsame Eimer zustaendig.
+  await assert.rejects(()=>guardRuntimeRequest(quote(),{RATE_LIMITER:voll}),error=>error.code==='RATE_LIMITED');
+});

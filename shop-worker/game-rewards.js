@@ -1,3 +1,6 @@
+import { TAG_MS, kontingentBelegen, kontingentFreigeben } from "./kontingent.js";
+import { privateNetzHash } from "./privacy-security.js";
+
 const ALLOWED_ORIGINS = new Set([
   "https://disorder119.com",
   "https://www.disorder119.com",
@@ -17,6 +20,14 @@ const RUN_TTL_MS = 12 * 60 * 1000;
 const COUPON_RESERVATION_MS = 22 * 60 * 1000;
 const DISCOUNT_BPS = 1000;
 const MAX_BODY_BYTES = 24 * 1024;
+
+// Spiel-Codes nach denselben Regeln wie beim Newsletter (newsletter.js:
+// hoechstens 2 Codes je Internetanschluss in 30 Tagen), dazu eine feste
+// Tagesgrenze fuer alle Spiel-Codes zusammen. Ist eine Grenze erreicht, zaehlt
+// der Score trotzdem fuer das Ranking - nur ohne Code.
+export const SPIEL_CODES_JE_ANSCHLUSS = 2;
+export const SPIEL_CODE_FENSTER_TAGE = 30;
+export const SPIEL_CODES_JE_TAG = 25;
 
 export class GameRewardError extends Error {
   constructor(code, status = 400) {
@@ -150,6 +161,11 @@ async function timingSafeHashMatch(plain, expectedHash) {
   return diff === 0;
 }
 
+function spielCodesJeTag(env) {
+  const configured = Number(env?.GAME_CODES_DAILY_CAP);
+  return Number.isInteger(configured) && configured > 0 ? configured : SPIEL_CODES_JE_TAG;
+}
+
 async function rateLimit(request, env, scope) {
   if (!env?.RATE_LIMITER || typeof env.RATE_LIMITER.limit !== "function") return;
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
@@ -223,7 +239,43 @@ async function issueCoupon(db, game, scoreId, usernameKey) {
   return (await issueRewardCoupon(db, { game, scoreId, usernameKey })).code;
 }
 
-async function submitScore(request, env, origin) {
+// Code nur, solange Anschluss und Tag noch Codes frei haben. Ist keiner frei
+// (leerer Code), bleibt der Score trotzdem gueltig.
+async function issueLimitedCoupon(request, env, db, { game, scoreId, usernameKey, requestId }) {
+  let netz;
+  try {
+    netz = await privateNetzHash(request, env, "spiel-code");
+  } catch (error) {
+    // Ohne IP-Schutz (LOGIN_IP_PEPPER fehlt im Livebetrieb) keine Codes.
+    console.warn(JSON.stringify({ level: "warn", event: "game_coupon_ip_privacy_missing", requestId, code: String(error?.code || "").slice(0, 60) }));
+    return { code: "", limited: true };
+  }
+  const platz = await kontingentBelegen(db, {
+    art: "spiel-code",
+    schluessel: netz,
+    jeSchluessel: SPIEL_CODES_JE_ANSCHLUSS,
+    fensterMs: SPIEL_CODE_FENSTER_TAGE * TAG_MS,
+    gesamt: spielCodesJeTag(env),
+    gesamtFensterMs: TAG_MS,
+    bezug: scoreId,
+    reqId: requestId,
+  });
+  if (!platz.ok) {
+    console.warn(JSON.stringify({ level: "warn", event: "game_coupon_limited", requestId, grund: platz.grund }));
+    return { code: "", limited: true };
+  }
+  try {
+    return { code: await issueCoupon(db, game, scoreId, usernameKey), limited: false };
+  } catch (error) {
+    await kontingentFreigeben(db, platz.id);
+    throw error;
+  }
+}
+
+async function submitScore(request, env, origin, requestId = "") {
+  // Codes gibt es nur fuer Anfragen aus dem Browser des Shops: ohne Origin
+  // (Skript, curl) wird nichts eingetragen und nichts vergeben.
+  if (!allowedOrigin(origin)) throw new GameRewardError("ORIGIN_REQUIRED", 403);
   await rateLimit(request, env, "score");
   const body = await readJson(request);
   const game = normalizeGame(body.game);
@@ -278,7 +330,10 @@ async function submitScore(request, env, origin) {
   }
 
   const qualified = qualifiedScore(game, score);
-  const couponCode = qualified ? await issueCoupon(db, game, scoreId, usernameKey) : "";
+  const coupon = qualified
+    ? await issueLimitedCoupon(request, env, db, { game, scoreId, usernameKey, requestId })
+    : { code: "", limited: false };
+  const couponCode = coupon.code;
   return json({
     ok: true,
     gameTitle: "ARCHIVE RAID 119",
@@ -287,6 +342,7 @@ async function submitScore(request, env, origin) {
     target: GAME_RULES[game].target,
     couponCode,
     discountPercent: couponCode ? 10 : 0,
+    ...(coupon.limited ? { couponLimited: true } : {}),
     leaderboard: await leaderboard(env, game, 10),
   }, 201, origin);
 }
@@ -425,10 +481,12 @@ export async function handleGameRewards(
   }
 
   try {
-    if (url.pathname === "/games/start" && request.method === "POST") return startRun(request, env, origin);
-    if (url.pathname === "/games/score" && request.method === "POST") return submitScore(request, env, origin);
-    if (url.pathname === "/games/leaderboard" && request.method === "GET") return getLeaderboard(request, env, url, origin);
-    if (url.pathname === "/coupons/validate" && request.method === "POST") return validateCoupon(request, env, origin);
+    // "return await": nur so landen Fehler der Routen (INVALID_GAME,
+    // RATE_LIMITED ...) hier im catch und nicht als 500 beim Aufrufer.
+    if (url.pathname === "/games/start" && request.method === "POST") return await startRun(request, env, origin);
+    if (url.pathname === "/games/score" && request.method === "POST") return await submitScore(request, env, origin, requestId);
+    if (url.pathname === "/games/leaderboard" && request.method === "GET") return await getLeaderboard(request, env, url, origin);
+    if (url.pathname === "/coupons/validate" && request.method === "POST") return await validateCoupon(request, env, origin);
     return json({ error: "METHOD_NOT_ALLOWED", requestId }, 405, origin);
   } catch (error) {
     if (error instanceof GameRewardError) {

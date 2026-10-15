@@ -336,7 +336,11 @@ export async function guardRuntimeRequest(request, env, url = new URL(request.ur
   // Admin work keeps its route-specific controls.
   if (REQUEST_BODY_METHODS.has(request.method) && (!pathname.startsWith('/admin/') || pathname.startsWith('/admin/auth/'))
       && pathname !== '/paypal-webhook' && !/^\/packlink\/webhook\/[^/]{1,200}$/.test(pathname)) {
-    if (env.RATE_LIMITER?.limit) {
+    // /rental-quote zaehlt sein eigener Begrenzer je Anschluss (QUOTE_LIMITER,
+    // worker.js): das Mietfenster fragt je Stueck einmal, ein volles Paket
+    // (20 Stuecke) leerte sonst schon diesen allgemeinen Eimer (20/min).
+    const eigenerBegrenzer = pathname === '/rental-quote' && typeof env.QUOTE_LIMITER?.limit === 'function';
+    if (env.RATE_LIMITER?.limit && !eigenerBegrenzer) {
       const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
       const result = await env.RATE_LIMITER.limit({key:'body-ingress:'+ip});
       if (!result?.success) throw new RuntimeGuardError('RATE_LIMITED',429);

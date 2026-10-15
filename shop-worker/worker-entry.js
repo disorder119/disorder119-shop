@@ -38,6 +38,8 @@ import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
 import { handleIncomingEmail, handlePostfach, isPostfachRoute } from "./postfach.js";
 import { besucherAufraeumen, entsperrtMelden, handleBesucher, istBesucherRoute } from "./besucher.js";
 import { istSandbox, testshopFetch } from "./sandbox.js";
+import { kontingentAufraeumen } from "./kontingent.js";
+import { halteAufraeumen } from "./offene-halte.js";
 import { applePayDomainSicherstellen } from "./paypal-einrichtung.js";
 import { handleNewsletter, isNewsletterRoute } from "./newsletter.js";
 import { handleGameRewards, isGameRewardsRoute } from "./game-rewards.js";
@@ -540,6 +542,10 @@ const worker = {
       reqId,
     );
     await runBackground(ctx, besucherAufraeumen(env, scheduledTime), "besucher_cleanup_failed", reqId);
+    // Zaehler gegen Missbrauch (IP-Hashes) nach Ablauf ihres Fensters loeschen.
+    await runBackground(ctx, kontingentAufraeumen(env.DB, new Date(scheduledTime)), "kontingent_cleanup_failed", reqId);
+    // Offene Halte (Kasse, Miete) zaehlen hoechstens 30 Minuten - danach weg.
+    await runBackground(ctx, halteAufraeumen(env.DB, new Date(scheduledTime)), "open_hold_cleanup_failed", reqId);
     await runBackground(ctx, applePayDomainSicherstellen(env, scheduledTime), "apple_pay_domain_failed", reqId);
   },
 

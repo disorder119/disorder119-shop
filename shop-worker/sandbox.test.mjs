@@ -3,7 +3,7 @@ import test from "node:test";
 
 import workerEntry from "./worker-entry.js";
 import { productionReadiness } from "./backend-runtime.js";
-import { sendMail } from "./customer-mail.js";
+import { sendMail, TESTSHOP_MAILS_JE_TAG } from "./customer-mail.js";
 import { sendTelegramMessage } from "./notifications.js";
 import {
   istSandbox,
@@ -95,7 +95,7 @@ test("Mails im Testshop gehen nur ans eigene Postfach, Telegram mit TEST", async
     ["api.telegram.org", (url, init) => { gesendet.push(JSON.parse(init.body)); return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } })); }],
   ]);
   try {
-    const env = { ...SANDBOX, MAIL_API_KEY: "test", MAIL_FROM: "shop@disorder119.com", SANDBOX_MAIL_AN: "inhaber@example.test", MAIL_BCC: "kopie@example.test" };
+    const env = { ...SANDBOX, DB: sqliteD1(allMigrations()), MAIL_API_KEY: "test", MAIL_FROM: "shop@disorder119.com", SANDBOX_MAIL_AN: "inhaber@example.test", MAIL_BCC: "kopie@example.test" };
     const r = await sendMail(env, { to: "kundin@example.test", subject: "Deine Bestellung", text: "Hallo", kopieAnShop: true });
     assert.equal(r.sent, true);
     assert.deepEqual(gesendet[0].to, [{ email: "inhaber@example.test", name: "Testshop" }]);
@@ -103,7 +103,7 @@ test("Mails im Testshop gehen nur ans eigene Postfach, Telegram mit TEST", async
     assert.equal(gesendet[0].bcc, undefined, "keine Kopie an echte Adressen");
     assert.ok(!JSON.stringify(gesendet[0]).includes("kundin@example.test"));
 
-    const ohneZiel = await sendMail({ ...SANDBOX, MAIL_API_KEY: "test", MAIL_FROM: "shop@disorder119.com" }, { to: "kundin@example.test", subject: "x", text: "y" });
+    const ohneZiel = await sendMail({ ...SANDBOX, DB: env.DB, MAIL_API_KEY: "test", MAIL_FROM: "shop@disorder119.com" }, { to: "kundin@example.test", subject: "x", text: "y" });
     assert.equal(ohneZiel.sent, false);
 
     await sendTelegramMessage({ ...SANDBOX, TELEGRAM_BOT_TOKEN: "t", TELEGRAM_CHAT_ID: "42" }, "Neue Bestellung");
@@ -123,4 +123,30 @@ test("Readiness bleibt privat: Sandbox braucht keinen GitHub-Schluessel, Live sc
   const live = await health({ DB: db, ...paypal, PAYPAL_ENVIRONMENT: "live" });
   assert.deepEqual(live,{ok:true});
   assert.equal(productionReadiness({DB:db,...paypal,PAYPAL_ENVIRONMENT:'live'}).checkoutReady,false,"live braucht weiter den GitHub-Schluessel");
+});
+
+test("Testshop: hoechstens 20 Mails am Tag, gezaehlt in D1 - danach still keine mehr", async () => {
+  const gesendet = [];
+  const n = netz([["api.brevo.com", (url, init) => { gesendet.push(JSON.parse(init.body)); return new Response(JSON.stringify({ messageId: "m" }), { status: 201 }); }]]);
+  try {
+    const DB = sqliteD1(allMigrations());
+    const env = { ...SANDBOX, DB, MAIL_API_KEY: "test", MAIL_FROM: "shop@disorder119.com", SANDBOX_MAIL_AN: "inhaber@example.test" };
+    const ergebnisse = [];
+    for (let i = 0; i < 23; i++) ergebnisse.push(await sendMail(env, { to: `kunde${i}@example.test`, subject: `Mail ${i}`, text: "x" }));
+    assert.equal(ergebnisse.filter(r => r.sent).length, TESTSHOP_MAILS_JE_TAG);
+    assert.deepEqual([...new Set(ergebnisse.filter(r => !r.sent).map(r => r.reason))], ["SANDBOX_DAILY_CAP"]);
+    assert.equal(gesendet.length, TESTSHOP_MAILS_JE_TAG, "Brevo sieht nur die erlaubten Mails");
+    // Nach 24 Stunden geht es weiter.
+    DB.raw.prepare("UPDATE audit_events SET created_at=? WHERE entity_type='kontingent:testshop-mail'")
+      .run(new Date(Date.now() - 25 * 3600 * 1000).toISOString());
+    assert.equal((await sendMail(env, { to: "kunde@example.test", subject: "Neuer Tag", text: "x" })).sent, true);
+    // Ohne Datenbank laesst sich nichts zaehlen: keine Mail.
+    const ohneDb = await sendMail({ ...env, DB: undefined }, { to: "kunde@example.test", subject: "x", text: "y" });
+    assert.deepEqual(ohneDb, { sent: false, reason: "SANDBOX_DAILY_CAP" });
+    // Der echte Shop zaehlt nicht mit.
+    const live = await sendMail({ MAIL_API_KEY: "test", MAIL_FROM: "shop@disorder119.com" }, { to: "kunde@example.test", subject: "Live", text: "x" });
+    assert.equal(live.sent, true);
+  } finally {
+    n.zurueck();
+  }
 });
