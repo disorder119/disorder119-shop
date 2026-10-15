@@ -716,6 +716,18 @@ def card_image(it):
 
 
 
+def sequence_attr(it, lang, richtung):
+    """href fuer vor (0) / zurueck (1) - echte Links schon im HTML, in der
+    Reihenfolge des Archivs ohne Filter (related_items.article_sequence).
+    assets/pwa-runtime.js uebernimmt nach dem Laden eine gefilterte Reihenfolge
+    aus dem Archiv. Verkaufte Stuecke stehen nicht in der Reihe."""
+    nachbarn = article_sequence().get(str(it.get("url_slug", it["id"])))
+    if not nachbarn:
+        return ' style="visibility:hidden"'
+    rel = "prev" if richtung == 0 else "next"
+    return ' href="' + lang_home(lang) + "artikel/" + esc(nachbarn[richtung]) + '/" rel="' + rel + '"'
+
+
 def build_page(it, shop_config, lang):
     name = display_name(it)
     title_tag = seo_title(name, it.get("product_type"), title_size(it, lang), lang)
@@ -853,9 +865,9 @@ def build_page(it, shop_config, lang):
   </div>
 </div>
 <nav class="article-sequence-nav" aria-label="{esc(product_nav_copy['nav_aria'])}">
-  <a class="article-sequence-nav__link article-sequence-nav__link--prev" aria-label="{esc(product_nav_copy['prev_aria'])}" style="visibility:hidden">{esc(product_nav_copy['prev'])}</a>
+  <a class="article-sequence-nav__link article-sequence-nav__link--prev" aria-label="{esc(product_nav_copy['prev_aria'])}"{sequence_attr(it, lang, 0)}>{esc(product_nav_copy['prev'])}</a>
   <a class="article-sequence-nav__link article-sequence-nav__link--archive" href="{home}" aria-label="{esc(product_nav_copy['archive_aria'])}">{esc(product_nav_copy['archive'])}</a>
-  <a class="article-sequence-nav__link article-sequence-nav__link--next" aria-label="{esc(product_nav_copy['next_aria'])}" style="visibility:hidden">{esc(product_nav_copy['next'])}</a>
+  <a class="article-sequence-nav__link article-sequence-nav__link--next" aria-label="{esc(product_nav_copy['next_aria'])}"{sequence_attr(it, lang, 1)}>{esc(product_nav_copy['next'])}</a>
 </nav>
 <div class="product" role="main">
   <div class="gallery"{gallery_attr}>

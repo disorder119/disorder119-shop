@@ -258,7 +258,10 @@
     if (!current || !current.id || !/\/(?:en\/|fr\/)?artikel\/\d+\/?$/i.test(location.pathname)) return;
 
     var lang = window.ARTICLE_LANG || "de";
-    var currentId = String(current.id);
+    // Adressen sind /artikel/<url_slug>/ (Artikelnummer). Die Shop-ID fuehrt
+    // nur noch auf die alten Weiterleitungsseiten. Die Archiv-Reihenfolge in
+    // sessionStorage stammt aus den Kachel-Links und enthaelt ebenfalls Slugs.
+    var currentId = String(current.url_slug || current.id);
 
     installProductLayout(lang);
     ensureArticleNavShell(lang);
@@ -280,6 +283,8 @@
       })
       .then(function (items) {
         if (!Array.isArray(items)) return;
+        // Dieselbe Reihenfolge wie die vor/zurueck-Links im HTML
+        // (build_site.py ueber scripts/related_items.article_sequence).
         var available = items.filter(function (item) {
           return item && item.id && item.public_status === "AVAILABLE";
         });
@@ -288,7 +293,7 @@
           var bv = typeof b.brightness === "number" ? b.brightness : 0.5;
           return bv - av;
         });
-        var ids = available.map(function (item) { return String(item.id); });
+        var ids = available.map(function (item) { return String(item.url_slug || item.id); });
         if (ids.indexOf(currentId) === -1) return;
         renderArticleSequence(ids, currentId, lang);
       })
