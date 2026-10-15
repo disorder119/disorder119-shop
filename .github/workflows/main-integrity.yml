@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   provenance:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Pull requests are the approved change path
@@ -155,7 +155,7 @@ jobs:
           PY
 
   production-policy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -183,7 +183,7 @@ jobs:
     name: Unautorisierten Main-Push automatisch neutralisieren
     needs: provenance
     if: always() && github.event_name == 'push' && needs.provenance.result == 'failure'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: write
