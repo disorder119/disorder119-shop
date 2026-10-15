@@ -57,3 +57,28 @@ Artikels (z.B. ein dunkleres Detailfoto vom selben Shooting), kann die
 Farb-Schätzung daneben liegen. Das Sicherheitsnetz fängt das ab, indem es in
 diesem Fall lieber gar nichts zuschneidet, statt etwas falsch zuzuschneiden -
 das Foto bleibt dann einfach im Original-Zustand mit sichtbarem Hintergrund.
+
+# fotoquellen.py — welches freigestellte Bild steckt hinter welchem Shop-Bild
+
+Seit 15.10.2026 heißen alle freigestellten Bilder (lokaler Ordner, eingetragen in
+`tools/fotoquellen.local.json` – nicht im Repo) wie ihr Original-Shootingfoto plus „ freigestellt“:
+
+    Original:      y-3 jacke (1) #42.JPG
+    Freigestellt:  y-3 jacke (1) #42 freigestellt.png
+
+Die Zahl **nach** „(n)“ ist die Artikelnummer im Katalog (`config/catalog-number-links.json`).
+Eine Zahl davor (z. B. `#195 (1) #192`) ist ein alter Foto-Tag und zählt nicht.
+
+Die Shop-Dateien behalten ihre Nummernnamen (`assets/img/<id>/<k>.webp`), denn URLs, Google,
+Merchant Center und Bestellmails hängen daran. Die Verbindung Shop-Bild → Freisteller →
+Artikelnummer steht in `config/photo-sources.json`.
+
+* `python tools/fotoquellen.py pruefen` (oder `tools\FOTOQUELLEN_PRUEFEN.cmd`): vergleicht den
+  Freisteller-Ordner mit der Zuordnung und meldet neue, geänderte, umbenannte oder fehlende Bilder
+  samt Artikel. Liest nur.
+* `python tools/fotoquellen.py zuordnen`: ordnet alle Shop-Bilder per Bildvergleich ihrem Freisteller
+  mit derselben Artikelnummer zu und schreibt `config/photo-sources.json` neu (bestehende Ausnahmen
+  bleiben). Nach neuen oder ersetzten Shop-Bildern ausführen.
+* Jeder Build prüft die Zuordnung mit `scripts/validate_photo_sources.py`: Ein Shop-Bild, das einem
+  Freisteller mit einer anderen Artikelnummer zugeordnet ist, stoppt den Build. Neue oder ersetzte
+  Bilder (z. B. aus dem Admin-Katalog) erzeugen nur Hinweise.
