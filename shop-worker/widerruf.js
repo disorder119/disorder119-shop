@@ -37,6 +37,8 @@ import {
 } from "./erstattung-auftrag.js";
 import { schonErstattet } from "./erstattung.js";
 import { reservierteZahlung } from "./zahlung.js";
+import { kontingentBelegen, kontingentFreigeben } from "./kontingent.js";
+import { privateNetzHash } from "./privacy-security.js";
 
 const SHOP_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -48,6 +50,16 @@ const DOPPELT_FENSTER_MS = 10 * 60 * 1000;
 const BESTAETIGUNGEN_JE_ADRESSE_UND_TAG = 5;
 const TAG_MS = 24 * 60 * 60 * 1000;
 const OFFEN = Object.freeze(["EINGEGANGEN", "IN_BEARBEITUNG"]);
+
+// Gegen das Formular als Mail-Schleuder (beliebige Empfaengeradresse):
+// Eingangsbestaetigungen der Website hoechstens WIDERRUF_MAILS_JE_ANSCHLUSS
+// je Anschluss und WIDERRUF_MAILS_JE_TAG insgesamt in 24 Stunden. Der Widerruf
+// selbst wird immer angenommen und gespeichert - gedrosselt wird nur die
+// Mail (bestaetigung_status GEDROSSELT, Hinweis an den Inhaber). Was an der
+// Tagesgrenze haengt, holt der Cron nach, sobald wieder Platz ist.
+export const WIDERRUF_MAILS_JE_ANSCHLUSS = 5;
+export const WIDERRUF_MAILS_JE_TAG = 100;
+const NACHHOLEN = "widerruf:nachholen:";
 
 export const WIDERRUF_STATUS_TEXT = Object.freeze({
   EINGEGANGEN: "Eingegangen",
@@ -188,7 +200,7 @@ function websiteEingabe(eingabe) {
 // eingabe (Website): { name, email, bestellnummer, umfang, teile, nachricht, sprache }
 // eingabe (Konto/Admin): { orderId, umfang?, teile?, nachricht?, eingegangenAt? (nur Admin), anleitungSenden? }
 // deps: { statusSetzen(orderId, status, { actor, nurInventar }) }
-export async function widerrufErfassen(env, eingabe = {}, { quelle = "WEBSITE", reqId = crypto.randomUUID(), deps = {}, now = new Date() } = {}) {
+export async function widerrufErfassen(env, eingabe = {}, { quelle = "WEBSITE", reqId = crypto.randomUUID(), deps = {}, now = new Date(), netz = null } = {}) {
   const db = env?.DB;
   if (!db) throw new WiderrufFehler("DATENBANK_FEHLT", 503);
   if (!["WEBSITE", "KONTO", "ADMIN"].includes(quelle)) throw new WiderrufFehler("QUELLE_UNBEKANNT", 400);
@@ -268,7 +280,7 @@ export async function widerrufErfassen(env, eingabe = {}, { quelle = "WEBSITE", 
     await db.prepare("UPDATE widerrufe SET bestaetigung_status='NICHT_NOETIG',updated_at=? WHERE id=? AND bestaetigung_status IS NULL")
       .bind(jetzt, id).run();
   } else {
-    mail = await eingangBestaetigen(env, row, order, reqId, now);
+    mail = await eingangBestaetigen(env, row, order, reqId, now, { netz });
   }
   row = await db.prepare("SELECT * FROM widerrufe WHERE id=?").bind(id).first();
   // Selbst in der Admin-App erfasst: keine Meldung an sich selbst.
@@ -277,8 +289,9 @@ export async function widerrufErfassen(env, eingabe = {}, { quelle = "WEBSITE", 
 }
 
 // Eingangsbestaetigung (einmal je Erklaerung). Scheitert der Versand, holt
-// der Cron ihn nach.
-export async function eingangBestaetigen(env, row, order, reqId = crypto.randomUUID(), now = new Date()) {
+// der Cron ihn nach. netz: IP-Hash des Anschlusses (nur Website);
+// manuell: aus der Admin-App ausgeloest - ohne die Grenzen gegen Missbrauch.
+export async function eingangBestaetigen(env, row, order, reqId = crypto.randomUUID(), now = new Date(), { netz = null, manuell = false } = {}) {
   const db = env.DB;
   const jetzt = new Date().toISOString();
   if (row.bestaetigung_gesendet_at) return { sent: false, duplicate: true };
@@ -299,6 +312,33 @@ export async function eingangBestaetigen(env, row, order, reqId = crypto.randomU
     VALUES (?,'SYSTEM','widerruf',?,'WITHDRAWAL_RECEIPT_CLAIMED',?,?,?)`)
     .bind(claimId, row.id, safeText(reqId, 120), JSON.stringify({ channel: "email" }), jetzt).run();
   if (!claim?.meta?.changes) return { sent: false, duplicate: true };
+
+  let platz = null;
+  if (row.quelle === "WEBSITE" && !manuell) {
+    platz = await kontingentBelegen(db, {
+      art: "widerruf-mail",
+      schluessel: netz,
+      jeSchluessel: netz ? WIDERRUF_MAILS_JE_ANSCHLUSS : null,
+      fensterMs: TAG_MS,
+      gesamt: WIDERRUF_MAILS_JE_TAG,
+      gesamtFensterMs: TAG_MS,
+      bezug: row.id,
+      reqId,
+      jetzt: now,
+    });
+    if (!platz.ok) {
+      await db.prepare("DELETE FROM audit_events WHERE id=? AND event_type='WITHDRAWAL_RECEIPT_CLAIMED'").bind(claimId).run();
+      await db.prepare("UPDATE widerrufe SET bestaetigung_status='GEDROSSELT',updated_at=? WHERE id=?").bind(jetzt, row.id).run();
+      if (platz.grund === "GESAMT") {
+        await db.prepare(`INSERT OR IGNORE INTO audit_events
+          (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+          VALUES (?,'SYSTEM','widerruf',?,'WITHDRAWAL_RECEIPT_DEFERRED',?,?,?)`)
+          .bind(`${NACHHOLEN}${row.id}`, row.id, safeText(reqId, 120), JSON.stringify({ grund: "TAGESGRENZE" }), jetzt).run();
+      }
+      log("warn", "withdrawal_receipt_throttled", reqId, { widerrufId: row.id, grund: platz.grund });
+      return { sent: false, reason: "GEDROSSELT", grund: platz.grund };
+    }
+  }
 
   const zugeordnet = order || (row.order_id ? await bestellungMitKontakt(db, row.order_id) : null);
   const items = zugeordnet ? await stueckeDerBestellung(db, zugeordnet.id) : [];
@@ -323,6 +363,7 @@ export async function eingangBestaetigen(env, row, order, reqId = crypto.randomU
     });
     if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
   } catch (err) {
+    await kontingentFreigeben(db, platz?.id);
     try {
       await db.prepare("DELETE FROM audit_events WHERE id=? AND event_type='WITHDRAWAL_RECEIPT_CLAIMED'").bind(claimId).run();
     } catch {
@@ -360,6 +401,9 @@ function inhaberText(row, order, lage, reserviert = false) {
       : order
         ? `Status der Bestellung: ${order.status}. Bitte in der Admin-App prüfen.`
         : "Bitte in der Admin-App unter „Widerrufe“ die Bestellung zuordnen.";
+  const gedrosselt = row.bestaetigung_status === "GEDROSSELT"
+    ? ["Eingangsbestätigung NICHT verschickt (Schutz gegen Mail-Missbrauch). Echte Kundin? Admin-App → Widerrufe → „Bestätigung senden“."]
+    : [];
   return [
     "DISORDER119 — WIDERRUF EINGEGANGEN",
     kopf,
@@ -369,6 +413,7 @@ function inhaberText(row, order, lage, reserviert = false) {
     `Eingegangen: ${berlinZeit(row.eingegangen_at)}`,
     was,
     ...(fristText ? [`Rückzahlung spätestens bis ${fristText} (bei Rücksendung: sobald die Ware da ist oder der Versand nachgewiesen ist).`] : []),
+    ...gedrosselt,
   ].join("\n");
 }
 
@@ -450,7 +495,13 @@ export async function handleWiderruf(request, env, url, reqId = crypto.randomUUI
     // Zweiter Schritt der Widerrufsfunktion: erst "Widerruf bestaetigen"
     // schickt ab.
     if (body.bestaetigt !== true) throw new WiderrufFehler("BESTAETIGUNG_FEHLT", 400);
-    const ergebnis = await widerrufErfassen(env, body, { quelle: "WEBSITE", reqId, deps });
+    let netz = null;
+    try {
+      netz = await privateNetzHash(request, env, "widerruf");
+    } catch {
+      // Ohne IP-Schutz bleibt nur die Tagesgrenze - der Widerruf geht immer.
+    }
+    const ergebnis = await widerrufErfassen(env, body, { quelle: "WEBSITE", reqId, deps, netz });
     const row = ergebnis.widerruf;
     return antwort({
       ok: true,
@@ -545,7 +596,7 @@ export async function widerrufBearbeiten(env, id, body = {}, reqId = crypto.rand
   }
   row = await db.prepare("SELECT * FROM widerrufe WHERE id=?").bind(row.id).first();
   if (body.bestaetigungSenden === true && !row.bestaetigung_gesendet_at && row.quelle !== "ADMIN") {
-    await eingangBestaetigen(env, row, null, reqId);
+    await eingangBestaetigen(env, row, null, reqId, new Date(), { manuell: true });
     row = await db.prepare("SELECT * FROM widerrufe WHERE id=?").bind(row.id).first();
   }
   return widerrufView(row);
@@ -666,7 +717,8 @@ export async function widerrufePflegen(env, reqId = crypto.randomUUID(), now = n
   let nachholen;
   try {
     nachholen = (await db.prepare(`SELECT * FROM widerrufe WHERE bestaetigung_gesendet_at IS NULL AND quelle<>'ADMIN'
-        AND (bestaetigung_status IS NULL OR bestaetigung_status IN ('FEHLER','NICHT_EINGERICHTET'))
+        AND (bestaetigung_status IS NULL OR bestaetigung_status IN ('FEHLER','NICHT_EINGERICHTET')
+          OR (bestaetigung_status='GEDROSSELT' AND EXISTS (SELECT 1 FROM audit_events a WHERE a.id='${NACHHOLEN}' || widerrufe.id)))
         AND eingegangen_at>=? ORDER BY eingegangen_at LIMIT 10`)
       .bind(new Date(now.getTime() - 3 * TAG_MS).toISOString()).all()).results || [];
   } catch (err) {

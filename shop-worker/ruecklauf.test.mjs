@@ -10,6 +10,7 @@ import {
   widerrufVonWebsite,
 } from "./admin-api.js";
 import { widerrufsbelehrungText } from "./customer-mail.js";
+import { WIDERRUF_MAILS_JE_ANSCHLUSS, WIDERRUF_MAILS_JE_TAG } from "./widerruf.js";
 import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 
 // Storno, Ruecksendung, Widerruf und Kulanz "wasserfest": Erstattungen als
@@ -655,4 +656,80 @@ test("the cancellation policy names the online withdrawal function", () => {
   const text = widerrufsbelehrungText("kontakt@disorder119.com");
   assert.match(text, /online unter https:\/\/disorder119\.com\/widerruf\/ ausüben/);
   assert.match(text, /Eingangsbestätigung mit Informationen zum Inhalt der Widerrufserklärung sowie dem Datum und der Uhrzeit ihres Eingangs/);
+});
+
+// ------------------------------------------------- Grenzen gegen Mail-Missbrauch
+
+async function widerrufenVon(DB, ip, body, env) {
+  const url = "https://api.disorder119.com/widerruf";
+  const request = new Request(url, { method: "POST", headers: { Origin: SHOP, "Content-Type": "application/json", "CF-Connecting-IP": ip }, body: JSON.stringify(body) });
+  const response = await widerrufVonWebsite(request, env, new URL(url), "req-widerruf", SHOP);
+  return { status: response.status, data: await response.json() };
+}
+
+test("receipt mails per connection are capped; the withdrawal itself is always stored", async () => {
+  const DB = sqliteD1(allMigrations());
+  seed(DB, { status: "DELIVERED" });
+  const netz = fakeNetz();
+  const env = { ...ENV(DB), LOGIN_IP_PEPPER: "p".repeat(48) };
+  try {
+    const antworten = [];
+    for (let i = 0; i < WIDERRUF_MAILS_JE_ANSCHLUSS + 1; i++) {
+      // Wechselnde Adressen im selben /64-Netz: ein Anschluss.
+      antworten.push(await widerrufenVon(DB, `2001:db8:5:6::${i + 1}`,
+        { name: `Person ${i}`, email: `opfer${i}@example.test`, bestellnummer: "irgendwas", umfang: "GANZ", bestaetigt: true }, env));
+    }
+    assert.deepEqual(antworten.map(a => a.status), Array(WIDERRUF_MAILS_JE_ANSCHLUSS + 1).fill(200));
+    assert.deepEqual(antworten.map(a => a.data.bestaetigungGesendet), [...Array(WIDERRUF_MAILS_JE_ANSCHLUSS).fill(true), false]);
+    assert.equal(wert(DB, "SELECT COUNT(*) AS n FROM widerrufe").n, WIDERRUF_MAILS_JE_ANSCHLUSS + 1, "jede Erklaerung gespeichert");
+    const letzte = wert(DB, "SELECT id,bestaetigung_status FROM widerrufe WHERE email='opfer5@example.test'");
+    assert.equal(letzte.bestaetigung_status, "GEDROSSELT");
+    assert.equal(netz.mails.filter(m => m.to?.[0]?.email === "opfer5@example.test").length, 0);
+    assert.match(netz.telegram.at(-1).text, /Eingangsbestätigung NICHT verschickt/);
+    // Gedrosselt je Anschluss: der Cron holt das nicht von selbst nach ...
+    await ruecklaufPflegen(env, "cron-drossel", spaeter(15));
+    assert.equal(wert(DB, "SELECT bestaetigung_status FROM widerrufe WHERE email='opfer5@example.test'").bestaetigung_status, "GEDROSSELT");
+    // ... die Admin-App kann die Bestaetigung aber jederzeit senden.
+    const senden = await call(DB, `/admin/widerrufe/${letzte.id}`, "PATCH", { bestaetigungSenden: true }, env);
+    assert.equal(senden.status, 200, JSON.stringify(senden.data));
+    assert.equal(wert(DB, "SELECT bestaetigung_status FROM widerrufe WHERE email='opfer5@example.test'").bestaetigung_status, "GESENDET");
+    // Ein anderer Anschluss ist davon nicht betroffen.
+    const anders = await widerrufenVon(DB, "198.51.100.20", { name: "Kim", email: "kundin@example.test", bestellnummer: NUMMER, umfang: "GANZ", bestaetigt: true }, env);
+    assert.equal(anders.data.bestaetigungGesendet, true);
+  } finally {
+    netz.restore();
+  }
+});
+
+test("receipt mails have a daily cap for the whole shop; the cron sends them once there is room", async () => {
+  const DB = sqliteD1(allMigrations());
+  seed(DB, { status: "DELIVERED" });
+  const netz = fakeNetz();
+  const env = { ...ENV(DB), LOGIN_IP_PEPPER: "p".repeat(48) };
+  const jetzt = new Date().toISOString();
+  const voll = DB.raw.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,created_at)
+    VALUES (?,'SYSTEM','kontingent:widerruf-mail',?,'KONTINGENT_BELEGT',?)`);
+  for (let i = 0; i < WIDERRUF_MAILS_JE_TAG; i++) voll.run(`fueller-${i}`, `netz-${i}`, jetzt);
+  try {
+    const res = await widerrufenVon(DB, "198.51.100.30", { name: "Kim", email: "kundin@example.test", bestellnummer: NUMMER, umfang: "GANZ", bestaetigt: true }, env);
+    assert.equal(res.status, 200, JSON.stringify(res.data));
+    assert.equal(res.data.bestaetigungGesendet, false);
+    const row = wert(DB, "SELECT id,order_id,bestaetigung_status FROM widerrufe");
+    assert.equal(row.order_id, "o1", "zugeordnet und gespeichert wie immer");
+    assert.equal(row.bestaetigung_status, "GEDROSSELT");
+    assert.equal(wert(DB, "SELECT status FROM commerce_orders").status, "RETURN_REQUESTED");
+    assert.equal(kundenmails(netz).length, 0);
+    assert.ok(wert(DB, `SELECT 1 AS ja FROM audit_events WHERE id='widerruf:nachholen:${row.id}'`), "zum Nachholen vorgemerkt");
+    // Noch voll: der Cron versucht es, schickt aber nichts.
+    await ruecklaufPflegen(env, "cron-voll", spaeter(15));
+    assert.equal(kundenmails(netz).length, 0);
+    // Einen Tag spaeter ist wieder Platz: die Bestaetigung geht raus, genau einmal.
+    await ruecklaufPflegen(env, "cron-frei", spaeter(25 * 60));
+    assert.equal(wert(DB, "SELECT bestaetigung_status FROM widerrufe").bestaetigung_status, "GESENDET");
+    assert.equal(kundenmails(netz).filter(m => /Eingangsbestätigung/.test(m.subject)).length, 1);
+    await ruecklaufPflegen(env, "cron-danach", spaeter(26 * 60));
+    assert.equal(kundenmails(netz).filter(m => /Eingangsbestätigung/.test(m.subject)).length, 1);
+  } finally {
+    netz.restore();
+  }
 });

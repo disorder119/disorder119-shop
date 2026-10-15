@@ -13,8 +13,31 @@ import { LEGAL_VERSION, CONTRACT_HTML } from "./legal-content.js";
 import { safeText } from "./commerce-core.js";
 import { invoiceProfile, renderInvoice } from './tax-invoice.js';
 import { istSandbox, sandboxMail } from "./sandbox.js";
+import { TAG_MS, kontingentBelegen } from "./kontingent.js";
 
 const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
+
+// Testshop: api-test.disorder119.com ist oeffentlich, der Turnstile-
+// Testschluessel laesst jede Anfrage durch, und Brevo zaehlt dasselbe
+// Kontingent wie im echten Shop. Darum hoechstens so viele Mails am Tag
+// (gezaehlt in D1, fuer alle Mails zusammen) - danach still keine mehr.
+export const TESTSHOP_MAILS_JE_TAG = 20;
+
+function testshopMailsJeTag(env) {
+  const configured = Number(env?.TESTSHOP_MAIL_DAILY_CAP);
+  return Number.isInteger(configured) && configured > 0 ? configured : TESTSHOP_MAILS_JE_TAG;
+}
+
+async function testshopMailFrei(env) {
+  // Ohne Datenbank laesst sich nichts zaehlen - dann lieber keine Mail.
+  if (!env?.DB) {
+    console.warn(JSON.stringify({ level: "warn", event: "testshop_mail_no_database" }));
+    return false;
+  }
+  const platz = await kontingentBelegen(env.DB, { art: "testshop-mail", gesamt: testshopMailsJeTag(env), gesamtFensterMs: TAG_MS });
+  if (!platz.ok) console.warn(JSON.stringify({ level: "warn", event: "testshop_mail_daily_cap", cap: testshopMailsJeTag(env) }));
+  return platz.ok;
+}
 
 // Muss Wort fuer Wort mit dem Impressum auf der Website uebereinstimmen.
 // scripts/validate_shop.py vergleicht beide Stellen und bricht ab, wenn sie
@@ -472,6 +495,7 @@ export async function sendMail(env, message = {}) {
   if (!to) return { sent: false, reason: "INVALID_RECIPIENT" };
   const subject = safeText(message.subject || "", 200);
   if (!subject) return { sent: false, reason: "EMPTY_SUBJECT" };
+  if (istSandbox(env) && !(await testshopMailFrei(env))) return { sent: false, reason: "SANDBOX_DAILY_CAP" };
 
   const sender = mailSenderIdentity(env);
   const payload = {
