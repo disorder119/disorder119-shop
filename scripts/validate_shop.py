@@ -388,8 +388,10 @@ def validate_and_report() -> None:
         variant_html = (BASE / variant / "index.html").read_text(encoding="utf-8", errors="replace")
         if 'name="robots" content="noindex,follow"' not in variant_html:
             severe.append(f"/{variant}/: noindex,follow fehlt")
-        if '<link rel="canonical" href="https://disorder119.com/">' not in variant_html:
-            severe.append(f"/{variant}/: Canonical auf Archiv fehlt")
+        # Nur noindex: eine canonical-Angabe auf die Startseite zusammen mit
+        # noindex waeren widerspruechliche Signale.
+        if '<link rel="canonical" href="https://disorder119.com/">' in variant_html:
+            severe.append(f"/{variant}/: noindex zusammen mit Canonical auf die Startseite")
 
     sitemap_text = (BASE / "sitemap.xml").read_text(encoding="utf-8", errors="replace")
     for forbidden_slug in ["/cart/", "/match/", "/chaos/", "/baukasten/"]:

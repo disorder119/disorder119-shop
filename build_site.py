@@ -1099,6 +1099,8 @@ def site_entities_jsonld(shop_config):
         # Nur das Land: die Anschrift steht im Impressum, aber nicht in den
         # Google-Daten jeder Seite (sonst taucht sie zu Namenssuchen auf).
         "address": {"@type": "PostalAddress", "addressCountry": "DE"},
+        # Gilt auch dort, wo ein Angebot keine eigene Rueckgaberegel traegt.
+        "hasMerchantReturnPolicy": dict(MERCHANT_RETURN_POLICY),
     }
     if shop_config.get("email"):
         store["email"] = shop_config["email"]
@@ -1157,10 +1159,12 @@ ITEM_LIST_NAME = {
 
 
 def item_list_jsonld(public_items, lang):
+    # Nur kaufbare Stuecke: verkaufte Seiten tragen kein Product-JSON-LD mehr
+    # und gehoeren nicht in die Produktliste der Startseite.
     home = SITE_URL.rstrip("/") + lang_home(lang)
     entries = [
         {"@type": "ListItem", "position": i + 1, "url": home + "artikel/" + str(it.get("url_slug", it["id"])) + "/"}
-        for i, it in enumerate(public_items)
+        for i, it in enumerate(x for x in public_items if x.get("public_status") == "AVAILABLE")
     ]
     data = {"@context": "https://schema.org", "@type": "ItemList", "name": ITEM_LIST_NAME[lang], "itemListElement": entries}
     return json.dumps(data, ensure_ascii=False)
@@ -1352,6 +1356,34 @@ def product_data_gap_html(it, lang):
     return '<p class="info__note info__note--data-gap" data-product-data-gap>' + esc(copy.format(fields=", ".join(missing))) + '</p>'
 
 
+# Startseite: Die H1 zeigt nur das Logo "Disorder119". Der Suchbegriff steht
+# davor in einem nur fuer Screenreader und Suchmaschinen lesbaren Teil
+# (.d119-sr-only in assets/app.css) - am Design aendert sich nichts.
+H1_LEAD = {
+    "de": "Designer Second Hand & Vintage Mode – ",
+    "en": "Pre-Owned Designer & Vintage Fashion – ",
+    "fr": "Mode designer seconde main & vintage – ",
+}
+PRODUCT_LINKS_LABEL = {"de": "Verfügbare Stücke", "en": "Available pieces", "fr": "Pièces disponibles"}
+
+
+def product_link_list_html(lang):
+    """Alle verfuegbaren Stuecke als schlichte Textlinks fuer Crawler - in
+    allen drei Sprachen schon im HTML. Das Raster baut assets/app.js erst im
+    Browser (und nur seitenweise ueber "Weitere laden"); ohne diese Liste
+    standen auf / zwei, auf /en/ und /fr/ gar keine Produktlinks im HTML.
+    Visuell versteckt (kein Bild, keine Wirkung auf LCP oder Layout), fuer
+    Screenreader als eigene Navigation lesbar, nicht in der Tab-Reihenfolge."""
+    home = lang_home(lang)
+    links = "".join(
+        '<li><a href="' + home + "artikel/" + esc(str(it.get("url_slug", it["id"]))) + '/" tabindex="-1">'
+        + esc(loc_name(it, lang)) + "</a></li>"
+        for it in ITEMS if it.get("public_status") == "AVAILABLE"
+    )
+    return ('<nav class="d119-sr-only" aria-label="' + esc(PRODUCT_LINKS_LABEL[lang]) + '" data-produktlinks>'
+            "<ul>" + links + "</ul></nav>")
+
+
 def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
                         include_item_list=False, robots=None, static_content="",
                         canonical_path_segment=None, slug=""):
@@ -1387,6 +1419,8 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__ROBOTS_META__", f'<meta name="robots" content="{robots_value}">')
     out = out.replace("__OG_LOCALE__", OG_LOCALES[lang])
     out = out.replace("__OG_LOCALE_ALTERNATES__", locale_alternates)
+    out = out.replace("__H1_LEAD__", esc(H1_LEAD[lang]))
+    out = out.replace("__SSR_PRODUCT_LINKS__", product_link_list_html(lang) if include_item_list else "")
     # Bewusst hier und nicht bei den uebrigen Versions-Tokens: CI-Skripte
     # (apply_focus_three_hardening, apply_pwa) suchen die Zeilen darunter
     # als zusammenhaengenden Block.
@@ -1427,7 +1461,10 @@ def build_special_pages():
             title_tag = ("Disorder119 — " + label) if slug != "cart" else (label + " | Disorder119")
             desc_text = SPECIAL_META_DESCRIPTIONS.get(slug, {}).get(lang, ph["home_desc"])
             robots = "noindex,follow" if slug == "cart" or slug in duplicate_variants or slug in PRIVATE_LEGAL_PAGES else None
-            canonical_segment = "" if slug in duplicate_variants else None
+            # Nur noindex - eine canonical-Angabe auf die Startseite zusammen
+            # mit noindex sind widerspruechliche Signale. Die Seiten verweisen
+            # deshalb auf sich selbst (app.js setzt das beim Umschalten ohnehin).
+            canonical_segment = None
             static_content = static_page_content_html(slug, lang, shop_config)
             out = render_bundle_page(
                 lang, slug + "/", title_tag, desc_text, shop_config,
