@@ -648,6 +648,17 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     return labels ? (labels[LANG] || productType) : productType;
   }
   function trCondition(cond) { var k = CONDITION_MAP_DE_TO_KEY[cond]; return k ? t(k) : (cond || ""); }
+  // Farben: Werte bleiben deutsch (Daten, Filterzustand), angezeigt wird die
+  // Seitensprache. Dieselbe Tabelle wie scripts/i18n_text.py COLOR_TR -
+  // scripts/validate_i18n_titles.py prueft, dass beide gleich sind.
+  var COLOR_TR = {"Schwarz":{"en":"Black","fr":"Noir"},"Weiß":{"en":"White","fr":"Blanc"},"Grau":{"en":"Gray","fr":"Gris"},"Anthrazit":{"en":"Charcoal","fr":"Anthracite"},"Silber":{"en":"Silver","fr":"Argent"},"Gold":{"en":"Gold","fr":"Or"},"Braun":{"en":"Brown","fr":"Marron"},"Dunkelbraun":{"en":"Dark Brown","fr":"Marron foncé"},"Rotbraun":{"en":"Reddish Brown","fr":"Brun rouge"},"Taupe":{"en":"Taupe","fr":"Taupe"},"Camel":{"en":"Camel","fr":"Camel"},"Beige":{"en":"Beige","fr":"Beige"},"Creme":{"en":"Cream","fr":"Crème"},"Elfenbein":{"en":"Ivory","fr":"Ivoire"},"Natur":{"en":"Natural","fr":"Naturel"},"Khaki":{"en":"Khaki","fr":"Kaki"},"Oliv":{"en":"Olive","fr":"Olive"},"Grün":{"en":"Green","fr":"Vert"},"Dunkelgrün":{"en":"Dark Green","fr":"Vert foncé"},"Hellgrün":{"en":"Light Green","fr":"Vert clair"},"Neongrün":{"en":"Neon Green","fr":"Vert fluo"},"Mint":{"en":"Mint","fr":"Menthe"},"Türkis":{"en":"Turquoise","fr":"Turquoise"},"Petrol":{"en":"Teal","fr":"Bleu pétrole"},"Blau":{"en":"Blue","fr":"Bleu"},"Hellblau":{"en":"Light Blue","fr":"Bleu clair"},"Dunkelblau":{"en":"Dark Blue","fr":"Bleu foncé"},"Marineblau":{"en":"Navy","fr":"Bleu marine"},"Rot":{"en":"Red","fr":"Rouge"},"Bordeaux":{"en":"Burgundy","fr":"Bordeaux"},"Burgunderrot":{"en":"Burgundy","fr":"Bordeaux"},"Weinrot":{"en":"Burgundy","fr":"Bordeaux"},"Orange":{"en":"Orange","fr":"Orange"},"Aprikose":{"en":"Apricot","fr":"Abricot"},"Gelb":{"en":"Yellow","fr":"Jaune"},"Senf":{"en":"Mustard","fr":"Moutarde"},"Rosa":{"en":"Pink","fr":"Rose"},"Pink":{"en":"Pink","fr":"Rose"},"Rose":{"en":"Rose","fr":"Rose"},"Rosé":{"en":"Rose","fr":"Rose"},"Lila":{"en":"Purple","fr":"Violet"},"Violett":{"en":"Purple","fr":"Violet"},"Flieder":{"en":"Lilac","fr":"Lilas"},"Bunt":{"en":"Multicolor","fr":"Multicolore"},"Mehrfarbig":{"en":"Multicolor","fr":"Multicolore"}};
+  function trColor(color) {
+    return String(color || "").split(",").map(function (c) {
+      c = c.trim();
+      var e = COLOR_TR[c];
+      return e && LANG !== "de" ? (e[LANG] || c) : c;
+    }).filter(Boolean).join(", ");
+  }
   function trSize(size) {
     if (size === "One Size") return t("sizeEinheitsgroesse");
     if (size === "Adjustable") return t("sizeVerstellbar");
@@ -1258,6 +1269,15 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   // Nur oeffentliche Artikel (AVAILABLE/SOLD) fliessen in Statistiken,
   // Filter-Optionen und Chip-Listen ein - DRAFT-Artikel (unklarer interner
   // Zwischenstatus) bleiben komplett unsichtbar, auch indirekt.
+  // Produkttitel in der Seitensprache: catalog.json liefert title_en/title_fr
+  // (aus data/items.json oder beim Bauen abgeleitet, scripts/i18n_text.py).
+  // Kacheln, Schnellansicht, Match, Universum und Baukasten lesen it.title;
+  // title_de bleibt fuer die Suche erhalten.
+  ITEMS.forEach(function (it) {
+    if (it.title_de === undefined) it.title_de = it.title || "";
+    var lokal = LANG === "de" ? it.title_de : it["title_" + LANG];
+    if (lokal) it.title = lokal;
+  });
   var PUBLIC_ITEMS = ITEMS.filter(function (it) { return it.public_status !== "DRAFT"; });
 
   // Marken, von denen aktuell nichts verfuegbar ist (nur noch verkaufte
@@ -1422,7 +1442,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       if (c) colorSet[c] = true;
     });
   });
-  fillSelect(filterColorEl, Object.keys(colorSet).sort(function (a, b) { return a.localeCompare(b, "de"); }));
+  fillSelect(filterColorEl, Object.keys(colorSet).sort(function (a, b) { return a.localeCompare(b, "de"); }), trColor);
 
   var conditionSet = {};
   PUBLIC_ITEMS.forEach(function (it) { if (it.condition) conditionSet[it.condition] = true; });
@@ -1486,7 +1506,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     updateFacetSelect(filterProductTypeEl, "productType", trProductType, "filterAllProductTypes");
     updateFacetSelect(filterBrandEl, "brand", function (v) { return v; }, "filterAllBrands");
     updateFacetSelect(filterSizeEl, "size", trSize, "filterAllSizes");
-    updateFacetSelect(filterColorEl, "color", function (v) { return v; }, "filterAllColors");
+    updateFacetSelect(filterColorEl, "color", trColor, "filterAllColors");
     updateFacetSelect(filterConditionEl, "condition", trCondition, "filterAllConditions");
   }
 
@@ -1523,7 +1543,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     if (state.productType) filters.push({ key: "productType", label: t("activeFilterProductType"), value: trProductType(state.productType) });
     if (state.brand) filters.push({ key: "brand", label: t("activeFilterBrand"), value: state.brand });
     if (state.size) filters.push({ key: "size", label: t("activeFilterSize"), value: trSize(state.size) });
-    if (state.color) filters.push({ key: "color", label: t("activeFilterColor"), value: state.color });
+    if (state.color) filters.push({ key: "color", label: t("activeFilterColor"), value: trColor(state.color) });
     if (state.condition) filters.push({ key: "condition", label: t("activeFilterCondition"), value: trCondition(state.condition) });
     if (state.priceMin != null || state.priceMax != null) {
       var priceValue = (state.priceMin != null ? state.priceMin : "0") + "–" + (state.priceMax != null ? state.priceMax : "∞") + " €";
@@ -1729,7 +1749,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     if (state.category !== "all" && browseCategory !== state.category) return false;
     if (state.query) {
       var hay = [
-        it.title, it.brand, browseCategory, it.product_type, it.department,
+        it.title, it.title_de, it.brand, browseCategory, it.product_type, it.department,
         it.size, it.size_normalized, it.article, String(it.id || "")
       ].map(normalizeText).join(" ");
       if (!queryMatchesHay(hay, state.query)) return false;
@@ -2052,7 +2072,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     var facts = [];
     if (it.category) facts.push([t("factCategory"), trCategory(it.category)]);
     if (it.size) facts.push([t("factSize"), trSize(it.size)]);
-    if (it.color) facts.push([t("factColor"), it.color]);
+    if (it.color) facts.push([t("factColor"), trColor(it.color)]);
     if (it.condition) facts.push([t("factCondition"), trCondition(it.condition)]);
     modalFacts.innerHTML = facts.map(function (f) {
       return '<div><div class="fact__label">' + escapeHtml(f[0]) + '</div><div class="fact__value">' + escapeHtml(f[1]) + "</div></div>";
@@ -2412,7 +2432,8 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     t: t,
     groesse: trSize,
     bereich: trDepartment,
-    erhaltung: trCondition
+    erhaltung: trCondition,
+    farbe: trColor
   };
 
   var menuLastFocusEl = null;

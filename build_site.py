@@ -147,19 +147,7 @@ def lang_home(lang):
     return "/" if lang == "de" else "/" + lang + "/"
 
 
-CATEGORY_TR = {
-    "Jackets": {"de": "Jacken", "en": "Jackets", "fr": "Vestes"},
-    "Coats": {"de": "Mäntel", "en": "Coats", "fr": "Manteaux"},
-    "Tops": {"de": "Tops", "en": "Tops", "fr": "Hauts"},
-    "Shirts": {"de": "Hemden/Shirts", "en": "Shirts", "fr": "Chemises/T-shirts"},
-    "Knitwear": {"de": "Strickwaren", "en": "Knitwear", "fr": "Maille"},
-    "Pants": {"de": "Hosen", "en": "Pants", "fr": "Pantalons"},
-    "Skirts": {"de": "Röcke", "en": "Skirts", "fr": "Jupes"},
-    "Dresses": {"de": "Kleider", "en": "Dresses", "fr": "Robes"},
-    "Shoes": {"de": "Schuhe", "en": "Shoes", "fr": "Chaussures"},
-    "Accessories": {"de": "Accessoires", "en": "Accessories", "fr": "Accessoires"},
-    "Objects": {"de": "Objekte", "en": "Objects", "fr": "Objets"},
-}
+CATEGORY_TR = i18n_text.CATEGORY_TR
 CONDITION_TR = {
     "Repariert": {"de": "Repariert", "en": "Repaired", "fr": "Réparé"},
     "Mit Defekt": {"de": "Mit Defekt", "en": "With defect", "fr": "Avec défaut"},
@@ -167,13 +155,7 @@ CONDITION_TR = {
     "Sehr gut": {"de": "Sehr gut", "en": "Very good", "fr": "Très bon"},
     "Zufriedenstellend": {"de": "Zufriedenstellend", "en": "Satisfactory", "fr": "Satisfaisant"},
 }
-SIZE_TR = {
-    "Einheitsgröße": {"de": "Einheitsgröße", "en": "One size", "fr": "Taille unique"},
-    "verstellbar": {"de": "verstellbar", "en": "adjustable", "fr": "réglable"},
-    "Größenverstellbar": {"de": "verstellbar", "en": "adjustable", "fr": "réglable"},
-    "Kindergröße L": {"de": "Kindergröße L", "en": "Kids' size L", "fr": "Taille enfant L"},
-    "Sonstige": {"de": "Sonstige", "en": "Other", "fr": "Autre"},
-}
+SIZE_TR = i18n_text.SIZE_TR
 
 
 def _tr(table, key, lang):
@@ -383,6 +365,10 @@ def display_name(it):
     # "MM6 Maison Margiela" oder "Pierre Balmain" -, wird sie nicht noch
     # einmal vorangestellt. Sonst entstand "Maison Margiela MM6 Maison
     # Margiela Top".
+    # Bleibt bewusst eigenstaendig: shop-worker/commerce-core.test.mjs
+    # vergleicht genau diese Funktion mit dem Bestellnamen im Worker.
+    # Seiten in EN/FR nutzen i18n_text.loc_name(it, lang) mit derselben Regel
+    # (scripts/test_i18n_text.py prueft die Gleichheit fuer Deutsch).
     if brand and re.search(r"(?<!\w)" + re.escape(brand) + r"(?!\w)", title, re.I):
         return title
     return (brand + " " + title).strip()
@@ -453,7 +439,7 @@ def facts_html(it, lang):
     if it.get("size"):
         facts.append(('factSize', labels["size"], "factSizeValue", size_tr(it["size"], lang)))
     if it.get("color"):
-        facts.append(('factColor', labels["color"], None, it["color"]))
+        facts.append(('factColor', labels["color"], None, i18n_text.color_tr(it["color"], lang)))
     out = []
     for i18n_key, label, value_id, value in facts:
         value_attr = f' id="{value_id}"' if value_id else ""
@@ -466,18 +452,29 @@ def facts_html(it, lang):
     return "".join(out)
 
 
-def price_block_html(it):
+PRICE_BLOCK_TEXT = {
+    # Wie assets/article.js (priceEstimatedPrefix/-Badge, priceOnRequest), das
+    # den Block nach dem Laden noch einmal setzt - so steht auf EN/FR schon im
+    # HTML die richtige Sprache.
+    "de": ("ca. ", "Preis wird geprüft", "Preis auf Anfrage"),
+    "en": ("approx. ", "Price being confirmed", "Price on request"),
+    "fr": ("env. ", "Prix en cours de vérification", "Prix sur demande"),
+}
+
+
+def price_block_html(it, lang="de"):
+    ca, geprueft, anfrage = PRICE_BLOCK_TEXT[lang]
     sold = it.get("public_status") == "SOLD"
     if sold:
         return '<div class="info__badge info__badge--sold">SOLD — DISORDER119 ARCHIVE</div>'
     if it.get("price_estimated"):
         return (
-            '<div class="info__price">ca. ' + fmt_price_de(it["price"]) + "</div>"
-            '<div class="info__badge info__badge--estimate">Preis wird geprüft</div>'
+            '<div class="info__price">' + esc(ca) + fmt_price_de(it["price"]) + "</div>"
+            '<div class="info__badge info__badge--estimate">' + esc(geprueft) + '</div>'
         )
     if it.get("price", 0) > 0:
         return '<div class="info__price">' + fmt_price_de(it["price"]) + "</div>"
-    return '<div class="info__price">Preis auf Anfrage</div>'
+    return '<div class="info__price">' + esc(anfrage) + '</div>'
 
 
 PAYPAL_VORSCHAU_TEXT = {
@@ -517,10 +514,18 @@ def euro_text(cents, lang):
     return "€" + betrag if lang == "en" else betrag.replace(".", ",") + " €"
 
 
+# Wie soldNote in assets/article.js.
+SOLD_NOTE = {
+    "de": "Dieses Stück ist bereits verkauft und bleibt als Teil des Disorder119-Archivs sichtbar.",
+    "en": "This piece has already been sold and remains visible as part of the Disorder119 archive.",
+    "fr": "Cette pièce est déjà vendue et reste visible comme partie de l'archive Disorder119.",
+}
+
+
 def cta_html(it, shop_config, home, lang):
     sold = it.get("public_status") == "SOLD"
     if sold:
-        return '<p class="info__note" id="soldNote">Dieses Stück ist bereits verkauft und bleibt als Teil des Disorder119-Archivs sichtbar.</p>'
+        return '<p class="info__note" id="soldNote">' + esc(SOLD_NOTE[lang]) + '</p>'
     has_price = it.get("price", 0) > 0
     paypal_ready = (
         bool((shop_config.get("features") or {}).get("paypalCheckout"))
@@ -610,7 +615,7 @@ def json_ld(it, lang):
         "@context": "https://schema.org",
         "@type": "Product",
         "@id": url + "#product",
-        "name": display_name(it),
+        "name": loc_name(it, lang),
         "url": url,
         "image": [SITE_URL + g for g in it.get("gallery") or []],
         "description": (desc_field or meta_description(it, lang))[:500],
@@ -685,7 +690,7 @@ def breadcrumb_json_ld(it, lang):
         "@type": "BreadcrumbList",
         "itemListElement": [
             {"@type": "ListItem", "position": 1, "name": labels.get(lang, "Archiv"), "item": home_url},
-            {"@type": "ListItem", "position": 2, "name": display_name(it), "item": product_url},
+            {"@type": "ListItem", "position": 2, "name": loc_name(it, lang), "item": product_url},
         ],
     }
     return json.dumps(data, ensure_ascii=False)
@@ -716,6 +721,9 @@ def card_image(it):
 
 
 
+LANG_GROUP_ARIA = {"de": "Sprache wählen", "en": "Choose language", "fr": "Choisir la langue"}
+
+
 def sequence_attr(it, lang, richtung):
     """href fuer vor (0) / zurueck (1) - echte Links schon im HTML, in der
     Reihenfolge des Archivs ohne Filter (related_items.article_sequence).
@@ -729,15 +737,15 @@ def sequence_attr(it, lang, richtung):
 
 
 def build_page(it, shop_config, lang):
-    name = display_name(it)
+    # Name und Titel in der Seitensprache: title_en/title_fr aus items.json,
+    # sonst eine Ableitung ohne deutsche Woerter (scripts/i18n_text.py).
+    name = loc_name(it, lang)
+    titel = loc_title(it, lang)
     title_tag = seo_title(name, it.get("product_type"), title_size(it, lang), lang)
     desc = meta_description(it, lang)
-    raw_body_desc = {
-        "de": it.get("desc_de") or it.get("desc") or "",
-        "en": it.get("desc_en") or "",
-        "fr": it.get("desc_fr") or "",
-    }[lang]
-    body_desc = raw_body_desc.strip() or auto_description(it, lang)
+    # Eigene Beschreibung der Sprache (alte CI-Platzhalter und deutsche Titel
+    # darin bereinigt), sonst der uebersetzte Ersatztext.
+    body_desc = i18n_text.body_description(it, lang)
     gallery = it.get("gallery") or []
     hero = gallery[0] if gallery else "assets/favicon.png"
     hero_display_candidate = display_path(hero)
@@ -787,7 +795,9 @@ def build_page(it, shop_config, lang):
         "id": it["id"],
         "article": it.get("article"),
         "url_slug": it.get("url_slug", str(it["id"])),
-        "title": it["title"],
+        "title": titel,
+        # Deutscher Titel fuer Anfragen an den Shop (Betreff mit Artikelnummer).
+        "title_de": it["title"],
         "brand": it.get("brand"),
         "size": it.get("size"),
         "color": it.get("color"),
@@ -795,8 +805,10 @@ def build_page(it, shop_config, lang):
         "category": it.get("category"),
         "desc": it.get("desc") or "",
         "desc_de": it.get("desc_de") or it.get("desc") or "",
-        "desc_en": it.get("desc_en") or "",
-        "desc_fr": it.get("desc_fr") or "",
+        # article.js zeigt desc_<Sprache>: schon bereinigt bzw. der Ersatztext,
+        # damit nach dem Laden derselbe Text steht wie im HTML.
+        "desc_en": body_desc if lang == "en" else i18n_text.own_description(it, "en"),
+        "desc_fr": body_desc if lang == "fr" else i18n_text.own_description(it, "fr"),
         "gallery": gallery,
         "thumbs": [thumb_path(g) for g in gallery],
         "sold": sold,
@@ -855,7 +867,7 @@ def build_page(it, shop_config, lang):
   <a class="page-head__menu" href="{home}" aria-label="{esc(product_nav_copy['menu_aria'])}"><span></span><span></span><span></span></a>
   <a class="page-head__brand" href="{home}">DISORDER119</a>
   <div class="page-head__right">
-    <div class="lang-switch" id="langSwitch" role="group" aria-label="Sprache wählen">
+    <div class="lang-switch" id="langSwitch" role="group" aria-label="{esc(LANG_GROUP_ARIA[lang])}">
       <a class="lang-switch__btn" data-lang="de" href="/artikel/{it.get('url_slug', it['id'])}/">DE</a>
       <a class="lang-switch__btn" data-lang="en" href="/en/artikel/{it.get('url_slug', it['id'])}/">EN</a>
       <a class="lang-switch__btn" data-lang="fr" href="/fr/artikel/{it.get('url_slug', it['id'])}/">FR</a>
@@ -881,9 +893,9 @@ def build_page(it, shop_config, lang):
     <div class="gallery__thumbs{' gallery__thumbs--reserved' if len(gallery) > 1 else ''}" id="galleryThumbs"></div>
   </div>
   <div class="info">
-    <a class="info__brand" href="{home}?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or "Ohne Marke")}</a>
-    <h1>{esc(it["title"])}</h1>
-    <div id="priceBlock">{price_block_html(it)}</div>
+    <a class="info__brand" href="{home}?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or META_PHRASES[lang]["no_brand"])}</a>
+    <h1>{esc(titel)}</h1>
+    <div id="priceBlock">{price_block_html(it, lang)}</div>
     <div class="info__facts">{facts_html(it, lang)}</div>
     <p class="info__desc" id="itemDesc">{esc(body_desc)}</p>
     <p class="info__gebraucht" data-zustand-hinweis>{esc(GEBRAUCHT_HINWEIS[lang])}</p>
@@ -1063,13 +1075,20 @@ def page_breadcrumb_jsonld(title, canonical, lang):
     return json.dumps(data, ensure_ascii=False)
 
 
+ITEM_LIST_NAME = {
+    "de": "Disorder119 — Verfügbare Stücke",
+    "en": "Disorder119 — Available pieces",
+    "fr": "Disorder119 — Pièces disponibles",
+}
+
+
 def item_list_jsonld(public_items, lang):
     home = SITE_URL.rstrip("/") + lang_home(lang)
     entries = [
         {"@type": "ListItem", "position": i + 1, "url": home + "artikel/" + str(it.get("url_slug", it["id"])) + "/"}
         for i, it in enumerate(public_items)
     ]
-    data = {"@context": "https://schema.org", "@type": "ItemList", "name": "Disorder119 — Archiv-Katalog", "itemListElement": entries}
+    data = {"@context": "https://schema.org", "@type": "ItemList", "name": ITEM_LIST_NAME[lang], "itemListElement": entries}
     return json.dumps(data, ensure_ascii=False)
 
 
@@ -1924,6 +1943,10 @@ CATALOG_FIELDS = [
     # Fehlt das Feld, zeigt die Mieten-Seite stattdessen "Preis auf Anfrage" -
     # kein Zwang, sofort den gesamten Bestand zu befuellen.
     "rental_price",
+    # Optionale Titel je Sprache (data/items.json). build_catalog_json setzt
+    # sie fuer jedes Stueck - fehlt das Feld, mit der Ableitung aus
+    # scripts/i18n_text.py; app.js zeigt auf /en/ und /fr/ diesen Titel.
+    "title_en", "title_fr",
 ]
 
 
@@ -2091,6 +2114,8 @@ def build_catalog_json():
             # Anker fuer scripts/apply_focus_three_hardening.py.
             row["price"] = 0
             row.pop("price_estimated", None)
+        for sprache in ("en", "fr"):
+            row["title_" + sprache] = loc_title(it, sprache)
         hover = hover_image_path(it)
         if hover:
             row["hover_image"] = hover

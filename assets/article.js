@@ -71,7 +71,7 @@
     en: {
       langGroupAria: "Choose language", backToArchive: "← To the archive", cartLink: "Cart",
       prevPhotoAria: "Previous photo", nextPhotoAria: "Next photo", closeAria: "Close",
-      factCategory: "Category", factSize: "Size", factColor: "Colour", factCondition: "Condition",
+      factCategory: "Category", factSize: "Size", factColor: "Color", factCondition: "Condition",
       factArticleNo: "Item number",
       priceOnRequest: "Price on request", priceEstimatedPrefix: "approx. ", priceEstimatedBadge: "Price being confirmed",
       soldBadge: "SOLD — DISORDER119 ARCHIVE",
@@ -1063,7 +1063,10 @@
     if (emailBtn) {
       if (SHOP_CONFIG.email) {
         emailBtn.href = "mailto:" + SHOP_CONFIG.email +
-          "?subject=" + encodeURIComponent(t("orderSubjectPrefix") + IT.title) +
+          // Betreff mit deutschem Titel und Artikelnummer - so findet der Shop
+          // das Stueck unabhaengig von der Seitensprache sofort wieder.
+          "?subject=" + encodeURIComponent(t("orderSubjectPrefix") + (IT.title_de || IT.title) +
+            (IT.article ? " · " + t("orderArticleAbbrev") + IT.article : "")) +
           "&body=" + encodeURIComponent(orderText());
         emailBtn.style.display = "";
       } else {
