@@ -8591,7 +8591,7 @@
   },
   {
     "id": 9374,
-    "article": "17",
+    "article": "15-2",
     "title": "MM6 Maison Margiela Top Damen",
     "brand": "MM6 Maison Margiela",
     "price": 0,
@@ -8613,7 +8613,7 @@
     "look": "assets/img/9374/0.webp",
     "price_estimated": false,
     "brightness": 0.352,
-    "public_status": "SOLD",
+    "public_status": "DRAFT",
     "data_quality_open": [
       "size",
       "color"
