@@ -496,6 +496,14 @@ def paypal_vorschau_html(lang):
 
 
 _VERSANDKOSTENFREI_AB = []
+_SHOP_CONFIG_RAW = []
+
+
+def _shop_config_raw():
+    """config/shop-config.json wie gespeichert (Versandtarife, Laufzeiten)."""
+    if not _SHOP_CONFIG_RAW:
+        _SHOP_CONFIG_RAW.append(json.loads(SHOP_CONFIG_PATH.read_text(encoding="utf-8")))
+    return _SHOP_CONFIG_RAW[0]
 
 
 def versandkostenfrei_ab_cents():
@@ -606,11 +614,77 @@ def cta_html(it, shop_config, home, lang):
     return "".join(parts)
 
 
+# Laut AGB Abschnitt 6: 14 Tage Widerrufsrecht, die unmittelbaren Kosten der
+# Ruecksendung traegt die Kundin bzw. der Kunde. Steht an jedem Angebot und
+# am OnlineStore (site_entities_jsonld).
+MERCHANT_RETURN_POLICY = {
+    "@type": "MerchantReturnPolicy",
+    "applicableCountry": "DE",
+    "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+    "merchantReturnDays": 14,
+    "returnMethod": "https://schema.org/ReturnByMail",
+    "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility",
+}
+
+# Groessensysteme fuer JSON-LD (schema.org) und Feed (g:size_system) - die
+# Ableitung aus dem Feld size steht in scripts/i18n_text.py.
+SIZE_SYSTEM_URL = i18n_text.SIZE_SYSTEM_URL
+size_specification = i18n_text.size_specification
+
+
+def shipping_cents(it):
+    """Versandpreis fuer ein einzelnes Stueck wie im Merchant-Feed (feste DHL-
+    Tarife aus config/shop-config.json); None, wenn der Preis erst in der Kasse
+    entsteht und das Stueck unter der Versandkostenfrei-Grenze liegt."""
+    from merchant_shipping import merchant_shipping_cents
+    cents = merchant_shipping_cents(it, _shop_config_raw())
+    frei_ab = versandkostenfrei_ab_cents()
+    if cents is None and frei_ab and float(it.get("price") or 0) * 100 >= frei_ab:
+        cents = 0
+    return cents
+
+
+# Bearbeitungszeit: "Versand innerhalb von 3 Werktagen" (Kasse, AGB). Kann in
+# config/shop-config.json als versand.bearbeitungTage {min, max} stehen.
+BEARBEITUNG_TAGE_STANDARD = (0, 3)
+
+
+def shipping_days():
+    """(Bearbeitung min/max, Laufzeit min/max) in Werktagen."""
+    versand = _shop_config_raw().get("versand") or {}
+    bearbeitung = versand.get("bearbeitungTage") or {}
+    h_min = bearbeitung.get("min", BEARBEITUNG_TAGE_STANDARD[0])
+    h_max = bearbeitung.get("max", BEARBEITUNG_TAGE_STANDARD[1])
+    laufzeiten = [t.get("laufzeitTage") for t in (versand.get("tarife") or {}).get("liste", [])
+                  if t.get("art") == "standard" and isinstance(t.get("laufzeitTage"), int)]
+    t_max = min(laufzeiten) if laufzeiten else 2
+    return h_min, h_max, 1, max(t_max, 1)
+
+
+def shipping_details_jsonld(it):
+    cents = shipping_cents(it)
+    if cents is None:
+        return None
+    h_min, h_max, t_min, t_max = shipping_days()
+    return {
+        "@type": "OfferShippingDetails",
+        "shippingRate": {"@type": "MonetaryAmount", "value": f"{cents / 100:.2f}", "currency": "EUR"},
+        "shippingDestination": {"@type": "DefinedRegion", "addressCountry": "DE"},
+        "deliveryTime": {
+            "@type": "ShippingDeliveryTime",
+            "handlingTime": {"@type": "QuantitativeValue", "minValue": h_min, "maxValue": h_max, "unitCode": "DAY"},
+            "transitTime": {"@type": "QuantitativeValue", "minValue": t_min, "maxValue": t_max, "unitCode": "DAY"},
+        },
+    }
+
+
+AUDIENCE_GENDER = {"Women": "female", "Men": "male", "Unisex": "unisex"}
+
+
 def json_ld(it, lang):
     status = it.get("public_status") or "DRAFT"
     sold = status == "SOLD"
     url = SITE_URL.rstrip("/") + lang_home(lang) + "artikel/" + str(it.get("url_slug", it["id"])) + "/"
-    desc_field = {"de": it.get("desc_de") or it.get("desc"), "en": it.get("desc_en"), "fr": it.get("desc_fr")}[lang]
     data = {
         "@context": "https://schema.org",
         "@type": "Product",
@@ -618,7 +692,8 @@ def json_ld(it, lang):
         "name": loc_name(it, lang),
         "url": url,
         "image": [SITE_URL + g for g in it.get("gallery") or []],
-        "description": (desc_field or meta_description(it, lang))[:500],
+        # Eigener Text ohne Kopfzeile und Standardsatz, am Satzende gekuerzt.
+        "description": i18n_text.structured_description(it, lang),
         # Dieselbe ID wie im Merchant-Feed (g:id), damit Google Feed-Eintrag und
         # Produktseite als ein Produkt erkennt.
         "sku": merchant_id(it),
@@ -627,10 +702,22 @@ def json_ld(it, lang):
     }
     if it.get("category"):
         data["category"] = cat_tr(it["category"], lang)
-    if it.get("color"):
-        data["color"] = it["color"]
-    if it.get("size"):
-        data["size"] = size_tr(it["size"], lang)
+    # Google-Format: hoechstens drei Farben mit "/", ohne "Bunt" (wie im Feed).
+    farbe = i18n_text.merchant_color(it, lang)
+    if farbe:
+        data["color"] = farbe
+    groesse = size_specification(it, lang)
+    if groesse:
+        data["size"] = {"@type": "SizeSpecification", "name": groesse[0]}
+        if groesse[1]:
+            data["size"]["sizeSystem"] = SIZE_SYSTEM_URL[groesse[1]]
+    # Nur ein echtes Materialfeld - nie aus der Beschreibung geraten.
+    material = i18n_text.material_tr(it.get("material"), lang)
+    if material:
+        data["material"] = material
+    geschlecht = AUDIENCE_GENDER.get(str(it.get("department") or ""))
+    if geschlecht:
+        data["audience"] = {"@type": "PeopleAudience", "suggestedGender": geschlecht, "suggestedMinAge": 13}
     if not sold and it.get("price", 0) > 0:
         availability = (
             "https://schema.org/LimitedAvailability"
@@ -643,30 +730,17 @@ def json_ld(it, lang):
             "priceCurrency": "EUR",
             "price": f'{it["price"]:.2f}',
             "availability": availability,
-            "itemCondition": "https://schema.org/UsedCondition",
+            # Wie g:condition im Feed: neu nur bei "Neu mit Etikett" im Rohfeld.
+            "itemCondition": ("https://schema.org/NewCondition" if i18n_text.item_condition(it) == "new"
+                              else "https://schema.org/UsedCondition"),
             "seller": {"@id": SITE_URL + "#store"},
-            # Laut AGB Abschnitt 6: 14 Tage Widerrufsrecht, die unmittelbaren
-            # Kosten der Ruecksendung traegt die Kundin bzw. der Kunde.
-            "hasMerchantReturnPolicy": {
-                "@type": "MerchantReturnPolicy",
-                "applicableCountry": "DE",
-                "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
-                "merchantReturnDays": 14,
-                "returnMethod": "https://schema.org/ReturnByMail",
-                "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility",
-            },
+            "hasMerchantReturnPolicy": dict(MERCHANT_RETURN_POLICY),
         }
-        # shippingDetails nur, wo der Versand sicher kostenlos ist (ab der
-        # Grenze aus config/shop-config.json). Darunter haengt der Preis an
-        # Paketgroesse und Versandart und kommt live aus der Kasse; eine feste
-        # Zahl koennte bei Google anders aussehen als dort.
-        frei_ab = versandkostenfrei_ab_cents()
-        if frei_ab and it["price"] * 100 >= frei_ab:
-            data["offers"]["shippingDetails"] = {
-                "@type": "OfferShippingDetails",
-                "shippingRate": {"@type": "MonetaryAmount", "value": "0.00", "currency": "EUR"},
-                "shippingDestination": {"@type": "DefinedRegion", "addressCountry": "DE"},
-            }
+        # Versand wie im Merchant-Feed (feste DHL-Tarife, ab 99 EUR kostenlos),
+        # damit Seite und Feed denselben Preis nennen.
+        versand = shipping_details_jsonld(it)
+        if versand:
+            data["offers"]["shippingDetails"] = versand
     return json.dumps(data, ensure_ascii=False)
 
 
@@ -898,7 +972,7 @@ def build_page(it, shop_config, lang):
     <div id="priceBlock">{price_block_html(it, lang)}</div>
     <div class="info__facts">{facts_html(it, lang)}</div>
     <p class="info__desc" id="itemDesc">{esc(body_desc)}</p>
-    <p class="info__gebraucht" data-zustand-hinweis>{esc(GEBRAUCHT_HINWEIS[lang])}</p>
+    <p class="info__gebraucht" data-zustand-hinweis>{esc(zustand_hinweis(it, lang))}</p>
     {cta_html(it, shop_config, home, lang)}
   </div>
 </div>
@@ -1243,6 +1317,20 @@ GEBRAUCHT_HINWEIS = {
     "en": "Pre-owned one-off piece (vintage / second hand) in good condition with normal, age-appropriate signs of wear. Any particular features are noted in the description and shown in the photos.",
     "fr": "Pièce unique d’occasion (vintage / seconde main) en bon état, avec des traces d’usure normales liées à l’âge. Les particularités sont indiquées dans la description et visibles sur les photos.",
 }
+
+
+# Einzige Ausnahme: steht im Rohfeld `condition` eindeutig "Neu mit Etikett",
+# sagen Hinweis, JSON-LD (NewCondition) und Merchant-Feed (new) dasselbe
+# (i18n_text.item_condition).
+NEU_HINWEIS = {
+    "de": "Ungetragenes Einzelstück mit Originaletikett. Besonderheiten stehen in der Beschreibung und sind auf den Fotos zu sehen.",
+    "en": "Unworn one-off piece with original tags. Any particular features are noted in the description and shown in the photos.",
+    "fr": "Pièce unique jamais portée, avec étiquette d’origine. Les particularités sont indiquées dans la description et visibles sur les photos.",
+}
+
+
+def zustand_hinweis(it, lang):
+    return NEU_HINWEIS[lang] if i18n_text.item_condition(it) == "new" else GEBRAUCHT_HINWEIS[lang]
 
 
 def product_data_gap_html(it, lang):
@@ -2190,12 +2278,10 @@ def merchant_description(it):
 
 
 def build_merchant_feed():
-    from merchant_shipping import merchant_shipping_cents
     def tag(name, value):
         return f"<{name}>{esc(str(value))}</{name}>"
 
-    frei_cents = versandkostenfrei_ab_cents()
-    shipping_config = json.loads(SHOP_CONFIG_PATH.read_text(encoding='utf-8'))
+    h_min, h_max, t_min, t_max = shipping_days()
     entries = []
     for it in ITEMS:
         if it.get("public_status") != "AVAILABLE" or float(it.get("price") or 0) <= 0:
@@ -2205,7 +2291,6 @@ def build_merchant_feed():
         if not gallery or not category:
             continue
         link = SITE_URL.rstrip("/") + "/artikel/" + str(it.get("url_slug", it["id"])) + "/"
-        neu = bool(re.search(r"neu mit (original)?etikett", str(it.get("desc_de") or it.get("desc") or ""), re.I))
         dep = str(it.get("department") or "")
         felder = [
             tag("g:id", merchant_id(it)),
@@ -2216,27 +2301,37 @@ def build_merchant_feed():
         ] + [tag("g:additional_image_link", SITE_URL + g) for g in gallery[1:11]] + [
             tag("g:availability", "in_stock"),
             tag("g:price", f'{float(it["price"]):.2f} EUR'),
-            tag("g:condition", "new" if neu else "used"),
+            # Wie itemCondition im JSON-LD der Produktseite (i18n_text.item_condition).
+            tag("g:condition", i18n_text.item_condition(it)),
             tag("g:brand", it.get("brand") or "Disorder119"),
             tag("g:identifier_exists", "no"),
             tag("g:google_product_category", category),
             tag("g:product_type", " > ".join(p for p in (
-                LANDING_DEP_LABEL.get(dep, {}).get("de", "") if "LANDING_DEP_LABEL" in globals() else {"Women": "Damen", "Men": "Herren"}.get(dep, ""),
+                {"Women": "Damen", "Men": "Herren"}.get(dep, ""),
                 cat_tr(it.get("taxonomy_category") or it.get("category") or "", "de"),
                 str(it.get("product_type") or "")) if p)),
             tag("g:gender", {"Women": "female", "Men": "male"}.get(dep, "unisex")),
             tag("g:age_group", "adult"),
         ]
-        if it.get("size"):
-            felder.append(tag("g:size", str(it["size"]).split("/")[0].strip()[:100]))
-        if it.get("color"):
-            felder.append(tag("g:color", str(it["color"])[:100]))
-        shipping_cents = merchant_shipping_cents(it, shipping_config)
-        if shipping_cents is None and frei_cents and float(it['price']) * 100 >= frei_cents:
-            shipping_cents = 0
-        if shipping_cents is not None:
+        groesse = size_specification(it, "de")
+        if groesse:
+            felder.append(tag("g:size", groesse[0][:100]))
+            if groesse[1]:
+                felder.append(tag("g:size_system", groesse[1]))
+        # Hoechstens drei Farben mit "/", ohne "Bunt" (Google kennt kein multicolor).
+        farbe = i18n_text.merchant_color(it, "de")
+        if farbe:
+            felder.append(tag("g:color", farbe[:100]))
+        material = i18n_text.material_tr(it.get("material"), "de")
+        if material:
+            felder.append(tag("g:material", material[:200]))
+        versand_cents = shipping_cents(it)
+        if versand_cents is not None:
             felder.append('<g:shipping><g:country>DE</g:country><g:service>DHL Standard</g:service>'
-                          + tag('g:price', f'{shipping_cents / 100:.2f} EUR') + '</g:shipping>')
+                          + tag('g:price', f'{versand_cents / 100:.2f} EUR')
+                          + tag('g:min_handling_time', h_min) + tag('g:max_handling_time', h_max)
+                          + tag('g:min_transit_time', t_min) + tag('g:max_transit_time', t_max)
+                          + '</g:shipping>')
         entries.append("<item>" + "".join(felder) + "</item>")
     MERCHANT_FEED_PATH.parent.mkdir(parents=True, exist_ok=True)
     xml = (
