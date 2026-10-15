@@ -38,6 +38,7 @@ import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
 import { handleIncomingEmail, handlePostfach, isPostfachRoute } from "./postfach.js";
 import { besucherAufraeumen, entsperrtMelden, handleBesucher, istBesucherRoute } from "./besucher.js";
 import { istSandbox, testshopFetch } from "./sandbox.js";
+import { httpsErzwingen, mitHsts } from "./https-pflicht.js";
 import { kontingentAufraeumen } from "./kontingent.js";
 import { halteAufraeumen } from "./offene-halte.js";
 import { applePayDomainSicherstellen } from "./paypal-einrichtung.js";
@@ -241,12 +242,20 @@ const TESTSHOP_INNEN = new WeakSet();
 
 const worker = {
   async fetch(request, env, ctx) {
+    const aussen = !TESTSHOP_INNEN.has(request);
+    // Unverschluesselt (http://, Cloudflare leitet nicht selbst um): vor
+    // Anmeldung und Routing auf HTTPS umleiten bzw. ablehnen (https-pflicht.js).
+    if (aussen) {
+      const nurHttps = httpsErzwingen(request);
+      if (nurHttps) return nurHttps;
+    }
     // Testshop (api-test.disorder119.com): Herkunft rein und raus uebersetzen.
-    if (istSandbox(env) && !TESTSHOP_INNEN.has(request)) {
-      return testshopFetch(request, env, anfrage => {
+    // HSTS auch fuer Antworten, die nicht ueber finish laufen (/sandbox/verkauft).
+    if (istSandbox(env) && aussen) {
+      return mitHsts(await testshopFetch(request, env, anfrage => {
         TESTSHOP_INNEN.add(anfrage);
         return worker.fetch(anfrage, env, ctx);
-      });
+      }), request);
     }
     const url = new URL(request.url);
     const origin = request.headers.get("Origin");

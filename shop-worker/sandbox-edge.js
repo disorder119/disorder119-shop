@@ -11,6 +11,7 @@
 // Gespeichert wird hier nichts. Die echte Seite bleibt unveraendert.
 
 import { secureHtml } from './storefront-csp.js';
+import { httpsErzwingen, mitHsts } from './https-pflicht.js';
 const LIVE = "https://disorder119.com";
 const API_LIVE = "https://api.disorder119.com";
 const API_TEST = "https://api-test.disorder119.com";
@@ -75,7 +76,7 @@ async function verkauftImTestshop(env) {
   }
 }
 
-export default {
+const testshop = {
   async fetch(request, env = {}, ctx = {}, originFetch = fetch) {
     const url = new URL(request.url);
     if (!["GET", "HEAD"].includes(request.method)) return textAntwort("Methode nicht erlaubt.", 405);
@@ -129,5 +130,16 @@ export default {
       return result;
     }
     return new Response(request.method === "HEAD" ? null : antwort.body, { status: antwort.status, statusText: antwort.statusText, headers: kopf });
+  },
+};
+
+export default {
+  async fetch(request, env = {}, ctx = {}, originFetch = fetch) {
+    // Unverschluesselt (http://): umleiten bzw. ablehnen - noch vor der
+    // Passwortabfrage, sonst ginge das Passwort offen ueber die Leitung
+    // (https-pflicht.js). Alle HTTPS-Antworten bekommen HSTS.
+    const nurHttps = httpsErzwingen(request);
+    if (nurHttps) return nurHttps;
+    return mitHsts(await testshop.fetch(request, env, ctx, originFetch), request);
   },
 };
