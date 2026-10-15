@@ -232,6 +232,12 @@ Reihenfolge beim Ausrollen: Migration `0034_besucher_server.sql`, dann dieser Wo
 
 Ausrollen: Migrationen auf beide Datenbanken (`--env sandbox` für die Test-D1), dann `deploy`, `deploy --env sandbox` und `deploy -c wrangler.sandbox-edge.toml`.
 
+## Nur HTTPS
+
+"Always Use HTTPS" ist in der Cloudflare-Zone aus, die Worker erzwingen es selbst (`https-pflicht.js`, Muster wie `storefront-edge.js`): `worker-entry.js` (api.* und api-test.*) und `sandbox-edge.js` (test.*, vor der Passwortabfrage) leiten `http://` bei GET/HEAD mit 301 auf dieselbe Adresse mit `https://` um und lehnen alle anderen Methoden mit 403 `{"error":"HTTPS_REQUIRED"}` ab (eine Umleitung verloere den Body). Erkannt wird `http:` in der Adresse oder `CF-Visitor: {"scheme":"http"}`. Jede HTTPS-Antwort traegt `Strict-Transport-Security: max-age=31536000; includeSubDomains`, falls nicht schon gesetzt. Lokal bleibt http erlaubt: `localhost`, `127.0.0.1`, `[::1]`, `*.localhost` und `wrangler dev` (biegt auf die Route um, der echte Host steht in `MF-Original-Hostname`).
+
+Pruefen nach dem Deploy: `curl -sI http://api.disorder119.com/health` (301, `Location: https://...`), `curl -s -X POST http://api.disorder119.com/health` (403 `HTTPS_REQUIRED`), `curl -sI https://api.disorder119.com/health` (HSTS), dasselbe fuer api-test.* und test.* (dort 301 statt 401).
+
 ## Hintergrundjobs (Cron) und Selbstheilung
 
 `wrangler.toml` startet den Worker alle 15 Minuten (`[triggers] crons`). `scheduled()` in `worker-entry.js` gleicht offene PayPal-Zahlungen ab und gibt abgelaufene Reservierungen frei, holt direkt in PayPal ausgeloeste Erstattungen nach, pflegt die Betriebswarnungen, raeumt die Besucherstatistik auf und registriert einmalig die Apple-Pay-Domain bei PayPal (`paypal-einrichtung.js`, `POST /v1/customer/wallet-domains`; nach einem Fehler hoechstens ein Versuch pro Tag, Ergebnis im Audit unter `paypal/apple-pay-domain`). Fehlt am PayPal-Webhook das Ereignis `PAYMENT.CAPTURE.REFUNDED`, ergaenzt der Erstattungsabgleich es selbst (Audit `paypal_webhook/refunds`); der Knopf in der Admin-App bleibt als Ersatzweg. Dieselben Jobs laufen weiterhin auch beim Oeffnen der Admin-App.
