@@ -503,7 +503,7 @@ async function reserveForPurchase(env, item, key, reqId) {
       .bind(now.toISOString(), inv.id, reservationId),
   ]);
   if (!statements[0]?.meta?.changes) throw new PublicError("ITEM_UNAVAILABLE", 409);
-  await audit(env, "reservation", reservationId, "PURCHASE_RESERVED", reqId, { itemId: item.id, expiresAt: expires });
+  await auditNachCommit(env, "reservation", reservationId, "PURCHASE_RESERVED", reqId, { itemId: item.id, expiresAt: expires });
   return { reservationId, inventoryId: inv.id, expiresAt: expires };
 }
 
