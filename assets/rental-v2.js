@@ -87,6 +87,7 @@
       intro: "Hallo! Ich möchte folgende Artikel aus dem Disorder119-Archiv gemeinsam mieten:",
       totalLabel: "Gesamt",
       termsVersion: "Mietbedingungen",
+      serverHoldsFull: "Deine Anfrage wurde nicht im Shop gespeichert: Über deinen Internetanschluss sind gerade mehrere Mietanfragen offen. Deine E-Mail bzw. Nachricht kannst du trotzdem abschicken – damit die Stücke für dich vorgemerkt werden, sende die Anfrage in ein paar Minuten erneut.",
       requestSent: "Anfrage vorbereitet. Die Artikel bleiben bis zur Bestätigung unverbindlich.",
       serverSaved: "Mietanfrage als gemeinsamer Vorgang gespeichert.",
       serverSaveFailed: "Die Server-Speicherung ist fehlgeschlagen; deine Kontaktanfrage kann trotzdem gesendet werden.",
@@ -159,6 +160,7 @@
       intro: "Hello! I would like to rent the following Disorder119 archive pieces together:",
       totalLabel: "Total",
       termsVersion: "Rental terms",
+      serverHoldsFull: "Your request was not saved in the shop: several rental requests are currently open on your internet connection. You can still send your email or message – to have the pieces held for you, send the request again in a few minutes.",
       requestSent: "Request prepared. The items remain non-binding until confirmed.",
       serverSaved: "Rental request saved as one combined booking.",
       serverSaveFailed: "Server saving failed; your contact request can still be sent.",
@@ -231,6 +233,7 @@
       intro: "Bonjour ! Je souhaite louer ensemble les pièces suivantes de l’archive Disorder119 :",
       totalLabel: "Total",
       termsVersion: "Conditions de location",
+      serverHoldsFull: "Ta demande n’a pas été enregistrée dans la boutique : plusieurs demandes de location sont déjà ouvertes depuis ta connexion internet. Tu peux quand même envoyer ton e-mail ou ton message – pour que les pièces te soient réservées, renvoie la demande dans quelques minutes.",
       requestSent: "Demande préparée. Les articles restent sans engagement jusqu’à confirmation.",
       serverSaved: "Demande enregistrée comme une location groupée.",
       serverSaveFailed: "L’enregistrement serveur a échoué ; votre demande de contact peut tout de même être envoyée.",
@@ -468,6 +471,17 @@
     document.body.appendChild(el);
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { if (el.parentNode) el.remove(); }, 1800);
+  }
+
+  // Wie showToast, aber laenger sichtbar - fuer Hinweise, die man lesen muss.
+  function showToastLang(message) { // RENTAL_HOLDS_FULL_TOAST
+    showToast(message);
+    var el = document.getElementById("d119RentalToast");
+    // Breiter als der kurze Hinweis (der waere bei left:50% hoechstens halb so
+    // breit wie das Fenster) und gut lesbar.
+    if (el) { el.style.boxSizing = "border-box"; el.style.width = "min(420px, calc(100vw - 32px))"; el.style.lineHeight = "1.45"; }
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { if (el && el.parentNode) el.remove(); }, 9000);
   }
 
   function refreshCardButtons() {
@@ -932,8 +946,10 @@
     }).then(function (data) {
       saveBundleReceipt(data, payload);
       showToast(t("serverSaved"));
-    }).catch(function () {
-      showToast(t("serverSaveFailed"));
+    }).catch(function (e) {
+      // 429: nichts gespeichert, die Nachricht geht aber ueber Mailprogramm bzw. WhatsApp.
+      if (e && e.message === "TOO_MANY_OPEN_HOLDS") showToastLang(t("serverHoldsFull")); // RENTAL_HOLDS_FULL_TEXT
+      else showToast(t("serverSaveFailed"));
     });
   }
 

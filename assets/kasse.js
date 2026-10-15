@@ -54,7 +54,8 @@
       wirdGeprueft: "PayPal prüft deine Zahlung noch. Sobald sie bestätigt ist, bekommst du eine Mail – bitte nicht noch einmal bezahlen.",
       botCheck: "Die Sicherheitsprüfung hat nicht geklappt. Lade die Seite bitte neu und versuch es noch einmal.",
       zuSchnell: "Zu viele Versuche in kurzer Zeit. Warte bitte eine Minute.",
-      zuVieleOffen: "Du hast schon zwei offene Reservierungen (Bestellungen oder Mietanfragen), die noch nicht abgeschlossen sind. Schließ eine davon ab oder warte 15 Minuten – dann sind sie abgelaufen.",
+      zuVieleOffen: "Über deinen Internetanschluss sind gerade mehrere Kassen offen. Bitte versuch es in ein paar Minuten erneut.",
+      zuVieleOffenMail: "Für diese E-Mail-Adresse sind schon zwei Bestellungen offen, die noch nicht bezahlt sind. Schließ eine davon ab oder versuch es in ein paar Minuten erneut – unbezahlte Reservierungen laufen nach 15 Minuten ab.",
       nurDe: "Wir liefern bisher nur innerhalb Deutschlands.",
       fehler: "Da ist leider etwas schiefgelaufen. Bitte versuch es gleich noch einmal oder schreib uns.",
       abschliessen: "Zahlung wird abgeschlossen …", abgebrochen: "Bezahlung abgebrochen – es wurde nichts abgebucht.",
@@ -116,7 +117,8 @@
       wirdGeprueft: "PayPal is still reviewing your payment. You will get an email as soon as it is confirmed – please do not pay again.",
       botCheck: "The security check failed. Please reload the page and try again.",
       zuSchnell: "Too many attempts in a short time. Please wait a minute.",
-      zuVieleOffen: "You already have two open reservations (orders or rental requests) that have not been completed yet. Complete one of them or wait 15 minutes until they expire.",
+      zuVieleOffen: "Several checkouts are currently open on your internet connection. Please try again in a few minutes.",
+      zuVieleOffenMail: "There are already two unpaid orders open for this email address. Complete one of them or try again in a few minutes – unpaid reservations expire after 15 minutes.",
       nurDe: "For now we only deliver within Germany.",
       fehler: "Something went wrong. Please try again in a moment or write to us.",
       abschliessen: "Completing payment …", abgebrochen: "Payment cancelled – nothing was charged.",
@@ -178,7 +180,8 @@
       wirdGeprueft: "PayPal vérifie encore ton paiement. Tu recevras un e-mail dès qu'il sera confirmé – merci de ne pas payer une seconde fois.",
       botCheck: "La vérification de sécurité a échoué. Recharge la page et réessaie.",
       zuSchnell: "Trop de tentatives en peu de temps. Attends une minute.",
-      zuVieleOffen: "Tu as déjà deux réservations ouvertes (commandes ou demandes de location) qui ne sont pas encore finalisées. Finalise l'une d'elles ou attends 15 minutes qu'elles expirent.",
+      zuVieleOffen: "Plusieurs paiements sont en cours en ce moment depuis ta connexion internet. Réessaie dans quelques minutes.",
+      zuVieleOffenMail: "Deux commandes non payées sont déjà ouvertes pour cette adresse e-mail. Finalise l'une d'elles ou réessaie dans quelques minutes – les réservations non payées expirent au bout de 15 minutes.",
       nurDe: "Pour l'instant, nous ne livrons qu'en Allemagne.",
       fehler: "Une erreur s'est produite. Réessaie dans un instant ou écris-nous.",
       abschliessen: "Finalisation du paiement …", abgebrochen: "Paiement annulé – rien n'a été débité.",
@@ -1109,7 +1112,9 @@
     if (code === "EMAIL_REQUIRED") return t("fehltEmail");
     if (/^TURNSTILE_|^schutz_/.test(code)) return t("botCheck");
     if (code === "RATE_LIMITED") return t("zuSchnell");
-    if (code === "TOO_MANY_OPEN_ORDERS") return t("zuVieleOffen");
+    // Grenze je E-Mail-Adresse (eigene offene Bestellungen) oder je
+    // Internetanschluss (auch Fremde im selben Netz) - der Server sagt welche.
+    if (code === "TOO_MANY_OPEN_ORDERS") return t(e && e.daten && e.daten.reason === "EMAIL" ? "zuVieleOffenMail" : "zuVieleOffen");
     if (code === "COUPON_INVALID_OR_USED") return t("gutscheinWeg");
     if (code === "COUPON_RESERVED") return t("gutscheinReserviert");
     if (code === "ITEM_UNAVAILABLE" || code === "ITEM_NOT_FOUND" || code === "PRICE_ON_REQUEST") return t("schonWeg");

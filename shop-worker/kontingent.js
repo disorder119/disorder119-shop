@@ -1,6 +1,6 @@
 // Kontingente gegen Missbrauch: Gutscheine aus dem Spiel, Mails im Testshop,
-// Eingangsbestaetigungen der Widerrufsfunktion, offene Halte (Kasse und Miete)
-// je Anschluss (offene-halte.js).
+// Eingangsbestaetigungen der Widerrufsfunktion, offene Halte (Kasse und Miete
+// getrennt) je Anschluss (offene-halte.js, eigene Zaehlung und Aufraeumen).
 //
 // Gezaehlt wird in audit_events - ohne eigene Tabelle, also ohne Migration.
 // Eine belegte Einheit ist eine Zeile mit
@@ -110,7 +110,11 @@ export async function kontingentBelegen(db, {
 // loescht nur Zeilen derselben Art - ruht eine Art (Widerrufe sind selten),
 // blieben IP-Hashes sonst liegen. Was nur einen Tag zaehlt, ist nach einem
 // Tag weg, alles andere nach dem laengsten Fenster (Spiel-Codes, 30 Tage).
-const TAGES_ARTEN = Object.freeze(["widerruf-mail", "testshop-mail", "halt-offen"]);
+// Offene Halte (30 Minuten) raeumt halteAufraeumen in offene-halte.js.
+// LAENGSTES_FENSTER_MS muss jedes Fenster abdecken - kontingent.test.mjs
+// prueft das gegen SPIEL_CODE_FENSTER_TAGE (game-rewards.js); ein Import
+// dorthin waere ein Kreis (game-rewards.js importiert diese Datei).
+const TAGES_ARTEN = Object.freeze(["widerruf-mail", "testshop-mail"]);
 export const LAENGSTES_FENSTER_MS = 30 * TAG_MS;
 
 export async function kontingentAufraeumen(db, jetzt = new Date()) {
@@ -119,7 +123,8 @@ export async function kontingentAufraeumen(db, jetzt = new Date()) {
   const lang = new Date(jetzt.getTime() - LAENGSTES_FENSTER_MS).toISOString();
   const kurz = await db.prepare(`DELETE FROM audit_events WHERE entity_type IN (${TAGES_ARTEN.map(() => "?").join(",")}) AND created_at<?`)
     .bind(...TAGES_ARTEN.map(typ), tag).run();
-  const alt = await db.prepare("DELETE FROM audit_events WHERE entity_type LIKE 'kontingent:%' AND event_type='KONTINGENT_BELEGT' AND created_at<?")
+  // Bereich statt LIKE: so traegt idx_audit_entity die Suche (';' folgt auf ':').
+  const alt = await db.prepare("DELETE FROM audit_events WHERE entity_type>='kontingent:' AND entity_type<'kontingent;' AND event_type='KONTINGENT_BELEGT' AND created_at<?")
     .bind(lang).run();
   return { geloescht: Number(kurz?.meta?.changes || 0) + Number(alt?.meta?.changes || 0) };
 }

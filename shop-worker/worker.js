@@ -20,7 +20,7 @@ import { captureStatements, recordVerifiedRefund } from './tax-evidence.js';
 import { normalizeEmail } from './customer-mail.js';
 import { autorisierungAus, autorisierungVerwerfen, reservierungFelder } from "./zahlung.js";
 import { anschlussVonIp } from "./privacy-security.js";
-import { OFFENE_HALTE_MAX, haltBelegen, haltFreigeben, haltMailHash, haltNetzHash, haltZuordnen } from "./offene-halte.js";
+import { KASSE_JE_ANSCHLUSS, KASSE_JE_MAIL, haltBelegen, haltFreigeben, haltMailHash, haltNetzHash, haltZuordnen } from "./offene-halte.js";
 
 const CONFIG = Object.freeze({
   githubOwner: "disorder119",
@@ -78,7 +78,7 @@ function securityHeaders() {
   };
 }
 
-function json(data, status = 200, origin = null) {
+function json(data, status = 200, origin = null, extraHeaders = null) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
@@ -86,6 +86,7 @@ function json(data, status = 200, origin = null) {
       "Vary": "Origin",
       ...securityHeaders(),
       ...corsHeaders(origin),
+      ...(extraHeaders || {}),
     },
   });
 }
@@ -229,11 +230,13 @@ async function findItemForQuote(env, itemId, now = Date.now()) {
 }
 
 // Hoechstens so viele offene, unbezahlte Bestellungen je E-Mail-Adresse und je
-// Anschluss - zusammen mit Mietanfragen und Mietpaketen, sonst liesse sich der
-// ganze Shop mit Reservierungen sperren (offene-halte.js). Der Platz wird vor
-// dem Reservieren in einem Schritt belegt, parallele Anfragen eingeschlossen.
+// Anschluss (mehrere Leute im selben Netz), sonst liesse sich der ganze Shop
+// mit Reservierungen sperren (offene-halte.js). Mietanfragen und Mietpakete
+// zaehlen getrennt und blockieren die Kasse nicht. Der Platz wird vor dem
+// Reservieren in einem Schritt belegt, parallele Anfragen eingeschlossen.
 // Abgelaufene Reservierungen zaehlen nicht.
-export const OFFENE_BESTELLUNGEN_MAX = OFFENE_HALTE_MAX;
+export const OFFENE_BESTELLUNGEN_JE_MAIL = KASSE_JE_MAIL;
+export const OFFENE_BESTELLUNGEN_JE_ANSCHLUSS = KASSE_JE_ANSCHLUSS;
 
 // Kasse: bis zu zehn Einzelstuecke in einer Bestellung, jede Nummer hoechstens
 // einmal. Die Produktseite schickt weiter nur itemId.
@@ -412,6 +415,45 @@ async function finishIdempotency(env, scope, key, status, data, resourceId = nul
     WHERE scope=? AND idempotency_key=?`).bind(status, JSON.stringify(data), resourceId, scope, key).run();
 }
 
+// Gibt den Claim eines Schluessels frei, solange er noch keine Antwort hat -
+// nach einer Absage (z. B. 429) darf derselbe Schluessel es spaeter erneut
+// versuchen, statt bis zum Ablauf IDEMPOTENT_REQUEST_IN_PROGRESS zu bekommen
+// (wie rental-bundle.js).
+async function idempotenzFreigeben(env, scope, key, ownerRequestId) {
+  if (!env.DB || !key) return;
+  try {
+    await env.DB.prepare(`DELETE FROM idempotency_keys
+      WHERE scope=? AND idempotency_key=? AND resource_id=? AND response_json IS NULL`)
+      .bind(scope, key, ownerRequestId).run();
+  } catch {
+    // Dann bleibt der Claim bis zu seinem Ablauf.
+  }
+}
+
+// Platz fuer einen offenen Halt belegen (offene-halte.js), bevor etwas
+// reserviert wird. Ist die Grenze erreicht: 429 mit Retry-After (bis der
+// erste offene Halt frei wird) und reason "EMAIL" (diese Adresse hat schon
+// offene Bestellungen) oder "NETWORK" (der Anschluss); der Idempotenz-Claim
+// wird frei. Ohne IP-Schutz im Livebetrieb: 503 IP_PRIVACY_NOT_CONFIGURED.
+async function haltOderAbsage(env, request, { art, code, scope, key, reqId, email = null }) {
+  const db = requireDb(env);
+  let halt;
+  try {
+    const netz = await haltNetzHash(request, env);
+    const mail = email ? await haltMailHash(env, email) : null;
+    halt = await haltBelegen(db, { art, netz, mail, reqId });
+  } catch (err) {
+    await idempotenzFreigeben(env, scope, key, reqId);
+    throw err;
+  }
+  if (halt.ok) return halt;
+  await idempotenzFreigeben(env, scope, key, reqId);
+  const absage = new PublicError(code, 429);
+  absage.retryAfter = halt.warteSekunden;
+  absage.felder = { reason: halt.grund === "MAIL" ? "EMAIL" : "NETWORK", retryAfter: halt.warteSekunden };
+  throw absage;
+}
+
 async function audit(env, entityType, entityId, eventType, reqId, metadata = null, actorType = "SYSTEM") {
   if (!env.DB) return;
   const clean = metadata ? JSON.stringify(metadata) : null;
@@ -420,6 +462,19 @@ async function audit(env, entityType, entityId, eventType, reqId, metadata = nul
     VALUES (?,?,?,?,?,?,?,?)`).bind(
       crypto.randomUUID(), actorType, entityType, String(entityId), eventType, reqId, clean, new Date().toISOString()
     ).run();
+}
+
+// Protokoll nach einem schon gespeicherten Vorgang: Ein Fehler hier darf den
+// Vorgang nicht scheitern lassen - sonst gaebe der Aufrufer Stuecke und Platz
+// frei, die laengst einer Bestellung oder Mietanfrage gehoeren. Geloggt wird
+// nur, was fehlte - keine Kundendaten.
+async function auditNachCommit(env, entityType, entityId, eventType, reqId, metadata = null) {
+  try {
+    await audit(env, entityType, entityId, eventType, reqId, metadata);
+  } catch (err) {
+    console.error(JSON.stringify({ level: "error", event: "audit_after_commit_failed", requestId: reqId,
+      entityType, eventType, message: safeText(err?.message || "unknown", 120) }));
+  }
 }
 
 async function reserveForPurchase(env, item, key, reqId) {
@@ -527,7 +582,7 @@ async function createRentalReservation(env, item, quote, body, key, reqId) {
     if (String(err?.message || err).toLowerCase().includes("unique")) throw new PublicError("RENTAL_DATES_UNAVAILABLE", 409);
     throw err;
   }
-  await audit(env, "rental_reservation", rentalId, "RENTAL_RESERVED", reqId, {
+  await auditNachCommit(env, "rental_reservation", rentalId, "RENTAL_RESERVED", reqId, {
     itemId: item.id, start: body.start, end: body.end, days: quote.days,
     dailyPriceCents: quote.dailyPriceCents, totalPriceCents: quote.totalPriceCents, priceOnRequest: quote.priceOnRequest,
   });
@@ -779,12 +834,44 @@ export async function markCatalogSold(env, itemId) {
   throw new Error("catalog_mark_sold_conflict");
 }
 
+// Markiert einen Fehler, nach dem sicher keine Bestellung angelegt ist - nur
+// dann gibt /create-order Stuecke und Platz wieder frei.
+function alsNichtAngelegt(err) {
+  const fehler = err instanceof Error ? err : new Error(String(err));
+  fehler.bestellungNichtAngelegt = true;
+  return fehler;
+}
+
 async function createOrderRecords(env, items, centsList, versand, reservations, providerOrder, key, reqId, adresse = null, kontakt = null) {
   const db = requireDb(env);
   const orderId = crypto.randomUUID();
   const paymentId = crypto.randomUUID();
   const now = new Date().toISOString();
   const orderNumber = publicOrderNumber(orderId, new Date());
+  try {
+    await db.batch(bestellungStatements(db, { orderId, orderNumber, paymentId, now, items, centsList, versand, reservations, providerOrder, key, adresse, kontakt }));
+  } catch (err) {
+    // D1 fuehrt den Batch als eine Transaktion aus. Steht die Bestellung
+    // trotzdem (nur die Antwort ging verloren), geht es normal weiter. Fehlt
+    // sie sicher, darf der Aufrufer freigeben; laesst sich das nicht pruefen,
+    // bleibt alles bis zum Ablauf reserviert - lieber das als ein Doppelverkauf.
+    let angelegt;
+    try {
+      angelegt = await db.prepare("SELECT 1 AS ja FROM commerce_orders WHERE id=?").bind(orderId).first();
+    } catch {
+      throw err;
+    }
+    if (!angelegt) throw alsNichtAngelegt(err);
+    console.error(JSON.stringify({ level: "error", event: "order_records_committed_despite_error", requestId: reqId,
+      message: safeText(err?.message || "unknown", 120) }));
+  }
+  await auditNachCommit(env, "order", orderId, "PAYMENT_STARTED", reqId, {
+    orderNumber, itemId: items[0].id, itemIds: items.map(item => item.id), provider: "PAYPAL", versand: versand.id,
+  });
+  return { orderId, orderNumber, paymentId };
+}
+
+function bestellungStatements(db, { orderId, orderNumber, paymentId, now, items, centsList, versand, reservations, providerOrder, key, adresse, kontakt }) {
   const cents = centsList.reduce((summe, c) => summe + c, 0);
   const shippingCents = versand.preisCents;
   const totalCents = cents + shippingCents;
@@ -811,11 +898,7 @@ async function createOrderRecords(env, items, centsList, versand, reservations, 
       VALUES (?,'CHECKOUT',?,?,?,?,?,?,?,'DE',?,?)`).bind(orderId, kontakt.email, kontakt.createAccount ? 1 : 0,
       adresse.name, `${adresse.strasse} ${adresse.hausnummer}`, adresse.zusatz || null, adresse.plz, adresse.ort, now, now));
   }
-  await db.batch(statements);
-  await audit(env, "order", orderId, "PAYMENT_STARTED", reqId, {
-    orderNumber, itemId: items[0].id, itemIds: items.map(item => item.id), provider: "PAYPAL", versand: versand.id,
-  });
-  return { orderId, orderNumber, paymentId };
+  return statements;
 }
 
 // Bestellung, Reservierungen und Lagerstuecke nach einer gesicherten Zahlung:
@@ -1099,10 +1182,10 @@ export default {
           if (err.message === "INVALID_RENTAL_DATES" || err.message === "RENTAL_DATE_IN_PAST") throw new PublicError("INVALID_RENTAL_DATES", 400); // RUNTIME_AUDIT_SERVER_DATE_MAP
           throw err;
         }
-        // Dieselbe Grenze offener Halte wie in der Kasse (offene-halte.js).
+        // Eigene Grenze offener Mietanfragen je Anschluss, gemeinsam mit
+        // Mietpaketen - zaehlt nicht gegen die Kasse (offene-halte.js).
         const db = requireDb(env);
-        const halt = await haltBelegen(db, { netz: await haltNetzHash(request, env), reqId });
-        if (!halt.ok) throw new PublicError("TOO_MANY_OPEN_HOLDS", 429);
+        const halt = await haltOderAbsage(env, request, { art: "miete", code: "TOO_MANY_OPEN_HOLDS", scope: "rental-request", key, reqId });
         let rental;
         try {
           rental = await createRentalReservation(env, item, quote, body, key, reqId);
@@ -1150,11 +1233,10 @@ export default {
         if (zustellung.art !== "haustuer" && !gewaehlt.abholstation) throw new PublicError("ABHOLSTATION_NUR_DHL", 422);
         const versand = { ...gewaehlt, zustellung };
         const shippingCents = versand.preisCents;
-        // Grenze offener Halte: Platz belegen, bevor etwas reserviert wird -
-        // in einem Schritt, auch bei parallelen Anfragen (offene-halte.js).
+        // Grenze offener Bestellungen: Platz belegen, bevor etwas reserviert
+        // wird - in einem Schritt, auch bei parallelen Anfragen (offene-halte.js).
         const db = requireDb(env);
-        const halt = await haltBelegen(db, { netz: await haltNetzHash(request, env), mail: await haltMailHash(env, kontakt.email), reqId });
-        if (!halt.ok) throw new PublicError("TOO_MANY_OPEN_ORDERS", 429);
+        const halt = await haltOderAbsage(env, request, { art: "kasse", code: "TOO_MANY_OPEN_ORDERS", scope: "create-order", key, reqId, email: kontakt.email });
         let reservations;
         try {
           reservations = await reserveAll(env, items, key, reqId);
@@ -1170,7 +1252,18 @@ export default {
           await haltFreigeben(db, halt.id);
           throw err;
         }
-        const local = await createOrderRecords(env, items, centsList, versand, reservations, providerOrder, key, reqId, adresse, kontakt);
+        let local;
+        try {
+          local = await createOrderRecords(env, items, centsList, versand, reservations, providerOrder, key, reqId, adresse, kontakt);
+        } catch (err) {
+          // Nur wenn sicher keine Bestellung angelegt ist, Stuecke und Platz
+          // zurueck - sonst gehoeren sie womoeglich schon einer Bestellung.
+          if (err?.bestellungNichtAngelegt) {
+            await releaseAll(env, reservations, "order_records_failed", reqId);
+            await haltFreigeben(db, halt.id);
+          }
+          throw err;
+        }
         await haltZuordnen(db, halt.id, local.orderId);
         const expiresAt = reservations.map(r => r.expiresAt).sort()[0];
         const response = { id: providerOrder.id, orderId: local.orderId, orderNumber: local.orderNumber, expiresAt,
@@ -1281,8 +1374,12 @@ export default {
 
       throw new PublicError("NOT_FOUND", 404);
     } catch (err) {
-      if (err instanceof PublicError) return json({ error: err.code, requestId: reqId }, err.status, origin);
+      if (err instanceof PublicError) {
+        return json({ error: err.code, ...(err.felder || {}), requestId: reqId }, err.status, origin,
+          err.retryAfter ? { "Retry-After": String(err.retryAfter) } : null);
+      }
       if (err instanceof VersandError) return json({ error: err.code, versand: err.versand || undefined, requestId: reqId }, err.status, origin);
+      if (err?.code === "IP_PRIVACY_NOT_CONFIGURED") return json({ error: err.code, requestId: reqId }, 503, origin);
       console.error(JSON.stringify({ level: "error", event: "unhandled_worker_error", requestId: reqId, message: safeText(err?.message || "unknown", 160) }));
       return json({ error: "INTERNAL_SHOP_ERROR", requestId: reqId }, 500, origin);
     }

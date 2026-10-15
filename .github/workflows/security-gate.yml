@@ -50,6 +50,8 @@ jobs:
           node --check shop-worker/admin-passkeys.js
           node --check shop-worker/admin-katalog.js
           node --check shop-worker/github-datei.js
+          node --check shop-worker/offene-halte.js
+          node --check shop-worker/kontingent.js
           node --check assets/ios-zoom-lock.js
           node --check assets/universe-upgrade.js
           node --check assets/zero-g-runway.js

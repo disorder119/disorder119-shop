@@ -52,10 +52,10 @@ function corsHeaders(origin) {
   };
 }
 
-function json(data, status = 200, origin = null) {
+function json(data, status = 200, origin = null, extraHeaders = null) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json; charset=utf-8", ...securityHeaders(), ...corsHeaders(origin) },
+    headers: { "Content-Type": "application/json; charset=utf-8", ...securityHeaders(), ...corsHeaders(origin), ...(extraHeaders || {}) },
   });
 }
 
@@ -398,10 +398,16 @@ export async function handleRentalBundle(request, env, url, reqId, origin = null
     await ensureInventory(env, items);
     await preflightAvailability(env, items, String(body.start), String(body.end));
     // Ein Mietpaket haelt bis zu 20 Stuecke fest: dieselbe Grenze offener
-    // Halte je Anschluss wie Kasse und Mietanfrage (offene-halte.js).
+    // Mietanfragen je Anschluss wie /rental-request - getrennt von der Kasse
+    // (offene-halte.js). Bei 429 wird der Idempotenz-Claim unten frei.
     const db = requireDb(env);
-    const halt = await haltBelegen(db, { netz: await haltNetzHash(request, env), reqId });
-    if (!halt.ok) throw new BundleError("TOO_MANY_OPEN_HOLDS", 429);
+    const halt = await haltBelegen(db, { art: "miete", netz: await haltNetzHash(request, env), reqId });
+    if (!halt.ok) {
+      const absage = new BundleError("TOO_MANY_OPEN_HOLDS", 429);
+      absage.retryAfter = halt.warteSekunden;
+      absage.felder = { reason: "NETWORK", retryAfter: halt.warteSekunden };
+      throw absage;
+    }
     let response;
     try {
       response = await createAtomicBundle(env, items, quotes, body, key, reqId);
@@ -414,7 +420,12 @@ export async function handleRentalBundle(request, env, url, reqId, origin = null
     return json(response, 201, origin);
   } catch (err) {
     await releaseIdempotencyClaim(env, key, reqId);
-    if (err instanceof BundleError) return json({ error: err.code, requestId: reqId }, err.status, origin);
+    if (err instanceof BundleError) {
+      return json({ error: err.code, ...(err.felder || {}), requestId: reqId }, err.status, origin,
+        err.retryAfter ? { "Retry-After": String(err.retryAfter) } : null);
+    }
+    // Ohne IP-Schutz im Livebetrieb keine Halte ohne Grenze (offene-halte.js).
+    if (err?.code === "IP_PRIVACY_NOT_CONFIGURED") return json({ error: err.code, requestId: reqId }, 503, origin);
     console.error(JSON.stringify({ level: "error", event: "rental_bundle_error", requestId: reqId, message: safeText(err?.message || "unknown", 180) }));
     return json({ error: "INTERNAL_RENTAL_BUNDLE_ERROR", requestId: reqId }, 500, origin);
   }
