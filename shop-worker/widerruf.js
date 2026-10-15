@@ -37,7 +37,7 @@ import {
 } from "./erstattung-auftrag.js";
 import { schonErstattet } from "./erstattung.js";
 import { reservierteZahlung } from "./zahlung.js";
-import { kontingentBelegen, kontingentFreigeben } from "./kontingent.js";
+import { kontingentBelegen, kontingentFreigeben, kontingentStand } from "./kontingent.js";
 import { privateNetzHash } from "./privacy-security.js";
 
 const SHOP_ORIGINS = Object.freeze([
@@ -56,10 +56,24 @@ const OFFEN = Object.freeze(["EINGEGANGEN", "IN_BEARBEITUNG"]);
 // je Anschluss und WIDERRUF_MAILS_JE_TAG insgesamt in 24 Stunden. Der Widerruf
 // selbst wird immer angenommen und gespeichert - gedrosselt wird nur die
 // Mail (bestaetigung_status GEDROSSELT, Hinweis an den Inhaber). Was an der
-// Tagesgrenze haengt, holt der Cron nach, sobald wieder Platz ist.
+// Tagesgrenze haengt, holt der Cron nach, sobald wieder Platz ist - mit dem
+// Anschluss von damals (im Vormerk-Eintrag), dessen Grenze also weiter gilt.
+// Vorgemerkt wird je Anschluss nur, was er noch verschicken duerfte.
 export const WIDERRUF_MAILS_JE_ANSCHLUSS = 5;
 export const WIDERRUF_MAILS_JE_TAG = 100;
 const NACHHOLEN = "widerruf:nachholen:";
+const NACHHOLEN_TAGE = 3;
+
+// Belegte Mails dieses Anschlusses (24 Stunden) plus seine noch offenen
+// Vormerkungen - ohne die des Widerrufs selbst (der Cron fragt erneut).
+async function anschlussAuslastung(db, netz, widerrufId, now) {
+  const belegt = await kontingentStand(db, { art: "widerruf-mail", schluessel: netz, fensterMs: TAG_MS, jetzt: now });
+  const vorgemerkt = await db.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE event_type='WITHDRAWAL_RECEIPT_DEFERRED' AND entity_type='widerruf' AND id<>?
+        AND json_extract(metadata_json,'$.netz')=? AND created_at>=?`)
+    .bind(`${NACHHOLEN}${widerrufId}`, netz, new Date(now.getTime() - NACHHOLEN_TAGE * TAG_MS).toISOString()).first();
+  return belegt + Number(vorgemerkt?.n || 0);
+}
 
 export const WIDERRUF_STATUS_TEXT = Object.freeze({
   EINGEGANGEN: "Eingegangen",
@@ -327,16 +341,25 @@ export async function eingangBestaetigen(env, row, order, reqId = crypto.randomU
       jetzt: now,
     });
     if (!platz.ok) {
+      let grund = platz.grund;
+      // Nur an der Tagesgrenze vormerken - und je Anschluss nicht mehr, als er
+      // ohnehin verschicken duerfte.
+      if (grund === "GESAMT" && netz && await anschlussAuslastung(db, netz, row.id, now) >= WIDERRUF_MAILS_JE_ANSCHLUSS) {
+        grund = "ANSCHLUSS";
+      }
       await db.prepare("DELETE FROM audit_events WHERE id=? AND event_type='WITHDRAWAL_RECEIPT_CLAIMED'").bind(claimId).run();
       await db.prepare("UPDATE widerrufe SET bestaetigung_status='GEDROSSELT',updated_at=? WHERE id=?").bind(jetzt, row.id).run();
-      if (platz.grund === "GESAMT") {
+      if (grund === "GESAMT") {
         await db.prepare(`INSERT OR IGNORE INTO audit_events
           (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
           VALUES (?,'SYSTEM','widerruf',?,'WITHDRAWAL_RECEIPT_DEFERRED',?,?,?)`)
-          .bind(`${NACHHOLEN}${row.id}`, row.id, safeText(reqId, 120), JSON.stringify({ grund: "TAGESGRENZE" }), jetzt).run();
+          .bind(`${NACHHOLEN}${row.id}`, row.id, safeText(reqId, 120), JSON.stringify({ grund: "TAGESGRENZE", netz: netz || null }), jetzt).run();
+      } else {
+        // Grenze je Anschluss: nicht (mehr) nachholen - die Admin-App kann.
+        await db.prepare("DELETE FROM audit_events WHERE id=? AND event_type='WITHDRAWAL_RECEIPT_DEFERRED'").bind(`${NACHHOLEN}${row.id}`).run();
       }
-      log("warn", "withdrawal_receipt_throttled", reqId, { widerrufId: row.id, grund: platz.grund });
-      return { sent: false, reason: "GEDROSSELT", grund: platz.grund };
+      log("warn", "withdrawal_receipt_throttled", reqId, { widerrufId: row.id, grund });
+      return { sent: false, reason: "GEDROSSELT", grund };
     }
   }
 
@@ -379,6 +402,8 @@ export async function eingangBestaetigen(env, row, order, reqId = crypto.randomU
   try {
     await db.prepare("UPDATE audit_events SET event_type='WITHDRAWAL_RECEIPT_SENT',metadata_json=? WHERE id=?")
       .bind(JSON.stringify({ channel: "email", sentAt: gesendet }), claimId).run();
+    // Vormerkung (mit IP-Hash) wird nicht mehr gebraucht.
+    await db.prepare("DELETE FROM audit_events WHERE id=? AND event_type='WITHDRAWAL_RECEIPT_DEFERRED'").bind(`${NACHHOLEN}${row.id}`).run();
   } catch {
     // Versendet ist versendet.
   }
@@ -714,24 +739,51 @@ export async function widerrufePflegen(env, reqId = crypto.randomUUID(), now = n
   const db = env?.DB;
   const ergebnis = { ok: true, bestaetigt: 0, erinnert: 0, fehler: [] };
   if (!db) return { ...ergebnis, ok: false };
+  const seit = new Date(now.getTime() - NACHHOLEN_TAGE * TAG_MS).toISOString();
   let nachholen;
+  let vorgemerkt = [];
   try {
+    // Zuerst, was an keiner Grenze haengt (z. B. FEHLER nach einem Brevo-
+    // Ausfall): gedrosselte Eintraege duerfen das nicht verdraengen.
     nachholen = (await db.prepare(`SELECT * FROM widerrufe WHERE bestaetigung_gesendet_at IS NULL AND quelle<>'ADMIN'
-        AND (bestaetigung_status IS NULL OR bestaetigung_status IN ('FEHLER','NICHT_EINGERICHTET')
-          OR (bestaetigung_status='GEDROSSELT' AND EXISTS (SELECT 1 FROM audit_events a WHERE a.id='${NACHHOLEN}' || widerrufe.id)))
+        AND (bestaetigung_status IS NULL OR bestaetigung_status IN ('FEHLER','NICHT_EINGERICHTET'))
         AND eingegangen_at>=? ORDER BY eingegangen_at LIMIT 10`)
-      .bind(new Date(now.getTime() - 3 * TAG_MS).toISOString()).all()).results || [];
+      .bind(seit).all()).results || [];
+    // Dann die an der Tagesgrenze vorgemerkten - nur so viele, wie heute noch
+    // Platz ist, und mit dem Anschluss von damals.
+    const frei = WIDERRUF_MAILS_JE_TAG - await kontingentStand(db, { art: "widerruf-mail", fensterMs: TAG_MS, jetzt: now });
+    if (frei > 0) {
+      vorgemerkt = (await db.prepare(`SELECT w.*,a.metadata_json AS nachholen_json FROM widerrufe w
+          JOIN audit_events a ON a.id='${NACHHOLEN}' || w.id AND a.event_type='WITHDRAWAL_RECEIPT_DEFERRED'
+          WHERE w.bestaetigung_gesendet_at IS NULL AND w.quelle<>'ADMIN' AND w.bestaetigung_status='GEDROSSELT'
+            AND w.eingegangen_at>=? ORDER BY w.eingegangen_at LIMIT ?`)
+        .bind(seit, Math.min(10, frei)).all()).results || [];
+    }
   } catch (err) {
     if (/no such table/i.test(String(err?.message || ""))) return { ...ergebnis, ok: false, code: "TABELLE_FEHLT" };
     throw err;
   }
-  for (const row of nachholen) {
+  for (const eintrag of [...nachholen, ...vorgemerkt]) {
+    const { nachholen_json: vormerkung, ...row } = eintrag;
+    let netz = null;
     try {
-      const mail = await eingangBestaetigen(env, row, null, reqId, now);
+      netz = vormerkung ? JSON.parse(vormerkung)?.netz || null : null;
+    } catch {
+      // Ohne Anschluss bleibt die Tagesgrenze.
+    }
+    try {
+      const mail = await eingangBestaetigen(env, row, null, reqId, now, { netz });
       if (mail.sent) ergebnis.bestaetigt += 1;
     } catch (err) {
       ergebnis.fehler.push(safeText(err?.message || "RECEIPT_RETRY_FAILED", 80));
     }
+  }
+  // Vormerkungen (mit IP-Hash) nach dem Nachhol-Zeitraum loeschen.
+  try {
+    await db.prepare("DELETE FROM audit_events WHERE event_type='WITHDRAWAL_RECEIPT_DEFERRED' AND entity_type='widerruf' AND created_at<?")
+      .bind(seit).run();
+  } catch {
+    // Beim naechsten Lauf.
   }
 
   const offen = (await db.prepare(`SELECT w.*,o.order_number,o.status AS order_status FROM widerrufe w

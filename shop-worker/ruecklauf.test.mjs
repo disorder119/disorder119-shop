@@ -733,3 +733,72 @@ test("receipt mails have a daily cap for the whole shop; the cron sends them onc
     netz.restore();
   }
 });
+
+test("deferred receipts keep the per-connection cap: the cron sends at most the connection's share", async () => {
+  const DB = sqliteD1(allMigrations());
+  seed(DB, { status: "DELIVERED" });
+  const netz = fakeNetz();
+  const env = { ...ENV(DB), LOGIN_IP_PEPPER: "p".repeat(48) };
+  const jetzt = new Date().toISOString();
+  const voll = DB.raw.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,created_at)
+    VALUES (?,'SYSTEM','kontingent:widerruf-mail',?,'KONTINGENT_BELEGT',?)`);
+  for (let i = 0; i < WIDERRUF_MAILS_JE_TAG; i++) voll.run(`fueller-${i}`, `netz-${i}`, jetzt);
+  const opfer = netz => netz.mails.filter(m => /^opfer\d+@example\.test$/.test(m.to?.[0]?.email || ""));
+  try {
+    // Tagesgrenze voll, dann 9 Erklaerungen von einem Anschluss an 9 Adressen.
+    for (let i = 0; i < 9; i++) {
+      const res = await widerrufenVon(DB, `2001:db8:9:9::${i + 1}`,
+        { name: `Person ${i}`, email: `opfer${i}@example.test`, bestellnummer: "irgendwas", umfang: "GANZ", bestaetigt: true }, env);
+      assert.equal(res.status, 200);
+      assert.equal(res.data.bestaetigungGesendet, false);
+    }
+    assert.equal(wert(DB, "SELECT COUNT(*) AS n FROM widerrufe WHERE bestaetigung_status='GEDROSSELT'").n, 9, "alle gespeichert");
+    // Vorgemerkt nur, was der Anschluss ueberhaupt verschicken duerfte - mit
+    // seinem Hash, nie der Adresse.
+    const vormerkungen = DB.raw.prepare("SELECT metadata_json FROM audit_events WHERE event_type='WITHDRAWAL_RECEIPT_DEFERRED'").all();
+    assert.equal(vormerkungen.length, WIDERRUF_MAILS_JE_ANSCHLUSS);
+    assert.ok(vormerkungen.every(v => /^[0-9a-f]{64}$/.test(JSON.parse(v.metadata_json).netz)));
+    assert.ok(!JSON.stringify(DB.raw.prepare("SELECT * FROM audit_events").all()).includes("2001:db8"));
+    // Am naechsten Tag ist wieder Platz: der Cron schickt hoechstens 5.
+    await ruecklaufPflegen(env, "cron-anschluss-1", spaeter(25 * 60));
+    await ruecklaufPflegen(env, "cron-anschluss-2", spaeter(26 * 60));
+    assert.equal(opfer(netz).length, WIDERRUF_MAILS_JE_ANSCHLUSS);
+    assert.equal(wert(DB, "SELECT COUNT(*) AS n FROM widerrufe WHERE bestaetigung_status='GESENDET'").n, WIDERRUF_MAILS_JE_ANSCHLUSS);
+    assert.equal(wert(DB, "SELECT COUNT(*) AS n FROM audit_events WHERE event_type='WITHDRAWAL_RECEIPT_DEFERRED'").n, 0, "Vormerkungen aufgeraeumt");
+  } finally {
+    netz.restore();
+  }
+});
+
+test("throttled receipts never crowd out failed receipts of other declarations", async () => {
+  const DB = sqliteD1(allMigrations());
+  seed(DB, { status: "DELIVERED" });
+  const optionen = {};
+  const netz = fakeNetz(optionen);
+  const env = { ...ENV(DB), LOGIN_IP_PEPPER: "p".repeat(48) };
+  const jetzt = new Date().toISOString();
+  const voll = DB.raw.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,created_at)
+    VALUES (?,'SYSTEM','kontingent:widerruf-mail',?,'KONTINGENT_BELEGT',?)`);
+  for (let i = 0; i < WIDERRUF_MAILS_JE_TAG; i++) voll.run(`fueller-${i}`, `netz-${i}`, jetzt);
+  try {
+    // 12 vorgemerkte Website-Erklaerungen (je ein anderer Anschluss) ...
+    for (let i = 0; i < 12; i++) {
+      await widerrufenVon(DB, `198.51.100.${100 + i}`,
+        { name: `Person ${i}`, email: `spam${i}@example.test`, bestellnummer: "irgendwas", umfang: "GANZ", bestaetigt: true }, env);
+    }
+    assert.equal(wert(DB, "SELECT COUNT(*) AS n FROM audit_events WHERE event_type='WITHDRAWAL_RECEIPT_DEFERRED'").n, 12);
+    // ... danach ein Widerruf aus dem Konto, dessen Bestaetigung an einem
+    // Mail-Ausfall scheitert.
+    optionen.mailFehler = netz.mails.length + 100;
+    await widerrufAusKonto(env, "o1", "konto");
+    optionen.mailFehler = 0;
+    assert.equal(wert(DB, "SELECT bestaetigung_status FROM widerrufe WHERE quelle='KONTO'").bestaetigung_status, "FEHLER");
+    // Die Tagesgrenze ist weiter voll; der Cron holt trotzdem die Konto-Mail nach.
+    for (const minuten of [15, 30, 45, 60]) await ruecklaufPflegen(env, `cron-hol-${minuten}`, spaeter(minuten));
+    assert.equal(wert(DB, "SELECT bestaetigung_status FROM widerrufe WHERE quelle='KONTO'").bestaetigung_status, "GESENDET");
+    assert.equal(netz.mails.filter(m => /^spam\d+@example\.test$/.test(m.to?.[0]?.email || "")).length, 0);
+    assert.equal(wert(DB, "SELECT COUNT(*) AS n FROM widerrufe WHERE quelle='WEBSITE' AND bestaetigung_status='GEDROSSELT'").n, 12);
+  } finally {
+    netz.restore();
+  }
+});

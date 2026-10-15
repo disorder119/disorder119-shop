@@ -168,15 +168,17 @@ Kundinnen sehen ihre Bestellungen mit Bildern und Sendungsverfolgung, pflegen ih
 Der Worker unterstuetzt:
 
 - `RATE_LIMITER`
-- `QUOTE_LIMITER` (strenger, nur `/rental-quote`, je Anschluss - IPv6 je /64; fehlt er, zaehlt `RATE_LIMITER`)
+- `QUOTE_LIMITER` (nur `/rental-quote`, 60 je Minute und Anschluss - IPv6 je /64 -, genug fuer ein volles Mietpaket samt Datumswechseln; zaehlt dort statt des gemeinsamen `RATE_LIMITER`-Eimers `body-ingress`; fehlt er, zaehlt `RATE_LIMITER`). Das Mietfenster merkt sich Antworten eine Minute und meldet ein `429` als "nicht geprueft", nie als "verfuegbar".
 - `TURNSTILE_SECRET`
 
-Kontingente gegen Missbrauch (`kontingent.js`, gezaehlt in `audit_events` als `kontingent:<art>`, ohne eigene Migration; IP-Hashes je Anschluss, nach Ablauf des Fensters geloescht):
+Kontingente gegen Missbrauch (`kontingent.js`, gezaehlt in `audit_events` als `kontingent:<art>`, ohne eigene Migration; IP-Hashes je Anschluss, geloescht beim naechsten Belegen und spaetestens im Cron alle 15 Minuten: nach einem Tag, Spiel-Codes nach 30 Tagen):
 
 - Spiel-Codes (`/games/score`): hoechstens 2 je Anschluss in 30 Tagen und 25 am Tag insgesamt (`GAME_CODES_DAILY_CAP`); danach zaehlt der Score ohne Code (`couponLimited`). Ohne `Origin` wird kein Score angenommen.
-- Eingangsbestaetigungen der Widerrufsfunktion: hoechstens 5 je Anschluss und 100 am Tag insgesamt. Der Widerruf wird immer gespeichert; die Mail ist dann `GEDROSSELT` (Telegram-Hinweis, in der Admin-App "Bestaetigung senden"), an der Tagesgrenze holt der Cron sie nach.
+- Eingangsbestaetigungen der Widerrufsfunktion: hoechstens 5 je Anschluss und 100 am Tag insgesamt. Der Widerruf wird immer gespeichert; die Mail ist dann `GEDROSSELT` (Telegram-Hinweis, in der Admin-App "Bestaetigung senden"). An der Tagesgrenze holt der Cron sie nach - mit dem Anschluss von damals, also weiter hoechstens 5 je Anschluss; vorgemerkt wird je Anschluss nur, was er noch verschicken duerfte. Fehlgeschlagene Bestaetigungen anderer Widerrufe holt der Cron vorher und unabhaengig davon nach.
 - Testshop (`SANDBOX="1"`): hoechstens 20 Mails am Tag fuer alle Mails zusammen (`TESTSHOP_MAIL_DAILY_CAP`), danach still keine mehr.
-- Kasse: hoechstens 2 offene, unbezahlte Bestellungen je E-Mail-Adresse und je Anschluss (`429 TOO_MANY_OPEN_ORDERS`); abgelaufene Reservierungen zaehlen nicht.
+- Offene Halte (`offene-halte.js`, `kontingent:halt-offen`): Kasse, Mietanfrage und Mietpaket reservieren Stuecke fuer 15 Minuten. Zusammen hoechstens 2 offene Halte je Anschluss und - in der Kasse - je E-Mail-Adresse (nur als Hash gespeichert). Der Platz wird vor dem Reservieren in einem einzigen `INSERT ... WHERE` belegt, auch parallele Anfragen kommen nicht darueber; scheitert die Anfrage, wird er zurueckgegeben. Antwort `429 TOO_MANY_OPEN_ORDERS` (Kasse) bzw. `429 TOO_MANY_OPEN_HOLDS` (`/rental-request`, `/rental-bundle`). Bezahlt, storniert oder abgelaufen zaehlt nicht mehr.
+
+Ausrollen dieser Grenzen (keine D1-Migration noetig): zuerst den Pull Request mergen und den Pages-Rebuild abwarten (neues `zero-g-runway.js` fuer `couponLimited`, `kasse.js`, `rental-v2.js`), danach `npx wrangler deploy` und `npx wrangler deploy --env sandbox` - erst damit gelten `QUOTE_LIMITER` und die neuen Grenzen. Umgekehrt zeigte das alte Spiel bei `couponLimited` "10 % freigeschaltet" ohne Code.
 
 In Sandbox/Entwicklung koennen diese Bindings fehlen. Im Live-Modus arbeiten menschlich ausgeloeste schreibende Commerce-Routen jedoch fail-closed, wenn die erforderlichen Abuse-Kontrollen nicht vorhanden sind. Eine fehlende Produktionskonfiguration wird nicht als funktionsfaehig vorgetaeuscht.
 

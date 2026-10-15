@@ -1,11 +1,15 @@
 # Dependabot haelt die GitHub Actions aktuell. Alle Actions sind auf Commit-SHAs
-# gepinnt (main-integrity.yml prueft das); Dependabot aktualisiert die SHA samt
-# Versionskommentar und schlaegt das als Pull Request vor - gemergt wird nur
-# nach denselben Pruefungen wie jede andere Aenderung.
+# gepinnt (main-integrity.yml prueft das); Dependabot ersetzt die SHA und
+# schlaegt das als Pull Request vor - gemergt wird nur nach denselben
+# Pruefungen wie jede andere Aenderung.
 #
-# Achtung: scripts/validate_focus_three.py verlangt fuer checkout, setup-python
-# und setup-node genau die heute auditierten SHAs. Ein Dependabot-PR fuer diese
-# drei Actions muss die erwarteten SHAs dort mit anheben.
+# Zwei Gruppen, damit nicht ein Update alle anderen blockiert:
+# scripts/validate_focus_three.py verlangt fuer checkout, setup-python und
+# setup-node genau die auditierten SHAs. Ein Update dieser drei kommt deshalb
+# als eigener Pull Request ("auditierte-actions"), der erst gruen wird, wenn
+# die erwarteten SHAs dort mit angehoben sind. Alle uebrigen Actions
+# (upload-/download-artifact, ...) laufen in "uebrige-actions" ohne diese
+# Huerde durch. Eine Abhaengigkeit landet in der ersten passenden Gruppe.
 version: 2
 updates:
   - package-ecosystem: "github-actions"
@@ -17,6 +21,11 @@ updates:
       timezone: "Europe/Berlin"
     open-pull-requests-limit: 5
     groups:
-      github-actions:
+      auditierte-actions:
+        patterns:
+          - "actions/checkout"
+          - "actions/setup-python"
+          - "actions/setup-node"
+      uebrige-actions:
         patterns:
           - "*"

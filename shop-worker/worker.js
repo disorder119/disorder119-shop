@@ -19,8 +19,8 @@ import { AbholortError, abholadresse, zustellungAus } from "./abholorte.js";
 import { captureStatements, recordVerifiedRefund } from './tax-evidence.js';
 import { normalizeEmail } from './customer-mail.js';
 import { autorisierungAus, autorisierungVerwerfen, reservierungFelder } from "./zahlung.js";
-import { anschlussVonIp, privateNetzHash } from "./privacy-security.js";
-import { kontingentBelegen, kontingentTyp } from "./kontingent.js";
+import { anschlussVonIp } from "./privacy-security.js";
+import { OFFENE_HALTE_MAX, haltBelegen, haltFreigeben, haltMailHash, haltNetzHash, haltZuordnen } from "./offene-halte.js";
 
 const CONFIG = Object.freeze({
   githubOwner: "disorder119",
@@ -144,9 +144,10 @@ async function rateLimit(request, env, scope) {
   if (result && result.success === false) throw new PublicError("RATE_LIMITED", 429);
 }
 
-// Eigener, strengerer Begrenzer fuer oeffentliche Abfragen ohne Bot-Schutz
-// (/rental-quote): QUOTE_LIMITER (wrangler.toml), sonst RATE_LIMITER. Gezaehlt
-// wird je Anschluss - IPv6 je /64, sonst waere jede neue Adresse frei.
+// Eigener Begrenzer fuer oeffentliche Abfragen ohne Bot-Schutz (/rental-quote):
+// QUOTE_LIMITER (wrangler.toml), sonst RATE_LIMITER. Gezaehlt wird je
+// Anschluss - IPv6 je /64, sonst waere jede neue Adresse frei. Die Grenze muss
+// fuer ein volles Mietpaket reichen: assets/rental-v2.js fragt je Stueck einmal.
 async function rateLimitAnschluss(request, env, scope) {
   const limiter = env.QUOTE_LIMITER && typeof env.QUOTE_LIMITER.limit === "function" ? env.QUOTE_LIMITER : env.RATE_LIMITER;
   if (!limiter || typeof limiter.limit !== "function") return;
@@ -228,39 +229,11 @@ async function findItemForQuote(env, itemId, now = Date.now()) {
 }
 
 // Hoechstens so viele offene, unbezahlte Bestellungen je E-Mail-Adresse und je
-// Anschluss. Mehr braucht niemand, und ohne Grenze liesse sich der ganze Shop
-// mit Reservierungen sperren. Abgelaufene Reservierungen zaehlen nicht.
-export const OFFENE_BESTELLUNGEN_MAX = 2;
-const OFFEN_FENSTER_MS = 2 * RESERVATION_TTL_SECONDS * 1000;
-const OFFENE_RESERVIERUNG_SQL = `EXISTS (SELECT 1 FROM order_items oi JOIN reservations r ON r.inventory_id=oi.inventory_id
-        AND (r.id=o.reservation_id OR r.idempotency_key=o.idempotency_key || '#' || oi.item_id)
-      WHERE oi.order_id=o.id AND r.status='RESERVED' AND r.expires_at>?)`;
-
-async function kasseNetzHash(request, env) {
-  try {
-    return await privateNetzHash(request, env, "kasse");
-  } catch {
-    // Ohne IP-Schutz (LOGIN_IP_PEPPER) bleibt die Grenze je E-Mail-Adresse.
-    return null;
-  }
-}
-
-async function offeneBestellungenPruefen(env, { email, netz, jetzt = new Date() }) {
-  const db = requireDb(env);
-  const nowIso = jetzt.toISOString();
-  const seit = new Date(jetzt.getTime() - OFFEN_FENSTER_MS).toISOString();
-  const jeAdresse = await db.prepare(`SELECT COUNT(*) AS n FROM commerce_orders o
-    WHERE o.status='PAYMENT_PENDING' AND o.created_at>=?
-      AND EXISTS (SELECT 1 FROM order_contact_snapshots c WHERE c.order_id=o.id AND lower(c.email)=?)
-      AND ${OFFENE_RESERVIERUNG_SQL}`).bind(seit, String(email || "").toLowerCase(), nowIso).first();
-  if (Number(jeAdresse?.n || 0) >= OFFENE_BESTELLUNGEN_MAX) throw new PublicError("TOO_MANY_OPEN_ORDERS", 429);
-  if (!netz) return;
-  const jeAnschluss = await db.prepare(`SELECT COUNT(*) AS n FROM commerce_orders o
-    WHERE o.status='PAYMENT_PENDING' AND o.created_at>=?
-      AND o.id IN (SELECT actor_ref FROM audit_events WHERE entity_type=? AND entity_id=? AND created_at>=?)
-      AND ${OFFENE_RESERVIERUNG_SQL}`).bind(seit, kontingentTyp("kasse-offen"), netz, seit, nowIso).first();
-  if (Number(jeAnschluss?.n || 0) >= OFFENE_BESTELLUNGEN_MAX) throw new PublicError("TOO_MANY_OPEN_ORDERS", 429);
-}
+// Anschluss - zusammen mit Mietanfragen und Mietpaketen, sonst liesse sich der
+// ganze Shop mit Reservierungen sperren (offene-halte.js). Der Platz wird vor
+// dem Reservieren in einem Schritt belegt, parallele Anfragen eingeschlossen.
+// Abgelaufene Reservierungen zaehlen nicht.
+export const OFFENE_BESTELLUNGEN_MAX = OFFENE_HALTE_MAX;
 
 // Kasse: bis zu zehn Einzelstuecke in einer Bestellung, jede Nummer hoechstens
 // einmal. Die Produktseite schickt weiter nur itemId.
@@ -1093,7 +1066,6 @@ export default {
       if (browserWrite && !isAllowedOrigin(origin)) throw new PublicError("ORIGIN_NOT_ALLOWED", 403);
 
       if (url.pathname === "/rental-quote" && request.method === "POST") {
-        await rateLimit(request, env, "rental-quote");
         await rateLimitAnschluss(request, env, "rental-quote-netz");
         const body = await readJson(request);
         if (!/^\d+$/.test(String(body.itemId || ""))) throw new PublicError("INVALID_ITEM_ID", 400);
@@ -1127,7 +1099,18 @@ export default {
           if (err.message === "INVALID_RENTAL_DATES" || err.message === "RENTAL_DATE_IN_PAST") throw new PublicError("INVALID_RENTAL_DATES", 400); // RUNTIME_AUDIT_SERVER_DATE_MAP
           throw err;
         }
-        const rental = await createRentalReservation(env, item, quote, body, key, reqId);
+        // Dieselbe Grenze offener Halte wie in der Kasse (offene-halte.js).
+        const db = requireDb(env);
+        const halt = await haltBelegen(db, { netz: await haltNetzHash(request, env), reqId });
+        if (!halt.ok) throw new PublicError("TOO_MANY_OPEN_HOLDS", 429);
+        let rental;
+        try {
+          rental = await createRentalReservation(env, item, quote, body, key, reqId);
+        } catch (err) {
+          await haltFreigeben(db, halt.id);
+          throw err;
+        }
+        await haltZuordnen(db, halt.id, rental.rentalId);
         const response = { ok: true, rentalReservationId: rental.rentalId, expiresAt: rental.expiresAt, currency: CURRENCY, days: quote.days, dailyPrice: quote.dailyPriceCents === null ? null : money(quote.dailyPriceCents), totalPrice: quote.totalPriceCents === null ? null : money(quote.totalPriceCents), priceOnRequest: quote.priceOnRequest };
         await finishIdempotency(env, "rental-request", key, 201, response, rental.rentalId);
         return json(response, 201, origin);
@@ -1143,8 +1126,6 @@ export default {
         const fingerprint = await requestHash("create-order", body);
         const claimed = await claimIdempotency(env, "create-order", key, reqId, fingerprint);
         if (claimed.replay) return json(claimed.data, claimed.status, origin);
-        const netz = await kasseNetzHash(request, env);
-        await offeneBestellungenPruefen(env, { email: kontakt.email, netz });
         const ids = checkoutItemIds(body);
         const items = await findItems(env, ids);
         const centsList = items.map(assertCatalogItemForSale);
@@ -1169,24 +1150,28 @@ export default {
         if (zustellung.art !== "haustuer" && !gewaehlt.abholstation) throw new PublicError("ABHOLSTATION_NUR_DHL", 422);
         const versand = { ...gewaehlt, zustellung };
         const shippingCents = versand.preisCents;
-        const reservations = await reserveAll(env, items, key, reqId);
+        // Grenze offener Halte: Platz belegen, bevor etwas reserviert wird -
+        // in einem Schritt, auch bei parallelen Anfragen (offene-halte.js).
+        const db = requireDb(env);
+        const halt = await haltBelegen(db, { netz: await haltNetzHash(request, env), mail: await haltMailHash(env, kontakt.email), reqId });
+        if (!halt.ok) throw new PublicError("TOO_MANY_OPEN_ORDERS", 429);
+        let reservations;
+        try {
+          reservations = await reserveAll(env, items, key, reqId);
+        } catch (err) {
+          await haltFreigeben(db, halt.id);
+          throw err;
+        }
         let providerOrder;
         try {
           providerOrder = await createPaypalOrder(env, items, cents, shippingCents, key, adresse);
         } catch (err) {
           await releaseAll(env, reservations, "provider_create_failed", reqId);
+          await haltFreigeben(db, halt.id);
           throw err;
         }
         const local = await createOrderRecords(env, items, centsList, versand, reservations, providerOrder, key, reqId, adresse, kontakt);
-        // Fuer die Grenze je Anschluss: welche Bestellung von wo kam (nur der
-        // IP-Hash, geloescht nach einem Tag - kontingent.js).
-        if (netz) {
-          try {
-            await kontingentBelegen(requireDb(env), { art: "kasse-offen", schluessel: netz, bezug: local.orderId, reqId });
-          } catch (err) {
-            console.error(JSON.stringify({ level: "error", event: "open_order_marker_failed", requestId: reqId, message: safeText(err?.message || "unknown", 120) }));
-          }
-        }
+        await haltZuordnen(db, halt.id, local.orderId);
         const expiresAt = reservations.map(r => r.expiresAt).sort()[0];
         const response = { id: providerOrder.id, orderId: local.orderId, orderNumber: local.orderNumber, expiresAt,
           currency: CURRENCY, itemIds: items.map(item => item.id), itemPrice: money(cents), shipping: money(shippingCents), total: money(cents + shippingCents),

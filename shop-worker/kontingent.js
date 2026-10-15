@@ -1,6 +1,6 @@
 // Kontingente gegen Missbrauch: Gutscheine aus dem Spiel, Mails im Testshop,
-// Eingangsbestaetigungen der Widerrufsfunktion, offene Bestellungen je
-// Anschluss.
+// Eingangsbestaetigungen der Widerrufsfunktion, offene Halte (Kasse und Miete)
+// je Anschluss (offene-halte.js).
 //
 // Gezaehlt wird in audit_events - ohne eigene Tabelle, also ohne Migration.
 // Eine belegte Einheit ist eine Zeile mit
@@ -13,8 +13,8 @@
 //
 // Belegen ist ein einziges INSERT ... SELECT ... WHERE: zwei gleichzeitige
 // Anfragen koennen eine Grenze nicht gemeinsam ueberschreiten. Alte Zeilen
-// werden beim Belegen geloescht - IP-Hashes bleiben nur so lange, wie die
-// Grenze sie braucht.
+// werden beim Belegen und im Cron (kontingentAufraeumen) geloescht -
+// IP-Hashes bleiben nur so lange, wie die Grenze sie braucht.
 
 export const TAG_MS = 24 * 60 * 60 * 1000;
 const OHNE_SCHLUESSEL = "-";
@@ -104,6 +104,24 @@ export async function kontingentBelegen(db, {
   const anschlussVoll = proSchluessel
     && await kontingentStand(db, { art, schluessel: entityId, fensterMs, jetzt }) >= proSchluessel;
   return { ok: false, grund: anschlussVoll ? "ANSCHLUSS" : "GESAMT" };
+}
+
+// Aufraeumen im Cron (worker-entry.js, alle 15 Minuten): kontingentBelegen
+// loescht nur Zeilen derselben Art - ruht eine Art (Widerrufe sind selten),
+// blieben IP-Hashes sonst liegen. Was nur einen Tag zaehlt, ist nach einem
+// Tag weg, alles andere nach dem laengsten Fenster (Spiel-Codes, 30 Tage).
+const TAGES_ARTEN = Object.freeze(["widerruf-mail", "testshop-mail", "halt-offen"]);
+export const LAENGSTES_FENSTER_MS = 30 * TAG_MS;
+
+export async function kontingentAufraeumen(db, jetzt = new Date()) {
+  if (!db) return { geloescht: 0 };
+  const tag = new Date(jetzt.getTime() - TAG_MS).toISOString();
+  const lang = new Date(jetzt.getTime() - LAENGSTES_FENSTER_MS).toISOString();
+  const kurz = await db.prepare(`DELETE FROM audit_events WHERE entity_type IN (${TAGES_ARTEN.map(() => "?").join(",")}) AND created_at<?`)
+    .bind(...TAGES_ARTEN.map(typ), tag).run();
+  const alt = await db.prepare("DELETE FROM audit_events WHERE entity_type LIKE 'kontingent:%' AND event_type='KONTINGENT_BELEGT' AND created_at<?")
+    .bind(lang).run();
+  return { geloescht: Number(kurz?.meta?.changes || 0) + Number(alt?.meta?.changes || 0) };
 }
 
 // Gibt eine belegte Einheit zurueck, wenn die Aktion danach doch nicht

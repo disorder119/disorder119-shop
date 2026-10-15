@@ -10,6 +10,7 @@ import {
   safeText,
 } from "./commerce-core.js";
 import { readRepoFile } from "./github-datei.js";
+import { haltBelegen, haltFreigeben, haltNetzHash, haltZuordnen } from "./offene-halte.js";
 
 const ALLOWED_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -396,7 +397,19 @@ export async function handleRentalBundle(request, env, url, reqId, origin = null
     await cleanupExpiredBundles(env);
     await ensureInventory(env, items);
     await preflightAvailability(env, items, String(body.start), String(body.end));
-    const response = await createAtomicBundle(env, items, quotes, body, key, reqId);
+    // Ein Mietpaket haelt bis zu 20 Stuecke fest: dieselbe Grenze offener
+    // Halte je Anschluss wie Kasse und Mietanfrage (offene-halte.js).
+    const db = requireDb(env);
+    const halt = await haltBelegen(db, { netz: await haltNetzHash(request, env), reqId });
+    if (!halt.ok) throw new BundleError("TOO_MANY_OPEN_HOLDS", 429);
+    let response;
+    try {
+      response = await createAtomicBundle(env, items, quotes, body, key, reqId);
+    } catch (err) {
+      await haltFreigeben(db, halt.id);
+      throw err;
+    }
+    await haltZuordnen(db, halt.id, response.rentalGroupId);
     await finishIdempotency(env, key, 201, response, response.rentalGroupId);
     return json(response, 201, origin);
   } catch (err) {

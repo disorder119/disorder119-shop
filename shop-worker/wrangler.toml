@@ -49,12 +49,14 @@ name = "RATE_LIMITER"
 namespace_id = "1190"
 simple = { limit = 20, period = 60 }
 
-# Strenger fuer oeffentliche Abfragen ohne Bot-Schutz (/rental-quote), je
-# Anschluss (IPv6 je /64). Fehlt die Bindung, zaehlt RATE_LIMITER (worker.js).
+# Nur /rental-quote (oeffentlich, ohne Bot-Schutz), je Anschluss (IPv6 je /64).
+# Das Mietfenster fragt je Stueck einmal (bis 20 Stuecke je Paket, bei jedem
+# Datumswechsel) - dafuer reichen 60; den Katalog liest die Route aus dem
+# Zwischenspeicher. Fehlt die Bindung, zaehlt RATE_LIMITER (worker.js).
 [[ratelimits]]
 name = "QUOTE_LIMITER"
 namespace_id = "1192"
-simple = { limit = 10, period = 60 }
+simple = { limit = 60, period = 60 }
 
 # D1-Datenbank (DB), angelegt am 24.09.2026 in Westeuropa (WEUR). Die ID ist
 # kein Geheimnis, sie darf ins Repo. Zuerst schema.sql, dann die Dateien in
@@ -95,7 +97,7 @@ simple = { limit = 20, period = 60 }
 [[env.sandbox.ratelimits]]
 name = "QUOTE_LIMITER"
 namespace_id = "1193"
-simple = { limit = 10, period = 60 }
+simple = { limit = 60, period = 60 }
 
 [[env.sandbox.d1_databases]]
 binding = "DB"

@@ -508,10 +508,12 @@ test("checkout: at most two open unpaid orders per connection (IPv6 per /64), wh
     assert.equal(dritte.status, 429);
     assert.equal(dritte.data.error, "TOO_MANY_OPEN_ORDERS");
     // Gespeichert ist nur der Hash des Anschlusses, nie die Adresse selbst.
-    const marker = DB.raw.prepare("SELECT entity_id,actor_ref FROM audit_events WHERE entity_type='kontingent:kasse-offen'").all();
+    const marker = DB.raw.prepare("SELECT entity_id,actor_ref FROM audit_events WHERE entity_type='kontingent:halt-offen'").all();
     assert.equal(marker.length, OFFENE_BESTELLUNGEN_MAX);
     assert.ok(marker.every(m => /^[0-9a-f]{64}$/.test(m.entity_id) && m.actor_ref));
-    assert.ok(!JSON.stringify(DB.raw.prepare("SELECT * FROM audit_events").all()).includes("2001:db8"));
+    const protokoll = JSON.stringify(DB.raw.prepare("SELECT * FROM audit_events").all());
+    assert.ok(!protokoll.includes("2001:db8"));
+    assert.ok(!protokoll.includes("person0@example.com"), "auch die E-Mail-Adresse nur als Hash");
     // Ein anderer Anschluss bestellt ganz normal.
     assert.equal((await bestellen(env, 9503, { email: "person9@example.com", ip: "198.51.100.44", key: "k-offen-netz-0010" })).status, 200);
     // Bezahlt oder abgebrochen ist nicht mehr offen.
@@ -552,6 +554,136 @@ test("rental quote: cached catalogue (no GitHub call per request), own limiter k
     const anfrage = await post({ DB, GITHUB_TOKEN: "gh-test" }, "/rental-request", { itemId: 9428, start: tag(10), end: tag(12) }, "k-miete-frisch-00001");
     assert.equal(anfrage.status, 201, JSON.stringify(anfrage.data));
     assert.equal(github(), nachErstem + 2, "Mietanfrage laedt den Katalog neu");
+  } finally {
+    netz.restore();
+    angebotKatalogLeeren();
+  }
+});
+
+// ------------------------------------- Offene Halte: parallel und gemeinsam
+
+test("checkout: the open-order limit also holds for parallel requests", async () => {
+  versandCacheLeeren();
+  const netz = fakeNetzViele();
+  const stuecke = [9501, 9502, 9503, 9504, 9505];
+  try {
+    // Gleiche E-Mail-Adresse, gleicher Anschluss, alles gleichzeitig.
+    let DB = sqliteD1(allMigrations());
+    let env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+    let ergebnisse = await Promise.all(stuecke.map((id, i) =>
+      bestellen(env, id, { email: "parallel@example.com", ip: "203.0.113.7", key: `k-parallel-a-000${i}` })));
+    assert.deepEqual(ergebnisse.map(r => r.status).sort(), [200, 200, 429, 429, 429], JSON.stringify(ergebnisse.map(r => r.data)));
+    assert.ok(ergebnisse.filter(r => r.status === 429).every(r => r.data.error === "TOO_MANY_OPEN_ORDERS"));
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM commerce_orders WHERE status='PAYMENT_PENDING'").get().n, OFFENE_BESTELLUNGEN_MAX);
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations WHERE status='RESERVED'").get().n, OFFENE_BESTELLUNGEN_MAX);
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM audit_events WHERE entity_type='kontingent:halt-offen' AND actor_ref IS NOT NULL").get().n, OFFENE_BESTELLUNGEN_MAX);
+
+    // Nur die E-Mail-Adresse gleich, jede Anfrage von einem anderen Anschluss.
+    DB = sqliteD1(allMigrations());
+    env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+    ergebnisse = await Promise.all(stuecke.map((id, i) =>
+      bestellen(env, id, { email: "Parallel@Example.com", ip: `198.51.100.${10 + i}`, key: `k-parallel-b-000${i}` })));
+    assert.deepEqual(ergebnisse.map(r => r.status).sort(), [200, 200, 429, 429, 429]);
+
+    // Nur der Anschluss gleich (IPv6 je /64), jede Anfrage mit anderer Adresse.
+    DB = sqliteD1(allMigrations());
+    env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+    ergebnisse = await Promise.all(stuecke.map((id, i) =>
+      bestellen(env, id, { email: `p${i}@example.com`, ip: `2001:db8:5:6::${i + 1}`, key: `k-parallel-c-000${i}` })));
+    assert.deepEqual(ergebnisse.map(r => r.status).sort(), [200, 200, 429, 429, 429]);
+  } finally {
+    netz.restore();
+  }
+});
+
+test("checkout: a failed order gives its open-order slot back", async () => {
+  versandCacheLeeren();
+  const netz = fakeNetzViele();
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  const ip = "203.0.113.70";
+  try {
+    assert.equal((await bestellen(env, 9501, { email: "a@example.com", ip, key: "k-frei-0000000001" })).status, 200);
+    // Schon reserviert: 409, der Platz bleibt nicht belegt.
+    const weg = await bestellen(env, 9501, { email: "b@example.com", ip, key: "k-frei-0000000002" });
+    assert.equal(weg.status, 409);
+    assert.equal(weg.data.error, "ITEM_UNAVAILABLE");
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM audit_events WHERE entity_type='kontingent:halt-offen'").get().n, 1);
+    assert.equal((await bestellen(env, 9502, { email: "b@example.com", ip, key: "k-frei-0000000003" })).status, 200);
+    assert.equal((await bestellen(env, 9503, { email: "c@example.com", ip, key: "k-frei-0000000004" })).status, 429);
+  } finally {
+    netz.restore();
+  }
+});
+
+test("rental: request and bundle count towards the same open-hold limit per connection as the checkout", async () => {
+  versandCacheLeeren();
+  const netz = fakeNetzViele();
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  const tag = n => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+  const antwort = async res => ({ status: res.status, data: await res.json() });
+  const paket = (itemIds, ip, key) => handleRentalBundle(new Request("https://api.disorder119.com/rental-bundle", {
+    method: "POST",
+    headers: { Origin: SHOP, "Content-Type": "application/json", "Idempotency-Key": key, "CF-Connecting-IP": ip },
+    body: JSON.stringify({ itemIds, start: tag(10), end: tag(12), termsVersion: "2026-09", termsAcceptedAt: new Date().toISOString() }),
+  }), env, new URL("https://api.disorder119.com/rental-bundle"), `req-${key}`, SHOP).then(antwort);
+  const anfrage = (itemId, ip, key, von = 10) => shopWorker.fetch(new Request("https://api.disorder119.com/rental-request", {
+    method: "POST",
+    headers: { Origin: SHOP, "Content-Type": "application/json", "Idempotency-Key": key, "CF-Connecting-IP": ip },
+    body: JSON.stringify({ itemId, start: tag(von), end: tag(von + 2) }),
+  }), env).then(antwort);
+  try {
+    // Drei Mietpakete gleichzeitig vom selben Anschluss: zwei gehen durch.
+    const pakete = await Promise.all([
+      paket([9501, 9502], "2001:db8:42:1::5", "k-halt-paket-000001"),
+      paket([9503], "2001:db8:42:1::6", "k-halt-paket-000002"),
+      paket([9504], "2001:db8:42:1::7", "k-halt-paket-000003"),
+    ]);
+    assert.deepEqual(pakete.map(r => r.status).sort(), [201, 201, 429], JSON.stringify(pakete.map(r => r.data)));
+    assert.equal(pakete.find(r => r.status === 429).data.error, "TOO_MANY_OPEN_HOLDS");
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM rental_groups WHERE status='RESERVED'").get().n, 2);
+    // Danach weder Mietanfrage noch Kauf vom selben Anschluss.
+    const dritteAnfrage = await anfrage(9505, "2001:db8:42:1::8", "k-halt-anfrage-0001");
+    assert.equal(dritteAnfrage.status, 429);
+    assert.equal(dritteAnfrage.data.error, "TOO_MANY_OPEN_HOLDS");
+    const kauf = await bestellen(env, 9505, { email: "miete@example.com", ip: "2001:db8:42:1::9", key: "k-halt-kauf-0000001" });
+    assert.equal(kauf.status, 429);
+    assert.equal(kauf.data.error, "TOO_MANY_OPEN_ORDERS");
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations").get().n, 0, "nichts zum Kauf reserviert");
+    // Ein anderer Anschluss fragt ganz normal an.
+    assert.equal((await anfrage(9505, "198.51.100.9", "k-halt-anfrage-0002")).status, 201);
+    // Abgelaufene Pakete halten nichts mehr fest - dann geht es wieder.
+    DB.raw.prepare("UPDATE rental_groups SET expires_at=?").run(new Date(Date.now() - 1000).toISOString());
+    const spaeter = await anfrage(9505, "2001:db8:42:1::8", "k-halt-anfrage-0003", 20);
+    assert.equal(spaeter.status, 201, JSON.stringify(spaeter.data));
+    const halte = DB.raw.prepare("SELECT entity_id,actor_ref FROM audit_events WHERE entity_type='kontingent:halt-offen'").all();
+    assert.equal(halte.length, 4, "zwei Pakete, zwei Mietanfragen");
+    assert.ok(halte.every(h => /^[0-9a-f]{64}$/.test(h.entity_id) && h.actor_ref));
+  } finally {
+    netz.restore();
+  }
+});
+
+test("rental quote: with QUOTE_LIMITER bound, the general RATE_LIMITER does not count quotes a second time", async () => {
+  angebotKatalogLeeren();
+  const netz = fakeNetz();
+  const DB = sqliteD1(allMigrations());
+  const allgemein = [];
+  const RATE_LIMITER = { limit: async ({ key }) => { allgemein.push(key); return { success: false }; } };
+  const QUOTE_LIMITER = { limit: async () => ({ success: true }) };
+  const tag = n => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+  try {
+    // Ein volles Mietpaket (20 Stuecke) fragt je Stueck einmal.
+    for (let i = 0; i < 20; i++) {
+      const res = await shopWorker.fetch(new Request("https://api.disorder119.com/rental-quote", {
+        method: "POST",
+        headers: { Origin: SHOP, "Content-Type": "application/json", "CF-Connecting-IP": "198.51.100.77" },
+        body: JSON.stringify({ itemId: 9428, start: tag(10), end: tag(12) }),
+      }), { DB, GITHUB_TOKEN: "gh-test", RATE_LIMITER, QUOTE_LIMITER });
+      assert.equal(res.status, 200);
+    }
+    assert.deepEqual(allgemein, []);
   } finally {
     netz.restore();
     angebotKatalogLeeren();
