@@ -427,3 +427,133 @@ test("rental: a DRAFT can be neither quoted, requested nor booked in a bundle", 
     netz.restore();
   }
 });
+
+// ------------------------------------------------- Grenzen gegen Missbrauch
+
+import { angebotKatalogLeeren, OFFENE_BESTELLUNGEN_MAX } from "./worker.js";
+
+// Katalog mit fuenf freien Stuecken und eine PayPal-Attrappe, die je
+// Bestellung eine eigene Nummer vergibt.
+function fakeNetzViele() {
+  const stuecke = [9501, 9502, 9503, 9504, 9505].map(id => ({ id, article: String(id), brand: "Test", title: `Test Shirt ${id}`,
+    price: 40, public_status: "AVAILABLE", taxonomy_category: "Tops", product_type: "T-Shirt" }));
+  const calls = [];
+  let nummer = 0;
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    const u = new URL(String(url));
+    calls.push({ host: u.host, path: u.pathname, method: init.method || "GET" });
+    if (u.host === "api.github.com") {
+      if (u.pathname.endsWith("/contents/data")) return Response.json([{ name: "items.json", type: "file", sha: "c".repeat(40) }]);
+      if (u.pathname.endsWith(`/git/blobs/${"c".repeat(40)}`)) return new Response(JSON.stringify(stuecke));
+    }
+    if (u.host === "api-m.sandbox.paypal.com") {
+      if (u.pathname === "/v1/oauth2/token") return Response.json({ access_token: "paypal-test-token" });
+      if (u.pathname === "/v2/checkout/orders") return Response.json({ id: `PAYPAL-OFFEN-${++nummer}`, status: "CREATED" }, { status: 201 });
+    }
+    return new Response("{}", { status: 404 });
+  };
+  return { calls, restore() { globalThis.fetch = original; } };
+}
+
+async function bestellen(env, itemId, { email = "kundin@example.com", ip = null, key }) {
+  const headers = { Origin: SHOP, "Content-Type": "application/json", "Idempotency-Key": key };
+  if (ip) headers["CF-Connecting-IP"] = ip;
+  const req = new Request("https://api.disorder119.com/create-order", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ itemIds: [itemId], adresse: ADRESSE, email, versand: "fest-dhl-S", versandPreisCents: 619 }),
+  });
+  const res = await shopWorker.fetch(req, env);
+  return { status: res.status, data: await res.json() };
+}
+
+test("checkout: at most two open unpaid orders per e-mail address; expired reservations do not count", async () => {
+  versandCacheLeeren();
+  const netz = fakeNetzViele();
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  try {
+    for (let i = 0; i < OFFENE_BESTELLUNGEN_MAX; i++) {
+      const ok = await bestellen(env, 9501 + i, { email: "Viel@Example.com", key: `k-offen-mail-000${i}` });
+      assert.equal(ok.status, 200, JSON.stringify(ok.data));
+    }
+    const dritte = await bestellen(env, 9503, { email: "viel@example.com", key: "k-offen-mail-0009" });
+    assert.equal(dritte.status, 429);
+    assert.equal(dritte.data.error, "TOO_MANY_OPEN_ORDERS");
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM commerce_orders").get().n, OFFENE_BESTELLUNGEN_MAX);
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations WHERE status='RESERVED'").get().n, OFFENE_BESTELLUNGEN_MAX, "nichts zusaetzlich reserviert");
+    // Eine andere Adresse bestellt ganz normal.
+    assert.equal((await bestellen(env, 9503, { email: "andere@example.com", key: "k-offen-mail-0010" })).status, 200);
+    // Abgelaufene Reservierungen zaehlen nicht mehr.
+    DB.raw.prepare("UPDATE reservations SET expires_at=? WHERE idempotency_key LIKE 'k-offen-mail-000%'").run(new Date(Date.now() - 1000).toISOString());
+    const spaeter = await bestellen(env, 9504, { email: "viel@example.com", key: "k-offen-mail-0011" });
+    assert.equal(spaeter.status, 200, JSON.stringify(spaeter.data));
+  } finally {
+    netz.restore();
+  }
+});
+
+test("checkout: at most two open unpaid orders per connection (IPv6 per /64), whatever the e-mail", async () => {
+  versandCacheLeeren();
+  const netz = fakeNetzViele();
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  try {
+    for (let i = 0; i < OFFENE_BESTELLUNGEN_MAX; i++) {
+      const ok = await bestellen(env, 9501 + i, { email: `person${i}@example.com`, ip: `2001:db8:aa:bb::${i + 1}`, key: `k-offen-netz-000${i}` });
+      assert.equal(ok.status, 200, JSON.stringify(ok.data));
+    }
+    const dritte = await bestellen(env, 9503, { email: "person9@example.com", ip: "2001:db8:aa:bb:1:2:3:4", key: "k-offen-netz-0009" });
+    assert.equal(dritte.status, 429);
+    assert.equal(dritte.data.error, "TOO_MANY_OPEN_ORDERS");
+    // Gespeichert ist nur der Hash des Anschlusses, nie die Adresse selbst.
+    const marker = DB.raw.prepare("SELECT entity_id,actor_ref FROM audit_events WHERE entity_type='kontingent:kasse-offen'").all();
+    assert.equal(marker.length, OFFENE_BESTELLUNGEN_MAX);
+    assert.ok(marker.every(m => /^[0-9a-f]{64}$/.test(m.entity_id) && m.actor_ref));
+    assert.ok(!JSON.stringify(DB.raw.prepare("SELECT * FROM audit_events").all()).includes("2001:db8"));
+    // Ein anderer Anschluss bestellt ganz normal.
+    assert.equal((await bestellen(env, 9503, { email: "person9@example.com", ip: "198.51.100.44", key: "k-offen-netz-0010" })).status, 200);
+    // Bezahlt oder abgebrochen ist nicht mehr offen.
+    DB.raw.prepare("UPDATE commerce_orders SET status='CANCELLED' WHERE idempotency_key='k-offen-netz-0000'").run();
+    const wieder = await bestellen(env, 9504, { email: "person9@example.com", ip: "2001:db8:aa:bb::99", key: "k-offen-netz-0011" });
+    assert.equal(wieder.status, 200, JSON.stringify(wieder.data));
+  } finally {
+    netz.restore();
+  }
+});
+
+test("rental quote: cached catalogue (no GitHub call per request), own limiter keyed per /64", async () => {
+  angebotKatalogLeeren();
+  const netz = fakeNetz();
+  const DB = sqliteD1(allMigrations());
+  const schluessel = [];
+  const QUOTE_LIMITER = { limit: async ({ key }) => { schluessel.push(key); return { success: schluessel.length <= 3 }; } };
+  const env = { DB, GITHUB_TOKEN: "gh-test", QUOTE_LIMITER };
+  const tag = n => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+  const angebot = ip => shopWorker.fetch(new Request("https://api.disorder119.com/rental-quote", {
+    method: "POST",
+    headers: { Origin: SHOP, "Content-Type": "application/json", "CF-Connecting-IP": ip },
+    body: JSON.stringify({ itemId: 9428, start: tag(10), end: tag(12) }),
+  }), env);
+  try {
+    const github = () => netz.calls.filter(c => c.host === "api.github.com").length;
+    assert.equal((await angebot("2001:db8:7:8::1")).status, 200);
+    const nachErstem = github();
+    assert.equal(nachErstem, 2, "einmal Verzeichnis + Blob");
+    assert.equal((await angebot("2001:db8:7:8::2")).status, 200);
+    assert.equal((await angebot("198.51.100.5")).status, 200);
+    assert.equal(github(), nachErstem, "weitere Angebote aus dem Zwischenspeicher");
+    assert.deepEqual(schluessel, ["rental-quote-netz:2001:db8:7:8::/64", "rental-quote-netz:2001:db8:7:8::/64", "rental-quote-netz:198.51.100.5"]);
+    const gebremst = await angebot("2001:db8:7:8::3");
+    assert.equal(gebremst.status, 429);
+    assert.equal((await gebremst.json()).error, "RATE_LIMITED");
+    // Mietanfrage und Kasse lesen weiter frisch.
+    const anfrage = await post({ DB, GITHUB_TOKEN: "gh-test" }, "/rental-request", { itemId: 9428, start: tag(10), end: tag(12) }, "k-miete-frisch-00001");
+    assert.equal(anfrage.status, 201, JSON.stringify(anfrage.data));
+    assert.equal(github(), nachErstem + 2, "Mietanfrage laedt den Katalog neu");
+  } finally {
+    netz.restore();
+    angebotKatalogLeeren();
+  }
+});

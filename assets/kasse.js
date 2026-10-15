@@ -54,6 +54,7 @@
       wirdGeprueft: "PayPal prüft deine Zahlung noch. Sobald sie bestätigt ist, bekommst du eine Mail – bitte nicht noch einmal bezahlen.",
       botCheck: "Die Sicherheitsprüfung hat nicht geklappt. Lade die Seite bitte neu und versuch es noch einmal.",
       zuSchnell: "Zu viele Versuche in kurzer Zeit. Warte bitte eine Minute.",
+      zuVieleOffen: "Du hast schon zwei offene Bestellungen, die noch nicht bezahlt sind. Schließ eine davon ab oder warte 15 Minuten – dann sind die Reservierungen abgelaufen.",
       nurDe: "Wir liefern bisher nur innerhalb Deutschlands.",
       fehler: "Da ist leider etwas schiefgelaufen. Bitte versuch es gleich noch einmal oder schreib uns.",
       abschliessen: "Zahlung wird abgeschlossen …", abgebrochen: "Bezahlung abgebrochen – es wurde nichts abgebucht.",
@@ -115,6 +116,7 @@
       wirdGeprueft: "PayPal is still reviewing your payment. You will get an email as soon as it is confirmed – please do not pay again.",
       botCheck: "The security check failed. Please reload the page and try again.",
       zuSchnell: "Too many attempts in a short time. Please wait a minute.",
+      zuVieleOffen: "You already have two open orders that have not been paid yet. Complete one of them or wait 15 minutes until the reservations expire.",
       nurDe: "For now we only deliver within Germany.",
       fehler: "Something went wrong. Please try again in a moment or write to us.",
       abschliessen: "Completing payment …", abgebrochen: "Payment cancelled – nothing was charged.",
@@ -176,6 +178,7 @@
       wirdGeprueft: "PayPal vérifie encore ton paiement. Tu recevras un e-mail dès qu'il sera confirmé – merci de ne pas payer une seconde fois.",
       botCheck: "La vérification de sécurité a échoué. Recharge la page et réessaie.",
       zuSchnell: "Trop de tentatives en peu de temps. Attends une minute.",
+      zuVieleOffen: "Tu as déjà deux commandes ouvertes qui ne sont pas encore payées. Finalise l'une d'elles ou attends 15 minutes que les réservations expirent.",
       nurDe: "Pour l'instant, nous ne livrons qu'en Allemagne.",
       fehler: "Une erreur s'est produite. Réessaie dans un instant ou écris-nous.",
       abschliessen: "Finalisation du paiement …", abgebrochen: "Paiement annulé – rien n'a été débité.",
@@ -1106,6 +1109,7 @@
     if (code === "EMAIL_REQUIRED") return t("fehltEmail");
     if (/^TURNSTILE_|^schutz_/.test(code)) return t("botCheck");
     if (code === "RATE_LIMITED") return t("zuSchnell");
+    if (code === "TOO_MANY_OPEN_ORDERS") return t("zuVieleOffen");
     if (code === "COUPON_INVALID_OR_USED") return t("gutscheinWeg");
     if (code === "COUPON_RESERVED") return t("gutscheinReserviert");
     if (code === "ITEM_UNAVAILABLE" || code === "ITEM_NOT_FOUND" || code === "PRICE_ON_REQUEST") return t("schonWeg");

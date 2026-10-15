@@ -168,7 +168,15 @@ Kundinnen sehen ihre Bestellungen mit Bildern und Sendungsverfolgung, pflegen ih
 Der Worker unterstuetzt:
 
 - `RATE_LIMITER`
+- `QUOTE_LIMITER` (strenger, nur `/rental-quote`, je Anschluss - IPv6 je /64; fehlt er, zaehlt `RATE_LIMITER`)
 - `TURNSTILE_SECRET`
+
+Kontingente gegen Missbrauch (`kontingent.js`, gezaehlt in `audit_events` als `kontingent:<art>`, ohne eigene Migration; IP-Hashes je Anschluss, nach Ablauf des Fensters geloescht):
+
+- Spiel-Codes (`/games/score`): hoechstens 2 je Anschluss in 30 Tagen und 25 am Tag insgesamt (`GAME_CODES_DAILY_CAP`); danach zaehlt der Score ohne Code (`couponLimited`). Ohne `Origin` wird kein Score angenommen.
+- Eingangsbestaetigungen der Widerrufsfunktion: hoechstens 5 je Anschluss und 100 am Tag insgesamt. Der Widerruf wird immer gespeichert; die Mail ist dann `GEDROSSELT` (Telegram-Hinweis, in der Admin-App "Bestaetigung senden"), an der Tagesgrenze holt der Cron sie nach.
+- Testshop (`SANDBOX="1"`): hoechstens 20 Mails am Tag fuer alle Mails zusammen (`TESTSHOP_MAIL_DAILY_CAP`), danach still keine mehr.
+- Kasse: hoechstens 2 offene, unbezahlte Bestellungen je E-Mail-Adresse und je Anschluss (`429 TOO_MANY_OPEN_ORDERS`); abgelaufene Reservierungen zaehlen nicht.
 
 In Sandbox/Entwicklung koennen diese Bindings fehlen. Im Live-Modus arbeiten menschlich ausgeloeste schreibende Commerce-Routen jedoch fail-closed, wenn die erforderlichen Abuse-Kontrollen nicht vorhanden sind. Eine fehlende Produktionskonfiguration wird nicht als funktionsfaehig vorgetaeuscht.
 
