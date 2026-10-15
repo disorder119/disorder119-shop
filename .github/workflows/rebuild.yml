@@ -28,6 +28,9 @@ on:
       - "config/shop-config.json"
       - "config/legal-content.json"
       - "config/mode-guard.json"
+      - "config/photo-sources.json"
+      - "config/catalog-number-links.json"
+      - "tools/fotoquellen.py"
       - "assets/app.js"
       - "assets/app.css"
       - "assets/article.js"
@@ -51,6 +54,9 @@ on:
       - "config/shop-config.json"
       - "config/legal-content.json"
       - "config/mode-guard.json"
+      - "config/photo-sources.json"
+      - "config/catalog-number-links.json"
+      - "tools/fotoquellen.py"
       - "assets/**"
       - "shop-worker/**"
       - "scripts/**"
@@ -90,6 +96,11 @@ jobs:
         run: |
           python scripts/validate_catalog_number_links.py
           python scripts/test_catalog_number_links.py
+
+      - name: Fotoquellen pruefen (Shop-Bild -> Freisteller -> Artikelnummer)
+        run: |
+          python scripts/validate_photo_sources.py
+          python scripts/test_photo_sources.py
 
       - name: Verifizierte Katalog-Quellfehler reparieren
         run: python scripts/repair_catalog_source_integrity.py
