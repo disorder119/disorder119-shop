@@ -31,6 +31,9 @@ function hostOhnePort(wert) {
 // jeden Aufruf auf den Live-Server. Wer den Kopf selbst setzt, schwaecht nur
 // seine eigene Anfrage - fremde Browser senden ihn nie.
 export function lokal(request, url = new URL(request.url)) {
+  // Hinter Cloudflare traegt jede Anfrage CF-Ray - dann ist sie nie lokal,
+  // egal welche Host-Koepfe der Client selbst mitschickt.
+  if (request.headers.get("CF-Ray")) return false;
   return lokalerName(url.hostname)
     || lokalerName(hostOhnePort(request.headers.get("Host")))
     || lokalerName(hostOhnePort(request.headers.get("MF-Original-Hostname")));
@@ -52,6 +55,7 @@ export function httpsErzwingen(request) {
   if (!unverschluesselt(request, url)) return null;
   if (request.method === "GET" || request.method === "HEAD") {
     url.protocol = "https:";
+    url.port = "";   // Cloudflare bedient https nicht auf den http-Sonderports (8080, 2052 ...)
     return new Response(null, { status: 301, headers: { Location: url.toString(), "Cache-Control": "no-store" } });
   }
   return new Response(JSON.stringify({ error: "HTTPS_REQUIRED" }), {

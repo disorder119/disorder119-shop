@@ -53,6 +53,16 @@ test("lokal (wrangler dev, localhost, 127.0.0.1) bleibt http - keine Schleife", 
   }
 });
 
+test("hinter Cloudflare (CF-Ray) helfen selbst gesetzte Host-Koepfe nicht, Sonderport faellt weg", () => {
+  for (const kopf of [{ "MF-Original-Hostname": "localhost" }, { Host: "localhost:8787" }]) {
+    const req = new Request("http://api.disorder119.com/health", { headers: { ...kopf, "CF-Ray": "8f1e2d3c4b5a6978-FRA" } });
+    assert.equal(lokal(req), false, JSON.stringify(kopf));
+    assert.equal(httpsErzwingen(req).status, 301, JSON.stringify(kopf));
+  }
+  const port = httpsErzwingen(new Request("http://api.disorder119.com:8080/x?y=1"));
+  assert.equal(port.headers.get("Location"), "https://api.disorder119.com/x?y=1");
+});
+
 test("HSTS auf HTTPS-Antworten, vorhandener Wert bleibt, http bekommt keins", async () => {
   const https = mitHsts(new Response("x", { status: 418, statusText: "Tee", headers: { "X-Eigen": "1" } }), new Request("https://api.disorder119.com/"));
   assert.equal(https.headers.get("Strict-Transport-Security"), HSTS);
