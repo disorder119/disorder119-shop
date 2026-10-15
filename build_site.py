@@ -31,6 +31,11 @@ sys.path.insert(0, str(BASE / "scripts"))
 from sync_legal_content import sync_legal_content
 sync_legal_content(BASE)
 from seo_text import compose_description, seo_title  # noqa: E402
+# Titel, Farben und Beschreibungen je Sprache sowie "Ähnliche Teile" und
+# vor/zurück teilt sich der Build mit scripts/repair_public_article_integrity.py.
+import i18n_text  # noqa: E402
+import related_items  # noqa: E402
+from i18n_text import loc_name, loc_title  # noqa: E402
 SITE_URL = "https://disorder119.com/"
 DATA_PATH = BASE / "data" / "items.json"
 
@@ -354,16 +359,10 @@ ITEMS = json.loads(DATA_PATH.read_text(encoding="utf-8"))
 # spezifischeren Namen (z.B. "Luna Rossa Sweatjacke"), nur das brand-Feld
 # wird hier zentral normalisiert - wirkt dadurch ueberall (Kachel-Filter,
 # Menue-Markenliste, "MEHR VON ..."-Vorschlaege, Markenzaehler im Header).
-BRAND_ALIASES = {
-    "Luna Rossa": "Prada",
-    "Maison Margiela x H&M": "Maison Margiela",
-    "Dior Homme": "Dior",
-    "MM6 Maison Margiela": "Maison Margiela",
-}
-for _it in ITEMS:
-    _alias = BRAND_ALIASES.get(_it.get("brand") or "")
-    if _alias:
-        _it["brand"] = _alias
+# Die Liste steht in scripts/i18n_text.py, weil das Reparaturskript nach dem
+# Bauen dieselben Marken braucht.
+BRAND_ALIASES = i18n_text.BRAND_ALIASES
+i18n_text.apply_brand_aliases(ITEMS)
 
 BY_ID = {it["id"]: it for it in ITEMS}
 
@@ -401,111 +400,45 @@ def title_size(it, lang):
 
 
 def meta_description(it, lang):
-    ph = META_PHRASES[lang]
-    cat = cat_tr(it.get("category") or "", lang)
-    name = display_name(it)
-    if it.get("public_status") == "SOLD":
-        return ph["sold"].format(name=name)
-    tail = []
-    if cat:
-        tail.append(cat)
-    if it.get("size"):
-        tail.append(ph["size_label"] + " " + size_tr(it["size"], lang))
-    tail_str = ", ".join(tail)
-    prefix = (name + " – " + tail_str) if tail_str else name
-    eigener_text = {"de": it.get("desc_de") or it.get("desc"),
-                    "en": it.get("desc_en"), "fr": it.get("desc_fr")}[lang]
-    return compose_description(prefix, eigener_text, ph["tail_suffix"], name)
+    # Gemeinsam mit scripts/repair_public_article_integrity.py, ohne Zustand.
+    return i18n_text.meta_description(it, lang)
 
 
 def auto_description(it, lang):
-    ph = META_PHRASES[lang]
-    facts = []
-    if it.get("category"):
-        facts.append(cat_tr(it["category"], lang))
-    if it.get("size"):
-        facts.append(ph["size_label"] + " " + size_tr(it["size"], lang))
-    name = display_name(it)
-    tail = (" – " + ", ".join(facts)) if facts else ""
-    return name + tail + ph["auto_suffix"]
+    return i18n_text.auto_description(it, lang)
 
 
 # ---------------------------------------------------------------------------
-# Related items (Task 4 Fix): zwei GETRENNTE Gruppen statt einer vermischten
-# Liste - "MORE FROM BRAND" darf ausschliesslich exakt dieselbe Marke zeigen.
+# Related items: zwei GETRENNTE Gruppen statt einer vermischten Liste - "MORE
+# FROM BRAND" zeigt ausschliesslich exakt dieselbe Marke. Auswahl (rotierendes
+# Fenster, nur verfuegbare Stuecke, mindestens drei eingehende Links) und
+# Karten stehen in scripts/related_items.py; das Reparaturskript setzt sie
+# nach dem Bauen mit derselben Logik erneut.
 # ---------------------------------------------------------------------------
-def related_same_brand(it, n=4):
-    others = [x for x in ITEMS if x["id"] != it["id"] and x.get("gallery") and x["gallery"][0]
-              and x.get("brand") and x.get("brand") == it.get("brand")]
-    others.sort(key=lambda x: (x.get("public_status") == "SOLD"))
-    return others[:n]
+_RELATED_PLAN = []
 
 
-def related_same_category(it, exclude_ids, n=4):
-    others = [x for x in ITEMS if x["id"] != it["id"] and x["id"] not in exclude_ids
-              and x.get("gallery") and x["gallery"][0]
-              and x.get("category") == it.get("category")]
-    others.sort(key=lambda x: (x.get("public_status") == "SOLD"))
-    return others[:n]
+def related_plan():
+    if not _RELATED_PLAN:
+        _RELATED_PLAN.append(related_items.related_plan(ITEMS))
+    return _RELATED_PLAN[0]
 
 
 def related_card_html(x, lang):
-    ph = META_PHRASES[lang]
-    sold = x.get("public_status") == "SOLD"
-    if sold:
-        price_html = '<span class="related-card__sold">SOLD</span>'
-        price_line = ""
-    else:
-        price_html = ""
-        price_line = (
-            '<span class="related-card__price">' + fmt_price_de(x["price"]) + "</span>"
-            if x.get("price", 0) > 0
-            else '<span class="related-card__price" data-price-on-request>' + esc(ph["price_on_request"]) + '</span>'
-        )
-    href = lang_home(lang) + "artikel/" + str(x.get("url_slug", x["id"])) + "/"
-    return (
-        '<a class="related-card" href="' + href + '">'
-        '<div class="related-card__frame">'
-        # Die Karte zeigt das Bild in einem 3:4-Rahmen von rund 140-200 px
-        # Breite. Dafuer das volle Galeriebild (bis 2400 px, bis 2 MiB) zu
-        # laden kostete auf der gemessenen Produktseite 915 KB fuer zwei
-        # briefmarkengrosse Kacheln - mehr als das Dreifache des eigentlichen
-        # Hauptbilds - und verzoegerte dessen Ladestart um 1892 ms. Das
-        # ohnehin vorhandene Vorschaubild (220x293) hat genau die richtige
-        # Groesse. width/height reservieren zusaetzlich den Platz.
-        '<img src="/' + esc(card_image(x)) + '" alt="' + esc(display_name(x)) + '" loading="lazy" decoding="async" width="220" height="293" />' +
-        (price_html if sold else "") +
-        "</div>"
-        '<span class="related-card__brand">' + esc(x.get("brand") or ph["no_brand"]) + "</span>"
-        '<span class="related-card__title">' + esc(x["title"]) + "</span>" +
-        price_line +
-        "</a>"
-    )
+    return related_items.related_card_html(x, lang, BASE)
 
 
 def related_sections_html(it, lang):
-    brand_items = related_same_brand(it)
-    exclude = {it["id"]} | {b["id"] for b in brand_items}
-    cat_items = related_same_category(it, exclude)
-    labels = {
-        "de": {"brand": "MEHR VON {brand}", "category": "ÄHNLICHE ARCHIVSTÜCKE"},
-        "en": {"brand": "MORE FROM {brand}", "category": "SIMILAR ARCHIVE PIECES"},
-        "fr": {"brand": "PLUS DE {brand}", "category": "PIÈCES D’ARCHIVE SIMILAIRES"},
-    }[lang]
-    parts = []
-    if brand_items:
-        parts.append(
-            '<div class="related"><h2 class="related__title" data-related-heading="brand">'
-            + esc(labels["brand"].format(brand=(it.get("brand") or "").upper())) + "</h2>"
-            '<div class="related__grid">' + "".join(related_card_html(x, lang) for x in brand_items) + "</div></div>"
-        )
-    if cat_items:
-        parts.append(
-            '<div class="related"><h2 class="related__title" data-related-heading="category">'
-            + esc(labels["category"]) + "</h2>"
-            '<div class="related__grid">' + "".join(related_card_html(x, lang) for x in cat_items) + "</div></div>"
-        )
-    return "".join(parts)
+    return related_items.related_sections_html(it, related_plan(), lang, BASE)
+
+
+_ARTICLE_SEQUENCE = []
+
+
+def article_sequence():
+    if not _ARTICLE_SEQUENCE:
+        _ARTICLE_SEQUENCE.append(related_items.article_sequence(ITEMS))
+    return _ARTICLE_SEQUENCE[0]
 
 
 def facts_html(it, lang):
