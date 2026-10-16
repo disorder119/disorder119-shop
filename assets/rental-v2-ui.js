@@ -228,6 +228,18 @@
     new MutationObserver(scheduleEnhance).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-pressed"] }); // QUALITY95_RENTAL_OBSERVER
   }
 
+  // Titel in der Seitensprache (catalog.json: title_en/title_fr, beim Bauen
+  // notfalls aus dem deutschen Titel abgeleitet). Nur in dieser Kopie des
+  // Katalogs - Anfragen tragen zusaetzlich die Artikelnummer.
+  function titelDerSprache(items) {
+    if (LANG === "de" || !Array.isArray(items)) return items;
+    items.forEach(function (item) {
+      var lokal = item && item["title_" + LANG];
+      if (lokal) item.title = lokal;
+    });
+    return items;
+  }
+
   function bootstrap() {
     if (!isRentalPage()) return;
     injectStyles();
@@ -235,7 +247,7 @@
     fetch("/data/catalog.json", { credentials: "same-origin" })
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (items) {
-        if (Array.isArray(items)) items.forEach(function (item) { catalogMap[Number(item.id)] = item; });
+        if (Array.isArray(items)) titelDerSprache(items).forEach(function (item) { catalogMap[Number(item.id)] = item; });
         scheduleEnhance();
       })
       .catch(function () { scheduleEnhance(); });

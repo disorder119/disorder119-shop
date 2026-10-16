@@ -217,6 +217,30 @@
     if (LANG === "en") return "€" + wert.toFixed(2);
     return wert.toFixed(2).replace(".", ",") + " €";
   }
+  // Titel in der Seitensprache (catalog.json: title_en/title_fr, beim Bauen
+  // notfalls abgeleitet). Bestellzeilen an den Shop bleiben deutsch.
+  function titelDerSprache(it) {
+    return String((LANG !== "de" && it["title_" + LANG]) || it.title || "");
+  }
+  // Groesse in der Seitensprache wie auf der Produktseite (scripts/i18n_text.py
+  // SIZE_TR): "Einheitsgröße" -> "One size", ohne doppeltes "Size" davor.
+  var GROESSE_WORT = {
+    "Einheitsgröße": { de: "Einheitsgröße", en: "One size", fr: "Taille unique" },
+    "One Size": { de: "Einheitsgröße", en: "One size", fr: "Taille unique" },
+    "One size": { de: "Einheitsgröße", en: "One size", fr: "Taille unique" },
+    "Universal": { de: "Universal", en: "One size", fr: "Taille unique" },
+    "verstellbar": { de: "verstellbar", en: "adjustable", fr: "réglable" },
+    "Größenverstellbar": { de: "verstellbar", en: "adjustable", fr: "réglable" },
+    "Adjustable": { de: "verstellbar", en: "adjustable", fr: "réglable" }
+  };
+  function groesseText(size) {
+    var roh = String(size || "").trim();
+    var wort = GROESSE_WORT[roh];
+    if (wort) { var w = wort[LANG] || wort.de; return w.charAt(0).toUpperCase() + w.slice(1); }
+    if (/^ca\.?\s*\d/i.test(roh)) roh = roh.replace(/^ca\.?\s*/i, LANG === "en" ? "approx. " : LANG === "fr" ? "env. " : "ca. ");
+    return t("groesse") + " " + roh;
+  }
+
   function el(tag, klasse, text) {
     var e = document.createElement(tag);
     if (klasse) e.className = klasse;
@@ -310,15 +334,15 @@
       }
       var text = el("span", "kasse-stueck__text");
       if (it.brand) text.appendChild(el("span", "kasse-stueck__marke", it.brand));
-      text.appendChild(el("span", "kasse-stueck__titel", it.title || ""));
-      if (it.size) text.appendChild(el("span", "kasse-stueck__meta", t("groesse") + " " + it.size));
+      text.appendChild(el("span", "kasse-stueck__titel", titelDerSprache(it)));
+      if (it.size) text.appendChild(el("span", "kasse-stueck__meta", groesseText(it.size)));
       li.appendChild(bild);
       li.appendChild(text);
       li.appendChild(el("span", "kasse-stueck__preis", geld(Math.round(it.price * 100))));
       liste.appendChild(li);
     });
     if (zustand.weg.length) {
-      var hinweis = el("li", "kasse-weg", t("nichtMehr") + " " + zustand.weg.map(function (it) { return it.title; }).join(", "));
+      var hinweis = el("li", "kasse-weg", t("nichtMehr") + " " + zustand.weg.map(titelDerSprache).join(", "));
       liste.appendChild(hinweis);
     }
     summeZeichnen();

@@ -31,8 +31,8 @@
     en: {
       alle: "All", kategorien: "Categories", groesse: "Size", weitereGroessen: "More sizes",
       wenigerGroessen: "Fewer sizes", schuhgroessen: "Shoe sizes",
-      fuer: "For", sortieren: "Sort", preis: "Price", mehr: "Price, brand, colour",
-      marke: "Brand", farbe: "Colour", erhaltung: "Condition", zuruecksetzen: "Reset all",
+      fuer: "For", sortieren: "Sort", preis: "Price", mehr: "Price, brand, color",
+      marke: "Brand", farbe: "Color", erhaltung: "Condition", zuruecksetzen: "Reset all",
       keineGroessen: "No sizes listed for this selection.", alleMarken: "All brands ({n})",
       weniger: "Less", bis: "up to €{b}", ab: "from €{a}", spanne: "€{a}–{b}",
       anzeigen: "Show filters", ausblenden: "Hide filters", filter: "Filters", schliessen: "Close",
@@ -606,9 +606,11 @@
     var fn = zaehlen(api.treffer("color"), function (it) {
       return String(it.color || "").split(",").map(function (c) { return c.trim(); });
     });
-    var farben = Object.keys(fn).sort(function (a, b) { return fn[b] - fn[a] || a.localeCompare(b, "de"); });
+    var farbName = api.farbe || function (v) { return v; };
+    var farben = Object.keys(fn).sort(function (a, b) { return fn[b] - fn[a] || farbName(a).localeCompare(farbName(b), sprache()); });
     if (farben.length) {
-      innen.appendChild(einfacheGruppe(tx("farbe"), "color", "filterColor", farben, fn, z.color, null, {
+      // Farbnamen in der Seitensprache (app.js trColor), Filterwerte bleiben deutsch.
+      innen.appendChild(einfacheGruppe(tx("farbe"), "color", "filterColor", farben, fn, z.color, api.farbe || null, {
         punkt: function (f) { return FARBEN[f] || "linear-gradient(135deg,#e04b4b,#e8c33a,#3aa35b,#3a6fd6)"; }
       }).gruppe);
     }
@@ -666,10 +668,17 @@
   var verkauftSpalten = 0;
   var verkauftGeplant = false;
 
+  // Der interne Testartikel (Artikelnummer TEST, Shop-ID 9999) gehoert nicht
+  // ins Band - erkannt an ID und Nummer, nicht nur am (deutschen) Titel.
+  function istTestartikel(it) {
+    return String(it.id) === "9999" || String(it.article || "").toUpperCase() === "TEST" ||
+      /testartikel/i.test(String(it.title || ""));
+  }
+
   function verkauftListe() {
     return api.artikel().filter(function (it) {
       return it.public_status === "SOLD" && (it.grid_image || (it.gallery && it.gallery[0])) &&
-        !/testartikel/i.test(String(it.title || ""));
+        !istTestartikel(it);
     }).sort(function (a, b) { return Number(b.id) - Number(a.id); }).slice(0, VERKAUFT_MAX);
   }
 
@@ -723,7 +732,7 @@
         bild.appendChild(img);
         var text = el("span", "d119-verkauft__text");
         text.appendChild(el("span", "d119-verkauft__marke", it.brand || "DISORDER119"));
-        if (!kopie) text.appendChild(el("span", "d119-verkauft__unsichtbar", it.title || ""));
+        if (!kopie) text.appendChild(el("span", "d119-verkauft__unsichtbar", api.titel ? api.titel(it) : (it.title || "")));
         text.appendChild(el("span", "d119-verkauft__status", tx("verkauftStatus")));
         karte.appendChild(bild);
         karte.appendChild(text);

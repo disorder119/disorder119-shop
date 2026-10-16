@@ -9,6 +9,7 @@ Rules:
   equally explicit condition phrase
 - unresolved physical facts remain open and are never guessed
 - automated fills retain machine-readable provenance
+- desc_en/desc_fr are never written (translations are rendered, not stored)
 """
 from __future__ import annotations
 
@@ -172,10 +173,12 @@ def missing_fields(item: dict) -> list[str]:
     return missing
 
 
-def expand_description(item: dict, lang: str) -> str:
-    key = {"de": "desc_de", "en": "desc_en", "fr": "desc_fr"}[lang]
-    fallback = item.get("desc") if lang == "de" else ""
-    current = str(item.get(key) or fallback or "").strip()
+def expand_description(item: dict, lang: str = "de") -> str:
+    """Nur Deutsch: ein zu kurzer Text bekommt Faktensaetze und den Hinweis
+    auf offene Angaben. EN/FR entstehen beim Rendern (scripts/i18n_text.py)."""
+    if lang != "de":
+        raise ValueError("desc_en/desc_fr werden nicht mehr vom CI geschrieben")
+    current = str(item.get("desc_de") or item.get("desc") or "").strip()
     if len(current) >= 80:
         return current
     brand = str(item.get("brand") or "Disorder119").strip()
@@ -183,32 +186,14 @@ def expand_description(item: dict, lang: str) -> str:
     category = str(item.get("taxonomy_category") or item.get("category") or "").strip()
     size = str(item.get("size") or "").strip()
     color = str(item.get("color") or "").strip()
-    condition = str(item.get("condition") or "").strip()
     gaps = missing_fields(item)
-    if lang == "de":
-        start = current or f"Aus dem kuratierten Archiv von Disorder119. {title} von {brand}."
-        facts = []
-        if category: facts.append("Kategorie: " + category)
-        if size: facts.append("Größe: " + size)
-        if color: facts.append("Farbe: " + color)
-        extra = (" " + ". ".join(facts) + ".") if facts else ""
-        gap = " Fehlende Angaben bitte den Fotos entnehmen oder vor dem Kauf nachfragen." if gaps else ""
-    elif lang == "en":
-        start = current or f"From the curated Disorder119 archive. {title} by {brand}."
-        facts = []
-        if category: facts.append("Category: " + category)
-        if size: facts.append("Size: " + size)
-        if color: facts.append("Color: " + color)
-        extra = (" " + ". ".join(facts) + ".") if facts else ""
-        gap = " For missing details, please see the photos or ask before buying." if gaps else ""
-    else:
-        start = current or f"Issu de l’archive sélectionnée Disorder119. {title} par {brand}."
-        facts = []
-        if category: facts.append("Catégorie : " + category)
-        if size: facts.append("Taille : " + size)
-        if color: facts.append("Couleur : " + color)
-        extra = (" " + ". ".join(facts) + ".") if facts else ""
-        gap = " Pour les informations manquantes, merci de voir les photos ou de nous demander avant l’achat." if gaps else ""
+    start = current or f"Aus dem kuratierten Archiv von Disorder119. {title} von {brand}."
+    facts = []
+    if category: facts.append("Kategorie: " + category)
+    if size: facts.append("Größe: " + size)
+    if color: facts.append("Farbe: " + color)
+    extra = (" " + ". ".join(facts) + ".") if facts else ""
+    gap = " Fehlende Angaben bitte den Fotos entnehmen oder vor dem Kauf nachfragen." if gaps else ""
     return (start.rstrip(". ") + "." + extra + gap).strip()
 
 
@@ -307,7 +292,11 @@ def main() -> None:
                 filled["condition"] += 1
                 changed = True
 
-        for lang, key in (("de", "desc_de"), ("en", "desc_en"), ("fr", "desc_fr")):
+        # Nur Deutsch: desc_en/desc_fr schreibt das CI nie mehr. Fruehere
+        # Platzhalter dort ("<deutscher Titel> by <Marke>. Color: Rotbraun")
+        # erkennt scripts/i18n_text.py beim Rendern und ersetzt sie durch den
+        # uebersetzten Ersatztext - eine Uebersetzung wird so nie ueberschrieben.
+        for lang, key in (("de", "desc_de"),):
             before = str(item.get(key) or (item.get("desc") if lang == "de" else "") or "").strip()
             after = expand_description(item, lang)
             if after != before:

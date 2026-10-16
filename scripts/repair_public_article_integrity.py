@@ -16,100 +16,19 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-# Gemeinsame Beschreibungslogik mit build_site.py. Frueher gab es hier eine
-# eigene Kopie; weil dieses Skript die Meta-Beschreibung nach dem Bauen
-# erneut setzt, hat es jede Aenderung am Generator stillschweigend
-# ueberschrieben.
-from seo_text import compose_description  # noqa: E402
+# Gemeinsame Text- und Verlinkungslogik mit build_site.py. Frueher gab es hier
+# eigene Kopien von Name, Meta-Beschreibung und "Aehnliche Teile"; weil dieses
+# Skript nach dem Bauen laeuft, hat es jede Aenderung am Generator
+# stillschweigend ueberschrieben (zuletzt: deutsche Titel und der Zustand in
+# der Meta-Beschreibung der EN/FR-Seiten).
+from i18n_text import CATEGORY_TR, apply_brand_aliases, meta_description, tr  # noqa: E402
+from related_items import related_plan, related_sections_html  # noqa: E402
 
 BASE = Path(__file__).resolve().parents[1]
 ITEMS_PATH = BASE / "data" / "items.json"
 LANGS = ("de", "en", "fr")
-
-CATEGORY_TR = {
-    "Jackets": {"de": "Jacken", "en": "Jackets", "fr": "Vestes"},
-    "Coats": {"de": "Mäntel", "en": "Coats", "fr": "Manteaux"},
-    "Tops": {"de": "Tops", "en": "Tops", "fr": "Hauts"},
-    "Shirts": {"de": "Hemden/Shirts", "en": "Shirts", "fr": "Chemises/T-shirts"},
-    "Knitwear": {"de": "Strickwaren", "en": "Knitwear", "fr": "Maille"},
-    "Pants": {"de": "Hosen", "en": "Pants", "fr": "Pantalons"},
-    "Skirts": {"de": "Röcke", "en": "Skirts", "fr": "Jupes"},
-    "Dresses": {"de": "Kleider", "en": "Dresses", "fr": "Robes"},
-    "Shoes": {"de": "Schuhe", "en": "Shoes", "fr": "Chaussures"},
-    "Accessories": {"de": "Accessoires", "en": "Accessories", "fr": "Accessoires"},
-    "Objects": {"de": "Objekte", "en": "Objects", "fr": "Objets"},
-}
-CONDITION_TR = {
-    "Repariert": {"de": "Repariert", "en": "Repaired", "fr": "Réparé"},
-    "Mit Defekt": {"de": "Mit Defekt", "en": "With defect", "fr": "Avec défaut"},
-    "Gut": {"de": "Gut", "en": "Good", "fr": "Bon"},
-    "Sehr gut": {"de": "Sehr gut", "en": "Very good", "fr": "Très bon"},
-    "Zufriedenstellend": {"de": "Zufriedenstellend", "en": "Satisfactory", "fr": "Satisfaisant"},
-}
-SIZE_TR = {
-    "Einheitsgröße": {"de": "Einheitsgröße", "en": "One size", "fr": "Taille unique"},
-    "verstellbar": {"de": "verstellbar", "en": "adjustable", "fr": "réglable"},
-    "Größenverstellbar": {"de": "verstellbar", "en": "adjustable", "fr": "réglable"},
-    "Kindergröße L": {"de": "Kindergröße L", "en": "Kids' size L", "fr": "Taille enfant L"},
-    "Sonstige": {"de": "Sonstige", "en": "Other", "fr": "Autre"},
-}
-META = {
-    "de": {
-        "sold": "{name} – bereits verkauft, Teil des kuratierten Disorder119-Archivs für Designer- und Vintage-Mode.",
-        "size": "Größe", "condition": "Zustand",
-        "suffix": ". Aus dem kuratierten Second-Hand-Archiv von Disorder119.",
-        "brand": "MEHR VON {brand}", "category": "ÄHNLICHE ARCHIVSTÜCKE", "request": "Preis auf Anfrage",
-    },
-    "en": {
-        "sold": "{name} – already sold, part of the curated Disorder119 archive for designer and vintage fashion.",
-        "size": "Size", "condition": "Condition",
-        "suffix": ". From the curated second-hand archive of Disorder119.",
-        "brand": "MORE FROM {brand}", "category": "SIMILAR ARCHIVE PIECES", "request": "Price on request",
-    },
-    "fr": {
-        "sold": "{name} – déjà vendu, fait partie de l'archive sélectionnée Disorder119 pour la mode de créateurs et vintage.",
-        "size": "Taille", "condition": "État",
-        "suffix": ". Issu de l'archive seconde main sélectionnée de Disorder119.",
-        "brand": "PLUS DE {brand}", "category": "PIÈCES D’ARCHIVE SIMILAIRES", "request": "Prix sur demande",
-    },
-}
 ARTICLE_ITEM_RE = re.compile(r"window\.ARTICLE_ITEM = (\{.*?\});", re.S)
 FACT_CATEGORY_RE = re.compile(r'(<div class="fact__value" id="factCategoryValue">).*?(</div>)', re.S)
-RELATED_HREF_RE = re.compile(r'href="(?:/(?:en|fr))?/artikel/(\d+)/"')
-
-
-def tr(table: dict, value: str, lang: str) -> str:
-    row = table.get(value)
-    return (row or {}).get(lang) or (row or {}).get("de") or value or ""
-
-
-def display_name(item: dict) -> str:
-    brand = item.get("brand") or ""
-    title = item.get("title") or ""
-    # Wie build_site.display_name: steht die Marke schon im Titel ("MM6 Maison
-    # Margiela", "Pierre Balmain"), wird sie nicht noch einmal vorangestellt.
-    if brand and re.search(r"(?<!\w)" + re.escape(brand) + r"(?!\w)", title, re.I):
-        return title
-    return (brand + " " + title).strip()
-
-
-def meta_description(item: dict, lang: str) -> str:
-    ph = META[lang]
-    name = display_name(item)
-    if item.get("public_status") == "SOLD":
-        return ph["sold"].format(name=name)
-    parts: list[str] = []
-    category = item.get("taxonomy_category") or item.get("category") or ""
-    if category:
-        parts.append(tr(CATEGORY_TR, category, lang))
-    if item.get("size"):
-        parts.append(ph["size"] + " " + tr(SIZE_TR, str(item["size"]), lang))
-    if item.get("condition"):
-        parts.append(ph["condition"] + " " + tr(CONDITION_TR, str(item["condition"]), lang))
-    prefix = name + ((" – " + ", ".join(parts)) if parts else "")
-    eigener_text = {"de": item.get("desc_de") or item.get("desc"),
-                    "en": item.get("desc_en"), "fr": item.get("desc_fr")}[lang]
-    return compose_description(prefix, eigener_text, ph["suffix"], name)
 
 
 def article_dir(lang: str, item_id: int) -> Path:
@@ -128,85 +47,6 @@ def set_meta_content(text: str, marker: str, value: str) -> str:
     return text[:value_start] + html.escape(value, quote=True) + text[value_end:]
 
 
-def fmt_price(value: float) -> str:
-    s = f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    return s + " €"
-
-
-def card_image(gallery: list) -> str:
-    """Kleinste vorhandene Fassung des Titelbilds fuer die Kacheln.
-
-    Muss mit build_site.card_image uebereinstimmen: dieses Skript erzeugt die
-    "Mehr von"-Karten nach dem Bauen noch einmal und wuerde sonst das volle
-    Galeriebild (bis 2400 px, bis 2 MiB) zuruecksetzen. Gemessen kostete das
-    auf einer Produktseite 915 KB fuer zwei briefmarkengrosse Kacheln.
-    """
-    if not gallery:
-        return "assets/favicon.png"
-    kopf, _, datei = gallery[0].rpartition("/")
-    for kandidat in (f"{kopf}/thumbs/{datei}", f"{kopf}/display/{datei}"):
-        if (BASE / kandidat).is_file():
-            return kandidat
-    return gallery[0]
-
-
-def related_card(item: dict, lang: str) -> str:
-    sold = item.get("public_status") == "SOLD"
-    if sold:
-        price = '<span class="related-card__sold">SOLD</span>'
-        price_line = ""
-    else:
-        price = ""
-        price_line = (
-            '<span class="related-card__price">' + fmt_price(float(item["price"])) + "</span>"
-            if float(item.get("price") or 0) > 0
-            else '<span class="related-card__price" data-price-on-request>' + html.escape(META[lang]["request"]) + "</span>"
-        )
-    prefix = "/" if lang == "de" else f"/{lang}/"
-    gallery = item.get("gallery") or []
-    hero = card_image(gallery)
-    return (
-        f'<a class="related-card" href="{prefix}artikel/{item.get("url_slug",item["id"])}/">'
-        '<div class="related-card__frame">'
-        f'<img src="/{html.escape(hero, quote=True)}" alt="{html.escape(display_name(item), quote=True)}" loading="lazy" decoding="async" width="220" height="293" />'
-        + price + "</div>"
-        f'<span class="related-card__brand">{html.escape(item.get("brand") or "")}</span>'
-        f'<span class="related-card__title">{html.escape(item.get("title") or "")}</span>'
-        + price_line + "</a>"
-    )
-
-
-def related_sections(item: dict, public_items: list[dict], lang: str, n: int = 4) -> str:
-    candidates = [x for x in public_items if x["id"] != item["id"] and (x.get("gallery") or [None])[0]]
-    same_brand = [x for x in candidates if x.get("brand") and x.get("brand") == item.get("brand")]
-    same_brand.sort(key=lambda x: x.get("public_status") == "SOLD")
-    brand_items = same_brand[:n]
-    excluded = {x["id"] for x in brand_items}
-    wanted_category = item.get("taxonomy_category") or item.get("category")
-    same_category = [
-        x for x in candidates
-        if x["id"] not in excluded
-        and (x.get("taxonomy_category") or x.get("category")) == wanted_category
-    ]
-    same_category.sort(key=lambda x: x.get("public_status") == "SOLD")
-    category_items = same_category[:n]
-    parts: list[str] = []
-    if brand_items:
-        heading = META[lang]["brand"].format(brand=(item.get("brand") or "").upper())
-        parts.append(
-            '<div class="related"><h2 class="related__title" data-related-heading="brand">'
-            + html.escape(heading) + '</h2><div class="related__grid">'
-            + "".join(related_card(x, lang) for x in brand_items) + "</div></div>"
-        )
-    if category_items:
-        parts.append(
-            '<div class="related"><h2 class="related__title" data-related-heading="category">'
-            + html.escape(META[lang]["category"]) + '</h2><div class="related__grid">'
-            + "".join(related_card(x, lang) for x in category_items) + "</div></div>"
-        )
-    return "".join(parts)
-
-
 def replace_related(text: str, sections: str) -> str:
     page_foot = text.find('<div class="page-foot">')
     if page_foot < 0:
@@ -217,7 +57,7 @@ def replace_related(text: str, sections: str) -> str:
     return text[:page_foot] + sections + "\n" + text[page_foot:]
 
 
-def repair_page(item: dict, public_items: list[dict], lang: str) -> None:
+def repair_page(item: dict, plan: dict, lang: str) -> None:
     page = article_dir(lang, int(item.get("url_slug",item["id"]))) / "index.html"
     if not page.exists():
         raise SystemExit(f"FEHLER: öffentliche Produktseite fehlt: {page.relative_to(BASE)}")
@@ -250,7 +90,7 @@ def repair_page(item: dict, public_items: list[dict], lang: str) -> None:
             article_data[field] = item[field]
     replacement = "window.ARTICLE_ITEM = " + json.dumps(article_data, ensure_ascii=False) + ";"
     text = text[:match.start()] + replacement + text[match.end():]
-    text = replace_related(text, related_sections(item, public_items, lang))
+    text = replace_related(text, related_sections_html(item, plan, lang, BASE))
     page.write_text(text, encoding="utf-8")
     if str(item.get('url_slug',item['id'])) != str(item['id']):
         # Legacy fallbacks must not retain stale related links to removed drafts.
@@ -263,7 +103,11 @@ def repair_page(item: dict, public_items: list[dict], lang: str) -> None:
 
 def main() -> None:
     items = json.loads(ITEMS_PATH.read_text(encoding="utf-8"))
+    # Wie build_site.py: Linien/Kollaborationen laufen unter der Hauptmarke
+    # (nur im Speicher, data/items.json bleibt unveraendert).
+    apply_brand_aliases(items)
     public_items = [item for item in items if item.get("public_status") != "DRAFT"]
+    plan = related_plan(items)
     drafts = [item for item in items if item.get("public_status") == "DRAFT"]
 
     removed = 0
@@ -277,7 +121,7 @@ def main() -> None:
     repaired = 0
     for item in public_items:
         for lang in LANGS:
-            repair_page(item, public_items, lang)
+            repair_page(item, plan, lang)
             repaired += 1
 
     print(

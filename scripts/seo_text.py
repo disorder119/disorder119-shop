@@ -66,7 +66,8 @@ TYPE_TR = {
     "Toaster": ("Toaster", "Toaster", "Grille-pain"),
     "Top": ("Top", "Top", "Haut"),
     "Trench Coat": ("Trenchcoat", "Trench Coat", "Trench"),
-    "Trousers": ("Hose", "Trousers", "Pantalon"),
+    # Englisch wie og:locale en_US: "Pants", nicht "Trousers".
+    "Trousers": ("Hose", "Pants", "Pantalon"),
     "Tunic": ("Tunika", "Tunic", "Tunique"),
     "Underwear Shorts": ("Unterhose", "Underwear Shorts", "Caleçon"),
     "Vest": ("Weste", "Vest", "Gilet"),
@@ -147,7 +148,8 @@ def _type_already_named(name: str, product_type: str | None) -> bool:
     return any(_norm(v) and _norm(v) in haystack for v in varianten)
 
 
-def seo_title(name: str, product_type: str | None, size_label: str, lang: str) -> str:
+def seo_title(name: str, product_type: str | None, size_label: str, lang: str,
+              size_word: bool = True) -> str:
     """'Balmain Furry' -> 'Balmain Furry Jacke · Gr. S | Disorder119'.
 
     Die Groesse kommt nur dazu, wenn der Titel dann noch in die Trefferliste
@@ -165,7 +167,9 @@ def seo_title(name: str, product_type: str | None, size_label: str, lang: str) -
         if len(mit_secondhand) + len(TITLE_SUFFIX) <= TITLE_MAX + 15:
             basis = mit_secondhand
     if size_label:
-        mit_groesse = f"{basis} · {SIZE_WORD[lang]} {size_label}"
+        # "One size"/"Taille unique" sind schon ein Wort: ohne "Size" davor.
+        wort = (SIZE_WORD[lang] + " ") if size_word else ""
+        mit_groesse = f"{basis} · {wort}{size_label}"
         if len(mit_groesse) + len(TITLE_SUFFIX) <= TITLE_MAX:
             basis = mit_groesse
     return basis + TITLE_SUFFIX
