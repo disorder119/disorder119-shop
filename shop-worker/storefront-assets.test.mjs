@@ -78,3 +78,23 @@ test('images, asset redirects, cache validators and missing pages preserve statu
   r = await worker.fetch(request('/artikel/999999/'), assetEnv(async () => new Response('missing', { status: 404 })), {});
   assert.equal(r.status, 404);
 });
+
+test('directory indexes and exact verification HTML keep their original public URLs', async () => {
+  const paths = [];
+  const env = assetEnv(async req => {
+    paths.push(new URL(req.url).pathname);
+    return new Response('original', { headers: { 'Content-Type': 'text/html' } });
+  });
+  for (const [path, asset] of [['/', '/index.html'], ['/en/', '/en/index.html'],
+      ['/artikel/119/', '/artikel/119/index.html'], ['/kasse/', '/kasse/index.html'],
+      ['/google7945c4dc594a9a9c.html', '/google7945c4dc594a9a9c.html'],
+      ['/.well-known/apple-developer-merchantid-domain-association', '/.well-known/apple-developer-merchantid-domain-association']]) {
+    const r = await worker.fetch(request(path), env, {});
+    assert.equal(r.status, 200, path);
+    assert.equal(paths.at(-1), asset);
+  }
+  const r = await worker.fetch(request('/faq?source=old'), env, {});
+  assert.equal(r.status, 301);
+  assert.equal(r.headers.get('Location'), 'https://disorder119.com/faq/?source=old');
+  assert.equal(paths.at(-1), '/faq/index.html');
+});

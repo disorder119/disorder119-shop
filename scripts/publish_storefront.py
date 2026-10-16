@@ -45,7 +45,7 @@ def validate_config(config):
     assert config["name"] == WORKER and config["main"] == "storefront-assets.js"
     assert config["workers_dev"] is False and config["preview_urls"] is False
     assert config["assets"] == {"directory": "../.storefront-build/public", "binding": "ASSETS",
-        "run_worker_first": True, "html_handling": "auto-trailing-slash", "not_found_handling": "none"}
+        "run_worker_first": True, "html_handling": "none", "not_found_handling": "none"}
     assert config["services"] == [{"binding": "BESUCH", "service": "disorder119-shop-worker"}]
     assert config["routes"] == [
         {"pattern": "disorder119.com/*", "zone_name": "disorder119.com"},

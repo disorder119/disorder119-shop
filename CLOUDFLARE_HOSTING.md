@@ -5,6 +5,9 @@ GitHub bleibt die Quelle mit Versionshistorie. Nur die Auslieferung der
 `disorder119-storefront-security` behält seine beiden Routen sowie CSP,
 Katalogfilter, alte Artikel-Weiterleitungen und die BESUCH-Dienstbindung.
 Er liest Dateien danach ausschließlich über sein ASSETS-Binding.
+Die automatische HTML-Umschreibung ist deaktiviert. Der Adapter ordnet
+Verzeichnisadressen ihrer `index.html` zu, während Googles `.html`-Verifikation
+und Apples Datei exakt unter den bisherigen Adressen erreichbar bleiben.
 
 ## Was erhalten bleibt
 
