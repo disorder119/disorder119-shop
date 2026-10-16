@@ -373,6 +373,9 @@ jobs:
       vars.CLOUDFLARE_STOREFRONT_ENABLED == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    # Server-enforced main-only branch policy protects the secret even if a
+    # same-repository PR attempts to edit its workflow conditions.
+    environment: storefront-production
     permissions:
       contents: read
     steps:

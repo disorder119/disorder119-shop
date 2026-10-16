@@ -32,15 +32,19 @@ hochgeladen. Lokale uncommittete Änderungen werden nicht übernommen.
 Der Client ist unter `tools/storefront-publish` fest auf Wrangler 4.151.1
 mit npm-Integritätswerten verankert. Installation erhält keine Zugangsdaten.
 Der Cloudflare-Token steht ausschließlich im Veröffentlichungs-Schritt zur
-Verfügung; PR-Validierungen bekommen ihn nicht.
+Verfügung. Das GitHub-Environment `storefront-production` muss serverseitig
+auf die Branch `main` beschränkt sein, sodass auch geänderte PR-Workflows
+das Secret nicht erhalten.
 
 Vor der ersten Aktivierung sind erforderlich:
 
 1. Ein Cloudflare **Account API Token**: **Specified Workers** → ausschließlich
    `disorder119-storefront-security` → **Editor**. Keine DNS-, D1-, Backend-,
    Account-Admin- oder Zahlungsrechte. Erstellung benötigt die Eigentümerfreigabe.
-2. Dieses Token als GitHub-Actions-Secret **CLOUDFLARE_STOREFRONT_TOKEN** nur in
-   `disorder119/disorder119-shop` speichern. Kein Passwort und kein interaktives
+2. GitHub-Environment `storefront-production` in `disorder119/disorder119-shop`
+   anlegen und eine benutzerdefinierte Deployment-Branch-Policy nur für `main`
+   setzen. Dieses Token dort als Environment-Secret
+   **CLOUDFLARE_STOREFRONT_TOKEN** speichern. Kein Passwort und kein interaktives
    Wrangler-OAuth-Token in GitHub verwenden.
 3. Repository-Variable **CLOUDFLARE_STOREFRONT_ENABLED=true** nach der Einrichtung
    setzen. Bis dahin wird kein Cloudflare-Deploy ausgelöst.
