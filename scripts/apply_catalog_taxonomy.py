@@ -18,6 +18,7 @@ from catalog_taxonomy import (
     apply_taxonomy,
     department_label,
     product_type_label,
+    label_size_label,
     taxonomy_category_label,
 )
 
@@ -165,7 +166,7 @@ def replace_visible_facts(html: str, item: dict, lang: str) -> str:
     if label_size and label_size.casefold() != display_size.casefold():
         facts.append(
             '<div data-taxonomy-fact="label-size"><div class="fact__label">' + labels["label_size"] + '</div>'
-            '<div class="fact__value">' + label_size.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") + '</div></div>'
+            '<div class="fact__value">' + label_size_label(label_size, lang).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") + '</div></div>'
         )
 
     desc_marker = '    <p class="info__desc" id="itemDesc">'

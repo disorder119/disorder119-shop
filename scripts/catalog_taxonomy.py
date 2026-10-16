@@ -219,8 +219,17 @@ PRODUCT_TYPE_LABELS = {
         "Sunglasses": "Sonnenbrille", "Belt": "Gürtel", "Scarf": "Schal", "Bag": "Tasche",
         "Backpack": "Rucksack", "Wallet": "Wallet / Geldbörse", "Accessory": "Accessoire",
     },
-    "en": {},
+    # Englisch wie og:locale en_US; sonst gilt der Schluessel selbst.
+    "en": {"Trousers": "Pants", "Underwear Shorts": "Underwear"},
+    # Vollstaendig wie der Archivfilter (assets/app.js PRODUCT_TYPE_LABELS) -
+    # sonst stand auf FR-Seiten "Biker Jacket" oder "Long Sleeve".
     "fr": {
+        "Biker Jacket": "Veste biker", "Bomber Jacket": "Bomber", "Long Sleeve": "Manches longues",
+        "Tank Top": "Débardeur", "Toaster": "Grille-pain / objet design", "Design Object": "Objet design",
+        "Cap": "Casquette", "Beanie": "Bonnet", "Shorts": "Short", "Swim Shorts": "Short de bain",
+        "Joggers": "Jogging", "Set": "Ensemble", "Sleepwear": "Vêtement de nuit", "Tunic": "Tunique",
+        "Trench Coat": "Trench", "Knit Top": "Haut en maille", "Accessory": "Accessoire",
+        "Sweatshirt": "Sweatshirt", "Underwear Shorts": "Sous-vêtement",
         "Dress": "Robe", "Skirt": "Jupe", "Trousers": "Pantalon", "Coat": "Manteau",
         "Jacket": "Veste", "Blazer": "Blazer", "Vest": "Gilet", "Suit": "Costume",
         "Cardigan": "Cardigan", "Sweater": "Pull", "Shirt": "Chemise", "T-Shirt": "T-shirt",
@@ -654,9 +663,29 @@ def department_label(value: str, lang: str) -> str:
 
 
 def product_type_label(value: str, lang: str) -> str:
-    if lang == "en":
-        return value
     return PRODUCT_TYPE_LABELS.get(lang, {}).get(value, value)
+
+
+# Etikettgroesse: Rohwert aus der Beschreibung, oft mit deutschem Zusatz
+# ("Nicht angegeben, geschätzt ca. S", "M/L (geschätzt)"). Auf EN/FR steht
+# der Zusatz in der Seitensprache.
+LABEL_SIZE_PHRASES = (
+    (r"nicht eindeutig lesbar", {"en": "not clearly legible", "fr": "pas clairement lisible"}),
+    (r"nicht angegeben", {"en": "not stated", "fr": "non indiquée"}),
+    (r"geschätzt ca\.", {"en": "estimated approx.", "fr": "estimée env."}),
+    (r"geschätzt", {"en": "estimated", "fr": "estimée"}),
+    (r"\bca\.", {"en": "approx.", "fr": "env."}),
+    (r"\bunbekannt\b", {"en": "unknown", "fr": "inconnue"}),
+)
+
+
+def label_size_label(value: str, lang: str) -> str:
+    text = _clean(value)
+    if lang == "de" or not text:
+        return text
+    for muster, ersatz in LABEL_SIZE_PHRASES:
+        text = re.sub(muster, ersatz[lang], text, flags=re.I)
+    return text[:1].upper() + text[1:]
 
 
 def taxonomy_category_label(value: str, lang: str) -> str:
