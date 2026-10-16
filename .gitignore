@@ -42,3 +42,6 @@ playwright-report/
 test-results/
 .fotoquellen-cache/
 tools/fotoquellen.local.json
+
+# Verified public asset export; never publish the repository root.
+.storefront-build/
