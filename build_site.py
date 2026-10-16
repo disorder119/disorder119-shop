@@ -174,7 +174,8 @@ def cond_tr(cond, lang):
 
 
 def size_tr(size, lang):
-    return _tr(SIZE_TR, size, lang)
+    # "Einheitsgroesse" -> "One size", Masse mit "approx."/"env." statt "ca.".
+    return i18n_text.size_tr(size, lang)
 
 
 META_PHRASES = {
@@ -645,19 +646,30 @@ def shipping_cents(it):
 
 
 # Bearbeitungszeit: "Versand innerhalb von 3 Werktagen" (Kasse, AGB). Kann in
-# config/shop-config.json als versand.bearbeitungTage {min, max} stehen.
+# config/shop-config.json als versand.bearbeitungTage stehen - als {min, max}
+# oder als eine Zahl (= hoechstens so viele Tage).
 BEARBEITUNG_TAGE_STANDARD = (0, 3)
 
 
+def _tage(wert, standard):
+    return wert if isinstance(wert, int) and not isinstance(wert, bool) and wert >= 0 else standard
+
+
 def shipping_days():
-    """(Bearbeitung min/max, Laufzeit min/max) in Werktagen."""
+    """(Bearbeitung min/max, Laufzeit min/max) in Werktagen. Die laengste
+    Laufzeit der Standard-Tarife ist die Obergrenze."""
     versand = _shop_config_raw().get("versand") or {}
-    bearbeitung = versand.get("bearbeitungTage") or {}
-    h_min = bearbeitung.get("min", BEARBEITUNG_TAGE_STANDARD[0])
-    h_max = bearbeitung.get("max", BEARBEITUNG_TAGE_STANDARD[1])
-    laufzeiten = [t.get("laufzeitTage") for t in (versand.get("tarife") or {}).get("liste", [])
-                  if t.get("art") == "standard" and isinstance(t.get("laufzeitTage"), int)]
-    t_max = min(laufzeiten) if laufzeiten else 2
+    bearbeitung = versand.get("bearbeitungTage")
+    if isinstance(bearbeitung, dict):
+        h_min = _tage(bearbeitung.get("min"), BEARBEITUNG_TAGE_STANDARD[0])
+        h_max = _tage(bearbeitung.get("max"), BEARBEITUNG_TAGE_STANDARD[1])
+    else:
+        h_min, h_max = BEARBEITUNG_TAGE_STANDARD[0], _tage(bearbeitung, BEARBEITUNG_TAGE_STANDARD[1])
+    h_max = max(h_min, h_max)
+    tarife = (versand.get("tarife") or {}).get("liste") or []
+    laufzeiten = [t.get("laufzeitTage") for t in tarife if isinstance(t, dict)
+                  and t.get("art") == "standard" and _tage(t.get("laufzeitTage"), None) is not None]
+    t_max = max(laufzeiten) if laufzeiten else 2
     return h_min, h_max, 1, max(t_max, 1)
 
 
@@ -698,11 +710,11 @@ def json_ld(it, lang):
         # Produktseite als ein Produkt erkennt.
         "sku": merchant_id(it),
         "brand": {"@type": "Brand", "name": it.get("brand") or "Disorder119"},
-        "seller": {"@id": SITE_URL + "#store"},
     }
     if it.get("category"):
         data["category"] = cat_tr(it["category"], lang)
-    # Google-Format: hoechstens drei Farben mit "/", ohne "Bunt" (wie im Feed).
+    # Google-Format: hoechstens drei Farben mit "/"; "Bunt" nur ohne andere
+    # Farbe, dann als "Mehrfarbig"/"Multicolor" (wie im Feed).
     farbe = i18n_text.merchant_color(it, lang)
     if farbe:
         data["color"] = farbe
@@ -730,9 +742,8 @@ def json_ld(it, lang):
             "priceCurrency": "EUR",
             "price": f'{it["price"]:.2f}',
             "availability": availability,
-            # Wie g:condition im Feed: neu nur bei "Neu mit Etikett" im Rohfeld.
-            "itemCondition": ("https://schema.org/NewCondition" if i18n_text.item_condition(it) == "new"
-                              else "https://schema.org/UsedCondition"),
+            # Wie g:condition im Feed (i18n_text.item_condition): immer gebraucht.
+            "itemCondition": "https://schema.org/UsedCondition",
             "seller": {"@id": SITE_URL + "#store"},
             "hasMerchantReturnPolicy": dict(MERCHANT_RETURN_POLICY),
         }
@@ -815,10 +826,20 @@ def build_page(it, shop_config, lang):
     # sonst eine Ableitung ohne deutsche Woerter (scripts/i18n_text.py).
     name = loc_name(it, lang)
     titel = loc_title(it, lang)
-    title_tag = seo_title(name, it.get("product_type"), title_size(it, lang), lang)
+    # "One size"/"Taille unique" stehen ohne "Size"/"Taille" davor. Der aus
+    # dem deutschen Titel abgeleitete EN/FR-Titel nennt die Produktart schon
+    # ("Zip Hoodie", "t-shirt à manches longues") - kein zweites Wort dafuer.
+    abgeleitet = lang != "de" and not str(it.get("title_" + lang) or "").strip()
+    groesse_ist_wort = i18n_text.size_is_word(it.get("size"))
+    groesse_titel = title_size(it, lang)
+    if groesse_ist_wort:
+        groesse_titel = groesse_titel[:1].upper() + groesse_titel[1:]
+    title_tag = seo_title(name, None if abgeleitet else it.get("product_type"), groesse_titel, lang,
+                          size_word=not groesse_ist_wort)
     desc = meta_description(it, lang)
-    # Eigene Beschreibung der Sprache (alte CI-Platzhalter und deutsche Titel
-    # darin bereinigt), sonst der uebersetzte Ersatztext.
+    # Eigene Beschreibung der Sprache ohne Kopfzeile und Standardsatz (alte
+    # CI-Platzhalter und deutsche Titel darin bereinigt), sonst der
+    # uebersetzte Ersatztext.
     body_desc = i18n_text.body_description(it, lang)
     gallery = it.get("gallery") or []
     hero = gallery[0] if gallery else "assets/favicon.png"
@@ -878,11 +899,11 @@ def build_page(it, shop_config, lang):
         "condition": it.get("condition"),
         "category": it.get("category"),
         "desc": it.get("desc") or "",
-        "desc_de": it.get("desc_de") or it.get("desc") or "",
         # article.js zeigt desc_<Sprache>: schon bereinigt bzw. der Ersatztext,
         # damit nach dem Laden derselbe Text steht wie im HTML.
-        "desc_en": body_desc if lang == "en" else i18n_text.own_description(it, "en"),
-        "desc_fr": body_desc if lang == "fr" else i18n_text.own_description(it, "fr"),
+        "desc_de": i18n_text.body_description(it, "de"),
+        "desc_en": i18n_text.body_description(it, "en"),
+        "desc_fr": i18n_text.body_description(it, "fr"),
         "gallery": gallery,
         "thumbs": [thumb_path(g) for g in gallery],
         "sold": sold,
@@ -972,7 +993,7 @@ def build_page(it, shop_config, lang):
     <div id="priceBlock">{price_block_html(it, lang)}</div>
     <div class="info__facts">{facts_html(it, lang)}</div>
     <p class="info__desc" id="itemDesc">{esc(body_desc)}</p>
-    <p class="info__gebraucht" data-zustand-hinweis>{esc(zustand_hinweis(it, lang))}</p>
+    <p class="info__gebraucht" data-zustand-hinweis>{esc(GEBRAUCHT_HINWEIS[lang])}</p>
     {cta_html(it, shop_config, home, lang)}
   </div>
 </div>
@@ -1323,20 +1344,6 @@ GEBRAUCHT_HINWEIS = {
 }
 
 
-# Einzige Ausnahme: steht im Rohfeld `condition` eindeutig "Neu mit Etikett",
-# sagen Hinweis, JSON-LD (NewCondition) und Merchant-Feed (new) dasselbe
-# (i18n_text.item_condition).
-NEU_HINWEIS = {
-    "de": "Ungetragenes Einzelstück mit Originaletikett. Besonderheiten stehen in der Beschreibung und sind auf den Fotos zu sehen.",
-    "en": "Unworn one-off piece with original tags. Any particular features are noted in the description and shown in the photos.",
-    "fr": "Pièce unique jamais portée, avec étiquette d’origine. Les particularités sont indiquées dans la description et visibles sur les photos.",
-}
-
-
-def zustand_hinweis(it, lang):
-    return NEU_HINWEIS[lang] if i18n_text.item_condition(it) == "new" else GEBRAUCHT_HINWEIS[lang]
-
-
 def product_data_gap_html(it, lang):
     """Truthful disclosure for unresolved source metadata; never invent facts."""
     category = it.get("taxonomy_category") or it.get("category") or ""
@@ -1356,32 +1363,24 @@ def product_data_gap_html(it, lang):
     return '<p class="info__note info__note--data-gap" data-product-data-gap>' + esc(copy.format(fields=", ".join(missing))) + '</p>'
 
 
-# Startseite: Die H1 zeigt nur das Logo "Disorder119". Der Suchbegriff steht
-# davor in einem nur fuer Screenreader und Suchmaschinen lesbaren Teil
-# (.d119-sr-only in assets/app.css) - am Design aendert sich nichts.
+# Startseite (nur dort): Die H1 zeigt das Logo "Disorder119"; davor steht eine
+# Beschreibung fuer Screenreader (.d119-sr-only in assets/app.css), die
+# zugleich sagt, was die Seite ist - am Design aendert sich nichts. Rechts-
+# texte, FAQ, Mieten usw. behalten die H1 "Disorder119". Eine versteckte
+# Linkliste auf alle Stuecke gibt es bewusst nicht (Googles Regel zu
+# verstecktem Text und Links): Produktseiten sind ueber Sitemap, "Aehnliche
+# Teile" und vor/zurueck verlinkt.
 H1_LEAD = {
     "de": "Designer Second Hand & Vintage Mode – ",
     "en": "Pre-Owned Designer & Vintage Fashion – ",
     "fr": "Mode designer seconde main & vintage – ",
 }
-PRODUCT_LINKS_LABEL = {"de": "Verfügbare Stücke", "en": "Available pieces", "fr": "Pièces disponibles"}
 
 
-def product_link_list_html(lang):
-    """Alle verfuegbaren Stuecke als schlichte Textlinks fuer Crawler - in
-    allen drei Sprachen schon im HTML. Das Raster baut assets/app.js erst im
-    Browser (und nur seitenweise ueber "Weitere laden"); ohne diese Liste
-    standen auf / zwei, auf /en/ und /fr/ gar keine Produktlinks im HTML.
-    Visuell versteckt (kein Bild, keine Wirkung auf LCP oder Layout), fuer
-    Screenreader als eigene Navigation lesbar, nicht in der Tab-Reihenfolge."""
-    home = lang_home(lang)
-    links = "".join(
-        '<li><a href="' + home + "artikel/" + esc(str(it.get("url_slug", it["id"]))) + '/" tabindex="-1">'
-        + esc(loc_name(it, lang)) + "</a></li>"
-        for it in ITEMS if it.get("public_status") == "AVAILABLE"
-    )
-    return ('<nav class="d119-sr-only" aria-label="' + esc(PRODUCT_LINKS_LABEL[lang]) + '" data-produktlinks>'
-            "<ul>" + links + "</ul></nav>")
+def h1_lead_html(lang, home_page):
+    if not home_page:
+        return ""
+    return '<span class="d119-sr-only">' + esc(H1_LEAD[lang]) + "</span>"
 
 
 def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
@@ -1419,8 +1418,7 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__ROBOTS_META__", f'<meta name="robots" content="{robots_value}">')
     out = out.replace("__OG_LOCALE__", OG_LOCALES[lang])
     out = out.replace("__OG_LOCALE_ALTERNATES__", locale_alternates)
-    out = out.replace("__H1_LEAD__", esc(H1_LEAD[lang]))
-    out = out.replace("__SSR_PRODUCT_LINKS__", product_link_list_html(lang) if include_item_list else "")
+    out = out.replace("__H1_LEAD__", h1_lead_html(lang, include_item_list))
     # Bewusst hier und nicht bei den uebrigen Versions-Tokens: CI-Skripte
     # (apply_focus_three_hardening, apply_pwa) suchen die Zeilen darunter
     # als zusammenhaengenden Block.
