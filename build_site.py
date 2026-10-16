@@ -2353,7 +2353,8 @@ def build_merchant_feed():
             felder.append(tag("g:size", groesse[0][:100]))
             if groesse[1]:
                 felder.append(tag("g:size_system", groesse[1]))
-        # Hoechstens drei Farben mit "/", ohne "Bunt" (Google kennt kein multicolor).
+        # Hoechstens drei Farben mit "/"; "Bunt" nur als einzige Angabe, dann
+        # als "Mehrfarbig" (Bekleidung ohne g:color lehnt Google ab).
         farbe = i18n_text.merchant_color(it, "de")
         if farbe:
             felder.append(tag("g:color", farbe[:100]))

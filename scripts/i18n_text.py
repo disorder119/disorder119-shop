@@ -1063,8 +1063,12 @@ def auto_description(it: dict, lang: str) -> str:
 
 
 def _starts_with_brand(line: str, it: dict) -> bool:
-    klein = line.casefold()
-    return any(b and klein.startswith(b.casefold()) for b in brand_variants(it.get("brand")))
+    """Marke am Zeilenanfang, höchstens zwei Wörter davor ("Christian Dior ...")."""
+    for marke in brand_variants(it.get("brand")):
+        treffer = _brand_pattern(marke).search(line or "")
+        if treffer and len(line[: treffer.start()].split()) <= 2:
+            return True
+    return False
 
 
 def _clean_visible(text: str, it: dict) -> str:
