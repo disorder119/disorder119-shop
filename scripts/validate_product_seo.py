@@ -2,19 +2,25 @@
 """SEO-Technik der Produktseiten, Startseiten und des Merchant-Feeds.
 
 Prüft nach dem Bauen (und nach scripts/repair_public_article_integrity.py):
-* Product-JSON-LD ist gültiges JSON; verfügbare Stücke tragen Versand mit
-  Laufzeiten (deliveryTime), Größe als SizeSpecification, Zielgruppe aus dem
-  Bereich und Farbe im Google-Format ("/", ohne Bunt/Multicolor).
-* Seite und Feed stimmen überein: Versandpreis und Zustand (new/used).
-* Meta-Beschreibungen nennen keinen Zustand (Inhaber 07.10.2026).
+* Product-JSON-LD ist gültiges JSON; verfügbare Stücke tragen Größe als
+  SizeSpecification, Zielgruppe aus dem Bereich und Farbe im Google-Format
+  ("/", "Mehrfarbig"/"Multicolor" nur ohne andere Farbe); kein "seller" am
+  Product (nur am Offer).
+* Versand: Seite und Feed stimmen überein (Preis, Laufzeiten). Pflicht sind
+  shippingDetails nur bei festen Tarifen (versand.quelle "fest") - mit
+  Packlink entsteht der Preis erst in der Kasse.
+* Zustand: JSON-LD und Feed melden "gebraucht".
+* Meta-, og- und twitter-Beschreibungen nennen keinen Zustand (Inhaber
+  07.10.2026), auch nicht "Hinweis zum Zustand" oder "neu mit Etikett".
 * vor/zurück sind echte Links auf url_slug-Adressen; "Ähnliche Teile" zeigt
   nur verfügbare Stücke, und jedes verfügbare Stück bekommt mindestens drei
   interne Links (Ähnliche Teile, soweit Marke/Kategorie es hergeben, plus
   vor/zurück).
-* Startseiten DE/EN/FR: crawlbare Links auf alle verfügbaren Stücke, H1 mit
-  Suchbegriff, ItemList nur mit verfügbaren Stücken, Rückgaberegel am Shop.
-* /match/, /chaos/, /baukasten/: nur noindex, keine canonical-Angabe auf die
-  Startseite.
+* Startseiten DE/EN/FR: Beschreibung für Screenreader in der H1, nur dort;
+  keine versteckte Linkliste; ItemList nur mit verfügbaren Stücken;
+  Rückgaberegel am Shop.
+* /match/, /chaos/, /baukasten/, /universe/: noindex ohne canonical-Angabe
+  auf die Startseite.
 """
 from __future__ import annotations
 
@@ -26,7 +32,9 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from i18n_text import COLOR_TR, CONDITION_PHRASES, MULTICOLOR_WORDS, apply_brand_aliases, item_condition  # noqa: E402
+from i18n_text import (  # noqa: E402
+    COLOR_TR, CONDITION_META_RE, MULTICOLOR_LABEL, MULTICOLOR_WORDS, apply_brand_aliases, item_condition,
+)
 from related_items import MIN_INCOMING, related_plan  # noqa: E402
 
 BASE = Path(__file__).resolve().parents[1]
@@ -34,11 +42,18 @@ SITE = "https://disorder119.com"
 LANGS = ("de", "en", "fr")
 G = "{http://base.google.com/ns/1.0}"
 LD_RE = re.compile(r'<script type="application/ld\+json">(.*?)</script>', re.S)
-META_DESC_RE = re.compile(r'<meta name="description" content="([^"]*)">')
+META_RE = {
+    "description": re.compile(r'<meta name="description" content="([^"]*)">'),
+    "og:description": re.compile(r'<meta property="og:description" content="([^"]*)">'),
+    "twitter:description": re.compile(r'<meta name="twitter:description" content="([^"]*)">'),
+}
 SEQ_RE = re.compile(r'<a class="article-sequence-nav__link article-sequence-nav__link--(prev|next)"([^>]*)>')
 HREF_RE = re.compile(r'href="(?:/(?:en|fr))?/artikel/(\d+)/"')
 RELATED_BLOCK_RE = re.compile(r'<div class="related">.*?(?=<div class="page-foot">)', re.S)
-MULTICOLOR_OUT = {w.casefold() for w in MULTICOLOR_WORDS} | {COLOR_TR[w][l].casefold() for w in MULTICOLOR_WORDS for l in ("en", "fr")}
+H1_RE = re.compile(r'<h1 class="wordmark"([^>]*)>(.*?)</h1>', re.S)
+MULTICOLOR_OUT = ({w.casefold() for w in MULTICOLOR_WORDS}
+                  | {COLOR_TR[w][l].casefold() for w in MULTICOLOR_WORDS for l in ("en", "fr")}
+                  | {v.casefold() for v in MULTICOLOR_LABEL.values()})
 
 
 def home(lang: str) -> str:
@@ -71,6 +86,22 @@ def feed_entries() -> dict[str, dict]:
     return out
 
 
+def fixed_shipping() -> bool:
+    """Feste Tarife (versand.quelle "fest") - dann ist der Versandpreis je
+    Stück bekannt und gehört auf jede Seite und in den Feed."""
+    config = json.loads((BASE / "config" / "shop-config.json").read_text(encoding="utf-8"))
+    return (config.get("versand") or {}).get("quelle") == "fest"
+
+
+def color_ok(farbe: str) -> bool:
+    teile = [t.strip() for t in farbe.split("/")]
+    if len(teile) > 3 or "," in farbe or not all(teile):
+        return False
+    bunt = [t for t in teile if t.casefold() in MULTICOLOR_OUT]
+    # "Mehrfarbig"/"Multicolor" nur als einzige Angabe.
+    return not bunt or len(teile) == 1
+
+
 def check() -> tuple[list[str], dict]:
     errors: list[str] = []
     items = json.loads((BASE / "data" / "items.json").read_text(encoding="utf-8"))
@@ -78,12 +109,11 @@ def check() -> tuple[list[str], dict]:
     public = [it for it in items if (it.get("public_status") or "DRAFT") != "DRAFT"]
     available = [it for it in public if it.get("public_status") == "AVAILABLE"]
     slug_of = {it["id"]: str(it.get("url_slug", it["id"])) for it in items}
-    by_slug = {slug_of[it["id"]]: it for it in public}
     available_slugs = {slug_of[it["id"]] for it in available}
     feed = feed_entries()
+    fest = fixed_shipping()
     incoming_related = {s: set() for s in available_slugs}
     incoming_sequence = {s: set() for s in available_slugs}
-    zustand_texte = CONDITION_PHRASES
 
     for it in public:
         slug = slug_of[it["id"]]
@@ -101,12 +131,15 @@ def check() -> tuple[list[str], dict]:
                 continue
             product = next((d for d in daten if d.get("@type") == "Product"), None)
 
-            meta = META_DESC_RE.search(page)
-            meta_text = html_lib.unescape(meta.group(1)) if meta else ""
-            for label, werte in zustand_texte[lang].items():
-                for wert in werte:
-                    if f"{label} {wert}" in meta_text:
-                        errors.append(f"{ort}: Meta-Beschreibung nennt den Zustand ({label} {wert})")
+            for key, muster in META_RE.items():
+                treffer = muster.search(page)
+                text = html_lib.unescape(treffer.group(1)) if treffer else ""
+                zustand = CONDITION_META_RE.search(text)
+                if zustand:
+                    errors.append(f"{ort}: {key} nennt den Zustand ({zustand.group(0)!r})")
+
+            if product and "seller" in product:
+                errors.append(f"{ort}: 'seller' am Product (gehört nur ans Offer)")
 
             if it.get("public_status") == "AVAILABLE" and float(it.get("price") or 0) > 0:
                 if not product:
@@ -114,22 +147,26 @@ def check() -> tuple[list[str], dict]:
                     continue
                 offer = product.get("offers") or {}
                 versand = offer.get("shippingDetails")
-                if not versand or "deliveryTime" not in versand:
-                    errors.append(f"{ort}: offers.shippingDetails mit deliveryTime fehlt")
+                if versand and "deliveryTime" not in versand:
+                    errors.append(f"{ort}: offers.shippingDetails ohne deliveryTime")
+                if fest and not versand:
+                    errors.append(f"{ort}: offers.shippingDetails fehlt trotz fester Versandtarife")
+                if offer.get("itemCondition") != "https://schema.org/UsedCondition":
+                    errors.append(f"{ort}: itemCondition {offer.get('itemCondition')} statt UsedCondition")
                 eintrag = feed.get(slug)
                 if lang == "de" and eintrag:
-                    if versand and eintrag["shipping"] != versand["shippingRate"]["value"] + " EUR":
-                        errors.append(f"{ort}: Versand Seite {versand['shippingRate']['value']} ≠ Feed {eintrag['shipping']}")
-                    erwartet = "https://schema.org/NewCondition" if eintrag["condition"] == "new" else "https://schema.org/UsedCondition"
-                    if offer.get("itemCondition") != erwartet or eintrag["condition"] != item_condition(it):
-                        errors.append(f"{ort}: Zustand Seite {offer.get('itemCondition')} ≠ Feed {eintrag['condition']}")
-                    if not eintrag["handling"] or not eintrag["transit"]:
+                    seite = (versand["shippingRate"]["value"] + " EUR") if versand else None
+                    if seite != eintrag["shipping"]:
+                        errors.append(f"{ort}: Versand Seite {seite} ≠ Feed {eintrag['shipping']}")
+                    if eintrag["shipping"] and (not eintrag["handling"] or not eintrag["transit"]):
                         errors.append(f"{ort}: g:shipping ohne Bearbeitungs-/Laufzeit im Feed")
+                    if eintrag["condition"] != item_condition(it):
+                        errors.append(f"{ort}: g:condition {eintrag['condition']} statt {item_condition(it)}")
                 farbe = product.get("color")
-                if farbe is not None:
-                    teile = farbe.split("/")
-                    if len(teile) > 3 or "," in farbe or any(t.strip().casefold() in MULTICOLOR_OUT for t in teile):
-                        errors.append(f"{ort}: JSON-LD color nicht im Google-Format: {farbe!r}")
+                if farbe is not None and not color_ok(farbe):
+                    errors.append(f"{ort}: JSON-LD color nicht im Google-Format: {farbe!r}")
+                if lang == "de" and eintrag and eintrag["color"] is not None and not color_ok(eintrag["color"]):
+                    errors.append(f"{ort}: g:color nicht im Google-Format: {eintrag['color']!r}")
                 size = product.get("size")
                 if size is not None and (not isinstance(size, dict) or size.get("@type") != "SizeSpecification"):
                     errors.append(f"{ort}: JSON-LD size ist keine SizeSpecification")
@@ -182,13 +219,11 @@ def check() -> tuple[list[str], dict]:
         pfad = BASE / ("index.html" if lang == "de" else f"{lang}/index.html")
         page = pfad.read_text(encoding="utf-8")
         ort = home(lang)
-        nav = re.search(r"<nav class=\"d119-sr-only\"[^>]*data-produktlinks>(.*?)</nav>", page, re.S)
-        verlinkt = set(HREF_RE.findall(nav.group(1))) if nav else set()
-        if verlinkt != available_slugs:
-            errors.append(f"{ort}: crawlbare Produktlinks {len(verlinkt)} statt {len(available_slugs)}")
-        h1 = re.search(r'<h1 class="wordmark"([^>]*)>(.*?)</h1>', page, re.S)
+        if "data-produktlinks" in page:
+            errors.append(f"{ort}: versteckte Produkt-Linkliste (Googles Regel zu verstecktem Text und Links)")
+        h1 = H1_RE.search(page)
         if not h1 or "aria-label" in h1.group(1) or 'class="d119-sr-only"' not in h1.group(2):
-            errors.append(f"{ort}: H1 ohne versteckten Suchbegriff (oder aria-label überdeckt ihn)")
+            errors.append(f"{ort}: H1 ohne Beschreibung vor dem Logo (oder aria-label überdeckt sie)")
         try:
             daten = lds(page)
         except json.JSONDecodeError as exc:
@@ -205,11 +240,24 @@ def check() -> tuple[list[str], dict]:
         if not store or "hasMerchantReturnPolicy" not in store:
             errors.append(f"{ort}: OnlineStore ohne hasMerchantReturnPolicy")
 
+    # Die Beschreibung in der H1 gehört nur auf die Startseite.
     for lang in LANGS:
-        for variant in ("match", "chaos", "baukasten"):
+        for slug in ("faq", "mieten", "ueber-uns", "agb", "impressum"):
+            pfad = BASE / (slug if lang == "de" else f"{lang}/{slug}") / "index.html"
+            if not pfad.is_file():
+                continue
+            h1 = H1_RE.search(pfad.read_text(encoding="utf-8"))
+            if h1 and "d119-sr-only" in h1.group(2):
+                errors.append(f"{home(lang)}{slug}/: H1 mit der Beschreibung der Startseite")
+
+    for lang in LANGS:
+        for variant in ("match", "chaos", "baukasten", "universe"):
             pfad = BASE / (variant if lang == "de" else f"{lang}/{variant}") / "index.html"
+            if not pfad.is_file():
+                errors.append(f"{home(lang)}{variant}/: Seite fehlt")
+                continue
             page = pfad.read_text(encoding="utf-8")
-            if 'name="robots" content="noindex,follow"' not in page:
+            if not re.search(r'<meta name="robots" content="noindex,\s*follow">', page):
                 errors.append(f"{home(lang)}{variant}/: noindex fehlt")
             if f'<link rel="canonical" href="{SITE}{home(lang)}">' in page:
                 errors.append(f"{home(lang)}{variant}/: canonical auf die Startseite trotz noindex")
@@ -217,7 +265,7 @@ def check() -> tuple[list[str], dict]:
     build = (BASE / "build_site.py").read_text(encoding="utf-8")
     if "LANDING_DEP_LABEL" in build:
         errors.append("build_site.py: Rest LANDING_DEP_LABEL aus dem geschlossenen SEO-PR")
-    return errors, {"available": len(available), "pages": len(public) * len(LANGS)}
+    return errors, {"available": len(available), "pages": len(public) * len(LANGS), "fest": fest}
 
 
 def main() -> None:
@@ -228,8 +276,9 @@ def main() -> None:
         if len(errors) > 60:
             print(f"FEHLER: … und {len(errors) - 60} weitere", file=sys.stderr)
         raise SystemExit(1)
+    versand = "Versand mit Laufzeiten" if stats["fest"] else "Versand nur in der Kasse (Packlink)"
     print(f"Produkt-SEO: OK – {stats['pages']} Sprachseiten, {stats['available']} verfügbare Stücke "
-          "mit Versand, Zielgruppe, Größe, echten vor/zurück-Links und je ≥3 internen Links.")
+          f"({versand}, Zielgruppe, Größe, echte vor/zurück-Links, je ≥3 interne Links).")
 
 
 if __name__ == "__main__":

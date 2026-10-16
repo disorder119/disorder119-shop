@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
 """EN/FR-Produktseiten: Titel, Farben und Beschreibungen in der Seitensprache.
 
-Bricht nur bei echten Widersprüchen ab:
-* Steht title_en/title_fr in data/items.json, müssen h1, <title>, og/twitter,
-  JSON-LD name, Breadcrumb, Bild-Alt und die "Ähnliche Teile"-Karten ihn
-  tragen - sonst hat ein Skript nach dem Bauen den Titel überschrieben.
+Bricht nur bei Code-Fehlern ab - nie wegen eines Datenwerts, sonst blockiert
+eine Admin-Speicherung (freies Farbfeld, freie Beschreibung) den Rebuild:
+* Steht title_en/title_fr in data/items.json oder wird er abgeleitet, müssen
+  h1, <title>, og/twitter, JSON-LD name, Breadcrumb, Bild-Alt und die
+  "Ähnliche Teile"-Karten ihn tragen - sonst hat ein Skript nach dem Bauen
+  den Titel überschrieben.
 * Der deutsche Titel darf auf EN/FR nirgends sichtbar oder in den
-  Suchmaschinendaten stehen (ausser in ARTICLE_ITEM.title_de/desc_de, die
+  Suchmaschinendaten stehen (außer in ARTICLE_ITEM.title_de/desc_de, die
   der Shop für Anfragen braucht).
-* Keine Faktenzeilen mit deutschen Werten ("Color: Schwarz") und keine
-  deutschen Farbwörter im Fakt "Color/Couleur" oder im JSON-LD.
+* Bekannte deutsche Farbwörter (Tabelle COLOR_TR) sind im Fakt "Color/Couleur"
+  und im JSON-LD übersetzt - die Übersetzung geht Wort für Wort, ein
+  übrig gebliebenes bekanntes Wort ist also ein Fehler im Code.
 * catalog.json trägt title_en/title_fr für jedes öffentliche Stück.
 * assets/app.js übersetzt Farben mit derselben Tabelle wie scripts/i18n_text.py.
 
-Fehlende Übersetzungen (kein title_xx, kein eigener Text) werden nur gemeldet.
+Nur als HINWEIS (Daten, kein Abbruch): unbekannte Farbwörter, beim Ableiten
+verworfene deutsche Wendungen, Faktenzeilen mit deutschen Werten in einer
+eigenen EN/FR-Beschreibung, Produktart oder Etikettgröße nicht übersetzt,
+doppelte Titel in einer Sprache, fehlende eigene Titel/Texte.
 """
 from __future__ import annotations
 
@@ -21,11 +27,14 @@ import html as html_lib
 import json
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i18n_text  # noqa: E402
-from i18n_text import COLOR_TR, apply_brand_aliases, color_canonical, color_words, loc_name, loc_title  # noqa: E402
+from i18n_text import (  # noqa: E402
+    COLOR_TR, apply_brand_aliases, color_canonical, loc_name, loc_title, title_parts, unknown_color_words,
+)
 
 BASE = Path(__file__).resolve().parents[1]
 LANGS = ("en", "fr")
@@ -42,6 +51,8 @@ META_RE = {
 MAIN_ALT_RE = re.compile(r'<img id="galleryMain" [^>]*alt="([^"]*)"')
 DESC_RE = re.compile(r'<p class="info__desc" id="itemDesc">(.*?)</p>', re.S)
 COLOR_FACT_RE = re.compile(r'data-i18n="factColor">[^<]*</div><div class="fact__value">([^<]*)</div>')
+TYPE_FACT_RE = re.compile(r'data-taxonomy-fact="product-type"><div class="fact__label">[^<]*</div><div class="fact__value">([^<]*)</div>')
+LABEL_SIZE_FACT_RE = re.compile(r'data-taxonomy-fact="label-size"><div class="fact__label">[^<]*</div><div class="fact__value">([^<]*)</div>')
 CARD_RE = re.compile(r'<a class="related-card" href="(?:/(?:en|fr))?/artikel/(\d+)/">.*?</a>', re.S)
 CARD_TITLE_RE = re.compile(r'<span class="related-card__title">([^<]*)</span>')
 GERMAN_FACT_RE = {
@@ -50,6 +61,9 @@ GERMAN_FACT_RE = {
 }
 # Werte, die in CI-Faktenzeilen nur auf Deutsch vorkamen.
 GERMAN_FACT_VALUES = re.compile(r"\b(?:Einheitsgröße|verstellbar|Größenverstellbar|Sonstige)\b")
+# Produktarten, die auf Französisch genauso heißen.
+FR_SAME_WORDS = {"blazer", "cardigan", "blouse", "sweatshirt", "polo", "parka", "trench"}
+GERMAN_LABEL_WORDS = re.compile(r"\b(?:nicht|angegeben|geschätzt|eindeutig|lesbar|unbekannt|ca\.)", re.I)
 
 
 def german_only_colors() -> set[str]:
@@ -103,6 +117,10 @@ def check(items: list[dict]) -> tuple[list[str], list[str], dict]:
              "fallback_description": {"en": 0, "fr": 0}}
     public = [it for it in items if (it.get("public_status") or "DRAFT") != "DRAFT"]
     by_slug = {str(it.get("url_slug", it["id"])): it for it in public}
+    hinweise: dict[str, list[str]] = {}
+
+    def hinweis(art: str, text: str) -> None:
+        hinweise.setdefault(art, []).append(text)
 
     if js_color_table() != {k: {"en": v["en"], "fr": v["fr"]} for k, v in COLOR_TR.items()}:
         errors.append("assets/app.js COLOR_TR weicht von scripts/i18n_text.py COLOR_TR ab")
@@ -116,6 +134,14 @@ def check(items: list[dict]) -> tuple[list[str], list[str], dict]:
         for lang in LANGS:
             if row.get("title_" + lang) != loc_title(it, lang):
                 errors.append(f"catalog.json {it['id']}: title_{lang} fehlt oder weicht ab")
+
+    for it in public:
+        for wort in unknown_color_words(it.get("color")):
+            hinweis("unbekanntes Farbwort (bleibt auf EN/FR deutsch)", f"{it['id']}: {wort!r}")
+        for lang in LANGS:
+            if not str(it.get("title_" + lang) or "").strip():
+                for weg in title_parts(it, lang)[1]:
+                    hinweis(f"beim Ableiten verworfen ({lang}, title_{lang} fehlt)", f"{it['id']}: {weg!r}")
 
     for it in public:
         slug = str(it.get("url_slug", it["id"]))
@@ -159,11 +185,11 @@ def check(items: list[dict]) -> tuple[list[str], list[str], dict]:
                 if not product or product.get("name") != name:
                     errors.append(f"{ort}: JSON-LD name ist nicht {name!r}")
                 elif german_color_words(str(product.get("color") or "")):
-                    errors.append(f"{ort}: JSON-LD color deutsch: {product.get('color')!r}")
+                    errors.append(f"{ort}: JSON-LD color mit bekanntem deutschem Farbwort: {product.get('color')!r}")
             if not breadcrumb or breadcrumb["itemListElement"][-1].get("name") != name:
                 errors.append(f"{ort}: Breadcrumb nennt nicht {name!r}")
 
-            # Deutscher Titel nirgends ausserhalb von ARTICLE_ITEM.
+            # Deutscher Titel nirgends außerhalb von ARTICLE_ITEM.
             ohne_daten = ARTICLE_ITEM_RE.sub("", page)
             klartext = html_lib.unescape(ohne_daten)
             for deutsch in {deutsch_name, deutsch_titel}:
@@ -174,13 +200,22 @@ def check(items: list[dict]) -> tuple[list[str], list[str], dict]:
             text = unesc(beschreibung.group(1)) if beschreibung else ""
             for wert in GERMAN_FACT_RE[lang].findall(text):
                 if german_color_words(wert) or GERMAN_FACT_VALUES.search(wert):
-                    errors.append(f"{ort}: Faktenzeile mit deutschem Wert in der Beschreibung: {wert.strip()!r}")
+                    hinweis(f"Faktenzeile mit deutschem Wert in desc_{lang}", f"{ort}: {wert.strip()!r}")
             if not i18n_text.own_description(it, lang):
                 stats["fallback_description"][lang] += 1
 
             farbe = COLOR_FACT_RE.search(page)
             if farbe and german_color_words(unesc(farbe.group(1))):
-                errors.append(f"{ort}: Farbe nicht übersetzt: {unesc(farbe.group(1))!r}")
+                errors.append(f"{ort}: bekanntes Farbwort nicht übersetzt: {unesc(farbe.group(1))!r}")
+
+            typ = TYPE_FACT_RE.search(page)
+            if lang == "fr" and typ and it.get("product_type") and unesc(typ.group(1)) == it["product_type"] \
+                    and it["product_type"].casefold() not in FR_SAME_WORDS:
+                hinweis("Produktart auf FR englisch (catalog_taxonomy PRODUCT_TYPE_LABELS['fr'])",
+                        f"{ort}: {it['product_type']!r}")
+            etikett = LABEL_SIZE_FACT_RE.search(page)
+            if etikett and GERMAN_LABEL_WORDS.search(unesc(etikett.group(1))):
+                hinweis("Etikettgröße mit deutschem Zusatz", f"{ort}: {unesc(etikett.group(1))!r}")
 
             # Karten "Ähnliche Teile": Titel der verlinkten Stücke in dieser Sprache.
             for karte in CARD_RE.finditer(page):
@@ -189,11 +224,24 @@ def check(items: list[dict]) -> tuple[list[str], list[str], dict]:
                 if ziel and titel_karte and unesc(titel_karte.group(1)) != loc_title(ziel, lang):
                     errors.append(f"{ort}: Karte {karte.group(1)} zeigt nicht den Titel der Sprache")
 
+    # Doppelte Titel: nur melden, wenn der deutsche Titel eindeutig ist.
+    verfuegbar = [it for it in public if it.get("public_status") == "AVAILABLE"]
+    deutsch = Counter(loc_name(it, "de") for it in verfuegbar)
+    for lang in LANGS:
+        zaehler = Counter(loc_name(it, lang) for it in verfuegbar)
+        for it in verfuegbar:
+            name = loc_name(it, lang)
+            if zaehler[name] > 1 and deutsch[loc_name(it, "de")] == 1:
+                hinweis(f"doppelter Titel auf {lang.upper()} (title_{lang} setzen)", f"{it['id']}: {name!r}")
+
     for lang in LANGS:
         if stats["derived_title"][lang]:
             notes.append(f"{stats['derived_title'][lang]} Stücke ohne title_{lang} (Titel wird abgeleitet)")
         if stats["fallback_description"][lang]:
             notes.append(f"{stats['fallback_description'][lang]} Stücke ohne eigene desc_{lang} (Ersatztext)")
+    for art, faelle in hinweise.items():
+        beispiele = "; ".join(faelle[:6]) + (" …" if len(faelle) > 6 else "")
+        notes.append(f"{len(faelle)}× {art}: {beispiele}")
     return errors, notes, stats
 
 
