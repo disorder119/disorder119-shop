@@ -364,6 +364,18 @@
     }).observe(document.body, { childList: true, subtree: true });
   }
 
+  // Titel in der Seitensprache (catalog.json: title_en/title_fr, beim Bauen
+  // notfalls aus dem deutschen Titel abgeleitet). Nur in dieser Kopie des
+  // Katalogs - Anfragen tragen zusaetzlich die Artikelnummer.
+  function titelDerSprache(items) {
+    if (LANG === "de" || !Array.isArray(items)) return items;
+    items.forEach(function (item) {
+      var lokal = item && item["title_" + LANG];
+      if (lokal) item.title = lokal;
+    });
+    return items;
+  }
+
   function bootstrap() {
     if (!isRentalPage()) return;
     injectStyles();
@@ -388,7 +400,7 @@
     fetch("/data/catalog.json", { credentials: "same-origin" })
       .then(function (response) { return response.ok ? response.json() : []; })
       .then(function (items) {
-        catalog = Array.isArray(items) ? items.filter(function (item) { return String(item.public_status || "").toUpperCase() !== "SOLD"; }) : [];
+        catalog = Array.isArray(items) ? titelDerSprache(items).filter(function (item) { return String(item.public_status || "").toUpperCase() !== "SOLD"; }) : [];
         if (picker) renderPicker();
       })
       .catch(function () { catalog = []; });
