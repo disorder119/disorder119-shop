@@ -93,7 +93,7 @@ def check_public(revision, manifest):
              "/.well-known/apple-developer-merchantid-domain-association", "/data/catalog.json"]
     rows = json.loads((ROOT / ".storefront-build/public/data/catalog.json").read_text("utf-8"))
     for item in rows[:3]:
-        paths.append("/artikel/" + str(item["article"]) + "/")
+        paths.append("/artikel/" + str(item.get("url_slug", item["id"])) + "/")
         if item.get("gallery"):
             paths.append("/" + item["gallery"][0].lstrip("/"))
     results = []

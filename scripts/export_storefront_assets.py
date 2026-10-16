@@ -106,7 +106,9 @@ def export(root: Path, target: Path, revision: str, node="node"):
             candidate = (public / name.lstrip("/")).resolve()
             if not candidate.is_relative_to(public.resolve()) or not candidate.is_file():
                 raise ValueError("Public gallery points outside export or to a missing photo.")
-        article = str(item["article"])
+        # Match the existing builder. A curated URL slug may intentionally
+        # differ from the visible article number; migration must preserve it.
+        article = str(item.get("url_slug", item["id"]))
         for language in ("", "en/", "fr/"):
             if not (public / language / "artikel" / article / "index.html").is_file():
                 raise ValueError("Canonical product page missing.")

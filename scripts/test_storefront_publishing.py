@@ -56,14 +56,14 @@ class PublishingTests(unittest.TestCase):
             paths = ['index.html', 'en/index.html', 'fr/index.html', 'kasse/index.html',
                 'feed/google-merchant.xml', 'google7945c4dc594a9a9c.html',
                 '.well-known/apple-developer-merchantid-domain-association', 'assets/img/a.webp',
-                'artikel/119/index.html', 'en/artikel/119/index.html', 'fr/artikel/119/index.html',
+                'artikel/777/index.html', 'en/artikel/777/index.html', 'fr/artikel/777/index.html',
                 'config/credentials.json', 'assets/example.test.js', 'admin/index.html']
             for path in paths:
                 destination = root / path
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_bytes(b'original')
             (root / 'data').mkdir()
-            rows = [{'id': 1, 'article': '119', 'title': 'Approved', 'price': 149,
+            rows = [{'id': 1, 'article': '119', 'url_slug': '777', 'title': 'Approved', 'price': 149,
                      'public_status': 'AVAILABLE', 'gallery': ['assets/img/a.webp'], 'purchase_price': 10},
                     {'id': 2, 'public_status': 'DRAFT', 'title': 'Private'}]
             for name in ('catalog.json', 'items.json'):
