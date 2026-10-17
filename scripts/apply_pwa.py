@@ -6,6 +6,7 @@ separate /admin/ app shell with its own narrow service-worker scope. Match,
 Chaos, Baukasten, rental pricing and mode-guard data are not modified.
 """
 from pathlib import Path
+import re
 
 from apply_admin_pwa import main as apply_admin_pwa
 
@@ -83,13 +84,19 @@ def patch_build(text: str) -> str:
             '<title>{esc(title_tag)}</title>',
             "article head metadata",
         )
-    text = replace_once(
-        text,
-        '<script src="/assets/article.js?v={ARTICLE_JS_VERSION}"></script>\n</body>',
-        '<script src="/assets/pwa.js?v={PWA_JS_VERSION}"></script>\n'
-        '<script src="/assets/article.js?v={ARTICLE_JS_VERSION}"></script>\n</body>',
-        "article service worker registration",
+    # Preserve unrelated script attributes (e.g. fetchpriority) when detecting
+    # or inserting the existing PWA registration. Still refuse missing/ambiguous anchors.
+    registration = re.compile(
+        r'(?P<pwa><script src="/assets/pwa\.js\?v=\{PWA_JS_VERSION\}"[^>]*></script>\n)?'
+        r'(?P<article><script src="/assets/article\.js\?v=\{ARTICLE_JS_VERSION\}"[^>]*></script>\n</body>)'
     )
+    anchors = list(registration.finditer(text))
+    if len(anchors) != 1:
+        raise SystemExit(f"FEHLER: PWA article service worker registration: erwartete 1 Fundstelle, gefunden {len(anchors)}")
+    anchor = anchors[0]
+    if not anchor.group("pwa"):
+        text = (text[:anchor.start()] + '<script src="/assets/pwa.js?v={PWA_JS_VERSION}"></script>\n'
+                + anchor.group("article") + text[anchor.end():])
     return text
 
 
