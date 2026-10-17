@@ -880,8 +880,8 @@ def build_page(it, shop_config, lang):
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <link rel="preload" as="image" href="/{esc(hero_display)}" fetchpriority="high">
 <style>{PRODUCT_CRITICAL_CSS}</style>
-<link rel="preload" as="style" href="/assets/article.css?v={ARTICLE_CSS_VERSION}" onload="this.onload=null;this.rel='stylesheet'">
-<link id="d119-product-page-v4" rel="preload" as="style" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="preload" as="style" href="/assets/article.css?v={ARTICLE_CSS_VERSION}" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
+<link id="d119-product-page-v4" rel="preload" as="style" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="/assets/article.css?v={ARTICLE_CSS_VERSION}"><link rel="stylesheet" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}"><link rel="stylesheet" href="/assets/theme.css?v={THEME_CSS_VERSION}"></noscript>
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="Disorder119">
@@ -900,7 +900,7 @@ def build_page(it, shop_config, lang):
 <script type="application/ld+json">{site_entities_jsonld(shop_config)}</script>
 {product_json_ld_tag(it, lang)}
 <script type="application/ld+json">{breadcrumb_json_ld(it, lang)}</script>
-<link rel="preload" as="style" href="/assets/theme.css?v={THEME_CSS_VERSION}" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="preload" as="style" href="/assets/theme.css?v={THEME_CSS_VERSION}" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
 <script src="/assets/ansicht.js" defer></script>
 <script>try{{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}}catch(e){{}}</script>
 <script src="/assets/catalog-number-links.js" defer></script>
