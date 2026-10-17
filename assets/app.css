@@ -1231,6 +1231,14 @@
   .cart-checkout-btn--whatsapp { background: #25d366; color: #062012; }
   .cart-checkout-btn--email { background: transparent; color: var(--text); border: 1px solid var(--rule-strong); }
 
+  .cart-email-choice > summary { list-style: none; position: relative; padding-inline: 34px; }
+  .cart-email-choice > summary::-webkit-details-marker { display: none; }
+  .cart-email-choice__arrow { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); }
+  .cart-email-choice[open] .cart-email-choice__arrow { transform: translateY(-50%) rotate(180deg); }
+  .cart-email-choice__options { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--rule-strong); border-top: 0; }
+  .cart-email-choice__hint { margin: 0 0 4px; font-size: 0.76rem; line-height: 1.5; color: var(--text-muted); }
+  .cart-email-choice .cart-checkout-btn:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+
   .cart-note {
     font-size: 0.7rem;
     color: var(--text-faint);

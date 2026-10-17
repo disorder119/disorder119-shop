@@ -72,7 +72,10 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       if (!isOpenFn()) return;
       if (e.key === "Escape") { closeFn(); return; }
       if (e.key !== "Tab") return;
-      var focusables = containerEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      var focusables = Array.prototype.filter.call(
+        containerEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'),
+        function (el) { return !el.disabled && el.getClientRects().length > 0; }
+      );
       if (!focusables.length) return;
       var first = focusables[0], last = focusables[focusables.length - 1];
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
@@ -167,7 +170,9 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       shipArrives: "Heute bestellt – voraussichtlich bei dir zwischen {von} und {bis}.",
       cartTrust: "Versand innerhalb Deutschlands · gesetzliches Widerrufsrecht (14 Tage)",
       shipParcelS: "bis 2 kg", shipParcelM: "bis 5 kg", shipParcelL: "bis 10 kg", shipParcelXL: "bis 20 kg", shipParcelXXL: "bis 31,5 kg",
-      cartWhatsapp: "Anfrage per WhatsApp senden", cartEmail: "Anfrage per E-Mail senden", cartGmail: "In Gmail schreiben",
+      cartWhatsapp: "Anfrage per WhatsApp senden", cartEmail: "Anfrage per E-Mail",
+      cartMailApp: "Mail-App öffnen", cartGmail: "Gmail im Browser öffnen",
+      cartEmailHint: "Wähle, wo du die vorbereitete Anfrage öffnen möchtest. Du kannst sie dort bearbeiten und selbst absenden.",
       paypalSoon: "Bald verfügbar", paypalSoonAria: "Bezahlen mit PayPal – bald verfügbar",
       cartConfigWarning: "Shop-Kontakt noch nicht eingerichtet: Trage in index.html bei SHOP_CONFIG deine WhatsApp-Nummer oder E-Mail-Adresse ein, damit Bestellanfragen bei dir ankommen.",
       cartNote: "Alle Artikel sind Einzelstücke. Nach deiner Anfrage bestätigen wir Verfügbarkeit, Gesamtpreis, Zahlungs- und Versandart. Erst mit dieser Bestätigung kommt der Kaufvertrag zustande. Für Verbraucher:innen gilt das gesetzliche 14-tägige Widerrufsrecht.",
@@ -315,7 +320,9 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       shipArrives: "Order today – expected to arrive between {von} and {bis}.",
       cartTrust: "Shipping within Germany · statutory 14-day right of withdrawal",
       shipParcelS: "up to 2 kg", shipParcelM: "up to 5 kg", shipParcelL: "up to 10 kg", shipParcelXL: "up to 20 kg", shipParcelXXL: "up to 31.5 kg",
-      cartWhatsapp: "Send request via WhatsApp", cartEmail: "Send request via e-mail", cartGmail: "Write in Gmail",
+      cartWhatsapp: "Send request via WhatsApp", cartEmail: "Request by email",
+      cartMailApp: "Open email app", cartGmail: "Open Gmail in browser",
+      cartEmailHint: "Choose where to open your prepared request. You can edit it there and send it yourself.",
       paypalSoon: "Coming soon", paypalSoonAria: "Pay with PayPal – coming soon",
       cartConfigWarning: "Shop contact not set up yet: add your WhatsApp number or e-mail address to SHOP_CONFIG in index.html so order requests reach you.",
       cartNote: "All pieces are one-offs. After your enquiry we confirm availability, total price, payment and shipping method. The purchase contract is only formed with that confirmation. Consumers have the statutory 14-day right of withdrawal.",
@@ -464,7 +471,9 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       shipArrives: "Commande aujourd’hui – livraison prévue entre le {von} et le {bis}.",
       cartTrust: "Livraison en Allemagne · droit légal de rétractation (14 jours)",
       shipParcelS: "jusqu’à 2 kg", shipParcelM: "jusqu’à 5 kg", shipParcelL: "jusqu’à 10 kg", shipParcelXL: "jusqu’à 20 kg", shipParcelXXL: "jusqu’à 31,5 kg",
-      cartWhatsapp: "Envoyer la demande par WhatsApp", cartEmail: "Envoyer la demande par e-mail", cartGmail: "Écrire dans Gmail",
+      cartWhatsapp: "Envoyer la demande par WhatsApp", cartEmail: "Demande par e-mail",
+      cartMailApp: "Ouvrir l’application e-mail", cartGmail: "Ouvrir Gmail dans le navigateur",
+      cartEmailHint: "Choisis où ouvrir ta demande préparée. Tu pourras la modifier et l’envoyer toi-même.",
       paypalSoon: "Bientôt disponible", paypalSoonAria: "Payer avec PayPal – bientôt disponible",
       cartConfigWarning: "Le contact de la boutique n'est pas encore configuré : renseigne ton numéro WhatsApp ou ton adresse e-mail dans SHOP_CONFIG (index.html) pour recevoir les demandes de commande.",
       cartNote: "Toutes les pièces sont uniques. Après ta demande, nous confirmons la disponibilité, le prix total, le mode de paiement et l’expédition. Le contrat de vente n’est conclu qu’avec cette confirmation. Les consommateurs disposent du droit légal de rétractation de 14 jours.",
@@ -1050,6 +1059,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   function renderCartDrawer(consumeNotice) {
     var body = document.getElementById("cartBody");
     var foot = document.getElementById("cartFoot");
+    var emailChoiceOpen = !!foot.querySelector(".cart-email-choice[open]");
     var wasSanitized = sanitizeCart();
     if (wasSanitized) updateCartCount();
     // Der Hinweis darf nicht schon durch einen stillen Zwischen-Aufruf
@@ -1123,10 +1133,14 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       footHtml += '<a class="cart-checkout-btn cart-checkout-btn--whatsapp" data-cart-inquiry="whatsapp" target="_blank" rel="noopener" href="#">' + t("cartWhatsapp") + '</a>';
     }
     if (hasEmail) {
-      footHtml += '<a class="cart-checkout-btn cart-checkout-btn--email" data-cart-inquiry="email" href="#">' + t("cartEmail") + '</a>';
-      // mailto: oeffnet das Mailprogramm des Geraets - wer Gmail im Browser nutzt,
-      // bekommt die vorgeschriebene Mail direkt dort (Entwurf, nichts wird gesendet).
-      footHtml += '<a class="cart-checkout-btn cart-checkout-btn--email cart-checkout-btn--gmail" data-cart-inquiry="gmail" target="_blank" rel="noopener" href="#">' + t("cartGmail") + '</a>';
+      // Ein Einstieg; die Mail-App wird nicht geraten und es wird nichts automatisch gesendet.
+      footHtml += '<details class="cart-email-choice"' + (emailChoiceOpen ? ' open' : '') + '>' +
+        '<summary class="cart-checkout-btn cart-checkout-btn--email" tabindex="0">' + t("cartEmail") + '<span class="cart-email-choice__arrow" aria-hidden="true">⌄</span></summary>' +
+        '<div class="cart-email-choice__options">' +
+          '<p class="cart-email-choice__hint">' + t("cartEmailHint") + '</p>' +
+          '<a class="cart-checkout-btn cart-checkout-btn--email" data-cart-inquiry="email" href="#">' + t("cartMailApp") + '</a>' +
+          '<a class="cart-checkout-btn cart-checkout-btn--email" data-cart-inquiry="gmail" target="_blank" rel="noopener noreferrer" href="#">' + t("cartGmail") + '</a>' +
+        '</div></details>';
     }
     if (!hasWhatsapp && !hasEmail) {
       footHtml += '<p class="cart-config-warning">' + t("cartConfigWarning") + '</p>';
@@ -1134,6 +1148,11 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     footHtml += '<p class="cart-note">' + t("cartNote") + '</p>';
     foot.innerHTML = footHtml;
     cartKasseZeichnen(total, shipping, hasUnknownPrice);
+
+    var emailChoice = foot.querySelector(".cart-email-choice");
+    if (emailChoice) emailChoice.addEventListener("toggle", function () {
+      if (emailChoice.open) emailChoice.querySelector(".cart-email-choice__options").scrollIntoView({ block: "center", inline: "nearest" });
+    });
 
     function refreshCartInquiryLinks() {
       var encoded = encodeURIComponent(buildOrderText());
