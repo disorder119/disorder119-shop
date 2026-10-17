@@ -173,6 +173,30 @@ export function quelleAus(referrer) {
   }
 }
 
+// Nur vorhandene Verweis-Domains auswerten; keine neuen Besuchermerkmale.
+// Fehlende Herkunft ist kein Beweis fuer einen direkten Aufruf.
+export function herkunftAus(quelle) {
+  const unbekannt = { kanal: "unbekannt", name: "Direkt oder unbekannt", domain: null, beleg: "nicht_uebermittelt" };
+  const host = String(quelle || "").trim().toLowerCase().replace(/^www\./, "");
+  if (!host || host === "direkt" || host === "unbekannt" || host.length > 80 ||
+      !/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(host) || !host.includes(".") ||
+      host === "disorder119.com" || host.endsWith(".disorder119.com")) return unbekannt;
+  const ist = domain => host === domain || host.endsWith("." + domain);
+  let kanal = "andere", name = "Andere Websites";
+  if (ist("instagram.com")) { kanal = "instagram"; name = "Instagram"; }
+  else if (/^(?:[a-z0-9-]+\.)?google\.(?:com|de|fr|at|ch|it|es|nl|be|co\.uk|com\.au|co\.jp)$/.test(host)) { kanal = "google"; name = "Google"; }
+  else if (ist("tiktok.com")) { kanal = "tiktok"; name = "TikTok"; }
+  else if (ist("facebook.com") || ist("fb.com")) { kanal = "facebook"; name = "Facebook"; }
+  else if (ist("bing.com")) { kanal = "bing"; name = "Bing"; }
+  else if (ist("duckduckgo.com")) { kanal = "duckduckgo"; name = "DuckDuckGo"; }
+  else if (ist("pinterest.com") || ist("pinterest.de") || ist("pin.it")) { kanal = "pinterest"; name = "Pinterest"; }
+  else if (ist("youtube.com") || ist("youtu.be")) { kanal = "youtube"; name = "YouTube"; }
+  else if (ist("ebay.de") || ist("ebay.com")) { kanal = "ebay"; name = "eBay"; }
+  else if (ist("linktr.ee")) { kanal = "linktree"; name = "Linktree"; }
+  else if (ist("chatgpt.com") || ist("chat.openai.com")) { kanal = "chatgpt"; name = "ChatGPT"; }
+  return { kanal, name, domain: host, beleg: "verweis_domain" };
+}
+
 function pfadAus(value) {
   const text = String(value || "").trim();
   if (!text.startsWith("/") || text.startsWith("//")) return "/";
@@ -344,6 +368,7 @@ export function telegramText(e, neu, katalogEintrag, warenkorbTitel = []) {
   } else if (neu) {
     zeilen.push("👀 BESUCHER GERADE IM SHOP", `📍 ${ortText(e)}`, `📱 ${e.geraet} · ${e.browser}`);
     if (e.quelle) zeilen.push(`↪️ kommt von ${e.quelle}`);
+    else zeilen.push("↪️ Herkunft nicht übermittelt (direkt oder unbekannt)");
     zeilen.push(artikel ? `👉 ${artikel}` : `👉 Seite ${e.pfad}`, `Besucher ${besucherKuerzel(e.besucher)}`);
   } else {
     zeilen.push(`👁 ${besucherKuerzel(e.besucher)} schaut: ${artikel || e.pfad}`);
@@ -737,6 +762,7 @@ export function sitzungenBilden(zeilen, verlassen = []) {
       browser: aktuell.browser,
       sprache: aktuell.sprache,
       quelle: aktuell.quelle,
+      herkunft: herkunftAus(aktuell.quelle),
       einstieg: erste.artikelId ? `Artikel ${erste.artikelId}` : erste.pfad,
       seiten: schritte.filter(x => x.typ === "seite" || x.typ === "artikel").length,
       artikel: artikel.size,
@@ -803,6 +829,7 @@ export function auswertungBerechnen(sitzungen, tage, now) {
   for (let i = tage - 1; i >= 0; i--) proTag.set(berlin(now - i * 86_400_000).tag, { besuche: 0, warenkorb: 0 });
   const proStunde = Array.from({ length: 24 }, () => 0);
   const quellen = new Map();
+  const herkunft = new Map();
   const orte = new Map();
   const geraete = new Map();
   const browser = new Map();
@@ -819,6 +846,12 @@ export function auswertungBerechnen(sitzungen, tage, now) {
     proStunde[b.stunde]++;
     const plus = (map, key) => map.set(key, (map.get(key) || 0) + 1);
     plus(quellen, s.quelle || "direkt");
+    const quelle = herkunftAus(s.quelle);
+    if (!herkunft.has(quelle.kanal)) herkunft.set(quelle.kanal, { kanal: quelle.kanal, name: quelle.name, besuche: 0, mitWarenkorb: 0, mitAnfrage: 0 });
+    const gruppe = herkunft.get(quelle.kanal);
+    gruppe.besuche++;
+    if (s.warenkorb > 0) gruppe.mitWarenkorb++;
+    if (s.anfrage) gruppe.mitAnfrage++;
     plus(orte, [s.ort.stadt, s.ort.landName].filter(Boolean).join(", ") || "unbekannt");
     plus(geraete, s.geraet || "unbekannt");
     plus(browser, s.browser || "unbekannt");
@@ -869,6 +902,12 @@ export function auswertungBerechnen(sitzungen, tage, now) {
       }))
       .sort((x, y) => y.warenkorb - x.warenkorb || y.aufrufe - x.aufrufe)
       .slice(0, 25),
+    herkunft: {
+      gesamt: n,
+      unbekannt: herkunft.get("unbekannt")?.besuche || 0,
+      quellen: [...herkunft.values()].sort((a, b) => b.besuche - a.besuche || a.name.localeCompare(b.name, "de"))
+        .map(q => ({ ...q, anteil: n ? Math.round(q.besuche / n * 1000) / 10 : 0 })),
+    },
     quellen: rangliste(quellen),
     orte: rangliste(orte, 15),
     geraete: rangliste(geraete),

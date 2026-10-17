@@ -15,6 +15,9 @@ import {
   istBot,
   katalogCacheLeeren,
   quelleAus,
+  herkunftAus,
+  auswertungBerechnen,
+  sitzungenBilden,
 } from "./besucher.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -483,4 +486,35 @@ test("Artikelnummer aus der Adresse und Meldung bei Passwort-Eingabe", async () 
   } finally {
     n.zurueck();
   }
+});
+
+
+test("Herkunft gruppiert nur echte Verweis-Domains und erfindet keine Quelle", () => {
+  for (const [domain, kanal] of [["l.instagram.com","instagram"],["www.google.de","google"],["google.co.uk","google"],["m.facebook.com","facebook"],["vm.tiktok.com","tiktok"],["www.ebay.de","ebay"],["example.org","andere"]]) {
+    assert.equal(herkunftAus(domain).kanal, kanal);
+    assert.equal(herkunftAus(domain).beleg, "verweis_domain");
+  }
+  for (const value of [null,"","direkt","disorder119.com","admin.disorder119.com","<script>","https://example.org/?email=private","example.org/private","a@b.example"]) {
+    assert.equal(herkunftAus(value).kanal,"unbekannt");
+    assert.equal(herkunftAus(value).domain,null);
+  }
+  for (const domain of ["instagram.com.evil.example","notinstagram.com","google.de.evil.example"]) assert.equal(herkunftAus(domain).kanal,"andere");
+});
+
+test("Quellenzahlen verwenden alle Sitzungen, nicht die gekuerzte Besuchsliste", () => {
+  const sitzungen = Array.from({length:251}, (_,i) => ({start:new Date(T0).toISOString(), quelle:i<200?"instagram.com":null, ort:{}, geraet:"Computer", browser:"Chrome", einstieg:"/", seiten:1, warenkorb:i===0?2:0, anfrage:i===0, schritte:[], dauerBekannt:false}));
+  const result = auswertungBerechnen(sitzungen,7,T0);
+  assert.equal(result.herkunft.gesamt,251);
+  assert.equal(result.herkunft.unbekannt,51);
+  const instagram = result.herkunft.quellen.find(q=>q.kanal==="instagram");
+  assert.deepEqual(instagram,{kanal:"instagram",name:"Instagram",besuche:200,mitWarenkorb:1,mitAnfrage:1,anteil:79.7});
+  assert.equal(result.herkunft.quellen.reduce((n,q)=>n+q.besuche,0),result.kennzahlen.besuche);
+  assert.deepEqual(auswertungBerechnen([],7,T0).herkunft,{gesamt:0,unbekannt:0,quellen:[]});
+});
+
+test("Ein Besuch behaelt den vorhandenen Verweis fuer spätere interne Schritte", () => {
+  const result=sitzungenBilden([{besucher:"a".repeat(64),zeit:new Date(T0).toISOString(),typ:"seite",pfad:"/",quelle:"instagram.com",land:"DE"},{besucher:"a".repeat(64),zeit:new Date(T0+1000).toISOString(),typ:"seite",pfad:"/cart/",quelle:null,land:"DE"}]);
+  assert.equal(result.length,1);assert.equal(result[0].herkunft.kanal,"instagram");
+  assert.equal(result[0].herkunft.domain,"instagram.com");
+  assert.equal(Object.hasOwn(result[0],"ip"),false);
 });
