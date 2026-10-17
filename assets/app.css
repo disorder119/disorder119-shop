@@ -1231,13 +1231,26 @@
   .cart-checkout-btn--whatsapp { background: #25d366; color: #062012; }
   .cart-checkout-btn--email { background: transparent; color: var(--text); border: 1px solid var(--rule-strong); }
 
-  .cart-email-choice > summary { list-style: none; position: relative; padding-inline: 34px; }
-  .cart-email-choice > summary::-webkit-details-marker { display: none; }
-  .cart-email-choice__arrow { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); }
-  .cart-email-choice[open] .cart-email-choice__arrow { transform: translateY(-50%) rotate(180deg); }
-  .cart-email-choice__options { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--rule-strong); border-top: 0; }
-  .cart-email-choice__hint { margin: 0 0 4px; font-size: 0.76rem; line-height: 1.5; color: var(--text-muted); }
-  .cart-email-choice .cart-checkout-btn:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+  .cart-email-dialog {
+    width: min(420px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 28px;
+    overflow: auto;
+    box-sizing: border-box;
+    border: 1px solid var(--rule-strong);
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    box-shadow: 0 16px 60px rgba(0, 0, 0, 0.35);
+  }
+  .cart-email-dialog::backdrop { background: rgba(0, 0, 0, 0.72); }
+  .cart-email-dialog h2 { margin: 0 42px 14px 0; font-size: 1.05rem; line-height: 1.5; }
+  .cart-email-dialog__close { position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; border: 0; background: transparent; color: inherit; font: inherit; font-size: 1.6rem; cursor: pointer; }
+  .cart-email-dialog__hint { margin: 0 0 20px; color: var(--text-muted); font-size: 0.85rem; line-height: 1.6; }
+  .cart-email-dialog__options { display: grid; gap: 10px; }
+  .cart-email-dialog :focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
 
   .cart-note {
     font-size: 0.7rem;

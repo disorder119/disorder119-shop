@@ -1056,10 +1056,55 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       "\n\n" + t("orderAvailQuestion");
   }
 
+  var cartEmailDialog = null;
+  function ensureCartEmailDialog() {
+    if (cartEmailDialog) return cartEmailDialog;
+    var dialog = document.createElement("dialog");
+    dialog.id = "cartEmailDialog";
+    dialog.className = "cart-email-dialog";
+    dialog.setAttribute("aria-labelledby", "cartEmailDialogTitle");
+    dialog.setAttribute("aria-describedby", "cartEmailDialogHint");
+    dialog.innerHTML =
+      '<button type="button" class="cart-email-dialog__close" aria-label="' + escapeHtml(t("closeAria")) + '">×</button>' +
+      '<h2 id="cartEmailDialogTitle">' + t("cartEmail") + '</h2>' +
+      '<p id="cartEmailDialogHint" class="cart-email-dialog__hint">' + t("cartEmailHint") + '</p>' +
+      '<div class="cart-email-dialog__options">' +
+        '<a class="cart-checkout-btn cart-checkout-btn--email" data-cart-inquiry="email" href="#">' + t("cartMailApp") + '</a>' +
+        '<a class="cart-checkout-btn cart-checkout-btn--email" data-cart-inquiry="gmail" target="_blank" rel="noopener noreferrer" href="#">' + t("cartGmail") + '</a>' +
+      '</div>';
+    document.body.appendChild(dialog);
+    cartEmailDialog = dialog;
+    dialog.querySelector("button").addEventListener("click", function () { dialog.close(); });
+    // Native modal focus and Escape stay in this dialog, above the cart trap.
+    dialog.addEventListener("keydown", function (event) {
+      event.stopPropagation();
+      if (event.key !== "Tab") return;
+      var controls = dialog.querySelectorAll("button, a[href]");
+      var first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus();
+      }
+    });
+    dialog.addEventListener("click", function (event) {
+      var box = dialog.getBoundingClientRect();
+      if (event.target === dialog && (event.clientX < box.left || event.clientX > box.right ||
+          event.clientY < box.top || event.clientY > box.bottom)) dialog.close();
+    });
+    dialog.addEventListener("close", function () {
+      var opener = document.querySelector("[data-cart-email-open]");
+      if (opener && document.getElementById("cartBackdrop").classList.contains("open")) opener.focus();
+    });
+    Array.prototype.forEach.call(dialog.querySelectorAll("a"), function (link) {
+      link.addEventListener("click", function () { dialog.close(); });
+    });
+    return dialog;
+  }
+
   function renderCartDrawer(consumeNotice) {
     var body = document.getElementById("cartBody");
     var foot = document.getElementById("cartFoot");
-    var emailChoiceOpen = !!foot.querySelector(".cart-email-choice[open]");
     var wasSanitized = sanitizeCart();
     if (wasSanitized) updateCartCount();
     // Der Hinweis darf nicht schon durch einen stillen Zwischen-Aufruf
@@ -1072,6 +1117,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     if (consumeNotice) cartRemovedNotice = null;
 
     if (!cart.length) {
+      if (cartEmailDialog && cartEmailDialog.open) cartEmailDialog.close();
       var sprache = String(document.documentElement.lang || "de").slice(0, 2);
       body.innerHTML = noticeHtml + '<p class="cart-empty">' + t("cartEmpty") + '</p>' +
         '<p class="cart-empty__weiter"><a href="' + (sprache === "en" || sprache === "fr" ? "/" + sprache + "/" : "/") + '">' + t("cartEmptyLink") + '</a></p>';
@@ -1133,14 +1179,8 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       footHtml += '<a class="cart-checkout-btn cart-checkout-btn--whatsapp" data-cart-inquiry="whatsapp" target="_blank" rel="noopener" href="#">' + t("cartWhatsapp") + '</a>';
     }
     if (hasEmail) {
-      // Ein Einstieg; die Mail-App wird nicht geraten und es wird nichts automatisch gesendet.
-      footHtml += '<details class="cart-email-choice"' + (emailChoiceOpen ? ' open' : '') + '>' +
-        '<summary class="cart-checkout-btn cart-checkout-btn--email" tabindex="0">' + t("cartEmail") + '<span class="cart-email-choice__arrow" aria-hidden="true">⌄</span></summary>' +
-        '<div class="cart-email-choice__options">' +
-          '<p class="cart-email-choice__hint">' + t("cartEmailHint") + '</p>' +
-          '<a class="cart-checkout-btn cart-checkout-btn--email" data-cart-inquiry="email" href="#">' + t("cartMailApp") + '</a>' +
-          '<a class="cart-checkout-btn cart-checkout-btn--email" data-cart-inquiry="gmail" target="_blank" rel="noopener noreferrer" href="#">' + t("cartGmail") + '</a>' +
-        '</div></details>';
+      footHtml += '<button type="button" class="cart-checkout-btn cart-checkout-btn--email" data-cart-email-open aria-haspopup="dialog" aria-controls="cartEmailDialog">' + t("cartEmail") + '</button>';
+      ensureCartEmailDialog();
     }
     if (!hasWhatsapp && !hasEmail) {
       footHtml += '<p class="cart-config-warning">' + t("cartConfigWarning") + '</p>';
@@ -1149,16 +1189,23 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     foot.innerHTML = footHtml;
     cartKasseZeichnen(total, shipping, hasUnknownPrice);
 
-    var emailChoice = foot.querySelector(".cart-email-choice");
-    if (emailChoice) emailChoice.addEventListener("toggle", function () {
-      if (emailChoice.open) emailChoice.querySelector(".cart-email-choice__options").scrollIntoView({ block: "center", inline: "nearest" });
+    var emailOpener = foot.querySelector("[data-cart-email-open]");
+    if (emailOpener) emailOpener.addEventListener("click", function () {
+      var dialog = ensureCartEmailDialog();
+      refreshCartInquiryLinks();
+      if (typeof dialog.showModal === "function") {
+        if (!dialog.open) dialog.showModal();
+      } else {
+        // Older browsers can still open their normal configured mail app.
+        location.href = dialog.querySelector('[data-cart-inquiry="email"]').href;
+      }
     });
 
     function refreshCartInquiryLinks() {
       var encoded = encodeURIComponent(buildOrderText());
       var wa = foot.querySelector('[data-cart-inquiry="whatsapp"]');
-      var email = foot.querySelector('[data-cart-inquiry="email"]');
-      var gmail = foot.querySelector('[data-cart-inquiry="gmail"]');
+      var email = cartEmailDialog && cartEmailDialog.querySelector('[data-cart-inquiry="email"]');
+      var gmail = cartEmailDialog && cartEmailDialog.querySelector('[data-cart-inquiry="gmail"]');
       if (wa) wa.href = "https://wa.me/" + SHOP_CONFIG.whatsappNumber + "?text=" + encoded;
       if (email) email.href = "mailto:" + SHOP_CONFIG.email + "?subject=" + encodeURIComponent(t("orderSubject")) + "&body=" + encoded;
       if (gmail) gmail.href = "https://mail.google.com/mail/?view=cm&fs=1&to=" + encodeURIComponent(SHOP_CONFIG.email) + "&su=" + encodeURIComponent(t("orderSubject")) + "&body=" + encoded;
@@ -1196,6 +1243,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   }
 
   function hideCartUI() {
+    if (cartEmailDialog && cartEmailDialog.open) cartEmailDialog.close();
     document.getElementById("cartBackdrop").classList.remove("open");
     document.body.style.overflow = "";
     if (cartLastFocusEl && typeof cartLastFocusEl.focus === "function") cartLastFocusEl.focus();
