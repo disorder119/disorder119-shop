@@ -11,9 +11,9 @@ function page(stored=null,hash='') {
   const listener=(name,fn)=>{(callbacks[name] ||= []).push(fn);};
   function node(tag) {const n={tag,children:[],style:{},appendChild(x){this.children.push(x);return x;},append(...xs){this.children.push(...xs);},setAttribute(){},addEventListener(name,fn){this[name]=fn;},remove(){this.removed=true;}};nodes.push(n);return n;}
   const localStorage={getItem(key){reads.push(key);return store.get(key)||null;},setItem(key,val){store.set(key,val);},removeItem(key){store.delete(key);}};
-  const document={documentElement:{lang:'de',getAttribute(){return 'de';}},referrer:'',body:node('body'),createElement:node,addEventListener:listener,visibilityState:'visible'};
+  const document={documentElement:{lang:'de',getAttribute(){return 'de';}},referrer:'',body:node('body'),createElement:node,addEventListener:listener,visibilityState:'visible',getElementById(){return null;}};
   const window={SHOP_CONFIG:{shopWorkerUrl:'https://api.disorder119.com'},localStorage,addEventListener:listener};
-  const context={window,document,location:{hash,pathname:'/'},history:{pushState(){}},navigator:{},Date,Blob,setTimeout:fn=>fn(),fetch:(url,init)=>{network.push({url,body:JSON.parse(init.body)});return Promise.resolve();}};
+  const context={window,document,location:{hash,pathname:'/'},history:{pushState(){}},navigator:{},Date,Blob,setInterval:()=>1,clearInterval(){},setTimeout:fn=>fn(),fetch:(url,init)=>{network.push({url,body:JSON.parse(init.body)});return Promise.resolve();}};
   vm.runInNewContext(script,context);
   return {nodes,network,reads,window,document,store,fire:(name,event={})=>(callbacks[name]||[]).forEach(fn=>fn(event))};
 }

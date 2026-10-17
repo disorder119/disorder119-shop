@@ -1,3 +1,4 @@
+import { sichtzeitBody, sichtzeitSpeichern, zeitIntervalle, zeitGruppen, sichtzeitIndex, sichtzeitZwischen, verbundeneZeiten, vereinigteZeit } from "./besucher-sichtzeit.js";
 // Live-Besucher: der Shop meldet Seitenaufrufe, angesehene Artikel,
 // Warenkorb-Aenderungen und geoeffnete Anfragen an POST /besuch. Der Worker
 // legt sie in D1 ab, schickt die wichtigen Momente an den Telegram-Bot und
@@ -30,7 +31,7 @@ const ADMIN_ORIGINS = Object.freeze([
 ]);
 
 export const BESUCHER_TYPEN = Object.freeze(["seite", "artikel", "warenkorb_rein", "warenkorb_raus", "anfrage"]);
-const KANAELE = Object.freeze(["whatsapp", "email", "paypal"]);
+const KANAELE = Object.freeze(["whatsapp", "email", "gmail", "paypal"]);
 const SPRACHEN = Object.freeze(["de", "en", "fr"]);
 const MAX_BODY = 2048;
 const SITZUNG_MS = 30 * 60 * 1000;
@@ -362,8 +363,8 @@ export function telegramText(e, neu, katalogEintrag, warenkorbTitel = []) {
   if (e.typ === "warenkorb_rein") {
     zeilen.push("🛒 IN DEN WARENKORB", artikel, wer, `Warenkorb jetzt: ${e.warenkorb} ${e.warenkorb === 1 ? "Teil" : "Teile"}`);
   } else if (e.typ === "anfrage") {
-    const kanal = e.kanal === "whatsapp" ? "WhatsApp" : e.kanal === "email" ? "E-Mail" : e.kanal === "paypal" ? "PayPal" : "Anfrage";
-    zeilen.push(`💬 ANFRAGE WIRD GESENDET (${kanal})`, wer, `${e.warenkorb} ${e.warenkorb === 1 ? "Teil" : "Teile"} im Warenkorb`);
+    const kanal = e.kanal === "whatsapp" ? "WhatsApp" : e.kanal === "email" ? "E-Mail" : e.kanal === "gmail" ? "Gmail" : e.kanal === "paypal" ? "PayPal" : "Anfrage";
+    zeilen.push(`💬 ANFRAGE GEÖFFNET (${kanal})`, wer, `${e.warenkorb} ${e.warenkorb === 1 ? "Teil" : "Teile"} im Warenkorb`);
     for (const titel of warenkorbTitel.slice(0, 8)) zeilen.push(`• ${titel}`);
   } else if (neu) {
     zeilen.push("👀 BESUCHER GERADE IM SHOP", `📍 ${ortText(e)}`, `📱 ${e.geraet} · ${e.browser}`);
@@ -420,6 +421,12 @@ export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
   let consentBody;
   try { consentBody = JSON.parse(raw); } catch { throw new BesucherError("INVALID_JSON",400); }
   if (consentBody?.consentVersion !== 1) return leer(origin);
+  if (consentBody.t === "sichtzeit") {
+    if (!sichtzeitBody(consentBody)) throw new BesucherError("INVALID_VISIBLE_TIME",400);
+    const besucher = await besucherSchluessel(env, request, now);
+    if (!await sichtzeitSpeichern(env,besucher,consentBody,now)) throw new BesucherError("INVALID_VISIBLE_TIME",400);
+    return leer(origin);
+  }
   const daten = ereignisAusBody(raw);
   if (daten.typ === "verlassen") {
     // Nur der Zeitpunkt fuer die Verweildauer: keine Meldung, kein Ort.
@@ -615,6 +622,7 @@ export async function besucherAufraeumen(env, now = Date.now()) {
   const grenze = new Date(now - tage * 24 * 60 * 60 * 1000).toISOString();
   const alt = await env.DB.prepare("DELETE FROM besucher_ereignisse WHERE zeit<?").bind(grenze).run();
   await env.DB.prepare("DELETE FROM besucher_verlassen WHERE zeit<?").bind(grenze).run().catch(() => {});
+  await env.DB.prepare("DELETE FROM besucher_sichtzeit WHERE zuletzt<?").bind(grenze).run().catch(() => {});
   // Salz von gestern und frueher weg: alte Schluessel sind danach nicht mehr
   // einer IP zuzuordnen.
   await env.DB.prepare("DELETE FROM besucher_salz WHERE tag<>?").bind(tagUtc(now)).run();
@@ -709,7 +717,7 @@ async function statistik(env, url, now) {
     laender: laender.map(r => ({ ...r, landName: landName(r.land) })),
     quellen,
     geraete,
-    einstellungen: { tracking: besucherAktiv(env), telegram: telegramModus(env) },
+    einstellungen: { tracking: besucherAktiv(env), telegram: telegramModus(env), aufbewahrungTage: ganzzahl(env.BESUCHER_AUFBEWAHRUNG_TAGE,STANDARD_AUFBEWAHRUNG_TAGE,1,365) },
   };
 }
 
@@ -730,13 +738,16 @@ function berlin(iso) {
   return { tag: `${teile.year}-${teile.month}-${teile.day}`, stunde: Number(teile.hour) };
 }
 
-export function sitzungenBilden(zeilen, verlassen = []) {
+export function sitzungenBilden(zeilen, verlassen = [], sichtzeit = []) {
+  const zeitenJe = new Map();
+  for(const z of sichtzeit){if(!zeitenJe.has(z.besucher))zeitenJe.set(z.besucher,[]);zeitenJe.get(z.besucher).push(z);}
+  for(const [key,liste] of zeitenJe)zeitenJe.set(key,zeitGruppen(zeitIntervalle(liste)));
   const verlassenJe = new Map();
   for (const v of verlassen) {
     if (!verlassenJe.has(v.besucher)) verlassenJe.set(v.besucher, []);
-    verlassenJe.get(v.besucher).push(Date.parse(v.zeit));
+    verlassenJe.get(v.besucher).push({t:Date.parse(v.zeit),pfad:v.pfad});
   }
-  for (const liste of verlassenJe.values()) liste.sort((a, b) => a - b);
+  for (const liste of verlassenJe.values()) liste.sort((a, b) => a.t - b.t);
 
   const sitzungen = [];
   let aktuell = null;
@@ -745,9 +756,12 @@ export function sitzungenBilden(zeilen, verlassen = []) {
     const schritte = aktuell.schritte;
     const letzter = schritte[schritte.length - 1];
     const ende = (verlassenJe.get(aktuell.schluessel) || [])
-      .find(t => t >= letzter.t && t - letzter.t <= MAX_SCHRITT_MS);
+      .find(v => v.t >= letzter.t && v.t - letzter.t <= MAX_SCHRITT_MS && (!v.pfad || v.pfad===letzter.pfad))?.t;
     if (ende !== undefined) letzter.dauerMs = ende - letzter.t;
-    const bis = ende !== undefined ? ende : letzter.t;
+    const gemessen = verbundeneZeiten(zeitenJe.get(aktuell.schluessel), schritte[0].t);
+    const bis = Math.max(ende !== undefined ? ende : letzter.t,gemessen.bis);
+    const zeitIndex = sichtzeitIndex(gemessen.intervalle);
+    const vordergrundMs = gemessen.intervalle.length ? sichtzeitZwischen(zeitIndex,schritte[0].t,bis) : null;
     const artikel = new Set(schritte.filter(x => x.artikelId && x.typ === "artikel").map(x => x.artikelId));
     const erste = schritte[0];
     sitzungen.push({
@@ -756,7 +770,11 @@ export function sitzungenBilden(zeilen, verlassen = []) {
       start: new Date(erste.t).toISOString(),
       ende: new Date(bis).toISOString(),
       dauerMs: bis - erste.t,
-      dauerBekannt: schritte.length > 1 || ende !== undefined,
+      dauerBekannt: schritte.length > 1 || ende !== undefined || gemessen.intervalle.length > 0,
+      vordergrundMs,
+      messungBis: gemessen.intervalle.length ? new Date(gemessen.bis).toISOString() : null,
+      messungBegrenzt: gemessen.intervalle.some(r=>r.begrenzt),
+      datenUmfang: gemessen.intervalle.length || schritte.some(x=>x.quelleArt === "browser") ? "browser_detail" : "server_seiten",
       ort: aktuell.ort,
       geraet: aktuell.geraet,
       browser: aktuell.browser,
@@ -769,7 +787,7 @@ export function sitzungenBilden(zeilen, verlassen = []) {
       warenkorb: schritte.filter(x => x.typ === "warenkorb_rein").length,
       warenkorbEnde: schritte.reduce((n, x) => (["warenkorb_rein", "warenkorb_raus", "anfrage"].includes(x.typ) ? x.warenkorb : n), 0),
       anfrage: schritte.some(x => x.typ === "anfrage"),
-      schritte: schritte.map(x => ({
+      schritte: schritte.map((x,i) => ({
         zeit: new Date(x.t).toISOString(),
         typ: x.typ,
         pfad: x.pfad,
@@ -778,6 +796,8 @@ export function sitzungenBilden(zeilen, verlassen = []) {
         warenkorb: x.warenkorb,
         kanal: x.kanal,
         dauerMs: x.dauerMs,
+        quelleArt: x.quelleArt,
+        vordergrundMs: sichtzeitZwischen(zeitIndex,x.t,schritte[i+1]?.t || bis,x),
       })),
     });
     aktuell = null;
@@ -787,7 +807,7 @@ export function sitzungenBilden(zeilen, verlassen = []) {
     const t = Date.parse(z.zeit);
     if (!Number.isFinite(t)) continue;
     const vorher = aktuell && aktuell.schritte[aktuell.schritte.length - 1];
-    if (!aktuell || aktuell.schluessel !== z.besucher || t - vorher.t > SITZUNG_MS) {
+    if (!aktuell || aktuell.schluessel !== z.besucher || t - verbundeneZeiten(zeitenJe.get(z.besucher),vorher.t).bis > SITZUNG_MS) {
       abschliessen();
       aktuell = {
         schluessel: z.besucher,
@@ -805,7 +825,7 @@ export function sitzungenBilden(zeilen, verlassen = []) {
     }
     aktuell.schritte.push({
       t, typ: z.typ, pfad: z.pfad, artikelId: z.artikel_id, titel: z.titel,
-      warenkorb: Number(z.warenkorb || 0), kanal: z.kanal, dauerMs: null,
+      warenkorb: Number(z.warenkorb || 0), kanal: z.kanal, dauerMs: null, quelleArt: z.server === 1 ? "server" : "browser",
     });
   }
   abschliessen();
@@ -836,6 +856,7 @@ export function auswertungBerechnen(sitzungen, tage, now) {
   const einstieg = new Map();
   const artikel = new Map();
   const dauern = [];
+  const sichtDauern = sitzungen.filter(s=>s.vordergrundMs !== null && s.vordergrundMs !== undefined).map(s=>s.vordergrundMs);
 
   for (const s of sitzungen) {
     const b = berlin(s.start);
@@ -892,6 +913,8 @@ export function auswertungBerechnen(sitzungen, tage, now) {
       absprungQuote: prozent(absprung),
       mitWarenkorb,
       mitAnfrage,
+      gemesseneBesuche: sichtDauern.length,
+      vordergrundMedianMs: median(sichtDauern),
     },
     proTag: [...proTag.entries()].map(([tag, w]) => ({ tag, ...w })),
     proStunde,
@@ -921,26 +944,31 @@ async function auswertung(env, url, now) {
   const limit = ganzzahl(url.searchParams.get("limit"), 150, 1, 500);
   const seit = new Date(now - tage * 24 * 60 * 60 * 1000).toISOString();
   const { results: zeilen } = await env.DB.prepare(`SELECT besucher, zeit, typ, pfad, artikel_id, titel, warenkorb, kanal,
-      quelle, sprache, land, region, stadt, geraet, browser
+      quelle, sprache, land, region, stadt, geraet, browser, server
     FROM besucher_ereignisse WHERE zeit>=? ORDER BY besucher, zeit, id LIMIT ${MAX_ZEILEN}`).bind(seit).all();
   let verlassen = [];
   try {
-    verlassen = (await env.DB.prepare("SELECT besucher, zeit FROM besucher_verlassen WHERE zeit>=? ORDER BY zeit LIMIT ?")
+    verlassen = (await env.DB.prepare("SELECT besucher, zeit, pfad FROM besucher_verlassen WHERE zeit>=? ORDER BY zeit LIMIT ?")
       .bind(seit, MAX_ZEILEN).all()).results || [];
   } catch {
     // Migration 0020 fehlt noch: Dauer nur aus den Schritten.
   }
-  const sitzungen = sitzungenBilden(zeilen || [], verlassen);
+  let sichtzeit = [], sichtzeitVerfuegbar = true;
+  try { sichtzeit = (await env.DB.prepare("SELECT besucher,beginn,zuletzt,pfad,artikel_id,sicht_ms,begrenzt FROM besucher_sichtzeit WHERE zuletzt>=? ORDER BY besucher,beginn LIMIT ?").bind(seit,MAX_ZEILEN).all()).results || []; }
+  catch { sichtzeitVerfuegbar = false; }
+  const sitzungen = sitzungenBilden(zeilen || [], verlassen,sichtzeit);
   return {
     ok: true,
     tage,
     erstellt: new Date(now).toISOString(),
     gekuerzt: (zeilen || []).length >= MAX_ZEILEN,
     verweildauerAktiv: verlassen.length > 0,
+    sichtzeitVerfuegbar,
+    sichtzeitGekuerzt: sichtzeit.length >= MAX_ZEILEN,
     ...auswertungBerechnen(sitzungen, tage, now),
     jetztAktiv: sitzungen.filter(s => Date.parse(s.ende) >= now - 5 * 60 * 1000).length,
     sitzungen: sitzungen.slice(0, limit),
-    einstellungen: { tracking: besucherAktiv(env), telegram: telegramModus(env) },
+    einstellungen: { tracking: besucherAktiv(env), telegram: telegramModus(env), aufbewahrungTage: ganzzahl(env.BESUCHER_AUFBEWAHRUNG_TAGE,STANDARD_AUFBEWAHRUNG_TAGE,1,365) },
   };
 }
 
