@@ -1,3 +1,4 @@
+import { sichtzeitBody, vereinigteZeit, zeitGruppen, verbundeneZeiten, sichtzeitIndex, sichtzeitZwischen } from "./besucher-sichtzeit.js";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -134,7 +135,7 @@ test("Besuch wird ohne IP gespeichert und Telegram meldet neuen Besucher, Warenk
     assert.match(n.telegram[0], /iPhone · Safari/);
     assert.match(n.telegram[0], /kommt von instagram\.com/);
     assert.match(n.telegram[1], /IN DEN WARENKORB\nArtikel 6042 – Prada – Nylonjacke \(120 €\)/);
-    assert.match(n.telegram[3], /ANFRAGE WIRD GESENDET \(WhatsApp\)/);
+    assert.match(n.telegram[3], /ANFRAGE GEÖFFNET \(WhatsApp\)/);
     assert.match(n.telegram[3], /• Artikel 6184 – Stone Island – Overshirt/);
     for (const text of n.telegram) assert.ok(!text.includes("203.0.113.7"), "keine IP in Telegram");
 
@@ -517,4 +518,64 @@ test("Ein Besuch behaelt den vorhandenen Verweis fuer spätere interne Schritte"
   assert.equal(result.length,1);assert.equal(result[0].herkunft.kanal,"instagram");
   assert.equal(result[0].herkunft.domain,"instagram.com");
   assert.equal(Object.hasOwn(result[0],"ip"),false);
+});
+
+
+test("Sichtzeit braucht Einwilligung, sendet keine Telegram-Alarme und bleibt kumulativ/idempotent",async()=>{
+ const db=d1(),n=netz();try{
+  const env=envMit(db);const v="a".repeat(24);
+  const req=besuch({t:"sichtzeit",v,ms:1000,p:"/",consentVersion:0});
+  assert.equal((await handleBesucher(req,env,new URL(req.url),"r",null,T0)).status,204);
+  assert.equal(db.raw.prepare("SELECT COUNT(*) n FROM besucher_sichtzeit").get().n,0);
+  assert.equal(db.raw.prepare("SELECT COUNT(*) n FROM besucher_salz").get().n,0);
+  for(const [ms,offset] of [[0,0],[30000,30000],[30000,35000],[60000,60000],[45000,65000]])assert.equal((await senden(env,{t:"sichtzeit",v,ms,p:"/"},undefined,T0+offset)).status,204);
+  const row=db.raw.prepare("SELECT * FROM besucher_sichtzeit").get();assert.equal(row.sicht_ms,60000);assert.equal(row.zaehler_ms,60000);assert.equal(row.zuletzt,new Date(T0+60000).toISOString());
+  assert.equal(db.raw.prepare("SELECT COUNT(*) n FROM besucher_sichtzeit").get().n,1);
+  assert.equal(n.telegram.length,0);assert.equal(Object.hasOwn(row,"ip"),false);
+  assert.equal((await senden(env,{t:"sichtzeit",v,ms:70000,p:"/cart/"},undefined,T0+70000)).status,400);
+ }finally{n.zurueck();}
+});
+
+test("Sichtzeit validiert IDs, Zeit und Pfade und begrenzt manipulierte Zeitangaben",async()=>{
+ for(const body of [{v:"bad",ms:1},{v:"a".repeat(24),ms:-1},{v:"a".repeat(24),ms:86400001},{v:"a".repeat(24),ms:1.5},{v:"a".repeat(24),ms:1,p:"//evil.example"},{v:"a".repeat(24),ms:1,a:"<script>"}])assert.equal(sichtzeitBody(body),null);
+ assert.deepEqual(sichtzeitBody({v:"a".repeat(24),ms:100,p:"/artikel/1/?private=x#secret",a:1}),{abschnitt:"a".repeat(24),ms:100,pfad:"/artikel/1/",artikelId:"1"});
+ const db=d1(),n=netz();try{
+  await senden(envMit(db),{t:"sichtzeit",v:"b".repeat(24),ms:86400000,p:"/"},undefined,T0);
+  const row=db.raw.prepare("SELECT * FROM besucher_sichtzeit").get();assert.equal(row.sicht_ms,30000);assert.equal(row.begrenzt,1);
+ }finally{n.zurueck();}
+});
+
+test("Vordergrundzeit trennt sichtbare Abschnitte von Hintergrund und alten Zeit-Schaetzungen",async()=>{
+ const db=d1(),n=netz();try{
+  const env=envMit(db);await senden(env,{t:"seite",p:"/"});
+  for(const [v,ms,offset] of [["a",0,0],["a",30000,30000],["b",0,120000],["b",15000,135000]])await senden(env,{t:"sichtzeit",v:v.repeat(24),ms,p:"/"},undefined,T0+offset);
+  const req=new Request("https://api.disorder119.com/admin/besucher/auswertung?tage=7&limit=1",{headers:{Origin:ADMIN}});
+  const res=await handleBesucher(req,{...env,ADMIN_AUTH_CONTEXT:{role:"READER"}},new URL(req.url),"r",null,T0+140000);assert.equal(res.status,200);
+  const d=await res.json();assert.equal(d.sichtzeitVerfuegbar,true);assert.equal(d.sitzungen[0].vordergrundMs,45000);assert.equal(d.sitzungen[0].dauerMs,135000);assert.equal(d.kennzahlen.vordergrundMedianMs,45000);
+  assert.equal(d.sitzungen[0].datenUmfang,"browser_detail");assert.equal(d.sitzungen[0].schritte[0].vordergrundMs,45000);
+  const old=sitzungenBilden([{besucher:"old",zeit:new Date(T0).toISOString(),typ:"seite",pfad:"/",server:1}]);assert.equal(old[0].vordergrundMs,null);assert.equal(old[0].datenUmfang,"server_seiten");
+ }finally{n.zurueck();}
+});
+
+test("Sichtbare Tabs werden zeitlich vereinigt und lange sichtbare Lesebesuche nicht falsch getrennt",()=>{
+ assert.equal(vereinigteZeit([{von:0,bis:30000,ms:30000},{von:15000,bis:45000,ms:30000}],0,45000),45000);
+ const events=[{besucher:"x",zeit:new Date(T0).toISOString(),typ:"seite",pfad:"/",server:1},{besucher:"x",zeit:new Date(T0+75*60000).toISOString(),typ:"warenkorb_rein",pfad:"/",artikel_id:"1"}];
+ const zeit=[{besucher:"x",beginn:new Date(T0).toISOString(),zuletzt:new Date(T0+75*60000).toISOString(),pfad:"/",sicht_ms:75*60000}];
+ const sessions=sitzungenBilden(events,[],zeit);assert.equal(sessions.length,1);assert.equal(sessions[0].vordergrundMs,75*60000);
+ assert.equal(sitzungenBilden(events).length,2);
+});
+
+test("Zeitabschnitte werden nach der vorhandenen Aufbewahrungsfrist entfernt",async()=>{
+ const db=d1(),n=netz();try{
+  const env=envMit(db);await senden(env,{t:"sichtzeit",v:"a".repeat(24),ms:0,p:"/"});
+  await besucherAufraeumen(env,T0+31*86400000);assert.equal(db.raw.prepare("SELECT COUNT(*) n FROM besucher_sichtzeit").get().n,0);
+ }finally{n.zurueck();}
+});
+
+
+test("Indizierte Zeitabfragen entsprechen der direkten Vereinigung auch bei Luecken, Kontexten und Nullzeit",()=>{
+ const rows=[{von:0,bis:30000,ms:30000,pfad:"/",artikelId:null},{von:15000,bis:45000,ms:30000,pfad:"/",artikelId:null},{von:60000,bis:70000,ms:10000,pfad:"/",artikelId:"1"},{von:71000,bis:71000,ms:0,pfad:"/",artikelId:"2"}];const index=sichtzeitIndex(rows);
+ for(let a=0;a<80000;a+=3711)for(let b=a;b<90000;b+=5417)for(const k of [undefined,{pfad:"/",artikelId:null},{pfad:"/",artikelId:"1"}])assert.equal(sichtzeitZwischen(index,a,b,k),vereinigteZeit(rows,a,b,k));
+ assert.equal(sichtzeitZwischen(index,0,90000,{pfad:"/",artikelId:"2"}),0);assert.equal(sichtzeitZwischen(index,0,90000,{pfad:"/missing"}),null);
+ const groups=zeitGruppen([...rows,{von:3600000,bis:3601000,ms:1000,pfad:"/"}]);assert.equal(groups.length,2);assert.equal(verbundeneZeiten(groups,1800000).bis,3601000);assert.equal(verbundeneZeiten(groups,71001).intervalle.length,0);
 });

@@ -273,3 +273,23 @@ Mindestens erforderlich:
 - Erst danach `shopWorkerUrl`, Client-ID und Feature-Flags bewusst aktivieren.
 
 Die detaillierte Zielarchitektur steht in `shop-worker/COMMERCE_ARCHITECTURE.md`.
+
+## Genauere freiwillige Besuchszeit (0039)
+
+Migration 0039_besucher_sichtzeit.sql legt ausschliesslich eine neue Statistiktabelle
+an. Zuerst Migration, dann Backend, Shop-Assets und Admin ausrollen. Rollback des
+Codes kann die additive Tabelle unbenutzt belassen; keine Nutzdaten zuruecksetzen.
+
+POST /besuch mit t=sichtzeit benoetigt consentVersion=1 und alle vorhandenen
+Origin-/Bot-/Ratenpruefungen. Kurzlebige zufaellige Abschnittskennung nur im RAM,
+keine dauerhaften neuen Kennungen/Cookies. Kumulative begrenzte Zaehler verhindern
+Doppelzeit durch Wiederholungen. Nur sichtbare Seiten-/Artikelkontexte, keine
+Formulartexte. Keine Telegram-Alarme pro Zeitmeldung. Aufbewahrung entspricht
+BESUCHER_AUFBEWAHRUNG_TAGE (Standard 30 Tage), Aufraeumen im bestehenden Cron.
+
+Auswertung kennzeichnet Vordergrundzeit getrennt von beobachtetem Zeitraum,
+Schaetzungen, Server-/Browser-Herkunft, Messlimit und fehlenden Messdaten.
+Ueberlappende Zeitintervalle werden vereinigt. Sichtbarer Tab beweist keine
+Aufmerksamkeit, IP-/UA-basierte Tagespseudonyme sind keine eindeutigen Menschen,
+Anfrage-Klicks keine gesendeten Nachrichten. Netzabbrueche/Blocker/Tabende und
+Tageswechsel koennen Messluecken hinterlassen. Alte unbekannte Werte nicht fuellen.
