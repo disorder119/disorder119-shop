@@ -132,13 +132,19 @@ function checkRemoval(path) {
 // ------------------------------------------------------------------ Ablaeufe
 
 export async function loadCatalog(env) {
-  const [{ text: itemsText, sha }, commits] = await Promise.all([
-    readRepoFile(env, ITEMS_PATH, { userAgent: USER_AGENT }),
+  // Optional history must never hold the actual catalog hostage. Do not
+  // cache private catalog data or substitute a potentially stale public file.
+  let timer;
+  const history = Promise.race([
     recentCommits(env, ITEMS_PATH, { userAgent: USER_AGENT }).catch(() => []),
+    new Promise(resolve => { timer = setTimeout(() => resolve([]), 1500); }),
   ]);
-  // Die Artikelliste geht als Text durch: 1 MB einmal parsen und wieder
-  // serialisieren kostete nur Rechenzeit.
-  return `{"ok":true,"sha":${JSON.stringify(sha)},"commits":${JSON.stringify(commits)},"items":${itemsText}}`;
+  try {
+    const [{ text: itemsText, sha }, commits] = await Promise.all([
+      readRepoFile(env, ITEMS_PATH, { userAgent: USER_AGENT }), history,
+    ]);
+    return `{"ok":true,"sha":${JSON.stringify(sha)},"commits":${JSON.stringify(commits)},"items":${itemsText}}`;
+  } finally { clearTimeout(timer); }
 }
 
 export async function saveCatalog(env, body = {}) {

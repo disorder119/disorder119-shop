@@ -92,6 +92,9 @@ jobs:
       - name: Verifizierte Katalog-Quellfehler reparieren
         run: python scripts/repair_catalog_source_integrity.py
 
+      - name: Bestaetigte Maengel im Merchant-Feed pruefen
+        run: python scripts/test_catalog_defect_feed.py
+
       - name: Produktdaten nur aus expliziten Quellen vervollstaendigen
         run: python scripts/repair_product_metadata_conservative.py
 
