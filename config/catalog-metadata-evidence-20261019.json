@@ -251,6 +251,50 @@
       "value": "Schwarz",
       "evidence": "Fotos 1-6",
       "source": "reviewed eBay evidence 2026-10-18"
+    },
+    {
+      "article": "205",
+      "shop_id": 6208,
+      "manager_id": 9563,
+      "field": "size",
+      "before": "",
+      "value": "L (geschätzt)",
+      "evidence_value": "L",
+      "evidence": "Nutzerentscheidung #205 = L (geschätzt)",
+      "source": "Owner-approved estimate, explicitly labeled; not a measured label size"
+    },
+    {
+      "article": "204",
+      "shop_id": 6207,
+      "manager_id": 9562,
+      "field": "size",
+      "before": "",
+      "value": "L (geschätzt)",
+      "evidence_value": "L",
+      "evidence": "geschätzt L (Nutzerentscheidung 14.10., kein Größenetikett)",
+      "source": "Owner-approved estimate, explicitly labeled; not a measured label size"
+    },
+    {
+      "article": "202",
+      "shop_id": 6205,
+      "manager_id": 9560,
+      "field": "size",
+      "before": "",
+      "value": "Einheitsgröße (geschätzt)",
+      "evidence_value": "Einheitsgröße",
+      "evidence": "Nutzerentscheidung #202 Einheitsgröße (geschätzt)",
+      "source": "Owner-approved estimate, explicitly labeled; not a measured label size"
+    },
+    {
+      "article": "182",
+      "shop_id": 6185,
+      "manager_id": 9540,
+      "field": "size",
+      "before": "",
+      "value": "M (geschätzt)",
+      "evidence_value": "M",
+      "evidence": "Nutzerentscheidung M (geschätzt)",
+      "source": "Owner-approved estimate, explicitly labeled; not a measured label size"
     }
   ],
   "article_13": "Owner-confirmed missing collar buttons added to DE, EN and FR descriptions.",
