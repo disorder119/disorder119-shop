@@ -4,6 +4,7 @@
    Hauptseite (index.html, gleicher Key), damit ein hier hinzugefuegtes
    Stueck dort im Warenkorb erscheint. */
 (function () {
+  function initializeArticle() {
   "use strict";
 
   var IT = window.ARTICLE_ITEM;
@@ -317,13 +318,19 @@
   // Laden der Seite gewechselt (siehe unten).
   var ersterAufruf = true;
 
+  function useFullPhoto(src) {
+    var source = mainImg.parentNode.querySelector("source");
+    if (source) source.removeAttribute("srcset");
+    mainImg.src = src;
+  }
+
   function showPhoto(i) {
     if (!gallery.length) return;
     idx = ((i % gallery.length) + gallery.length) % gallery.length;
     if (ersterAufruf) {
       ersterAufruf = false;
     } else {
-      mainImg.src = gallery[idx];
+      useFullPhoto(gallery[idx]);
     }
     if (counterEl) counterEl.textContent = (idx + 1) + " / " + gallery.length;
     if (thumbsEl) {
@@ -1095,7 +1102,7 @@
     if (mainImg.getAttribute("src") === voll) return;
     var vorlader = new Image();
     vorlader.onload = function () {
-      if (idx === 0) mainImg.src = voll;
+      if (idx === 0) useFullPhoto(voll);
     };
     vorlader.src = voll;
   }
@@ -1104,6 +1111,32 @@
   EINGABEN.forEach(function (ev) { window.addEventListener(ev, heroInVollaufloesung, OPTIONEN); });
 
   applyLang();
+  }
+  // Let the server-rendered photo paint before decorating the gallery/CTA.
+  // User input and a bounded fallback keep controls usable on broken images.
+  var started = false;
+  var fallback;
+  function start() {
+    if (started) return;
+    started = true;
+    clearTimeout(fallback);
+    document.removeEventListener("pointerdown", start, true);
+    document.removeEventListener("keydown", start, true);
+    initializeArticle();
+  }
+  function painted() {
+    requestAnimationFrame(function () { requestAnimationFrame(start); });
+  }
+  var hero = document.getElementById("galleryMain");
+  fallback = setTimeout(start, 1500);
+  document.addEventListener("pointerdown", start, true);
+  document.addEventListener("keydown", start, true);
+  if (!hero || hero.complete) painted();
+  else {
+    hero.addEventListener("load", painted, { once: true });
+    hero.addEventListener("error", start, { once: true });
+  }
+
 })();
 
 /* IMAGE_COPY_GUARD_V1

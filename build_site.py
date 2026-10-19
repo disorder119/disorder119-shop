@@ -765,6 +765,11 @@ def thumb_path(p):
     return parts[0] + "/thumbs/" + parts[1]
 
 
+def mobile_hero_path(p):
+    parts = p.rsplit("/", 1)
+    return parts[0] + "/mobile-hero/" + parts[1] if len(parts) == 2 else p
+
+
 def display_path(p):
     parts = p.rsplit("/", 1)
     if len(parts) != 2:
@@ -797,6 +802,8 @@ def build_page(it, shop_config, lang):
     hero = gallery[0] if gallery else "assets/favicon.png"
     hero_display_candidate = display_path(hero)
     hero_display = hero_display_candidate if (BASE / hero_display_candidate).is_file() else hero
+    mobile_candidate = mobile_hero_path(hero)
+    hero_mobile = mobile_candidate if (BASE / mobile_candidate).is_file() else hero_display
     hell = foto_hell(grid_thumb_path(it))
     gallery_attr = f' style="--d119-hell:{hell}"' if hell else ""
     home = lang_home(lang)
@@ -878,7 +885,8 @@ def build_page(it, shop_config, lang):
 <link rel="canonical" href="{canonical}">
 {hreflang_links}
 <link rel="icon" type="image/png" href="/assets/favicon.png">
-<link rel="preload" as="image" href="/{esc(hero_display)}" fetchpriority="high">
+<link rel="preload" as="image" href="/{esc(hero_mobile)}" media="(max-width: 600px)" fetchpriority="high">
+<link rel="preload" as="image" href="/{esc(hero_display)}" media="(min-width: 601px)" fetchpriority="high">
 <style>{PRODUCT_CRITICAL_CSS}</style>
 <link rel="preload" as="style" href="/assets/article.css?v={ARTICLE_CSS_VERSION}" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
 <link id="d119-product-page-v4" rel="preload" as="style" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
@@ -928,7 +936,10 @@ def build_page(it, shop_config, lang):
   <div class="gallery"{gallery_attr}>
     <div class="gallery__stage">
 {'      <span class="gallery__badge">SOLD</span>' if sold else ""}
+      <picture style="display:contents">
+        <source media="(max-width: 600px)" srcset="/{esc(hero_mobile)}">
       <img id="galleryMain" src="/{esc(hero_display)}" alt="{esc(name)}" fetchpriority="high" decoding="sync">
+      </picture>
       <button type="button" class="gallery__nav gallery__nav--prev" id="galleryPrev" data-i18n-aria="prevPhotoAria" aria-label="Vorheriges Foto">‹</button>
       <button type="button" class="gallery__nav gallery__nav--next" id="galleryNext" data-i18n-aria="nextPhotoAria" aria-label="Nächstes Foto">›</button>
       <span class="gallery__counter" id="galleryCounter">1 / {max(len(gallery), 1)}</span>
@@ -962,8 +973,8 @@ def build_page(it, shop_config, lang):
   window.ARTICLE_LANG = "{lang}";
 </script>
 <script src="/assets/newsletter.js?v={NEWSLETTER_ASSET_VERSION}" fetchpriority="low" defer></script>
-<script src="/assets/pwa.js?v={PWA_JS_VERSION}"></script>
-<script src="/assets/article.js?v={ARTICLE_JS_VERSION}" fetchpriority="low"></script>
+<script src="/assets/pwa.js?v={PWA_JS_VERSION}" defer></script>
+<script src="/assets/article.js?v={ARTICLE_JS_VERSION}" fetchpriority="low" defer></script>
 </body>
 </html>
 """
@@ -2281,6 +2292,27 @@ def build_merchant_feed():
     print(f"feed/google-merchant.xml geschrieben ({len(entries)} Artikel).")
 
 
+def build_mobile_heroes():
+    """Derive a smaller first-paint image; originals/order remain untouched."""
+    from PIL import Image
+    seen = set()
+    for item in ITEMS:
+        gallery = item.get("gallery") or []
+        if not gallery or gallery[0] in seen:
+            continue
+        source = gallery[0]
+        seen.add(source)
+        src = BASE / source
+        if not src.is_file():
+            continue
+        dest = BASE / mobile_hero_path(source)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(src) as image:
+            image = image.convert("RGBA")
+            image.thumbnail((600, 800), Image.Resampling.LANCZOS)
+            image.save(dest, format="WEBP", quality=78, method=4)
+
+
 def build_thumbs():
     from PIL import Image
     THUMB_SIZE = (220, 293)
@@ -2326,6 +2358,7 @@ def main():
     build_newsletter_pages()
     build_checkout_pages()
     build_widerruf_pages()
+    build_mobile_heroes()
     build_articles()
     build_catalog_json()
     build_merchant_feed()

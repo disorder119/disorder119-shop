@@ -16,7 +16,7 @@ const ITEMS = [
 const ITEMS_TEXT = JSON.stringify(ITEMS, null, 2) + "\n";
 
 // Nachbau der GitHub-Schnittstelle: Git-Daten, Pull Requests, Merge.
-function fakeGithub({ conflicts = 0 } = {}) {
+function fakeGithub({ conflicts = 0, stalledHistory = false } = {}) {
   const calls = [];
   let merges = 0;
   const original = globalThis.fetch;
@@ -33,6 +33,7 @@ function fakeGithub({ conflicts = 0 } = {}) {
     if (method === "GET" && path === "/contents/assets/img/b2-241") return Response.json([{ name: "0.webp", type: "file" }]);
     if (method === "GET" && path === "/git/blobs/items-sha") return new Response(ITEMS_TEXT);
     if (method === "GET" && path === "/commits") {
+      if (stalledHistory) return new Promise(() => {});
       return Response.json([{ sha: "c".repeat(40), commit: { message: "Admin: Titel geändert\n\nDetails", author: { name: "disorder119", date: "2026-09-24T10:00:00Z" } } }]);
     }
     if (method === "POST" && path === "/git/blobs") return Response.json({ sha: `blob-${calls.filter(c => c.path === "/git/blobs").length}` });
@@ -202,4 +203,16 @@ test("only the catalog save route may carry photos larger than 32 KiB", async ()
     () => guardRuntimeRequest(request("/admin/notes"), {}),
     err => err instanceof RuntimeGuardError && err.code === "REQUEST_TOO_LARGE",
   );
+});
+
+
+test("a stalled optional commit history cannot prevent loading the catalog", async () => {
+  const gh = fakeGithub({ stalledHistory: true });
+  try {
+    const result = await call("/admin/katalog");
+    assert.equal(result.status, 200);
+    assert.deepEqual(result.data.items, ITEMS);
+    assert.deepEqual(result.data.commits, []);
+    assert.equal(result.data.sha, "items-sha");
+  } finally { gh.restore(); }
 });

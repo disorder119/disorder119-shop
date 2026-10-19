@@ -131,7 +131,7 @@ def main() -> None:
     require("PWA_JS_VERSION" in build and '__PWA_JS_VERSION__' in template, "PWA-Asset bekommt kein Build-Cache-Busting")
     require_pwa_head(template, "index_template.html")
     require('<script src="/assets/pwa.js?v=__PWA_JS_VERSION__"></script>' in template, "Hauptbundle registriert PWA-Runtime nicht")
-    require('<script src="/assets/pwa.js?v={PWA_JS_VERSION}"></script>' in build, "Produktseiten registrieren PWA-Runtime nicht")
+    require('<script src="/assets/pwa.js?v={PWA_JS_VERSION}" defer></script>' in build, "Produktseiten registrieren PWA-Runtime nicht")
 
     generated_index = BASE / "index.html"
     if generated_index.is_file():
