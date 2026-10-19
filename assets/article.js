@@ -318,13 +318,19 @@
   // Laden der Seite gewechselt (siehe unten).
   var ersterAufruf = true;
 
+  function useFullPhoto(src) {
+    var source = mainImg.parentNode.querySelector("source");
+    if (source) source.removeAttribute("srcset");
+    mainImg.src = src;
+  }
+
   function showPhoto(i) {
     if (!gallery.length) return;
     idx = ((i % gallery.length) + gallery.length) % gallery.length;
     if (ersterAufruf) {
       ersterAufruf = false;
     } else {
-      mainImg.src = gallery[idx];
+      useFullPhoto(gallery[idx]);
     }
     if (counterEl) counterEl.textContent = (idx + 1) + " / " + gallery.length;
     if (thumbsEl) {
@@ -1096,7 +1102,7 @@
     if (mainImg.getAttribute("src") === voll) return;
     var vorlader = new Image();
     vorlader.onload = function () {
-      if (idx === 0) mainImg.src = voll;
+      if (idx === 0) useFullPhoto(voll);
     };
     vorlader.src = voll;
   }
