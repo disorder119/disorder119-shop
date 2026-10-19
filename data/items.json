@@ -226,9 +226,7 @@
     "price_estimated": false,
     "brightness": 0.19,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "233",
     "department": "Women",
     "product_type": "Sneakers",
@@ -553,9 +551,7 @@
     "price_estimated": false,
     "brightness": 0.182,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "225",
     "department": "Men",
     "product_type": "Sneakers",
@@ -842,9 +838,7 @@
     "price_estimated": false,
     "brightness": 0.412,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "218",
     "department": "Women",
     "product_type": "Sandals",
@@ -884,9 +878,7 @@
     "price_estimated": false,
     "brightness": 0.217,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "217",
     "department": "Men",
     "product_type": "Trousers",
@@ -1001,9 +993,7 @@
     "price_estimated": false,
     "brightness": 0.092,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "214",
     "department": "Unisex",
     "product_type": "Beanie",
@@ -1039,9 +1029,7 @@
     "price_estimated": false,
     "brightness": 0.1,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "213",
     "department": "Unisex",
     "product_type": "Beanie",
@@ -1121,9 +1109,7 @@
     "price_estimated": false,
     "brightness": 0.341,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "211",
     "department": "Women",
     "product_type": "Skirt",
@@ -1158,9 +1144,7 @@
     "price_estimated": false,
     "brightness": 0.31,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "210",
     "department": "Women",
     "product_type": "Top",
@@ -1195,9 +1179,7 @@
     "price_estimated": false,
     "brightness": 0.238,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "209",
     "department": "Women",
     "product_type": "Top",
@@ -1357,9 +1339,7 @@
     "price_estimated": false,
     "brightness": 0.167,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "size"
-    ],
+    "data_quality_open": [],
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
@@ -1367,8 +1347,8 @@
     "department": "Men",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
-    "size_normalized": "Unknown",
-    "size_source": "unknown",
+    "size_normalized": "L (geschätzt)",
+    "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
@@ -1397,9 +1377,7 @@
     "price_estimated": false,
     "brightness": 0.176,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "size"
-    ],
+    "data_quality_open": [],
     "data_quality_sources": {
       "color": "explicit-title-color"
     },
@@ -1407,8 +1385,8 @@
     "department": "Unisex",
     "product_type": "Jacket",
     "taxonomy_category": "Jackets",
-    "size_normalized": "Unknown",
-    "size_source": "unknown",
+    "size_normalized": "L (geschätzt)",
+    "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
@@ -1479,15 +1457,13 @@
     "price_estimated": false,
     "brightness": 0.272,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "202",
     "department": "Women",
     "product_type": "Belt",
     "taxonomy_category": "Accessories",
-    "size_normalized": "Unknown",
-    "size_source": "unknown",
+    "size_normalized": "Einheitsgröße (geschätzt)",
+    "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true
   },
@@ -1519,9 +1495,7 @@
     "price_estimated": false,
     "brightness": 0.433,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "201",
     "department": "Men",
     "product_type": "Vest",
@@ -1641,9 +1615,7 @@
     "price_estimated": false,
     "brightness": 0.294,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "198",
     "department": "Men",
     "product_type": "Long Sleeve",
@@ -1916,9 +1888,7 @@
     "price_estimated": false,
     "brightness": 0.405,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "191",
     "department": "Women",
     "product_type": "Cardigan",
@@ -1957,9 +1927,7 @@
     "price_estimated": false,
     "brightness": 0.303,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "190",
     "department": "Men",
     "product_type": "Biker Jacket",
@@ -2037,9 +2005,7 @@
     "price_estimated": false,
     "brightness": 0.299,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "188",
     "department": "Women",
     "product_type": "Vest",
@@ -2076,9 +2042,7 @@
     "price_estimated": false,
     "brightness": 0.383,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "187",
     "department": "Women",
     "product_type": "Tunic",
@@ -2118,9 +2082,7 @@
     "price_estimated": false,
     "brightness": 0.285,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "186",
     "department": "Men",
     "product_type": "T-Shirt",
@@ -2155,9 +2117,7 @@
     "price_estimated": false,
     "brightness": 0.444,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "185",
     "department": "Women",
     "product_type": "Dress",
@@ -2202,9 +2162,7 @@
     "price_estimated": false,
     "brightness": 0.271,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "184",
     "department": "Men",
     "product_type": "Biker Jacket",
@@ -2284,15 +2242,13 @@
     "price_estimated": false,
     "brightness": 0.243,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "182",
     "department": "Unisex",
     "product_type": "Hat",
     "taxonomy_category": "Accessories",
-    "size_normalized": "Unknown",
-    "size_source": "unknown",
+    "size_normalized": "M (geschätzt)",
+    "size_source": "structured",
     "taxonomy_confidence": "high",
     "taxonomy_reviewed": true
   },
@@ -2323,15 +2279,13 @@
     "price_estimated": false,
     "brightness": 0.195,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "181",
     "department": "Unisex",
     "product_type": "Hat",
     "taxonomy_category": "Accessories",
-    "size_normalized": "Unknown",
-    "size_source": "unknown",
+    "size_normalized": "S",
+    "size_source": "structured",
     "taxonomy_confidence": "high",
     "taxonomy_reviewed": true
   },
@@ -5674,9 +5628,7 @@
     "price_estimated": false,
     "brightness": 0.335,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "95",
     "department": "Women",
     "product_type": "Scarf",
@@ -6762,9 +6714,7 @@
     "price_estimated": false,
     "brightness": 0.219,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "68",
     "department": "Women",
     "product_type": "Shorts",
@@ -7610,9 +7560,7 @@
     "price_estimated": false,
     "brightness": 0.272,
     "public_status": "AVAILABLE",
-    "data_quality_open": [
-      "color"
-    ],
+    "data_quality_open": [],
     "url_slug": "46",
     "department": "Women",
     "product_type": "Jacket",
