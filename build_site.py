@@ -962,7 +962,7 @@ def build_page(it, shop_config, lang):
   window.ARTICLE_LANG = "{lang}";
 </script>
 <script src="/assets/newsletter.js?v={NEWSLETTER_ASSET_VERSION}" fetchpriority="low" defer></script>
-<script src="/assets/pwa.js?v={PWA_JS_VERSION}"></script>
+<script src="/assets/pwa.js?v={PWA_JS_VERSION}" defer></script>
 <script src="/assets/article.js?v={ARTICLE_JS_VERSION}" fetchpriority="low" defer></script>
 </body>
 </html>
