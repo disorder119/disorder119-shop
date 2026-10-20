@@ -419,7 +419,7 @@ const worker = {
       }
 
       if (isAdminRoute(url)) {
-        return finish(await handleAdminRequest(request, runtimeEnv, url, reqId, origin));
+        return finish(await handleAdminRequest(request, runtimeEnv, url, reqId, origin, ctx));
       }
 
       const shouldInspectRental = url.pathname === "/rental-request" && request.method === "POST";
