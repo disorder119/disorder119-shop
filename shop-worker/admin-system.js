@@ -100,13 +100,38 @@ async function tokenEquals(left, right) {
   return diff === 0;
 }
 
-async function requireAdmin(request, env) {
+async function requireAdmin(request, env, databaseRequired = true) {
   if (!env.ADMIN_TOKEN) throw new AdminSystemError("ADMIN_NOT_CONFIGURED", 503);
   const supplied = String(request.headers.get("Authorization") || "")
     .replace(/^Bearer\s+/i, "")
     .trim();
   if (!(await tokenEquals(supplied, env.ADMIN_TOKEN))) throw new AdminSystemError("UNAUTHORIZED", 401);
-  if (!env.DB) throw new AdminSystemError("COMMERCE_DATABASE_NOT_CONFIGURED", 503);
+  if (databaseRequired && !env.DB) throw new AdminSystemError("COMMERCE_DATABASE_NOT_CONFIGURED", 503);
+}
+
+// Configuration evidence only: no provider calls, customer rows or secret
+// values. Kept separate from the expensive shipping/schema System report.
+export function connectionSnapshot(env = {}) {
+  const state = (...parts) => parts.every(Boolean) ? "configured" : parts.some(Boolean) ? "partial" : "missing";
+  return {
+    schema: "connections-v1",
+    generatedAt: new Date().toISOString(),
+    evidence: "runtime_configuration",
+    services: {
+      api: { state: "reachable" },
+      database: { state: state(env.DB) },
+      github: { state: state(env.GITHUB_TOKEN) },
+      paypal: { state: state(env.PAYPAL_CLIENT_ID, env.PAYPAL_CLIENT_SECRET), webhook: Boolean(env.PAYPAL_WEBHOOK_ID),
+        environment: env.PAYPAL_ENVIRONMENT === "live" ? "live" : "sandbox" },
+      brevo: { state: state(env.MAIL_API_KEY) },
+      newsletter: { state: state(env.MAIL_API_KEY, env.NEWSLETTER_LIST_ID) },
+      telegram: { state: state(env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_CHAT_ID || env.TELEGRAM_TARGET_USERNAME) },
+      packlink: { state: state(env.PACKLINK_API_KEY), webhook: Boolean(env.PACKLINK_WEBHOOK_TOKEN) },
+      dhl: { state: state(env.DHL_PRIVAT_API_KEY), environment: env.DHL_PRIVAT_ENVIRONMENT === "live" ? "live" : "sandbox" },
+      turnstile: { state: state(env.TURNSTILE_SECRET) },
+      rateLimiter: { state: state(env.RATE_LIMITER) },
+    },
+  };
 }
 
 export function detectSchemaVersion(tableNames, operationsTaskColumns = [], triggerNames = []) {
@@ -261,9 +286,10 @@ export async function handleAdminSystem(request, env, url, reqId, origin = null)
       });
     }
     if (origin && !ADMIN_ORIGINS.includes(origin)) throw new AdminSystemError("ORIGIN_NOT_ALLOWED", 403);
-    await requireAdmin(request, env);
-    if (url.pathname !== "/admin/system") throw new AdminSystemError("NOT_FOUND", 404);
+    await requireAdmin(request, env, url.pathname !== "/admin/connections");
+    if (url.pathname !== "/admin/system" && url.pathname !== "/admin/connections") throw new AdminSystemError("NOT_FOUND", 404);
     if (request.method !== "GET") throw new AdminSystemError("METHOD_NOT_ALLOWED", 405);
+    if (url.pathname === "/admin/connections") return json(connectionSnapshot(env), 200, origin);
     return json(await getSystem(env), 200, origin);
   } catch (err) {
     if (err instanceof AdminSystemError) {
