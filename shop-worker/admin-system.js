@@ -124,8 +124,10 @@ export function connectionSnapshot(env = {}) {
       paypal: { state: state(env.PAYPAL_CLIENT_ID, env.PAYPAL_CLIENT_SECRET), webhook: Boolean(env.PAYPAL_WEBHOOK_ID),
         environment: env.PAYPAL_ENVIRONMENT === "live" ? "live" : "sandbox" },
       brevo: { state: state(env.MAIL_API_KEY) },
-      newsletter: { state: state(env.MAIL_API_KEY, env.NEWSLETTER_LIST_ID) },
-      telegram: { state: state(env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_CHAT_ID || env.TELEGRAM_TARGET_USERNAME) },
+      // Both services can resolve their target from D1. Absence of an
+      // optional env override must not masquerade as missing configuration.
+      newsletter: { state: state(env.MAIL_API_KEY, env.DB || env.NEWSLETTER_LIST_ID) },
+      telegram: { state: state(env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_CHAT_ID || env.DB) },
       packlink: { state: state(env.PACKLINK_API_KEY), webhook: Boolean(env.PACKLINK_WEBHOOK_TOKEN) },
       dhl: { state: state(env.DHL_PRIVAT_API_KEY), environment: env.DHL_PRIVAT_ENVIRONMENT === "live" ? "live" : "sandbox" },
       turnstile: { state: state(env.TURNSTILE_SECRET) },
