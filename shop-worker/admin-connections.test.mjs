@@ -12,12 +12,22 @@ test('configuration snapshot is bounded, honest and contains no credentials or p
   assert.equal(data.services.paypal.webhook,false);
   assert.equal(data.services.paypal.environment,'live');
   assert.equal(data.services.github.state,'configured');
-  assert.equal(data.services.newsletter.state,'partial');
+  assert.equal(data.services.newsletter.state,'configured');
   assert.equal(data.services.turnstile.state,'missing');
   assert.equal(data.services.dhl.state,'configured');
   assert.ok(!JSON.stringify(data).includes(secret));
   assert.ok(!JSON.stringify(data).includes('private@example.test'));
   assert.ok(JSON.stringify(data).length<1800);
+});
+
+test('central target storage counts as configured without reading private settings',()=>{
+  const DB={prepare(){assert.fail('no private setting reads');}};
+  const data=connectionSnapshot({DB,MAIL_API_KEY:'test',TELEGRAM_BOT_TOKEN:'test'});
+  assert.equal(data.services.newsletter.state,'configured');
+  assert.equal(data.services.telegram.state,'configured');
+  const withoutDb=connectionSnapshot({MAIL_API_KEY:'test',TELEGRAM_BOT_TOKEN:'test'});
+  assert.equal(withoutDb.services.newsletter.state,'partial');
+  assert.equal(withoutDb.services.telegram.state,'partial');
 });
 
 test('authenticated read never invokes database or third-party services; missing DB can be reported',async()=>{
