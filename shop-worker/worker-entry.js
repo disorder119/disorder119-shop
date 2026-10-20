@@ -329,7 +329,7 @@ const worker = {
         return finish(await handleAdminPrivacy(request, runtimeEnv, url));
       }
 
-      if (url.pathname === "/admin/system") {
+      if (url.pathname === "/admin/system" || url.pathname === "/admin/connections") {
         return finish(await handleAdminSystem(request, runtimeEnv, url, reqId, origin));
       }
 
