@@ -196,9 +196,12 @@ async function auditAdmin(env, entityType, entityId, eventType, reqId, metadata 
 }
 
 async function loadCatalogMap() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 1500);
   try {
     const res = await fetch("https://disorder119.com/data/catalog.json", {
       headers: { Accept: "application/json", "User-Agent": "disorder119-admin-worker" },
+      signal: controller.signal,
     });
     if (!res.ok) return new Map();
     const items = await res.json();
@@ -209,7 +212,7 @@ async function loadCatalogMap() {
     return map;
   } catch {
     return new Map();
-  }
+  } finally { clearTimeout(timer); }
 }
 
 function catalogView(item) {
@@ -323,7 +326,7 @@ async function getOverview(env, url) {
     COUNT(*) AS requests, COALESCE(SUM(rr.total_price_cents),0) AS quotedRentalCents
     FROM rental_reservations rr JOIN inventory i ON i.id=rr.inventory_id
     WHERE rr.status NOT IN ('CANCELLED') GROUP BY i.item_id,i.article_no ORDER BY requests DESC, quotedRentalCents DESC LIMIT 8`).all();
-  const catalog = await loadCatalogMap();
+  const catalog = (topRentedRows.results || []).length ? await loadCatalogMap() : new Map();
   const topRented = (topRentedRows.results || []).map(row => ({ ...row, catalog: catalogView(catalog.get(Number(row.itemId))) }));
 
   const first = result => (result?.results && result.results[0]) || {};
@@ -1319,7 +1322,7 @@ export async function enrichRentalReservation(env, rentalId, payload, reqId = cr
   return true;
 }
 
-export async function handleAdminRequest(request, env, url, reqId, origin = null) {
+export async function handleAdminRequest(request, env, url, reqId, origin = null, ctx = null) {
   try {
     if (request.method === "OPTIONS") return adminOptions(origin);
     if (origin && !ADMIN_ORIGINS.includes(origin)) throw new AdminError("ORIGIN_NOT_ALLOWED", 403);
@@ -1328,6 +1331,22 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
     const path = url.pathname;
     if (path === "/admin/ping" && request.method === "GET") {
       return adminJson({ ok: true, role: "OWNER", database: Boolean(env.DB), now: new Date().toISOString() }, 200, origin);
+    }
+    if ((path === "/admin/overview" || path === "/admin/orders") && request.method === "GET" && ctx?.waitUntil) {
+      // Provider reconciliation is maintained by cron as well. Never make
+      // reading orders wait for PayPal's remote webhook/event pagination.
+      ctx.waitUntil(Promise.allSettled([
+        reconcilePurchasePayments(env, reqId),
+        paypalErstattungenSicherAbgleichen(env, reqId),
+      ]).then(results => {
+        if (results.some(result => result.status === "rejected")) {
+          console.error(JSON.stringify({ event: "admin_background_reconciliation_failed", requestId: reqId }));
+        }
+      }));
+      const data = path === "/admin/overview" ? await getOverview(env, url) : await getOrders(env, url);
+      return adminJson({ ...data, paypalRefundSync: {
+        configured: Boolean(env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET), pending: true,
+      } }, 200, origin);
     }
     if (path === "/admin/overview" && request.method === "GET") {
       const [, paypalRefundSync] = await Promise.all([
