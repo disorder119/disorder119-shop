@@ -241,13 +241,34 @@
 
   var zustand = { stuecke: [], weg: [], versand: null, wahl: null, laeuft: false, versuch: null, orte: [] };
 
-  // ---- Welche Stuecke? ?artikel=<ID> (Produktseite) oder der Warenkorb
+  // ---- Welche Stuecke? ?artikel=<ID> (Produktseite), ?products=<ID:Menge,...>
+  //      (Checkout-URL des Meta-Shops: Instagram/Facebook schicken die
+  //      Katalog-IDs = Artikelnummern, dazu optional ?coupon=<CODE>) oder der Warenkorb.
+  //      Jedes Stueck ist ein Einzelstueck, die Menge aus Meta wird deshalb ignoriert.
+  function metaProdukte() {
+    var roh = new URLSearchParams(location.search).get("products");
+    if (!roh) return [];
+    var schluessel = [];
+    String(roh).split(",").forEach(function (eintrag) {
+      var key = String(eintrag).trim().split(":")[0].trim();
+      if (/^\d{1,9}$/.test(key) && schluessel.indexOf(key) < 0) schluessel.push(key);
+    });
+    return schluessel.slice(0, 10);
+  }
+  function metaGutschein() {
+    var code = new URLSearchParams(location.search).get("coupon");
+    if (!code) return;
+    code = String(code).trim().toUpperCase().slice(0, 40);
+    if (/^[A-Z0-9_-]{2,40}$/.test(code)) { try { localStorage.setItem(CODE_KEY, code); } catch (e) {} }
+  }
   function gewuenschteIds() {
     var param = new URLSearchParams(location.search).get("artikel");
-    if (param && /^\d{1,9}$/.test(param)) return [Number(param)];
+    if (param && /^\d{1,9}$/.test(param)) return [param];
+    var meta = metaProdukte();
+    if (meta.length) { metaGutschein(); return meta; }
     try {
       var liste = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
-      return (Array.isArray(liste) ? liste : []).map(Number).filter(function (n) { return n > 0; }).slice(0, 10);
+      return (Array.isArray(liste) ? liste : []).map(Number).filter(function (n) { return n > 0; }).slice(0, 10).map(String);
     } catch (e) { return []; }
   }
   function vorschau(it) {
@@ -267,11 +288,17 @@
     return fetch("/data/catalog.json", { cache: "no-cache" })
       .then(function (r) { return r.json(); })
       .then(function (katalog) {
+        // Shop-ID (Warenkorb, Produktseite) und Artikelnummer (Meta-Katalog, nur wenn
+        // sie auch die Adresse der Produktseite ist - wie merchant_id in build_site.py).
         var nachId = {};
-        katalog.forEach(function (it) { nachId[it.id] = it; });
+        katalog.forEach(function (it) {
+          nachId[String(it.id)] = it;
+          var nummer = String(it.article || "").trim();
+          if (nummer && String(it.url_slug || "") === nummer && !nachId[nummer]) nachId[nummer] = it;
+        });
         zustand.stuecke = []; zustand.weg = [];
         ids.forEach(function (id) {
-          var it = nachId[id];
+          var it = nachId[String(id)];
           if (it && it.public_status === "AVAILABLE" && it.price > 0) zustand.stuecke.push(it);
           else if (it) zustand.weg.push(it);
         });
