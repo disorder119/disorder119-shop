@@ -83,8 +83,18 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     });
   }
 
+  // Produkttitel in der Seitensprache: catalog.json liefert title_en/title_fr
+  // (aus data/items.json oder beim Bauen abgeleitet, scripts/i18n_text.py).
+  // it.title bleibt deutsch - Match, Chaos und Baukasten (per Mode-Guard
+  // gesperrt) erkennen daran z.B. Kopfteile; angezeigt wird locTitle(it).
+  function locTitle(it) {
+    if (!it) return "";
+    var lokal = LANG !== "de" ? it["title_" + LANG] : "";
+    return String(lokal || it.title || "");
+  }
+
   function productAltText(it) {
-    var title = it.title || "";
+    var title = locTitle(it);
     var brand = it.brand || "";
     if (!brand || title.toLowerCase().indexOf(brand.toLowerCase()) === 0) return title;
     return brand + " " + title;
@@ -152,6 +162,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       cookieOk: "Verstanden",
       shareAria: "Teilen", shareToast: "Link kopiert",
       prevPhotoAria: "Vorheriges Foto", nextPhotoAria: "Nächstes Foto",
+      photoAltTemplate: "{title} — Foto {n} von {total}", shareAtShop: " bei Disorder119", menuOpenAria: "Menü öffnen",
       modalNote: "Disorder119-Archiv",
       factCategory: "Kategorie", factSize: "Größe", factColor: "Farbe", factCondition: "Zustand",
       noBrand: "Ohne Marke", noDesc: "Keine Beschreibung hinterlegt.",
@@ -275,13 +286,13 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       filterProductTypeLabel: "Product type", filterAllProductTypes: "All product types",
       filterBrandLabel: "Brand", filterAllBrands: "All brands",
       filterSizeLabel: "Size", filterAllSizes: "All sizes",
-      filterColorLabel: "Colour", filterAllColors: "All colours",
+      filterColorLabel: "Color", filterAllColors: "All colors",
       filterConditionLabel: "Condition", filterAllConditions: "All conditions",
       filterPriceLabel: "Price (€)", filterPriceFrom: "from", filterPriceTo: "to",
       filterResetLabel: "Reset filters",
       activeFiltersAria: "Active filters", activeFilterSearch: "Search",
       activeFilterDepartment: "Department", activeFilterProductType: "Product type",
-      activeFilterBrand: "Brand", activeFilterSize: "Size", activeFilterColor: "Colour",
+      activeFilterBrand: "Brand", activeFilterSize: "Size", activeFilterColor: "Color",
       activeFilterCondition: "Condition", activeFilterPrice: "Price", activeFilterCategory: "Category",
       activeFilterStatus: "Status", activeFilterRemove: "remove", activeFilterClear: "Clear all filters",
       railCountTemplate: "{filtered} of {total} pieces",
@@ -289,7 +300,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       emptyBody: "Try a different search term or reset the filters.",
       footerTagline: "Curated second-hand archive for designer and vintage fashion.",
       menuTitle: "Menu", menuAllItems: "All pieces", menuJackets: "Jackets", menuTops: "Tops",
-      menuPants: "Trousers", menuSkirts: "Skirts", menuDresses: "Dresses", menuShoes: "Shoes",
+      menuPants: "Pants", menuSkirts: "Skirts", menuDresses: "Dresses", menuShoes: "Shoes",
       menuAccessories: "Accessories", menuBrands: "Brands", menuArchive: "Archive",
       menuCart: "Cart",
       loadMore: "Load more", footerAbout: "About Disorder119", footerFaq: "FAQ", footerAccount: "Account", footerContact: "Contact",
@@ -302,8 +313,9 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       cookieOk: "Got it",
       shareAria: "Share", shareToast: "Link copied",
       prevPhotoAria: "Previous photo", nextPhotoAria: "Next photo",
+      photoAltTemplate: "{title} — photo {n} of {total}", shareAtShop: " at Disorder119", menuOpenAria: "Open menu",
       modalNote: "Disorder119 archive",
-      factCategory: "Category", factSize: "Size", factColor: "Colour", factCondition: "Condition",
+      factCategory: "Category", factSize: "Size", factColor: "Color", factCondition: "Condition",
       noBrand: "No brand", noDesc: "No description available.",
       priceOnRequest: "Price on request", priceEstimatedPrefix: "approx. ", priceEstimatedBadge: "Price being confirmed",
       sold: "Sold", priceOnRequestCta: "Price on request — please get in touch",
@@ -453,6 +465,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       cookieOk: "Compris",
       shareAria: "Partager", shareToast: "Lien copié",
       prevPhotoAria: "Photo précédente", nextPhotoAria: "Photo suivante",
+      photoAltTemplate: "{title} — photo {n} sur {total}", shareAtShop: " chez Disorder119", menuOpenAria: "Ouvrir le menu",
       modalNote: "Archive Disorder119",
       factCategory: "Catégorie", factSize: "Taille", factColor: "Couleur", factCondition: "État",
       noBrand: "Sans marque", noDesc: "Aucune description disponible.",
@@ -650,13 +663,38 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     var labels = DEPARTMENT_LABELS[department];
     return labels ? (labels[LANG] || labels.en || department) : (department || "");
   }
+  // Englisch wie og:locale en_US (scripts/catalog_taxonomy.py PRODUCT_TYPE_LABELS["en"]).
+  var PRODUCT_TYPE_LABELS_EN = { "Trousers": "Pants", "Underwear Shorts": "Underwear" };
   function trProductType(productType) {
     if (!productType) return "";
-    if (LANG === "en") return productType;
+    if (LANG === "en") return PRODUCT_TYPE_LABELS_EN[productType] || productType;
     var labels = PRODUCT_TYPE_LABELS[productType];
     return labels ? (labels[LANG] || productType) : productType;
   }
   function trCondition(cond) { var k = CONDITION_MAP_DE_TO_KEY[cond]; return k ? t(k) : (cond || ""); }
+  // Farben: Werte bleiben deutsch (Daten, Filterzustand), angezeigt wird die
+  // Seitensprache. Dieselbe Tabelle wie scripts/i18n_text.py COLOR_TR -
+  // scripts/validate_i18n_titles.py prueft, dass beide gleich sind.
+  var COLOR_TR = {"Schwarz":{"en":"Black","fr":"Noir"},"Weiß":{"en":"White","fr":"Blanc"},"Grau":{"en":"Gray","fr":"Gris"},"Anthrazit":{"en":"Charcoal","fr":"Anthracite"},"Silber":{"en":"Silver","fr":"Argent"},"Gold":{"en":"Gold","fr":"Or"},"Braun":{"en":"Brown","fr":"Marron"},"Dunkelbraun":{"en":"Dark Brown","fr":"Marron foncé"},"Rotbraun":{"en":"Reddish Brown","fr":"Brun rouge"},"Taupe":{"en":"Taupe","fr":"Taupe"},"Camel":{"en":"Camel","fr":"Camel"},"Beige":{"en":"Beige","fr":"Beige"},"Creme":{"en":"Cream","fr":"Crème"},"Elfenbein":{"en":"Ivory","fr":"Ivoire"},"Natur":{"en":"Natural","fr":"Naturel"},"Khaki":{"en":"Khaki","fr":"Kaki"},"Oliv":{"en":"Olive","fr":"Olive"},"Grün":{"en":"Green","fr":"Vert"},"Dunkelgrün":{"en":"Dark Green","fr":"Vert foncé"},"Hellgrün":{"en":"Light Green","fr":"Vert clair"},"Neongrün":{"en":"Neon Green","fr":"Vert fluo"},"Mint":{"en":"Mint","fr":"Menthe"},"Türkis":{"en":"Turquoise","fr":"Turquoise"},"Petrol":{"en":"Teal","fr":"Bleu pétrole"},"Blau":{"en":"Blue","fr":"Bleu"},"Hellblau":{"en":"Light Blue","fr":"Bleu clair"},"Dunkelblau":{"en":"Dark Blue","fr":"Bleu foncé"},"Marineblau":{"en":"Navy","fr":"Bleu marine"},"Rot":{"en":"Red","fr":"Rouge"},"Bordeaux":{"en":"Burgundy","fr":"Bordeaux"},"Burgunderrot":{"en":"Burgundy","fr":"Bordeaux"},"Weinrot":{"en":"Burgundy","fr":"Bordeaux"},"Orange":{"en":"Orange","fr":"Orange"},"Aprikose":{"en":"Apricot","fr":"Abricot"},"Gelb":{"en":"Yellow","fr":"Jaune"},"Senf":{"en":"Mustard","fr":"Moutarde"},"Rosa":{"en":"Pink","fr":"Rose"},"Pink":{"en":"Pink","fr":"Rose"},"Rose":{"en":"Rose","fr":"Rose"},"Rosé":{"en":"Rose","fr":"Rose"},"Lila":{"en":"Purple","fr":"Mauve"},"Violett":{"en":"Violet","fr":"Violet"},"Flieder":{"en":"Lilac","fr":"Lilas"},"Bunt":{"en":"Multicolor","fr":"Multicolore"},"Mehrfarbig":{"en":"Multicolor","fr":"Multicolore"}};
+  // Freie Angaben ("Schwarz-Weiß", "Grau meliert") Wort fuer Wort; Unbekanntes
+  // bleibt stehen (wie i18n_text.color_word_tr, ohne Umstellung der Zusaetze).
+  function trColorWord(word) {
+    var e = COLOR_TR[word];
+    if (e) return e[LANG] || word;
+    var lower = word.toLowerCase();
+    for (var k in COLOR_TR) { if (k.toLowerCase() === lower) return COLOR_TR[k][LANG] || word; }
+    return word;
+  }
+  function trColor(color) {
+    return String(color || "").split(",").map(function (c) {
+      c = c.trim();
+      if (!c || LANG === "de") return c;
+      if (COLOR_TR[c]) return COLOR_TR[c][LANG] || c;
+      return c.split(/(\s+|-)/).map(function (teil) {
+        return /^(\s+|-)$/.test(teil) || !teil ? teil : trColorWord(teil);
+      }).join("");
+    }).filter(Boolean).join(", ");
+  }
   function trSize(size) {
     if (size === "One Size") return t("sizeEinheitsgroesse");
     if (size === "Adjustable") return t("sizeVerstellbar");
@@ -675,9 +713,10 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     var facts = [];
     if (it.category) facts.push(trCategory(it.category));
     if (it.size) facts.push(t("factSize") + " " + trSize(it.size));
-    var name = it.brand && it.title.toLowerCase().indexOf(it.brand.toLowerCase()) === 0
-      ? it.title
-      : [it.brand, it.title].filter(Boolean).join(" ");
+    var titel = locTitle(it);
+    var name = it.brand && titel.toLowerCase().indexOf(it.brand.toLowerCase()) === 0
+      ? titel
+      : [it.brand, titel].filter(Boolean).join(" ");
     var factsStr = facts.join(", ");
     return tFormat("autoDescTemplate", { name: name, facts: factsStr ? " – " + factsStr : "" });
   }
@@ -851,7 +890,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     cart = cart.filter(function (id) {
       var it = findItem(id);
       var ok = !!it && it.public_status === "AVAILABLE";
-      if (!ok && it) removedTitles.push(it.title);
+      if (!ok && it) removedTitles.push(locTitle(it));
       return ok;
     });
     if (cart.length !== before) {
@@ -1142,7 +1181,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
         '<div class="cart-line__frame"' + hell + '>' + (hero ? '<img src="' + escapeHtml(hero) + '" alt="" loading="lazy" />' : "") + "</div>" +
         '<div class="cart-line__body">' +
           '<span class="cart-line__brand">' + escapeHtml(it.brand || "DISORDER119") + "</span>" +
-          '<span class="cart-line__title">' + escapeHtml(it.title) + "</span>" +
+          '<span class="cart-line__title">' + escapeHtml(locTitle(it)) + "</span>" +
           '<span class="cart-line__meta">#' + escapeHtml(String(it.article || it.id)) +
             (it.size ? ' · ' + escapeHtml(trSize(it.size)) : "") + "</span>" +
           '<div class="cart-line__row">' +
@@ -1489,7 +1528,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       if (c) colorSet[c] = true;
     });
   });
-  fillSelect(filterColorEl, Object.keys(colorSet).sort(function (a, b) { return a.localeCompare(b, "de"); }));
+  fillSelect(filterColorEl, Object.keys(colorSet).sort(function (a, b) { return trColor(a).localeCompare(trColor(b), LANG); }), trColor);
 
   var conditionSet = {};
   PUBLIC_ITEMS.forEach(function (it) { if (it.condition) conditionSet[it.condition] = true; });
@@ -1553,7 +1592,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     updateFacetSelect(filterProductTypeEl, "productType", trProductType, "filterAllProductTypes");
     updateFacetSelect(filterBrandEl, "brand", function (v) { return v; }, "filterAllBrands");
     updateFacetSelect(filterSizeEl, "size", trSize, "filterAllSizes");
-    updateFacetSelect(filterColorEl, "color", function (v) { return v; }, "filterAllColors");
+    updateFacetSelect(filterColorEl, "color", trColor, "filterAllColors");
     updateFacetSelect(filterConditionEl, "condition", trCondition, "filterAllConditions");
   }
 
@@ -1590,7 +1629,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     if (state.productType) filters.push({ key: "productType", label: t("activeFilterProductType"), value: trProductType(state.productType) });
     if (state.brand) filters.push({ key: "brand", label: t("activeFilterBrand"), value: state.brand });
     if (state.size) filters.push({ key: "size", label: t("activeFilterSize"), value: trSize(state.size) });
-    if (state.color) filters.push({ key: "color", label: t("activeFilterColor"), value: state.color });
+    if (state.color) filters.push({ key: "color", label: t("activeFilterColor"), value: trColor(state.color) });
     if (state.condition) filters.push({ key: "condition", label: t("activeFilterCondition"), value: trCondition(state.condition) });
     if (state.priceMin != null || state.priceMax != null) {
       var priceValue = (state.priceMin != null ? state.priceMin : "0") + "–" + (state.priceMax != null ? state.priceMax : "∞") + " €";
@@ -1796,7 +1835,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     if (state.category !== "all" && browseCategory !== state.category) return false;
     if (state.query) {
       var hay = [
-        it.title, it.brand, browseCategory, it.product_type, it.department,
+        it.title, locTitle(it), it.brand, browseCategory, it.product_type, it.department,
         it.size, it.size_normalized, it.article, String(it.id || "")
       ].map(normalizeText).join(" ");
       if (!queryMatchesHay(hay, state.query)) return false;
@@ -1970,7 +2009,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
         "</div>" +
         '<div class="plate__body">' +
           '<button type="button" class="plate__brand" data-brand-filter>' + escapeHtml(it.brand || t("noBrand")) + "</button>" +
-          '<span class="plate__title">' + escapeHtml(it.title) + "</span>" +
+          '<span class="plate__title">' + escapeHtml(locTitle(it)) + "</span>" +
           (cardSizeLabel(it) ? '<span class="plate__size">' + escapeHtml(cardSizeLabel(it)) + "</span>" : "") +
           '<div class="plate__row">' +
             priceHtml +
@@ -2074,7 +2113,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     }
     currentPhoto = Math.max(0, Math.min(index, gallery.length - 1));
     modalImg.src = assetUrl(gallery[currentPhoto]);
-    modalImg.alt = currentItem.title + " — Foto " + (currentPhoto + 1) + " von " + gallery.length;
+    modalImg.alt = tFormat("photoAltTemplate", { title: locTitle(currentItem), n: currentPhoto + 1, total: gallery.length });
 
     var multi = gallery.length > 1;
     modalPrev.style.display = multi ? "" : "none";
@@ -2104,7 +2143,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     try { document.dispatchEvent(new CustomEvent("d119:artikel", { detail: { id: it.id } })); } catch (e) {}
     showPhoto(0);
     modalBrand.textContent = it.brand || t("noBrand");
-    modalTitle.textContent = it.title;
+    modalTitle.textContent = locTitle(it);
     // Verkaufte Artikel zeigen nie mehr einen (alten) Preis - stattdessen die
     // Archiv-Kennzeichnung direkt an der Preis-Stelle, nicht nur als Badge.
     modalPrice.textContent = it.status === "Verkauft"
@@ -2119,7 +2158,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     var facts = [];
     if (it.category) facts.push([t("factCategory"), trCategory(it.category)]);
     if (it.size) facts.push([t("factSize"), trSize(it.size)]);
-    if (it.color) facts.push([t("factColor"), it.color]);
+    if (it.color) facts.push([t("factColor"), trColor(it.color)]);
     if (it.condition) facts.push([t("factCondition"), trCondition(it.condition)]);
     modalFacts.innerHTML = facts.map(function (f) {
       return '<div><div class="fact__label">' + escapeHtml(f[0]) + '</div><div class="fact__value">' + escapeHtml(f[1]) + "</div></div>";
@@ -2174,8 +2213,8 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     // mehr) - eine relative Aufloesung haette dort z.B. ".../chaos/artikel/
     // 123/" ergeben (404) statt der echten Artikel-URL.
     var shareUrl = location.origin + langHome(LANG) + "artikel/" + (currentItem.url_slug || currentItem.id) + "/";
-    var shareTitle = (currentItem.brand ? currentItem.brand + " — " : "") + currentItem.title;
-    var shareText = shareTitle + " bei Disorder119";
+    var shareTitle = (currentItem.brand ? currentItem.brand + " — " : "") + locTitle(currentItem);
+    var shareText = shareTitle + t("shareAtShop");
     if (navigator.share) {
       navigator.share({ title: shareTitle, text: shareText, url: shareUrl }).catch(function () {});
       return;
@@ -2479,7 +2518,9 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     t: t,
     groesse: trSize,
     bereich: trDepartment,
-    erhaltung: trCondition
+    erhaltung: trCondition,
+    farbe: trColor,
+    titel: locTitle
   };
 
   var menuLastFocusEl = null;

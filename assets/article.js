@@ -72,7 +72,7 @@
     en: {
       langGroupAria: "Choose language", backToArchive: "← To the archive", cartLink: "Cart",
       prevPhotoAria: "Previous photo", nextPhotoAria: "Next photo", closeAria: "Close",
-      factCategory: "Category", factSize: "Size", factColor: "Colour", factCondition: "Condition",
+      factCategory: "Category", factSize: "Size", factColor: "Color", factCondition: "Condition",
       factArticleNo: "Item number",
       priceOnRequest: "Price on request", priceEstimatedPrefix: "approx. ", priceEstimatedBadge: "Price being confirmed",
       soldBadge: "SOLD — DISORDER119 ARCHIVE",
@@ -190,8 +190,13 @@
     "Sehr gut": { de: "Sehr gut", en: "Very good", fr: "Très bon" },
     "Zufriedenstellend": { de: "Zufriedenstellend", en: "Satisfactory", fr: "Satisfaisant" }
   };
+  // Wie scripts/i18n_text.py SIZE_TR (der Build setzt denselben Wert ins HTML).
   var SIZE_TR = {
     "Einheitsgröße": { de: "Einheitsgröße", en: "One size", fr: "Taille unique" },
+    "One Size": { de: "Einheitsgröße", en: "One size", fr: "Taille unique" },
+    "One size": { de: "Einheitsgröße", en: "One size", fr: "Taille unique" },
+    "Universal": { de: "Universal", en: "One size", fr: "Taille unique" },
+    "Adjustable": { de: "verstellbar", en: "adjustable", fr: "réglable" },
     "verstellbar": { de: "verstellbar", en: "adjustable", fr: "réglable" },
     "Größenverstellbar": { de: "verstellbar", en: "adjustable", fr: "réglable" },
     "Kindergröße L": { de: "Kindergröße L", en: "Kids' size L", fr: "Taille enfant L" },
@@ -200,7 +205,15 @@
 
   function trCat(cat) { var e = CATEGORY_TR[cat]; return e ? e[LANG] || e.de : (cat || ""); }
   function trCond(cond) { var e = CONDITION_TR[cond]; return e ? e[LANG] || e.de : (cond || ""); }
-  function trSize(size) { var e = SIZE_TR[size]; return e ? e[LANG] || e.de : (size || ""); }
+  function trSize(size) {
+    var e = SIZE_TR[size];
+    if (e) return e[LANG] || e.de;
+    // Masse: "ca. 28 x 18 cm" -> "approx. ..." / "env. ..." (wie im HTML).
+    if (LANG !== "de" && /^ca\.?\s*\d/i.test(String(size || ""))) {
+      return String(size).replace(/^ca\.?\s*/i, LANG === "en" ? "approx. " : "env. ");
+    }
+    return size || "";
+  }
 
   function displayName() {
     var brand = IT.brand || "", title = IT.title || "";
@@ -1070,7 +1083,10 @@
     if (emailBtn) {
       if (SHOP_CONFIG.email) {
         emailBtn.href = "mailto:" + SHOP_CONFIG.email +
-          "?subject=" + encodeURIComponent(t("orderSubjectPrefix") + IT.title) +
+          // Betreff mit deutschem Titel und Artikelnummer - so findet der Shop
+          // das Stueck unabhaengig von der Seitensprache sofort wieder.
+          "?subject=" + encodeURIComponent(t("orderSubjectPrefix") + (IT.title_de || IT.title) +
+            (IT.article ? " · " + t("orderArticleAbbrev") + IT.article : "")) +
           "&body=" + encodeURIComponent(orderText());
         emailBtn.style.display = "";
       } else {

@@ -528,7 +528,20 @@
     else setTimeout(task, 120);
   }
 
+  // Titel in der Seitensprache (catalog.json: title_en/title_fr, beim Bauen
+  // notfalls aus dem deutschen Titel abgeleitet). Nur in dieser Kopie des
+  // Katalogs - Anfragen tragen zusaetzlich die Artikelnummer.
+  function titelDerSprache(items) {
+    if (LANG === "de" || !Array.isArray(items)) return items;
+    items.forEach(function (item) {
+      var lokal = item && item["title_" + LANG];
+      if (lokal) item.title = lokal;
+    });
+    return items;
+  }
+
   function start(items) {
+    titelDerSprache(items);
     S.pool = items.filter(function (it) { return it && it.public_status === "AVAILABLE" && it.gallery && it.gallery[0]; });
     if (!S.pool.length) throw new Error("empty catalog");
     makeStars(); resize(); prewarm();

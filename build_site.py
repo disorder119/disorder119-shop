@@ -31,6 +31,11 @@ sys.path.insert(0, str(BASE / "scripts"))
 from sync_legal_content import sync_legal_content
 sync_legal_content(BASE)
 from seo_text import compose_description, seo_title  # noqa: E402
+# Titel, Farben und Beschreibungen je Sprache sowie "Ähnliche Teile" und
+# vor/zurück teilt sich der Build mit scripts/repair_public_article_integrity.py.
+import i18n_text  # noqa: E402
+import related_items  # noqa: E402
+from i18n_text import loc_name, loc_title  # noqa: E402
 SITE_URL = "https://disorder119.com/"
 DATA_PATH = BASE / "data" / "items.json"
 
@@ -142,19 +147,7 @@ def lang_home(lang):
     return "/" if lang == "de" else "/" + lang + "/"
 
 
-CATEGORY_TR = {
-    "Jackets": {"de": "Jacken", "en": "Jackets", "fr": "Vestes"},
-    "Coats": {"de": "Mäntel", "en": "Coats", "fr": "Manteaux"},
-    "Tops": {"de": "Tops", "en": "Tops", "fr": "Hauts"},
-    "Shirts": {"de": "Hemden/Shirts", "en": "Shirts", "fr": "Chemises/T-shirts"},
-    "Knitwear": {"de": "Strickwaren", "en": "Knitwear", "fr": "Maille"},
-    "Pants": {"de": "Hosen", "en": "Pants", "fr": "Pantalons"},
-    "Skirts": {"de": "Röcke", "en": "Skirts", "fr": "Jupes"},
-    "Dresses": {"de": "Kleider", "en": "Dresses", "fr": "Robes"},
-    "Shoes": {"de": "Schuhe", "en": "Shoes", "fr": "Chaussures"},
-    "Accessories": {"de": "Accessoires", "en": "Accessories", "fr": "Accessoires"},
-    "Objects": {"de": "Objekte", "en": "Objects", "fr": "Objets"},
-}
+CATEGORY_TR = i18n_text.CATEGORY_TR
 CONDITION_TR = {
     "Repariert": {"de": "Repariert", "en": "Repaired", "fr": "Réparé"},
     "Mit Defekt": {"de": "Mit Defekt", "en": "With defect", "fr": "Avec défaut"},
@@ -162,13 +155,7 @@ CONDITION_TR = {
     "Sehr gut": {"de": "Sehr gut", "en": "Very good", "fr": "Très bon"},
     "Zufriedenstellend": {"de": "Zufriedenstellend", "en": "Satisfactory", "fr": "Satisfaisant"},
 }
-SIZE_TR = {
-    "Einheitsgröße": {"de": "Einheitsgröße", "en": "One size", "fr": "Taille unique"},
-    "verstellbar": {"de": "verstellbar", "en": "adjustable", "fr": "réglable"},
-    "Größenverstellbar": {"de": "verstellbar", "en": "adjustable", "fr": "réglable"},
-    "Kindergröße L": {"de": "Kindergröße L", "en": "Kids' size L", "fr": "Taille enfant L"},
-    "Sonstige": {"de": "Sonstige", "en": "Other", "fr": "Autre"},
-}
+SIZE_TR = i18n_text.SIZE_TR
 
 
 def _tr(table, key, lang):
@@ -187,7 +174,8 @@ def cond_tr(cond, lang):
 
 
 def size_tr(size, lang):
-    return _tr(SIZE_TR, size, lang)
+    # "Einheitsgroesse" -> "One size", Masse mit "approx."/"env." statt "ca.".
+    return i18n_text.size_tr(size, lang)
 
 
 META_PHRASES = {
@@ -354,16 +342,10 @@ ITEMS = json.loads(DATA_PATH.read_text(encoding="utf-8"))
 # spezifischeren Namen (z.B. "Luna Rossa Sweatjacke"), nur das brand-Feld
 # wird hier zentral normalisiert - wirkt dadurch ueberall (Kachel-Filter,
 # Menue-Markenliste, "MEHR VON ..."-Vorschlaege, Markenzaehler im Header).
-BRAND_ALIASES = {
-    "Luna Rossa": "Prada",
-    "Maison Margiela x H&M": "Maison Margiela",
-    "Dior Homme": "Dior",
-    "MM6 Maison Margiela": "Maison Margiela",
-}
-for _it in ITEMS:
-    _alias = BRAND_ALIASES.get(_it.get("brand") or "")
-    if _alias:
-        _it["brand"] = _alias
+# Die Liste steht in scripts/i18n_text.py, weil das Reparaturskript nach dem
+# Bauen dieselben Marken braucht.
+BRAND_ALIASES = i18n_text.BRAND_ALIASES
+i18n_text.apply_brand_aliases(ITEMS)
 
 BY_ID = {it["id"]: it for it in ITEMS}
 
@@ -384,6 +366,10 @@ def display_name(it):
     # "MM6 Maison Margiela" oder "Pierre Balmain" -, wird sie nicht noch
     # einmal vorangestellt. Sonst entstand "Maison Margiela MM6 Maison
     # Margiela Top".
+    # Bleibt bewusst eigenstaendig: shop-worker/commerce-core.test.mjs
+    # vergleicht genau diese Funktion mit dem Bestellnamen im Worker.
+    # Seiten in EN/FR nutzen i18n_text.loc_name(it, lang) mit derselben Regel
+    # (scripts/test_i18n_text.py prueft die Gleichheit fuer Deutsch).
     if brand and re.search(r"(?<!\w)" + re.escape(brand) + r"(?!\w)", title, re.I):
         return title
     return (brand + " " + title).strip()
@@ -401,111 +387,45 @@ def title_size(it, lang):
 
 
 def meta_description(it, lang):
-    ph = META_PHRASES[lang]
-    cat = cat_tr(it.get("category") or "", lang)
-    name = display_name(it)
-    if it.get("public_status") == "SOLD":
-        return ph["sold"].format(name=name)
-    tail = []
-    if cat:
-        tail.append(cat)
-    if it.get("size"):
-        tail.append(ph["size_label"] + " " + size_tr(it["size"], lang))
-    tail_str = ", ".join(tail)
-    prefix = (name + " – " + tail_str) if tail_str else name
-    eigener_text = {"de": it.get("desc_de") or it.get("desc"),
-                    "en": it.get("desc_en"), "fr": it.get("desc_fr")}[lang]
-    return compose_description(prefix, eigener_text, ph["tail_suffix"], name)
+    # Gemeinsam mit scripts/repair_public_article_integrity.py, ohne Zustand.
+    return i18n_text.meta_description(it, lang)
 
 
 def auto_description(it, lang):
-    ph = META_PHRASES[lang]
-    facts = []
-    if it.get("category"):
-        facts.append(cat_tr(it["category"], lang))
-    if it.get("size"):
-        facts.append(ph["size_label"] + " " + size_tr(it["size"], lang))
-    name = display_name(it)
-    tail = (" – " + ", ".join(facts)) if facts else ""
-    return name + tail + ph["auto_suffix"]
+    return i18n_text.auto_description(it, lang)
 
 
 # ---------------------------------------------------------------------------
-# Related items (Task 4 Fix): zwei GETRENNTE Gruppen statt einer vermischten
-# Liste - "MORE FROM BRAND" darf ausschliesslich exakt dieselbe Marke zeigen.
+# Related items: zwei GETRENNTE Gruppen statt einer vermischten Liste - "MORE
+# FROM BRAND" zeigt ausschliesslich exakt dieselbe Marke. Auswahl (rotierendes
+# Fenster, nur verfuegbare Stuecke, mindestens drei eingehende Links) und
+# Karten stehen in scripts/related_items.py; das Reparaturskript setzt sie
+# nach dem Bauen mit derselben Logik erneut.
 # ---------------------------------------------------------------------------
-def related_same_brand(it, n=4):
-    others = [x for x in ITEMS if x["id"] != it["id"] and x.get("gallery") and x["gallery"][0]
-              and x.get("brand") and x.get("brand") == it.get("brand")]
-    others.sort(key=lambda x: (x.get("public_status") == "SOLD"))
-    return others[:n]
+_RELATED_PLAN = []
 
 
-def related_same_category(it, exclude_ids, n=4):
-    others = [x for x in ITEMS if x["id"] != it["id"] and x["id"] not in exclude_ids
-              and x.get("gallery") and x["gallery"][0]
-              and x.get("category") == it.get("category")]
-    others.sort(key=lambda x: (x.get("public_status") == "SOLD"))
-    return others[:n]
+def related_plan():
+    if not _RELATED_PLAN:
+        _RELATED_PLAN.append(related_items.related_plan(ITEMS))
+    return _RELATED_PLAN[0]
 
 
 def related_card_html(x, lang):
-    ph = META_PHRASES[lang]
-    sold = x.get("public_status") == "SOLD"
-    if sold:
-        price_html = '<span class="related-card__sold">SOLD</span>'
-        price_line = ""
-    else:
-        price_html = ""
-        price_line = (
-            '<span class="related-card__price">' + fmt_price_de(x["price"]) + "</span>"
-            if x.get("price", 0) > 0
-            else '<span class="related-card__price" data-price-on-request>' + esc(ph["price_on_request"]) + '</span>'
-        )
-    href = lang_home(lang) + "artikel/" + str(x.get("url_slug", x["id"])) + "/"
-    return (
-        '<a class="related-card" href="' + href + '">'
-        '<div class="related-card__frame">'
-        # Die Karte zeigt das Bild in einem 3:4-Rahmen von rund 140-200 px
-        # Breite. Dafuer das volle Galeriebild (bis 2400 px, bis 2 MiB) zu
-        # laden kostete auf der gemessenen Produktseite 915 KB fuer zwei
-        # briefmarkengrosse Kacheln - mehr als das Dreifache des eigentlichen
-        # Hauptbilds - und verzoegerte dessen Ladestart um 1892 ms. Das
-        # ohnehin vorhandene Vorschaubild (220x293) hat genau die richtige
-        # Groesse. width/height reservieren zusaetzlich den Platz.
-        '<img src="/' + esc(card_image(x)) + '" alt="' + esc(display_name(x)) + '" loading="lazy" decoding="async" width="220" height="293" />' +
-        (price_html if sold else "") +
-        "</div>"
-        '<span class="related-card__brand">' + esc(x.get("brand") or ph["no_brand"]) + "</span>"
-        '<span class="related-card__title">' + esc(x["title"]) + "</span>" +
-        price_line +
-        "</a>"
-    )
+    return related_items.related_card_html(x, lang, BASE)
 
 
 def related_sections_html(it, lang):
-    brand_items = related_same_brand(it)
-    exclude = {it["id"]} | {b["id"] for b in brand_items}
-    cat_items = related_same_category(it, exclude)
-    labels = {
-        "de": {"brand": "MEHR VON {brand}", "category": "ÄHNLICHE ARCHIVSTÜCKE"},
-        "en": {"brand": "MORE FROM {brand}", "category": "SIMILAR ARCHIVE PIECES"},
-        "fr": {"brand": "PLUS DE {brand}", "category": "PIÈCES D’ARCHIVE SIMILAIRES"},
-    }[lang]
-    parts = []
-    if brand_items:
-        parts.append(
-            '<div class="related"><h2 class="related__title" data-related-heading="brand">'
-            + esc(labels["brand"].format(brand=(it.get("brand") or "").upper())) + "</h2>"
-            '<div class="related__grid">' + "".join(related_card_html(x, lang) for x in brand_items) + "</div></div>"
-        )
-    if cat_items:
-        parts.append(
-            '<div class="related"><h2 class="related__title" data-related-heading="category">'
-            + esc(labels["category"]) + "</h2>"
-            '<div class="related__grid">' + "".join(related_card_html(x, lang) for x in cat_items) + "</div></div>"
-        )
-    return "".join(parts)
+    return related_items.related_sections_html(it, related_plan(), lang, BASE)
+
+
+_ARTICLE_SEQUENCE = []
+
+
+def article_sequence():
+    if not _ARTICLE_SEQUENCE:
+        _ARTICLE_SEQUENCE.append(related_items.article_sequence(ITEMS))
+    return _ARTICLE_SEQUENCE[0]
 
 
 def facts_html(it, lang):
@@ -520,7 +440,7 @@ def facts_html(it, lang):
     if it.get("size"):
         facts.append(('factSize', labels["size"], "factSizeValue", size_tr(it["size"], lang)))
     if it.get("color"):
-        facts.append(('factColor', labels["color"], None, it["color"]))
+        facts.append(('factColor', labels["color"], None, i18n_text.color_tr(it["color"], lang)))
     out = []
     for i18n_key, label, value_id, value in facts:
         value_attr = f' id="{value_id}"' if value_id else ""
@@ -533,18 +453,29 @@ def facts_html(it, lang):
     return "".join(out)
 
 
-def price_block_html(it):
+PRICE_BLOCK_TEXT = {
+    # Wie assets/article.js (priceEstimatedPrefix/-Badge, priceOnRequest), das
+    # den Block nach dem Laden noch einmal setzt - so steht auf EN/FR schon im
+    # HTML die richtige Sprache.
+    "de": ("ca. ", "Preis wird geprüft", "Preis auf Anfrage"),
+    "en": ("approx. ", "Price being confirmed", "Price on request"),
+    "fr": ("env. ", "Prix en cours de vérification", "Prix sur demande"),
+}
+
+
+def price_block_html(it, lang="de"):
+    ca, geprueft, anfrage = PRICE_BLOCK_TEXT[lang]
     sold = it.get("public_status") == "SOLD"
     if sold:
         return '<div class="info__badge info__badge--sold">SOLD — DISORDER119 ARCHIVE</div>'
     if it.get("price_estimated"):
         return (
-            '<div class="info__price">ca. ' + fmt_price_de(it["price"]) + "</div>"
-            '<div class="info__badge info__badge--estimate">Preis wird geprüft</div>'
+            '<div class="info__price">' + esc(ca) + fmt_price_de(it["price"]) + "</div>"
+            '<div class="info__badge info__badge--estimate">' + esc(geprueft) + '</div>'
         )
     if it.get("price", 0) > 0:
         return '<div class="info__price">' + fmt_price_de(it["price"]) + "</div>"
-    return '<div class="info__price">Preis auf Anfrage</div>'
+    return '<div class="info__price">' + esc(anfrage) + '</div>'
 
 
 PAYPAL_VORSCHAU_TEXT = {
@@ -566,6 +497,14 @@ def paypal_vorschau_html(lang):
 
 
 _VERSANDKOSTENFREI_AB = []
+_SHOP_CONFIG_RAW = []
+
+
+def _shop_config_raw():
+    """config/shop-config.json wie gespeichert (Versandtarife, Laufzeiten)."""
+    if not _SHOP_CONFIG_RAW:
+        _SHOP_CONFIG_RAW.append(json.loads(SHOP_CONFIG_PATH.read_text(encoding="utf-8")))
+    return _SHOP_CONFIG_RAW[0]
 
 
 def versandkostenfrei_ab_cents():
@@ -584,10 +523,18 @@ def euro_text(cents, lang):
     return "€" + betrag if lang == "en" else betrag.replace(".", ",") + " €"
 
 
+# Wie soldNote in assets/article.js.
+SOLD_NOTE = {
+    "de": "Dieses Stück ist bereits verkauft und bleibt als Teil des Disorder119-Archivs sichtbar.",
+    "en": "This piece has already been sold and remains visible as part of the Disorder119 archive.",
+    "fr": "Cette pièce est déjà vendue et reste visible comme partie de l'archive Disorder119.",
+}
+
+
 def cta_html(it, shop_config, home, lang):
     sold = it.get("public_status") == "SOLD"
     if sold:
-        return '<p class="info__note" id="soldNote">Dieses Stück ist bereits verkauft und bleibt als Teil des Disorder119-Archivs sichtbar.</p>'
+        return '<p class="info__note" id="soldNote">' + esc(SOLD_NOTE[lang]) + '</p>'
     has_price = it.get("price", 0) > 0
     paypal_ready = (
         bool((shop_config.get("features") or {}).get("paypalCheckout"))
@@ -668,31 +615,121 @@ def cta_html(it, shop_config, home, lang):
     return "".join(parts)
 
 
+# Laut AGB Abschnitt 6: 14 Tage Widerrufsrecht, die unmittelbaren Kosten der
+# Ruecksendung traegt die Kundin bzw. der Kunde. Steht an jedem Angebot und
+# am OnlineStore (site_entities_jsonld).
+MERCHANT_RETURN_POLICY = {
+    "@type": "MerchantReturnPolicy",
+    "applicableCountry": "DE",
+    "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+    "merchantReturnDays": 14,
+    "returnMethod": "https://schema.org/ReturnByMail",
+    "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility",
+}
+
+# Groessensysteme fuer JSON-LD (schema.org) und Feed (g:size_system) - die
+# Ableitung aus dem Feld size steht in scripts/i18n_text.py.
+SIZE_SYSTEM_URL = i18n_text.SIZE_SYSTEM_URL
+size_specification = i18n_text.size_specification
+
+
+def shipping_cents(it):
+    """Versandpreis fuer ein einzelnes Stueck wie im Merchant-Feed (feste DHL-
+    Tarife aus config/shop-config.json); None, wenn der Preis erst in der Kasse
+    entsteht und das Stueck unter der Versandkostenfrei-Grenze liegt."""
+    from merchant_shipping import merchant_shipping_cents
+    cents = merchant_shipping_cents(it, _shop_config_raw())
+    frei_ab = versandkostenfrei_ab_cents()
+    if cents is None and frei_ab and float(it.get("price") or 0) * 100 >= frei_ab:
+        cents = 0
+    return cents
+
+
+# Bearbeitungszeit: "Versand innerhalb von 3 Werktagen" (Kasse, AGB). Kann in
+# config/shop-config.json als versand.bearbeitungTage stehen - als {min, max}
+# oder als eine Zahl (= hoechstens so viele Tage).
+BEARBEITUNG_TAGE_STANDARD = (0, 3)
+
+
+def _tage(wert, standard):
+    return wert if isinstance(wert, int) and not isinstance(wert, bool) and wert >= 0 else standard
+
+
+def shipping_days():
+    """(Bearbeitung min/max, Laufzeit min/max) in Werktagen. Die laengste
+    Laufzeit der Standard-Tarife ist die Obergrenze."""
+    versand = _shop_config_raw().get("versand") or {}
+    bearbeitung = versand.get("bearbeitungTage")
+    if isinstance(bearbeitung, dict):
+        h_min = _tage(bearbeitung.get("min"), BEARBEITUNG_TAGE_STANDARD[0])
+        h_max = _tage(bearbeitung.get("max"), BEARBEITUNG_TAGE_STANDARD[1])
+    else:
+        h_min, h_max = BEARBEITUNG_TAGE_STANDARD[0], _tage(bearbeitung, BEARBEITUNG_TAGE_STANDARD[1])
+    h_max = max(h_min, h_max)
+    tarife = (versand.get("tarife") or {}).get("liste") or []
+    laufzeiten = [t.get("laufzeitTage") for t in tarife if isinstance(t, dict)
+                  and t.get("art") == "standard" and _tage(t.get("laufzeitTage"), None) is not None]
+    t_max = max(laufzeiten) if laufzeiten else 2
+    return h_min, h_max, 1, max(t_max, 1)
+
+
+def shipping_details_jsonld(it):
+    cents = shipping_cents(it)
+    if cents is None:
+        return None
+    h_min, h_max, t_min, t_max = shipping_days()
+    return {
+        "@type": "OfferShippingDetails",
+        "shippingRate": {"@type": "MonetaryAmount", "value": f"{cents / 100:.2f}", "currency": "EUR"},
+        "shippingDestination": {"@type": "DefinedRegion", "addressCountry": "DE"},
+        "deliveryTime": {
+            "@type": "ShippingDeliveryTime",
+            "handlingTime": {"@type": "QuantitativeValue", "minValue": h_min, "maxValue": h_max, "unitCode": "DAY"},
+            "transitTime": {"@type": "QuantitativeValue", "minValue": t_min, "maxValue": t_max, "unitCode": "DAY"},
+        },
+    }
+
+
+AUDIENCE_GENDER = {"Women": "female", "Men": "male", "Unisex": "unisex"}
+
+
 def json_ld(it, lang):
     status = it.get("public_status") or "DRAFT"
     sold = status == "SOLD"
     url = SITE_URL.rstrip("/") + lang_home(lang) + "artikel/" + str(it.get("url_slug", it["id"])) + "/"
-    desc_field = {"de": it.get("desc_de") or it.get("desc"), "en": it.get("desc_en"), "fr": it.get("desc_fr")}[lang]
     data = {
         "@context": "https://schema.org",
         "@type": "Product",
         "@id": url + "#product",
-        "name": display_name(it),
+        "name": loc_name(it, lang),
         "url": url,
         "image": [SITE_URL + g for g in it.get("gallery") or []],
-        "description": (desc_field or meta_description(it, lang))[:500],
+        # Eigener Text ohne Kopfzeile und Standardsatz, am Satzende gekuerzt.
+        "description": i18n_text.structured_description(it, lang),
         # Dieselbe ID wie im Merchant-Feed (g:id), damit Google Feed-Eintrag und
         # Produktseite als ein Produkt erkennt.
         "sku": merchant_id(it),
         "brand": {"@type": "Brand", "name": it.get("brand") or "Disorder119"},
-        "seller": {"@id": SITE_URL + "#store"},
     }
     if it.get("category"):
         data["category"] = cat_tr(it["category"], lang)
-    if it.get("color"):
-        data["color"] = it["color"]
-    if it.get("size"):
-        data["size"] = size_tr(it["size"], lang)
+    # Google-Format: hoechstens drei Farben mit "/"; "Bunt" nur ohne andere
+    # Farbe, dann als "Mehrfarbig"/"Multicolor" (wie im Feed).
+    farbe = i18n_text.merchant_color(it, lang)
+    if farbe:
+        data["color"] = farbe
+    groesse = size_specification(it, lang)
+    if groesse:
+        data["size"] = {"@type": "SizeSpecification", "name": groesse[0]}
+        if groesse[1]:
+            data["size"]["sizeSystem"] = SIZE_SYSTEM_URL[groesse[1]]
+    # Nur ein echtes Materialfeld - nie aus der Beschreibung geraten.
+    material = i18n_text.material_tr(it.get("material"), lang)
+    if material:
+        data["material"] = material
+    geschlecht = AUDIENCE_GENDER.get(str(it.get("department") or ""))
+    if geschlecht:
+        data["audience"] = {"@type": "PeopleAudience", "suggestedGender": geschlecht, "suggestedMinAge": 13}
     if not sold and it.get("price", 0) > 0:
         availability = (
             "https://schema.org/LimitedAvailability"
@@ -705,30 +742,16 @@ def json_ld(it, lang):
             "priceCurrency": "EUR",
             "price": f'{it["price"]:.2f}',
             "availability": availability,
+            # Wie g:condition im Feed (i18n_text.item_condition): immer gebraucht.
             "itemCondition": "https://schema.org/UsedCondition",
             "seller": {"@id": SITE_URL + "#store"},
-            # Laut AGB Abschnitt 6: 14 Tage Widerrufsrecht, die unmittelbaren
-            # Kosten der Ruecksendung traegt die Kundin bzw. der Kunde.
-            "hasMerchantReturnPolicy": {
-                "@type": "MerchantReturnPolicy",
-                "applicableCountry": "DE",
-                "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
-                "merchantReturnDays": 14,
-                "returnMethod": "https://schema.org/ReturnByMail",
-                "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility",
-            },
+            "hasMerchantReturnPolicy": dict(MERCHANT_RETURN_POLICY),
         }
-        # shippingDetails nur, wo der Versand sicher kostenlos ist (ab der
-        # Grenze aus config/shop-config.json). Darunter haengt der Preis an
-        # Paketgroesse und Versandart und kommt live aus der Kasse; eine feste
-        # Zahl koennte bei Google anders aussehen als dort.
-        frei_ab = versandkostenfrei_ab_cents()
-        if frei_ab and it["price"] * 100 >= frei_ab:
-            data["offers"]["shippingDetails"] = {
-                "@type": "OfferShippingDetails",
-                "shippingRate": {"@type": "MonetaryAmount", "value": "0.00", "currency": "EUR"},
-                "shippingDestination": {"@type": "DefinedRegion", "addressCountry": "DE"},
-            }
+        # Versand wie im Merchant-Feed (feste DHL-Tarife, ab 99 EUR kostenlos),
+        # damit Seite und Feed denselben Preis nennen.
+        versand = shipping_details_jsonld(it)
+        if versand:
+            data["offers"]["shippingDetails"] = versand
     return json.dumps(data, ensure_ascii=False)
 
 
@@ -752,7 +775,7 @@ def breadcrumb_json_ld(it, lang):
         "@type": "BreadcrumbList",
         "itemListElement": [
             {"@type": "ListItem", "position": 1, "name": labels.get(lang, "Archiv"), "item": home_url},
-            {"@type": "ListItem", "position": 2, "name": display_name(it), "item": product_url},
+            {"@type": "ListItem", "position": 2, "name": loc_name(it, lang), "item": product_url},
         ],
     }
     return json.dumps(data, ensure_ascii=False)
@@ -788,16 +811,41 @@ def card_image(it):
 
 
 
+LANG_GROUP_ARIA = {"de": "Sprache wählen", "en": "Choose language", "fr": "Choisir la langue"}
+
+
+def sequence_attr(it, lang, richtung):
+    """href fuer vor (0) / zurueck (1) - echte Links schon im HTML, in der
+    Reihenfolge des Archivs ohne Filter (related_items.article_sequence).
+    assets/pwa-runtime.js uebernimmt nach dem Laden eine gefilterte Reihenfolge
+    aus dem Archiv. Verkaufte Stuecke stehen nicht in der Reihe."""
+    nachbarn = article_sequence().get(str(it.get("url_slug", it["id"])))
+    if not nachbarn:
+        return ' style="visibility:hidden"'
+    rel = "prev" if richtung == 0 else "next"
+    return ' href="' + lang_home(lang) + "artikel/" + esc(nachbarn[richtung]) + '/" rel="' + rel + '"'
+
+
 def build_page(it, shop_config, lang):
-    name = display_name(it)
-    title_tag = seo_title(name, it.get("product_type"), title_size(it, lang), lang)
+    # Name und Titel in der Seitensprache: title_en/title_fr aus items.json,
+    # sonst eine Ableitung ohne deutsche Woerter (scripts/i18n_text.py).
+    name = loc_name(it, lang)
+    titel = loc_title(it, lang)
+    # "One size"/"Taille unique" stehen ohne "Size"/"Taille" davor. Der aus
+    # dem deutschen Titel abgeleitete EN/FR-Titel nennt die Produktart schon
+    # ("Zip Hoodie", "t-shirt à manches longues") - kein zweites Wort dafuer.
+    abgeleitet = lang != "de" and not str(it.get("title_" + lang) or "").strip()
+    groesse_ist_wort = i18n_text.size_is_word(it.get("size"))
+    groesse_titel = title_size(it, lang)
+    if groesse_ist_wort:
+        groesse_titel = groesse_titel[:1].upper() + groesse_titel[1:]
+    title_tag = seo_title(name, None if abgeleitet else it.get("product_type"), groesse_titel, lang,
+                          size_word=not groesse_ist_wort)
     desc = meta_description(it, lang)
-    raw_body_desc = {
-        "de": it.get("desc_de") or it.get("desc") or "",
-        "en": it.get("desc_en") or "",
-        "fr": it.get("desc_fr") or "",
-    }[lang]
-    body_desc = raw_body_desc.strip() or auto_description(it, lang)
+    # Eigene Beschreibung der Sprache ohne Kopfzeile und Standardsatz (alte
+    # CI-Platzhalter und deutsche Titel darin bereinigt), sonst der
+    # uebersetzte Ersatztext.
+    body_desc = i18n_text.body_description(it, lang)
     gallery = it.get("gallery") or []
     hero = gallery[0] if gallery else "assets/favicon.png"
     hero_display_candidate = display_path(hero)
@@ -849,16 +897,20 @@ def build_page(it, shop_config, lang):
         "id": it["id"],
         "article": it.get("article"),
         "url_slug": it.get("url_slug", str(it["id"])),
-        "title": it["title"],
+        "title": titel,
+        # Deutscher Titel fuer Anfragen an den Shop (Betreff mit Artikelnummer).
+        "title_de": it["title"],
         "brand": it.get("brand"),
         "size": it.get("size"),
         "color": it.get("color"),
         "condition": it.get("condition"),
         "category": it.get("category"),
         "desc": it.get("desc") or "",
-        "desc_de": it.get("desc_de") or it.get("desc") or "",
-        "desc_en": it.get("desc_en") or "",
-        "desc_fr": it.get("desc_fr") or "",
+        # article.js zeigt desc_<Sprache>: schon bereinigt bzw. der Ersatztext,
+        # damit nach dem Laden derselbe Text steht wie im HTML.
+        "desc_de": i18n_text.body_description(it, "de"),
+        "desc_en": i18n_text.body_description(it, "en"),
+        "desc_fr": i18n_text.body_description(it, "fr"),
         "gallery": gallery,
         "thumbs": [thumb_path(g) for g in gallery],
         "sold": sold,
@@ -918,7 +970,7 @@ def build_page(it, shop_config, lang):
   <a class="page-head__menu" href="{home}" aria-label="{esc(product_nav_copy['menu_aria'])}"><span></span><span></span><span></span></a>
   <a class="page-head__brand" href="{home}">DISORDER119</a>
   <div class="page-head__right">
-    <div class="lang-switch" id="langSwitch" role="group" aria-label="Sprache wählen">
+    <div class="lang-switch" id="langSwitch" role="group" aria-label="{esc(LANG_GROUP_ARIA[lang])}">
       <a class="lang-switch__btn" data-lang="de" href="/artikel/{it.get('url_slug', it['id'])}/">DE</a>
       <a class="lang-switch__btn" data-lang="en" href="/en/artikel/{it.get('url_slug', it['id'])}/">EN</a>
       <a class="lang-switch__btn" data-lang="fr" href="/fr/artikel/{it.get('url_slug', it['id'])}/">FR</a>
@@ -928,9 +980,9 @@ def build_page(it, shop_config, lang):
   </div>
 </div>
 <nav class="article-sequence-nav" aria-label="{esc(product_nav_copy['nav_aria'])}">
-  <a class="article-sequence-nav__link article-sequence-nav__link--prev" aria-label="{esc(product_nav_copy['prev_aria'])}" style="visibility:hidden">{esc(product_nav_copy['prev'])}</a>
+  <a class="article-sequence-nav__link article-sequence-nav__link--prev" aria-label="{esc(product_nav_copy['prev_aria'])}"{sequence_attr(it, lang, 0)}>{esc(product_nav_copy['prev'])}</a>
   <a class="article-sequence-nav__link article-sequence-nav__link--archive" href="{home}" aria-label="{esc(product_nav_copy['archive_aria'])}">{esc(product_nav_copy['archive'])}</a>
-  <a class="article-sequence-nav__link article-sequence-nav__link--next" aria-label="{esc(product_nav_copy['next_aria'])}" style="visibility:hidden">{esc(product_nav_copy['next'])}</a>
+  <a class="article-sequence-nav__link article-sequence-nav__link--next" aria-label="{esc(product_nav_copy['next_aria'])}"{sequence_attr(it, lang, 1)}>{esc(product_nav_copy['next'])}</a>
 </nav>
 <div class="product" role="main">
   <div class="gallery"{gallery_attr}>
@@ -947,9 +999,9 @@ def build_page(it, shop_config, lang):
     <div class="gallery__thumbs{' gallery__thumbs--reserved' if len(gallery) > 1 else ''}" id="galleryThumbs"></div>
   </div>
   <div class="info">
-    <a class="info__brand" href="{home}?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or "Ohne Marke")}</a>
-    <h1>{esc(it["title"])}</h1>
-    <div id="priceBlock">{price_block_html(it)}</div>
+    <a class="info__brand" href="{home}?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or META_PHRASES[lang]["no_brand"])}</a>
+    <h1>{esc(titel)}</h1>
+    <div id="priceBlock">{price_block_html(it, lang)}</div>
     <div class="info__facts">{facts_html(it, lang)}</div>
     <p class="info__desc" id="itemDesc">{esc(body_desc)}</p>
     <p class="info__gebraucht" data-zustand-hinweis>{esc(GEBRAUCHT_HINWEIS[lang])}</p>
@@ -1079,6 +1131,8 @@ def site_entities_jsonld(shop_config):
         # Nur das Land: die Anschrift steht im Impressum, aber nicht in den
         # Google-Daten jeder Seite (sonst taucht sie zu Namenssuchen auf).
         "address": {"@type": "PostalAddress", "addressCountry": "DE"},
+        # Gilt auch dort, wo ein Angebot keine eigene Rueckgaberegel traegt.
+        "hasMerchantReturnPolicy": dict(MERCHANT_RETURN_POLICY),
     }
     if shop_config.get("email"):
         store["email"] = shop_config["email"]
@@ -1129,13 +1183,22 @@ def page_breadcrumb_jsonld(title, canonical, lang):
     return json.dumps(data, ensure_ascii=False)
 
 
+ITEM_LIST_NAME = {
+    "de": "Disorder119 — Verfügbare Stücke",
+    "en": "Disorder119 — Available pieces",
+    "fr": "Disorder119 — Pièces disponibles",
+}
+
+
 def item_list_jsonld(public_items, lang):
+    # Nur kaufbare Stuecke: verkaufte Seiten tragen kein Product-JSON-LD mehr
+    # und gehoeren nicht in die Produktliste der Startseite.
     home = SITE_URL.rstrip("/") + lang_home(lang)
     entries = [
         {"@type": "ListItem", "position": i + 1, "url": home + "artikel/" + str(it.get("url_slug", it["id"])) + "/"}
-        for i, it in enumerate(public_items)
+        for i, it in enumerate(x for x in public_items if x.get("public_status") == "AVAILABLE")
     ]
-    data = {"@context": "https://schema.org", "@type": "ItemList", "name": "Disorder119 — Archiv-Katalog", "itemListElement": entries}
+    data = {"@context": "https://schema.org", "@type": "ItemList", "name": ITEM_LIST_NAME[lang], "itemListElement": entries}
     return json.dumps(data, ensure_ascii=False)
 
 
@@ -1311,6 +1374,26 @@ def product_data_gap_html(it, lang):
     return '<p class="info__note info__note--data-gap" data-product-data-gap>' + esc(copy.format(fields=", ".join(missing))) + '</p>'
 
 
+# Startseite (nur dort): Die H1 zeigt das Logo "Disorder119"; davor steht eine
+# Beschreibung fuer Screenreader (.d119-sr-only in assets/app.css), die
+# zugleich sagt, was die Seite ist - am Design aendert sich nichts. Rechts-
+# texte, FAQ, Mieten usw. behalten die H1 "Disorder119". Eine versteckte
+# Linkliste auf alle Stuecke gibt es bewusst nicht (Googles Regel zu
+# verstecktem Text und Links): Produktseiten sind ueber Sitemap, "Aehnliche
+# Teile" und vor/zurueck verlinkt.
+H1_LEAD = {
+    "de": "Designer Second Hand & Vintage Mode – ",
+    "en": "Pre-Owned Designer & Vintage Fashion – ",
+    "fr": "Mode designer seconde main & vintage – ",
+}
+
+
+def h1_lead_html(lang, home_page):
+    if not home_page:
+        return ""
+    return '<span class="d119-sr-only">' + esc(H1_LEAD[lang]) + "</span>"
+
+
 def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
                         include_item_list=False, robots=None, static_content="",
                         canonical_path_segment=None, slug=""):
@@ -1346,6 +1429,7 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__ROBOTS_META__", f'<meta name="robots" content="{robots_value}">')
     out = out.replace("__OG_LOCALE__", OG_LOCALES[lang])
     out = out.replace("__OG_LOCALE_ALTERNATES__", locale_alternates)
+    out = out.replace("__H1_LEAD__", h1_lead_html(lang, include_item_list))
     # Bewusst hier und nicht bei den uebrigen Versions-Tokens: CI-Skripte
     # (apply_focus_three_hardening, apply_pwa) suchen die Zeilen darunter
     # als zusammenhaengenden Block.
@@ -1386,7 +1470,10 @@ def build_special_pages():
             title_tag = ("Disorder119 — " + label) if slug != "cart" else (label + " | Disorder119")
             desc_text = SPECIAL_META_DESCRIPTIONS.get(slug, {}).get(lang, ph["home_desc"])
             robots = "noindex,follow" if slug == "cart" or slug in duplicate_variants or slug in PRIVATE_LEGAL_PAGES else None
-            canonical_segment = "" if slug in duplicate_variants else None
+            # Nur noindex - eine canonical-Angabe auf die Startseite zusammen
+            # mit noindex sind widerspruechliche Signale. Die Seiten verweisen
+            # deshalb auf sich selbst (app.js setzt das beim Umschalten ohnehin).
+            canonical_segment = None
             static_content = static_page_content_html(slug, lang, shop_config)
             out = render_bundle_page(
                 lang, slug + "/", title_tag, desc_text, shop_config,
@@ -1990,6 +2077,10 @@ CATALOG_FIELDS = [
     # Fehlt das Feld, zeigt die Mieten-Seite stattdessen "Preis auf Anfrage" -
     # kein Zwang, sofort den gesamten Bestand zu befuellen.
     "rental_price",
+    # Optionale Titel je Sprache (data/items.json). build_catalog_json setzt
+    # sie fuer jedes Stueck - fehlt das Feld, mit der Ableitung aus
+    # scripts/i18n_text.py; app.js zeigt auf /en/ und /fr/ diesen Titel.
+    "title_en", "title_fr",
 ]
 
 
@@ -2157,6 +2248,8 @@ def build_catalog_json():
             # Anker fuer scripts/apply_focus_three_hardening.py.
             row["price"] = 0
             row.pop("price_estimated", None)
+        for sprache in ("en", "fr"):
+            row["title_" + sprache] = loc_title(it, sprache)
         hover = hover_image_path(it)
         if hover:
             row["hover_image"] = hover
@@ -2231,12 +2324,10 @@ def merchant_description(it):
 
 
 def build_merchant_feed():
-    from merchant_shipping import merchant_shipping_cents
     def tag(name, value):
         return f"<{name}>{esc(str(value))}</{name}>"
 
-    frei_cents = versandkostenfrei_ab_cents()
-    shipping_config = json.loads(SHOP_CONFIG_PATH.read_text(encoding='utf-8'))
+    h_min, h_max, t_min, t_max = shipping_days()
     entries = []
     for it in ITEMS:
         if it.get("public_status") != "AVAILABLE" or float(it.get("price") or 0) <= 0:
@@ -2246,7 +2337,6 @@ def build_merchant_feed():
         if not gallery or not category:
             continue
         link = SITE_URL.rstrip("/") + "/artikel/" + str(it.get("url_slug", it["id"])) + "/"
-        neu = bool(re.search(r"neu mit (original)?etikett", str(it.get("desc_de") or it.get("desc") or ""), re.I))
         dep = str(it.get("department") or "")
         felder = [
             tag("g:id", merchant_id(it)),
@@ -2257,27 +2347,38 @@ def build_merchant_feed():
         ] + [tag("g:additional_image_link", SITE_URL + g) for g in gallery[1:11]] + [
             tag("g:availability", "in_stock"),
             tag("g:price", f'{float(it["price"]):.2f} EUR'),
-            tag("g:condition", "new" if neu else "used"),
+            # Wie itemCondition im JSON-LD der Produktseite (i18n_text.item_condition).
+            tag("g:condition", i18n_text.item_condition(it)),
             tag("g:brand", it.get("brand") or "Disorder119"),
             tag("g:identifier_exists", "no"),
             tag("g:google_product_category", category),
             tag("g:product_type", " > ".join(p for p in (
-                LANDING_DEP_LABEL.get(dep, {}).get("de", "") if "LANDING_DEP_LABEL" in globals() else {"Women": "Damen", "Men": "Herren"}.get(dep, ""),
+                {"Women": "Damen", "Men": "Herren"}.get(dep, ""),
                 cat_tr(it.get("taxonomy_category") or it.get("category") or "", "de"),
                 str(it.get("product_type") or "")) if p)),
             tag("g:gender", {"Women": "female", "Men": "male"}.get(dep, "unisex")),
             tag("g:age_group", "adult"),
         ]
-        if it.get("size"):
-            felder.append(tag("g:size", str(it["size"]).split("/")[0].strip()[:100]))
-        if it.get("color"):
-            felder.append(tag("g:color", str(it["color"])[:100]))
-        shipping_cents = merchant_shipping_cents(it, shipping_config)
-        if shipping_cents is None and frei_cents and float(it['price']) * 100 >= frei_cents:
-            shipping_cents = 0
-        if shipping_cents is not None:
+        groesse = size_specification(it, "de")
+        if groesse:
+            felder.append(tag("g:size", groesse[0][:100]))
+            if groesse[1]:
+                felder.append(tag("g:size_system", groesse[1]))
+        # Hoechstens drei Farben mit "/"; "Bunt" nur als einzige Angabe, dann
+        # als "Mehrfarbig" (Bekleidung ohne g:color lehnt Google ab).
+        farbe = i18n_text.merchant_color(it, "de")
+        if farbe:
+            felder.append(tag("g:color", farbe[:100]))
+        material = i18n_text.material_tr(it.get("material"), "de")
+        if material:
+            felder.append(tag("g:material", material[:200]))
+        versand_cents = shipping_cents(it)
+        if versand_cents is not None:
             felder.append('<g:shipping><g:country>DE</g:country><g:service>DHL Standard</g:service>'
-                          + tag('g:price', f'{shipping_cents / 100:.2f} EUR') + '</g:shipping>')
+                          + tag('g:price', f'{versand_cents / 100:.2f} EUR')
+                          + tag('g:min_handling_time', h_min) + tag('g:max_handling_time', h_max)
+                          + tag('g:min_transit_time', t_min) + tag('g:max_transit_time', t_max)
+                          + '</g:shipping>')
         entries.append("<item>" + "".join(felder) + "</item>")
     MERCHANT_FEED_PATH.parent.mkdir(parents=True, exist_ok=True)
     xml = (

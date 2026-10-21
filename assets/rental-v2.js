@@ -604,6 +604,18 @@
     return { days: days, rentTotal: rentTotal, depositTotal: depositTotal, unknown: unknown, buyWarning: buyWarning };
   }
 
+  // Titel in der Seitensprache (catalog.json: title_en/title_fr, beim Bauen
+  // notfalls aus dem deutschen Titel abgeleitet). Nur in dieser Kopie des
+  // Katalogs - Anfragen tragen zusaetzlich die Artikelnummer.
+  function titelDerSprache(items) {
+    if (LANG === "de" || !Array.isArray(items)) return items;
+    items.forEach(function (item) {
+      var lokal = item && item["title_" + LANG];
+      if (lokal) item.title = lokal;
+    });
+    return items;
+  }
+
   // Marke nur voranstellen, wenn der Titel nicht schon damit beginnt -
   // sonst hiess es "Alexander McQueen Alexander McQueen Jacke".
   function itemName(item) {
@@ -1014,7 +1026,7 @@
     fetch("/data/catalog.json", { credentials: "same-origin" })
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (items) {
-        catalog = Array.isArray(items) ? items : [];
+        catalog = Array.isArray(items) ? titelDerSprache(items) : [];
         catalog.forEach(function (item) { catalogMap[Number(item.id)] = item; });
         state.ids = state.ids.filter(function (id, index, all) { return all.indexOf(id) === index && !!catalogMap[id] && String(catalogMap[id].public_status || "").toUpperCase() !== "SOLD"; });
         saveState();

@@ -89,6 +89,9 @@ jobs:
           python scripts/validate_photo_sources.py
           python scripts/test_photo_sources.py
 
+      - name: Sprachtexte und interne Verlinkung testen
+        run: python scripts/test_i18n_text.py
+
       - name: Verifizierte Katalog-Quellfehler reparieren
         run: python scripts/repair_catalog_source_integrity.py
 
@@ -288,6 +291,12 @@ jobs:
 
       - name: Shop, SEO, Katalog und geschuetzte Modi pruefen
         run: python scripts/validate_shop.py
+
+      - name: EN/FR-Produkttitel und Farben pruefen
+        run: python scripts/validate_i18n_titles.py
+
+      - name: Produkt-SEO (JSON-LD, Feed, interne Links) pruefen
+        run: python scripts/validate_product_seo.py
 
       - name: Artikelnummern-URLs und alte Produktverweise pruefen
         run: |
