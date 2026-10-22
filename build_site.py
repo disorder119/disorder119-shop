@@ -2256,6 +2256,9 @@ def build_merchant_feed():
             tag("g:image_link", SITE_URL + gallery[0]),
         ] + [tag("g:additional_image_link", SITE_URL + g) for g in gallery[1:11]] + [
             tag("g:availability", "in_stock"),
+            # Meta-Shop (Instagram): ohne Bestandsangabe gelten Einzelstuecke als
+            # "ausverkauft" und sind nicht taggbar. Google ignoriert das Feld.
+            tag("g:quantity_to_sell_on_facebook", 1),
             tag("g:price", f'{float(it["price"]):.2f} EUR'),
             tag("g:condition", "new" if neu else "used"),
             tag("g:brand", it.get("brand") or "Disorder119"),
