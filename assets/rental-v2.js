@@ -1015,7 +1015,7 @@
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (items) {
         catalog = Array.isArray(items) ? items : [];
-        catalog.forEach(function (item) { catalogMap[Number(item.id)] = item; });
+        catalog.forEach(function (item) { if (LANG === "en" && item && item.title_en) item.title = item.title_en; catalogMap[Number(item.id)] = item; }); // title_en: build_site.py
         state.ids = state.ids.filter(function (id, index, all) { return all.indexOf(id) === index && !!catalogMap[id] && String(catalogMap[id].public_status || "").toUpperCase() !== "SOLD"; });
         saveState();
         refreshCardButtons();

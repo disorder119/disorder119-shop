@@ -176,7 +176,8 @@
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (liste) {
         var karte = {};
-        (liste || []).forEach(function (it) { karte[String(it.id)] = it; });
+        // Englisches Konto: englischer Titel (title_en aus build_site.py).
+        (liste || []).forEach(function (it) { if (LANG === "en" && it && it.title_en) it.title = it.title_en; karte[String(it.id)] = it; });
         return karte;
       })
       .catch(function () { return {}; });

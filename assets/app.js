@@ -106,6 +106,22 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   }
   var PATH_REST = PATH_LANG_MATCH ? PATH_LANG_MATCH[2] : location.pathname.replace(/^\//, "");
   function langHome(lang) { return lang === "de" ? "/" : "/" + lang + "/"; }
+  // Englischer Shop: englische Titel (title_en aus build_site.py) fuer
+  // Kacheln, Warenkorb, Match, Baukasten und Universum. Deutsch bleibt.
+  if (LANG === "en") ITEMS.forEach(function (it) { if (it && it.title_en) it.title = it.title_en; });
+  // Farbnamen fuer /en/ aus color/color_en derselben Artikel. Die Filterwerte
+  // bleiben die deutschen Farben, nur die Anzeige wird englisch.
+  var COLOR_EN = {};
+  if (LANG === "en") ITEMS.forEach(function (it) {
+    if (!it || !it.color || !it.color_en) return;
+    var de = String(it.color).split(","), en = String(it.color_en).split(",");
+    if (de.length !== en.length) return;
+    de.forEach(function (c, i) { if (c.trim() && en[i].trim()) COLOR_EN[c.trim()] = en[i].trim(); });
+  });
+  function trColor(color) {
+    if (LANG !== "en" || !color) return color || "";
+    return String(color).split(",").map(function (c) { return COLOR_EN[c.trim()] || c.trim(); }).join(", ");
+  }
 
   var I18N = {
     de: {
@@ -1489,7 +1505,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       if (c) colorSet[c] = true;
     });
   });
-  fillSelect(filterColorEl, Object.keys(colorSet).sort(function (a, b) { return a.localeCompare(b, "de"); }));
+  fillSelect(filterColorEl, Object.keys(colorSet).sort(function (a, b) { return a.localeCompare(b, "de"); }), trColor);
 
   var conditionSet = {};
   PUBLIC_ITEMS.forEach(function (it) { if (it.condition) conditionSet[it.condition] = true; });
@@ -1590,7 +1606,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     if (state.productType) filters.push({ key: "productType", label: t("activeFilterProductType"), value: trProductType(state.productType) });
     if (state.brand) filters.push({ key: "brand", label: t("activeFilterBrand"), value: state.brand });
     if (state.size) filters.push({ key: "size", label: t("activeFilterSize"), value: trSize(state.size) });
-    if (state.color) filters.push({ key: "color", label: t("activeFilterColor"), value: state.color });
+    if (state.color) filters.push({ key: "color", label: t("activeFilterColor"), value: trColor(state.color) });
     if (state.condition) filters.push({ key: "condition", label: t("activeFilterCondition"), value: trCondition(state.condition) });
     if (state.priceMin != null || state.priceMax != null) {
       var priceValue = (state.priceMin != null ? state.priceMin : "0") + "–" + (state.priceMax != null ? state.priceMax : "∞") + " €";
@@ -2119,7 +2135,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     var facts = [];
     if (it.category) facts.push([t("factCategory"), trCategory(it.category)]);
     if (it.size) facts.push([t("factSize"), trSize(it.size)]);
-    if (it.color) facts.push([t("factColor"), it.color]);
+    if (it.color) facts.push([t("factColor"), trColor(it.color)]);
     if (it.condition) facts.push([t("factCondition"), trCondition(it.condition)]);
     modalFacts.innerHTML = facts.map(function (f) {
       return '<div><div class="fact__label">' + escapeHtml(f[0]) + '</div><div class="fact__value">' + escapeHtml(f[1]) + "</div></div>";
@@ -2479,7 +2495,8 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     t: t,
     groesse: trSize,
     bereich: trDepartment,
-    erhaltung: trCondition
+    erhaltung: trCondition,
+    farbe: trColor
   };
 
   var menuLastFocusEl = null;

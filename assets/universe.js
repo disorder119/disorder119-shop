@@ -529,6 +529,8 @@
   }
 
   function start(items) {
+    // Englischer Shop: englischer Titel (title_en aus build_site.py).
+    if (LANG === "en") items.forEach(function (it) { if (it && it.title_en) it.title = it.title_en; });
     S.pool = items.filter(function (it) { return it && it.public_status === "AVAILABLE" && it.gallery && it.gallery[0]; });
     if (!S.pool.length) throw new Error("empty catalog");
     makeStars(); resize(); prewarm();

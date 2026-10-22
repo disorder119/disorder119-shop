@@ -49,7 +49,7 @@
     if (state.items) return state.items;
     try {
       var response=await fetch("/data/catalog.json",{cache:"no-store"}); if(!response.ok) throw new Error("catalog");
-      var raw=await response.json(); var list=Array.isArray(raw)?raw:(Array.isArray(raw.items)?raw.items:[]);
+      var raw=await response.json(); var list=Array.isArray(raw)?raw:(Array.isArray(raw.items)?raw.items:[]); if(/^\/en\//.test(location.pathname)) list.forEach(function(it){if(it&&it.title_en)it.title=it.title_en;}); /* title_en: build_site.py */
       state.items=list.filter(function(it){return String(it.public_status||"").toUpperCase()==="AVAILABLE" && slotFor(it) && ((it.grid_image&&String(it.grid_image))||(Array.isArray(it.gallery)&&it.gallery[0]));}).slice(0,320);
     } catch (_) { state.items=[]; }
     return state.items;

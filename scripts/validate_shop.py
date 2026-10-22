@@ -438,6 +438,54 @@ def validate_and_report() -> None:
     print("Shop-Invarianten: OK")
 
 
+def validate_english_pages() -> None:
+    """Englischer Shop ohne deutsche Titel und Knoepfe (22.10.2026: /en/ zeigte
+    "In den Warenkorb", "Jetzt kaufen" und Titel wie "Balmain Kunstfelljacke
+    Damen"). Die deutschen Seiten behalten den gepflegten Titel."""
+    import html as html_lib
+    sys.path.insert(0, str(BASE / "scripts"))
+    from english_titles import english_title, uebersetzter_titel
+
+    items = read_json(ITEMS_PATH)
+    catalog = {int(row["id"]): row for row in read_json(CATALOG_PATH)}
+    h1_re = re.compile(r"<h1>(.*?)</h1>", re.S)
+    deutsch = re.compile(r"\b(Damen|Herren|In den Warenkorb|Jetzt kaufen|Zum Archiv|Ohne Marke)\b")
+    rueckfall, seiten = [], 0
+    for item in items:
+        if item.get("public_status") == "DRAFT":
+            continue
+        slug = str(item.get("url_slug", item["id"]))
+        titel_en = english_title(item)
+        if deutsch.search(titel_en):
+            fail(f"Englischer Titel von {item['id']} enthaelt Deutsch: {titel_en}")
+        if uebersetzter_titel(item) is None:
+            rueckfall.append(str(item["id"]))
+        row = catalog.get(int(item["id"]))
+        if row is not None and row.get("title_en") != titel_en:
+            fail(f"catalog.json: title_en fehlt oder weicht ab bei {item['id']}")
+        for lang, erwartet in (("de", item.get("title") or ""), ("en", titel_en)):
+            page = (BASE if lang == "de" else BASE / lang) / "artikel" / slug / "index.html"
+            if not page.is_file():
+                fail(f"Produktseite fehlt: {page.relative_to(BASE)}")
+            text = page.read_text(encoding="utf-8")
+            match = h1_re.search(text)
+            if not match or html_lib.unescape(match.group(1)) != erwartet:
+                fail(f"{page.relative_to(BASE)}: <h1> ist nicht der erwartete Titel ({erwartet})")
+            if lang == "en":
+                sichtbar = text.split("window.ARTICLE_ITEM", 1)[0]
+                treffer = deutsch.search(re.sub(r"<script[^>]*>.*?</script>", "", sichtbar, flags=re.S))
+                if treffer:
+                    fail(f"{page.relative_to(BASE)}: deutscher Text im englischen Shop: {treffer.group(0)}")
+                if 'id="addToCartBtn"' in text and 'data-i18n="addToCart">Add to cart<' not in text:
+                    fail(f"{page.relative_to(BASE)}: Warenkorb-Knopf nicht englisch")
+                if 'id="buyNowBtn"' in text and 'data-i18n="buyNow">Buy now<' not in text:
+                    fail(f"{page.relative_to(BASE)}: Kaufen-Knopf nicht englisch")
+            seiten += 1
+    print(f"Englischer Shop: {seiten} Produktseiten geprueft (DE-Titel unveraendert, EN ohne deutsche Titel/Knoepfe); "
+          f"{len(rueckfall)} Titel aus Marke/Produktart/Bereich/Farbe abgeleitet"
+          + (f" (unbekannte Woerter, scripts/english_titles.py ergaenzen: {', '.join(rueckfall)})" if rueckfall else "") + ".")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--init-mode-guard", action="store_true")
@@ -448,6 +496,7 @@ def main() -> None:
     if not args.skip_mode_guard:
         validate_mode_guard()
     validate_and_report()
+    validate_english_pages()
 
 
 if __name__ == "__main__":
