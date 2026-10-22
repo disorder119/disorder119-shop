@@ -1569,7 +1569,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     updateFacetSelect(filterProductTypeEl, "productType", trProductType, "filterAllProductTypes");
     updateFacetSelect(filterBrandEl, "brand", function (v) { return v; }, "filterAllBrands");
     updateFacetSelect(filterSizeEl, "size", trSize, "filterAllSizes");
-    updateFacetSelect(filterColorEl, "color", function (v) { return v; }, "filterAllColors");
+    updateFacetSelect(filterColorEl, "color", trColor, "filterAllColors");
     updateFacetSelect(filterConditionEl, "condition", trCondition, "filterAllConditions");
   }
 
