@@ -234,28 +234,14 @@
       "title": "Balmain Kunstfelljacke Damen"
     }
   ],
-  "sizeConflictCount": 47,
+  "sizeConflictCount": 43,
   "sizeConflicts": [
     {
-      "id": 9524,
-      "article": "170",
-      "title": "Prada Bomberjacke Damen Schwarz",
-      "structuredSize": "XS",
-      "descriptionLabelSize": "S"
-    },
-    {
-      "id": 9513,
-      "article": "159",
-      "title": "Isaac Sellam Experience Hose Damen Weiß",
-      "structuredSize": "S",
-      "descriptionLabelSize": "Nicht eindeutig lesbar"
-    },
-    {
-      "id": 9510,
-      "article": "153",
-      "title": "Balenciaga SNCF Weste Damen Schwarz",
-      "structuredSize": "M / 38 / 10",
-      "descriptionLabelSize": "3"
+      "id": 9509,
+      "article": "152",
+      "title": "Prada Jacke Damen Hellblau",
+      "structuredSize": "S / IT 42",
+      "descriptionLabelSize": "IT 42"
     },
     {
       "id": 9508,
@@ -284,13 +270,6 @@
       "title": "Dior Monogramm-Gürtel Damen",
       "structuredSize": "80cm",
       "descriptionLabelSize": "80"
-    },
-    {
-      "id": 9493,
-      "article": "134",
-      "title": "Prada Stiefel Damen Schwarz",
-      "structuredSize": "37",
-      "descriptionLabelSize": "39"
     },
     {
       "id": 9489,
@@ -366,7 +345,7 @@
       "id": 9435,
       "article": "76",
       "title": "Prada Melierter Cardigan Damen",
-      "structuredSize": "M / 38 / 10",
+      "structuredSize": "M / IT 44",
       "descriptionLabelSize": "44"
     },
     {
@@ -408,7 +387,7 @@
       "id": 9400,
       "article": "62",
       "title": "Isabel Marant Kleid Damen Schwarz",
-      "structuredSize": "M / 38 / 10",
+      "structuredSize": "XS / 0",
       "descriptionLabelSize": "0"
     },
     {
@@ -480,13 +459,6 @@
       "title": "Walter Van Beirendonck Jeansrock Damen Blau",
       "structuredSize": "M / 38 / 10",
       "descriptionLabelSize": "M (Tag: W26)"
-    },
-    {
-      "id": 9414,
-      "article": "36",
-      "title": "Walter Van Beirendonck Jeans-Shorts Damen Blau",
-      "structuredSize": "M / 38 / 10",
-      "descriptionLabelSize": "M"
     },
     {
       "id": 9408,
