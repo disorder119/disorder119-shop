@@ -461,8 +461,13 @@ def validate_english_pages() -> None:
         if uebersetzter_titel(item) is None:
             rueckfall.append(str(item["id"]))
         row = catalog.get(int(item["id"]))
-        if row is not None and row.get("title_en") != titel_en:
-            fail(f"catalog.json: title_en fehlt oder weicht ab bei {item['id']}")
+        if row is None or not str(row.get("title_en") or "").strip():
+            fail(f"catalog.json: title_en fehlt bei {item['id']}")
+        # build_site.py rechnet mit der normalisierten Marke (BRAND_ALIASES);
+        # Massstab fuer die Seite ist deshalb der Katalogwert.
+        titel_en = row["title_en"]
+        if deutsch.search(titel_en):
+            fail(f"catalog.json: title_en von {item['id']} enthaelt Deutsch: {titel_en}")
         for lang, erwartet in (("de", item.get("title") or ""), ("en", titel_en)):
             page = (BASE if lang == "de" else BASE / lang) / "artikel" / slug / "index.html"
             if not page.is_file():

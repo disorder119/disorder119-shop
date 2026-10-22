@@ -204,6 +204,8 @@ def _wort(wort: str, marke: set[str]) -> str | None:
         return wort                       # "+", "&", Zahlen
     if re.search(r"\d", wort):
         return wort                       # Modellnummern wie "MA-1"
+    if re.fullmatch(r"[A-Z&.+'’-]{2,}", wort):
+        return wort                       # Kuerzel und Linien: "H&M", "SNCF", "DRKSHDW"
     if _schluessel(blank).strip(".+") in marke or _schluessel(wort) in marke:
         return wort
     ganz = _einzelwort(wort)
