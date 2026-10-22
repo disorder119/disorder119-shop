@@ -401,7 +401,11 @@ def item_color(it, lang="de"):
 
 def display_name(it, lang="de"):
     brand = it.get("brand") or ""
-    title = item_title(it, lang)
+    title = it.get("title") or ""
+    # Eigenstaendig fuer Deutsch: shop-worker/commerce-core.test.mjs fuehrt
+    # genau diese Funktion ohne den Rest des Moduls aus.
+    if lang == "en":
+        title = item_title(it, lang)
     # Steht die Marke schon irgendwo im Titel - etwa hinter einer Linie wie
     # "MM6 Maison Margiela" oder "Pierre Balmain" -, wird sie nicht noch
     # einmal vorangestellt. Sonst entstand "Maison Margiela MM6 Maison
