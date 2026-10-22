@@ -388,6 +388,7 @@
     fetch("/data/catalog.json", { credentials: "same-origin" })
       .then(function (response) { return response.ok ? response.json() : []; })
       .then(function (items) {
+        if (LANG === "en" && Array.isArray(items)) items.forEach(function (item) { if (item && item.title_en) item.title = item.title_en; }); // title_en: build_site.py
         catalog = Array.isArray(items) ? items.filter(function (item) { return String(item.public_status || "").toUpperCase() !== "SOLD"; }) : [];
         if (picker) renderPicker();
       })

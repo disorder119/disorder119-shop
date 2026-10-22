@@ -21,6 +21,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # erneut setzt, hat es jede Aenderung am Generator stillschweigend
 # ueberschrieben.
 from seo_text import compose_description  # noqa: E402
+# Englische Titel und desc_en ohne deutsche Reste - wie in build_site.py.
+from english_titles import english_description, english_title  # noqa: E402
 
 BASE = Path(__file__).resolve().parents[1]
 ITEMS_PATH = BASE / "data" / "items.json"
@@ -83,9 +85,13 @@ def tr(table: dict, value: str, lang: str) -> str:
     return (row or {}).get(lang) or (row or {}).get("de") or value or ""
 
 
-def display_name(item: dict) -> str:
+def item_title(item: dict, lang: str = "de") -> str:
+    return english_title(item) if lang == "en" else (item.get("title") or "")
+
+
+def display_name(item: dict, lang: str = "de") -> str:
     brand = item.get("brand") or ""
-    title = item.get("title") or ""
+    title = item_title(item, lang)
     # Wie build_site.display_name: steht die Marke schon im Titel ("MM6 Maison
     # Margiela", "Pierre Balmain"), wird sie nicht noch einmal vorangestellt.
     if brand and re.search(r"(?<!\w)" + re.escape(brand) + r"(?!\w)", title, re.I):
@@ -95,7 +101,7 @@ def display_name(item: dict) -> str:
 
 def meta_description(item: dict, lang: str) -> str:
     ph = META[lang]
-    name = display_name(item)
+    name = display_name(item, lang)
     if item.get("public_status") == "SOLD":
         return ph["sold"].format(name=name)
     parts: list[str] = []
@@ -109,6 +115,8 @@ def meta_description(item: dict, lang: str) -> str:
     prefix = name + ((" – " + ", ".join(parts)) if parts else "")
     eigener_text = {"de": item.get("desc_de") or item.get("desc"),
                     "en": item.get("desc_en"), "fr": item.get("desc_fr")}[lang]
+    if lang == "en" and eigener_text:
+        eigener_text = english_description(item, eigener_text)
     return compose_description(prefix, eigener_text, ph["suffix"], name)
 
 
@@ -168,10 +176,10 @@ def related_card(item: dict, lang: str) -> str:
     return (
         f'<a class="related-card" href="{prefix}artikel/{item.get("url_slug",item["id"])}/">'
         '<div class="related-card__frame">'
-        f'<img src="/{html.escape(hero, quote=True)}" alt="{html.escape(display_name(item), quote=True)}" loading="lazy" decoding="async" width="220" height="293" />'
+        f'<img src="/{html.escape(hero, quote=True)}" alt="{html.escape(display_name(item, lang), quote=True)}" loading="lazy" decoding="async" width="220" height="293" />'
         + price + "</div>"
         f'<span class="related-card__brand">{html.escape(item.get("brand") or "")}</span>'
-        f'<span class="related-card__title">{html.escape(item.get("title") or "")}</span>'
+        f'<span class="related-card__title">{html.escape(item_title(item, lang))}</span>'
         + price_line + "</a>"
     )
 

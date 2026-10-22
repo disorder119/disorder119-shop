@@ -235,7 +235,7 @@
     fetch("/data/catalog.json", { credentials: "same-origin" })
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (items) {
-        if (Array.isArray(items)) items.forEach(function (item) { catalogMap[Number(item.id)] = item; });
+        if (Array.isArray(items)) items.forEach(function (item) { if (LANG === "en" && item && item.title_en) item.title = item.title_en; catalogMap[Number(item.id)] = item; }); // title_en: build_site.py
         scheduleEnhance();
       })
       .catch(function () { scheduleEnhance(); });

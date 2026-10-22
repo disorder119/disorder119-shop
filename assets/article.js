@@ -7,6 +7,27 @@
   function initializeArticle() {
   "use strict";
 
+  // Die Artikeldaten stehen als JSON in einem Inline-Skript, das der
+  // Storefront-Worker per Hash in der Content-Security-Policy freigibt.
+  // Veraendert unterwegs etwas den Text (Proxy, Uebersetzer, ein
+  // Aufnahme-Werkzeug, das Titel ersetzt), passt der Hash nicht mehr, der
+  // Browser blockiert das Skript - und bisher fehlten dann Warenkorb, Kaufen
+  // und alle Uebersetzungen (am 22.10. auf /en/ in einer Aufnahme gesehen).
+  // Dann die Daten aus dem Text lesen: nur JSON.parse, nichts wird ausgefuehrt.
+  function seitenDatenLesen() {
+    var namen = { ARTICLE_ITEM: true, ARTICLE_SHOP_CONFIG: true, ARTICLE_LANG: true };
+    var skripte = Array.prototype.filter.call(document.querySelectorAll("script:not([src])"), function (s) {
+      return !s.type && /^\s*window\.ARTICLE_ITEM\s*=/.test(s.textContent || "");
+    });
+    var quelle = skripte[skripte.length - 1];
+    if (!quelle) return;
+    String(quelle.textContent).split("\n").forEach(function (zeile) {
+      var m = /^\s*window\.([A-Z_]+)\s*=\s*([\s\S]*?);\s*$/.exec(zeile);
+      if (!m || !namen[m[1]] || window[m[1]] !== undefined) return;
+      try { window[m[1]] = JSON.parse(m[2]); } catch (e) { /* bleibt leer */ }
+    });
+  }
+  if (!window.ARTICLE_ITEM) seitenDatenLesen();
   var IT = window.ARTICLE_ITEM;
   if (!IT) return;
   var SHOP_CONFIG = window.ARTICLE_SHOP_CONFIG || { whatsappNumber: "", email: "" };
@@ -21,7 +42,7 @@
   // bestimmt also die Sprache verbindlich (window.ARTICLE_LANG, von
   // build_page() in build_site.py gesetzt) - nicht mehr localStorage, das
   // sonst z.B. eine EN-URL faelschlich auf Deutsch rendern wuerde.
-  var LANG = window.ARTICLE_LANG || "de";
+  var LANG = window.ARTICLE_LANG || (/^\/(en|fr)\//.exec(location.pathname) || [])[1] || "de";
 
   var I18N = {
     de: {
@@ -481,11 +502,22 @@
   function versandPreisText(cents) {
     return cents === 0 ? t("shipFree") : fmtPrice(cents / 100);
   }
+  // Tarifnamen kommen vom Server auf Deutsch (config/shop-config.json);
+  // /en/ und /fr/ zeigen sie in der Seitensprache.
+  var VERSAND_TITEL = {
+    en: { "DHL Paket": "DHL Parcel", "DHL Paket mit Höherversicherung": "DHL Parcel with extra insurance" },
+    fr: { "DHL Paket": "DHL Colis", "DHL Paket mit Höherversicherung": "DHL Colis avec assurance complémentaire" }
+  };
+  function versandTitel(o) {
+    var titel = (o && o.titel) || "";
+    return (VERSAND_TITEL[LANG] && VERSAND_TITEL[LANG][titel]) || titel;
+  }
   function versandName(o) {
-    if (o.art === "express") return o.titel + (o.carrier ? " (" + o.carrier + ")" : "");
+    var titel = versandTitel(o);
+    if (o.art === "express") return titel + (o.carrier ? " (" + o.carrier + ")" : "");
     // "DHL Paket" bzw. "DHL Paket mit Höherversicherung" statt zweimal "DHL".
-    if (o.titel && o.carrier && o.titel.indexOf(o.carrier) === 0) return o.titel;
-    return o.carrier || o.titel;
+    if (titel && o.carrier && titel.indexOf(o.carrier) === 0) return titel;
+    return o.carrier || titel;
   }
   // "Mo., 12.10." - das Datum rechnet der Worker (Werktage, Feiertage in
   // Bayern, deutsche Zeit, shop-worker/lieferzeit.js); hier nur formatiert.
@@ -780,7 +812,7 @@
         });
         var nameEl = document.createElement("span");
         nameEl.className = "checkout-versand__name";
-        nameEl.textContent = opt.titel;
+        nameEl.textContent = versandTitel(opt);
         var meta = [opt.carrier, versandTage(opt)].filter(Boolean).join(" · ");
         if (meta) {
           var klein = document.createElement("small");
@@ -799,7 +831,7 @@
       sperrHinweis.hidden = !gesperrt;
       sperrHinweis.textContent = gesperrt ? tFormat("shipLocked", { zeit: uhrzeit(versandZustand.gesperrtBis) }) : "";
       if (o) {
-        versandZeile.dt.textContent = t("checkoutShipping") + " · " + o.titel;
+        versandZeile.dt.textContent = t("checkoutShipping") + " · " + versandTitel(o);
         versandZeile.dd.textContent = versandPreisText(o.preisCents);
         gesamtZeile.dd.textContent = fmtPrice(IT.price + o.preisCents / 100);
       } else {

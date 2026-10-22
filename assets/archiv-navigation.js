@@ -608,7 +608,7 @@
     });
     var farben = Object.keys(fn).sort(function (a, b) { return fn[b] - fn[a] || a.localeCompare(b, "de"); });
     if (farben.length) {
-      innen.appendChild(einfacheGruppe(tx("farbe"), "color", "filterColor", farben, fn, z.color, null, {
+      innen.appendChild(einfacheGruppe(tx("farbe"), "color", "filterColor", farben, fn, z.color, api.farbe || null, {
         punkt: function (f) { return FARBEN[f] || "linear-gradient(135deg,#e04b4b,#e8c33a,#3aa35b,#3a6fd6)"; }
       }).gruppe);
     }

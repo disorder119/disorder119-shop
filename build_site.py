@@ -31,6 +31,10 @@ sys.path.insert(0, str(BASE / "scripts"))
 from sync_legal_content import sync_legal_content
 sync_legal_content(BASE)
 from seo_text import compose_description, seo_title  # noqa: E402
+# Englische Titel/Farben fuer /en/ (Wort-fuer-Wort aus dem deutschen Titel,
+# sonst Marke + Produktart + Bereich + Farbe) - geteilt mit
+# scripts/repair_public_article_integrity.py.
+from english_titles import english_description, english_title, farbe_en  # noqa: E402
 SITE_URL = "https://disorder119.com/"
 DATA_PATH = BASE / "data" / "items.json"
 
@@ -377,9 +381,31 @@ def fmt_price_de(v):
     return s + " €"
 
 
-def display_name(it):
+def item_title(it, lang="de"):
+    """Sichtbarer Artikeltitel: im englischen Shop englisch, sonst der
+    gepflegte (deutsche) Titel aus data/items.json."""
+    return english_title(it) if lang == "en" else (it.get("title") or "")
+
+
+def item_description(it, lang):
+    """Eigener Beschreibungstext der Sprache; im EN-Shop ohne deutsche
+    Titel-/Farbreste (english_description)."""
+    text = {"de": it.get("desc_de") or it.get("desc"), "en": it.get("desc_en"), "fr": it.get("desc_fr")}[lang]
+    return english_description(it, text) if lang == "en" and text else text
+
+
+def item_color(it, lang="de"):
+    farbe = it.get("color") or ""
+    return (farbe_en(farbe) or farbe) if lang == "en" else farbe
+
+
+def display_name(it, lang="de"):
     brand = it.get("brand") or ""
     title = it.get("title") or ""
+    # Eigenstaendig fuer Deutsch: shop-worker/commerce-core.test.mjs fuehrt
+    # genau diese Funktion ohne den Rest des Moduls aus.
+    if lang == "en":
+        title = item_title(it, lang)
     # Steht die Marke schon irgendwo im Titel - etwa hinter einer Linie wie
     # "MM6 Maison Margiela" oder "Pierre Balmain" -, wird sie nicht noch
     # einmal vorangestellt. Sonst entstand "Maison Margiela MM6 Maison
@@ -403,7 +429,7 @@ def title_size(it, lang):
 def meta_description(it, lang):
     ph = META_PHRASES[lang]
     cat = cat_tr(it.get("category") or "", lang)
-    name = display_name(it)
+    name = display_name(it, lang)
     if it.get("public_status") == "SOLD":
         return ph["sold"].format(name=name)
     tail = []
@@ -413,8 +439,7 @@ def meta_description(it, lang):
         tail.append(ph["size_label"] + " " + size_tr(it["size"], lang))
     tail_str = ", ".join(tail)
     prefix = (name + " – " + tail_str) if tail_str else name
-    eigener_text = {"de": it.get("desc_de") or it.get("desc"),
-                    "en": it.get("desc_en"), "fr": it.get("desc_fr")}[lang]
+    eigener_text = item_description(it, lang)
     return compose_description(prefix, eigener_text, ph["tail_suffix"], name)
 
 
@@ -425,7 +450,7 @@ def auto_description(it, lang):
         facts.append(cat_tr(it["category"], lang))
     if it.get("size"):
         facts.append(ph["size_label"] + " " + size_tr(it["size"], lang))
-    name = display_name(it)
+    name = display_name(it, lang)
     tail = (" – " + ", ".join(facts)) if facts else ""
     return name + tail + ph["auto_suffix"]
 
@@ -473,11 +498,11 @@ def related_card_html(x, lang):
         # Hauptbilds - und verzoegerte dessen Ladestart um 1892 ms. Das
         # ohnehin vorhandene Vorschaubild (220x293) hat genau die richtige
         # Groesse. width/height reservieren zusaetzlich den Platz.
-        '<img src="/' + esc(card_image(x)) + '" alt="' + esc(display_name(x)) + '" loading="lazy" decoding="async" width="220" height="293" />' +
+        '<img src="/' + esc(card_image(x)) + '" alt="' + esc(display_name(x, lang)) + '" loading="lazy" decoding="async" width="220" height="293" />' +
         (price_html if sold else "") +
         "</div>"
         '<span class="related-card__brand">' + esc(x.get("brand") or ph["no_brand"]) + "</span>"
-        '<span class="related-card__title">' + esc(x["title"]) + "</span>" +
+        '<span class="related-card__title">' + esc(item_title(x, lang)) + "</span>" +
         price_line +
         "</a>"
     )
@@ -511,7 +536,7 @@ def related_sections_html(it, lang):
 def facts_html(it, lang):
     labels = {
         "de": {"category": "Kategorie", "size": "Größe", "color": "Farbe", "condition": "Zustand", "article": "Artikelnummer"},
-        "en": {"category": "Category", "size": "Size", "color": "Color", "condition": "Condition", "article": "Article number"},
+        "en": {"category": "Category", "size": "Size", "color": "Colour", "condition": "Condition", "article": "Article number"},
         "fr": {"category": "Catégorie", "size": "Taille", "color": "Couleur", "condition": "État", "article": "Numéro d’article"},
     }[lang]
     facts = []
@@ -520,7 +545,7 @@ def facts_html(it, lang):
     if it.get("size"):
         facts.append(('factSize', labels["size"], "factSizeValue", size_tr(it["size"], lang)))
     if it.get("color"):
-        facts.append(('factColor', labels["color"], None, it["color"]))
+        facts.append(('factColor', labels["color"], None, item_color(it, lang)))
     out = []
     for i18n_key, label, value_id, value in facts:
         value_attr = f' id="{value_id}"' if value_id else ""
@@ -533,18 +558,64 @@ def facts_html(it, lang):
     return "".join(out)
 
 
-def price_block_html(it):
+# Texte der Produktseite, die assets/article.js nach dem Start ueber
+# data-i18n setzt (I18N dort). Sie stehen schon im ausgelieferten HTML in der
+# Seitensprache: Vorher zeigte /en/ bis zum Skriptstart - und ganz ohne
+# Skript - "In den Warenkorb" und "Jetzt kaufen". Wortlaut wie in article.js,
+# damit beim Start nichts springt; Deutsch ist unveraendert.
+ARTIKEL_UI = {
+    "de": {
+        "langGroupAria": "Sprache wählen", "backToArchive": "← Zum Archiv", "cartLink": "Warenkorb",
+        "prevPhotoAria": "Vorheriges Foto", "nextPhotoAria": "Nächstes Foto", "closeAria": "Schließen",
+        "priceOnRequest": "Preis auf Anfrage", "priceEstimatedPrefix": "ca. ", "priceEstimatedBadge": "Preis wird geprüft",
+        "soldNote": "Dieses Stück ist bereits verkauft und bleibt als Teil des Disorder119-Archivs sichtbar.",
+        "addToCart": "In den Warenkorb", "buyNow": "Jetzt kaufen",
+        "inquireWhatsapp": "Anfrage per WhatsApp", "inquireEmail": "Anfrage per E-Mail",
+        "configWarning": "Shop-Kontakt noch nicht eingerichtet: WhatsApp-Nummer oder E-Mail-Adresse fehlen in SHOP_CONFIG (index.html).",
+        "footerNote": "Disorder119 · Kuratiertes Archiv für Designer-, Vintage- und Contemporary-Mode. Jedes Stück wird einzeln ausgewählt, fotografiert und beschrieben.",
+        "footerFullArchive": "Zum vollständigen Archiv", "noBrand": "Ohne Marke",
+    },
+    "en": {
+        "langGroupAria": "Choose language", "backToArchive": "← To the archive", "cartLink": "Cart",
+        "prevPhotoAria": "Previous photo", "nextPhotoAria": "Next photo", "closeAria": "Close",
+        "priceOnRequest": "Price on request", "priceEstimatedPrefix": "approx. ", "priceEstimatedBadge": "Price being confirmed",
+        "soldNote": "This piece has already been sold and remains visible as part of the Disorder119 archive.",
+        "addToCart": "Add to cart", "buyNow": "Buy now",
+        "inquireWhatsapp": "Enquire via WhatsApp", "inquireEmail": "Enquire via e-mail",
+        "configWarning": "Shop contact not set up yet: WhatsApp number or e-mail address missing in SHOP_CONFIG (index.html).",
+        "footerNote": "Disorder119 · Curated archive for designer, vintage and contemporary fashion. Every piece is individually selected, photographed and described.",
+        "footerFullArchive": "To the full archive", "noBrand": "No brand",
+    },
+    "fr": {
+        "langGroupAria": "Choisir la langue", "backToArchive": "← Vers l'archive", "cartLink": "Panier",
+        "prevPhotoAria": "Photo précédente", "nextPhotoAria": "Photo suivante", "closeAria": "Fermer",
+        "priceOnRequest": "Prix sur demande", "priceEstimatedPrefix": "env. ", "priceEstimatedBadge": "Prix en cours de vérification",
+        "soldNote": "Cette pièce est déjà vendue et reste visible comme partie de l'archive Disorder119.",
+        "addToCart": "Ajouter au panier", "buyNow": "Acheter",
+        "inquireWhatsapp": "Demande par WhatsApp", "inquireEmail": "Demande par e-mail",
+        "configWarning": "Le contact de la boutique n'est pas encore configuré : numéro WhatsApp ou e-mail manquant dans SHOP_CONFIG (index.html).",
+        "footerNote": "Disorder119 · Archive sélectionnée pour la mode de créateurs, vintage et contemporaine. Chaque pièce est choisie, photographiée et décrite individuellement.",
+        "footerFullArchive": "Vers l'archive complète", "noBrand": "Sans marque",
+    },
+}
+
+
+def ui(lang, key):
+    return ARTIKEL_UI.get(lang, ARTIKEL_UI["de"])[key]
+
+
+def price_block_html(it, lang="de"):
     sold = it.get("public_status") == "SOLD"
     if sold:
         return '<div class="info__badge info__badge--sold">SOLD — DISORDER119 ARCHIVE</div>'
     if it.get("price_estimated"):
         return (
-            '<div class="info__price">ca. ' + fmt_price_de(it["price"]) + "</div>"
-            '<div class="info__badge info__badge--estimate">Preis wird geprüft</div>'
+            '<div class="info__price">' + esc(ui(lang, "priceEstimatedPrefix")) + fmt_price_de(it["price"]) + "</div>"
+            '<div class="info__badge info__badge--estimate">' + esc(ui(lang, "priceEstimatedBadge")) + "</div>"
         )
     if it.get("price", 0) > 0:
         return '<div class="info__price">' + fmt_price_de(it["price"]) + "</div>"
-    return '<div class="info__price">Preis auf Anfrage</div>'
+    return '<div class="info__price">' + esc(ui(lang, "priceOnRequest")) + "</div>"
 
 
 PAYPAL_VORSCHAU_TEXT = {
@@ -587,7 +658,7 @@ def euro_text(cents, lang):
 def cta_html(it, shop_config, home, lang):
     sold = it.get("public_status") == "SOLD"
     if sold:
-        return '<p class="info__note" id="soldNote">Dieses Stück ist bereits verkauft und bleibt als Teil des Disorder119-Archivs sichtbar.</p>'
+        return '<p class="info__note" id="soldNote">' + esc(ui(lang, "soldNote")) + '</p>'
     has_price = it.get("price", 0) > 0
     paypal_ready = (
         bool((shop_config.get("features") or {}).get("paypalCheckout"))
@@ -596,14 +667,14 @@ def cta_html(it, shop_config, home, lang):
     )
     parts = ['<div class="info__cta">']
     if has_price:
-        parts.append('<button type="button" class="btn" id="addToCartBtn" data-i18n="addToCart">In den Warenkorb</button>')
+        parts.append('<button type="button" class="btn" id="addToCartBtn" data-i18n="addToCart">' + esc(ui(lang, "addToCart")) + '</button>')
     if has_price and not paypal_ready:
         parts.append(paypal_vorschau_html(lang))
     if has_price and paypal_ready:
         # Gekauft wird in der Kasse (/kasse/?artikel=<id>): Lieferadresse mit
         # Vorschlaegen, Versandart und PayPal - derselbe Weg wie fuer mehrere
         # Stuecke aus dem Warenkorb (build_checkout_pages, assets/kasse.js).
-        parts.append('<a class="btn btn--buy" id="buyNowBtn" href="' + home + 'kasse/?artikel=' + str(it["id"]) + '" data-i18n="buyNow">Jetzt kaufen</a>')
+        parts.append('<a class="btn btn--buy" id="buyNowBtn" href="' + home + 'kasse/?artikel=' + str(it["id"]) + '" data-i18n="buyNow">' + esc(ui(lang, "buyNow")) + '</a>')
     # Kundennachricht und Anfrage per WhatsApp/E-Mail nur noch, wenn online
     # nicht bezahlt werden kann (Inhaber 08.10.2026: Produktseite ohne
     # Anfrage-Knoepfe; Warenkorb und Kontakt bleiben).
@@ -623,8 +694,8 @@ def cta_html(it, shop_config, home, lang):
     if anfrage_noetig:
         whatsapp_hidden = "" if shop_config.get("whatsappNumber") else ' style="display:none"'
         email_hidden = "" if shop_config.get("email") else ' style="display:none"'
-        parts.append('<a class="btn btn--outline" id="inquireWhatsapp" target="_blank" rel="noopener" data-i18n="inquireWhatsapp"' + whatsapp_hidden + '>Anfrage per WhatsApp</a>')
-        parts.append('<a class="btn btn--outline" id="inquireEmail" data-i18n="inquireEmail"' + email_hidden + '>Anfrage per E-Mail</a>')
+        parts.append('<a class="btn btn--outline" id="inquireWhatsapp" target="_blank" rel="noopener" data-i18n="inquireWhatsapp"' + whatsapp_hidden + '>' + esc(ui(lang, "inquireWhatsapp")) + '</a>')
+        parts.append('<a class="btn btn--outline" id="inquireEmail" data-i18n="inquireEmail"' + email_hidden + '>' + esc(ui(lang, "inquireEmail")) + '</a>')
     parts.append("</div>")
     # Kein "Auch mietbar"-Knopf mehr auf jeder Produktseite (Inhaber
     # 08.10.2026): Der Mietbereich /mieten/ bleibt, /mieten/?item=<id>
@@ -664,7 +735,7 @@ def cta_html(it, shop_config, home, lang):
     parts.append('<p class="info__note">' + esc(note_text) + '</p>')
     parts.append(product_data_gap_html(it, lang))
     if not shop_config["whatsappNumber"] and not shop_config["email"]:
-        parts.append('<p class="info__config-warning" data-i18n="configWarning">Shop-Kontakt noch nicht eingerichtet: WhatsApp-Nummer oder E-Mail-Adresse fehlen in SHOP_CONFIG (index.html).</p>')
+        parts.append('<p class="info__config-warning" data-i18n="configWarning">' + esc(ui(lang, "configWarning")) + '</p>')
     return "".join(parts)
 
 
@@ -672,12 +743,12 @@ def json_ld(it, lang):
     status = it.get("public_status") or "DRAFT"
     sold = status == "SOLD"
     url = SITE_URL.rstrip("/") + lang_home(lang) + "artikel/" + str(it.get("url_slug", it["id"])) + "/"
-    desc_field = {"de": it.get("desc_de") or it.get("desc"), "en": it.get("desc_en"), "fr": it.get("desc_fr")}[lang]
+    desc_field = item_description(it, lang)
     data = {
         "@context": "https://schema.org",
         "@type": "Product",
         "@id": url + "#product",
-        "name": display_name(it),
+        "name": display_name(it, lang),
         "url": url,
         "image": [SITE_URL + g for g in it.get("gallery") or []],
         "description": (desc_field or meta_description(it, lang))[:500],
@@ -690,7 +761,7 @@ def json_ld(it, lang):
     if it.get("category"):
         data["category"] = cat_tr(it["category"], lang)
     if it.get("color"):
-        data["color"] = it["color"]
+        data["color"] = item_color(it, lang)
     if it.get("size"):
         data["size"] = size_tr(it["size"], lang)
     if not sold and it.get("price", 0) > 0:
@@ -752,7 +823,7 @@ def breadcrumb_json_ld(it, lang):
         "@type": "BreadcrumbList",
         "itemListElement": [
             {"@type": "ListItem", "position": 1, "name": labels.get(lang, "Archiv"), "item": home_url},
-            {"@type": "ListItem", "position": 2, "name": display_name(it), "item": product_url},
+            {"@type": "ListItem", "position": 2, "name": display_name(it, lang), "item": product_url},
         ],
     }
     return json.dumps(data, ensure_ascii=False)
@@ -789,14 +860,10 @@ def card_image(it):
 
 
 def build_page(it, shop_config, lang):
-    name = display_name(it)
+    name = display_name(it, lang)
     title_tag = seo_title(name, it.get("product_type"), title_size(it, lang), lang)
     desc = meta_description(it, lang)
-    raw_body_desc = {
-        "de": it.get("desc_de") or it.get("desc") or "",
-        "en": it.get("desc_en") or "",
-        "fr": it.get("desc_fr") or "",
-    }[lang]
+    raw_body_desc = item_description(it, lang) or ""
     body_desc = raw_body_desc.strip() or auto_description(it, lang)
     gallery = it.get("gallery") or []
     hero = gallery[0] if gallery else "assets/favicon.png"
@@ -849,7 +916,7 @@ def build_page(it, shop_config, lang):
         "id": it["id"],
         "article": it.get("article"),
         "url_slug": it.get("url_slug", str(it["id"])),
-        "title": it["title"],
+        "title": item_title(it, lang),
         "brand": it.get("brand"),
         "size": it.get("size"),
         "color": it.get("color"),
@@ -857,7 +924,7 @@ def build_page(it, shop_config, lang):
         "category": it.get("category"),
         "desc": it.get("desc") or "",
         "desc_de": it.get("desc_de") or it.get("desc") or "",
-        "desc_en": it.get("desc_en") or "",
+        "desc_en": (item_description(it, "en") if lang == "en" else it.get("desc_en")) or "",
         "desc_fr": it.get("desc_fr") or "",
         "gallery": gallery,
         "thumbs": [thumb_path(g) for g in gallery],
@@ -918,13 +985,13 @@ def build_page(it, shop_config, lang):
   <a class="page-head__menu" href="{home}" aria-label="{esc(product_nav_copy['menu_aria'])}"><span></span><span></span><span></span></a>
   <a class="page-head__brand" href="{home}">DISORDER119</a>
   <div class="page-head__right">
-    <div class="lang-switch" id="langSwitch" role="group" aria-label="Sprache wählen">
+    <div class="lang-switch" id="langSwitch" role="group" aria-label="{esc(ui(lang, 'langGroupAria'))}">
       <a class="lang-switch__btn" data-lang="de" href="/artikel/{it.get('url_slug', it['id'])}/">DE</a>
       <a class="lang-switch__btn" data-lang="en" href="/en/artikel/{it.get('url_slug', it['id'])}/">EN</a>
       <a class="lang-switch__btn" data-lang="fr" href="/fr/artikel/{it.get('url_slug', it['id'])}/">FR</a>
     </div>
-    <a class="page-head__back" href="{home}" data-i18n="backToArchive">← Zum Archiv</a>
-    <a class="page-head__cart" id="pageHeadCart" href="{home}cart/"><span data-i18n="cartLink">Warenkorb</span><span class="page-head__cart-count" id="pageHeadCartCount"></span></a>
+    <a class="page-head__back" href="{home}" data-i18n="backToArchive">{esc(ui(lang, 'backToArchive'))}</a>
+    <a class="page-head__cart" id="pageHeadCart" href="{home}cart/"><span data-i18n="cartLink">{esc(ui(lang, 'cartLink'))}</span><span class="page-head__cart-count" id="pageHeadCartCount"></span></a>
   </div>
 </div>
 <nav class="article-sequence-nav" aria-label="{esc(product_nav_copy['nav_aria'])}">
@@ -940,16 +1007,16 @@ def build_page(it, shop_config, lang):
         <source media="(max-width: 600px)" srcset="/{esc(hero_mobile)}">
       <img id="galleryMain" src="/{esc(hero_display)}" alt="{esc(name)}" fetchpriority="high" decoding="sync">
       </picture>
-      <button type="button" class="gallery__nav gallery__nav--prev" id="galleryPrev" data-i18n-aria="prevPhotoAria" aria-label="Vorheriges Foto">‹</button>
-      <button type="button" class="gallery__nav gallery__nav--next" id="galleryNext" data-i18n-aria="nextPhotoAria" aria-label="Nächstes Foto">›</button>
+      <button type="button" class="gallery__nav gallery__nav--prev" id="galleryPrev" data-i18n-aria="prevPhotoAria" aria-label="{esc(ui(lang, 'prevPhotoAria'))}">‹</button>
+      <button type="button" class="gallery__nav gallery__nav--next" id="galleryNext" data-i18n-aria="nextPhotoAria" aria-label="{esc(ui(lang, 'nextPhotoAria'))}">›</button>
       <span class="gallery__counter" id="galleryCounter">1 / {max(len(gallery), 1)}</span>
     </div>
     <div class="gallery__thumbs{' gallery__thumbs--reserved' if len(gallery) > 1 else ''}" id="galleryThumbs"></div>
   </div>
   <div class="info">
-    <a class="info__brand" href="{home}?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or "Ohne Marke")}</a>
-    <h1>{esc(it["title"])}</h1>
-    <div id="priceBlock">{price_block_html(it)}</div>
+    <a class="info__brand" href="{home}?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or ui(lang, "noBrand"))}</a>
+    <h1>{esc(item_title(it, lang))}</h1>
+    <div id="priceBlock">{price_block_html(it, lang)}</div>
     <div class="info__facts">{facts_html(it, lang)}</div>
     <p class="info__desc" id="itemDesc">{esc(body_desc)}</p>
     <p class="info__gebraucht" data-zustand-hinweis>{esc(GEBRAUCHT_HINWEIS[lang])}</p>
@@ -959,12 +1026,12 @@ def build_page(it, shop_config, lang):
 {related_sections_html(it, lang)}
 <div class="page-foot">
   <div data-d119-newsletter data-quelle="artikel"></div>
-  <p data-i18n="footerNote">Disorder119 · Kuratiertes Archiv für Designer-, Vintage- und Contemporary-Mode. Jedes Stück wird einzeln ausgewählt, fotografiert und beschrieben.</p>
-  <p><a href="{home}" data-i18n="footerFullArchive">Zum vollständigen Archiv</a></p>
+  <p data-i18n="footerNote">{esc(ui(lang, 'footerNote'))}</p>
+  <p><a href="{home}" data-i18n="footerFullArchive">{esc(ui(lang, 'footerFullArchive'))}</a></p>
   {artikel_recht_nav(home, lang)}
 </div>
 <div class="lightbox" id="lightbox">
-  <button type="button" class="lightbox__close" id="lightboxClose" data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
+  <button type="button" class="lightbox__close" id="lightboxClose" data-i18n-aria="closeAria" aria-label="{esc(ui(lang, 'closeAria'))}">✕</button>
   <img id="lightboxImg" src="" alt="">
 </div>
 {paypal_sdk_tag}<script>
@@ -1202,8 +1269,8 @@ def grid_thumb_path(it):
     return candidate if (BASE / candidate).is_file() else hero
 
 
-def initial_archive_alt(it):
-    title = str(it.get("title") or "").strip()
+def initial_archive_alt(it, lang="de"):
+    title = str(item_title(it, lang) or "").strip()
     brand = str(it.get("brand") or "").strip()
     if not brand or title.lower().startswith(brand.lower()):
         return title
@@ -1238,7 +1305,7 @@ def initial_archive_card_html(it, lang):
             source = '<source media="(max-width: 600px)" srcset="/' + esc(mobile) + '">'
         picture = (
             '<picture>' + source
-            + '<img src="/' + esc(desktop) + '" alt="' + esc(initial_archive_alt(it))
+            + '<img src="/' + esc(desktop) + '" alt="' + esc(initial_archive_alt(it, lang))
             + '" loading="eager" fetchpriority="high" decoding="sync">'  # FOCUS3_MEASURED_LCP_FOLLOWUP
             + '</picture>'
         )
@@ -1249,7 +1316,7 @@ def initial_archive_card_html(it, lang):
         + '<div class="plate__body">'
         + '<button type="button" class="plate__brand" data-brand-filter>'
         + esc(it.get("brand") or ph["no_brand"]) + '</button>'
-        + '<span class="plate__title">' + esc(it.get("title") or "") + '</span>'
+        + '<span class="plate__title">' + esc(item_title(it, lang)) + '</span>'
         + (('<span class="plate__size">' + esc(size_label) + '</span>') if size_label else "")
         + '<div class="plate__row"><span class="plate__price">' + esc(price_text) + '</span></div>'
         + '</div></a>'
@@ -2163,6 +2230,12 @@ def build_catalog_json():
         hell = foto_hell(row.get("grid_image"))
         if hell:
             row["foto_hell"] = hell
+        # Englischer Titel fuer /en/ (Kacheln, Warenkorb, Kasse, Match,
+        # Baukasten, Universum): die Skripte nehmen ihn dort statt "title".
+        row["title_en"] = english_title(it)
+        farbe = farbe_en(it.get("color") or "")
+        if farbe:
+            row["color_en"] = farbe
     CATALOG_PATH.write_text(
         json.dumps(catalog, ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",

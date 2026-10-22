@@ -292,6 +292,8 @@
         // sie auch die Adresse der Produktseite ist - wie merchant_id in build_site.py).
         var nachId = {};
         katalog.forEach(function (it) {
+          // Englische Kasse: englischer Titel (title_en aus build_site.py).
+          if (LANG === "en" && it.title_en) it.title = it.title_en;
           nachId[String(it.id)] = it;
           var nummer = String(it.article || "").trim();
           if (nummer && String(it.url_slug || "") === nummer && !nachId[nummer]) nachId[nummer] = it;
@@ -384,10 +386,21 @@
     var text = String(euro).replace(/\B(?=(\d{3})+(?!\d))/g, LANG === "en" ? "," : LANG === "fr" ? " " : ".");
     return LANG === "en" ? "€" + text : text + " €";
   }
+  // Tarifnamen kommen vom Server auf Deutsch (config/shop-config.json);
+  // /en/ und /fr/ zeigen sie in der Seitensprache.
+  var VERSAND_TITEL = {
+    en: { "DHL Paket": "DHL Parcel", "DHL Paket mit Höherversicherung": "DHL Parcel with extra insurance" },
+    fr: { "DHL Paket": "DHL Colis", "DHL Paket mit Höherversicherung": "DHL Colis avec assurance complémentaire" }
+  };
+  function versandTitel(o) {
+    var titel = (o && o.titel) || "";
+    return (VERSAND_TITEL[LANG] && VERSAND_TITEL[LANG][titel]) || titel;
+  }
   // "DHL Paket" statt "DHL DHL Paket": den Paketdienst nur nennen, wenn der Titel ihn nicht schon traegt.
   function versandName(o) {
     if (!o) return "";
-    return o.carrier && String(o.titel || "").indexOf(o.carrier) !== 0 ? o.carrier + " " + (o.titel || "") : (o.titel || o.carrier || "");
+    var titel = versandTitel(o);
+    return o.carrier && titel.indexOf(o.carrier) !== 0 ? o.carrier + " " + titel : (titel || o.carrier || "");
   }
   // "Mo., 12.10." - das Datum rechnet der Worker (shop-worker/lieferzeit.js).
   function datumKurz(iso) {
@@ -448,8 +461,8 @@
       radio.checked = !!zustand.wahl && zustand.wahl.id === o.id;
       radio.disabled = gesperrt || nurHaustuer;
       radio.addEventListener("change", function () { zustand.wahl = o; versandZeichnen(); });
-      var name = el("span", "kasse-option__name", o.titel);
-      var dienst = o.carrier && String(o.titel || "").indexOf(o.carrier) !== 0 ? o.carrier : "";
+      var name = el("span", "kasse-option__name", versandTitel(o));
+      var dienst = o.carrier && versandTitel(o).indexOf(o.carrier) !== 0 ? o.carrier : "";
       var meta = [dienst, tage(o), o.versichertBisCents ? tf("versichert", { betrag: geldRund(o.versichertBisCents) }) : "",
         nurHaustuer ? t("nurHaustuer") : ""].filter(Boolean).join(" · ");
       if (meta) name.appendChild(el("small", "", meta));
