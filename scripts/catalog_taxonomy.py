@@ -24,7 +24,7 @@ TAXONOMY_CATEGORIES = {
 DEPARTMENT_OVERRIDES = {
     # Disorder119 has no separate children's department. Real child-size facts
     # remain in the raw size field, while the browse department stays neutral.
-    6202: "Women",  # Prada Jacke mit Streifenkragen, Größe S - Damen (Nutzer 08.10.2026), keine Kinderjacke
+    6202: "Women",  # Prada Jacke mit Streifenkragen, Damen, keine Kinderjacke (Nutzer 08.10.); Etikett L, fällt klein aus (23.10.)
     9533: "Unisex", # Prada Flops – EU 28
     6235: "Men",    # Dior Homme high-tops
     6233: "Men",    # Dior Homme high-tops

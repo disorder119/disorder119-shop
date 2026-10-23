@@ -107,11 +107,14 @@ def main() -> None:
         if got != wanted:
             fail(f"Taxonomie bei {item_id} unerwartet: {got!r} statt {wanted!r}")
 
-    # Keine Kinderjacke (Inhaber 07.10.2026): Prada-Jacke in Größe S.
-    if by_id[6202].get("size") != "S":
-        fail("Prada Cropped Jacket: Größe soll S sein (keine Kindergröße)")
-    if by_id[6202].get("size_normalized") != "S":
-        fail("Prada Cropped Jacket: normalisierte Größe soll S sein")
+    # Keine Kinderjacke (Inhaber 07.10.2026). Größe laut Etikett L, fällt sehr klein aus
+    # (passt eher wie S) - Inhaber-Entscheidung 23.10.2026.
+    if by_id[6202].get("size") != "L":
+        fail("Prada Cropped Jacket: Größe soll L sein (Etikett, keine Kindergröße)")
+    if by_id[6202].get("size_normalized") != "L":
+        fail("Prada Cropped Jacket: normalisierte Größe soll L sein")
+    if "passt eher wie S" not in str(by_id[6202].get("desc_de") or ""):
+        fail("Prada Cropped Jacket: Hinweis 'fällt sehr klein aus - passt eher wie S' fehlt")
     if by_id[9533].get("size_normalized") != "EU 28":
         fail("Prada Flops: EU 28 muss als Größenangabe erhalten bleiben")
 
