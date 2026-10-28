@@ -98,3 +98,22 @@ test('directory indexes and exact verification HTML keep their original public U
   assert.equal(r.headers.get('Location'), 'https://disorder119.com/faq/?source=old');
   assert.equal(paths.at(-1), '/faq/index.html');
 });
+
+test('legal pages and files with the owner address stay reachable but carry X-Robots-Tag noindex', async () => {
+  const env = assetEnv(async req => new URL(req.url).pathname.endsWith('.js')
+    ? new Response('window.D119Legal={};', { headers: { 'Content-Type': 'text/javascript' } })
+    : new Response('<html><p>Impressum</p></html>', { headers: { 'Content-Type': 'text/html' } }));
+  const robots = 'noindex, noarchive, nosnippet, noimageindex';
+  for (const path of ['/impressum/', '/agb/', '/datenschutz/', '/widerruf/', '/en/impressum/', '/en/agb/',
+    '/en/datenschutz/', '/en/widerruf/', '/fr/impressum/', '/fr/agb/', '/fr/datenschutz/', '/fr/widerruf/',
+    '/impressum/index.html', '/assets/app.js', '/assets/legal-content.js']) {
+    const r = await worker.fetch(request(path), env, {});
+    assert.equal(r.status, 200, path);
+    assert.equal(r.headers.get('X-Robots-Tag'), robots, path);
+  }
+  for (const path of ['/', '/en/', '/faq/', '/ueber-uns/', '/kasse/', '/artikel/12/', '/assets/article.js', '/data/catalog.json']) {
+    const r = await worker.fetch(request(path), assetEnv(async () => path.endsWith('.json')
+      ? Response.json([]) : new Response('<html></html>', { headers: { 'Content-Type': 'text/html' } })), {});
+    assert.equal(r.headers.get('X-Robots-Tag'), null, path);
+  }
+});

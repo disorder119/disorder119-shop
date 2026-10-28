@@ -1,4 +1,5 @@
 import edge, { storefrontHeaders } from './storefront-edge.js';
+import { rechtsseitenRobots } from './rechtsseiten-robots.js';
 
 async function fetchAsset(request, assets) {
   const url = new URL(request.url);
@@ -35,6 +36,9 @@ export default {
     const headers = new Headers(response.headers);
     headers.set('X-Disorder119-Hosting', 'cloudflare-assets');
     if (/^[a-f0-9]{40}$/.test(env.RELEASE_SHA || '')) headers.set('X-Disorder119-Release', env.RELEASE_SHA);
+    // Rechtsseiten und Skripte mit der Anschrift: erreichbar, aber nicht im Suchindex.
+    const robots = rechtsseitenRobots(new URL(request.url).pathname);
+    if (robots) headers.set('X-Robots-Tag', robots);
     return new Response(response.body, {
       status: response.status, statusText: response.statusText, headers,
     });
