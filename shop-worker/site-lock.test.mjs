@@ -31,7 +31,11 @@ const adminPost = body => new Request("https://api.disorder119.com/admin/site-lo
   headers: { Origin: "https://admin.disorder119.com", Authorization: "Bearer sitzung-123", "Content-Type": "application/json" },
   body: JSON.stringify(body),
 });
-const shopGet = pass => new Request(`https://api.disorder119.com/site-status${pass ? `?pass=${encodeURIComponent(pass)}` : ""}`, {
+// Der Pass reist im Kopf X-D119-Pass (nie in der Adresse, die landet in Protokollen).
+const shopGet = pass => new Request("https://api.disorder119.com/site-status", {
+  headers: { Origin: "https://disorder119.com", ...(pass ? { "X-D119-Pass": pass } : {}) },
+});
+const shopGetAlt = pass => new Request(`https://api.disorder119.com/site-status?pass=${encodeURIComponent(pass)}`, {
   headers: { Origin: "https://disorder119.com" },
 });
 const shopUnlock = password => new Request("https://api.disorder119.com/site-unlock", {
@@ -59,6 +63,11 @@ test("sperren, falsches Passwort, richtiges Passwort, Pass gilt", async () => {
   assert.ok(pass);
   res = await call(shopGet(pass), { DB: db });
   assert.equal((await res.json()).access, true);
+  // Alte, zwischengespeicherte Skripte schicken ?pass= noch eine Weile.
+  assert.equal((await (await call(shopGetAlt(pass), { DB: db })).json()).access, true);
+  // Vorab-Anfrage (CORS) erlaubt den Kopf.
+  const vorab = await call(new Request("https://api.disorder119.com/site-status", { method: "OPTIONS", headers: { Origin: "https://disorder119.com" } }), { DB: db });
+  assert.match(vorab.headers.get("Access-Control-Allow-Headers"), /X-D119-Pass/);
 });
 
 test("neue Sperre macht alte Pässe ungültig, Öffnen gibt frei", async () => {

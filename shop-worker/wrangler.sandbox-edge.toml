@@ -21,3 +21,11 @@ service = "disorder119-shop-worker-sandbox"
 [observability]
 enabled = true
 head_sampling_rate = 1
+
+# Keine Aufrufprotokolle (invocation logs): sie enthielten die volle Adresse
+# samt Query - Zugangs- und Bestaetigungscodes (?anmeldung=, ?bestaetigen=,
+# ?abmelden=), PLZ/Strasse der Abholortsuche. Eigene console-Zeilen (mit
+# Request-ID, ohne Kundendaten) bleiben.
+[observability.logs]
+enabled = true
+invocation_logs = false

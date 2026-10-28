@@ -54,6 +54,8 @@ export { BesucherWecker } from "./besucher-wecker.js";
 import { istSandbox, testshopFetch } from "./sandbox.js";
 import { httpsErzwingen, mitHsts } from "./https-pflicht.js";
 import { kontingentAufraeumen } from "./kontingent.js";
+import { datenPflegen } from "./datenpflege.js";
+import { lokalErlaubt } from "./lokale-entwicklung.js";
 import { halteAufraeumen } from "./offene-halte.js";
 import { applePayDomainSicherstellen } from "./paypal-einrichtung.js";
 import { handleNewsletter, isNewsletterRoute } from "./newsletter.js";
@@ -80,10 +82,10 @@ import {
   scopeAdminEnv,
 } from "./backend-runtime.js";
 
+// localhost:8765 nur in der lokalen Entwicklung (LOKALE_ENTWICKLUNG="1",
+// lokale-entwicklung.js) - im Livebetrieb nie.
 const ADMIN_REQUEST_ORIGINS = new Set([
   "https://admin.disorder119.com",
-  "http://localhost:8765",
-  "http://127.0.0.1:8765",
 ]);
 
 function requestId(request) {
@@ -127,10 +129,10 @@ function isLegacyAdminRoute(pathname) {
   return pathname === "/rental-requests" || pathname.startsWith("/rental-request/");
 }
 
-function assertAdminOrigin(request) {
+function assertAdminOrigin(request, env) {
   const origin = request.headers.get("Origin");
   if (!origin) return;
-  if (!ADMIN_REQUEST_ORIGINS.has(origin)) {
+  if (!ADMIN_REQUEST_ORIGINS.has(origin) && !lokalErlaubt(origin, env)) {
     throw new RuntimeGuardError("ADMIN_ORIGIN_FORBIDDEN", 403);
   }
 }
@@ -140,7 +142,7 @@ async function authorizeRouteEnv(request, env, url, reqId) {
   const legacyAdminRoute = isLegacyAdminRoute(url.pathname);
   if (!adminRoute && !legacyAdminRoute) return { env, request };
 
-  assertAdminOrigin(request);
+  assertAdminOrigin(request, env);
   if (request.method === "OPTIONS" && adminRoute) return { env, request };
 
   let requiredRole;
@@ -613,6 +615,9 @@ const worker = {
     await runBackground(ctx, kontingentAufraeumen(env.DB, new Date(scheduledTime)), "kontingent_cleanup_failed", reqId);
     // Offene Halte (Kasse, Miete) zaehlen hoechstens 30 Minuten - danach weg.
     await runBackground(ctx, halteAufraeumen(env.DB, new Date(scheduledTime)), "open_hold_cleanup_failed", reqId);
+    // Datensparsamkeit: unbestaetigte Newsletter-Anmeldungen (30 Tage),
+    // abgelaufene Anmeldelinks, Einmal-Schluessel und Sitzungen (datenpflege.js).
+    await runBackground(ctx, datenPflegen(env, scheduledTime), "data_retention_failed", reqId);
     await runBackground(ctx, applePayDomainSicherstellen(env, scheduledTime), "apple_pay_domain_failed", reqId);
   },
 
