@@ -1,4 +1,5 @@
-// Wecker fuer die Besuchs-Zusammenfassung: ein einziger Durable Object
+// Wecker fuer die Besuchs-Zusammenfassung und die gebuendelten Waechter-
+// Meldungen: ein einziger Durable Object
 // (SQLite-Speicher, laeuft auf dem kostenlosen Workers-Plan) haelt genau einen
 // Alarm - den naechsten Zeitpunkt, an dem ein Besuch als beendet gilt.
 // besucher-sitzung.js stellt ihn bei jedem neuen Besuch und bei jedem
@@ -8,6 +9,7 @@
 // Faellt der Wecker aus (Bindung fehlt, Fehler), melden die naechsten
 // Seitenaufrufe und der Cron alle 15 Minuten die Besuche trotzdem.
 import { naechsteFaelligkeit, sitzungenMelden } from "./besucher-zusammenfassung.js";
+import { waechterBuendeln, waechterFaelligkeit } from "./waechter.js";
 
 export class BesucherWecker {
   constructor(state, env) {
@@ -30,7 +32,11 @@ export class BesucherWecker {
   async alarm() {
     const now = Date.now();
     await sitzungenMelden(this.env, now, { limit: 25 });
-    const naechste = await naechsteFaelligkeit(this.env);
-    if (naechste !== null) await this.state.storage.setAlarm(Math.max(naechste, now + 5000));
+    // Derselbe Wecker buendelt die Waechter-Meldungen (waechter.js): eine
+    // Nachricht etwa eine Minute nach der ersten neuen Sperre.
+    await waechterBuendeln(this.env, now).catch(() => {});
+    const zeiten = [await naechsteFaelligkeit(this.env), await waechterFaelligkeit(this.env, Date.now()).catch(() => null)]
+      .filter(z => z !== null && z !== undefined && Number.isFinite(z));
+    if (zeiten.length) await this.state.storage.setAlarm(Math.max(Math.min(...zeiten), now + 5000));
   }
 }

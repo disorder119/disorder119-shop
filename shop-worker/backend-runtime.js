@@ -334,7 +334,12 @@ export async function guardRuntimeRequest(request, env, url = new URL(request.ur
   // Reject abusive public writes before cloning/reading their body. Provider
   // callbacks retain their own verification and limiter, and authenticated
   // Admin work keeps its route-specific controls.
-  if (REQUEST_BODY_METHODS.has(request.method) && (!pathname.startsWith('/admin/') || pathname.startsWith('/admin/auth/'))
+  // Seitenaufrufe vom Storefront-Worker (Dienstbindung storefront.intern)
+  // tragen keine CF-Connecting-IP: sie landeten sonst alle im selben Eimer
+  // "body-ingress:unknown" (20/min fuer den ganzen Shop). Sie haben ihren
+  // eigenen Zaehler je Anschluss in besucher.js.
+  const intern = url.hostname === 'storefront.intern' && pathname.startsWith('/intern/');
+  if (REQUEST_BODY_METHODS.has(request.method) && !intern && (!pathname.startsWith('/admin/') || pathname.startsWith('/admin/auth/'))
       && pathname !== '/paypal-webhook' && !/^\/packlink\/webhook\/[^/]{1,200}$/.test(pathname)) {
     // /rental-quote zaehlt sein eigener Begrenzer je Anschluss (QUOTE_LIMITER,
     // worker.js): das Mietfenster fragt je Stueck einmal, ein volles Paket

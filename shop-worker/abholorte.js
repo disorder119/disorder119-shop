@@ -17,6 +17,8 @@
 import { safeText } from "./commerce-core.js";
 import { bundeslandZurPlz } from "./adresse.js";
 import { landAusSchluessel, luftbildFuer } from "./karte.js";
+import { kontingentBelegen } from "./kontingent.js";
+import { anschlussVonIp, ipPepper } from "./privacy-security.js";
 
 const FINDER = "https://api.dhl.com/location-finder/v1/find-by-address";
 const CACHE_SEKUNDEN = 24 * 60 * 60;
@@ -128,11 +130,32 @@ async function cacheSchreiben(schluessel, daten) {
   }
 }
 
-export async function abholorteSuchen(env, { plz, strasse }) {
+// DHL erlaubt 500 Abfragen am Tag. Damit niemand das Kontingent mit immer
+// neuen Strassennamen leerfragt (der Zwischenspeicher gilt je PLZ + Strasse):
+// je Anschluss hoechstens 40 DHL-Abfragen am Tag, insgesamt 450. Faellt die
+// Zaehlung aus, wird gefragt wie bisher.
+async function dhlKontingent(env, anschluss) {
+  if (!env?.DB) return true;
+  try {
+    const schluessel = await sha256Hex(`dhl-abholorte:${anschluss}:${ipPepper(env)}`);
+    const belegt = await kontingentBelegen(env.DB, { art: "dhl-abholorte", schluessel, jeSchluessel: 40, gesamt: 450 });
+    return belegt.ok;
+  } catch {
+    return true;
+  }
+}
+
+async function sha256Hex(text) {
+  const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
+  return Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function abholorteSuchen(env, { plz, strasse }, { kontingent = null } = {}) {
   if (!env?.DHL_PRIVAT_API_KEY) throw new AbholortError("ABHOLORTE_NICHT_EINGERICHTET", 503);
   const schluessel = `https://abholorte.disorder119.intern/v1/${plz}/${encodeURIComponent(strasse.toLowerCase())}`;
   const vorhanden = await cacheLesen(schluessel);
   if (vorhanden) return vorhanden;
+  if (typeof kontingent === "function" && !(await kontingent())) throw new AbholortError("DHL_LIMIT", 503);
   const query = new URLSearchParams({ countryCode: "DE", postalCode: plz, limit: "50", radius: "5000" });
   if (strasse) query.set("streetAddress", strasse);
   let res;
@@ -227,13 +250,14 @@ export async function handleAbholorte(request, env, url, reqId = crypto.randomUU
     }
     if (request.method !== "GET") throw new AbholortError("METHOD_NOT_ALLOWED", 405);
     if (origin && !OEFFENTLICHE_ORIGINS.includes(origin)) throw new AbholortError("ORIGIN_NOT_ALLOWED", 403);
+    // Je Anschluss (IPv6 je /64), sonst helfen neue Adressen im selben Netz.
+    const anschluss = anschlussVonIp(request.headers.get("CF-Connecting-IP")) || "unknown";
     if (env.RATE_LIMITER && typeof env.RATE_LIMITER.limit === "function") {
-      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-      const r = await env.RATE_LIMITER.limit({ key: `abholorte:${ip}` });
+      const r = await env.RATE_LIMITER.limit({ key: `abholorte:${anschluss}` });
       if (r && r.success === false) throw new AbholortError("RATE_LIMITED", 429);
     }
     const anfrage = anfrageAus(url);
-    const daten = await abholorteSuchen(env, anfrage);
+    const daten = await abholorteSuchen(env, anfrage, { kontingent: () => dhlKontingent(env, anschluss) });
     // luftbild: { land, quelle } fuer die amtlichen Luftbilder des Bundeslands
     // der gesuchten PLZ (karte.js) - oder false, dann nur die Strassenkarte.
     const luftbild = daten.orte.length ? luftbildFuer(landAusSchluessel(await bundeslandZurPlz(env, anfrage.plz))) : false;

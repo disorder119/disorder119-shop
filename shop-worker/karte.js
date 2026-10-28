@@ -85,6 +85,10 @@ export function kachelAus(pfad) {
   const [z, y, x] = m.slice(2).map(Number);
   const anzahl = 2 ** z;
   if (z < LUFTBILD_MIN_ZOOM || z > LUFTBILD_MAX_ZOOM || y >= anzahl || x >= anzahl) return null;
+  // Nur Kacheln, die Deutschland beruehren: kein Luftbild-Proxy fuer die Welt.
+  const laenge = v => (v / anzahl) * 360 - 180;
+  const breite = v => (Math.atan(Math.sinh(Math.PI * (1 - (2 * v) / anzahl))) * 180) / Math.PI;
+  if (laenge(x + 1) < 5.5 || laenge(x) > 15.5 || breite(y) < 47 || breite(y + 1) > 55.2) return null;
   return { land: m[1], z, y, x };
 }
 

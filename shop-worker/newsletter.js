@@ -652,7 +652,15 @@ async function verifyTurnstile(env, request, body) {
   if (!result.success) throw new NewsletterError("TURNSTILE_FAILED", 403);
 }
 
-export async function handleNewsletter(request, env, url, reqId = crypto.randomUUID(), origin = null) {
+// Formular-Falle: das Feld "website" ist fuer Menschen unsichtbar
+// (assets/newsletter.js). Ist es ausgefuellt, war es ein Bot: gleiche
+// Antwort wie immer, aber nichts wird gespeichert oder verschickt; der
+// Waechter zaehlt den Versuch (deps.falle).
+export function newsletterFalle(body) {
+  return typeof body?.website === "string" && body.website.trim() !== "";
+}
+
+export async function handleNewsletter(request, env, url, reqId = crypto.randomUUID(), origin = null, deps = {}) {
   const path = url.pathname.replace(/\/+$/, "");
   const admin = path.startsWith("/admin/");
   try {
@@ -688,6 +696,10 @@ export async function handleNewsletter(request, env, url, reqId = crypto.randomU
 
     if (path === "/newsletter/subscribe") {
       await limitRequests(request, env);
+      if (newsletterFalle(body)) {
+        if (typeof deps?.falle === "function") await Promise.resolve(deps.falle()).catch(() => {});
+        return reply({ ok: true }, 200, origin);
+      }
       await verifyTurnstile(env, request, body);
       await subscribe(env, body, { reqId, ip: await ipHash(request, env) });
       return reply({ ok: true }, 200, origin);

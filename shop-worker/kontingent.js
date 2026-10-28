@@ -114,7 +114,7 @@ export async function kontingentBelegen(db, {
 // LAENGSTES_FENSTER_MS muss jedes Fenster abdecken - kontingent.test.mjs
 // prueft das gegen SPIEL_CODE_FENSTER_TAGE (game-rewards.js); ein Import
 // dorthin waere ein Kreis (game-rewards.js importiert diese Datei).
-const TAGES_ARTEN = Object.freeze(["widerruf-mail", "testshop-mail"]);
+const TAGES_ARTEN = Object.freeze(["widerruf-mail", "testshop-mail", "besuch-neu", "dhl-abholorte"]);
 export const LAENGSTES_FENSTER_MS = 30 * TAG_MS;
 
 export async function kontingentAufraeumen(db, jetzt = new Date()) {

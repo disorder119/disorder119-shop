@@ -1,7 +1,9 @@
 import { ARTICLE_NUMBER_ROUTES } from './catalog-number-routes.js';
 import { contentSecurityPolicy, secureHtml } from './storefront-csp.js';
 import { geoGesperrt, geoSperrAntwort } from './geo-sperre.js';
-import { bekannterBot, kurzPfad, waechterPruefen } from './waechter-regeln.js';
+import { bekannterBot, fremdAusgeloest, kurzPfad, netzVon, verifizierterBot, waechterPruefen } from './waechter-regeln.js';
+import { ENTSPERREN_PFAD, VORSCHAU_PFAD, erwischtAntwort, sichererRuecksprung, sperrAntwort, sperrSprache, vorfallNummer, vorschauDaten } from './waechter-seiten.js';
+import { anschlussVonIp } from './privacy-security.js';
 // Edge route in front of the existing static origin. No database or secrets.
 // Catalog source files stay intact in Git; only the public response is filtered.
 // Page views and Waechter incidents are handed to the shop Worker through the
@@ -89,64 +91,135 @@ function besuchMelden(request,url,status,env,ctx) {
   } catch {}
 }
 
-// Waechter (waechter-regeln.js, Speicherung in waechter.js beim Shop-Worker):
-// Scanner und Angriffsproben bekommen sofort 404/403 und werden ueber die
-// Dienstbindung gemeldet; gesperrte Anschluesse bekommen 403. Die Sperrliste
-// fragt dieser Worker nur fuer Seiten und Daten (nicht fuer /assets/) beim
+// Waechter (waechter-regeln.js, Speicherung in waechter.js beim Shop-Worker,
+// Seiten in waechter-seiten.js):
+// - Eindeutige Angriffsprobe (SQL-Injection, XSS, ...) -> "Erwischt"-Seite
+//   (403) in der Landessprache, Meldung ueber die Dienstbindung.
+// - Scanner-Pfad -> 404; sperrt der Shop-Worker deshalb (Schwelle erreicht,
+//   Hoster, Kampagne), zeigt schon diese Anfrage die "Erwischt"-Seite.
+// - Angriffsmuster von einer fremden Seite (Sec-Fetch-Site: cross-site) und
+//   von Bots: nur abweisen, nie sperren, keine "Erwischt"-Seite.
+// - Gesperrter Anschluss -> neutrale, dreisprachige Sperrseite (Impressum,
+//   bei milden Sperren Selbst-Entsperrung per Turnstile). Rechtsseiten und
+//   /assets/ bleiben immer erreichbar.
+// Die Sperrliste fragt dieser Worker nur fuer Seiten und Daten beim
 // Shop-Worker ab und merkt sich die Antwort eine Minute im Speicher - keine
 // Datenbank, kein Speichern hier. Faellt die Abfrage aus, bleibt die Seite offen.
 const WAECHTER_VORFALL='https://storefront.intern/intern/waechter/vorfall';
 const WAECHTER_PRUEFEN='https://storefront.intern/intern/waechter/pruefen';
+const WAECHTER_ENTSPERREN='https://storefront.intern/intern/waechter/entsperren';
 const sperrMerker=new Map();
 const meldeMerker=new Map();
 const MERKER_MAX=5000;
 export function waechterMerkerLeeren(){sperrMerker.clear();meldeMerker.clear();}
-const SEITE_GESPERRT='<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>403</title>'
-+'<style>html{background:#000;color:#f2efe7;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 20px;box-sizing:border-box}h1{font-size:3rem;margin:0 0 12px}p{max-width:440px;color:rgba(242,239,231,.62);font-size:.9rem;line-height:1.6;margin:4px 0}</style></head>'
-+'<body><h1>403</h1><p>Dieser Anschluss ist wegen auffälliger Anfragen vorübergehend gesperrt. Falls das ein Irrtum ist, schreib uns an kontakt@disorder119.com.</p><p lang="en">Access from this connection is temporarily blocked because of unusual requests.</p></body></html>';
 function istAsset(pathname){return /^\/assets\//.test(pathname)||pathname==='/favicon.ico';}
+// Impressum, Datenschutz, AGB und Widerruf: auch fuer gesperrte Anschluesse.
+export function istRechtsseite(pathname){return /^\/(?:(?:en|fr)\/)?(?:impressum|datenschutz|agb|widerruf)(?:\/(?:index\.html)?)?$/.test(pathname);}
+
+function mitFrist(promise,ms){
+  let uhr;
+  return Promise.race([promise,new Promise(resolve=>{uhr=setTimeout(()=>resolve(null),ms);})]).finally(()=>clearTimeout(uhr));
+}
+
+function merken(ip,eintrag){
+  if (sperrMerker.size>MERKER_MAX) sperrMerker.clear();
+  sperrMerker.set(ip,{...eintrag,ablauf:Date.now()+60_000});
+}
+
+// Meldet einen Vorfall; Ergebnis-Promise ({gesperrt, selbst, bis} oder null)
+// oder null, wenn nichts gemeldet wurde.
 function vorfallMelden(env,ctx,request,url,vorfall){
   try {
-    if (!env?.BESUCH || typeof env.BESUCH.fetch!=='function' || typeof ctx?.waitUntil!=='function') return;
+    if (!env?.BESUCH || typeof env.BESUCH.fetch!=='function' || typeof ctx?.waitUntil!=='function') return null;
     const ip=(request.headers.get('CF-Connecting-IP')||'').slice(0,64);
-    if (!ip) return;
+    if (!ip) return null;
     const jetzt=Date.now(),gemerkt=sperrMerker.get(ip);
     // Schon als gesperrt bekannt: nichts mehr melden (keine Schreibflut).
-    if (gemerkt && gemerkt.gesperrt && gemerkt.bis>jetzt) return;
+    if (gemerkt && gemerkt.gesperrt && gemerkt.ablauf>jetzt) return null;
     // Drosseln: je Art hoechstens alle 2 s je Anschluss (Angriffe sperren sofort).
     if (vorfall.art!=='angriff') {
       const key=`${vorfall.art}|${ip}`;
-      if ((meldeMerker.get(key)||0)>jetzt-2000) return;
+      if ((meldeMerker.get(key)||0)>jetzt-2000) return null;
       if (meldeMerker.size>MERKER_MAX) meldeMerker.clear();
       meldeMerker.set(key,jetzt);
     }
+    const netz=netzVon(request);
     const body={ip,ua:(request.headers.get('User-Agent')||'').slice(0,400),land:String(request.cf?.country||'').slice(0,2),
-      pfad:(vorfall.pfad||kurzPfad(url)).slice(0,200),art:vorfall.art,grund:vorfall.grund||'',bot:Boolean(vorfall.bot)};
-    ctx.waitUntil(env.BESUCH.fetch(WAECHTER_VORFALL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      pfad:(vorfall.pfad||kurzPfad(url)).slice(0,200),art:vorfall.art,grund:vorfall.grund||'',bot:Boolean(vorfall.bot),
+      asn:netz.asn,netz:netz.name,nr:vorfall.nr||''};
+    const laeuft=env.BESUCH.fetch(WAECHTER_VORFALL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
       .then(async res=>{
-        let gesperrt=false;
-        try { gesperrt=(await res.json())?.gesperrt===true; } catch {}
-        if (sperrMerker.size>MERKER_MAX) sperrMerker.clear();
-        if (gesperrt) sperrMerker.set(ip,{gesperrt:true,bis:Date.now()+60_000}); else sperrMerker.delete(ip);
-      }).catch(()=>{}));
-  } catch {}
+        let daten=null;
+        try { daten=await res.json(); } catch {}
+        if (daten?.gesperrt===true) merken(ip,{gesperrt:true,selbst:daten.selbst===true,bis:daten.bis||null}); else sperrMerker.delete(ip);
+        return daten;
+      }).catch(()=>null);
+    ctx.waitUntil(laeuft);
+    return laeuft;
+  } catch { return null; }
 }
-async function anschlussGesperrt(env,ip) {
-  if (!ip || !env?.BESUCH || typeof env.BESUCH.fetch!=='function') return false;
-  const jetzt=Date.now(),gemerkt=sperrMerker.get(ip);
-  if (gemerkt && gemerkt.bis>jetzt) return gemerkt.gesperrt;
-  let gesperrt=false;
+
+// null oder { selbst, bis } fuer einen gesperrten Anschluss.
+async function anschlussSperre(env,ip) {
+  if (!ip || !env?.BESUCH || typeof env.BESUCH.fetch!=='function') return null;
+  const gemerkt=sperrMerker.get(ip);
+  if (gemerkt && gemerkt.ablauf>Date.now()) return gemerkt.gesperrt?gemerkt:null;
+  let daten=null;
   try {
-    const antwort=await Promise.race([
-      env.BESUCH.fetch(WAECHTER_PRUEFEN,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip})}),
-      new Promise(resolve=>setTimeout(()=>resolve(null),1500)),
-    ]);
-    if (antwort && antwort.ok) gesperrt=(await antwort.json())?.gesperrt===true;
+    const antwort=await mitFrist(env.BESUCH.fetch(WAECHTER_PRUEFEN,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip})}),1500);
+    if (antwort && antwort.ok) daten=await antwort.json();
     else antwort?.body?.cancel?.();
   } catch {}
-  if (sperrMerker.size>MERKER_MAX) sperrMerker.clear();
-  sperrMerker.set(ip,{gesperrt,bis:jetzt+60_000});
-  return gesperrt;
+  const eintrag={gesperrt:daten?.gesperrt===true,selbst:daten?.selbst===true,bis:daten?.bis||null};
+  merken(ip,eintrag);
+  return eintrag.gesperrt?eintrag:null;
+}
+
+function erwischt(request,url,grund,nr) {
+  const cf=request.cf||{},netz=netzVon(request);
+  // IP nur anzeigen (sie steht ohnehin in der Anfrage), nie speichern.
+  return erwischtAntwort(request,{ip:request.headers.get('CF-Connecting-IP')||'',land:cf.country,stadt:cf.city,region:cf.region,
+    netz:netz.name,asn:netz.asn,ua:request.headers.get('User-Agent')||'',zeit:Date.now(),grund,nutzlast:`${url.pathname}${url.search}`,nr});
+}
+
+function sperrSeiteAntwort(request,url,sperre,fehler=false,zurueck=`${url.pathname}${url.search}`) {
+  return sperrAntwort(request,{sprache:sperrSprache(url.pathname,request.cf?.country),selbst:sperre?.selbst===true,bis:sperre?.bis||null,zurueck,fehler});
+}
+
+// "Ich bin ein Mensch": Turnstile-Antwort an den Shop-Worker, der prueft und
+// die Sperre aufhebt (nur bei milden Sperren). Danach zurueck zur Seite.
+async function entsperren(request,env,url,ip) {
+  const weiter=ziel=>new Response(null,{status:303,headers:storefrontHeaders(new Response(null,{headers:{Location:ziel,'Cache-Control':'no-store'}}))});
+  if (request.method!=='POST') return weiter('/');
+  if (Number(request.headers.get('Content-Length')||0)>8192) return new Response('Zu groß.',{status:413,headers:{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'}});
+  let form=null;
+  try { form=await request.formData(); } catch {}
+  const token=String(form?.get('cf-turnstile-response')||'').slice(0,2048);
+  const zurueck=sichererRuecksprung(form?.get('zurueck'));
+  let ergebnis=null;
+  if (ip && token && env?.BESUCH && typeof env.BESUCH.fetch==='function') {
+    try {
+      const antwort=await mitFrist(env.BESUCH.fetch(WAECHTER_ENTSPERREN,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip,token})}),8000);
+      if (antwort && antwort.ok) ergebnis=await antwort.json(); else antwort?.body?.cancel?.();
+    } catch {}
+  }
+  if (ergebnis?.ok===true) { sperrMerker.delete(ip); return weiter(zurueck); }
+  sperrMerker.delete(ip);
+  const sperre=await anschlussSperre(env,ip);
+  if (!sperre) return weiter(zurueck);
+  return sperrSeiteAntwort(request,new URL(zurueck,url),sperre,true,zurueck);
+}
+
+// Vorschau fuer die Admin-App (Sicherheit): nur Beispieldaten, nichts wird
+// gemeldet, gespeichert oder gesperrt.
+function waechterVorschau(request,url) {
+  const land=String(url.searchParams.get('land')||'FR').toUpperCase().slice(0,2);
+  if (url.searchParams.get('seite')==='sperre') {
+    return sperrAntwort(request,{sprache:sperrSprache(url.searchParams.get('sprache')==='en'?'/en/':url.searchParams.get('sprache')==='fr'?'/fr/':'/',land),
+      selbst:url.searchParams.get('selbst')!=='0',bis:new Date(Date.now()+24*3600_000).toISOString(),zurueck:'/'},200);
+  }
+  const sprache=String(url.searchParams.get('sprache')||'').slice(0,8);
+  return erwischtAntwort(request,{...vorschauDaten(land),...(sprache?{sprache}:{})},200);
 }
 
 // Liefergebiet (AGB § 4, FAQ "Wohin versendet ihr?"): Europa - EU, EWR,
@@ -212,18 +285,53 @@ export default {
     // nie sperren, sonst traefe eine Sperre alle.
     const bot=bekannterBot(request,ua) || (!ua && Number(request.cf?.asn)===13335);
     const html=(status,body)=>new Response(request.method==='HEAD'?null:body,{status,headers:storefrontHeaders(new Response(null,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}}))});
+    // Vorschau der Waechter-Seiten (Admin-App -> Sicherheit), nur Beispieldaten.
+    if (url.pathname===VORSCHAU_PFAD && ['GET','HEAD'].includes(request.method)) return waechterVorschau(request,url);
     const probe=waechterPruefen(url,ua);
     if (probe) {
-      vorfallMelden(env,ctx,request,url,{art:probe.art,grund:probe.grund,pfad:probe.detail,bot});
-      return probe.art==='angriff'?fail(403,'Nicht erlaubt.'):html(404,SEITE_404);
+      // Fremde Seite (Bild/Link mit Angriffsmuster) oder Bot: nur abweisen.
+      const fremd=probe.art==='angriff' && fremdAusgeloest(request);
+      if (bot || fremd) {
+        if (!fremd) vorfallMelden(env,ctx,request,url,{art:probe.art,grund:probe.grund,pfad:probe.detail,bot:true});
+        return probe.art==='angriff'?fail(403,'Nicht erlaubt.'):html(404,SEITE_404);
+      }
+      const nr=vorfallNummer();
+      if (probe.art==='angriff') {
+        vorfallMelden(env,ctx,request,url,{art:'angriff',grund:probe.grund,pfad:probe.detail,nr});
+        return erwischt(request,url,probe.grund,nr);
+      }
+      // Scanner-Pfad: sperrt der Shop-Worker deshalb (Schwelle, Hoster,
+      // Kampagne), zeigt schon diese Anfrage die "Erwischt"-Seite. Auf das
+      // Ergebnis wird hoechstens 1,5 s gewartet - nur Scanner warten.
+      const gemerkt=sperrMerker.get(ip);
+      let gesperrt=Boolean(gemerkt?.gesperrt && gemerkt.ablauf>Date.now());
+      if (!gesperrt) {
+        const laeuft=vorfallMelden(env,ctx,request,url,{art:'probe',grund:probe.grund,pfad:probe.detail,nr});
+        gesperrt=Boolean(laeuft && (await mitFrist(laeuft,1500))?.gesperrt===true);
+      }
+      return gesperrt?erwischt(request,url,probe.grund,nr):html(404,SEITE_404);
     }
-    if (!bot && !istAsset(url.pathname)) {
-      if (await anschlussGesperrt(env,ip)) return html(403,SEITE_GESPERRT);
+    if (url.pathname===ENTSPERREN_PFAD) {
       if (ip && typeof env?.WAECHTER_FLUT?.limit==='function') {
         let frei=null;
-        try { frei=await env.WAECHTER_FLUT.limit({key:ip}); } catch {}
+        try { frei=await env.WAECHTER_FLUT.limit({key:anschlussVonIp(ip)}); } catch {}
+        if (frei && frei.success===false) return fail(429,'Zu viele Anfragen. Bitte kurz warten.');
+      }
+      return entsperren(request,env,url,ip);
+    }
+    if (!istAsset(url.pathname)) {
+      if (!bot && !istRechtsseite(url.pathname)) {
+        const sperre=await anschlussSperre(env,ip);
+        if (sperre) return sperrSeiteAntwort(request,url,sperre);
+      }
+      // Flut-Grenze fuer alle ausser von Cloudflare verifizierten Bots; Bots
+      // nach Kennung + Netz und andere Cloudflare-Worker bekommen nur 429.
+      if (ip && !verifizierterBot(request) && typeof env?.WAECHTER_FLUT?.limit==='function') {
+        let frei=null;
+        // Je Anschluss (IPv6 je /64): neue Adressen im selben Netz helfen nicht.
+        try { frei=await env.WAECHTER_FLUT.limit({key:anschlussVonIp(ip)}); } catch {}
         if (frei && frei.success===false) {
-          vorfallMelden(env,ctx,request,url,{art:'flut',grund:'zu-viele-anfragen'});
+          if (!bot) vorfallMelden(env,ctx,request,url,{art:'flut',grund:'zu-viele-anfragen'});
           return fail(429,'Zu viele Anfragen. Bitte kurz warten.');
         }
       }

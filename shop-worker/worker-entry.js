@@ -44,6 +44,7 @@ import {
   istWaechterAdmin,
   istWaechterIntern,
   waechterIntern,
+  waechterFehlversuch,
   waechterNachher,
   waechterPflegen,
   waechterVorab,
@@ -338,7 +339,13 @@ const worker = {
       }
 
       if (isGameRewardsRoute(url.pathname)) {
-        return finish(await handleGameRewards(request, runtimeEnv, url, reqId, origin));
+        const antwort = await handleGameRewards(request, runtimeEnv, url, reqId, origin);
+        // Waechter: falsche Gutschein-Codes zaehlen (Durchprobieren).
+        if (url.pathname === "/coupons/validate" && antwort.ok) {
+          const ergebnis = await antwort.clone().json().catch(() => null);
+          if (ergebnis && ergebnis.valid === false) await waechterFehlversuch(request, runtimeEnv, ctx, url, "enum");
+        }
+        return finish(antwort);
       }
 
       if (url.pathname === "/rental-bundle") {
@@ -418,7 +425,10 @@ const worker = {
       // Newsletter: Anmeldung, Bestaetigung und Abmeldung von der Website,
       // /admin/newsletter fuer die Liste in der Admin-App.
       if (isNewsletterRoute(url)) {
-        return finish(await handleNewsletter(request, runtimeEnv, url, reqId, origin));
+        return finish(await handleNewsletter(request, runtimeEnv, url, reqId, origin, {
+          // Verstecktes Feld ausgefuellt: Bot - zaehlt beim Waechter.
+          falle: () => waechterFehlversuch(request, runtimeEnv, ctx, url, "falle"),
+        }));
       }
 
       // Packlink PRO (DPD, DHL): Angebote, Etikett kaufen, Entwurf, Sendungsnummer.
@@ -491,6 +501,11 @@ const worker = {
         } catch (error) {
           throw couponRuntimeError(error);
         }
+      }
+
+      // Waechter: viele fehlgeschlagene Zahlungsabschluesse von einem Anschluss.
+      if (shouldInspectCapture && response.status >= 400 && response.status < 500 && response.status !== 429) {
+        await waechterFehlversuch(request, runtimeEnv, ctx, url, "kasse");
       }
 
       if (!response.ok || !requestCopy || !runtimeEnv.DB) return finish(response);
