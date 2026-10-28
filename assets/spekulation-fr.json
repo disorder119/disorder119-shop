@@ -1,0 +1,18 @@
+{
+ "prefetch": [
+  {
+   "source": "document",
+   "where": {
+    "or": [
+     {
+      "href_matches": "/fr/artikel/*"
+     },
+     {
+      "href_matches": "/fr/"
+     }
+    ]
+   },
+   "eagerness": "moderate"
+  }
+ ]
+}

@@ -998,6 +998,7 @@ def build_page(it, shop_config, lang):
 <link rel="preload" as="style" href="/assets/theme.css?v={THEME_CSS_VERSION}" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
 <link rel="stylesheet" href="/assets/theme.css?v={THEME_CSS_VERSION}" media="{DESKTOP_CSS_MEDIA}">
 <script src="/assets/ansicht.js" defer></script>
+<script src="/assets/zurueck.js" defer></script>
 <script>try{{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}}catch(e){{}}</script>
 <script src="/assets/catalog-number-links.js" defer></script>
 </head>

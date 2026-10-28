@@ -1,5 +1,7 @@
 import edge, { storefrontHeaders } from './storefront-edge.js';
 import { rechtsseitenRobots } from './rechtsseiten-robots.js';
+import { BILD_ENDUNG, CACHE_BILD, CACHE_SEITE, CACHE_UNVERAENDERLICH, SPEKULATION, assetVersion, seitenspeicherErlaubt,
+  sha256Hex, spekulationsKopf } from './storefront-cache.js';
 
 async function fetchAsset(request, assets) {
   const url = new URL(request.url);
@@ -17,34 +19,6 @@ async function fetchAsset(request, assets) {
     return new Response(null, { status: 301, headers: { Location: canonical.toString() } });
   }
   return response;
-}
-
-// Ladezeit (Browser-Cache) fuer Dateien unter /assets/. Bisher musste der
-// Browser bei jedem Seitenwechsel jede Datei neu bestaetigen lassen
-// (max-age=0) - am Handy eine Rundreise vor jedem Stil, Skript und Bild.
-// - Skripte/Stile mit ?v=<Inhalts-Hash> (build_site.py: sha256 der Datei,
-//   erste 10 Zeichen): ein Jahr unveraenderlich, aber nur, wenn der
-//   ausgelieferte Inhalt nachweislich zu diesem Hash passt. Ein manueller
-//   (?v=20261008-1) oder nicht passender Wert behaelt die bisherige Regel;
-//   so kann auch waehrend eines Deploys nie eine alte Datei unter einer neuen
-//   Adresse fest im Browser landen.
-// - Bilder: 10 Minuten ohne Nachfrage. Ein ausgetauschtes Foto (gleicher
-//   Pfad) ist damit spaetestens nach 10 Minuten ueberall neu.
-// HTML, Katalog und unversionierte Skripte bleiben unveraendert.
-export const CACHE_UNVERAENDERLICH = 'public, max-age=31536000, immutable';
-export const CACHE_BILD = 'public, max-age=600';
-const BILD_ENDUNG = /\.(?:webp|avif|png|jpe?g|gif|svg|ico)$/i;
-
-export function assetVersion(url) {
-  if (!url.pathname.startsWith('/assets/') || !/\.(?:css|js)$/i.test(url.pathname)) return '';
-  const keys = [...url.searchParams.keys()];
-  const v = url.searchParams.get('v') || '';
-  return keys.length === 1 && keys[0] === 'v' && /^[a-f0-9]{10,64}$/.test(v) ? v : '';
-}
-
-async function sha256Hex(bytes) {
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
-  return Array.from(digest, b => b.toString(16).padStart(2, '0')).join('');
 }
 
 // Keep the existing public-path, catalog, CSP, redirect and visit protections.
@@ -85,6 +59,13 @@ export default {
     } else if ((response.status === 200 || response.status === 304) && url.pathname.startsWith('/assets/')
         && BILD_ENDUNG.test(url.pathname)) {
       headers.set('Cache-Control', CACHE_BILD);
+    } else if (response.status === 200 && SPEKULATION.test(url.pathname)) {
+      headers.set('Content-Type', 'application/speculationrules+json');
+      headers.set('Cache-Control', 'public, max-age=3600');
+    } else if (response.status === 200 && /text\/html/i.test(headers.get('Content-Type') || '')
+        && seitenspeicherErlaubt(url.pathname)) {
+      headers.set('Cache-Control', CACHE_SEITE);
+      headers.set('Speculation-Rules', spekulationsKopf(url.pathname));
     }
     return new Response(body, {
       status: response.status, statusText: response.statusText, headers,
