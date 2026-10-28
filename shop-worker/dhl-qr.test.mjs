@@ -432,6 +432,8 @@ test("catalog check: foreign parcels under other ids are found by weight, gaps a
     PAKINT05: { attributes: { maxWeight: 5000 }, regions: [{ countries: ["AUT", "FRA"], price: { amount: 17.49 } }] },
     PAECKINT: { attributes: { displayName: { text: "Päckchen International" }, maxWeight: 2000 }, regions: [{ countries: ["AUT"], price: { amount: 10.49 } }] },
     "PAKINT05.HVERSI1000": { attributes: { maxWeight: 5000 }, regions: [{ countries: ["AUT"], price: { amount: 31.49 } }] },
+    // Wie live fuer Italien: Express-Produkte zaehlen nicht als Standardpaket.
+    EXPRESSPAK10: { attributes: { displayName: { text: "DHL Express" }, maxWeight: 10000 }, regions: [{ countries: ["AUT"], price: { amount: 105.70 } }] },
   } };
   const at = katalogPreise(katalog, "AUT");
   assert.deepEqual({ ...at }, { S: 1449, M: 1749 });
