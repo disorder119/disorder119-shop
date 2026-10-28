@@ -316,6 +316,13 @@ export function checkoutKontaktAus(body) {
   return { email, createAccount: body.createAccount === true };
 }
 
+// Sprache der Kasse (/, /en/, /fr/): in ihr gehen alle Mails zur Bestellung
+// (customer-mail.js). Alles Unbekannte ist Deutsch.
+export function bestellSpracheAus(body) {
+  const wert = typeof body?.sprache === "string" ? body.sprache.trim().toLowerCase() : "";
+  return wert === "en" || wert === "fr" ? wert : "de";
+}
+
 // Vorschaubild des Titelfotos ("assets/img/<ordner>/thumbs/<n>.webp") fuer die
 // Mails - dieselbe Ableitung wie thumbUrl() in assets/app.js.
 export function vorschaubild(item) {
@@ -877,14 +884,14 @@ function alsNichtAngelegt(err) {
   return fehler;
 }
 
-async function createOrderRecords(env, items, centsList, versand, reservations, providerOrder, key, reqId, adresse = null, kontakt = null) {
+async function createOrderRecords(env, items, centsList, versand, reservations, providerOrder, key, reqId, adresse = null, kontakt = null, sprache = "de") {
   const db = requireDb(env);
   const orderId = crypto.randomUUID();
   const paymentId = crypto.randomUUID();
   const now = new Date().toISOString();
   const orderNumber = publicOrderNumber(orderId, new Date());
   try {
-    await db.batch(bestellungStatements(db, { orderId, orderNumber, paymentId, now, items, centsList, versand, reservations, providerOrder, key, adresse, kontakt }));
+    await db.batch(bestellungStatements(db, { orderId, orderNumber, paymentId, now, items, centsList, versand, reservations, providerOrder, key, adresse, kontakt, sprache }));
   } catch (err) {
     // D1 fuehrt den Batch als eine Transaktion aus. Steht die Bestellung
     // trotzdem (nur die Antwort ging verloren), geht es normal weiter. Fehlt
@@ -906,14 +913,14 @@ async function createOrderRecords(env, items, centsList, versand, reservations, 
   return { orderId, orderNumber, paymentId };
 }
 
-function bestellungStatements(db, { orderId, orderNumber, paymentId, now, items, centsList, versand, reservations, providerOrder, key, adresse, kontakt }) {
+function bestellungStatements(db, { orderId, orderNumber, paymentId, now, items, centsList, versand, reservations, providerOrder, key, adresse, kontakt, sprache = "de" }) {
   const cents = centsList.reduce((summe, c) => summe + c, 0);
   const shippingCents = versand.preisCents;
   const totalCents = cents + shippingCents;
   const statements = [
     db.prepare(`INSERT INTO commerce_orders
-      (id,order_number,reservation_id,status,currency,subtotal_cents,shipping_cents,total_cents,idempotency_key,created_at)
-      VALUES (?,?,?,'PAYMENT_PENDING',?,?,?,?,?,?)`).bind(orderId, orderNumber, reservations[0].reservationId, CURRENCY, cents, shippingCents, totalCents, key, now),
+      (id,order_number,reservation_id,status,currency,subtotal_cents,shipping_cents,total_cents,idempotency_key,created_at,sprache)
+      VALUES (?,?,?,'PAYMENT_PENDING',?,?,?,?,?,?,?)`).bind(orderId, orderNumber, reservations[0].reservationId, CURRENCY, cents, shippingCents, totalCents, key, now, sprache),
     ...items.map((item, i) => db.prepare(`INSERT INTO order_items
       (id,order_id,inventory_id,item_id,article_no,title_snapshot,unit_price_cents,quantity,currency,bild)
       VALUES (?,?,?,?,?,?,?,1,?,?)`).bind(crypto.randomUUID(), orderId, reservations[i].inventoryId, Number(item.id), String(item.article || item.id), catalogDisplayName(item), centsList[i], CURRENCY, vorschaubild(item))),
@@ -1256,6 +1263,7 @@ export default {
         if (isLive(env) && !env.DB) throw new PublicError("COMMERCE_DATABASE_NOT_CONFIGURED", 503);
         const body = await readJson(request);
         const kontakt = checkoutKontaktAus(body);
+        const sprache = bestellSpracheAus(body);
         await verifyTurnstile(env, request, body);
         const key = idempotencyKey(request, body);
         const fingerprint = await requestHash("create-order", body);
@@ -1311,7 +1319,7 @@ export default {
         }
         let local;
         try {
-          local = await createOrderRecords(env, items, centsList, versand, reservations, providerOrder, key, reqId, adresse, kontakt);
+          local = await createOrderRecords(env, items, centsList, versand, reservations, providerOrder, key, reqId, adresse, kontakt, sprache);
         } catch (err) {
           // Nur wenn sicher keine Bestellung angelegt ist, Stuecke und Platz
           // zurueck - sonst gehoeren sie womoeglich schon einer Bestellung.
