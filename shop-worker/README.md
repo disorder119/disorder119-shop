@@ -229,6 +229,7 @@ Zwei Quellen landen in `besucher_ereignisse` (`besucher.js`), beide mit taeglich
 - API: falsche Gutschein-Codes (`enum`, 12 in 30 Min.), fehlgeschlagene `/capture-order` (`kasse`, 8 in 30 Min.), Newsletter-Falle `website` (`falle`, 2 am Tag) sperren mit Turnstile-Option.
 - Telegram: neue Sperren/Kampagnen gesammelt (Wecker ca. 1 Min. nach der ersten, Cron als Rueckfall), hoechstens alle 10 Min. eine Nachricht.
 - Ausrollen: Migration 0042 -> `wrangler deploy` -> `--env sandbox` -> Storefront (CI).
+- Achtung Commit-Texte: steht die Zeichenfolge skip-ci in eckigen Klammern irgendwo in der Nachricht des obersten main-Commits (auch im Squash-Text eines PR), startet GitHub keinen push-Workflow - dann laufen Rebuild und Storefront-Ausrollen nicht (so geschehen bei #325).
 
 Reihenfolge beim Ausrollen: Migrationen `0040_besucher_zusammenfassung.sql` und `0041_waechter.sql`, dann dieser Worker (`npx wrangler deploy` legt den Durable Object an), dann `npx wrangler deploy -c wrangler.storefront.toml` bzw. der Storefront-Lauf in `rebuild.yml` (die Dienstbindung braucht den Shop-Worker).
 

@@ -138,9 +138,10 @@ export function istHosting(asn, name) {
 
 // Angriffsmuster in einer Anfrage, die eine FREMDE Website ausgeloest hat
 // (Bild, Skript oder Link auf disorder119.com/?q=<svg ...>): der Browser des
-// Besuchers schickt sie mit seiner eigenen IP. Solche Anfragen werden
-// abgewiesen, sperren aber nicht sofort - sonst koennte jede fremde Seite
-// unsere Kunden aussperren. Angriffswerkzeuge schicken diesen Kopf nicht.
+// Besuchers schickt sie mit seiner eigenen IP. Solche Anfragen werden nur
+// abgewiesen, nie gezaehlt oder gesperrt (waechter.js, storefront-edge.js) -
+// sonst koennte jede fremde Seite unsere Kunden aussperren. Wer den Kopf
+// faelscht, wird weiter abgewiesen, nur nicht gesperrt.
 export function fremdAusgeloest(request) {
   return String(request?.headers?.get?.("Sec-Fetch-Site") || "").toLowerCase() === "cross-site";
 }
