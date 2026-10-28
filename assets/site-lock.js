@@ -120,15 +120,26 @@
     if (document.body) bauen(); else document.addEventListener("DOMContentLoaded", bauen);
   }
 
-  // Den Zugangspass im Kopf schicken, nie in der Adresse (Protokolle).
-  fetch(API + "/site-status", { credentials: "omit", cache: "no-store", headers: pass ? { "X-D119-Pass": pass } : {} })
-    .then(function (res) { return res.json(); })
-    .then(function (s) {
-      if (!s || !s.locked) { schreiben(ZULETZT, ""); freigeben(); return; }
-      schreiben(ZULETZT, "1");
-      if (s.access) { freigeben(); return; }
-      schreiben(PASS, "");
-      zeigen(s.message || "");
-    })
-    .catch(freigeben);
+  function pruefen() {
+    // Den Zugangspass im Kopf schicken, nie in der Adresse (Protokolle).
+    fetch(API + "/site-status", { credentials: "omit", cache: "no-store", headers: pass ? { "X-D119-Pass": pass } : {} })
+      .then(function (res) { return res.json(); })
+      .then(function (s) {
+        if (!s || !s.locked) { schreiben(ZULETZT, ""); freigeben(); return; }
+        schreiben(ZULETZT, "1");
+        if (s.access) { freigeben(); return; }
+        schreiben(PASS, "");
+        zeigen(s.message || "");
+      })
+      .catch(freigeben);
+  }
+  pruefen();
+
+  // Zurueck/Vor ohne Neuladen (bfcache, assets/zurueck.js): Sperre neu
+  // pruefen - der Shop kann inzwischen gesperrt oder freigegeben sein.
+  window.addEventListener("pageshow", function (e) {
+    if (!e.persisted) return;
+    pass = lesen(PASS);
+    pruefen();
+  });
 })();

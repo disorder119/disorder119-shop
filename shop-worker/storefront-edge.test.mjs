@@ -16,7 +16,7 @@ test('canonical numbers are served without redirect loops; unknown legacy IDs re
 });
 
 test('publication allows real shop, language, image, PWA and Apple Pay paths',()=>{
-  for(const path of ['/','/en/','/fr/agb/','/artikel/119/index.html','/artikel/119.html','/kasse/','/assets/img/test/0.webp','/assets/legal-content.js','/manifest.webmanifest','/.well-known/apple-developer-merchantid-domain-association','/feed/google-merchant.xml']) assert.equal(publicPath(path),true,path);
+  for(const path of ['/','/en/','/fr/agb/','/artikel/119/index.html','/artikel/119.html','/kasse/','/assets/img/test/0.webp','/assets/legal-content.js','/manifest.webmanifest','/.well-known/apple-developer-merchantid-domain-association','/feed/google-merchant.xml','/feed/google-merchant-en.xml']) assert.equal(publicPath(path),true,path);
   for(const path of ['/feed/','/feed/google-merchant.json','/feed/x/y.xml']) assert.equal(publicPath(path),false,path);
 });
 test('publication rejects backend sources, drafts metadata, configuration and traversal',()=>{
@@ -166,4 +166,35 @@ test('erwischt product list: only available pieces with cut-out thumb, one per b
   assert.equal(liste[0].bild,'assets/img/a/thumbs/0.webp');
   assert.deepEqual(erwischtProdukteAus(null),[]);
   assert.deepEqual(erwischtProdukteAus('x'),[]);
+});
+
+const ping=(daten,headers={})=>new Request('https://disorder119.com/_seitenaufruf',{method:'POST',body:typeof daten==='string'?daten:JSON.stringify(daten),
+  headers:{'Sec-Fetch-Site':'same-origin','Sec-Fetch-Mode':'no-cors','Origin':'https://disorder119.com','User-Agent':IPHONE,'CF-Connecting-IP':'198.51.100.4','Content-Type':'text/plain;charset=UTF-8',...headers}});
+test('bfcache/prefetch ping counts once in the same counter with the same exceptions',async()=>{
+  const z=zaehler();
+  let origin=0;
+  const nieUrsprung=async()=>{origin++;return new Response('x');};
+  let response=await edge.fetch(ping({u:'/en/artikel/119/?utm_source=instagram',r:'https://disorder119.com/en/',a:'vorab'}),z.env,z.ctx,nieUrsprung);
+  assert.equal(response.status,204);
+  await Promise.all(z.laeuft);
+  const aufrufe=()=>z.gesendet.filter(g=>g.url.endsWith('/intern/seitenaufruf'));
+  assert.deepEqual(aufrufe()[0].body,{p:'/en/artikel/119/',r:'https://disorder119.com/en/',ua:IPHONE,ip:'198.51.100.4',land:'',sl:'',us:'instagram',uc:''});
+  // Zurueck/Vor ohne verweisende Seite gilt als Aufruf innerhalb des Shops; Dublette binnen 3 s faellt weg.
+  await edge.fetch(ping({u:'/',a:'zurueck'}),z.env,z.ctx,nieUrsprung);
+  await edge.fetch(ping({u:'/',a:'zurueck'}),z.env,z.ctx,nieUrsprung);
+  await Promise.all(z.laeuft);
+  assert.equal(aufrufe().length,2);
+  assert.equal(aufrufe()[1].body.r,'https://disorder119.com/');
+  const nicht=[
+    ping({u:'/kasse/'},{'Sec-Fetch-Site':'cross-site'}),ping({u:'/x/'},{}),ping({u:'https://evil.example/'}),
+    ping({u:'/assets/app.js'}),ping({u:'/data/catalog.json'}),ping({u:'/robots.txt'}),
+    ping({u:'/artikel/5/'},{'Sec-GPC':'1'}),ping({u:'/artikel/6/'},{DNT:'1'}),ping({u:'/artikel/7/'},{Cookie:'d119_nicht_zaehlen=1'}),
+    ping({u:'/artikel/8/'},{Origin:'https://evil.example'}),ping('kein json'),ping({u:'/artikel/9/',r:'x'.repeat(2000)}),
+    ping({u:'/artikel/10/'},{'User-Agent':'Googlebot/2.1 (+http://www.google.com/bot.html)'}),
+  ];
+  for(const req of nicht) assert.equal((await edge.fetch(req,z.env,z.ctx,nieUrsprung)).status,204);
+  await Promise.all(z.laeuft);
+  assert.equal(aufrufe().length,2);
+  assert.equal((await edge.fetch(new Request('https://disorder119.com/_seitenaufruf'),z.env,z.ctx,nieUrsprung)).status,405);
+  assert.equal(origin,0,'der Ping erreicht nie die statischen Dateien');
 });

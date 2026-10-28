@@ -80,6 +80,72 @@ export function seitenaufruf(request,url,status) {
     sl:browserSprache(h.get('Accept-Language')),us:kampagnenWert(url.searchParams.get('utm_source')),uc:kampagnenWert(url.searchParams.get('utm_campaign'))};
 }
 
+// Seitenaufrufe ohne Abruf der Seite beim Server (assets/zurueck.js):
+// Zurueck/Vor aus dem Seitenspeicher des Browsers (bfcache), vorab geladene
+// Seiten (Speculation Rules - der Vorab-Abruf selbst zaehlt oben bewusst
+// nicht) und Zurueck aus dem Browser-Cache. Gleicher Zaehler, gleiche Daten
+// und gleiche Ausnahmen wie seitenaufruf(); Adresse und verweisende Seite
+// kommen aus dem kleinen Body statt aus der Anfrage. Nur von der eigenen
+// Seite, hoechstens 1 KB, dieselbe Seite je Anschluss hoechstens alle 3 s;
+// die Flut-Grenze des Waechters gilt wie fuer jede Seite.
+export const SEITENAUFRUF_PING='/_seitenaufruf';
+const pingMerker=new Map();
+export function pingSeitenaufruf(request,body) {
+  const h=request.headers;
+  if (request.method!=='POST' || h.get('Sec-Fetch-Site')!=='same-origin') return null;
+  const origin=h.get('Origin');
+  if (origin && !['https://disorder119.com','https://www.disorder119.com'].includes(origin)) return null;
+  if (h.get('Sec-GPC')==='1' || h.get('DNT')==='1') return null;
+  if (/(?:^|;\s*)d119_nicht_zaehlen=1(?:;|$)/.test(h.get('Cookie')||'')) return null;
+  if (request.cf?.botManagement?.verifiedBot===true || request.cf?.verifiedBotCategory) return null;
+  let ziel;
+  try { ziel=new URL(String(body?.u||''),'https://disorder119.com'); } catch { return null; }
+  if (ziel.origin!=='https://disorder119.com' || !publicPath(ziel.pathname)) return null;
+  if (/^\/(?:assets|data|feed|\.well-known)\//.test(ziel.pathname) || /\.(?!html$)[a-z0-9]+$/i.test(ziel.pathname)) return null;
+  // Zurueck/Vor hat keine neue verweisende Seite: Aufruf innerhalb des Shops.
+  const r=String(body?.r||'').slice(0,300)||'https://disorder119.com/';
+  return {p:ziel.pathname.slice(0,200),r,ua:(h.get('User-Agent')||'').slice(0,400),
+    ip:(h.get('CF-Connecting-IP')||'').slice(0,64),land:String(request.cf?.country||'').slice(0,2),
+    sl:browserSprache(h.get('Accept-Language')),us:kampagnenWert(ziel.searchParams.get('utm_source')),uc:kampagnenWert(ziel.searchParams.get('utm_campaign'))};
+}
+async function kurzerBody(request,max=1024) {
+  if (Number(request.headers.get('Content-Length')||0)>max) return null;
+  const reader=request.body?.getReader();
+  if (!reader) return '';
+  const teile=[];let groesse=0;
+  try {
+    while(true) {
+      const {done,value}=await reader.read();
+      if (done) break;
+      groesse+=value.byteLength;
+      if (groesse>max) { reader.cancel().catch(()=>{}); return null; }
+      teile.push(value);
+    }
+  } finally { reader.releaseLock?.(); }
+  const bytes=new Uint8Array(groesse);let pos=0;
+  for(const t of teile){bytes.set(t,pos);pos+=t.byteLength;}
+  return new TextDecoder().decode(bytes);
+}
+async function seitenaufrufPing(request,env,ctx,bot) {
+  const leer=new Response(null,{status:204,headers:storefrontHeaders(new Response(null,{headers:{'Cache-Control':'no-store'}}))});
+  try {
+    if (bot) return leer;
+    const text=await kurzerBody(request);
+    if (text===null) return leer;
+    let body;
+    try { body=JSON.parse(text||'{}'); } catch { return leer; }
+    const daten=pingSeitenaufruf(request,body);
+    if (!daten || !daten.ip || !env?.BESUCH || typeof env.BESUCH.fetch!=='function' || typeof ctx?.waitUntil!=='function') return leer;
+    const jetzt=Date.now(),schluessel=`${daten.ip}|${daten.p}`;
+    if ((pingMerker.get(schluessel)||0)>jetzt-3000) return leer;
+    if (pingMerker.size>MERKER_MAX) pingMerker.clear();
+    pingMerker.set(schluessel,jetzt);
+    ctx.waitUntil(env.BESUCH.fetch(BESUCH_ZIEL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(daten)})
+      .then(res=>res.body?.cancel()).catch(()=>{}));
+  } catch {}
+  return leer;
+}
+
 function besuchMelden(request,url,status,env,ctx) {
   try {
     if (!env?.BESUCH || typeof env.BESUCH.fetch!=='function' || typeof ctx?.waitUntil!=='function') return;
@@ -388,6 +454,7 @@ export default {
         }
       }
     }
+    if (url.pathname===SEITENAUFRUF_PING) return request.method==='POST'?seitenaufrufPing(request,env,ctx,bot):fail(405,'Methode nicht erlaubt.');
     if (!['GET','HEAD'].includes(request.method)) return fail(405,'Methode nicht erlaubt.');
     const legacy=url.pathname.match(/^(\/(?:en\/|fr\/)?artikel\/)(\d+)(?:\/index\.html|\/|\.html)?$/);
     if(legacy && ARTICLE_NUMBER_ROUTES[legacy[2]]) {
