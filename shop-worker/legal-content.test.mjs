@@ -29,7 +29,7 @@ test('confirmation contains full terms and withdrawal form in HTML and plain tex
   for(const body of [mail.text,mail.html]) {
     assert.match(body,/Geltungsbereich/); assert.match(body,/Bestellung und Vertragsschluss/);
     assert.match(body,/Gewährleistung/);assert.match(body,/Muster-Widerrufsformular/);
-    assert.match(body,/2026-10-28-2/);assert.match(body,/\+49 152 0829 7741/);assert.match(body,/office@example.test/);
+    assert.match(body,/2026-10-28-3/);assert.match(body,/\+49 152 0829 7741/);assert.match(body,/office@example.test/);
     assert.doesNotMatch(body,/\{email\}/);
   }
   assert.doesNotMatch(mail.text,/<h3>/);
@@ -54,7 +54,7 @@ test('withdrawal keeps the statutory period, return costs and refund proof in al
 
 test('privacy policy names the visit summary, the visit count in browser storage, regional blocking and the 24-hour attack blocks in all languages',()=>{
   const source=JSON.parse(fs.readFileSync(new URL('../config/legal-content.json',import.meta.url),'utf8'));
-  assert.equal(source.version,'2026-10-28-2');
+  assert.equal(source.version,'2026-10-28-3');
   for(const [lang,stand,zusammenfassung,sperre,waechter] of [
     ['de',/Stand: 28\. Oktober 2026/,/Zusammenfassung per Telegram/,/Länder-Sperre/,/für 24 Stunden/],
     ['en',/Updated 28 October 2026/,/Telegram summary/,/Regional blocking/,/for 24 hours/],
