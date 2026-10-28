@@ -147,7 +147,7 @@ def export(root: Path, target: Path, revision: str, node="node"):
     with tempfile.TemporaryDirectory() as temporary:
         runtime = Path(temporary)
         (runtime / "package.json").write_text('{"type":"module","private":true}\n', encoding="utf-8")
-        for name in ("storefront-edge.js", "storefront-csp.js", "catalog-number-routes.js", "geo-sperre.js", "waechter-regeln.js", "waechter-seiten.js", "privacy-security.js"):
+        for name in ("storefront-edge.js", "storefront-csp.js", "catalog-number-routes.js", "geo-sperre.js", "waechter-regeln.js", "waechter-seiten.js", "waechter-erwischt-texte.js", "privacy-security.js"):
             (runtime / name).write_bytes(git(root, "show", f"{commit}:shop-worker/{name}"))
         rows = []
         for row in git(root, "ls-tree", "-r", "-z", "-l", commit).split(b"\0"):

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import edge,{publicPath,publicCatalog,seitenaufruf} from './storefront-edge.js';
+import edge,{publicPath,publicCatalog,seitenaufruf,erwischtProdukteAus} from './storefront-edge.js';
 
 test('legacy product identities redirect to confirmed numbers and preserve language/query',async()=>{
   for(const [old,target] of [['/artikel/6184/','/artikel/181/'],['/artikel/9429/','/artikel/69/'],['/en/artikel/9472/?from=archive','/en/artikel/123/?from=archive'],['/fr/artikel/6241.html','/fr/artikel/238/']]) {
@@ -148,4 +148,53 @@ test('Europa, USA, unbekannte Laender und Bots bekommen keinen Hinweis',async()=
   assert.match(await falsch.text(),/d119-liefergebiet/);
   // Keine Laender-Sperre dafuer: Asien bleibt erreichbar.
   for (const land of ['JP','CN','SG','SA']) assert.equal((await edge.fetch(ausLand('/',land),{},{},seiteMitBody)).status,200,land);
+});
+
+test('erwischt product list: only available pieces with cut-out thumb, one per brand, safe fields',()=>{
+  const roh=[
+    {public_status:'AVAILABLE',brand:'Prada',title:'Prada A',title_en:'Prada A EN',price:120,article:'1',grid_image:'assets/img/a/thumbs/0.webp',product_type:'Sneakers'},
+    {public_status:'AVAILABLE',brand:'Prada',title:'Prada B',price:99,article:'2',grid_image:'assets/img/b/thumbs/0.webp'}, // zweite Prada -> entfaellt
+    {public_status:'SOLD',brand:'Dior',title:'Dior verkauft',price:80,article:'3',grid_image:'assets/img/c/thumbs/0.webp'}, // nicht verfuegbar
+    {public_status:'AVAILABLE',brand:'Balmain',title:'Balmain X',price:250,article:'4',grid_image:'assets/img/d/thumbs/0.webp',product_type:'Jacket'},
+    {public_status:'AVAILABLE',brand:'NoBild',title:'ohne Bild',price:10,article:'5'}, // kein grid_image
+    null,
+  ];
+  const liste=erwischtProdukteAus(roh);
+  assert.deepEqual(liste.map(p=>p.marke),['Prada','Balmain']);
+  assert.equal(liste[0].titelEn,'Prada A EN');
+  assert.equal(liste[1].titelEn,'Balmain X'); // faellt auf title zurueck
+  assert.equal(liste[0].bild,'assets/img/a/thumbs/0.webp');
+  assert.deepEqual(erwischtProdukteAus(null),[]);
+  assert.deepEqual(erwischtProdukteAus('x'),[]);
+});
+
+const ping=(daten,headers={})=>new Request('https://disorder119.com/_seitenaufruf',{method:'POST',body:typeof daten==='string'?daten:JSON.stringify(daten),
+  headers:{'Sec-Fetch-Site':'same-origin','Sec-Fetch-Mode':'no-cors','Origin':'https://disorder119.com','User-Agent':IPHONE,'CF-Connecting-IP':'198.51.100.4','Content-Type':'text/plain;charset=UTF-8',...headers}});
+test('bfcache/prefetch ping counts once in the same counter with the same exceptions',async()=>{
+  const z=zaehler();
+  let origin=0;
+  const nieUrsprung=async()=>{origin++;return new Response('x');};
+  let response=await edge.fetch(ping({u:'/en/artikel/119/?utm_source=instagram',r:'https://disorder119.com/en/',a:'vorab'}),z.env,z.ctx,nieUrsprung);
+  assert.equal(response.status,204);
+  await Promise.all(z.laeuft);
+  const aufrufe=()=>z.gesendet.filter(g=>g.url.endsWith('/intern/seitenaufruf'));
+  assert.deepEqual(aufrufe()[0].body,{p:'/en/artikel/119/',r:'https://disorder119.com/en/',ua:IPHONE,ip:'198.51.100.4',land:'',sl:'',us:'instagram',uc:''});
+  // Zurueck/Vor ohne verweisende Seite gilt als Aufruf innerhalb des Shops; Dublette binnen 3 s faellt weg.
+  await edge.fetch(ping({u:'/',a:'zurueck'}),z.env,z.ctx,nieUrsprung);
+  await edge.fetch(ping({u:'/',a:'zurueck'}),z.env,z.ctx,nieUrsprung);
+  await Promise.all(z.laeuft);
+  assert.equal(aufrufe().length,2);
+  assert.equal(aufrufe()[1].body.r,'https://disorder119.com/');
+  const nicht=[
+    ping({u:'/kasse/'},{'Sec-Fetch-Site':'cross-site'}),ping({u:'/x/'},{}),ping({u:'https://evil.example/'}),
+    ping({u:'/assets/app.js'}),ping({u:'/data/catalog.json'}),ping({u:'/robots.txt'}),
+    ping({u:'/artikel/5/'},{'Sec-GPC':'1'}),ping({u:'/artikel/6/'},{DNT:'1'}),ping({u:'/artikel/7/'},{Cookie:'d119_nicht_zaehlen=1'}),
+    ping({u:'/artikel/8/'},{Origin:'https://evil.example'}),ping('kein json'),ping({u:'/artikel/9/',r:'x'.repeat(2000)}),
+    ping({u:'/artikel/10/'},{'User-Agent':'Googlebot/2.1 (+http://www.google.com/bot.html)'}),
+  ];
+  for(const req of nicht) assert.equal((await edge.fetch(req,z.env,z.ctx,nieUrsprung)).status,204);
+  await Promise.all(z.laeuft);
+  assert.equal(aufrufe().length,2);
+  assert.equal((await edge.fetch(new Request('https://disorder119.com/_seitenaufruf'),z.env,z.ctx,nieUrsprung)).status,405);
+  assert.equal(origin,0,'der Ping erreicht nie die statischen Dateien');
 });

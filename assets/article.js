@@ -495,6 +495,16 @@
   window.addEventListener("storage", function (e) {
     if (e.key === CART_KEY) { refreshCartBtn(); refreshCartCount(); }
   });
+  // Zurueck/Vor ohne Neuladen (bfcache, assets/zurueck.js): ist das Stueck
+  // inzwischen verkauft, die Seite neu laden statt den alten Stand zu zeigen.
+  // Den Warenkorb zieht das "storage"-Ereignis oben nach.
+  document.addEventListener("d119:wiederhergestellt", function () {
+    if (IT.sold) return;
+    fetch("/data/catalog.json", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (neu) {
+      var eintrag = (neu || []).filter(function (it) { return it && String(it.id) === String(IT.id); })[0];
+      if (eintrag && eintrag.public_status === "SOLD") location.reload();
+    }).catch(function () {});
+  });
   if (cartBtn) {
     cartBtn.addEventListener("click", function () {
       // Sicherheitsnetz: ein SOLD-Artikel darf nie in den Warenkorb gelangen,
