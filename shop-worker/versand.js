@@ -31,7 +31,16 @@ import { PAKETE, VERSAND, dienstErlaubt, lieferlaender, paketFuer, paketFuerArti
 
 const CACHE_MS = 10 * 60 * 1000;
 const KATALOG_CACHE_MS = 5 * 60 * 1000;
-const KATALOG_URL = "https://disorder119.com/data/catalog.json";
+// Oeffentlicher Katalog fuer Anzeige-Preise (Paketklasse, "ab 99 € frei").
+// Seit der Shop aus Cloudflare ausgeliefert wird, landet ein Abruf von
+// disorder119.com aus diesem Worker (gleiche Zone) beim alten Ursprung und
+// endet nach ~39 s mit 522 - deshalb zuerst die gebaute Datei auf main
+// (GitHub, oeffentlich), mit kurzer Frist; disorder119.com nur als Rueckfall.
+const KATALOG_QUELLEN = Object.freeze([
+  "https://raw.githubusercontent.com/disorder119/disorder119-shop/main/data/catalog.json",
+  "https://disorder119.com/data/catalog.json",
+]);
+const KATALOG_FRIST_MS = 4000;
 const MAX_ARTIKEL = 10;
 const OEFFENTLICHE_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -352,9 +361,18 @@ export function artikelIdsAus(wert) {
 async function katalogArtikel(env, ids) {
   if (!katalogCache || katalogCache.bis <= Date.now()) {
     const laden = env.KATALOG_LADEN || (async () => {
-      const res = await fetch(KATALOG_URL, { headers: { Accept: "application/json", "User-Agent": "disorder119-shop-worker" } });
-      if (!res.ok) throw new Error(`katalog_${res.status}`);
-      return res.json();
+      let fehler = new Error("katalog_unbekannt");
+      for (const url of KATALOG_QUELLEN) {
+        try {
+          const res = await fetch(url, { headers: { Accept: "application/json", "User-Agent": "disorder119-shop-worker" },
+            signal: AbortSignal.timeout(KATALOG_FRIST_MS) });
+          if (res.ok) return await res.json();
+          fehler = new Error(`katalog_${res.status}`);
+        } catch (err) {
+          fehler = err;
+        }
+      }
+      throw fehler;
     });
     const liste = await laden();
     const map = new Map();

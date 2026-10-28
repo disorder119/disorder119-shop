@@ -283,3 +283,39 @@ test("PayPal lehnt eine EU-Anschrift ab: klare Meldung, Stuecke sofort wieder fr
     globalThis.fetch = original;
   }
 });
+
+test("Anzeige-Katalog kommt von GitHub (main), disorder119.com nur als Rueckfall", async () => {
+  const original = globalThis.fetch;
+  const abrufe = [];
+  let rawKaputt = false;
+  globalThis.fetch = async url => {
+    const u = new URL(String(url));
+    abrufe.push(u.host);
+    if (u.host === "raw.githubusercontent.com") {
+      assert.equal(u.pathname, "/disorder119/disorder119-shop/main/data/catalog.json");
+      if (rawKaputt) throw new Error("netz weg");
+      return Response.json(ITEMS);
+    }
+    if (u.host === "disorder119.com") return Response.json(ITEMS);
+    return new Response("{}", { status: 404 });
+  };
+  const abfrage = async () => {
+    const url = new URL("https://api.disorder119.com/versand/optionen?artikel=9420&land=DE");
+    const res = await handleVersandOptionen(new Request(url, { headers: { Origin: SHOP } }), {}, url, "r", SHOP);
+    return res.json();
+  };
+  try {
+    versandCacheLeeren();
+    const daten = await abfrage();
+    // Mantel ueber 99 EUR: Klasse M, Gratisversand - nur mit echtem Katalog richtig.
+    assert.deepEqual([daten.paket, daten.optionen[0].preisCents, daten.frei?.erreicht], ["M", 0, true]);
+    assert.deepEqual(abrufe, ["raw.githubusercontent.com"]);
+    versandCacheLeeren();
+    abrufe.length = 0;
+    rawKaputt = true;
+    assert.equal((await abfrage()).paket, "M");
+    assert.deepEqual(abrufe, ["raw.githubusercontent.com", "disorder119.com"]);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
