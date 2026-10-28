@@ -8,6 +8,8 @@ const ADMIN = "https://admin.disorder119.com";
 const TOKEN = "admin-schluessel-dieser-anfrage";
 const CART_ID = "ABCDEF123456";
 const TRACKING = "00340434161094042557";
+// EU-Laender (ISO-3) der Kasse, wie sie der DHL-Katalog in einer Region fuehrt.
+const EU3 = ["AUT", "BEL", "BGR", "HRV", "CYP", "CZE", "DNK", "EST", "FIN", "FRA", "GRC", "HUN", "IRL", "ITA", "LVA", "LTU", "LUX", "MLT", "NLD", "POL", "PRT", "ROU", "SWE", "SVK", "SVN", "ESP"];
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...new Array(600).fill(7)]);
 
 test('DHL checkout rejects lookalike hosts, credentials and insecure URLs', () => {
@@ -47,16 +49,22 @@ function fakeDhl({ payAfter = 1 } = {}) {
   const original = globalThis.fetch;
   globalThis.fetch = async (url, init = {}) => {
     const u = new URL(String(url));
+    // Cloudflare Workers werfen bei redirect "error" (nur "follow"/"manual" erlaubt).
+    assert.ok(init.redirect === undefined || ["follow", "manual"].includes(init.redirect), `redirect ${init.redirect}`);
     calls.push({ path: u.pathname, method: init.method || "GET", headers: init.headers || {}, body: init.body ? JSON.parse(init.body) : null });
     const path = u.pathname.replace("/parcel/de/shipping/of/v1/public", "");
     if (path === "/catalog/current/products") {
       return Response.json({
         defaultProduct: "PAK02",
         products: {
-          PAK05: { attributes: { displayName: { text: "Paket bis 5 kg" }, maxWeight: 5000, tracking: true }, regions: [{ countries: ["DEU"], price: { amount: 7.69 } }] },
-          PAK02: { attributes: { displayName: { text: "Paket bis 2 kg" }, maxWeight: 2000, tracking: true }, regions: [{ countries: ["DEU"], price: { amount: 6.19 } }] },
+          // Dasselbe Produkt hat je Region einen eigenen Preis: Inland, EU (Zone 1), Schweiz (Zone 2).
+          PAK05: { attributes: { displayName: { text: "Paket bis 5 kg" }, maxWeight: 5000, tracking: true }, regions: [
+            { countries: ["DEU"], price: { amount: 7.69 } }, { countries: EU3, price: { amount: 17.49 } }, { countries: ["CHE"], price: { amount: 26.99 } }] },
+          PAK02: { attributes: { displayName: { text: "Paket bis 2 kg" }, maxWeight: 2000, tracking: true }, regions: [
+            { countries: ["DEU"], price: { amount: 6.19 } }, { countries: EU3, price: { amount: 14.49 } }] },
           PAECK: { attributes: { displayName: { text: "Päckchen" }, tracking: false }, regions: [{ countries: ["DEU"], price: { amount: 4.19 } }] },
-          PAKEU: { attributes: { displayName: { text: "Paket EU" }, tracking: true }, regions: [{ countries: ["AUT"], price: { amount: 17.49 } }] },
+          "PAK05.HVERSI1000.EU": { attributes: { displayName: { text: "Paket bis 5 kg mit Höherversicherung bis 1.000 €" }, maxWeight: 5000, tracking: true },
+            regions: [{ countries: EU3, price: { amount: 31.49 } }] },
         },
       });
     }
@@ -105,12 +113,19 @@ async function call(env, pathname, { method = "GET", body, bearer = TOKEN } = {}
 test("names and streets are made safe for DHL's Latin-1 franking", () => {
   assert.equal(dhlText("Maria Müller-Groß", 50), "Maria Müller-Groß");
   assert.equal(dhlText("Café #3 [Hinterhof]: 2!", 50), "Café 3 Hinterhof 2");
-  assert.equal(dhlText("Łukasz 🙂 Świątek", 50), "ukasz Swiatek");
+  // Buchstaben ohne Zerlegung werden umgeschrieben statt verschluckt.
+  assert.equal(dhlText("Łukasz 🙂 Świątek", 50), "Lukasz Swiatek");
+  assert.equal(dhlText("Đurđevac Ħal Għargħur Ștefan", 50), "Durdevac Hal Gharghur Stefan");
   assert.deepEqual(splitStreet("Musterstraße 12a"), { street: "Musterstraße", streetNumber: "12a" });
   assert.deepEqual(splitStreet("Am Markt 3-5"), { street: "Am Markt", streetNumber: "3-5" });
   assert.deepEqual(splitStreet("Straße des 17. Juni 110"), { street: "Straße des 17. Juni", streetNumber: "110" });
   assert.deepEqual(splitStreet("Packstation 150"), { street: "Packstation", streetNumber: "150" });
   assert.deepEqual(splitStreet("Musterweg"), { street: "Musterweg", streetNumber: "" });
+  // EU-Schreibweisen: Zusatz nach der Nummer, "ohne Nummer", Nummer vorn.
+  assert.deepEqual(splitStreet("Rue de la Paix 12bis"), { street: "Rue de la Paix", streetNumber: "12bis" });
+  assert.deepEqual(splitStreet("Calle Mayor s/n"), { street: "Calle Mayor", streetNumber: "s/n" });
+  assert.deepEqual(splitStreet("12 rue de la Paix"), { street: "rue de la Paix", streetNumber: "12" });
+  assert.deepEqual(splitStreet("Via Roma 5/7"), { street: "Via Roma", streetNumber: "5/7" });
   assert.equal(receiverAddress({ given_name: "Maria", surname: "Müller", address_line1: "Weg 1" }).name2, "Maria Müller");
 });
 
@@ -232,10 +247,24 @@ test("incomplete or foreign addresses are stopped before anything is bought", as
     });
     assert.equal(fixed.status, 200);
 
-    const abroad = await call(envWith(seed({ country_code: "AT", postal_code: "1010", city: "Wien" })), "/admin/versand/o1/qr", {
-      method: "POST", body: { produkt: "PAK02" },
+    // Ausserhalb der EU (Zoll) gibt es keine Marke ueber diese Anbindung.
+    const schweiz = await call(envWith(seed({ country_code: "CH", postal_code: "8001", city: "Zürich" })), "/admin/versand/o1/qr", {
+      method: "POST", body: { produkt: "PAK05" },
     });
-    assert.equal(abroad.data.error, "NUR_INLANDSVERSAND");
+    assert.equal(schweiz.status, 409);
+    assert.equal(schweiz.data.error, "LAND_NICHT_ANGEBUNDEN");
+    // Kanaren: Spanien, aber ausserhalb des EU-Zollgebiets.
+    const kanaren = await call(envWith(seed({ country_code: "ES", postal_code: "35001", city: "Las Palmas" })), "/admin/versand/o1/qr", {
+      method: "POST", body: { produkt: "PAK05" },
+    });
+    assert.equal(kanaren.data.error, "SONDERGEBIET_MIT_ZOLL");
+    // Ein Produkt, das DHL fuer dieses Land nicht fuehrt, wird nicht angelegt.
+    const falsch = await call(envWith(seed({ country_code: "CH", postal_code: "8001", city: "Zürich" })), "/admin/versand/dhl-produkte?land=CH");
+    assert.equal(falsch.data.error, "LAND_NICHT_ANGEBUNDEN");
+    const ohneEu = await call(envWith(seed({ country_code: "AT", postal_code: "1010", city: "Wien" })), "/admin/versand/o1/qr", {
+      method: "POST", body: { produkt: "PAECK" },
+    });
+    assert.equal(ohneEu.data.error, "PRODUKT_NICHT_FUER_LAND");
   } finally {
     dhl.restore();
   }
@@ -253,7 +282,8 @@ test('invalid DHL setup does not attempt to capture an authorized payment', asyn
   const cases = [
     {body:{},error:'PRODUKT_FEHLT'},
     {contact:{address_line1:'Musterweg'},body:{produkt:'PAK02'},error:'ADRESSE_UNVOLLSTAENDIG'},
-    {contact:{country_code:'AT',postal_code:'1010',city:'Wien'},body:{produkt:'PAK02'},error:'NUR_INLANDSVERSAND'},
+    {contact:{country_code:'CH',postal_code:'8001',city:'Zürich'},body:{produkt:'PAK02'},error:'LAND_NICHT_ANGEBUNDEN'},
+    {contact:{country_code:'FR',postal_code:'97110',city:'Pointe-à-Pitre'},body:{produkt:'PAK02'},error:'SONDERGEBIET_MIT_ZOLL'},
     {env:{DHL_PRIVAT_API_KEY:''},body:{produkt:'PAK02'},error:'DHL_QR_NICHT_EINGERICHTET'},
   ];
   for (const c of cases) {
@@ -269,5 +299,123 @@ test('invalid DHL setup does not attempt to capture an authorized payment', asyn
       assert.equal(DB.raw.prepare("SELECT status FROM payments WHERE id='pay1'").get().status,'AUTHORIZED');
       assert.equal(DB.raw.prepare('SELECT COUNT(*) AS n FROM dhl_qr_marken').get().n,0);
     } finally {globalThis.fetch=original;DB.raw.close();}
+  }
+});
+
+test("EU: products and prices for the delivery country, nothing outside the EU", async () => {
+  const dhl = fakeDhl();
+  try {
+    const at = await call(envWith(seed()), "/admin/versand/dhl-produkte?land=AT");
+    assert.equal(at.status, 200);
+    assert.equal(at.data.land, "AT");
+    assert.deepEqual(at.data.produkte.map(p => [p.id, p.priceCents]), [["PAK02", 1449], ["PAK05", 1749], ["PAK05.HVERSI1000.EU", 3149]]);
+    const de = await call(envWith(seed()), "/admin/versand/dhl-produkte");
+    assert.deepEqual(de.data.produkte.map(p => p.id), ["PAK02", "PAK05"]);
+    const us = await call(envWith(seed()), "/admin/versand/dhl-produkte?land=US");
+    assert.equal(us.status, 409);
+    assert.equal(us.data.error, "LAND_NICHT_ANGEBUNDEN");
+  } finally {
+    dhl.restore();
+  }
+});
+
+test("EU: a label for France uses DHL's international address format with the ISO-3 country", async () => {
+  const DB = seed({ recipient_name: "Élodie Lefèvre", address_line1: "Rue de la Paix 12bis", address_line2: "Bâtiment B",
+    postal_code: "75002", city: "Paris", country_code: "FR" });
+  const dhl = fakeDhl({ payAfter: 1 });
+  try {
+    const created = await call(envWith(DB), "/admin/versand/o1/qr", { method: "POST", body: { produkt: "PAK05" } });
+    assert.equal(created.status, 200, JSON.stringify(created.data));
+    const cart = dhl.calls.find(c => c.path.endsWith("/shopping-carts/pre-paid")).body.shoppingcart;
+    assert.deepEqual(cart.items[0].address.receiver, {
+      name2: "Élodie Lefèvre", street: "Rue de la Paix", streetNumber: "12bis", plz: "75002", city: "Paris", country: "FRA", name3: "Bâtiment B",
+    });
+    assert.equal(cart.items[0].address.sender.country, "DEU");
+    assert.equal(cart.items[0].product.id, "PAK05");
+  } finally {
+    dhl.restore();
+  }
+  // Niederlande: PLZ in der Schreibweise der Post, Packstation gibt es dort nicht.
+  const nl = receiverAddress({ recipient_name: "Anna de Vries", address_line1: "Keizersgracht 123", postal_code: "1015cj", city: "Amsterdam", country_code: "NL" });
+  assert.equal(nl.plz, "1015 CJ");
+  assert.equal(nl.country, "NLD");
+  assert.doesNotThrow(() => assertReceiver(nl, "NL"));
+  assert.throws(() => assertReceiver({ ...nl, plz: "1015" }, "NL"), err => err.code === "ADRESSE_UNVOLLSTAENDIG" && /PLZ/.test(err.detail));
+  const abholort = receiverAddress({ recipient_name: "Anna de Vries", address_line1: "Packstation 162", postal_code: "1015 CJ", city: "Amsterdam", country_code: "NL" });
+  assert.throws(() => assertReceiver(abholort, "NL"), err => err.code === "ABHOLORT_NUR_DE");
+});
+
+test("catalog check: shop prices against DHL per zone and country, once a day", async () => {
+  const { katalogAbgleich, katalogAbgleichen } = await import("./dhl-qr.js");
+  const katalog = { products: {
+    PAK02: { regions: [{ countries: ["DEU"], price: { amount: 6.19 } }, { countries: EU3, price: { amount: 14.49 } }] },
+    PAK05: { regions: [{ countries: ["DEU"], price: { amount: 7.69 } }, { countries: EU3.filter(l => l !== "MLT"), price: { amount: 17.49 } }, { countries: ["MLT"], price: { amount: 19.99 } }] },
+    PAK10: { regions: [{ countries: ["DEU"], price: { amount: 10.49 } }, { countries: EU3, price: { amount: 22.49 } }] },
+    PAK20: { regions: [{ countries: ["DEU"], price: { amount: 18.99 } }, { countries: EU3, price: { amount: 28.49 } }] },
+    PAK315: { regions: [{ countries: ["DEU"], price: { amount: 23.99 } }, { countries: EU3, price: { amount: 45.49 } }] },
+    "PAK05.HVERSI1000.EU": { regions: [{ countries: EU3, price: { amount: 31.49 } }] },
+  } };
+  const ergebnis = katalogAbgleichen(katalog);
+  // Deutschland und die EU stimmen - bis auf Malta im Beispiel.
+  assert.deepEqual(ergebnis.abweichungen, [{ zone: "EU", land: "MT", paket: "M", kasseCents: 1749, dhlCents: 1999 }]);
+  assert.deepEqual(ergebnis.zonen.DE.dhl, [{ preise: { S: 619, M: 769, L: 1049, XL: 1899, XXL: 2399 }, laender: ["DE"] }]);
+  assert.equal(ergebnis.zonen.EU.dhl[0].laender.length, 25);
+  assert.deepEqual(ergebnis.versicherung, ["PAK05.HVERSI1000.EU"]);
+  assert.deepEqual(ergebnis.fehlend, []);
+
+  const DB = seed();
+  const original = globalThis.fetch;
+  let abrufe = 0;
+  globalThis.fetch = async () => { abrufe += 1; return Response.json(katalog); };
+  try {
+    const env = envWith(DB, { DHL_PRIVAT_ENVIRONMENT: "live" });
+    const jetzt = Date.parse("2030-01-01T10:00:00Z");
+    const erster = await katalogAbgleich(env, jetzt);
+    assert.equal(erster.ereignis, "DHL_KATALOG_ABWEICHUNG");
+    assert.equal((await katalogAbgleich(env, jetzt + 3_600_000)).uebersprungen, "HEUTE_SCHON");
+    const row = DB.raw.prepare("SELECT event_type,metadata_json FROM audit_events WHERE entity_id='dhl-katalog'").get();
+    assert.equal(row.event_type, "DHL_KATALOG_ABWEICHUNG");
+    assert.equal(JSON.parse(row.metadata_json).environment, "live");
+    assert.ok(abrufe <= 1, "der Katalog wird gemerkt");
+    // Die Admin-App bekommt den letzten Abgleich mit der Produktliste.
+    const liste = await call(env, "/admin/versand/dhl-produkte?land=MT");
+    assert.equal(liste.data.abgleich.ereignis, "DHL_KATALOG_ABWEICHUNG");
+    assert.equal(liste.data.abgleich.abweichungen[0].land, "MT");
+    assert.equal((await katalogAbgleich({ DB }, jetzt + 2 * 86_400_000)).uebersprungen, "NICHT_EINGERICHTET");
+    // Nach einem Fehler: nach einer Stunde erneut, nicht erst morgen.
+    const DB2 = seed();
+    const fehlerAm = jetzt + 3 * 86_400_000;
+    DB2.raw.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,metadata_json,created_at)
+      VALUES ('f1','SYSTEM','versand','dhl-katalog','DHL_KATALOG_FEHLER','{}',?)`).run(new Date(fehlerAm).toISOString());
+    const env2 = envWith(DB2, { DHL_PRIVAT_ENVIRONMENT: "live" });
+    assert.equal((await katalogAbgleich(env2, fehlerAm + 30 * 60_000)).uebersprungen, "HEUTE_SCHON");
+    assert.equal((await katalogAbgleich(env2, fehlerAm + 61 * 60_000)).ereignis, "DHL_KATALOG_ABWEICHUNG");
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("no fetch in the worker uses redirect 'error' (Cloudflare Workers reject it at runtime)", async () => {
+  const fs = await import("node:fs");
+  const dir = new URL("./", import.meta.url);
+  for (const name of fs.readdirSync(dir).filter(n => n.endsWith(".js"))) {
+    const text = fs.readFileSync(new URL(name, dir), "utf8");
+    assert.doesNotMatch(text, /redirect\s*:\s*["']error["']/, name);
+  }
+});
+
+test("a redirect from DHL is not followed but reported", async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    assert.equal(init.redirect, "manual");
+    return new Response(null, { status: 302, headers: { Location: "https://example.com/" } });
+  };
+  try {
+    const res = await call(envWith(seed(), { DHL_PRIVAT_ENVIRONMENT: "redirect-test" }), "/admin/versand/dhl-produkte?land=AT");
+    assert.equal(res.status, 502);
+    assert.equal(res.data.error, "DHL_FEHLER");
+    assert.match(res.data.detail, /HTTP 302/);
+  } finally {
+    globalThis.fetch = original;
   }
 });

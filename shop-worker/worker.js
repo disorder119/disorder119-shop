@@ -15,6 +15,8 @@ import {
 import { branchHead, createCommit, fastForward, readRepoFile } from "./github-datei.js";
 import { istSandbox, sandboxKatalogLaden, sandboxVerkauft } from "./sandbox.js";
 import { VersandError, versandFuerBestellung, versandWahlStatement } from "./versand.js";
+import { zoneFuerLand } from "./versand-config.js";
+import { lateinTauglich, plzNormalisieren, plzSondergebiet } from "./laender.js";
 import { AbholortError, abholadresse, zustellungAus } from "./abholorte.js";
 import { captureStatements, recordVerifiedRefund } from './tax-evidence.js';
 import { normalizeEmail } from './customer-mail.js';
@@ -255,31 +257,51 @@ async function findItems(env, ids) {
   return ids.map(id => items.find(item => String(item.id) === id));
 }
 
-// Lieferadresse aus der Kasse (assets/kasse.js). Versendet wird nur innerhalb
-// Deutschlands. Packstation und Filiale gehen nicht ueber die Strasse, sondern
-// ueber die Zustellung (abholorte.js) - nur mit DHL, DPD stellt dort nicht zu.
+// Lieferadresse aus der Kasse (assets/kasse.js). Versendet wird nach
+// Deutschland und in die EU-Laender aus versand.zonen (config/shop-config.json)
+// - dorthin ohne Zoll. Sondergebiete mit Zoll (Kanaren, franz. Uebersee ...)
+// lehnt laender.js ab. Packstation und Filiale gehen nicht ueber die Strasse,
+// sondern ueber die Zustellung (abholorte.js) - nur mit DHL und nur in DE.
 export function lieferadresseAus(roh) {
   if (roh === undefined || roh === null) return null;
   if (typeof roh !== "object" || Array.isArray(roh)) throw new PublicError("ADRESSE_UNVOLLSTAENDIG", 422);
   const zeile = (wert, max) => safeText(wert, max).replace(/\s+/g, " ").trim();
+  const land = zeile(roh.land || "DE", 3).toUpperCase();
   const adresse = {
     name: zeile(roh.name, 120),
     strasse: zeile(roh.strasse, 100),
     hausnummer: zeile(roh.hausnummer, 12).replace(/\s+/g, ""),
     zusatz: zeile(roh.zusatz, 100),
-    plz: zeile(roh.plz, 5),
+    plz: zeile(roh.plz, 12),
     ort: zeile(roh.ort, 80),
-    land: zeile(roh.land || "DE", 2).toUpperCase(),
+    land,
   };
   if (/packstation|postfiliale|postfach|paketshop/i.test(`${adresse.strasse} ${adresse.zusatz}`)) {
     throw new PublicError("PACKSTATION_NICHT_MOEGLICH", 422);
   }
-  if (adresse.land !== "DE") throw new PublicError("NUR_DEUTSCHLAND", 422);
+  if (!/^[A-Z]{2}$/.test(land) || !zoneFuerLand(land)) throw new PublicError("LAND_NICHT_BELIEFERT", 422);
+  // PLZ in der Schreibweise der jeweiligen Post ("75001", "1012 AB", "00-950").
+  const plz = plzNormalisieren(land, adresse.plz);
+  // Hausnummer: in Deutschland wie bisher; im EU-Ausland auch "12bis", "s/n"
+  // oder "4B". Irland kennt oft keine Hausnummer (Eircode genuegt).
+  const nummerOk = land === "DE"
+    ? /^\d{1,5}[a-zA-Z]?(?:[-/]\d{1,5}[a-zA-Z]?)?$/.test(adresse.hausnummer)
+    : (land === "IE" && !adresse.hausnummer) || /^[0-9A-Za-z][0-9A-Za-z./-]{0,11}$/.test(adresse.hausnummer);
   const vollstaendig = adresse.name.length >= 3 && /\s/.test(adresse.name)
-    && adresse.strasse.length >= 2 && /^\d{1,5}[a-zA-Z]?(?:[-/]\d{1,5}[a-zA-Z]?)?$/.test(adresse.hausnummer)
-    && /^\d{5}$/.test(adresse.plz) && adresse.ort.length >= 2;
+    && adresse.strasse.length >= 2 && nummerOk && plz && adresse.ort.length >= 2;
   if (!vollstaendig) throw new PublicError("ADRESSE_UNVOLLSTAENDIG", 422);
-  return adresse;
+  if (plzSondergebiet(land, plz)) throw new PublicError("SONDERGEBIET_NICHT_BELIEFERT", 422);
+  // Das DHL-Etikett kennt nur lateinische Buchstaben (Latin-1).
+  if (!lateinTauglich(`${adresse.name} ${adresse.strasse} ${adresse.hausnummer} ${adresse.zusatz} ${adresse.ort}`)) {
+    throw new PublicError("ADRESSE_NUR_LATEIN", 422);
+  }
+  return { ...adresse, plz };
+}
+
+// Anschriftzeile fuer PayPal und die Bestellung: "Nelseestraße 25". Ohne
+// Hausnummer (Irland) nur die Strasse.
+function anschriftZeile(adresse) {
+  return `${adresse.strasse} ${adresse.hausnummer || ""}`.trim();
 }
 
 export function checkoutKontaktAus(body) {
@@ -627,11 +649,13 @@ async function createPaypalOrder(env, items, itemCents, shippingCents, idempoten
       type: "SHIPPING",
       name: { full_name: adresse.name.slice(0, 300) },
       address: {
-        address_line_1: `${adresse.strasse} ${adresse.hausnummer}`.slice(0, 300),
+        address_line_1: anschriftZeile(adresse).slice(0, 300),
         ...(adresse.zusatz ? { address_line_2: adresse.zusatz.slice(0, 300) } : {}),
         admin_area_2: adresse.ort.slice(0, 120),
         postal_code: adresse.plz,
-        country_code: "DE",
+        // Lieferland aus der Kasse - PayPal zeigt genau diese Anschrift und
+        // laesst sie nicht aendern; der Versandpreis gilt fuer dieses Land.
+        country_code: adresse.land || "DE",
       },
     };
   }
@@ -654,7 +678,18 @@ async function createPaypalOrder(env, items, itemCents, shippingCents, idempoten
       },
     }),
   });
-  if (!res.ok) throw new Error(`paypal_create_${res.status}`);
+  if (!res.ok) {
+    // PayPal prueft die mitgeschickte Anschrift (SET_PROVIDED_ADDRESS). Lehnt
+    // es sie ab - etwa ein Format, das PayPal fuer ein EU-Land anders erwartet -,
+    // bekommt die Kasse eine klare Meldung statt eines Serverfehlers; die
+    // Stuecke gibt create-order sofort wieder frei. Ins Log nur der Code.
+    const issue = res.status === 422 ? await paypalIssue(res) : "";
+    if (/ADDRESS|POSTAL|CITY|STATE|COUNTRY|ZIP/.test(issue)) {
+      console.warn(JSON.stringify({ level: "warn", event: "paypal_adresse_abgelehnt", issue, land: adresse?.land || null }));
+      throw new PublicError("PAYPAL_ADRESSE_ABGELEHNT", 422);
+    }
+    throw new Error(`paypal_create_${res.status}${issue ? `_${issue}` : ""}`);
+  }
   return res.json();
 }
 
@@ -895,8 +930,8 @@ function bestellungStatements(db, { orderId, orderNumber, paymentId, now, items,
     // Bezahlen mit denselben Angaben plus E-Mail (snapshotPaypalOrder).
     statements.push(db.prepare(`INSERT INTO order_contact_snapshots
       (order_id,source_provider,email,account_requested,recipient_name,address_line1,address_line2,postal_code,city,country_code,captured_at,updated_at)
-      VALUES (?,'CHECKOUT',?,?,?,?,?,?,?,'DE',?,?)`).bind(orderId, kontakt.email, kontakt.createAccount ? 1 : 0,
-      adresse.name, `${adresse.strasse} ${adresse.hausnummer}`, adresse.zusatz || null, adresse.plz, adresse.ort, now, now));
+      VALUES (?,'CHECKOUT',?,?,?,?,?,?,?,?,?,?)`).bind(orderId, kontakt.email, kontakt.createAccount ? 1 : 0,
+      adresse.name, anschriftZeile(adresse), adresse.zusatz || null, adresse.plz, adresse.ort, adresse.land || "DE", now, now));
   }
   return statements;
 }
@@ -1018,6 +1053,7 @@ export async function completePayment(env, providerOrderId, providerOrder, reqId
       orderId: payment.commerce_order_id, itemId: itemIds[0], itemIds, provider: "PAYPAL",
       authorizationId: felder.authorizationId, einziehenSpaetestens: felder.captureDueAt,
     }, "PAYMENT_PROVIDER");
+    await lieferlandAbgleichen(env, payment.commerce_order_id, providerOrder, reqId);
     return { ...result, status: 'AUTHORIZED', reserviert: true, capture_due_at: felder.captureDueAt };
   }
 
@@ -1025,6 +1061,22 @@ export async function completePayment(env, providerOrderId, providerOrder, reqId
   // (reconcilePurchasePayments) schliesst sie ab, sobald sie steht.
   if (String(authorization?.status || "") === "PENDING") throw new PublicError("PAYMENT_CONFIRMATION_PENDING", 409);
   throw new PublicError("PAYMENT_MISMATCH", 409);
+}
+
+// Abgleich des Lieferlands: PayPal zeigt die Kassenanschrift unveraenderlich
+// (SET_PROVIDED_ADDRESS), Versandpreis und Etikett gelten fuer sie. Meldet
+// PayPal trotzdem ein anderes Land, steht das im Protokoll und im Log - die
+// Zahlung bleibt gueltig, das Etikett geht an die Kassenanschrift.
+async function lieferlandAbgleichen(env, orderId, providerOrder, reqId) {
+  try {
+    const paypalLand = safeText(providerOrder?.purchase_units?.[0]?.shipping?.address?.country_code || "", 2).toUpperCase();
+    if (!/^[A-Z]{2}$/.test(paypalLand)) return;
+    const row = await requireDb(env).prepare("SELECT country_code FROM order_contact_snapshots WHERE order_id=?").bind(orderId).first();
+    const kasse = String(row?.country_code || "").toUpperCase();
+    if (!kasse || kasse === paypalLand) return;
+    console.warn(JSON.stringify({ level: "warn", event: "lieferland_abweichung", requestId: reqId, orderId, kasse, paypal: paypalLand }));
+    await audit(env, "order", orderId, "LIEFERLAND_ABWEICHUNG", reqId, { kasse, paypal: paypalLand }, "PAYMENT_PROVIDER");
+  } catch { /* nur ein Hinweis - nie ein Grund, die Zahlung scheitern zu lassen */ }
 }
 
 // Nach dem Bezahlen jedes Stueck im Katalog als verkauft markieren - je Stueck
@@ -1219,17 +1271,22 @@ export default {
         let adresse;
         try {
           zustellung = zustellungAus(body.zustellung);
+          // Packstation und Filiale gibt es nur in Deutschland.
+          if (zustellung.art !== "haustuer" && String(body.adresse?.land || "DE").toUpperCase() !== "DE") {
+            throw new PublicError("ABHOLSTATION_NUR_DE", 422);
+          }
           adresse = zustellung.art === "haustuer" ? lieferadresseAus(body.adresse) : abholadresse(body.adresse?.name, zustellung);
         } catch (err) {
           if (err instanceof AbholortError) throw new PublicError(err.code, err.status);
           throw err;
         }
         if (!adresse) throw new PublicError("ADRESSE_UNVOLLSTAENDIG", 422);
-        // Versandart und -preis prueft der Server selbst (versand.js). Weicht
-        // der Preis von dem ab, den die Kundschaft gesehen hat, gibt es 409
-        // mit der aktuellen Liste - noch bevor etwas reserviert wird. Ab dem
-        // Warenwert in versand.versandkostenfrei kostet der Standard 0 Cent.
-        const gewaehlt = await versandFuerBestellung(env, items, body.versand, body.versandPreisCents, cents);
+        // Versandart und -preis prueft der Server selbst (versand.js) - fuer
+        // das Lieferland der Adresse. Weicht der Preis von dem ab, den die
+        // Kundschaft gesehen hat, gibt es 409 mit der aktuellen Liste - noch
+        // bevor etwas reserviert wird. Ab dem Warenwert in
+        // versand.versandkostenfrei kostet der Standard 0 Cent (nur DE).
+        const gewaehlt = await versandFuerBestellung(env, items, body.versand, body.versandPreisCents, cents, adresse.land || "DE");
         if (zustellung.art !== "haustuer" && !gewaehlt.abholstation) throw new PublicError("ABHOLSTATION_NUR_DHL", 422);
         const versand = { ...gewaehlt, zustellung };
         const shippingCents = versand.preisCents;
@@ -1268,7 +1325,7 @@ export default {
         const expiresAt = reservations.map(r => r.expiresAt).sort()[0];
         const response = { id: providerOrder.id, orderId: local.orderId, orderNumber: local.orderNumber, expiresAt,
           currency: CURRENCY, itemIds: items.map(item => item.id), itemPrice: money(cents), shipping: money(shippingCents), total: money(cents + shippingCents),
-          versand: { id: versand.id, art: versand.art, titel: versand.titel, preisCents: versand.preisCents, carrier: versand.carrier, laufzeit: versand.laufzeit } };
+          versand: { id: versand.id, art: versand.art, titel: versand.titel, preisCents: versand.preisCents, carrier: versand.carrier, laufzeit: versand.laufzeit, land: adresse.land || "DE" } };
         await finishIdempotency(env, "create-order", key, 200, response, local.orderId);
         return json(response, 200, origin);
       }

@@ -82,14 +82,18 @@ async function post(env, path, body, key) {
   return { status: res.status, data: await res.json() };
 }
 
-test("delivery address: complete German addresses only, no Packstation yet", () => {
+test("delivery address: complete addresses in Germany and the EU, no Packstation in the street", () => {
   assert.deepEqual(lieferadresseAus(ADRESSE), { ...ADRESSE });
   assert.equal(lieferadresseAus(undefined), null);
   assert.equal(lieferadresseAus({ ...ADRESSE, hausnummer: " 12 - 14 " }).hausnummer, "12-14");
   const fehler = roh => { try { lieferadresseAus(roh); return null; } catch (err) { return err.code; } };
   assert.equal(fehler({ ...ADRESSE, strasse: "Packstation 123" }), "PACKSTATION_NICHT_MOEGLICH");
   assert.equal(fehler({ ...ADRESSE, zusatz: "Postfiliale 512" }), "PACKSTATION_NICHT_MOEGLICH");
-  assert.equal(fehler({ ...ADRESSE, land: "AT" }), "NUR_DEUTSCHLAND");
+  // Seit 28.10.2026: EU-Laender ueber die Kasse, alles andere auf Anfrage.
+  assert.equal(fehler({ ...ADRESSE, land: "CH", plz: "8001" }), "LAND_NICHT_BELIEFERT");
+  assert.equal(fehler({ ...ADRESSE, land: "US", plz: "10001" }), "LAND_NICHT_BELIEFERT");
+  assert.equal(fehler({ ...ADRESSE, land: "AT" }), "ADRESSE_UNVOLLSTAENDIG", "AT hat vierstellige PLZ");
+  assert.equal(lieferadresseAus({ ...ADRESSE, land: "AT", plz: "1010", ort: "Wien" }).plz, "1010");
   assert.equal(fehler({ ...ADRESSE, plz: "6373" }), "ADRESSE_UNVOLLSTAENDIG");
   assert.equal(fehler({ ...ADRESSE, name: "Maria" }), "ADRESSE_UNVOLLSTAENDIG");
   assert.equal(fehler({ ...ADRESSE, hausnummer: "" }), "ADRESSE_UNVOLLSTAENDIG");

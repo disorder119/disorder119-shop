@@ -29,8 +29,11 @@ def merchant_shipping_cents(item, config):
         return None
     value = int(Decimal(str(item.get('price') or 0)) * 100)
     size = package_for_item(item, config)
+    # Der Feed nennt den Versand nach Deutschland (g:country DE); EU-Tarife
+    # (zone "EU", seit 28.10.2026) gelten dort nicht.
     prices = [tariff['preise'][size] for tariff in shipping.get('tarife', {}).get('liste', [])
-              if tariff.get('art') == 'standard' and value >= tariff.get('abWarenwertCents', 0)]
+              if tariff.get('art') == 'standard' and tariff.get('zone', 'DE') == 'DE'
+              and value >= tariff.get('abWarenwertCents', 0)]
     if not prices:
         raise ValueError('Kein fester Standardtarif für Merchant-Artikel.')
     free = (shipping.get('versandkostenfrei') or {}).get('abCents')

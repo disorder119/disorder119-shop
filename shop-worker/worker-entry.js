@@ -27,7 +27,7 @@ import { sendInvoiceAfterCaptureByProviderOrder, sendOrderConfirmation, sendOrde
 import { handleAccountRequest, isAccountRoute, sendRequestedAccountLink, sendRequestedAccountLinkByProviderOrder } from "./customer-account.js";
 import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
 import { handleVersand, istVersandRoute } from "./dhl.js";
-import { handleDhlQr, isDhlQrRoute } from "./dhl-qr.js";
+import { handleDhlQr, isDhlQrRoute, katalogAbgleich } from "./dhl-qr.js";
 import { handlePacklink, handlePacklinkWebhook, isPacklinkRoute, isPacklinkWebhookRoute } from "./packlink.js";
 import { handleVersandOptionen, isVersandOptionenRoute } from "./versand.js";
 import { handleAbholorte, isAbholorteRoute } from "./abholorte.js";
@@ -624,6 +624,8 @@ const worker = {
     // abgelaufene Anmeldelinks, Einmal-Schluessel und Sitzungen (datenpflege.js).
     await runBackground(ctx, datenPflegen(env, scheduledTime), "data_retention_failed", reqId);
     await runBackground(ctx, applePayDomainSicherstellen(env, scheduledTime), "apple_pay_domain_failed", reqId);
+    // Einmal am Tag: Kassenpreise (Deutschland, EU) gegen den DHL-Produktkatalog.
+    await runBackground(ctx, katalogAbgleich(env, scheduledTime), "dhl_catalog_check_failed", reqId);
   },
 
   // Cloudflare Email Routing: kontakt@disorder119.com -> Postfach + Kopie ins Gmail.

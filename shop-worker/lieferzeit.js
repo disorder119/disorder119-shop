@@ -80,11 +80,16 @@ export function heuteInDeutschland(jetzt = new Date()) {
 
 // { von: "2026-10-12", bis: "2026-10-14" } - oder null, wenn die Laufzeit
 // des Paketdienstes unbekannt ist (Ersatzpreis, solange Packlink fehlt).
-export function lieferfenster(laufzeitTage, jetzt = new Date()) {
+// laufzeitBisTage: Laufzeiten als Spanne (EU-Laender, z. B. Italien 2-4
+// Werktage, versand.zonen in config/shop-config.json). Gezaehlt wird mit
+// deutschen Werktagen - Feiertage im Zielland kennt die Schaetzung nicht.
+export function lieferfenster(laufzeitTage, jetzt = new Date(), laufzeitBisTage = laufzeitTage) {
   if (!Number.isInteger(laufzeitTage) || laufzeitTage < 1 || laufzeitTage > 10) return null;
+  const bisTage = Number.isInteger(laufzeitBisTage) && laufzeitBisTage >= laufzeitTage && laufzeitBisTage <= 10
+    ? laufzeitBisTage : laufzeitTage;
   const heute = heuteInDeutschland(jetzt);
   return {
     von: iso(plusWerktage(heute, laufzeitTage + 1)),
-    bis: iso(plusWerktage(heute, laufzeitTage + VERSAND_WERKTAGE)),
+    bis: iso(plusWerktage(heute, bisTage + VERSAND_WERKTAGE)),
   };
 }
