@@ -401,10 +401,15 @@ jobs:
       - name: Nur oeffentliche Git-Dateien exportieren und vorpruefen
         env:
           REVISION: ${{ needs.publish.outputs.revision }}
+          # Geo-Sperre (shop-worker/geo-sperre.js): Repository-Variablen, leer = RU,BY,IN,KP,IR.
+          GEO_SPERRE_LAENDER: ${{ vars.GEO_SPERRE_LAENDER }}
+          GEO_SPERRE_KONTINENTE: ${{ vars.GEO_SPERRE_KONTINENTE }}
         run: python scripts/publish_storefront.py --revision "$REVISION"
       - name: Bestehenden Storefront-Worker aktualisieren und Ergebnis gegenpruefen
         env:
           REVISION: ${{ needs.publish.outputs.revision }}
+          GEO_SPERRE_LAENDER: ${{ vars.GEO_SPERRE_LAENDER }}
+          GEO_SPERRE_KONTINENTE: ${{ vars.GEO_SPERRE_KONTINENTE }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_STOREFRONT_TOKEN }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "Cloudflare-Publikationsfreigabe fehlt."; exit 1; }

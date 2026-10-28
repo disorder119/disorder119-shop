@@ -27,3 +27,12 @@ service = "disorder119-shop-worker"
 [observability]
 enabled = true
 head_sampling_rate = 0.1
+
+# Waechter (storefront-edge.js): hoechstens 120 Seiten-/Datenabrufe je
+# Anschluss und Minute (Bilder, Skripte und Stile unter /assets/ zaehlen
+# nicht). Darueber 429 und Meldung an den Shop-Worker; wer das wiederholt
+# schafft, wird dort fuer 24 h gesperrt. namespace_id ist kontoweit eindeutig.
+[[ratelimits]]
+name = "WAECHTER_FLUT"
+namespace_id = "1194"
+simple = { limit = 120, period = 60 }

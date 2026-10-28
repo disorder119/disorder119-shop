@@ -160,6 +160,27 @@ def activate_and_verify(version, previous, revision, manifest, state_path):
     return state
 
 
+def geo_vars(environ):
+    """Geo-Sperre (shop-worker/geo-sperre.js) aus GitHub-Variablen durchreichen.
+
+    Ohne Eintrag gilt die Vorgabe im Code (RU, BY, IN, KP, IR). Erlaubt sind nur
+    Zweibuchstaben-Codes oder "aus" - nichts anderes erreicht Wrangler.
+    """
+    args = []
+    for name in ("GEO_SPERRE_LAENDER", "GEO_SPERRE_KONTINENTE"):
+        value = str(environ.get(name, "") or "").strip()
+        if not value:
+            continue
+        if value.lower() == "aus":
+            args += ["--var", f"{name}:aus"]
+            continue
+        codes = [c for c in re.split(r"[\s,;]+", value.upper()) if c]
+        if not codes or len(codes) > 250 or not all(re.fullmatch(r"[A-Z][A-Z0-9]", c) for c in codes):
+            raise ValueError(f"{name} must list two-letter codes separated by commas, or 'aus'.")
+        args += ["--var", f"{name}:" + ",".join(dict.fromkeys(codes))]
+    return args
+
+
 def publish(args):
     config = ROOT / "shop-worker/wrangler.storefront.toml"
     validate_config(tomllib.loads(config.read_text("utf-8")))
@@ -175,8 +196,9 @@ def publish(args):
     cli = ROOT / "tools/storefront-publish/node_modules/wrangler/bin/wrangler.js"
     base = [args.node, str(cli), "--config", str(config)]
     env = dict(os.environ, WRANGLER_SEND_METRICS="false", CI="true", CLOUDFLARE_ACCOUNT_ID=ACCOUNT)
+    geo = geo_vars(os.environ)
     if not args.activate:
-        subprocess.run(base + ["versions", "upload", "--dry-run", "--var", "RELEASE_SHA:" + revision,
+        subprocess.run(base + ["versions", "upload", "--dry-run", "--var", "RELEASE_SHA:" + revision, *geo,
                               "--upload-source-maps=false"], env=env, check=True)
         print("Dry run passed; no upload, deployment, DNS or plan changes.")
         return
@@ -184,7 +206,7 @@ def publish(args):
         raise RuntimeError("Stale build; main moved. No deployment performed.")
     previous = current_versions()
     # Upload does not activate the version and does not touch existing routes.
-    process = subprocess.run(base + ["versions", "upload", "--var", "RELEASE_SHA:" + revision,
+    process = subprocess.run(base + ["versions", "upload", "--var", "RELEASE_SHA:" + revision, *geo,
         "--tag", revision[:12], "--message", "Public storefront " + revision, "--upload-source-maps=false"],
         env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")
     print(process.stdout)

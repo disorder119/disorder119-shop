@@ -24,6 +24,16 @@ class PublishingTests(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 publisher.validate_config(dict(cfg, **change))
 
+    def test_geo_block_variables_are_validated_before_reaching_wrangler(self):
+        self.assertEqual(publisher.geo_vars({}), [])
+        self.assertEqual(publisher.geo_vars({'GEO_SPERRE_LAENDER': ' '}), [])
+        self.assertEqual(publisher.geo_vars({'GEO_SPERRE_LAENDER': 'ru, by;in ru', 'GEO_SPERRE_KONTINENTE': 'as'}),
+                         ['--var', 'GEO_SPERRE_LAENDER:RU,BY,IN', '--var', 'GEO_SPERRE_KONTINENTE:AS'])
+        self.assertEqual(publisher.geo_vars({'GEO_SPERRE_LAENDER': 'AUS'}), ['--var', 'GEO_SPERRE_LAENDER:aus'])
+        for bad in ('RU,"; rm -rf', 'RUS', 'R', 'RU IN --var X:Y'):
+            with self.assertRaises(ValueError):
+                publisher.geo_vars({'GEO_SPERRE_LAENDER': bad})
+
     def test_manifest_detects_missing_modified_and_extra_upload_files(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -51,7 +61,7 @@ class PublishingTests(unittest.TestCase):
             root.mkdir()
             subprocess.run(['git', 'init', '-q', str(root)], check=True)
             (root / 'shop-worker').mkdir()
-            for name in ('storefront-edge.js', 'storefront-csp.js', 'catalog-number-routes.js'):
+            for name in ('storefront-edge.js', 'storefront-csp.js', 'catalog-number-routes.js', 'geo-sperre.js', 'waechter-regeln.js'):
                 shutil.copyfile(exporter.ROOT / 'shop-worker' / name, root / 'shop-worker' / name)
             paths = ['index.html', 'en/index.html', 'fr/index.html', 'kasse/index.html',
                 'feed/google-merchant.xml', 'google7945c4dc594a9a9c.html',

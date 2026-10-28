@@ -1,6 +1,9 @@
 /* Live-Besucher: meldet Seitenaufrufe, angesehene Artikel, Warenkorb-
    Aenderungen, geoeffnete Anfragen und das Verlassen der Seite (fuer die
-   Verweildauer) an den Shop-Worker (POST /besuch).
+   Verweildauer und die Telegram-Zusammenfassung nach dem Besuch) an den
+   Shop-Worker (POST /besuch). Mit Zustimmung (Version 2) zaehlt der Browser
+   ausserdem seine Besuche (d119_besuche_v1: Zahl und zwei Tagesdaten, keine
+   Kennung); Ablehnen oder Widerruf loescht diesen Eintrag.
    Optionale Analyse erst nach ausdruecklicher Zustimmung. Die Entscheidung
    wird lokal gespeichert und kann jederzeit widerrufen werden.
    "Do Not Track" und Global Privacy Control werden respektiert.
@@ -34,29 +37,41 @@
   if (navigator.doNotTrack === "1" || window.doNotTrack === "1") return;
   if (navigator.webdriver) return;
 
+  // Version 2 (28.10.2026): die Statistik umfasst zusaetzlich die Besuchszahl
+  // im Browser-Speicher (Wiedererkennung). Eine fruehere Zustimmung (Version 1)
+  // deckt das nicht ab: dann wird neu gefragt. Eine fruehere Ablehnung bleibt.
   var CONSENT_KEY = "d119_analytics_consent_v1";
+  var CONSENT_VERSION = 2;
+  var BESUCHE_KEY = "d119_besuche_v1";
   var consent = null;
   try { consent = JSON.parse(window.localStorage.getItem(CONSENT_KEY) || "null"); } catch (e) {}
   function erlaubt() {
-    return consent && consent.version === 1 && consent.allowed === true
+    return consent && consent.version === CONSENT_VERSION && consent.allowed === true
       && Date.now() - Number(consent.at) < 180 * 86400000
       && Number(consent.at) <= Date.now();
   }
+  function entschieden() {
+    return consent && [1, CONSENT_VERSION].indexOf(consent.version) !== -1 && Number.isFinite(Number(consent.at))
+      && Date.now() - Number(consent.at) < 180 * 86400000 && Number(consent.at) <= Date.now()
+      && (consent.version === CONSENT_VERSION || consent.allowed !== true);
+  }
+  // Ohne (gueltige) Zustimmung keine Besuchszahl auf dem Geraet.
+  function besucheLoeschen() { try { window.localStorage.removeItem(BESUCHE_KEY); } catch (e) {} }
   var started = false;
   var box = null;
   var lang = (document.documentElement.lang || "de").slice(0, 2);
   var words = {
-    de: ["Datenschutz-Einstellungen", "Warenkorb und Anmeldung verwenden notwendige Speicherung. Seitenaufrufe zählt unser Server ohne Zugriff auf dein Gerät pseudonym mit Land, Gerätetyp und Browser. Möchtest du zusätzlich die Besucherstatistik erlauben? Sie erfasst angesehene Artikel, Warenkorb-Änderungen, Zeit im sichtbaren Tab und den ungefähren Ort. Über beides erhalten wir Benachrichtigungen per Telegram. Deine Wahl ist freiwillig und jederzeit änderbar.", "Nur notwendige", "Statistik erlauben", "Datenschutzerklärung"],
-    en: ["Privacy settings", "Your cart and sign-in use necessary storage. Our server counts page views pseudonymously, without accessing your device, with country, device type and browser. Would you also like to allow visitor statistics? They include viewed items, cart changes, time in a visible tab and approximate location. We receive Telegram notifications about both. Your choice is optional and can be changed at any time.", "Necessary only", "Allow statistics", "Privacy policy"],
-    fr: ["Paramètres de confidentialité", "Le panier et la connexion utilisent un stockage nécessaire. Notre serveur compte les pages consultées de façon pseudonyme, sans accéder à ton appareil, avec pays, type d’appareil et navigateur. Souhaites-tu également autoriser les statistiques de visite ? Elles incluent articles consultés, modifications du panier, temps dans l’onglet visible et localisation approximative. Nous recevons des notifications Telegram pour les deux. Ce choix est facultatif et modifiable à tout moment.", "Nécessaires seulement", "Autoriser les statistiques", "Confidentialité"]
+    de: ["Datenschutz-Einstellungen", "Warenkorb und Anmeldung verwenden notwendige Speicherung. Seitenaufrufe zählt unser Server ohne Zugriff auf dein Gerät pseudonym mit Land, Gerätetyp, Betriebssystem, Browser und Browsersprache. Möchtest du zusätzlich die Besucherstatistik erlauben? Sie erfasst angesehene Artikel, Warenkorb-Änderungen, Zeit im sichtbaren Tab, wann du die Seite verlässt, den ungefähren Ort (Stadt) und ob du wiederkommst – dafür speichert dein Browser nur die Zahl deiner Besuche und zwei Daten. Nach jedem Besuch erhalten wir eine Zusammenfassung per Telegram. Deine Wahl ist freiwillig und jederzeit änderbar.", "Nur notwendige", "Statistik erlauben", "Datenschutzerklärung"],
+    en: ["Privacy settings", "Your cart and sign-in use necessary storage. Our server counts page views pseudonymously, without accessing your device, with country, device type, operating system, browser and browser language. Would you also like to allow visitor statistics? They include viewed items, cart changes, time in a visible tab, when you leave the site, approximate location (city) and whether you come back – for this your browser only stores the number of your visits and two dates. After each visit we receive a summary via Telegram. Your choice is optional and can be changed at any time.", "Necessary only", "Allow statistics", "Privacy policy"],
+    fr: ["Paramètres de confidentialité", "Le panier et la connexion utilisent un stockage nécessaire. Notre serveur compte les pages consultées de façon pseudonyme, sans accéder à ton appareil, avec pays, type d’appareil, système d’exploitation, navigateur et langue du navigateur. Souhaites-tu également autoriser les statistiques de visite ? Elles incluent articles consultés, modifications du panier, temps dans l’onglet visible, le moment où tu quittes le site, localisation approximative (ville) et si tu reviens – pour cela ton navigateur enregistre seulement le nombre de tes visites et deux dates. Après chaque visite, nous recevons un résumé via Telegram. Ce choix est facultatif et modifiable à tout moment.", "Nécessaires seulement", "Autoriser les statistiques", "Confidentialité"]
   }[lang] || null;
   if (!words) words = ["Privacy settings", "Allow optional visitor statistics? Your choice can be changed at any time. See our privacy policy.", "Necessary only", "Allow statistics", "Privacy policy"];
   function choose(allowed) {
-    consent = {version:1, allowed:allowed === true, at:Date.now()};
+    consent = {version:CONSENT_VERSION, allowed:allowed === true, at:Date.now()};
     try { window.localStorage.setItem(CONSENT_KEY, JSON.stringify(consent)); } catch (e) {}
     if (box) { box.remove(); box = null; }
     if (erlaubt()) start();
-    else { started = false; sichtStop(); referrerGesendet = false; letzterStand = []; }
+    else { started = false; sichtStop(); referrerGesendet = false; letzterStand = []; besucheLoeschen(); }
   }
   function settings() {
     if (box) return;
@@ -86,15 +101,42 @@
     try { consent = JSON.parse(e.newValue || "null"); } catch (err) { consent = null; }
     if (erlaubt()) start(); else { started = false; sichtStop(); referrerGesendet = false; letzterStand = []; }
   });
-  if (!consent || consent.version !== 1 || !Number.isFinite(Number(consent.at)) || Date.now() - Number(consent.at) >= 180 * 86400000 || Number(consent.at) > Date.now()) settings();
+  if (!entschieden()) settings();
+  if (!erlaubt()) besucheLoeschen();
 
   var ziel = basis + "/besuch";
   var sprache = (document.documentElement.getAttribute("lang") || "de").slice(0, 2);
   var referrerGesendet = false;
 
+  // Besuchszahl nur mit Zustimmung: Zahl der Besuche, Tag des ersten und des
+  // vorigen Besuchs, Zeitpunkt der letzten Aktivitaet. Keine Kennung - der
+  // Server kann Besuche damit nicht verknuepfen. Neuer Besuch nach 30 Minuten
+  // ohne Aktivitaet.
+  var BESUCH_PAUSE = 30 * 60000;
+  function tag(ms) { return new Date(ms).toISOString().slice(0, 10); }
+  function besuchZaehlen() {
+    if (!erlaubt()) return null;
+    var jetzt = Date.now(), b = null;
+    try { b = JSON.parse(window.localStorage.getItem(BESUCHE_KEY) || "null"); } catch (e) { b = null; }
+    if (!b || typeof b !== "object" || !(Number(b.n) >= 1) || !/^\d{4}-\d{2}-\d{2}$/.test(String(b.erster || ""))) b = null;
+    if (!b) b = {n: 1, erster: tag(jetzt), vorher: null, zuletzt: jetzt};
+    else if (!(jetzt - Number(b.zuletzt) < BESUCH_PAUSE)) b = {n: Math.min(9999, Number(b.n) + 1), erster: b.erster, vorher: tag(Number(b.zuletzt) || jetzt), zuletzt: jetzt};
+    else b.zuletzt = jetzt;
+    try { window.localStorage.setItem(BESUCHE_KEY, JSON.stringify(b)); } catch (e) {}
+    return b;
+  }
+  function besuchAktiv() {
+    if (!erlaubt()) return;
+    try {
+      var b = JSON.parse(window.localStorage.getItem(BESUCHE_KEY) || "null");
+      if (b && Number(b.n) >= 1) { b.zuletzt = Date.now(); window.localStorage.setItem(BESUCHE_KEY, JSON.stringify(b)); }
+    } catch (e) {}
+  }
+
   function senden(daten) {
     if (!erlaubt()) return;
-    daten.consentVersion = 1;
+    daten.consentVersion = CONSENT_VERSION;
+    if (daten.s !== 1) besuchAktiv();
     daten.p = daten.p || location.pathname;
     daten.l = sprache;
     if (!referrerGesendet) {
@@ -175,9 +217,20 @@
     letzterStand = jetzt;
   }
 
+  // Klick auf einen Link zu einer anderen Shop-Seite: das folgende pagehide
+  // ist kein Abschied, nur ein Seitenwechsel (Meldung mit w=1).
+  var internWeiter = 0;
   document.addEventListener("click", function (e) {
     var anfrage = e.target && e.target.closest ? e.target.closest("[data-cart-inquiry]") : null;
     if (anfrage) senden({ t: "anfrage", k: anfrage.getAttribute("data-cart-inquiry"), n: warenkorb().length });
+    var link = e.target && e.target.closest ? e.target.closest("a[href]") : null;
+    if (link && erlaubt()) {
+      try {
+        var ziel2 = new URL(link.getAttribute("href"), location.href);
+        if (ziel2.origin === location.origin && ziel2.pathname !== location.pathname && !link.hasAttribute("download")
+          && (link.getAttribute("target") || "_self") === "_self") internWeiter = Date.now();
+      } catch (err) {}
+    }
     if (erlaubt()) setTimeout(warenkorbPruefen, 60);
   }, true);
   window.addEventListener("storage", function (e) { if (e.key === CART_KEY) letzterStand = warenkorb(); });
@@ -207,13 +260,17 @@
   window.addEventListener("popstate", function () { setTimeout(pfadPruefen, 0); });
 
   // Verlassen oder in den Hintergrund: ergibt die Verweildauer der letzten
-  // Seite. pagehide und visibilitychange feuern beim Schliessen oft beide.
+  // Seite und - ausser beim Wechsel auf eine andere Shop-Seite - den Abschied
+  // fuer die Zusammenfassung. pagehide und visibilitychange feuern beim
+  // Schliessen oft beide.
   var zuletztVerlassen = 0;
   function verlassen() {
     var jetzt = Date.now();
     if (jetzt - zuletztVerlassen < 2000) return;
     zuletztVerlassen = jetzt;
-    senden({ t: "verlassen" });
+    var daten = { t: "verlassen" };
+    if (jetzt - internWeiter < 3000) daten.w = 1;
+    senden(daten);
   }
   window.addEventListener("pagehide", function(){ sichtEnde(); verlassen(); });
   window.addEventListener("pageshow", function(){ if(started && erlaubt() && !sicht) sichtStart(); });
@@ -227,8 +284,10 @@
     started = true;
     letzterStand = warenkorb();
     var artikel = window.ARTICLE_ITEM;
-    if (artikel && artikel.id !== undefined) senden({t:"artikel", a:artikel.id, s:1});
-    else senden({t:"seite", s:1});
+    var startDaten = artikel && artikel.id !== undefined ? {t:"artikel", a:artikel.id, s:1} : {t:"seite", s:1};
+    var b = besuchZaehlen();
+    if (b) { startDaten.wn = b.n; startDaten.we = b.erster; if (b.vorher) startDaten.wv = b.vorher; }
+    senden(startDaten);
     sichtEinrichten();
   }
   start();
