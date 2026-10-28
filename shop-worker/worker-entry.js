@@ -281,10 +281,23 @@ const worker = {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin");
     const reqId = requestId(request);
-    const finish = response => {
+    const begonnen = Date.now();
+    const finish = async response => {
       // Waechter: 404 der API zaehlen (Scanner raten Adressen).
       waechterNachher(request, env, ctx, url, response?.status);
-      return finalizeRuntimeResponse(response, request, env, reqId, url.pathname);
+      const out = await finalizeRuntimeResponse(response, request, env, reqId, url.pathname);
+      // Admin-App: Bearbeitungszeit im Worker (Datenbank, GitHub, PayPal) fuer
+      // die Messung im Browser (DevTools > Timing) - nur fuer die eigene App.
+      if (url.pathname.startsWith("/admin/")) {
+        try {
+          out.headers.set("Server-Timing", `app;dur=${Date.now() - begonnen}`);
+          const erlaubt = out.headers.get("Access-Control-Allow-Origin");
+          if (erlaubt && erlaubt === origin) out.headers.set("Timing-Allow-Origin", erlaubt);
+        } catch {
+          // unveraenderliche Kopfzeilen: dann eben ohne Messwert
+        }
+      }
+      return out;
     };
 
     // Waechter-Meldungen und -Abfragen des Storefront-Workers (Dienstbindung).

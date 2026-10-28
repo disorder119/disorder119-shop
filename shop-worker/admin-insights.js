@@ -1,6 +1,7 @@
 // Disorder119 private business insights for the owner dashboard.
 // Read-only analytics over the authoritative D1 commerce data.
 // No secrets or raw payment-provider payloads are returned.
+import { oeffentlicherKatalog } from "./oeffentlicher-katalog.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -95,21 +96,14 @@ function safeCatalogItem(item) {
   };
 }
 
-async function loadCatalog() {
-  try {
-    const res = await fetch("https://disorder119.com/data/catalog.json", {
-      headers: { Accept: "application/json", "User-Agent": "disorder119-insights-worker" },
-    });
-    if (!res.ok) return new Map();
-    const rows = await res.json();
-    const map = new Map();
-    if (Array.isArray(rows)) {
-      for (const item of rows) map.set(Number(item.id), safeCatalogItem(item));
-    }
-    return map;
-  } catch {
-    return new Map();
+// Oeffentlicher Katalog fuer Namen und Bilder (oeffentlicher-katalog.js). Frueher
+// direkt von disorder119.com: aus dem Worker (gleiche Zone) kam nach ~39 s ein 522.
+async function loadCatalog(env) {
+  const map = new Map();
+  for (const item of await oeffentlicherKatalog({ env })) {
+    if (item && item.id !== undefined && item.id !== null) map.set(Number(item.id), safeCatalogItem(item));
   }
+  return map;
 }
 
 function aggregateDimension(rows, catalog, dimension, valueField) {
@@ -134,7 +128,7 @@ async function buildInsights(env, url) {
   const today = new Date().toISOString().slice(0, 10);
   const inSeven = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
 
-  const batch = await db.batch([
+  const ersteStmts = [
     db.prepare(`SELECT
       COUNT(DISTINCT order_id) AS paidOrders,
       COALESCE(SUM(amount_cents),0) AS capturedCents
@@ -177,9 +171,9 @@ async function buildInsights(env, url) {
     db.prepare(`SELECT COUNT(*) AS openReturns FROM returns WHERE status NOT IN ('CLOSED','REJECTED')`),
     db.prepare(`SELECT COUNT(*) AS shipmentExceptions FROM shipments WHERE status='EXCEPTION'`),
     db.prepare(`SELECT COUNT(*) AS unprocessedPaymentEvents FROM payment_events WHERE processed_at IS NULL`),
-  ]);
+  ];
 
-  const customerRows = await db.prepare(`SELECT
+  const customerRowsStmt = db.prepare(`SELECT
       LOWER(COALESCE(NULLIF(cs.email,''),NULLIF(o.guest_email,''))) AS email,
       COUNT(*) AS orders,
       COALESCE(SUM(o.total_cents),0) AS orderValueCents,
@@ -191,42 +185,49 @@ async function buildInsights(env, url) {
       AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND p.provider_payment_id IS NOT NULL)
       AND COALESCE(NULLIF(cs.email,''),NULLIF(o.guest_email,'')) IS NOT NULL
     GROUP BY LOWER(COALESCE(NULLIF(cs.email,''),NULLIF(o.guest_email,'')))
-    ORDER BY orderValueCents DESC`).all();
-  const customerList = customerRows.results || [];
+    ORDER BY orderValueCents DESC`);
 
-  const countryRows = await db.prepare(`SELECT COALESCE(NULLIF(country_code,''),'UNBEKANNT') AS countryCode,
+  const countryRowsStmt = db.prepare(`SELECT COALESCE(NULLIF(country_code,''),'UNBEKANNT') AS countryCode,
       COUNT(*) AS orders, COALESCE(SUM(o.total_cents),0) AS orderValueCents
     FROM commerce_orders o JOIN order_contact_snapshots cs ON cs.order_id=o.id
     WHERE EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id
       AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND p.provider_payment_id IS NOT NULL)
     GROUP BY COALESCE(NULLIF(country_code,''),'UNBEKANNT')
-    ORDER BY orderValueCents DESC, orders DESC LIMIT 20`).all();
+    ORDER BY orderValueCents DESC, orders DESC LIMIT 20`);
 
-  const monthlySales = await db.prepare(`SELECT substr(COALESCE((SELECT COALESCE(e.occurred_at,e.observed_at)
+  const monthlySalesStmt = db.prepare(`SELECT substr(COALESCE((SELECT COALESCE(e.occurred_at,e.observed_at)
       FROM tax_cash_events e WHERE e.payment_id=payments.id AND e.kind='capture' ORDER BY e.rowid LIMIT 1),updated_at,created_at),1,7) AS month,
       COUNT(DISTINCT order_id) AS orders, COALESCE(SUM(amount_cents),0) AS capturedCents
     FROM payments WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND provider_payment_id IS NOT NULL
       AND COALESCE((SELECT COALESCE(e.occurred_at,e.observed_at) FROM tax_cash_events e
         WHERE e.payment_id=payments.id AND e.kind='capture' ORDER BY e.rowid LIMIT 1),updated_at,created_at)>=datetime('now','-12 months')
-    GROUP BY month ORDER BY month`).all();
-  const monthlyRentals = await db.prepare(`SELECT substr(created_at,1,7) AS month,
+    GROUP BY month ORDER BY month`);
+  const monthlyRentalsStmt = db.prepare(`SELECT substr(created_at,1,7) AS month,
       COUNT(*) AS rentals, COALESCE(SUM(total_price_cents),0) AS rentalValueCents, COALESCE(SUM(days),0) AS rentalDays
     FROM rental_reservations
     WHERE status IN ('CONFIRMED','ACTIVE','RETURN_DUE','RETURNED') AND created_at>=datetime('now','-12 months')
-    GROUP BY substr(created_at,1,7) ORDER BY month`).all();
+    GROUP BY substr(created_at,1,7) ORDER BY month`);
 
-  const soldItems = await db.prepare(`SELECT oi.item_id AS itemId, COUNT(*) AS count,
+  const soldItemsStmt = db.prepare(`SELECT oi.item_id AS itemId, COUNT(*) AS count,
       COALESCE(SUM(oi.unit_price_cents),0) AS valueCents
     FROM order_items oi JOIN commerce_orders o ON o.id=oi.order_id
     WHERE EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id
       AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND p.provider_payment_id IS NOT NULL)
-    GROUP BY oi.item_id ORDER BY valueCents DESC LIMIT 100`).all();
-  const rentedItems = await db.prepare(`SELECT i.item_id AS itemId, COUNT(*) AS count,
+    GROUP BY oi.item_id ORDER BY valueCents DESC LIMIT 100`);
+  const rentedItemsStmt = db.prepare(`SELECT i.item_id AS itemId, COUNT(*) AS count,
       COALESCE(SUM(rr.total_price_cents),0) AS valueCents
     FROM rental_reservations rr JOIN inventory i ON i.id=rr.inventory_id
     WHERE rr.status IN ('CONFIRMED','ACTIVE','RETURN_DUE','RETURNED')
-    GROUP BY i.item_id ORDER BY valueCents DESC LIMIT 100`).all();
-  const catalog = await loadCatalog();
+    GROUP BY i.item_id ORDER BY valueCents DESC LIMIT 100`);
+  // Eine Rundreise zu D1 statt 7 nacheinander (live je ~50 ms), der
+  // Katalog kommt gleichzeitig (oeffentlicher-katalog.js, meist aus dem Speicher).
+  const [alle, catalog] = await Promise.all([
+    db.batch([...ersteStmts, customerRowsStmt, countryRowsStmt, monthlySalesStmt, monthlyRentalsStmt, soldItemsStmt, rentedItemsStmt]),
+    loadCatalog(env),
+  ]);
+  const batch = alle.slice(0, ersteStmts.length);
+  const [customerRows, countryRows, monthlySales, monthlyRentals, soldItems, rentedItems] = alle.slice(ersteStmts.length);
+  const customerList = customerRows.results || [];
 
   const payment = first(batch[0]);
   const refund = first(batch[1]);

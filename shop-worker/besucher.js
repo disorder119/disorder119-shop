@@ -23,6 +23,7 @@ import { SITZUNG_GRENZE, sitzungBeruehren, wiederkehrAusBody } from "./besucher-
 import { kontingentBelegen } from "./kontingent.js";
 import { anschlussVonIp, ipPepper } from "./privacy-security.js";
 import { geoSperrListe } from "./geo-sperre.js";
+import { oeffentlicherKatalog, oeffentlichenKatalogLeeren } from "./oeffentlicher-katalog.js";
 
 const SHOP_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -42,7 +43,6 @@ const SPRACHEN = Object.freeze(["de", "en", "fr"]);
 const MAX_BODY = 2048;
 const SITZUNG_MS = 30 * 60 * 1000;
 const STANDARD_AUFBEWAHRUNG_TAGE = 30;
-const KATALOG_CACHE_MS = 10 * 60 * 1000;
 
 const BOT_UA = /bot\b|bot\/|crawl|spider|slurp|headless|lighthouse|pagespeed|preview|facebookexternalhit|whatsapp|telegram|discord|curl|wget|python|node-fetch|undici|go-http|java\/|okhttp|axios|postman|monitor|uptime/i;
 
@@ -190,14 +190,27 @@ export function browserSpracheAus(value) {
   return treffer ? treffer[1].toLowerCase() : null;
 }
 
+// Intl-Objekte zu bauen ist teuer (je ~0,1 ms): die Besucher-Auswertung rief
+// das fuer jede Sitzung mehrfach auf - bei einigen tausend Sitzungen Sekunden.
+// Deshalb einmal je Isolate bauen und Ergebnisse je Code merken.
+const NAMEN_CACHE = new Map();
+function displayName(art, code) {
+  const key = `${art}:${code}`;
+  if (NAMEN_CACHE.has(key)) return NAMEN_CACHE.get(key);
+  let name;
+  try {
+    name = new Intl.DisplayNames(["de"], { type: art }).of(code) || code;
+  } catch {
+    name = code;
+  }
+  if (NAMEN_CACHE.size < 2000) NAMEN_CACHE.set(key, name);
+  return name;
+}
+
 export function spracheName(code) {
   const c = String(code || "").toLowerCase();
   if (!/^[a-z]{2,3}$/.test(c)) return null;
-  try {
-    return new Intl.DisplayNames(["de"], { type: "language" }).of(c) || c;
-  } catch {
-    return c;
-  }
+  return displayName("language", c);
 }
 
 // Kampagne aus utm_source/utm_campaign des Einstiegslinks ("instagram/herbst").
@@ -293,47 +306,40 @@ function artikelIdAus(value) {
 export function landName(code) {
   const c = String(code || "").toUpperCase();
   if (!/^[A-Z]{2}$/.test(c)) return null;
-  try {
-    return new Intl.DisplayNames(["de"], { type: "region" }).of(c) || c;
-  } catch {
-    return c;
-  }
+  return displayName("region", c);
 }
 
 // ---------------------------------------------------------------- Katalog
 
-let katalogCache = { bis: 0, map: null };
+let katalogCache = { liste: null, map: null };
 
 export function katalogCacheLeeren() {
-  katalogCache = { bis: 0, map: null };
+  katalogCache = { liste: null, map: null };
+  oeffentlichenKatalogLeeren();
 }
 
+// Quelle: oeffentlicher-katalog.js (GitHub main zuerst). Frueher direkt von
+// disorder119.com - aus diesem Worker (gleiche Zone) kam nach ~39 s ein 522,
+// und jeder gezaehlte Seitenaufruf mit Artikel wartete so lange.
 async function katalog(env) {
-  const jetzt = Date.now();
-  if (katalogCache.map && katalogCache.bis > jetzt) return katalogCache.map;
-  const basis = String(env?.SHOP_PUBLIC_URL || "https://disorder119.com").replace(/\/+$/, "");
-  try {
-    const res = await fetch(`${basis}/data/catalog.json`, { cf: { cacheTtl: 600, cacheEverything: true } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const liste = await res.json();
-    const map = new Map();
-    // Overlay-Ereignisse tragen die Katalog-ID, Produktseiten-Adressen die
-    // Artikelnummer (url_slug): beide fuehren zum selben Eintrag.
-    for (const it of Array.isArray(liste) ? liste : []) {
-      if (it && it.id !== undefined) map.set(String(it.id), it);
-    }
-    for (const it of Array.isArray(liste) ? liste : []) {
-      for (const key of [it?.url_slug, it?.article]) {
-        if (key !== undefined && key !== null && /^\d{1,9}$/.test(String(key)) && !map.has(String(key))) map.set(String(key), it);
-      }
-    }
-    katalogCache = { bis: jetzt + KATALOG_CACHE_MS, map };
-    return map;
-  } catch {
-    // Ohne Katalog laufen die Meldungen mit Artikelnummer statt Titel weiter.
-    katalogCache = { bis: jetzt + 60_000, map: katalogCache.map || new Map() };
-    return katalogCache.map;
+  const liste = await oeffentlicherKatalog({ env });
+  if (katalogCache.map && katalogCache.liste === liste) return katalogCache.map;
+  // Ohne Katalog laufen die Meldungen mit Artikelnummer statt Titel weiter -
+  // eine aeltere Zuordnung bleibt dann stehen.
+  if (!liste.length && katalogCache.map) return katalogCache.map;
+  const map = new Map();
+  // Overlay-Ereignisse tragen die Katalog-ID, Produktseiten-Adressen die
+  // Artikelnummer (url_slug): beide fuehren zum selben Eintrag.
+  for (const it of liste) {
+    if (it && it.id !== undefined) map.set(String(it.id), it);
   }
+  for (const it of liste) {
+    for (const key of [it?.url_slug, it?.article]) {
+      if (key !== undefined && key !== null && /^\d{1,9}$/.test(String(key)) && !map.has(String(key))) map.set(String(key), it);
+    }
+  }
+  katalogCache = { liste, map };
+  return map;
 }
 export const katalogLaden = katalog;
 
@@ -784,10 +790,13 @@ async function statistik(env, url, now) {
 const MAX_SCHRITT_MS = SITZUNG_MS;
 const MAX_ZEILEN = 20_000;
 
+let berlinFormat = null;
 function berlin(iso) {
-  const teile = Object.fromEntries(new Intl.DateTimeFormat("de-DE", {
+  // Ein Formatierer je Isolate (vorher einer je Aufruf: 0,15 ms x Sitzungen).
+  berlinFormat ||= new Intl.DateTimeFormat("de-DE", {
     timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23",
-  }).formatToParts(new Date(iso)).map(t => [t.type, t.value]));
+  });
+  const teile = Object.fromEntries(berlinFormat.formatToParts(new Date(iso)).map(t => [t.type, t.value]));
   return { tag: `${teile.year}-${teile.month}-${teile.day}`, stunde: Number(teile.hour) };
 }
 
@@ -934,6 +943,7 @@ function median(werte) {
 }
 
 export function auswertungBerechnen(sitzungen, tage, now) {
+  const heuteBerlin = berlin(now).tag;
   const proTag = new Map();
   for (let i = tage - 1; i >= 0; i--) proTag.set(berlin(now - i * 86_400_000).tag, { besuche: 0, warenkorb: 0 });
   const proStunde = Array.from({ length: 24 }, () => 0);
@@ -1006,7 +1016,7 @@ export function auswertungBerechnen(sitzungen, tage, now) {
   return {
     kennzahlen: {
       besuche: n,
-      besucherHeute: sitzungen.filter(s => berlin(s.start).tag === berlin(now).tag).length,
+      besucherHeute: sitzungen.filter(s => berlin(s.start).tag === heuteBerlin).length,
       dauerMedianMs: median(dauern),
       dauerSchnittMs: dauern.length ? Math.round(dauern.reduce((a, b) => a + b, 0) / dauern.length) : 0,
       seitenProBesuch: n ? Math.round((sitzungen.reduce((a, s) => a + s.seiten, 0) / n) * 10) / 10 : 0,
@@ -1050,6 +1060,38 @@ async function auswertung(env, url, now) {
   const tage = ganzzahl(url.searchParams.get("tage"), 7, 1, 90);
   const limit = ganzzahl(url.searchParams.get("limit"), 150, 1, 500);
   const seit = new Date(now - tage * 24 * 60 * 60 * 1000).toISOString();
+  const { zeilen, verlassen, sichtzeit, sichtzeitVerfuegbar, lebenslauf } = await auswertungLesen(env, seit);
+  const sitzungen = sitzungenBilden(zeilen || [], verlassen, sichtzeit, lebenslauf);
+  return auswertungAntwort(env, now, tage, limit, { zeilen, verlassen, sichtzeit, sichtzeitVerfuegbar, sitzungen });
+}
+
+// Alle vier Tabellen in einer Rundreise (db.batch) - einzeln kostete das live
+// vier mal rund 50 ms. Fehlt eine Tabelle, Spalte oder ein Index (aeltere
+// Migration), scheitert der Batch als Ganzes; dann der bisherige Weg Schritt
+// fuer Schritt.
+// INDEXED BY: ohne Statistik las SQLite sonst die ganze Tabelle in der
+// Reihenfolge von ORDER BY (live: 537 Zeilen gelesen fuer 81 von heute) statt
+// nur den Zeitraum zu suchen und den Rest kurz zu sortieren.
+async function auswertungLesen(env, seit) {
+  if (typeof env.DB.batch === "function") {
+    try {
+      const [e, v, z, l] = await env.DB.batch([
+        env.DB.prepare(`SELECT besucher, zeit, typ, pfad, artikel_id, titel, warenkorb, kanal,
+            quelle, sprache, land, region, stadt, geraet, browser, server, system, browser_sprache, kampagne
+          FROM besucher_ereignisse INDEXED BY idx_besucher_ereignisse_zeit WHERE zeit>=? ORDER BY besucher, zeit, id LIMIT ${MAX_ZEILEN}`).bind(seit),
+        env.DB.prepare("SELECT besucher, zeit, pfad FROM besucher_verlassen WHERE zeit>=? ORDER BY zeit LIMIT ?").bind(seit, MAX_ZEILEN),
+        env.DB.prepare("SELECT besucher,beginn,zuletzt,pfad,artikel_id,sicht_ms,begrenzt FROM besucher_sichtzeit INDEXED BY idx_besucher_sichtzeit_zuletzt WHERE zuletzt>=? ORDER BY besucher,beginn LIMIT ?").bind(seit, MAX_ZEILEN),
+        env.DB.prepare(`SELECT besucher, beginn, zuletzt, einwilligung, besuch_nr, erster_besuch, vorher_besuch,
+            entsperrt, gemeldet, meldung_grund FROM besucher_sitzungen INDEXED BY idx_besucher_sitzungen_zuletzt WHERE zuletzt>=? ORDER BY besucher, beginn LIMIT ?`).bind(seit, MAX_ZEILEN),
+      ]);
+      return {
+        zeilen: e?.results || [], verlassen: v?.results || [], sichtzeit: z?.results || [],
+        sichtzeitVerfuegbar: true, lebenslauf: l?.results || [],
+      };
+    } catch {
+      // weiter unten einzeln, mit den Rueckfaellen fuer fehlende Migrationen
+    }
+  }
   let zeilen;
   try {
     zeilen = (await env.DB.prepare(`SELECT besucher, zeit, typ, pfad, artikel_id, titel, warenkorb, kanal,
@@ -1079,7 +1121,10 @@ async function auswertung(env, url, now) {
   } catch {
     // Migration 0040 fehlt noch.
   }
-  const sitzungen = sitzungenBilden(zeilen || [], verlassen, sichtzeit, lebenslauf);
+  return { zeilen, verlassen, sichtzeit, sichtzeitVerfuegbar, lebenslauf };
+}
+
+function auswertungAntwort(env, now, tage, limit, { zeilen, verlassen, sichtzeit, sichtzeitVerfuegbar, sitzungen }) {
   return {
     ok: true,
     tage,

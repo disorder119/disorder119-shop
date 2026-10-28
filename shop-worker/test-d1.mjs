@@ -34,7 +34,13 @@ export function sqliteD1(files = []) {
       const result = db.prepare(sql).run(...clean(args));
       return { meta: { changes: Number(result.changes) } };
     },
-    execute() { return /^\s*SELECT\b/i.test(sql)?{results:db.prepare(sql).all(...clean(args))}:db.prepare(sql).run(...clean(args)); },
+    // Im Batch liefert D1 Zeilen fuer jede Abfrage mit Ergebnisspalten - auch
+    // fuer "WITH ... SELECT" (Admin-Kennzahlen laufen seit perf/admin-api im Batch).
+    execute() {
+      const st = db.prepare(sql);
+      const liefertZeilen = typeof st.columns === "function" ? st.columns().length > 0 : /^\s*(SELECT|WITH)\b/i.test(sql);
+      return liefertZeilen ? { results: st.all(...clean(args)) } : st.run(...clean(args));
+    },
   });
   return {
     prepare(sql) {
