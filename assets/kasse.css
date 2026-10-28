@@ -696,3 +696,8 @@
 :root:not([data-theme]) .kasse-konto input { color-scheme: dark; }
 .kasse-option:has(input:checked),
 .kasse-ort:has(input:checked) { background: var(--accent-soft); }
+
+/* Lieferland (EU-Kasse, 28.10.2026): die Liste der Auswahl in der schwarzen Ansicht dunkel
+   malen - sonst steht helle Schrift auf der weissen Liste des Systems. */
+:root:not([data-theme]) .kasse-feld select { color-scheme: dark; }
+.kasse-feld select:disabled { opacity: 0.7; }

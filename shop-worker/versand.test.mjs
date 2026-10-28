@@ -290,7 +290,8 @@ test("versandkostenfrei: only the cheapest standard is free, the rest costs the 
   const ersatz = versandkostenfreiAnwenden({ paket: "S", quelle: "ersatz", optionen: [{ id: "ersatz-S", art: "standard", preisCents: 590 }] }, 12000, konfig);
   assert.equal(ersatz.optionen[0].preisCents, 0);
   // Die echte Konfiguration: ab 99 Euro.
-  assert.deepEqual(VERSAND.versandkostenfrei, { abCents: 9900 });
+  // Die echte Konfiguration: ab 99 Euro, nur in Deutschland (EU zahlt den DHL-Preis).
+  assert.deepEqual(VERSAND.versandkostenfrei, { abCents: 9900, zonen: ["DE"] });
   const kaputt = structuredClone(shopConfig);
   kaputt.versand.versandkostenfrei = { abCents: "99" };
   assert.throws(() => versandKonfigurationPruefen(kaputt), /VERSAND_VERSANDKOSTENFREI_UNGUELTIG/);

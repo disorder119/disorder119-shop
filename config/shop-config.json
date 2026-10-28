@@ -9,7 +9,7 @@
     "standardGroesse": "S",
     "quelle": "fest",
     "tarife": {
-      "_comment": "Feste Versandpreise im Checkout (Inhaber 08.10.2026: nur DHL, Privatpreise der Online-Frankierung, Etikett ueber die Admin-App als QR-Marke). Preise in Cent je Paketklasse. DHL Paket: 2 kg 6,19 / 5 kg 7,69 / 10 kg 10,49 / 20 kg 18,99 / 31,5 kg 23,99 EUR, Haftung bis 500 EUR eingeschlossen. Hoeherversicherung bis 2.500 EUR: +6,99 EUR (DHL Transportversicherung), nur an die Haustuer und erst ab 500 EUR Warenwert (abWarenwertCents). quelle \"packlink\" schaltet zurueck auf Packlink-Preise.",
+      "_comment": "Feste Versandpreise im Checkout (Inhaber 08.10.2026: nur DHL, Privatpreise der Online-Frankierung, Etikett ueber die Admin-App als QR-Marke). Preise in Cent je Paketklasse, zone = versand.zonen (ohne zone: DE). Deutschland - DHL Paket: 2 kg 6,19 / 5 kg 7,69 / 10 kg 10,49 / 20 kg 18,99 / 31,5 kg 23,99 EUR, Haftung bis 500 EUR eingeschlossen; Hoeherversicherung bis 2.500 EUR: +6,99 EUR (DHL Transportversicherung), nur an die Haustuer und erst ab 500 EUR Warenwert (abWarenwertCents). EU (Inhaber 28.10.2026) - DHL Paket EU, Online-Preise Zone 1 laut dhl.de (seit 01.07.2025, 2026 unveraendert): 2 kg 14,49 / 5 kg 17,49 / 10 kg 22,49 / 20 kg 28,49 / 30 kg 45,49 EUR, Haftung bis 500 EUR; Hoeherversicherung International +14 EUR je angefangene 1.000 EUR bis 5.000 EUR (abWarenwertCents/bisWarenwertCents waehlen die passende Stufe). Der Worker vergleicht diese Preise taeglich mit dem DHL-Produktkatalog (dhl-qr.js#katalogAbgleich, Audit versand/dhl-katalog). quelle \"packlink\" schaltet zurueck auf Packlink-Preise (nur Deutschland).",
       "liste": [
         {
           "id": "dhl",
@@ -43,8 +43,266 @@
           "abholstation": false,
           "versichertBisCents": 250000,
           "abWarenwertCents": 50001
+        },
+        {
+          "id": "dhl-eu",
+          "zone": "EU",
+          "carrier": "DHL",
+          "titel": "DHL Paket EU",
+          "art": "standard",
+          "preise": {
+            "S": 1449,
+            "M": 1749,
+            "L": 2249,
+            "XL": 2849,
+            "XXL": 4549
+          },
+          "laufzeitTage": 3,
+          "abholstation": false,
+          "versichertBisCents": 50000
+        },
+        {
+          "id": "dhl-eu-hv1000",
+          "zone": "EU",
+          "carrier": "DHL",
+          "titel": "DHL Paket EU mit Höherversicherung",
+          "art": "standard",
+          "preise": {
+            "S": 2849,
+            "M": 3149,
+            "L": 3649,
+            "XL": 4249,
+            "XXL": 5949
+          },
+          "laufzeitTage": 3,
+          "abholstation": false,
+          "versichertBisCents": 100000,
+          "abWarenwertCents": 50001,
+          "bisWarenwertCents": 100000
+        },
+        {
+          "id": "dhl-eu-hv2000",
+          "zone": "EU",
+          "carrier": "DHL",
+          "titel": "DHL Paket EU mit Höherversicherung",
+          "art": "standard",
+          "preise": {
+            "S": 4249,
+            "M": 4549,
+            "L": 5049,
+            "XL": 5649,
+            "XXL": 7349
+          },
+          "laufzeitTage": 3,
+          "abholstation": false,
+          "versichertBisCents": 200000,
+          "abWarenwertCents": 100001,
+          "bisWarenwertCents": 200000
+        },
+        {
+          "id": "dhl-eu-hv3000",
+          "zone": "EU",
+          "carrier": "DHL",
+          "titel": "DHL Paket EU mit Höherversicherung",
+          "art": "standard",
+          "preise": {
+            "S": 5649,
+            "M": 5949,
+            "L": 6449,
+            "XL": 7049,
+            "XXL": 8749
+          },
+          "laufzeitTage": 3,
+          "abholstation": false,
+          "versichertBisCents": 300000,
+          "abWarenwertCents": 200001,
+          "bisWarenwertCents": 300000
+        },
+        {
+          "id": "dhl-eu-hv4000",
+          "zone": "EU",
+          "carrier": "DHL",
+          "titel": "DHL Paket EU mit Höherversicherung",
+          "art": "standard",
+          "preise": {
+            "S": 7049,
+            "M": 7349,
+            "L": 7849,
+            "XL": 8449,
+            "XXL": 10149
+          },
+          "laufzeitTage": 3,
+          "abholstation": false,
+          "versichertBisCents": 400000,
+          "abWarenwertCents": 300001,
+          "bisWarenwertCents": 400000
+        },
+        {
+          "id": "dhl-eu-hv5000",
+          "zone": "EU",
+          "carrier": "DHL",
+          "titel": "DHL Paket EU mit Höherversicherung",
+          "art": "standard",
+          "preise": {
+            "S": 8449,
+            "M": 8749,
+            "L": 9249,
+            "XL": 9849,
+            "XXL": 11549
+          },
+          "laufzeitTage": 3,
+          "abholstation": false,
+          "versichertBisCents": 500000,
+          "abWarenwertCents": 400001
         }
       ]
+    },
+    "zonen": {
+      "_comment": "Liefergebiet der Kasse (Inhaber 28.10.2026): Deutschland und alle EU-Laender - dorthin ohne Zoll. Das restliche Europa (Schweiz, Grossbritannien, Norwegen, Balkan ...) und die USA nur auf Anfrage, also nicht hier. Packstation und Filiale gibt es nur in DE. laufzeitTage je Land [von, bis] Werktage Transportzeit von DHL Paket International (dhl.de/laufzeiten, Stand 26.10.2026), dazu kommen bis zu 3 Werktage bis zum Versand (lieferzeit.js). Nicht beliefert werden Sondergebiete mit Zoll (Kanaren, Ceuta, Melilla, Aaland, franz. Uebersee, Livigno, Campione, Berg Athos - shop-worker/laender.js). maxGewichtKg: DHL international hoechstens 30 kg je Paket.",
+      "DE": {
+        "name": "Deutschland",
+        "laender": [
+          "DE"
+        ]
+      },
+      "EU": {
+        "name": "EU",
+        "laender": [
+          "AT",
+          "BE",
+          "BG",
+          "HR",
+          "CY",
+          "CZ",
+          "DK",
+          "EE",
+          "FI",
+          "FR",
+          "GR",
+          "HU",
+          "IE",
+          "IT",
+          "LV",
+          "LT",
+          "LU",
+          "MT",
+          "NL",
+          "PL",
+          "PT",
+          "RO",
+          "SE",
+          "SK",
+          "SI",
+          "ES"
+        ],
+        "maxGewichtKg": 30,
+        "laufzeitTage": {
+          "AT": [
+            2,
+            2
+          ],
+          "BE": [
+            2,
+            2
+          ],
+          "BG": [
+            4,
+            5
+          ],
+          "HR": [
+            3,
+            4
+          ],
+          "CY": [
+            6,
+            7
+          ],
+          "CZ": [
+            2,
+            3
+          ],
+          "DK": [
+            2,
+            3
+          ],
+          "EE": [
+            3,
+            4
+          ],
+          "FI": [
+            4,
+            6
+          ],
+          "FR": [
+            2,
+            3
+          ],
+          "GR": [
+            5,
+            7
+          ],
+          "HU": [
+            3,
+            4
+          ],
+          "IE": [
+            4,
+            4
+          ],
+          "IT": [
+            2,
+            4
+          ],
+          "LV": [
+            3,
+            4
+          ],
+          "LT": [
+            3,
+            4
+          ],
+          "LU": [
+            2,
+            2
+          ],
+          "MT": [
+            5,
+            7
+          ],
+          "NL": [
+            2,
+            2
+          ],
+          "PL": [
+            2,
+            3
+          ],
+          "PT": [
+            4,
+            5
+          ],
+          "RO": [
+            3,
+            4
+          ],
+          "SE": [
+            2,
+            4
+          ],
+          "SK": [
+            2,
+            3
+          ],
+          "SI": [
+            2,
+            3
+          ],
+          "ES": [
+            3,
+            4
+          ]
+        }
+      }
     },
     "dienste": {
       "_comment": "Gilt nur fuer quelle \"packlink\" (Rueckfall) und den Packlink-Reiter der Admin-App: Hermes, DPD, GLS und DHL, kein TNT, FedEx oder UPS. Im Checkout gibt es seit 08.10.2026 nur DHL (versand.tarife).",
@@ -62,8 +320,11 @@
       "expressMaxCents": 2500
     },
     "versandkostenfrei": {
-      "_comment": "Ab diesem Warenwert (Summe der Artikelpreise vor einem Gutschein, in Cent) uebernimmt der Shop den guenstigsten Standardversand: Die Kundschaft zahlt dafuer nichts, fuer einen anderen Paketdienst oder Express nur den Aufpreis. Wunsch des Inhabers 07.10.2026: ab 99 Euro. Block weglassen schaltet es ab. Gilt im Worker (shop-worker/versand.js) und in den Texten (build_site.py, AGB).",
-      "abCents": 9900
+      "_comment": "Ab diesem Warenwert (Summe der Artikelpreise vor einem Gutschein, in Cent) uebernimmt der Shop den guenstigsten Standardversand: Die Kundschaft zahlt dafuer nichts, fuer einen anderen Paketdienst oder Express nur den Aufpreis. Wunsch des Inhabers 07.10.2026: ab 99 Euro. Gilt nur in den Zonen unter \"zonen\" (Inhaber 28.10.2026: nur Deutschland - EU-Lieferungen zahlen den DHL-Preis); fehlt \"zonen\", gilt es nur fuer DE. Block weglassen schaltet es ab. Gilt im Worker (shop-worker/versand.js) und in den Texten (build_site.py, AGB).",
+      "abCents": 9900,
+      "zonen": [
+        "DE"
+      ]
     },
     "pakete": {
       "S": {

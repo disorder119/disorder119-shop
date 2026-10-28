@@ -14,6 +14,7 @@ import { safeText } from "./commerce-core.js";
 import { invoiceProfile, renderInvoice } from './tax-invoice.js';
 import { istSandbox, sandboxMail } from "./sandbox.js";
 import { TAG_MS, kontingentBelegen } from "./kontingent.js";
+import { landName } from "./laender.js";
 
 const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
 
@@ -142,7 +143,7 @@ function versandBezeichnung(order) {
   // "DHL Paket mit Hoeherversicherung") - der sagt mehr als "Standard (DHL)".
   const name = safeText(v.service_name || v.serviceName || "", 60);
   if (name && carrier && name.toUpperCase().startsWith(carrier.toUpperCase())) return `Versand · ${name}`;
-  if (!art) return "Versand (Deutschland)";
+  if (!art) return "Versand";
   return `Versand · ${art}${carrier ? ` (${carrier})` : ""}`;
 }
 
@@ -268,7 +269,8 @@ function deliveryLines(contact = {}) {
     safeText(contact.address_line2 || contact.addressLine2 || "", 160),
     [safeText(contact.postal_code || contact.postalCode || "", 20), safeText(contact.city || "", 80)]
       .filter(Boolean).join(" "),
-    safeText(contact.country_code || contact.countryCode || "", 4),
+    // Land ausgeschrieben ("Frankreich") - seit der EU-Kasse nicht mehr nur Deutschland.
+    landName(safeText(contact.country_code || contact.countryCode || "", 4).toUpperCase()),
   ];
   return lines.map(line => line.trim()).filter(Boolean);
 }

@@ -24,12 +24,16 @@
       fehltEmail: "Bitte gib eine gültige E-Mail-Adresse an.", appleCoupon: "Mit Gutschein bitte PayPal wählen; der Rabatt wird dort vor der Zahlung geprüft.",
       vorname: "Vorname", nachname: "Nachname", plz: "PLZ", ort: "Ort", strasse: "Straße",
       hausnummer: "Nr.", zusatz: "Adresszusatz (optional)",
-      landHinweis: "Über die Kasse liefern wir innerhalb Deutschlands mit DHL – an die Haustür, an eine Packstation oder in eine Filiale. Nach Europa und in die USA versenden wir auf Anfrage – schreib uns vor dem Kauf. Bezahlt wird mit PayPal oder Apple Pay.",
+      landHinweis: "Über die Kasse liefern wir mit DHL nach Deutschland und in alle EU-Länder – in Deutschland auch an eine Packstation oder in eine Filiale. In die Schweiz, nach Großbritannien, ins übrige Europa und in die USA versenden wir auf Anfrage – schreib uns vor dem Kauf. Bezahlt wird mit PayPal oder Apple Pay.",
+      land: "Land", fehltPlzLand: "Bitte prüf die Postleitzahl – so sieht sie in {land} aus: {beispiel}.",
+      fehltNummerEu: "Bitte gib die Hausnummer an (z. B. 12, 12bis oder s/n).", latein: "Bitte schreib Name und Adresse in lateinischen Buchstaben – so druckt DHL das Etikett.",
+      sondergebiet: "In dieses Gebiet (z. B. Kanaren, Ceuta, Melilla, Åland, französische Überseegebiete) brauchen Pakete Zollpapiere – das geht nur auf Anfrage. Schreib uns.",
+      nurDeAbhol: "Packstation und Filiale gibt es nur in Deutschland.", paypalAdresse: "PayPal hat die Lieferadresse nicht angenommen. Bitte prüf PLZ, Ort und Straße – oder schreib uns, dann klären wir die Bestellung per E-Mail.", freiNurDe: "Kostenloser Versand ab {grenze} gilt innerhalb Deutschlands. In die EU zahlst du den DHL-Preis für dein Paket – ohne Zoll.",
       agb: "AGB & Widerruf", datenschutz: "Datenschutz", impressum: "Impressum", widerruf: "Vertrag widerrufen",
       rueckgabe: "14 Tage gesetzliches Widerrufsrecht ab Warenerhalt; bei getrennten Lieferungen einer Bestellung ab Erhalt der letzten Ware. Den Rückversand beim Widerruf zahlst du selbst. Wir erstatten unverzüglich, spätestens 14 Tage nach Eingang deines Widerrufs; bis zum Warenerhalt oder Versandnachweis dürfen wir die Rückzahlung zurückhalten. Keine freiwillige verlängerte Rückgabefrist. Gesetzliche Mängelrechte bleiben unberührt.",
       laedt: "Wird geladen …", leer: "Dein Warenkorb ist leer.", zumArchiv: "Zum Archiv",
       nichtMehr: "Nicht mehr verfügbar – wird nicht mitbestellt:", groesse: "Größe", paket: "Paket",
-      paketS: "bis 2 kg", paketM: "bis 5 kg", paketL: "bis 10 kg", paketXL: "bis 20 kg", paketXXL: "bis 31,5 kg", tag1: "1 Werktag", tageN: "{n} Werktage",
+      paketS: "bis 2 kg", paketM: "bis 5 kg", paketL: "bis 10 kg", paketXL: "bis 20 kg", paketXXL: "bis 31,5 kg", paketXXLeu: "bis 30 kg", tag1: "1 Werktag", tageN: "{n} Werktage",
       versandLaedt: "Versand wird berechnet …", versandFehlt: "Der Versandpreis ist gerade nicht abrufbar. Bitte lade die Seite gleich neu.",
       versandWahlFehlt: "Dein gewählter Versanddienst ist nicht mehr verfügbar. Bitte wähle eine neue Versandart.",
       zwischensumme: "Stücke", versandZeile: "Versand", gesamt: "Gesamt", kostenlos: "kostenlos",
@@ -56,7 +60,7 @@
       zuSchnell: "Zu viele Versuche in kurzer Zeit. Warte bitte eine Minute.",
       zuVieleOffen: "Über deinen Internetanschluss sind gerade mehrere Kassen offen. Bitte versuch es in ein paar Minuten erneut.",
       zuVieleOffenMail: "Für diese E-Mail-Adresse sind schon zwei Bestellungen offen, die noch nicht bezahlt sind. Schließ eine davon ab oder versuch es in ein paar Minuten erneut – unbezahlte Reservierungen laufen nach 15 Minuten ab.",
-      nurDe: "Über die Kasse liefern wir nur innerhalb Deutschlands. Nach Europa und in die USA versenden wir auf Anfrage – schreib uns.",
+      nurDe: "Über die Kasse liefern wir nach Deutschland und in die EU. In die Schweiz, nach Großbritannien, ins übrige Europa und in die USA versenden wir auf Anfrage – schreib uns.",
       fehler: "Da ist leider etwas schiefgelaufen. Bitte versuch es gleich noch einmal oder schreib uns.",
       abschliessen: "Zahlung wird abgeschlossen …", abgebrochen: "Bezahlung abgebrochen – es wurde nichts abgebucht.",
       danke: "Danke für deine Bestellung!", bestellnr: "Bestellnummer:",
@@ -87,12 +91,16 @@
       fehltEmail: "Please enter a valid email address.", appleCoupon: "For coupons, please choose PayPal; the discount is checked before payment.",
       vorname: "First name", nachname: "Last name", plz: "Postcode", ort: "Town", strasse: "Street",
       hausnummer: "No.", zusatz: "Address line 2 (optional)",
-      landHinweis: "At checkout we deliver within Germany with DHL – to your door, to a Packstation or to a post office. We ship to the rest of Europe and the USA on request – message us before you buy. Payment is made with PayPal or Apple Pay.",
+      landHinweis: "At checkout we deliver with DHL to Germany and every EU country – within Germany also to a Packstation or post office. We ship to Switzerland, the UK, the rest of Europe and the USA on request – message us before you buy. Payment is made with PayPal or Apple Pay.",
+      land: "Country", fehltPlzLand: "Please check the postcode – in {land} it looks like this: {beispiel}.",
+      fehltNummerEu: "Please enter the house number (e.g. 12, 12bis or s/n).", latein: "Please write your name and address in Latin letters – that is how DHL prints the label.",
+      sondergebiet: "Parcels to this area (e.g. the Canary Islands, Ceuta, Melilla, Åland, French overseas territories) need customs papers – on request only. Please message us.",
+      nurDeAbhol: "Packstations and post offices are only available in Germany.", paypalAdresse: "PayPal did not accept the delivery address. Please check postcode, town and street – or message us and we will arrange the order by e-mail.", freiNurDe: "Free shipping from {grenze} applies within Germany. To the EU you pay DHL's price for your parcel – no customs.",
       agb: "Terms & withdrawal", datenschutz: "Privacy", impressum: "Legal notice", widerruf: "Withdraw from contract here",
       rueckgabe: "Statutory 14-day withdrawal period from receipt of the goods; for separate deliveries of one order, from receipt of the last item. You pay the direct cost of returning goods after withdrawal. We reimburse without undue delay, no later than 14 days after receiving your withdrawal; reimbursement may be withheld until we receive the goods or evidence of their return. No additional voluntary return period. Statutory rights for defective goods remain unaffected.",
       laedt: "Loading …", leer: "Your cart is empty.", zumArchiv: "To the archive",
       nichtMehr: "No longer available – not included:", groesse: "Size", paket: "parcel",
-      paketS: "up to 2 kg", paketM: "up to 5 kg", paketL: "up to 10 kg", paketXL: "up to 20 kg", paketXXL: "up to 31.5 kg", tag1: "1 working day", tageN: "{n} working days",
+      paketS: "up to 2 kg", paketM: "up to 5 kg", paketL: "up to 10 kg", paketXL: "up to 20 kg", paketXXL: "up to 31.5 kg", paketXXLeu: "up to 30 kg", tag1: "1 working day", tageN: "{n} working days",
       versandLaedt: "Calculating shipping …", versandFehlt: "The shipping price is not available right now. Please reload the page in a moment.",
       versandWahlFehlt: "Your selected carrier is no longer available. Please choose another shipping option.",
       zwischensumme: "Pieces", versandZeile: "Shipping", gesamt: "Total", kostenlos: "free",
@@ -119,7 +127,7 @@
       zuSchnell: "Too many attempts in a short time. Please wait a minute.",
       zuVieleOffen: "Several checkouts are currently open on your internet connection. Please try again in a few minutes.",
       zuVieleOffenMail: "There are already two unpaid orders open for this email address. Complete one of them or try again in a few minutes – unpaid reservations expire after 15 minutes.",
-      nurDe: "Checkout only delivers within Germany. We ship to the rest of Europe and the USA on request – message us.",
+      nurDe: "Checkout delivers to Germany and the EU. We ship to Switzerland, the UK, the rest of Europe and the USA on request – message us.",
       fehler: "Something went wrong. Please try again in a moment or write to us.",
       abschliessen: "Completing payment …", abgebrochen: "Payment cancelled – nothing was charged.",
       danke: "Thank you for your order!", bestellnr: "Order number:",
@@ -150,12 +158,16 @@
       fehltEmail: "Saisis une adresse e-mail valide.", appleCoupon: "Pour utiliser un bon, choisis PayPal ; la réduction est vérifiée avant le paiement.",
       vorname: "Prénom", nachname: "Nom", plz: "Code postal", ort: "Ville", strasse: "Rue",
       hausnummer: "N°", zusatz: "Complément d'adresse (facultatif)",
-      landHinweis: "À la caisse, nous livrons en Allemagne avec DHL – à domicile, en Packstation ou en bureau de poste. Vers le reste de l’Europe et les États-Unis, nous livrons sur demande – écris-nous avant l’achat. Le paiement se fait avec PayPal ou Apple Pay.",
+      landHinweis: "À la caisse, nous livrons avec DHL en Allemagne et dans tous les pays de l’UE – en Allemagne aussi en Packstation ou en bureau de poste. Vers la Suisse, le Royaume-Uni, le reste de l’Europe et les États-Unis, nous livrons sur demande – écris-nous avant l’achat. Le paiement se fait avec PayPal ou Apple Pay.",
+      land: "Pays", fehltPlzLand: "Vérifie le code postal – en {land}, il ressemble à ceci : {beispiel}.",
+      fehltNummerEu: "Indique le numéro (p. ex. 12, 12bis ou s/n).", latein: "Écris ton nom et ton adresse en lettres latines – c’est ainsi que DHL imprime l’étiquette.",
+      sondergebiet: "Vers cette zone (p. ex. Canaries, Ceuta, Melilla, Åland, outre-mer français), les colis demandent des documents douaniers – uniquement sur demande. Écris-nous.",
+      nurDeAbhol: "Les Packstations et bureaux de poste n’existent qu’en Allemagne.", paypalAdresse: "PayPal n’a pas accepté l’adresse de livraison. Vérifie le code postal, la ville et la rue – ou écris-nous, nous réglerons la commande par e-mail.", freiNurDe: "La livraison gratuite dès {grenze} s’applique en Allemagne. Vers l’UE, tu paies le tarif DHL de ton colis – sans douane.",
       agb: "CGV & rétractation", datenschutz: "Confidentialité", impressum: "Mentions légales", widerruf: "Se rétracter du contrat ici",
       rueckgabe: "Délai légal de rétractation de 14 jours à compter de la réception des biens ; pour une commande livrée séparément, de la réception du dernier article. Les frais directs de renvoi après rétractation sont à ta charge. Remboursement sans retard excessif, au plus tard 14 jours après réception de ta rétractation ; il peut être différé jusqu'à réception des biens ou d'une preuve de leur renvoi. Aucun délai de retour volontaire supplémentaire. Les droits légaux en cas de défaut restent inchangés.",
       laedt: "Chargement …", leer: "Ton panier est vide.", zumArchiv: "Vers l'archive",
       nichtMehr: "Plus disponible – non inclus :", groesse: "Taille", paket: "colis",
-      paketS: "jusqu’à 2 kg", paketM: "jusqu’à 5 kg", paketL: "jusqu’à 10 kg", paketXL: "jusqu’à 20 kg", paketXXL: "jusqu’à 31,5 kg", tag1: "1 jour ouvré", tageN: "{n} jours ouvrés",
+      paketS: "jusqu’à 2 kg", paketM: "jusqu’à 5 kg", paketL: "jusqu’à 10 kg", paketXL: "jusqu’à 20 kg", paketXXL: "jusqu’à 31,5 kg", paketXXLeu: "jusqu’à 30 kg", tag1: "1 jour ouvré", tageN: "{n} jours ouvrés",
       versandLaedt: "Calcul de la livraison …", versandFehlt: "Le prix de livraison n'est pas disponible pour le moment. Recharge la page dans un instant.",
       versandWahlFehlt: "Le transporteur choisi n'est plus disponible. Choisis un autre mode de livraison.",
       zwischensumme: "Pièces", versandZeile: "Livraison", gesamt: "Total", kostenlos: "gratuite",
@@ -182,7 +194,7 @@
       zuSchnell: "Trop de tentatives en peu de temps. Attends une minute.",
       zuVieleOffen: "Plusieurs paiements sont en cours en ce moment depuis ta connexion internet. Réessaie dans quelques minutes.",
       zuVieleOffenMail: "Deux commandes non payées sont déjà ouvertes pour cette adresse e-mail. Finalise l'une d'elles ou réessaie dans quelques minutes – les réservations non payées expirent au bout de 15 minutes.",
-      nurDe: "La caisse livre uniquement en Allemagne. Vers le reste de l’Europe et les États-Unis, nous livrons sur demande – écris-nous.",
+      nurDe: "La caisse livre en Allemagne et dans l’UE. Vers la Suisse, le Royaume-Uni, le reste de l’Europe et les États-Unis, nous livrons sur demande – écris-nous.",
       fehler: "Une erreur s'est produite. Réessaie dans un instant ou écris-nous.",
       abschliessen: "Finalisation du paiement …", abgebrochen: "Paiement annulé – rien n'a été débité.",
       danke: "Merci pour ta commande !", bestellnr: "Numéro de commande :",
@@ -239,7 +251,48 @@
   $("kasseTitel").textContent = t("titel");
   $("kasseZurueck").textContent = "← " + t("zurueck");
 
-  var zustand = { stuecke: [], weg: [], versand: null, wahl: null, laeuft: false, versuch: null, orte: [] };
+  var zustand = { stuecke: [], weg: [], versand: null, wahl: null, laeuft: false, versuch: null, orte: [], land: "DE" };
+
+  // ---- Lieferland: Deutschland und die EU-Laender, die der Server meldet
+  //      (shop-worker/versand.js, versand.zonen). Die Namen kommen vom Browser
+  //      in der Seitensprache (Intl.DisplayNames), Deutschland steht oben.
+  //      Die PLZ-Muster sind nur eine Hilfe beim Tippen - pruefen tut der Server.
+  var PLZ_MUSTER = {
+    DE: [/^\d{5}$/, "10115"], AT: [/^\d{4}$/, "1010"], BE: [/^\d{4}$/, "1000"], BG: [/^\d{4}$/, "1000"], CY: [/^\d{4}$/, "1010"],
+    DK: [/^\d{4}$/, "1050"], HU: [/^\d{4}$/, "1051"], LU: [/^(L-?)?\d{4}$/, "1450"], SI: [/^(SI-?)?\d{4}$/, "1000"],
+    HR: [/^\d{5}$/, "10000"], EE: [/^\d{5}$/, "10111"], FI: [/^\d{5}$/, "00100"], FR: [/^\d{5}$/, "75002"], IT: [/^\d{5}$/, "00184"],
+    ES: [/^\d{5}$/, "28013"], RO: [/^\d{6}$/, "010011"], CZ: [/^\d{3} ?\d{2}$/, "110 00"], GR: [/^\d{3} ?\d{2}$/, "105 57"],
+    SE: [/^\d{3} ?\d{2}$/, "114 55"], SK: [/^\d{3} ?\d{2}$/, "811 01"], PL: [/^\d{2}-?\d{3}$/, "00-950"], PT: [/^\d{4}-?\d{3}$/, "1100-148"],
+    LV: [/^(LV-?)?\d{4}$/, "LV-1050"], LT: [/^(LT-?)?\d{5}$/, "LT-01100"], NL: [/^\d{4} ?[A-Z]{2}$/, "1015 CJ"],
+    MT: [/^[A-Z]{3} ?\d{4}$/, "VLT 1117"], IE: [/^([AC-FHKNPRTV-Y]\d{2}|D6W) ?[0-9AC-FHKNPRTV-Y]{4}$/, "D02 X285"]
+  };
+  var landNamen = null;
+  try { landNamen = new Intl.DisplayNames([LANG === "de" ? "de-DE" : LANG === "fr" ? "fr-FR" : "en-GB"], { type: "region" }); } catch (e) { landNamen = null; }
+  function landName(code) {
+    try { return (landNamen && landNamen.of(code)) || code; } catch (e) { return code; }
+  }
+  var landWahl = $("kLandWahl");
+  var bekannteLaender = ["DE"];
+  function laenderSetzen(liste) {
+    if (!Array.isArray(liste) || !liste.length || liste.join() === bekannteLaender.join()) return;
+    bekannteLaender = liste.filter(function (c) { return /^[A-Z]{2}$/.test(c) && PLZ_MUSTER[c]; });
+    if (bekannteLaender.indexOf("DE") < 0) bekannteLaender.unshift("DE");
+    var rest = bekannteLaender.filter(function (c) { return c !== "DE"; })
+      .sort(function (a, b) { return landName(a).localeCompare(landName(b), LANG); });
+    landWahl.textContent = "";
+    ["DE"].concat(rest).forEach(function (code) {
+      var opt = el("option", "", landName(code));
+      opt.value = code;
+      landWahl.appendChild(opt);
+    });
+    landWahl.value = bekannteLaender.indexOf(zustand.land) >= 0 ? zustand.land : "DE";
+  }
+  function plzMuster(land) { return PLZ_MUSTER[land] || PLZ_MUSTER.DE; }
+  function plzGueltig(land, wert) { return plzMuster(land)[0].test(String(wert || "").trim().toUpperCase()); }
+  // Nur lateinische Buchstaben - DHL druckt das Etikett in Latin-1.
+  var NICHT_LATEIN = null;
+  try { NICHT_LATEIN = new RegExp("(?=\\p{L})\\P{Script=Latin}", "u"); } catch (e) { NICHT_LATEIN = null; }
+  function lateinisch(text) { return !NICHT_LATEIN || !NICHT_LATEIN.test(String(text || "")); }
 
   // ---- Welche Stuecke? ?artikel=<ID> (Produktseite), ?products=<ID:Menge,...>
   //      (Checkout-URL des Meta-Shops: Instagram/Facebook schicken die
@@ -360,13 +413,21 @@
     box.setAttribute("aria-busy", "true");
     if (!WORKER) { zustand.versand = null; versandZeichnen(); return Promise.resolve(); }
     var ids = zustand.stuecke.map(function (it) { return it.id; }).join(",");
-    return fetch(WORKER + "/versand/optionen?artikel=" + encodeURIComponent(ids))
-      .then(function (r) { return r.ok ? r.json() : null; })
+    var nr = ++versandAnfrage;
+    return fetch(WORKER + "/versand/optionen?artikel=" + encodeURIComponent(ids) + "&land=" + encodeURIComponent(zustand.land))
+      .then(function (r) { return r.json().catch(function () { return null; }).then(function (d) { return r.ok ? d : (d && d.laender ? { laender: d.laender } : null); }); })
       .catch(function () { return null; })
-      .then(function (daten) { versandSetzen(daten); });
+      .then(function (daten) {
+        // Nur die Antwort zum zuletzt gewaehlten Land zaehlt.
+        if (nr !== versandAnfrage) return;
+        if (daten && daten.laender) laenderSetzen(daten.laender);
+        versandSetzen(daten && daten.optionen ? daten : null);
+      });
   }
+  var versandAnfrage = 0;
   function versandSetzen(daten) {
     var gueltig = daten && daten.optionen && daten.optionen.length ? daten : null;
+    if (gueltig && gueltig.frei && gueltig.frei.abCents) FREI_AB_CENTS = gueltig.frei.abCents;
     var vorher = zustand.wahl;
     zustand.versand = gueltig;
     zustand.wahl = !gueltig ? null : !vorher ? gueltig.optionen[0] :
@@ -376,9 +437,12 @@
   }
   // Gesamte Lieferzeit: Versand innerhalb von 1 bis VERSAND_TAGE Werktagen plus Laufzeit des Paketdienstes.
   var VERSAND_TAGE = 3;
-  function tage(o) { return !o || !o.tage ? "" : tf("tageN", { n: (o.tage + 1) + "–" + (o.tage + VERSAND_TAGE) }); }
-  function paketName(d) { return d ? t("paket") + " " + (t("paket" + d.paket) || d.paketName) : ""; }
-  // Ab 99 € Warenwert uebernimmt der Shop den guenstigsten Standard (Worker).
+  function tage(o) { return !o || !o.tage ? "" : tf("tageN", { n: (o.tage + 1) + "–" + ((o.tageBis || o.tage) + VERSAND_TAGE) }); }
+  // International hoechstens 30 kg je Paket (DHL), im Inland 31,5 kg.
+  function paketName(d) { return d ? t("paket") + " " + (t("paket" + d.paket + (d.zone === "EU" && d.paket === "XXL" ? "eu" : "")) || d.paketName) : ""; }
+  // Ab 99 € Warenwert uebernimmt der Shop den guenstigsten Standard (Worker) -
+  // nur in Deutschland. Die Grenze merkt sich die Kasse aus der deutschen Antwort.
+  var FREI_AB_CENTS = 0;
   function preisText(cents) { return Number(cents) === 0 ? t("kostenlos") : geld(cents); }
   function geldRund(cents) {
     var euro = Math.round((Number(cents) || 0) / 100);
@@ -389,8 +453,10 @@
   // Tarifnamen kommen vom Server auf Deutsch (config/shop-config.json);
   // /en/ und /fr/ zeigen sie in der Seitensprache.
   var VERSAND_TITEL = {
-    en: { "DHL Paket": "DHL Parcel", "DHL Paket mit Höherversicherung": "DHL Parcel with extra insurance" },
-    fr: { "DHL Paket": "DHL Colis", "DHL Paket mit Höherversicherung": "DHL Colis avec assurance complémentaire" }
+    en: { "DHL Paket": "DHL Parcel", "DHL Paket mit Höherversicherung": "DHL Parcel with extra insurance",
+      "DHL Paket EU": "DHL Parcel EU", "DHL Paket EU mit Höherversicherung": "DHL Parcel EU with extra insurance" },
+    fr: { "DHL Paket": "DHL Colis", "DHL Paket mit Höherversicherung": "DHL Colis avec assurance complémentaire",
+      "DHL Paket EU": "DHL Colis UE", "DHL Paket EU mit Höherversicherung": "DHL Colis UE avec assurance complémentaire" }
   };
   function versandTitel(o) {
     var titel = (o && o.titel) || "";
@@ -484,6 +550,7 @@
     if (frei && !frei.erreicht && frei.fehltCents > 0) {
       box.appendChild(el("p", "kasse-hinweis kasse-frei", tf("freiFehlt", { betrag: geld(frei.fehltCents), grenze: geld(frei.abCents) })));
     }
+    if (d.zone && d.zone !== "DE" && FREI_AB_CENTS) box.appendChild(el("p", "kasse-hinweis kasse-frei", tf("freiNurDe", { grenze: geld(FREI_AB_CENTS) })));
     box.appendChild(el("p", "kasse-hinweis", paketName(d)));
     summeZeichnen();
     if (fokus) {
@@ -553,9 +620,11 @@
 
   var plzAnfrage = 0;
   f.plz.addEventListener("input", function () {
-    f.plz.value = f.plz.value.replace(/\D/g, "").slice(0, 5);
     orteBox.hidden = true;
     feldFehler(f.plz, "");
+    // Ausserhalb Deutschlands: Buchstaben, Leerzeichen und Bindestrich erlaubt, keine Ortsvorschlaege.
+    if (zustand.land !== "DE") { f.plz.value = f.plz.value.toUpperCase().replace(/[^A-Z0-9 -]/g, "").slice(0, 10); return; }
+    f.plz.value = f.plz.value.replace(/\D/g, "").slice(0, 5);
     if (f.plz.value.length !== 5) return;
     var nr = ++plzAnfrage;
     adressdienst("plz=" + f.plz.value).then(function (daten) {
@@ -616,7 +685,8 @@
   f.strasse.addEventListener("input", function () {
     clearTimeout(strassenUhr);
     var anfang = f.strasse.value.trim();
-    if (anfang.length < 2 || !/^\d{5}$/.test(f.plz.value)) { vorschlaegeSchliessen(); return; }
+    // Strassenvorschlaege gibt es nur fuer deutsche Adressen (OpenPLZ).
+    if (anfang.length < 2 || zustand.land !== "DE" || !/^\d{5}$/.test(f.plz.value)) { vorschlaegeSchliessen(); return; }
     strassenUhr = setTimeout(function () {
       var nr = ++strassenAnfrage;
       adressdienst("plz=" + f.plz.value + "&strasse=" + encodeURIComponent(anfang)).then(function (daten) {
@@ -1042,11 +1112,30 @@
   aPost.addEventListener("input", function () { aPost.value = aPost.value.replace(/[^\d ]/g, "").slice(0, 14); feldFehler(aPost, ""); });
   // PLZ der Adresse: wird zur Suche uebernommen, solange dort nichts Eigenes steht.
   f.plz.addEventListener("input", function () {
-    if (!(aPlz.dataset.auto !== "0" || !aPlz.value) || f.plz.value.length !== 5) return;
+    if (zustand.land !== "DE" || !(aPlz.dataset.auto !== "0" || !aPlz.value) || f.plz.value.length !== 5) return;
     aPlz.value = f.plz.value;
     aPlz.dataset.auto = "1";
     if (abhol.art === "abholort") abholSuchen(true);
   });
+
+  // Land gewechselt: PLZ-Feld anpassen, Packstation zuruecksetzen (nur DE)
+  // und den Versandpreis fuer das neue Land beim Server holen.
+  function landSetzen(land) {
+    if (!PLZ_MUSTER[land] || land === zustand.land) return;
+    zustand.land = land;
+    var de = land === "DE";
+    f.plz.inputMode = de ? "numeric" : "text";
+    f.plz.maxLength = de ? 5 : 10;
+    f.plz.autocapitalize = de ? "off" : "characters";
+    if (de) f.plz.value = f.plz.value.replace(/\D/g, "").slice(0, 5);
+    feldFehler(f.plz, "");
+    feldFehler(f.nummer, "");
+    orteBox.hidden = true;
+    vorschlaegeSchliessen();
+    if (!de) abhol.art = "haustuer";
+    versandLaden();
+  }
+  landWahl.addEventListener("change", function () { landSetzen(landWahl.value); });
 
   function wohinSetzen(art) {
     abhol.art = art;
@@ -1083,7 +1172,7 @@
       zusatz: f.zusatz.value.trim(),
       plz: f.plz.value.trim(),
       ort: f.ort.value.trim(),
-      land: "DE"
+      land: zustand.land
     };
   }
   function pruefen() {
@@ -1104,12 +1193,18 @@
       // Pflicht an Packstation und Filiale - DHL frankiert beide nur mit Postnummer.
       pruef(aPost, /^\d{6,10}$/.test(post), post ? t("postnummerUngueltig") : t("fehltPostnummer"));
     } else {
-      pruef(f.plz, /^\d{5}$/.test(f.plz.value), t("fehltPlz"));
+      var de = zustand.land === "DE";
+      pruef(f.plz, plzGueltig(zustand.land, f.plz.value), de ? t("fehltPlz") : tf("fehltPlzLand", { land: landName(zustand.land), beispiel: plzMuster(zustand.land)[1] }));
       pruef(f.ort, f.ort.value.trim().length >= 2, t("fehltOrt"));
       var packstation = /packstation|postfiliale|postfach|paketshop/i.test(f.strasse.value + " " + f.zusatz.value);
-      pruef(f.strasse, f.strasse.value.trim().length >= 2 && !packstation, packstation ? t("packstation") : t("fehltStrasse"));
-      pruef(f.nummer, /^\d{1,5}\s?[a-zA-Z]?(?:\s?[-/]\s?\d{1,5}[a-zA-Z]?)?$/.test(f.nummer.value.trim()), t("fehltNummer"));
+      pruef(f.strasse, f.strasse.value.trim().length >= 2 && !packstation, packstation ? t(de ? "packstation" : "nurDeAbhol") : t("fehltStrasse"));
+      var nummer = f.nummer.value.trim();
+      pruef(f.nummer, de ? /^\d{1,5}\s?[a-zA-Z]?(?:\s?[-/]\s?\d{1,5}[a-zA-Z]?)?$/.test(nummer)
+        : (zustand.land === "IE" && !nummer) || /^[0-9A-Za-z][0-9A-Za-z .\/-]{0,11}$/.test(nummer), t(de ? "fehltNummer" : "fehltNummerEu"));
     }
+    // DHL druckt nur lateinische Buchstaben.
+    var lateinFeld = [f.vorname, f.nachname, f.strasse, f.nummer, f.zusatz, f.ort].filter(function (x) { return !lateinisch(x.value); })[0];
+    if (lateinFeld && fehler.indexOf(lateinFeld) < 0) { feldFehler(lateinFeld, t("latein")); fehler.push(lateinFeld); }
     if (fehler.length) { melden(t("pruefen"), status); fehler[0].focus(); return false; }
     melden("", status);
     return true;
@@ -1147,7 +1242,11 @@
     if (code === "POSTNUMMER_FEHLT") return t("fehltPostnummer");
     if (code === "POSTNUMMER_UNGUELTIG") return t("postnummerUngueltig");
     if (code === "ABHOLORT_UNVOLLSTAENDIG" || code === "ZUSTELLUNG_UNGUELTIG") return t("abholUnvollstaendig");
-    if (code === "NUR_DEUTSCHLAND") return t("nurDe");
+    if (code === "NUR_DEUTSCHLAND" || code === "LAND_NICHT_BELIEFERT") return t("nurDe");
+    if (code === "SONDERGEBIET_NICHT_BELIEFERT") return t("sondergebiet");
+    if (code === "ADRESSE_NUR_LATEIN") return t("latein");
+    if (code === "ABHOLSTATION_NUR_DE") return t("nurDeAbhol");
+    if (code === "PAYPAL_ADRESSE_ABGELEHNT") return t("paypalAdresse");
     if (code === "ADRESSE_UNVOLLSTAENDIG") return t("pruefen");
     if (code === "EMAIL_REQUIRED") return t("fehltEmail");
     if (/^TURNSTILE_|^schutz_/.test(code)) return t("botCheck");
@@ -1165,6 +1264,7 @@
     versandZeichnen();
     Array.prototype.forEach.call($("kasseForm").elements, function (feld) { feld.readOnly = bis > Date.now(); });
     $("kKonto").disabled = bis > Date.now();
+    landWahl.disabled = bis > Date.now();
     sperrZeichnen();
     if (bis > Date.now()) setTimeout(function () { sperren(0); }, Math.min(bis - Date.now() + 500, 2147483000));
   }
@@ -1358,7 +1458,7 @@
       zeilen.push(t("mailGesamt") + ": " + geld(stueckeCents() + (zustand.wahl ? zustand.wahl.preisCents : 0)));
       zeilen.push("", t("email") + ": " + f.email.value.trim(), t("mailAdresse") + ":", a.name, a.strasse + " " + a.hausnummer);
       if (a.zusatz) zeilen.push(a.zusatz);
-      zeilen.push(a.plz + " " + a.ort, "Deutschland", "", t("mailFrage"));
+      zeilen.push(a.plz + " " + a.ort, landName(a.land || "DE"), "", t("mailFrage"));
       location.href = "mailto:" + CFG.email + "?subject=" + encodeURIComponent(t("betreff")) + "&body=" + encodeURIComponent(zeilen.join("\n"));
     });
     ziel.appendChild(knopf);

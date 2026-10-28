@@ -373,6 +373,7 @@ async function getOrders(env, url) {
       (SELECT GROUP_CONCAT(oi.item_id) FROM order_items oi WHERE oi.order_id=o.id) AS itemIds,
       (SELECT COALESCE(NULLIF(c.recipient_name,''),TRIM(COALESCE(c.given_name,'')||' '||COALESCE(c.surname,''))) FROM order_contact_snapshots c WHERE c.order_id=o.id) AS customerName,
       (SELECT c.city FROM order_contact_snapshots c WHERE c.order_id=o.id) AS customerCity,
+      (SELECT c.country_code FROM order_contact_snapshots c WHERE c.order_id=o.id) AS customerCountry,
       (SELECT p.status FROM payments p WHERE p.order_id=o.id ORDER BY p.created_at DESC LIMIT 1) AS paymentStatus,
       (SELECT p.provider FROM payments p WHERE p.order_id=o.id ORDER BY p.created_at DESC LIMIT 1) AS paymentProvider,
       (SELECT s.status FROM shipments s WHERE s.order_id=o.id ORDER BY s.created_at DESC LIMIT 1) AS shipmentStatus,

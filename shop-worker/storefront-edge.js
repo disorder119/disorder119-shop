@@ -151,7 +151,9 @@ async function anschlussGesperrt(env,ip) {
 
 // Liefergebiet (AGB § 4, FAQ "Wohin versendet ihr?"): Europa - EU, EWR,
 // Schweiz, Grossbritannien, Balkan und Osteuropa ohne Russland/Belarus - und
-// die USA. Ueber die Kasse geht Deutschland, die anderen Laender auf Anfrage.
+// die USA. Ueber die Kasse gehen Deutschland und die EU (seit 28.10.2026,
+// versand.zonen), die anderen Laender auf Anfrage. EU-Besucher sehen den
+// Hinweis deshalb nie.
 // Besucher aus allen anderen Laendern sehen oben auf jeder Seite einen
 // dezenten Hinweis. Das Land kommt von Cloudflare (request.cf.country, aus
 // der IP); gespeichert oder gezaehlt wird dafuer nichts. Gesperrt wird nichts.

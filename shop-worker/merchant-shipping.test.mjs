@@ -13,7 +13,7 @@ test('Merchant shipping agrees with checkout package estimates and standard pric
   const expected = items.map(item => {
     const size = paketFuerArtikel([item]);
     const value = Math.round(item.price*100);
-    const prices = VERSAND.tarife.filter(t => t.art==='standard' && value >= (t.abWarenwertCents || 0)).map(t => t.preise[size]);
+    const prices = VERSAND.tarife.filter(t => t.art==='standard' && t.zone==='DE' && value >= (t.abWarenwertCents || 0)).map(t => t.preise[size]);
     return [size,value >= VERSAND.versandkostenfrei.abCents ? 0 : Math.min(...prices)];
   });
   assert.deepEqual(actual,expected);

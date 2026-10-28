@@ -5,6 +5,7 @@
 // die Datei beim Deploy, build_site.py liest dieselbe Datei fuer Produktseiten
 // und Google-Daten - Masse und Preise stehen also nirgends ein zweites Mal.
 import shopConfig from "../config/shop-config.json" with { type: "json" };
+import { istBekanntesLand } from "./laender.js";
 
 // DHL-Paketklassen: S bis 2 kg, M bis 5 kg, L bis 10 kg, XL bis 20 kg, XXL bis 31,5 kg.
 export const GROESSEN = Object.freeze(["S", "M", "L", "XL", "XXL"]);
@@ -70,11 +71,18 @@ export function versandKonfigurationPruefen(roh) {
   // Versandkostenfrei ab einem Warenwert in Cent (Wunsch des Inhabers: ab 99
   // Euro). Fehlt der Block, gibt es keine Grenze; ist er kaputt, bricht der
   // Worker ab, statt falsch zu rechnen.
+  // Liefergebiet (Inhaber 28.10.2026): Zonen mit ihren Laendern. Ohne Block
+  // nur Deutschland - wie vor der EU-Kasse.
+  const zonen = zonenPruefen(v.zonen);
   let versandkostenfrei = null;
   if (v.versandkostenfrei !== undefined && v.versandkostenfrei !== null) {
     const f = v.versandkostenfrei;
     if (typeof f !== "object" || !ganzzahl(f.abCents, 1, 10000000)) throw new Error("VERSAND_VERSANDKOSTENFREI_UNGUELTIG");
-    versandkostenfrei = Object.freeze({ abCents: f.abCents });
+    // In welchen Zonen der Shop ab dem Warenwert den Versand uebernimmt.
+    // Fehlt die Liste: nur Deutschland - nie aus Versehen gratis ins Ausland.
+    const freiZonen = f.zonen === undefined ? ["DE"] : f.zonen;
+    if (!Array.isArray(freiZonen) || freiZonen.some(z => !Object.hasOwn(zonen, z))) throw new Error("VERSAND_VERSANDKOSTENFREI_ZONE_UNGUELTIG");
+    versandkostenfrei = Object.freeze({ abCents: f.abCents, zonen: Object.freeze([...freiZonen]) });
   }
   // Feste Tarife (quelle "fest"): je Paketdienst ein Preis pro Paketgroesse.
   const quelle = v.quelle === "fest" ? "fest" : "packlink";
@@ -85,24 +93,37 @@ export function versandKonfigurationPruefen(roh) {
       const id = String(t?.id || "");
       if (!/^[a-z0-9-]{2,20}$/.test(id) || tarife.some(x => x.id === id)) throw new Error("VERSAND_TARIF_UNGUELTIG");
       if (!GROESSEN.every(g => ganzzahl(t.preise?.[g], 1, 100000))) throw new Error(`VERSAND_TARIF_PREIS_${id}`);
+      const zone = t.zone === undefined ? "DE" : String(t.zone);
+      if (!Object.hasOwn(zonen, zone)) throw new Error(`VERSAND_TARIF_ZONE_${id}`);
       tarife.push(Object.freeze({
         id,
+        zone,
         carrier: String(t.carrier || "").trim(),
         titel: String(t.titel || t.carrier || id),
         art: t.art === "express" ? "express" : "standard",
         preise: Object.freeze({ ...t.preise }),
         laufzeitTage: ganzzahl(t.laufzeitTage, 1, 30) ? t.laufzeitTage : null,
-        abholstation: t.abholstation === true,
+        // Packstation und Filiale gibt es nur in Deutschland.
+        abholstation: t.abholstation === true && zone === "DE",
         versichertBisCents: ganzzahl(t.versichertBisCents, 0, 10000000) ? t.versichertBisCents : null,
-        // Erst ab diesem Warenwert anbieten (Hoeherversicherung).
+        // Erst ab / nur bis zu diesem Warenwert anbieten (Stufen der Hoeherversicherung).
         abWarenwertCents: ganzzahl(t.abWarenwertCents, 1, 100000000) ? t.abWarenwertCents : null,
+        bisWarenwertCents: ganzzahl(t.bisWarenwertCents, 1, 100000000) ? t.bisWarenwertCents : null,
       }));
     }
     if (!tarife.length) throw new Error("VERSAND_TARIFE_FEHLEN");
+    // Jede Zone braucht einen Standard ohne Warenwert-Grenze, sonst stuende
+    // die Kasse in diesem Land ohne Versandart da.
+    for (const zone of Object.keys(zonen)) {
+      if (!tarife.some(t => t.zone === zone && t.art === "standard" && !t.abWarenwertCents && !t.bisWarenwertCents)) {
+        throw new Error(`VERSAND_ZONE_OHNE_TARIF_${zone}`);
+      }
+    }
   }
   return Object.freeze({
     quelle,
     tarife: Object.freeze(tarife),
+    zonen,
     pakete: Object.freeze(pakete),
     standardGroesse: standard,
     schaetzung,
@@ -111,6 +132,54 @@ export function versandKonfigurationPruefen(roh) {
     dienste: Object.freeze({ erlaubt, ausgeschlossen, expressMaxCents }),
     versandkostenfrei,
   });
+}
+
+// Zonen des Liefergebiets: { DE: { key, name, laender, laufzeitTage, maxGewichtKg }, EU: ... }.
+// Jedes Land hoechstens in einer Zone, Deutschland immer in "DE".
+function zonenPruefen(roh) {
+  const quelle = roh && typeof roh === "object" ? roh : { DE: { name: "Deutschland", laender: ["DE"] } };
+  const zonen = {};
+  const vergeben = new Set();
+  for (const [key, z] of Object.entries(quelle)) {
+    if (key.startsWith("_")) continue;
+    if (!/^[A-Z]{2,3}$/.test(key) || !z || typeof z !== "object" || !Array.isArray(z.laender) || !z.laender.length) {
+      throw new Error(`VERSAND_ZONE_UNGUELTIG_${key}`);
+    }
+    for (const land of z.laender) {
+      if (!istBekanntesLand(land) || vergeben.has(land)) throw new Error(`VERSAND_ZONE_LAND_UNGUELTIG_${land}`);
+      vergeben.add(land);
+    }
+    const laufzeit = {};
+    for (const [land, spanne] of Object.entries(z.laufzeitTage || {})) {
+      if (!z.laender.includes(land) || !Array.isArray(spanne) || spanne.length !== 2
+        || !ganzzahl(spanne[0], 1, 10) || !ganzzahl(spanne[1], spanne[0], 10)) {
+        throw new Error(`VERSAND_ZONE_LAUFZEIT_UNGUELTIG_${land}`);
+      }
+      laufzeit[land] = Object.freeze([spanne[0], spanne[1]]);
+    }
+    const maxKg = Number(z.maxGewichtKg);
+    zonen[key] = Object.freeze({
+      key,
+      name: String(z.name || key),
+      laender: Object.freeze([...z.laender]),
+      laufzeitTage: Object.freeze(laufzeit),
+      maxGewichtKg: maxKg > 0 && maxKg <= 31.5 ? maxKg : 31.5,
+    });
+  }
+  if (!zonen.DE || !zonen.DE.laender.includes("DE")) throw new Error("VERSAND_ZONE_DE_FEHLT");
+  return Object.freeze(zonen);
+}
+
+// Zone eines Lieferlands ("DE", "EU") oder null, wenn die Kasse nicht dorthin liefert.
+export function zoneFuerLand(land, konfig = VERSAND) {
+  const code = String(land || "").toUpperCase();
+  return Object.values(konfig.zonen || {}).find(z => z.laender.includes(code)) || null;
+}
+
+// Alle Laender der Kasse, Deutschland zuerst.
+export function lieferlaender(konfig = VERSAND) {
+  const alle = Object.values(konfig.zonen || {}).flatMap(z => z.laender);
+  return ["DE", ...alle.filter(l => l !== "DE").sort()];
 }
 
 // Ein Name trifft auch Varianten: "UPS" sperrt "UPS® Standard", aber nicht
