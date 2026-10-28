@@ -2420,6 +2420,20 @@ GOOGLE_CATEGORY_BY_TYPE = {
     "Wallet": "Apparel & Accessories > Handbags, Wallets & Cases > Wallets & Money Clips",
 }
 MERCHANT_FEED_PATH = BASE / "feed" / "google-merchant.xml"
+# Englischer Feed fuer die EU (seit 28.10.2026 liefert die Kasse in alle
+# EU-Laender): Google zeigt einen Feed nur Nutzern seiner Sprache, und die
+# Zielseite muss dieselbe Sprache haben - daher /en/-Produktseiten,
+# englische Titel (english_titles.py) und desc_en. Im Merchant Center ist das
+# eine eigene Datenquelle (Sprache Englisch, Laender EU).
+MERCHANT_FEED_EN_PATH = BASE / "feed" / "google-merchant-en.xml"
+MERCHANT_FEED_TEXT = {
+    "de": {"suffix": " – Second Hand", "home": "",
+           "channel": "Kuratiertes Archiv für Designer-, Vintage- und Contemporary-Mode aus zweiter Hand.",
+           "dep": {"Women": "Damen", "Men": "Herren"}},
+    "en": {"suffix": " – Pre-Owned", "home": "en/",
+           "channel": "Curated archive of pre-owned designer, vintage and contemporary fashion.",
+           "dep": {"Women": "Women", "Men": "Men"}},
+}
 
 
 def merchant_id(it):
@@ -2439,18 +2453,55 @@ def merchant_category(it):
     return GOOGLE_CATEGORY_BY_TYPE.get(art) or GOOGLE_CATEGORY.get(cat, "")
 
 
-def merchant_description(it):
+def merchant_description(it, lang="de"):
     from seo_text import description_snippet
-    text = str(it.get("desc_de") or it.get("desc") or "").strip()
-    auszug = description_snippet(text, 1500, display_name(it)) if text else ""
-    return auszug or meta_description(it, "de")
+    if lang == "en":
+        text = str(item_description(it, "en") or "").strip()
+    else:
+        text = str(it.get("desc_de") or it.get("desc") or "").strip()
+    auszug = description_snippet(text, 1500, display_name(it, lang)) if text else ""
+    return auszug or meta_description(it, lang)
 
 
-def build_merchant_feed():
-    from merchant_shipping import merchant_shipping_cents
+def merchant_shipping_xml(it, shipping_config, frei_cents):
+    """g:shipping je Lieferland der Kasse (Deutschland + EU) mit Preis,
+    Bearbeitungs- und Laufzeit - dieselben Zahlen wie in der Kasse."""
+    from merchant_shipping import merchant_shipping_cents, merchant_shipping_entries
+
     def tag(name, value):
         return f"<{name}>{esc(str(value))}</{name}>"
 
+    rows = merchant_shipping_entries(it, shipping_config)
+    if not rows:
+        # Dynamische Anbieter (Packlink): nur Deutschland, kostenlos ab Grenze.
+        cents = merchant_shipping_cents(it, shipping_config)
+        if cents is None and frei_cents and float(it["price"]) * 100 >= frei_cents:
+            cents = 0
+        return [] if cents is None else ["<g:shipping>" + tag("g:country", "DE") + tag("g:service", "DHL Standard")
+                                         + tag("g:price", f"{cents / 100:.2f} EUR") + "</g:shipping>"]
+    out = []
+    for row in rows:
+        teile = [tag("g:country", row["country"]), tag("g:service", row["service"]),
+                 tag("g:price", f'{row["cents"] / 100:.2f} EUR'),
+                 tag("g:min_handling_time", row["min_handling_time"]),
+                 tag("g:max_handling_time", row["max_handling_time"])]
+        if row["min_transit_time"] is not None:
+            teile += [tag("g:min_transit_time", row["min_transit_time"]),
+                      tag("g:max_transit_time", row["max_transit_time"])]
+        out.append("<g:shipping>" + "".join(teile) + "</g:shipping>")
+    return out
+
+
+def build_merchant_feed():
+    write_merchant_feed("de", MERCHANT_FEED_PATH)
+    write_merchant_feed("en", MERCHANT_FEED_EN_PATH)
+
+
+def write_merchant_feed(lang, path):
+    def tag(name, value):
+        return f"<{name}>{esc(str(value))}</{name}>"
+
+    text = MERCHANT_FEED_TEXT[lang]
     frei_cents = versandkostenfrei_ab_cents()
     shipping_config = json.loads(SHOP_CONFIG_PATH.read_text(encoding='utf-8'))
     entries = []
@@ -2461,13 +2512,13 @@ def build_merchant_feed():
         category = merchant_category(it)
         if not gallery or not category:
             continue
-        link = SITE_URL.rstrip("/") + "/artikel/" + str(it.get("url_slug", it["id"])) + "/"
+        link = SITE_URL + text["home"] + "artikel/" + str(it.get("url_slug", it["id"])) + "/"
         neu = bool(re.search(r"neu mit (original)?etikett", str(it.get("desc_de") or it.get("desc") or ""), re.I))
         dep = str(it.get("department") or "")
         felder = [
             tag("g:id", merchant_id(it)),
-            tag("g:title", (display_name(it) + " – Second Hand")[:150]),
-            tag("g:description", merchant_description(it)[:5000]),
+            tag("g:title", (display_name(it, lang) + text["suffix"])[:150]),
+            tag("g:description", merchant_description(it, lang)[:5000]),
             tag("g:link", link),
             tag("g:image_link", SITE_URL + gallery[0]),
         ] + [tag("g:additional_image_link", SITE_URL + g) for g in gallery[1:11]] + [
@@ -2481,34 +2532,30 @@ def build_merchant_feed():
             tag("g:identifier_exists", "no"),
             tag("g:google_product_category", category),
             tag("g:product_type", " > ".join(p for p in (
-                LANDING_DEP_LABEL.get(dep, {}).get("de", "") if "LANDING_DEP_LABEL" in globals() else {"Women": "Damen", "Men": "Herren"}.get(dep, ""),
-                cat_tr(it.get("taxonomy_category") or it.get("category") or "", "de"),
+                text["dep"].get(dep, ""),
+                cat_tr(it.get("taxonomy_category") or it.get("category") or "", lang),
                 str(it.get("product_type") or "")) if p)),
             tag("g:gender", {"Women": "female", "Men": "male"}.get(dep, "unisex")),
             tag("g:age_group", "adult"),
         ]
         if it.get("size"):
             felder.append(tag("g:size", str(it["size"]).split("/")[0].strip()[:100]))
-        if it.get("color"):
-            felder.append(tag("g:color", str(it["color"])[:100]))
-        shipping_cents = merchant_shipping_cents(it, shipping_config)
-        if shipping_cents is None and frei_cents and float(it['price']) * 100 >= frei_cents:
-            shipping_cents = 0
-        if shipping_cents is not None:
-            felder.append('<g:shipping><g:country>DE</g:country><g:service>DHL Standard</g:service>'
-                          + tag('g:price', f'{shipping_cents / 100:.2f} EUR') + '</g:shipping>')
+        farbe = item_color(it, lang)
+        if farbe:
+            felder.append(tag("g:color", str(farbe)[:100]))
+        felder += merchant_shipping_xml(it, shipping_config, frei_cents)
         entries.append("<item>" + "".join(felder) + "</item>")
-    MERCHANT_FEED_PATH.parent.mkdir(parents=True, exist_ok=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
     xml = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0"><channel>'
         "<title>Disorder119 – Designer Second Hand &amp; Vintage</title>"
-        f"<link>{esc(SITE_URL)}</link>"
-        "<description>Kuratiertes Archiv für Designer-, Vintage- und Contemporary-Mode aus zweiter Hand.</description>\n"
+        f"<link>{esc(SITE_URL + text['home'])}</link>"
+        f"<description>{esc(text['channel'])}</description>\n"
         + "\n".join(entries) + "\n</channel></rss>\n"
     )
-    MERCHANT_FEED_PATH.write_text(xml, encoding="utf-8")
-    print(f"feed/google-merchant.xml geschrieben ({len(entries)} Artikel).")
+    path.write_text(xml, encoding="utf-8")
+    print(f"feed/{path.name} geschrieben ({len(entries)} Artikel).")
 
 
 def build_mobile_heroes():

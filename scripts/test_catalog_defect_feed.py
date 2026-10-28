@@ -11,7 +11,9 @@ class ConfirmedDefectFeedTest(unittest.TestCase):
         item["public_status"]="AVAILABLE"
         with tempfile.TemporaryDirectory() as directory:
             target=pathlib.Path(directory)/"feed.xml"
-            with patch.object(build_site,"ITEMS",[item]),patch.object(build_site,"MERCHANT_FEED_PATH",target):
+            target_en=pathlib.Path(directory)/"feed-en.xml"
+            with patch.object(build_site,"ITEMS",[item]),patch.object(build_site,"MERCHANT_FEED_PATH",target),\
+                    patch.object(build_site,"MERCHANT_FEED_EN_PATH",target_en):
                 build_site.build_merchant_feed()
             root=ET.parse(target).getroot();ns={"g":"http://base.google.com/ns/1.0"}
             product=root.find("channel/item")
@@ -20,5 +22,16 @@ class ConfirmedDefectFeedTest(unittest.TestCase):
             self.assertIn("Knöpfe am Kragen fehlen",product.findtext("g:description",namespaces=ns))
             self.assertEqual(product.findtext("g:price",namespaces=ns),f'{item["price"]:.2f} EUR')
             self.assertEqual(product.findtext("g:link",namespaces=ns),"https://disorder119.com/artikel/13/")
+            # Versand je Lieferland der Kasse: Deutschland zuerst, dann die EU.
+            laender=[s.findtext("g:country",namespaces=ns) for s in product.findall("g:shipping",ns)]
+            self.assertEqual(laender[0],"DE")
+            self.assertEqual(len(laender),27)
+            self.assertIn("FR",laender)
+            # Englischer Feed: gleiche ID, englische Seite und englischer Titel.
+            en=ET.parse(target_en).getroot().find("channel/item")
+            self.assertEqual(en.findtext("g:id",namespaces=ns),"13")
+            self.assertEqual(en.findtext("g:link",namespaces=ns),"https://disorder119.com/en/artikel/13/")
+            self.assertTrue(en.findtext("g:title",namespaces=ns).endswith("– Pre-Owned"))
+            self.assertEqual(len(en.findall("g:shipping",ns)),27)
 
 if __name__=="__main__": unittest.main()
