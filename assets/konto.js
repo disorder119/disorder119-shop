@@ -284,7 +284,7 @@
     schutzLaden()
       .then(function (S) { return S.waechter().token(); })
       .then(function (token) {
-        return api("/account/login", { method: "POST", body: { email: email, turnstileToken: token } });
+        return api("/account/login", { method: "POST", body: { email: email, turnstileToken: token, lang: LANG } });
       })
       .then(function () { meldung("ok", t.loginGesendet); })
       .catch(function (fehler) { meldung("fehler", anmeldeFehlerText(fehler)); })

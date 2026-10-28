@@ -1018,7 +1018,7 @@
             return fetch(workerUrl + "/create-order", {
               method: "POST",
               headers: kopf,
-              body: JSON.stringify({ itemId: IT.id, versand: gewaehlt.id, versandPreisCents: gewaehlt.preisCents }),
+              body: JSON.stringify({ itemId: IT.id, versand: gewaehlt.id, versandPreisCents: gewaehlt.preisCents, sprache: LANG }),
             });
           })
           .then(antwortLesen)

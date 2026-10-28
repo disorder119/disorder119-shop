@@ -293,7 +293,7 @@ export async function widerrufErfassen(env, eingabe = {}, { quelle = "WEBSITE", 
     // Online-Funktion die Anleitung zur Ruecksendung (falls versendet).
     if (lage === "VERSENDET" && eingabe.anleitungSenden !== false) {
       try {
-        mail = await sendReturnInstructions(env, order.id, reqId, { widerrufAm: eingegangen, schluessel: id });
+        mail = await sendReturnInstructions(env, order.id, reqId, { widerrufAm: eingegangen, schluessel: id, sprache });
       } catch (err) {
         log("error", "return_instructions_failed", reqId, { widerrufId: id, message: safeText(err?.message, 160) });
       }
@@ -613,7 +613,7 @@ export async function widerrufBearbeiten(env, id, body = {}, reqId = crypto.rand
       await ruecksendungSicherstellen(db, order.id, reqId, "ADMIN");
       if (body.anleitungSenden !== false) {
         try {
-          await sendReturnInstructions(env, order.id, reqId, { widerrufAm: row.eingegangen_at, schluessel: row.id });
+          await sendReturnInstructions(env, order.id, reqId, { widerrufAm: row.eingegangen_at, schluessel: row.id, sprache: row.sprache });
         } catch (err) {
           log("error", "return_instructions_failed", reqId, { widerrufId: row.id, message: safeText(err?.message, 160) });
         }
@@ -670,7 +670,7 @@ export async function ruecksendungAnlegen(env, orderId, body = {}, reqId = crypt
   await ruecksendungSicherstellen(db, order.id, reqId, "ADMIN");
   let anleitung = { sent: false };
   if (body.anleitungSenden !== false) {
-    anleitung = await sendReturnInstructions(env, order.id, reqId, { widerrufAm: offen.eingegangen_at, schluessel: `${offen.id}:${Date.now()}` });
+    anleitung = await sendReturnInstructions(env, order.id, reqId, { widerrufAm: offen.eingegangen_at, schluessel: `${offen.id}:${Date.now()}`, sprache: offen.sprache });
   }
   return { widerruf: widerrufView(offen), anleitung };
 }
