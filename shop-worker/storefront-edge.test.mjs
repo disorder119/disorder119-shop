@@ -16,7 +16,7 @@ test('canonical numbers are served without redirect loops; unknown legacy IDs re
 });
 
 test('publication allows real shop, language, image, PWA and Apple Pay paths',()=>{
-  for(const path of ['/','/en/','/fr/agb/','/artikel/119/index.html','/artikel/119.html','/kasse/','/assets/img/test/0.webp','/assets/legal-content.js','/manifest.webmanifest','/.well-known/apple-developer-merchantid-domain-association','/feed/google-merchant.xml']) assert.equal(publicPath(path),true,path);
+  for(const path of ['/','/en/','/fr/agb/','/artikel/119/index.html','/artikel/119.html','/kasse/','/assets/img/test/0.webp','/assets/legal-content.js','/manifest.webmanifest','/.well-known/apple-developer-merchantid-domain-association','/feed/google-merchant.xml','/feed/google-merchant-en.xml']) assert.equal(publicPath(path),true,path);
   for(const path of ['/feed/','/feed/google-merchant.json','/feed/x/y.xml']) assert.equal(publicPath(path),false,path);
 });
 test('publication rejects backend sources, drafts metadata, configuration and traversal',()=>{
