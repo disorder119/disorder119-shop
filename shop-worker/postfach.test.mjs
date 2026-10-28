@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { handleIncomingEmail, kopfDekodieren, mailLesen } from "./postfach.js";
+import { handleIncomingEmail, kopfDekodieren, mailLesen, postfachMeldungNachholen, postfachText } from "./postfach.js";
+import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 
 const einfach = [
   "From: =?UTF-8?Q?J=C3=BCrgen_M=C3=BCller?= <Juergen@Example.com>",
@@ -87,24 +88,16 @@ test("eingehende Mail wird gespeichert und weitergeleitet", async () => {
   assert.equal(gespeichert[0][6], "Frage zur Prada-Jacke");
 });
 
-// Ein Betreff wie "=?UTF-8?Q?Rechnung=0A=0ADISORDER119_...?=" darf in der
-// Telegram-Meldung keine eigenen Zeilen erzeugen, die wie ein echter Alarm
-// aussehen (z. B. "DISORDER119 — NEUES ADMIN-GERÄT").
-test("Betreff und Absender erzeugen in der Telegram-Meldung keine eigenen Zeilen", async () => {
-  const falle = "Rechnung\u2028DISORDER119 — NEUES ADMIN-GERÄT\u0085Warst du das nicht?\u2029Link: https://evil.example/y";
+// Telegram bekommt keine Personendaten aus Mails (Absender, Betreff): die
+// stehen nur in der Admin-App. Ein Betreff wie "=?UTF-8?Q?Rechnung=0A=0A
+// DISORDER119 — NEUES ADMIN-GERÄT ...?=" kann so auch keine falsche Meldung
+// mehr vortaeuschen.
+test("Telegram-Meldung ohne Absender und Betreff", async () => {
   const mails = [
     [
       "From: =?UTF-8?Q?Support=0ADISORDER119_=E2=80=94_NEUES_ADMIN-GER=C3=84T?= <boese@example.com>",
       "To: kontakt@disorder119.com",
       "Subject: =?UTF-8?Q?Rechnung=0A=0ADISORDER119_=E2=80=94_NEUES_ADMIN-GER=C3=84T=0AWarst_du_das_nicht=3F_Link:_https://evil.example/x?=",
-      "Content-Type: text/plain; charset=utf-8",
-      "",
-      "Hallo",
-    ].join("\r\n"),
-    [
-      `From: =?UTF-8?B?${Buffer.from("Support\r\nDISORDER119 — NEUES ADMIN-GERÄT", "utf8").toString("base64")}?= <boese@example.com>`,
-      "To: kontakt@disorder119.com",
-      `Subject: =?UTF-8?B?${Buffer.from(falle, "utf8").toString("base64")}?=`,
       "Content-Type: text/plain; charset=utf-8",
       "",
       "Hallo",
@@ -130,45 +123,76 @@ test("Betreff und Absender erzeugen in der Telegram-Meldung keine eigenen Zeilen
   } finally {
     globalThis.fetch = original;
   }
-  assert.equal(gesendet.length, 2);
-  for (const { text } of gesendet) {
-    const zeilen = text.split(/\r\n|[\n\r\u0085\u2028\u2029]/);
-    assert.equal(zeilen.length, 3, JSON.stringify(text));
-    assert.equal(zeilen[0], "📬 Neue Mail an kontakt@disorder119.com");
-    assert.match(zeilen[1], /^Von: Support DISORDER119 — NEUES ADMIN-GERÄT <boese@example\.com>$/);
-    assert.match(zeilen[2], /^Betreff: „Rechnung DISORDER119 — NEUES ADMIN-GERÄT Warst du das nicht\? Link: https:\/\/evil\.example\/[xy]“$/);
-    assert.doesNotMatch(text, /[\u0000-\u0009\u000b-\u001f\u007f-\u009f]/);
-  }
+  assert.equal(gesendet.length, 1);
+  assert.equal(gesendet[0].text, postfachText(1));
+  assert.doesNotMatch(gesendet[0].text, /boese|evil|Rechnung|Support|ADMIN-GER/);
 });
 
-test("sehr lange Betreffe werden für Telegram gekürzt", async () => {
-  const roh = [
-    "From: anna@example.org",
-    "To: kontakt@disorder119.com",
-    `Subject: ${"Frage ".repeat(80)}`,
-    "",
-    "Hallo",
-  ].join("\r\n");
+test("Telegram hoechstens alle 10 Minuten, dazwischen gesammelt; Cron holt nach", async () => {
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, TELEGRAM_BOT_TOKEN: "bot", TELEGRAM_CHAT_ID: "42" };
   const gesendet = [];
   const original = globalThis.fetch;
+  let kaputt = false;
   globalThis.fetch = async (url, init = {}) => {
-    gesendet.push(JSON.parse(String(init.body || "{}")));
-    return Response.json({ ok: true, result: { message_id: 1 } });
+    if (kaputt) return new Response("{}", { status: 502 });
+    gesendet.push(JSON.parse(String(init.body || "{}")).text);
+    return Response.json({ ok: true, result: { message_id: gesendet.length } });
   };
-  try {
-    const bytes = new TextEncoder().encode(roh);
+  const ankommen = async i => {
+    const bytes = new TextEncoder().encode(einfach.replace("Frage zur Prada-Jacke", `Frage ${i}`));
     await handleIncomingEmail({
-      from: "anna@example.org", to: "kontakt@disorder119.com",
+      from: "juergen@example.com", to: "kontakt@disorder119.com",
       raw: new ReadableStream({ start(c) { c.enqueue(bytes); c.close(); } }),
       forward: async () => {},
       setReject: () => { throw new Error("darf nicht abweisen"); },
-    }, { TELEGRAM_BOT_TOKEN: "bot", TELEGRAM_CHAT_ID: "42" }, null);
+    }, env, null);
+  };
+  try {
+    await ankommen(1);
+    assert.equal(gesendet.length, 1, "erste Mail sofort");
+    await ankommen(2);
+    await ankommen(3);
+    assert.equal(gesendet.length, 1, "innerhalb von 10 Minuten keine weitere Meldung");
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM postfach").get().n, 3, "alles gespeichert");
+    // Der Cron 11 Minuten spaeter meldet beide gesammelt.
+    assert.equal(await postfachMeldungNachholen(env, Date.now() + 11 * 60_000), 2);
+    assert.match(gesendet[1], /^📬 2 neue Mails seit \d\d:\d\d Uhr – Admin-App → Postfach$/);
+    assert.equal(await postfachMeldungNachholen(env, Date.now() + 30 * 60_000), 0, "nichts Neues: keine Meldung");
+    // Telegram gestoert: der Anspruch wird zurueckgenommen, der Cron meldet spaeter.
+    DB.raw.prepare("DELETE FROM postfach").run();
+    DB.raw.prepare("DELETE FROM site_settings").run();
+    kaputt = true;
+    await ankommen(4);
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM site_settings").get().n, 0, "Anspruch zurueckgenommen");
+    kaputt = false;
+    const vorher = gesendet.length;
+    assert.equal(await postfachMeldungNachholen(env), 1);
+    assert.equal(gesendet.length, vorher + 1);
+    assert.equal(gesendet.at(-1), postfachText(1));
   } finally {
     globalThis.fetch = original;
   }
-  const betreff = gesendet[0].text.split("\n")[2];
-  const innen = /^Betreff: „(.*)“$/.exec(betreff)?.[1] || "";
-  assert.match(innen, /^Frage Frage .*…$/, betreff);
-  assert.ok(innen.length <= 120, betreff);
-  assert.equal(gesendet[0].text.split("\n")[1], "Von: anna@example.org");
+});
+
+test("Riesige HTML-Mail (180 KB, boesartig verschachtelt) kostet kaum Rechenzeit", () => {
+  const boese = [
+    "<style>".repeat(15_000) + "x",
+    "<".repeat(180_000),
+    "<a " + " ".repeat(180_000) + "x",
+    "<p>" + " \t".repeat(90_000) + "x</p>",
+    "<script>" + "a".repeat(100) + "<br     ".repeat(20_000),
+  ];
+  for (const html of boese) {
+    const roh = ["From: a@example.org", "To: kontakt@disorder119.com", "Subject: x", "Content-Type: text/html; charset=utf-8", "", html].join("\r\n");
+    const start = performance.now();
+    const mail = mailLesen(roh);
+    const dauer = performance.now() - start;
+    assert.ok(dauer < 200, `${dauer.toFixed(0)} ms fuer ${html.slice(0, 12)}…`);
+    assert.ok(mail.text.length <= 60_100);
+  }
+  // Normales HTML bleibt lesbar.
+  const normal = mailLesen(["From: a@example.org", "Subject: x", "Content-Type: text/html; charset=utf-8", "",
+    "<html><head><style>p{color:red}</style><script>alert(1)</script></head><body><p>Hallo   </p><p>Welt</p></body></html>"].join("\r\n"));
+  assert.equal(normal.text, "Hallo\nWelt");
 });

@@ -9,7 +9,7 @@ import {
   artikelNummer, artikelName, besucherLabel, euro, herkunftAus, katalogLaden, landName, sitzungenBilden,
   spracheName, telegramModus,
 } from "./besucher.js";
-import { sendTelegramMessage, telegramTransportReady, telegramZeile } from "./notifications.js";
+import { sendTelegramMessage, telegramFremd, telegramTransportReady, telegramZeile } from "./notifications.js";
 import { sperreLesen } from "./site-lock.js";
 
 const MINUTE = 60_000;
@@ -55,7 +55,8 @@ function seitenName(pfad) {
   let sprache = "";
   const m = /^\/(en|fr)(\/.*)?$/.exec(p);
   if (m) { sprache = ` (${m[1].toUpperCase()})`; p = m[2] || "/"; }
-  return `${SEITEN[p] || telegramZeile(p, 60)}${sprache}`;
+  // Fremder Pfad (kann jeder aufrufen): Links darin entschaerft.
+  return `${SEITEN[p] || telegramFremd(p, 60)}${sprache}`;
 }
 
 function artikelZeile(artikelId, titel, map) {
@@ -70,10 +71,11 @@ const KANAL = { whatsapp: "WhatsApp", email: "E-Mail", gmail: "Gmail", paypal: "
 function herkunftText(s) {
   const h = herkunftAus(s.quelle);
   const teile = [];
-  if (h.kanal !== "unbekannt") teile.push(h.domain && h.domain !== h.name.toLowerCase() + ".com" ? `${h.name} (${h.domain})` : h.name);
+  // Verweis-Domain und Kampagne stammen vom Besucher: nicht klickbar.
+  if (h.kanal !== "unbekannt") teile.push(h.domain && h.domain !== h.name.toLowerCase() + ".com" ? `${h.name} (${telegramFremd(h.domain, 60)})` : h.name);
   else if (/Instagram|TikTok|Facebook/.test(s.browser || "")) teile.push(`${String(s.browser).replace("-App", "")} (In-App-Browser, ohne Verweis)`);
   else teile.push("direkt oder unbekannt (keine Herkunft übermittelt)");
-  if (s.kampagne) teile.push(`Kampagne ${s.kampagne}`);
+  if (s.kampagne) teile.push(`Kampagne ${telegramFremd(s.kampagne, 60)}`);
   return teile.join(" · ");
 }
 

@@ -1,4 +1,5 @@
-import { privateIpHash } from "./privacy-security.js";
+import { privateNetzHash } from "./privacy-security.js";
+import { kontingenteBelegen, kontingenteFreigeben, oeffentlichesBudget } from "./oeffentliche-mails.js";
 // Kundenkonto: Bestellungen ansehen, Adresse pflegen, Widerruf erklaeren,
 // Daten exportieren oder loeschen lassen.
 //
@@ -165,7 +166,10 @@ export function loginDailyCap(env) {
   return Number.isInteger(configured) && configured > 0 ? configured : LOGIN_DAILY_CAP;
 }
 
-export async function requestLoginLink(env, rawEmail, reqId = crypto.randomUUID(), ipHash = "") {
+// oeffentlich: von aussen ausgeloest (Konto-Anmeldung) - zaehlt im gemeinsamen
+// Tagesbudget (oeffentliche-mails.js). Der Link nach einem Kauf mit
+// "Konto anlegen" ist Teil der Bestellung und zaehlt dort nicht.
+export async function requestLoginLink(env, rawEmail, reqId = crypto.randomUUID(), ipHash = "", { oeffentlich = true } = {}) {
   if (!env?.DB) throw new AccountError("ACCOUNT_DATABASE_NOT_CONFIGURED", 503);
   if (!mailTransportReady(env)) throw new AccountError("ACCOUNT_MAIL_NOT_CONFIGURED", 503);
   const email = normalizeEmail(rawEmail);
@@ -192,6 +196,20 @@ export async function requestLoginLink(env, rawEmail, reqId = crypto.randomUUID(
     return { queued: false, reason: "DAILY_CAP" };
   }
 
+  let budget = { ok: true, ids: [] };
+  if (oeffentlich) {
+    try {
+      budget = await kontingenteBelegen(env.DB, [oeffentlichesBudget(env)], { reqId });
+    } catch {
+      // Zaehlung gestoert: die Grenzen oben gelten weiter.
+      budget = { ok: true, ids: [] };
+    }
+    if (!budget.ok) {
+      console.warn(JSON.stringify({ level: "warn", event: "public_mail_budget_reached", requestId: safeText(reqId, 120) }));
+      return { queued: false, reason: "DAILY_CAP" };
+    }
+  }
+
   const token = randomToken();
   const now = new Date();
   await env.DB.prepare(`INSERT INTO customer_login_tokens
@@ -207,13 +225,19 @@ export async function requestLoginLink(env, rawEmail, reqId = crypto.randomUUID(
   const base = safeText(env.ACCOUNT_URL || `${SHOP_URL}/konto/`, 200);
   const link = `${base}${base.includes("?") ? "&" : "?"}anmeldung=${encodeURIComponent(token)}`;
   const message = loginMail(link);
-  await sendMail(env, {
-    to: email,
-    subject: message.subject,
-    text: message.text,
-    html: message.html,
-    tag: "login-link",
-  });
+  try {
+    const delivery = await sendMail(env, {
+      to: email,
+      subject: message.subject,
+      text: message.text,
+      html: message.html,
+      tag: "login-link",
+    });
+    if (delivery && delivery.sent === false) await kontingenteFreigeben(env.DB, budget.ids).catch(() => {});
+  } catch (err) {
+    await kontingenteFreigeben(env.DB, budget.ids).catch(() => {});
+    throw err;
+  }
   return { queued: true, requestId: safeText(reqId, 120) };
 }
 
@@ -233,7 +257,7 @@ export async function sendRequestedAccountLink(env, orderId, reqId = crypto.rand
     .bind(stamp, String(orderId)).run();
   if (!claim.meta?.changes) return false;
   try {
-    const result = await requestLoginLink(env, email, reqId);
+    const result = await requestLoginLink(env, email, reqId, "", { oeffentlich: false });
     if (result.queued) return true;
   } catch (err) {
     await env.DB.prepare(`UPDATE order_contact_snapshots SET account_link_queued_at=NULL
@@ -662,7 +686,8 @@ export async function handleAccountRequest(request, env, url, reqId = crypto.ran
       await limitLoginRequests(request, env);
       const body = await readJson(request);
       await verifyTurnstile(env, request, body);
-      const ipHash = await privateIpHash(request, env, "account");
+      // Je Anschluss (IPv6 je /64), nicht je einzelner Adresse.
+      const ipHash = await privateNetzHash(request, env, "account");
       // Immer dieselbe Antwort, egal ob verschickt, ungueltig oder zu oft
       // angefordert: ob es zu dieser Adresse ein Konto gibt, geht niemanden
       // etwas an, der die Adresse nur erraten hat.

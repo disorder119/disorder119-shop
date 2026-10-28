@@ -132,13 +132,16 @@ async function cacheSchreiben(schluessel, daten) {
 
 // DHL erlaubt 500 Abfragen am Tag. Damit niemand das Kontingent mit immer
 // neuen Strassennamen leerfragt (der Zwischenspeicher gilt je PLZ + Strasse):
-// je Anschluss hoechstens 40 DHL-Abfragen am Tag, insgesamt 450. Faellt die
+// je Anschluss hoechstens 40 DHL-Abfragen am Tag, insgesamt 300 (Luft fuer
+// die Kasse und eigene Tests bis zur DHL-Grenze von 500). Faellt die
 // Zaehlung aus, wird gefragt wie bisher.
-async function dhlKontingent(env, anschluss) {
+export const DHL_JE_ANSCHLUSS = 40;
+export const DHL_JE_TAG = 300;
+export async function dhlKontingent(env, anschluss) {
   if (!env?.DB) return true;
   try {
     const schluessel = await sha256Hex(`dhl-abholorte:${anschluss}:${ipPepper(env)}`);
-    const belegt = await kontingentBelegen(env.DB, { art: "dhl-abholorte", schluessel, jeSchluessel: 40, gesamt: 450 });
+    const belegt = await kontingentBelegen(env.DB, { art: "dhl-abholorte", schluessel, jeSchluessel: DHL_JE_ANSCHLUSS, gesamt: DHL_JE_TAG });
     return belegt.ok;
   } catch {
     return true;

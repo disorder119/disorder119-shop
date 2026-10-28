@@ -1,4 +1,5 @@
-import { privateIpHash } from "./privacy-security.js";
+import { privateNetzHash } from "./privacy-security.js";
+import { hashText, kontingenteBelegen, kontingenteFreigeben, oeffentlichesBudget } from "./oeffentliche-mails.js";
 // Newsletter mit Double-Opt-in und einmaligem 10-%-Willkommenscode.
 //
 // Ablauf: Anmeldung auf der Website -> Bestaetigungsmail (Link gilt 48 Std.)
@@ -40,8 +41,13 @@ const BREVO_CONTACTS = "https://api.brevo.com/v3/contacts";
 
 export const CONFIRM_TTL_HOURS = 48;
 export const RESEND_PAUSE_MINUTES = 10;
+// Bestaetigungsmails (gezaehlt werden verschickte Mails, nicht Zeilen):
+// je Anschluss (IPv6 je /64) 10 in der Stunde, je Postfach (kanonische
+// Adresse) 3 am Tag, insgesamt 50 am Tag - und alle zusammen mit Anmelde-
+// links und Widerrufsbestaetigungen im gemeinsamen Budget (oeffentliche-mails.js).
 export const IP_MAILS_PER_HOUR = 10;
-export const NEWSLETTER_DAILY_CAP = 150;
+export const MAILS_PER_ADDRESS_DAY = 3;
+export const NEWSLETTER_DAILY_CAP = 50;
 export const CODES_PER_NETWORK = 2;
 export const CODE_NETWORK_WINDOW_DAYS = 30;
 export const CONSENT_VERSION = "2026-09-26";
@@ -123,8 +129,9 @@ function tokenFrom(value) {
   return /^[0-9a-f]{64}$/.test(token) ? token : "";
 }
 
+// Je Anschluss (IPv6 je /64): neue Adressen im selben Netz zaehlen mit.
 async function ipHash(request, env) {
-  return privateIpHash(request, env, "newsletter");
+  return privateNetzHash(request, env, "newsletter");
 }
 
 function dailyCap(env) {
@@ -338,17 +345,20 @@ export async function subscribe(env, input = {}, { reqId = crypto.randomUUID(), 
       existing.last_confirm_mail_at > new Date(now.getTime() - RESEND_PAUSE_MINUTES * 60_000).toISOString()) {
     return { queued: false, reason: "RECENTLY_SENT" };
   }
-  if (ip) {
-    const hour = new Date(now.getTime() - 3_600_000).toISOString();
-    const row = await db.prepare(`SELECT COUNT(*) AS n FROM newsletter_subscribers
-      WHERE request_ip_hash=? AND last_confirm_mail_at>=?`).bind(ip, hour).first();
-    if (Number(row?.n || 0) >= IP_MAILS_PER_HOUR) return { queued: false, reason: "IP_RATE_LIMITED" };
-  }
-  const day = new Date(now.getTime() - 86_400_000).toISOString();
-  const sentToday = await db.prepare("SELECT COUNT(*) AS n FROM newsletter_subscribers WHERE last_confirm_mail_at>=?").bind(day).first();
-  if (Number(sentToday?.n || 0) >= dailyCap(env)) {
-    console.warn(JSON.stringify({ level: "warn", event: "newsletter_daily_cap_reached", requestId: String(reqId).slice(0, 120) }));
-    return { queued: false, reason: "DAILY_CAP" };
+  // Grenzen zaehlen verschickte Mails (frueher Zeilen: eine Adresse mit
+  // erneuter Bestaetigung alle 10 Minuten zaehlte nur einmal).
+  const kontingent = await kontingenteBelegen(db, [
+    ip ? { art: "nl-netz", schluessel: ip, jeSchluessel: IP_MAILS_PER_HOUR, fensterMs: 3_600_000 } : null,
+    { art: "nl-adresse", schluessel: await hashText(`newsletter:${canonical}`), jeSchluessel: MAILS_PER_ADDRESS_DAY, fensterMs: 86_400_000 },
+    { art: "nl-gesamt", gesamt: dailyCap(env), gesamtFensterMs: 86_400_000 },
+    oeffentlichesBudget(env),
+  ], { jetzt: now, reqId });
+  if (!kontingent.ok) {
+    const reason = kontingent.art === "nl-netz" ? "IP_RATE_LIMITED" : kontingent.art === "nl-adresse" ? "ADDRESS_RATE_LIMITED" : "DAILY_CAP";
+    if (reason === "DAILY_CAP") {
+      console.warn(JSON.stringify({ level: "warn", event: "newsletter_daily_cap_reached", requestId: String(reqId).slice(0, 120), art: kontingent.art }));
+    }
+    return { queued: false, reason };
   }
 
   const token = randomToken();
@@ -387,7 +397,14 @@ export async function subscribe(env, input = {}, { reqId = crypto.randomUUID(), 
   const link = `${pageUrl(lang)}?bestaetigen=${token}`;
   const message = confirmMail(lang, link, await neuesteArtikel(3, lang));
   const recipient = existing?.email_normalized || email;
-  await sendMail(env, { to: recipient, subject: message.subject, text: message.text, html: message.html, tag: "newsletter-bestaetigung" });
+  try {
+    const delivery = await sendMail(env, { to: recipient, subject: message.subject, text: message.text, html: message.html, tag: "newsletter-bestaetigung" });
+    if (delivery && delivery.sent === false) await kontingenteFreigeben(db, kontingent.ids);
+  } catch (err) {
+    // Nicht verschickt: zaehlt fuer keine Grenze.
+    await kontingenteFreigeben(db, kontingent.ids);
+    throw err;
+  }
   return { queued: true };
 }
 

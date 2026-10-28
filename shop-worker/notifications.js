@@ -160,7 +160,28 @@ export function telegramZeile(value, max = 120) {
     .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  return text.length > max ? `${text.slice(0, Math.max(0, max - 1)).trimEnd()}…` : text;
+  return wohlgeformt(text.length > max ? `${text.slice(0, Math.max(0, max - 1)).trimEnd()}…` : text);
+}
+
+// String.prototype.toWellFormed (Workers, Node 20+), sonst von Hand: einzelne
+// Ersatzzeichen-Haelften werden zu U+FFFD.
+export function wohlgeformt(text) {
+  const wert = String(text ?? "");
+  if (typeof wert.toWellFormed === "function") return wert.toWellFormed();
+  return wert.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "�");
+}
+
+// Fremdtext (Pfade, Verweis-Domains, Kampagnen, Browserkennungen ...) fuer
+// Telegram: eine Zeile wie telegramZeile und Links entschaerft - Telegram
+// macht sonst aus "evil.example/x", "https://..." und "@name" klickbare Links.
+// Lesbar bleibt es: U+2024 statt Punkt, U+2044 statt Schraegstrich nach dem
+// Schema, Vollbreiten-@.
+export function telegramFremd(value, max = 120) {
+  const entschaerft = String(value ?? "")
+    .replace(/:\/\//g, ":⁄⁄")
+    .replace(/([\p{L}\p{N}])\.(?=[\p{L}\p{N}])/gu, "$1․")
+    .replace(/@/g, "＠");
+  return telegramZeile(entschaerft, max);
 }
 
 export async function sendTelegramMessage(env, text, reqId = crypto.randomUUID()) {
@@ -169,11 +190,15 @@ export async function sendTelegramMessage(env, text, reqId = crypto.randomUUID()
   // Zeilenumbrueche bleiben erhalten, sonst klebt jede Meldung in einer Zeile.
   // Nur "\n" trennt Zeilen; NEL und die Unicode-Zeilentrenner werden wie die
   // uebrigen Steuerzeichen zu Leerzeichen.
-  const cleanText = String(text ?? "")
+  // Richtungszeichen (RTL-Override u. a.) koennen Fremdtext umdrehen und
+  // eigene Zeilen vortaeuschen - zentral weg. Abgeschnittene Emojis (halbe
+  // Ersatzzeichen-Paare nach slice) lehnt Telegram ab - daher wohlgeformt.
+  const cleanText = wohlgeformt(String(text ?? "")
     .replace(/\r\n?/g, "\n")
     .replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u2028\u2029]/g, " ")
+    .replace(/[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "")
     .trim()
-    .slice(0, 4096);
+    .slice(0, 4096));
   if (!cleanText) return { sent: false, reason: "EMPTY_MESSAGE" };
   const chatId = await resolveTelegramChatId(env, reqId);
   if (!chatId) return { sent: false, reason: "TARGET_NOT_CONNECTED" };

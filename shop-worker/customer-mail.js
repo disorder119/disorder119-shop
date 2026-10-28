@@ -14,6 +14,7 @@ import { safeText } from "./commerce-core.js";
 import { invoiceProfile, renderInvoice } from './tax-invoice.js';
 import { istSandbox, sandboxMail } from "./sandbox.js";
 import { TAG_MS, kontingentBelegen } from "./kontingent.js";
+import { linksEntschaerfen } from "./oeffentliche-mails.js";
 
 const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
 
@@ -1254,17 +1255,21 @@ export function formatWithdrawalReceipt(widerruf = {}, options = {}) {
   const contactEmail = safeText(options.contactEmail || "", 200);
   const lage = options.lage || "OFFEN";
   const eingang = berlinZeit(widerruf.eingegangen_at);
-  const nummer = safeText(widerruf.bestellnummer_eingabe || "", 80) || "—";
+  // Freitext aus dem Formular (Name, Bestellnummer, Stuecke, Nachricht) kann
+  // jeder eintragen - auch mit fremder Empfaengeradresse. Links darin werden
+  // entschaerft, damit die Bestaetigung kein Phishing-Kanal ist.
+  const fremd = (wert, max) => linksEntschaerfen(safeText(wert || "", max));
+  const nummer = fremd(widerruf.bestellnummer_eingabe, 80) || "—";
   const vorgang = safeText(widerruf.id || "", 80).replace(/-/g, "").slice(0, 8).toUpperCase();
   const umfang = widerruf.umfang === "TEIL"
-    ? `Widerruf für folgende Stücke: ${safeText(widerruf.teile_text || "", 600)}`
+    ? `Widerruf für folgende Stücke: ${fremd(widerruf.teile_text, 600)}`
     : "Widerruf des ganzen Vertrags";
   const felder = [
-    ["Name", safeText(widerruf.name || "", 120)],
+    ["Name", fremd(widerruf.name, 120)],
     ["E-Mail", safeText(widerruf.email || "", 200)],
     ["Bestellung", nummer],
     ["Erklärung", umfang],
-    ...(widerruf.nachricht ? [["Nachricht", safeText(widerruf.nachricht, 1000)]] : []),
+    ...(widerruf.nachricht ? [["Nachricht", fremd(widerruf.nachricht, 1000)]] : []),
     ["Eingegangen", eingang],
     ["Vorgang", vorgang],
   ];

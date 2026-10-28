@@ -99,14 +99,46 @@ function teilLesen(roh) {
   return { kopf: kopfTeilen(kopfBlock), koerper };
 }
 
+// Laengste HTML-Mail, die in Text umgewandelt wird (der Rest steht in der
+// Kopie im Gmail). Vorher brauchten 180 KB mit vielen offenen "<style" bzw.
+// "<" ohne ">" ueber 3 s Rechenzeit (quadratische Regex-Suche).
+export const HTML_TEXT_MAX = 100_000;
+
+// <style>/<script>-Bloecke ohne Regex-Rueckgriff entfernen: lineare Suche.
+function bloeckeEntfernen(html) {
+  const klein = html.toLowerCase();
+  let aus = "";
+  let pos = 0;
+  while (pos < html.length) {
+    const s1 = klein.indexOf("<style", pos);
+    const s2 = klein.indexOf("<script", pos);
+    const start = s1 < 0 ? s2 : s2 < 0 ? s1 : Math.min(s1, s2);
+    if (start < 0) { aus += html.slice(pos); break; }
+    aus += html.slice(pos, start);
+    const ende = klein.indexOf(start === s1 ? "</style" : "</script", start);
+    if (ende < 0) break; // nie geschlossen: der Rest ist Stil/Skript
+    const zu = klein.indexOf(">", ende);
+    pos = zu < 0 ? html.length : zu + 1;
+  }
+  return aus;
+}
+
+function rechtsKuerzen(zeile) {
+  let ende = zeile.length;
+  while (ende > 0 && (zeile[ende - 1] === " " || zeile[ende - 1] === "\t")) ende--;
+  return zeile.slice(0, ende);
+}
+
 function textAusHtml(html) {
-  return String(html)
-    .replace(/<(style|script)[\s\S]*?<\/\1>/gi, "")
+  return bloeckeEntfernen(String(html).slice(0, HTML_TEXT_MAX))
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|tr|li|h[1-6])>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
+    .replace(/<[^<>]*>/g, "")
     .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-    .replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+    // Zeilenweise statt /[ \t]+\n/: lange Leerzeichen-Folgen ohne Umbruch
+    // waeren sonst wieder quadratisch.
+    .split("\n").map(rechtsKuerzen).join("\n")
+    .replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function teilDurchgehen(roh, sammlung, tiefe = 0) {
@@ -197,36 +229,89 @@ export async function mailSpeichern(env, mail, groesse, empfaenger) {
   return id;
 }
 
+// ---------------------------------------------------- Telegram (gedrosselt)
+//
+// Ohne Personendaten: Absender und Betreff stehen nur in der Admin-App (die
+// Datenschutzerklaerung nennt Telegram nicht fuer Mails). Hoechstens eine
+// Meldung je POSTFACH_MELDUNG_MINUTEN; was dazwischen kommt, meldet die
+// naechste Nachricht bzw. der Cron (postfachMeldungNachholen) gesammelt.
+export const POSTFACH_MELDUNG_MINUTEN = 10;
+const MELDUNG_SCHLUESSEL = "postfach_telegram_gemeldet";
+
+export function postfachText(anzahl, seit = null) {
+  if (anzahl <= 1) return "📬 Neue Mail an kontakt@disorder119.com – Absender und Inhalt: Admin-App → Postfach";
+  const uhr = seit ? new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" }).format(new Date(seit)) : "";
+  return `📬 ${anzahl} neue Mails${uhr ? ` seit ${uhr} Uhr` : ""} – Admin-App → Postfach`;
+}
+
+// Meldet alle seit der letzten Meldung eingegangenen Mails in EINER Nachricht,
+// wenn die letzte Meldung lange genug her ist. Ergebnis: Anzahl gemeldet.
+export async function postfachMeldungNachholen(env, now = Date.now()) {
+  if (!env?.DB || !telegramTransportReady(env)) return 0;
+  const jetzt = new Date(now).toISOString();
+  const grenze = new Date(now - POSTFACH_MELDUNG_MINUTEN * 60_000).toISOString();
+  const vorher = await env.DB.prepare("SELECT value FROM site_settings WHERE key=?").bind(MELDUNG_SCHLUESSEL).first();
+  const seit = vorher?.value || null;
+  if (seit && seit > grenze) return 0;
+  const offen = await env.DB.prepare("SELECT COUNT(*) AS n, MIN(received_at) AS erste FROM postfach WHERE received_at>?")
+    .bind(seit || new Date(now - 24 * 3_600_000).toISOString()).first();
+  const anzahl = Number(offen?.n || 0);
+  if (!anzahl) return 0;
+  // Anspruch atomar: nur wer den alten Wert noch sieht, meldet.
+  const anspruch = seit
+    ? await env.DB.prepare("UPDATE site_settings SET value=?, updated_at=? WHERE key=? AND value=?").bind(jetzt, jetzt, MELDUNG_SCHLUESSEL, seit).run()
+    : await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key,value,updated_at) VALUES (?,?,?)").bind(MELDUNG_SCHLUESSEL, jetzt, jetzt).run();
+  if (Number(anspruch?.meta?.changes || 0) !== 1) return 0;
+  let gesendet = false;
+  try {
+    gesendet = Boolean((await sendTelegramMessage(env, postfachText(anzahl, offen.erste)))?.sent);
+  } catch {
+    gesendet = false;
+  }
+  if (!gesendet) {
+    // Nicht angekommen: Anspruch zuruecknehmen, der Cron versucht es erneut.
+    if (seit) await env.DB.prepare("UPDATE site_settings SET value=?, updated_at=? WHERE key=? AND value=?").bind(seit, jetzt, MELDUNG_SCHLUESSEL, jetzt).run().catch(() => {});
+    else await env.DB.prepare("DELETE FROM site_settings WHERE key=? AND value=?").bind(MELDUNG_SCHLUESSEL, jetzt).run().catch(() => {});
+    return 0;
+  }
+  return anzahl;
+}
+
 export async function handleIncomingEmail(message, env, ctx) {
   const weiterleitung = String(env.MAIL_WEITERLEITUNG || STANDARD_WEITERLEITUNG);
   let gespeichert = false;
+  let roh = null;
   try {
-    const { bytes, groesse } = await rohLesen(message.raw);
-    const mail = mailLesen(bytes);
-    if (!mail.vonEmail) mail.vonEmail = String(message.from || "").toLowerCase();
-    if (env.DB) {
-      await mailSpeichern(env, mail, groesse, message.to);
-      gespeichert = true;
+    roh = await rohLesen(message.raw);
+  } catch (err) {
+    console.error(JSON.stringify({ level: "error", event: "postfach_lesen_fehlgeschlagen", message: String(err?.message || err).slice(0, 160) }));
+  }
+  // Die Kopie ins Gmail zuerst - sie kommt immer, auch wenn das Auswerten
+  // danach scheitert oder an der Rechenzeit haengen bleibt.
+  let weitergeleitet = false;
+  try {
+    await message.forward(weiterleitung);
+    weitergeleitet = true;
+  } catch (err) {
+    console.error(JSON.stringify({ level: "error", event: "postfach_weiterleitung_fehlgeschlagen", message: String(err?.message || err).slice(0, 160) }));
+  }
+  try {
+    if (roh) {
+      const mail = mailLesen(roh.bytes);
+      if (!mail.vonEmail) mail.vonEmail = String(message.from || "").toLowerCase();
+      if (env.DB) {
+        await mailSpeichern(env, mail, roh.groesse, message.to);
+        gespeichert = true;
+      }
     }
     if (telegramTransportReady(env)) {
-      // Absender und Betreff kommen von aussen: je eine Zeile, gekuerzt, der
-      // Betreff in Anfuehrungszeichen - so sieht er nie wie eine eigene Meldung aus.
-      const absender = telegramZeile(mail.vonEmail, 120);
-      const von = mail.vonName ? `${telegramZeile(mail.vonName, 80)} <${absender}>` : absender;
-      const text = `📬 Neue Mail an ${telegramZeile(message.to, 120)}\nVon: ${von}\nBetreff: „${telegramZeile(mail.betreff, 120)}“`;
-      const senden = sendTelegramMessage(env, text).catch(() => {});
+      const senden = (env.DB ? postfachMeldungNachholen(env) : sendTelegramMessage(env, postfachText(1))).catch(() => {});
       if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(senden); else await senden;
     }
   } catch (err) {
     console.error(JSON.stringify({ level: "error", event: "postfach_speichern_fehlgeschlagen", message: String(err?.message || err).slice(0, 160) }));
   }
-  // Die Kopie ins Gmail kommt immer - auch wenn das Speichern scheitert.
-  try {
-    await message.forward(weiterleitung);
-  } catch (err) {
-    console.error(JSON.stringify({ level: "error", event: "postfach_weiterleitung_fehlgeschlagen", gespeichert, message: String(err?.message || err).slice(0, 160) }));
-    if (!gespeichert) message.setReject("Mailbox temporarily unavailable");
-  }
+  if (!weitergeleitet && !gespeichert) message.setReject("Mailbox temporarily unavailable");
 }
 
 // ----------------------------------------------------------- Admin-API
