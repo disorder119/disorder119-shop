@@ -206,7 +206,12 @@ async function dhl(env, path, { method = "GET", body, accept = "application/json
   if (!dhlQrReady(env)) throw new DhlQrError("DHL_QR_NICHT_EINGERICHTET", 503);
   const res = await fetch(`${apiBase(env)}${path}`, {
     method,
-    redirect: 'error',
+    // Cloudflare Workers kennen nur "follow" und "manual" - "error" warf seit
+    // #280 bei JEDEM DHL-Aufruf "Invalid redirect value" (QR-Marke und
+    // Produktliste gingen live nie). "manual": eine Weiterleitung wird nicht
+    // verfolgt (der API-Schluessel geht nirgends sonst hin), sondern landet
+    // unten als Fehler (HTTP 3xx).
+    redirect: "manual",
     signal: AbortSignal.timeout(15000),
     headers: {
       "dhl-api-key": env.DHL_PRIVAT_API_KEY,

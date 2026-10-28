@@ -49,6 +49,8 @@ function fakeDhl({ payAfter = 1 } = {}) {
   const original = globalThis.fetch;
   globalThis.fetch = async (url, init = {}) => {
     const u = new URL(String(url));
+    // Cloudflare Workers werfen bei redirect "error" (nur "follow"/"manual" erlaubt).
+    assert.ok(init.redirect === undefined || ["follow", "manual"].includes(init.redirect), `redirect ${init.redirect}`);
     calls.push({ path: u.pathname, method: init.method || "GET", headers: init.headers || {}, body: init.body ? JSON.parse(init.body) : null });
     const path = u.pathname.replace("/parcel/de/shipping/of/v1/public", "");
     if (path === "/catalog/current/products") {
@@ -380,6 +382,31 @@ test("catalog check: shop prices against DHL per zone and country, once a day", 
     assert.equal(liste.data.abgleich.ereignis, "DHL_KATALOG_ABWEICHUNG");
     assert.equal(liste.data.abgleich.abweichungen[0].land, "MT");
     assert.equal((await katalogAbgleich({ DB }, jetzt + 2 * 86_400_000)).uebersprungen, "NICHT_EINGERICHTET");
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("no fetch in the worker uses redirect 'error' (Cloudflare Workers reject it at runtime)", async () => {
+  const fs = await import("node:fs");
+  const dir = new URL("./", import.meta.url);
+  for (const name of fs.readdirSync(dir).filter(n => n.endsWith(".js"))) {
+    const text = fs.readFileSync(new URL(name, dir), "utf8");
+    assert.doesNotMatch(text, /redirect\s*:\s*["']error["']/, name);
+  }
+});
+
+test("a redirect from DHL is not followed but reported", async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    assert.equal(init.redirect, "manual");
+    return new Response(null, { status: 302, headers: { Location: "https://example.com/" } });
+  };
+  try {
+    const res = await call(envWith(seed(), { DHL_PRIVAT_ENVIRONMENT: "redirect-test" }), "/admin/versand/dhl-produkte?land=AT");
+    assert.equal(res.status, 502);
+    assert.equal(res.data.error, "DHL_FEHLER");
+    assert.match(res.data.detail, /HTTP 302/);
   } finally {
     globalThis.fetch = original;
   }
