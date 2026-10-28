@@ -81,6 +81,13 @@ PWA_JS_VERSION = _asset_version("assets/pwa.js")
 PRODUCT_CRITICAL_CSS = """:root{--ink:#000;--paper:#f2efe7;--rule:rgba(242,239,231,.14);--rule-strong:rgba(242,239,231,.28);--text-muted:rgba(242,239,231,.58);--surface:#121212;color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;padding:0;overflow-x:hidden}body{background:#000;color:#f2efe7;font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}a{color:inherit}.page-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--rule)}.page-head__brand{font-family:"Helvetica Neue Condensed","Arial Narrow",Helvetica,Arial,sans-serif;font-weight:800;text-transform:uppercase;font-size:1.3rem;letter-spacing:-.01em;text-decoration:none}.page-head__right,.lang-switch{display:flex;align-items:center}.page-head__right{gap:12px}.lang-switch{gap:2px;border:1px solid var(--rule-strong)}.lang-switch__btn{display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;text-decoration:none}.page-head__back{display:none!important}.page-head__menu{display:none}.article-sequence-nav{max-width:1240px;margin:16px auto 0;padding:0 clamp(20px,5vw,48px);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px}.article-sequence-nav__link{min-height:38px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap}.article-sequence-nav__link--prev{justify-self:start}.article-sequence-nav__link--archive{justify-self:center}.article-sequence-nav__link--next{justify-self:end}.product{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:clamp(24px,4vw,56px);max-width:1240px;margin:0 auto;padding:clamp(20px,3vw,40px) clamp(20px,5vw,48px) 60px}.gallery,.info{min-width:0}.gallery{position:sticky;top:16px;align-self:start}.gallery__stage{position:relative;background:#121212;aspect-ratio:3/4;overflow:hidden}.gallery__stage img{width:100%;height:100%;object-fit:contain;display:block;background:#121212}.gallery__nav{position:absolute;top:50%;transform:translateY(-50%)}.gallery__nav--prev{left:10px}.gallery__nav--next{right:10px}.gallery__counter{position:absolute;right:10px;bottom:10px}.gallery__badge{position:absolute;left:10px;top:10px}.gallery__thumbs{display:flex;gap:8px;margin-top:10px;overflow-x:auto}.gallery__thumbs--reserved{min-height:84px}@media(max-width:860px){.page-head{position:relative;min-height:74px;padding:14px 16px;gap:8px}.page-head__menu{width:38px;height:38px;flex:0 0 38px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-decoration:none}.page-head__menu span{display:block;width:22px;height:1px;background:currentColor}.page-head__brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;font-size:.7rem;line-height:1;letter-spacing:.01em;white-space:nowrap}.page-head__right{margin-left:auto;justify-content:flex-end;flex-wrap:nowrap!important;gap:7px}.lang-switch{gap:2px}.lang-switch__btn{width:32px;height:32px;flex:0 0 32px;padding:0;font-size:.59rem}.page-head__cart{position:relative;width:34px;height:34px;flex:0 0 34px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:0}.page-head__cart>span:first-child{display:none}.article-sequence-nav{max-width:none;width:auto;margin:0;padding:0 16px;min-height:58px;grid-template-columns:1fr auto 1fr;gap:0;border-bottom:1px solid rgba(242,239,231,.18)}.article-sequence-nav__link{min-width:0;min-height:58px;padding:0 10px}.article-sequence-nav__link--archive{padding-left:22px;padding-right:22px;border-left:1px solid rgba(242,239,231,.16);border-right:1px solid rgba(242,239,231,.16)}.product{grid-template-columns:1fr;gap:22px;padding:12px 16px 48px}.gallery{position:static}.gallery__stage{border:0}.gallery__thumbs--reserved{min-height:100px}}@media(max-width:380px){.page-head{padding-left:12px;padding-right:12px}.page-head__menu{width:34px;flex-basis:34px}.page-head__brand{font-size:.68rem}.page-head__right{gap:5px}.lang-switch__btn{width:30px;height:30px;flex-basis:30px}.page-head__cart{width:31px;height:31px;flex-basis:31px}.article-sequence-nav{padding:0 12px}.article-sequence-nav__link{padding:0 6px}.article-sequence-nav__link--archive{padding-left:12px;padding-right:12px}.product{padding-left:12px;padding-right:12px}}"""
 PRODUCT_CRITICAL_CSS += "@media(max-width:860px){.lang-switch__btn{width:26px;flex-basis:26px}}"
 PRODUCT_CRITICAL_CSS += ":root[data-theme=hell]{--ink:#fff;--paper:#151514;--rule:rgba(21,21,20,.12);--rule-strong:rgba(21,21,20,.26);--surface:#f3f2ef;color-scheme:light}:root[data-theme=hell] body{background:#fff;color:#151514}:root[data-theme=hell] .gallery__stage,:root[data-theme=hell] .gallery__stage img{background:#fff}"
+# Produktseite am Desktop: Die drei Stylesheets kommen dort zusaetzlich als
+# normales (blockierendes) <link media=...>. Nur mit dem kritischen Inline-CSS
+# sprang die Seite nach dem Nachladen sichtbar (Kopfzeile 4 px hoeher,
+# Kauf-Knoepfe rutschten in der Spalte nach oben): CLS 0,24-0,43 gemessen,
+# danach 0,005 bei gleichem LCP. Am Handy (bis 860 px) bleibt es beim
+# asynchronen Laden, dort liegt die Info-Spalte unter dem Bild.
+DESKTOP_CSS_MEDIA = "(min-width: 861px)"
 
 # Jede dieser Seiten ist inhaltlich die Startseite (gleiches HTML/JS/CSS-Bundle),
 # oeffnet beim Laden aber automatisch das passende Panel anhand von
@@ -965,7 +972,9 @@ def build_page(it, shop_config, lang):
 <link rel="preload" as="image" href="/{esc(hero_display)}" media="(min-width: 601px)" fetchpriority="high">
 <style>{PRODUCT_CRITICAL_CSS}</style>
 <link rel="preload" as="style" href="/assets/article.css?v={ARTICLE_CSS_VERSION}" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="stylesheet" href="/assets/article.css?v={ARTICLE_CSS_VERSION}" media="{DESKTOP_CSS_MEDIA}">
 <link id="d119-product-page-v4" rel="preload" as="style" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="stylesheet" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}" media="{DESKTOP_CSS_MEDIA}">
 <noscript><link rel="stylesheet" href="/assets/article.css?v={ARTICLE_CSS_VERSION}"><link rel="stylesheet" href="/assets/product-page-v4.css?v={PRODUCT_PAGE_CSS_VERSION}"><link rel="stylesheet" href="/assets/theme.css?v={THEME_CSS_VERSION}"></noscript>
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="Disorder119">
@@ -985,6 +994,7 @@ def build_page(it, shop_config, lang):
 {product_json_ld_tag(it, lang)}
 <script type="application/ld+json">{breadcrumb_json_ld(it, lang)}</script>
 <link rel="preload" as="style" href="/assets/theme.css?v={THEME_CSS_VERSION}" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="stylesheet" href="/assets/theme.css?v={THEME_CSS_VERSION}" media="{DESKTOP_CSS_MEDIA}">
 <script src="/assets/ansicht.js" defer></script>
 <script>try{{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}}catch(e){{}}</script>
 <script src="/assets/catalog-number-links.js" defer></script>
@@ -1312,9 +1322,11 @@ def initial_archive_card_html(it, lang):
         source = ""
         if mobile and mobile != desktop:
             source = '<source media="(max-width: 600px)" srcset="/' + esc(mobile) + '">'
+        srcset = grid_srcset(original)
+        srcset_attr = (' srcset="' + esc(srcset) + '" sizes="' + GRID_SIZES + '"') if srcset else ""
         picture = (
             '<picture>' + source
-            + '<img src="/' + esc(desktop) + '" alt="' + esc(initial_archive_alt(it, lang))
+            + '<img src="/' + esc(desktop) + '"' + srcset_attr + ' alt="' + esc(initial_archive_alt(it, lang))
             + '" loading="eager" fetchpriority="high" decoding="sync">'  # FOCUS3_MEASURED_LCP_FOLLOWUP
             + '</picture>'
         )
@@ -1352,7 +1364,14 @@ def initial_archive_preloads():
         if mobil:
             links.append('<link rel="preload" as="image" href="/' + esc(mobil)
                          + '" media="(max-width: 600px)" fetchpriority="high">')
-        if breit:
+        srcset = grid_srcset(original)
+        if breit and srcset:
+            # Gleiche Auswahl wie das <img srcset> der Kachel, sonst laedt
+            # der Browser am normalen Monitor beide Fassungen.
+            links.append('<link rel="preload" as="image" href="/' + esc(breit)
+                         + '" imagesrcset="' + esc(srcset) + '" imagesizes="' + GRID_SIZES
+                         + '" media="(min-width: 601px)" fetchpriority="high">')
+        elif breit:
             links.append('<link rel="preload" as="image" href="/' + esc(breit)
                          + '" media="(min-width: 601px)" fetchpriority="high">')
     return "\n".join(links)
@@ -1440,11 +1459,29 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     return out
 
 
+# Ladezeit /en/ und /fr/: Dort baut erst app.js das Archiv (die Beschriftungen
+# uebersetzt der Browser, deshalb kein Server-Rendering wie auf der deutschen
+# Startseite). Bisher lief das nacheinander: HTML -> app.js -> catalog.json ->
+# Kachelbild. Jetzt holt der Browser den Katalog und die ersten zwei
+# Kachelbilder (gleiche Auswahl wie app.js: verfuegbar, hellste zuerst)
+# gleichzeitig mit app.js. crossorigin="anonymous" passt zum fetch() in
+# app.js, sonst laedt der Browser den Katalog doppelt.
+def startseite_ohne_ssr_vorladen(out):
+    anker = '<link rel="stylesheet" href="/assets/app.css'
+    if anker not in out or 'data-ssr-initial="1"' in out:
+        return out
+    links = initial_archive_preloads()
+    links += '\n<link rel="preload" href="/data/catalog.json" as="fetch" crossorigin="anonymous">'
+    return out.replace(anker, links + "\n" + anker, 1)
+
+
 def build_index():
     shop_config = get_shop_config()
     for lang in LANGS:
         ph = META_PHRASES[lang]
         out = render_bundle_page(lang, "", ph["home_title"], ph["home_desc"], shop_config, include_item_list=True)
+        if lang != "de":
+            out = startseite_ohne_ssr_vorladen(out)
         path = BASE / "index.html" if lang == "de" else BASE / lang / "index.html"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(out, encoding="utf-8")
@@ -2233,7 +2270,7 @@ def build_catalog_json():
             # Anker fuer scripts/apply_focus_three_hardening.py.
             row["price"] = 0
             row.pop("price_estimated", None)
-        hover = hover_image_path(it)
+        hover = hover_image_cached(it)
         if hover:
             row["hover_image"] = hover
         hell = foto_hell(row.get("grid_image"))
@@ -2398,6 +2435,94 @@ def build_mobile_heroes():
             image.save(dest, format="WEBP", quality=78, method=4)
 
 
+# Ladezeit am PC (28.10.2026): Die Archivkachel ist dort hoechstens 307 px
+# breit, geladen wurde aber immer die Anzeigefassung (720x960, 45-90 KB) -
+# am normalen Monitor (Pixeldichte 1) rund doppelt so viele Pixel wie
+# sichtbar, 650 von 790 KB Bildern der Startseite waren Ueberschuss. Dazu
+# kommt eine Kachelfassung (grid, lange Kante 540 px, ~22 KB); per srcset
+# waehlt der Browser sie nur, wenn sie fuer seine Pixeldichte reicht
+# (bis ~1,3), Retina-Bildschirme bekommen weiter die Anzeigefassung.
+# Das Hover-Foto kam bisher in voller Groesse (1200x1600, ~200 KB je
+# Ueberfahren) und bekommt dieselben zwei Fassungen.
+# Erzeugt wird nur, wenn das Quellbild neu ist oder sich geaendert hat
+# (Pruefsumme in data/bildvarianten.json) - ein ausgetauschtes Foto bekommt
+# so automatisch neue Fassungen. Die Originale bleiben unberuehrt.
+GRID_BOX = (540, 540)
+GRID_SRCSET_W = (405, 720)   # Breiten im srcset (3:4-Rahmen, lange Kante 540/960)
+GRID_SIZES = "308px"         # groesste Kachelbreite ab 601 px Fenster (gemessen)
+DISPLAY_BOX = (960, 960)
+BILDVARIANTEN_PATH = BASE / "data" / "bildvarianten.json"
+_HOVER_CACHE = {}
+
+
+def grid_path(p):
+    parts = p.rsplit("/", 1)
+    return parts[0] + "/grid/" + parts[1] if len(parts) == 2 else p
+
+
+def grid_srcset(p):
+    """srcset Kachel-/Anzeigefassung oder "" (dann bleibt es beim src)."""
+    if not p:
+        return ""
+    klein, gross = grid_path(p), display_path(p)
+    if not ((BASE / klein).is_file() and (BASE / gross).is_file()):
+        return ""
+    return (f"/{klein} {GRID_SRCSET_W[0]}w, /{gross} {GRID_SRCSET_W[1]}w")
+
+
+def hover_image_cached(it):
+    key = tuple(it.get("gallery") or [])
+    if key not in _HOVER_CACHE:
+        _HOVER_CACHE[key] = hover_image_path(it)
+    return _HOVER_CACHE[key]
+
+
+def build_image_variants():
+    from PIL import Image
+    try:
+        stand = json.loads(BILDVARIANTEN_PATH.read_text(encoding="utf-8"))
+    except (FileNotFoundError, ValueError):
+        stand = {}
+    auftraege = {}
+    for it in ITEMS:
+        if it.get("public_status") == "DRAFT":
+            continue
+        gallery = it.get("gallery") or []
+        if not gallery:
+            continue
+        auftraege[grid_path(gallery[0])] = (gallery[0], GRID_BOX)
+        # Die Anzeigefassung des Titelbilds legt der Fotoimport an. Fehlt sie
+        # (z. B. nach geaenderter Fotoreihenfolge, Artikel 9381), war die
+        # Kachel am PC bisher ein kaputtes Bild - dann wird sie hier erzeugt.
+        titel_display = display_path(gallery[0])
+        if not (BASE / titel_display).is_file() or titel_display in stand:
+            auftraege[titel_display] = (gallery[0], DISPLAY_BOX)
+        hover = hover_image_cached(it)
+        if hover:
+            auftraege[grid_path(hover)] = (hover, GRID_BOX)
+            auftraege[display_path(hover)] = (hover, DISPLAY_BOX)
+    neu, erzeugt = {}, 0
+    for ziel, (quelle, box) in sorted(auftraege.items()):
+        src = BASE / quelle
+        if not src.is_file():
+            continue
+        pruefsumme = hashlib.sha256(src.read_bytes()).hexdigest()[:16]
+        dest = BASE / ziel
+        neu[ziel] = pruefsumme
+        if dest.is_file() and stand.get(ziel) == pruefsumme:
+            continue
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(src) as image:
+            meta = {k: image.info[k] for k in ("exif", "xmp") if image.info.get(k)}
+            image = image.convert("RGBA")
+            image.thumbnail(box, Image.Resampling.LANCZOS, reducing_gap=3.0)
+            image.save(dest, format="WEBP", quality=90, method=4, **meta)
+        erzeugt += 1
+    if neu != stand:
+        BILDVARIANTEN_PATH.write_text(json.dumps(neu, indent=0, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"Bildvarianten: {erzeugt} neu erzeugt, {len(neu)} aktuell.")
+
+
 def build_thumbs():
     from PIL import Image
     THUMB_SIZE = (220, 293)
@@ -2437,6 +2562,7 @@ def clean_old_flat_article_files():
 
 def main():
     clean_old_flat_article_files()
+    build_image_variants()
     build_index()
     build_special_pages()
     build_account_pages()

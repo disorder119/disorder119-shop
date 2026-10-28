@@ -800,6 +800,51 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   }
   function thumbUrl(p) { return variantUrl(p, "thumbs"); }
   function displayUrl(p) { return variantUrl(p, "display"); }
+  // Kachel ab 601 px Fensterbreite: hoechstens 307 px breit. build_site.py
+  // (build_image_variants) legt zu jedem Titel- und Hover-Bild des Katalogs
+  // eine Kachelfassung (grid, lange Kante 540 px) an und prueft das. Der
+  // Browser nimmt sie nur, wenn sie fuer seine Pixeldichte reicht; Retina
+  // bekommt weiter die Anzeigefassung (display).
+  var GRID_SIZES = "308px";
+  function gridSrcset(p) {
+    return p ? variantUrl(p, "grid") + " 405w, " + displayUrl(p) + " 720w" : "";
+  }
+  // Deutsche Startseite: Der Lader im HTML (FOCUS3_MOBILE_RUNTIME_AFTER_LCP)
+  // holt die Skripte nach app.js einzeln nacheinander, jedes erst nach dem
+  // vorigen - am Handy fuenf Rundreisen, bis Filterleiste und Mieten bereit
+  // sind. app.js laedt sie jetzt gleichzeitig vor; ausgefuehrt werden sie
+  // weiter vom Lader in derselben Reihenfolge (gleiche Adresse = Vorrat).
+  (function () {
+    try {
+      var lader = Array.prototype.filter.call(document.scripts, function (s) {
+        return !s.src && s.text.indexOf("FOCUS3_MOBILE_RUNTIME_AFTER_LCP") >= 0;
+      })[0];
+      var treffer = lader && /var s=(\[[^\]]*\])/.exec(lader.text);
+      (treffer ? JSON.parse(treffer[1]) : []).forEach(function (src) {
+        if (/\/app\.js(?:\?|$)/.test(src) || !/^\/assets\/[a-z0-9-]+\.js(?:\?v=[a-f0-9]+)?$/.test(src)) return;
+        var vorrat = document.createElement("link");
+        vorrat.rel = "preload";
+        vorrat.as = "script";
+        vorrat.href = src;
+        document.head.appendChild(vorrat);
+      });
+    } catch (e) {}
+  })();
+
+  // Titelbild der Produktseite: bis 600 px die mobile-hero-Fassung, darueber
+  // die Anzeigefassung (wie <link rel="preload"> in build_site.py build_page).
+  var produktBildGeladen = {};
+  function produktBildVorladen(p) {
+    try {
+      var schmal = window.matchMedia && window.matchMedia("(max-width: 600px)").matches;
+      var url = variantUrl(p, schmal ? "mobile-hero" : "display");
+      if (!url || produktBildGeladen[url]) return;
+      produktBildGeladen[url] = true;
+      var bild = new Image();
+      bild.decoding = "async";
+      bild.src = url;
+    } catch (e) {}
+  }
 
   // ---- Warenkorb ----
   var CART_KEY = "disorder119_cart";
@@ -1959,7 +2004,9 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
         var mobileSource = mobileImgSrc && mobileImgSrc !== imgSrc
           ? '<source media="(max-width: 600px)" srcset="' + mobileImgSrc + '">'
           : "";
-        pictureHtml = '<picture>' + mobileSource + '<img src="' + imgSrc + '" alt="' + altText + '" loading="' + heroLoading + '"' + heroPriority + ' decoding="' + heroDecoding + '"></picture>';
+        var imgSrcset = gridSrcset(hero);
+        var srcsetAttr = imgSrcset ? ' srcset="' + imgSrcset + '" sizes="' + GRID_SIZES + '"' : "";
+        pictureHtml = '<picture>' + mobileSource + '<img src="' + imgSrc + '"' + srcsetAttr + ' alt="' + altText + '" loading="' + heroLoading + '"' + heroPriority + ' decoding="' + heroDecoding + '"></picture>';
       }
       if (!reusedSsrPlate) plate.innerHTML =
         '<div class="plate__frame">' + pictureHtml +
@@ -1988,11 +2035,29 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       // Nahaufnahme oder ein nicht freigestelltes Foto. build_site.py legt
       // jetzt pro Artikel hover_image fest (freigestellte Gesamtansicht);
       // fehlt es, bleibt die Kachel beim Ueberfahren stehen.
+      // Geladen wird die Kachel-/Anzeigefassung des Hover-Fotos (srcset wie
+      // beim Titelbild) statt der vollen Datei mit 1200x1600 (~200 KB).
       var hoverSrc = assetUrl(it.hover_image || "");
-      if (canHover && hoverSrc) {
-        var frameImg = plate.querySelector(".plate__frame img");
-        plate.addEventListener("mouseenter", function () { frameImg.src = hoverSrc; });
-        plate.addEventListener("mouseleave", function () { frameImg.src = imgSrc; });
+      var frameImg = plate.querySelector(".plate__frame img");
+      if (canHover && hoverSrc && frameImg) {
+        var restSrcset = frameImg.getAttribute("srcset");
+        var hoverSrcset = restSrcset ? gridSrcset(it.hover_image) : "";
+        plate.addEventListener("mouseenter", function () {
+          if (hoverSrcset) frameImg.setAttribute("srcset", hoverSrcset);
+          else frameImg.src = hoverSrc;
+        });
+        plate.addEventListener("mouseleave", function () {
+          if (hoverSrcset) frameImg.setAttribute("srcset", restSrcset);
+          else frameImg.src = imgSrc;
+        });
+      }
+      // Produktseite schneller: Beim Klick (Maus schon beim Druecken) fordert
+      // die Kachel das Titelbild der Produktseite an, waehrend der Browser
+      // noch auf das HTML wartet.
+      if (hero && !plate.getAttribute("data-produktbild")) {
+        plate.setAttribute("data-produktbild", "1");
+        plate.addEventListener("pointerdown", function (e) { if (e.pointerType === "mouse") produktBildVorladen(hero); });
+        plate.addEventListener("click", function () { produktBildVorladen(hero); });
       }
 
       if (!reusedSsrPlate) frag.appendChild(plate);

@@ -117,3 +117,44 @@ test('legal pages and files with the owner address stay reachable but carry X-Ro
     assert.equal(r.headers.get('X-Robots-Tag'), null, path);
   }
 });
+test('content-hashed scripts and styles become immutable only when the bytes match the hash', async () => {
+  const css = new TextEncoder().encode('body{color:red}');
+  const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', css)), b => b.toString(16).padStart(2, '0')).join('');
+  let seen;
+  const env = assetEnv(async req => {
+    seen = req;
+    return new Response(css, { headers: { 'Content-Type': 'text/css', 'Cache-Control': 'public, max-age=0, must-revalidate', ETag: 'x' } });
+  });
+  let r = await worker.fetch(request('/assets/app.css?v=' + digest.slice(0, 10), { headers: { 'If-None-Match': 'x' } }), env, {});
+  assert.equal(r.status, 200);
+  assert.equal(seen.headers.has('If-None-Match'), false);
+  assert.equal(r.headers.get('Cache-Control'), 'public, max-age=31536000, immutable');
+  assert.deepEqual(new Uint8Array(await r.arrayBuffer()), css);
+  // Wrong, manual or extended version values keep the revalidating default.
+  for (const path of ['/assets/app.css?v=0123456789', '/assets/site-lock.js?v=20261008-1',
+      '/assets/app.css?v=' + digest.slice(0, 10) + '&x=1', '/assets/app.css']) {
+    r = await worker.fetch(request(path), env, {});
+    assert.equal(r.status, 200, path);
+    assert.equal(r.headers.get('Cache-Control'), 'public, max-age=0, must-revalidate', path);
+  }
+});
+
+test('images are cached briefly, HTML and catalog keep their no-store rules', async () => {
+  const env = assetEnv(async req => {
+    const path = new URL(req.url).pathname;
+    if (path.endsWith('.html')) return new Response('<html><body>x</body></html>', { headers: { 'Content-Type': 'text/html' } });
+    if (path.endsWith('.json')) return Response.json([]);
+    return new Response('img', { headers: { 'Content-Type': 'image/webp', 'Cache-Control': 'public, max-age=0, must-revalidate' } });
+  });
+  let r = await worker.fetch(request('/assets/img/9479/thumbs/0.webp'), env, {});
+  assert.equal(r.headers.get('Cache-Control'), 'public, max-age=600');
+  r = await worker.fetch(request('/assets/img/9479/thumbs/0.webp'), assetEnv(async () => new Response(null, { status: 304 })), {});
+  assert.equal(r.status, 304);
+  assert.equal(r.headers.get('Cache-Control'), 'public, max-age=600');
+  r = await worker.fetch(request('/assets/img/missing.webp'), assetEnv(async () => new Response('x', { status: 404 })), {});
+  assert.notEqual(r.headers.get('Cache-Control'), 'public, max-age=600');
+  r = await worker.fetch(request('/'), env, {});
+  assert.equal(r.headers.get('Cache-Control'), 'no-store');
+  r = await worker.fetch(request('/data/catalog.json'), env, {});
+  assert.equal(r.headers.get('Cache-Control'), 'no-store');
+});

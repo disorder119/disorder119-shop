@@ -345,6 +345,22 @@
     mainImg.src = src;
   }
 
+  // Blaettern ohne Warten: Sobald jemand die Galerie bedient, liegen die
+  // Nachbarfotos (volle Aufloesung, je ~200-300 KB) schon bereit. Vorher kam
+  // jedes Foto erst nach dem Wischen ueber das Netz - am Handy sichtbar spaet.
+  var nachbarGeladen = {};
+  function nachbarnVorladen() {
+    if (gallery.length < 2) return;
+    [idx + 1, idx - 1].forEach(function (n) {
+      var src = gallery[((n % gallery.length) + gallery.length) % gallery.length];
+      if (!src || nachbarGeladen[src]) return;
+      nachbarGeladen[src] = true;
+      var bild = new Image();
+      bild.decoding = "async";
+      bild.src = src;
+    });
+  }
+
   function showPhoto(i) {
     if (!gallery.length) return;
     idx = ((i % gallery.length) + gallery.length) % gallery.length;
@@ -352,6 +368,7 @@
       ersterAufruf = false;
     } else {
       useFullPhoto(gallery[idx]);
+      nachbarnVorladen();
     }
     if (counterEl) counterEl.textContent = (idx + 1) + " / " + gallery.length;
     if (thumbsEl) {
@@ -382,6 +399,18 @@
 
   var touchStartX = null;
   mainImg.addEventListener("touchstart", function (e) { touchStartX = e.touches[0].clientX; }, { passive: true });
+  // Waagerechtes Wischen beginnt: Nachbarfotos schon jetzt holen (senkrechtes
+  // Scrollen ueber das Bild loest nichts aus).
+  var wischStartY = null;
+  mainImg.addEventListener("touchstart", function (e) { wischStartY = e.touches[0].clientY; }, { passive: true });
+  mainImg.addEventListener("touchmove", function (e) {
+    if (touchStartX === null || wischStartY === null) return;
+    var wx = Math.abs(e.touches[0].clientX - touchStartX), wy = Math.abs(e.touches[0].clientY - wischStartY);
+    if (wx > 12 && wx > wy) nachbarnVorladen();
+  }, { passive: true });
+  [prevBtn, nextBtn].forEach(function (knopf) {
+    if (knopf) knopf.addEventListener("pointerenter", nachbarnVorladen);
+  });
   mainImg.addEventListener("touchend", function (e) {
     if (touchStartX === null) return;
     var dx = e.changedTouches[0].clientX - touchStartX;
