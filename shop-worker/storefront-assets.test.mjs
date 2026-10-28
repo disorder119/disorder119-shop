@@ -139,7 +139,7 @@ test('content-hashed scripts and styles become immutable only when the bytes mat
   }
 });
 
-test('images are cached briefly, HTML and catalog keep their no-store rules', async () => {
+test('images are cached briefly, the catalog keeps no-store', async () => {
   const env = assetEnv(async req => {
     const path = new URL(req.url).pathname;
     if (path.endsWith('.html')) return new Response('<html><body>x</body></html>', { headers: { 'Content-Type': 'text/html' } });
@@ -153,8 +153,31 @@ test('images are cached briefly, HTML and catalog keep their no-store rules', as
   assert.equal(r.headers.get('Cache-Control'), 'public, max-age=600');
   r = await worker.fetch(request('/assets/img/missing.webp'), assetEnv(async () => new Response('x', { status: 404 })), {});
   assert.notEqual(r.headers.get('Cache-Control'), 'public, max-age=600');
-  r = await worker.fetch(request('/'), env, {});
-  assert.equal(r.headers.get('Cache-Control'), 'no-store');
   r = await worker.fetch(request('/data/catalog.json'), env, {});
   assert.equal(r.headers.get('Cache-Control'), 'no-store');
+});
+
+test('shop pages allow the back/forward cache and announce same-language prefetch rules; checkout never', async () => {
+  const env = assetEnv(async req => {
+    const path = new URL(req.url).pathname;
+    if (path.endsWith('.json')) return new Response('{"prefetch":[]}', { headers: { 'Content-Type': 'application/json' } });
+    return new Response('<html><body>x</body></html>', { headers: { 'Content-Type': 'text/html' } });
+  });
+  for (const [path, regeln] of [['/', '/assets/spekulation-de.json'], ['/artikel/119/', '/assets/spekulation-de.json'],
+      ['/en/', '/assets/spekulation-en.json'], ['/fr/artikel/119/', '/assets/spekulation-fr.json'], ['/faq/', '/assets/spekulation-de.json']]) {
+    const r = await worker.fetch(request(path), env, {});
+    assert.equal(r.headers.get('Cache-Control'), 'private, no-cache', path);
+    assert.equal(r.headers.get('Speculation-Rules'), '"' + regeln + '"', path);
+    assert.match(r.headers.get('Content-Security-Policy'), /script-src 'self'/, path);
+  }
+  for (const path of ['/kasse/', '/en/kasse/', '/konto/', '/cart/', '/fr/cart/', '/widerruf/', '/newsletter/']) {
+    const r = await worker.fetch(request(path), env, {});
+    assert.equal(r.headers.get('Cache-Control'), 'no-store', path);
+    assert.equal(r.headers.get('Speculation-Rules'), null, path);
+  }
+  const missing = await worker.fetch(request('/artikel/999999/'), assetEnv(async () => new Response('<html>404</html>', { status: 404, headers: { 'Content-Type': 'text/html' } })), {});
+  assert.notEqual(missing.headers.get('Cache-Control'), 'private, no-cache');
+  const r = await worker.fetch(request('/assets/spekulation-en.json'), env, {});
+  assert.equal(r.headers.get('Content-Type'), 'application/speculationrules+json');
+  assert.equal(r.headers.get('Cache-Control'), 'public, max-age=3600');
 });
