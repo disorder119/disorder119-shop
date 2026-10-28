@@ -61,7 +61,7 @@ class PublishingTests(unittest.TestCase):
             root.mkdir()
             subprocess.run(['git', 'init', '-q', str(root)], check=True)
             (root / 'shop-worker').mkdir()
-            for name in ('storefront-edge.js', 'storefront-csp.js', 'catalog-number-routes.js', 'geo-sperre.js', 'waechter-regeln.js', 'waechter-seiten.js', 'privacy-security.js'):
+            for name in ('storefront-edge.js', 'storefront-csp.js', 'catalog-number-routes.js', 'geo-sperre.js', 'waechter-regeln.js', 'waechter-seiten.js', 'waechter-erwischt-texte.js', 'privacy-security.js'):
                 shutil.copyfile(exporter.ROOT / 'shop-worker' / name, root / 'shop-worker' / name)
             paths = ['index.html', 'en/index.html', 'fr/index.html', 'kasse/index.html',
                 'feed/google-merchant.xml', 'google7945c4dc594a9a9c.html',

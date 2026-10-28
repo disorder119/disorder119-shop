@@ -392,11 +392,11 @@ test("Storefront: Angriffsprobe -> Erwischt-Seite (Landessprache, maskiert, CSP-
   assert.equal(res.status, 403);
   assert.equal(res.headers.get("Cache-Control"), "no-store");
   assert.match(res.headers.get("X-Robots-Tag"), /noindex/);
-  assert.match(res.headers.get("Content-Security-Policy"), /^default-src 'none'; style-src 'sha256-[A-Za-z0-9+/=]+'; img-src 'none'/);
+  assert.match(res.headers.get("Content-Security-Policy"), /^default-src 'none'; style-src 'sha256-[A-Za-z0-9+/=]+'; img-src 'self'/);
   const html = await res.text();
   assert.match(html, /<html lang="fr" dir="ltr">/);
-  assert.match(html, /ATTAQUE DÉTECTÉE/);
-  assert.match(html, /I know you&#39;re trying to hack me\./, "Englisch immer dazu");
+  assert.match(html, /Ton attaque a été bloquée et enregistrée\. Cette connexion est bloquée\./);
+  assert.match(html, /Your attack was blocked and logged\. This connection is blocked\./, "Englisch immer dazu");
   assert.match(html, /198\.51\.100\.66/);
   assert.match(html, /Free SAS \(AS12322\)/);
   assert.match(html, /Lyon, France/);
@@ -500,8 +500,8 @@ test("Storefront: Vorschau fuer die Admin-App zeigt Beispieldaten und meldet nic
   assert.equal(res.status, 200);
   const html = await res.text();
   assert.match(html, /<html lang="hi"/);
-  assert.match(html, /हमला पकड़ा गया/);
-  assert.match(html, /I know you&#39;re trying to hack me/);
+  assert.match(html, /तुम्हारा हमला रोक दिया गया है और दर्ज कर लिया गया है। यह कनेक्शन ब्लॉक है।/);
+  assert.match(html, /Your attack was blocked and logged\. This connection is blocked\./);
   assert.match(html, /PREVIEW/);
   assert.match(html, /203\.0\.113\.42/);
   assert.ok(!html.includes(IP), "keine echte IP in der Vorschau");

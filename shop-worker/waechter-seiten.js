@@ -1,3 +1,5 @@
+import { ERWISCHT_A, ERWISCHT_B, ERWISCHT_BASIS, ERWISCHT_C, V } from "./waechter-erwischt-texte.js";
+
 // Seiten des Waechters fuer disorder119.com (storefront-edge.js):
 //
 // 1. "Erwischt"-Bildschirm: NUR fuer die Anfrage, die selbst ein eindeutiges
@@ -150,41 +152,23 @@ function utcZeit(ms) {
 
 // ---------------------------------------------------------------- Stile
 
-const ERWISCHT_CSS = `:root{color-scheme:dark}
-html{background:#050505;color:#33ff66;font:15px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono","Noto Sans Mono",monospace;-webkit-text-size-adjust:100%}
-body{margin:0;min-height:100vh;background:#050505 repeating-linear-gradient(0deg,rgba(0,0,0,.45) 0 1px,transparent 1px 3px)}
-.t{max-width:880px;margin:0 auto;padding:22px 16px 44px;box-sizing:border-box}
-.kopf{display:flex;gap:7px;align-items:center;border-bottom:1px solid #1c3a24;padding-bottom:10px;margin-bottom:16px;color:#5f8f6c;font-size:12px;letter-spacing:.04em}
-.kopf i{width:10px;height:10px;border-radius:50%;background:#ff3b3b;display:inline-block}.kopf i+i{background:#ffb300}.kopf i+i+i{background:#33ff66}.kopf b{font-weight:400;margin-inline-start:6px}
-.vs{margin-inline-start:auto;color:#050505;background:#ffb300;padding:1px 7px;border-radius:2px;font-weight:700}
-.log{list-style:none;margin:0;padding:0}
-.z{display:flex;flex-wrap:wrap;gap:2px 14px;padding:3px 0;animation:tip .8s steps(24,end) both}
-[dir=rtl] .z{animation-name:tipr}
-.z:nth-child(1){animation-delay:.15s}.z:nth-child(2){animation-delay:.75s}.z:nth-child(3){animation-delay:1.2s}.z:nth-child(4){animation-delay:1.65s}.z:nth-child(5){animation-delay:2.1s}.z:nth-child(6){animation-delay:2.55s}.z:nth-child(7){animation-delay:3s}.z:nth-child(8){animation-delay:3.45s}.z:nth-child(9){animation-delay:3.9s}
-.k{color:#7fdc95;min-width:13ch}
-.w{color:#eaffee;overflow-wrap:anywhere;word-break:break-word;min-width:0;flex:1 1 16ch}
-.ok{color:#33ff66}
-.p{color:#ffb300}
-.rot{color:#ff4d4d;font-weight:700}
-code.w{color:#ffc2c2;background:#1b0606;border:1px solid #521313;padding:1px 6px;border-radius:3px;font:inherit}
-.alarm{margin:30px 0 10px;font-size:clamp(30px,8vw,66px);line-height:1.08;color:#ff3131;letter-spacing:.02em;position:relative;animation:an .2s 4.5s both,zit 3s 4.5s infinite;text-shadow:0 0 18px rgba(255,40,40,.45)}
-.alarm::before,.alarm::after{content:attr(data-t);position:absolute;inset:0;pointer-events:none}
-.alarm::before{color:#00e5ff;clip-path:inset(0 0 58% 0);animation:g1 1.7s 4.5s infinite steps(2)}
-.alarm::after{color:#33ff66;clip-path:inset(62% 0 0 0);animation:g2 2.1s 4.5s infinite steps(2)}
-.satz{font-size:clamp(19px,3.8vw,30px);line-height:1.3;color:#fff;margin:6px 0;animation:an .2s 5s both}
-.satz.en{font-size:clamp(15px,2.5vw,19px);color:#9fe0ad}
-.text{color:#d3ecd8;max-width:62ch;margin:16px 0 0;animation:an .2s 5.4s both}
-.text.en{margin-top:4px;color:#8fbf9a}
-.cur{display:inline-block;width:.6em;height:1.05em;background:#33ff66;vertical-align:text-bottom;margin-inline-start:4px;animation:bl 1s steps(1) infinite}
-.fuss{margin-top:30px;font-size:12px;color:#5f8f6c}.fuss a{color:#7fdc95}
-@keyframes an{from{opacity:0}to{opacity:1}}
-@keyframes tip{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
-@keyframes tipr{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0 0 0 0)}}
-@keyframes bl{50%{opacity:0}}
-@keyframes zit{0%,92%,100%{transform:none}93%{transform:translate(2px,-1px)}95%{transform:translate(-2px,1px)}97%{transform:translate(1px,1px)}}
-@keyframes g1{0%{transform:translate(2px,0)}50%{transform:translate(-3px,1px)}100%{transform:translate(1px,-1px)}}
-@keyframes g2{0%{transform:translate(-2px,0)}50%{transform:translate(3px,-1px)}100%{transform:translate(-1px,1px)}}
-@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}.alarm::before,.alarm::after{display:none}}`;
+// ---------------------------------------------------------------- Variante
+
+// Drei Looks (Preisschild, Universum, Magazin-Cover) wechseln sich je Vorfall
+// deterministisch ab - gleiche Vorfall-Nummer, gleiche Variante, kein Zufall je
+// Request. Die CSS liegen in waechter-erwischt-texte.js (visuell geprueft).
+const VARIANTEN = ["a", "b", "c"];
+export function erwischtVariante(nr, override) {
+  const o = String(override || "").toLowerCase();
+  if (VARIANTEN.includes(o)) return o;
+  const s = String(nr || "");
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return VARIANTEN[h % 3];
+}
+function erwischtCss(variante) {
+  return ERWISCHT_BASIS + (variante === "b" ? ERWISCHT_B : variante === "c" ? ERWISCHT_C : ERWISCHT_A);
+}
 
 const SPERRE_CSS = `:root{color-scheme:dark}
 html{background:#000;color:#f2efe7;font:16px/1.6 "Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
@@ -215,8 +199,10 @@ async function stilHash(css) {
   return hashCache.get(css);
 }
 
-export async function erwischtCsp() {
-  return `default-src 'none'; style-src ${await stilHash(ERWISCHT_CSS)}; img-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`;
+export async function erwischtCsp(variante) {
+  // Produktfotos liegen auf derselben Domain (img-src 'self'); Stil nur als Hash
+  // des tatsaechlich ausgelieferten Variantenstils.
+  return `default-src 'none'; style-src ${await stilHash(erwischtCss(variante))}; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`;
 }
 
 export async function sperrCsp() {
@@ -228,38 +214,189 @@ export async function sperrCsp() {
 
 // ---------------------------------------------------------------- Erwischt
 
-// d: { ip, land, stadt, region, netz, asn, ua, zeit, grund, nutzlast, nr, sprache?, vorschau? }
+// Die drei Varianten teilen den Kopf (Markentagline unuebersetzt) und den
+// Fuss. Alles aus der Anfrage ist in d bereits HTML-maskiert (anzeigeText/
+// nutzlastText), Beschriftungen und Produktfelder werden hier maskiert.
+const CLAIM = "Curated · Designer · Archive";
+const ERWISCHT_FUSS = '<footer class="fuss">disorder119.com · <a href="/impressum/">Impressum</a></footer>';
+const BAND_INNER = ["Maison Margiela", "Jean Paul Gaultier", "Y-3", "Balmain", "Raf Simons", "Comme des Garçons", "Yohji Yamamoto", "Walter Van Beirendonck", "Dior", "Prada"]
+  .map(m => `${esc(m)}<span>·</span>`).join(" ");
+
+function erwischtKopf(sprache, dir, titel, variante) {
+  return `<!DOCTYPE html><html lang="${esc(sprache)}" dir="${dir}"><head><meta charset="utf-8">`
+    + `<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">`
+    + `<meta name="referrer" content="no-referrer"><title>403 · ${esc(titel)}</title><style>${erwischtCss(variante)}</style></head>`;
+}
+
+// Kuerzt nach Zeichen (nicht Bytes), ohne zu maskieren - das macht der Aufrufer.
+function kurzText(wert, max) {
+  const zeichen = Array.from(String(wert ?? "").replace(/[\r\n\t]/g, " "));
+  return zeichen.length > max ? zeichen.slice(0, max).join("") : zeichen.join("");
+}
+
+// Lokalisierter Preis (ganze Euro); faellt auf "<n> €" zurueck.
+function preisText(preis, locale) {
+  const n = Number(preis);
+  if (!Number.isFinite(n)) return "";
+  try {
+    return new Intl.NumberFormat(locale || "en-GB", { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+  } catch { return `${Math.round(n)} €`; }
+}
+
+// Sperrdauer aus dem Sperr-Ende (bis). Ohne sichere Angabe neutral (dNull):
+// 24 h normal, 7 Tage Wiederholungstaeter, 2 h Kampagne.
+function dauerText(bis, jetzt, vt) {
+  const ms = Date.parse(String(bis || "")) - (Number.isFinite(jetzt) ? jetzt : Date.now());
+  if (!Number.isFinite(ms) || ms <= 0) return vt.dNull;
+  if (ms >= 36 * 3600_000) return `${Math.round(ms / 86400_000)} ${vt.tage}`;
+  return `${Math.max(1, Math.round(ms / 3600_000))} ${vt.std}`;
+}
+
+// Produktkarten aufbereiten: Name ohne Marke, lokalisierter Preis, nur eigene
+// Asset-Pfade und reine Artikelnummern. d.produkte ist die im Worker gecachte
+// Liste verfuegbarer Teile; bei Ausfall bleibt sie leer und die Seite ohne Teile.
+function produktKarten(produkte, sprache, locale) {
+  if (!Array.isArray(produkte)) return [];
+  const pfad = sprache === "fr" ? "/fr/artikel/" : sprache === "en" ? "/en/artikel/" : "/artikel/";
+  const out = [];
+  for (const p of produkte) {
+    if (!p) continue;
+    const bild = String(p.bild || "");
+    if (!/^assets\/img\/[A-Za-z0-9/_.-]+\.(?:webp|jpg|jpeg|png)$/.test(bild)) continue;
+    const marke = String(p.marke || "");
+    const titel = sprache === "de" ? String(p.titel || "") : String(p.titelEn || p.titel || "");
+    const name = marke && titel.startsWith(marke) ? titel.slice(marke.length).trim() : titel;
+    const art = String(p.nr || "").replace(/\D/g, "").slice(0, 8);
+    out.push({
+      marke: kurzText(marke, 40), name: kurzText(name || titel, 70), preis: preisText(p.preis, locale),
+      href: art ? `${pfad}${art}/` : "/", klein: "/" + bild, gross: "/" + bild.replace("/thumbs/", "/grid/"),
+      kat: String(p.kat || ""),
+    });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- Variante A: Preisschild
+function erwischtA(c) {
+  const { vt, ven, t, ten, dir, en, sprache, variante, start } = c;
+  const row = (k, ke, w) => `<div><dt>${esc(k)}${en ? `<small lang="en">${esc(ke)}</small>` : ""}</dt><dd>${w}</dd></div>`;
+  const karten = c.karten.slice(0, 5);
+  const grid = karten.map(x =>
+    `<li><a href="${esc(x.href)}"><div class="rahmen"><img src="${esc(x.klein)}" srcset="${esc(x.klein)} 220w, ${esc(x.gross)} 405w" sizes="(max-width:860px) 45vw, 200px" alt="${esc(x.marke)} ${esc(x.name)}" width="220" height="293" loading="lazy" decoding="async"></div>`
+    + `<span class="tm">${esc(x.marke)}</span><span class="tn">${esc(x.name)}</span><span class="tp">${esc(x.preis)}</span></a></li>`).join("");
+  const statt = karten.length
+    ? `<section class="statt"><div class="statt-kopf"><h2>${esc(vt.statt)}${en ? `<span lang="en">${esc(ven.statt)}</span>` : ""}</h2><a class="archiv" href="${start}">${esc(vt.archiv)} →</a></div>`
+      + `<ul class="teile">${grid}</ul><p class="spaeter">${esc(vt.spaeter)}${en ? ` <span lang="en">${esc(ven.spaeter)}</span>` : ""}</p></section>`
+    : "";
+  return erwischtKopf(sprache, dir, vt.aTitel, variante)
+    + `<body><header class="kopf"><a class="marke" href="${start}">Disorder119</a><span class="claim">${esc(CLAIM)}</span><span class="code403">403${c.vorschau ? " · PREVIEW" : ""}</span></header>`
+    + '<main><section class="buehne"><div>'
+    + `<h1>${esc(vt.aTitel)}</h1>${en ? `<p class="h1en" lang="en">${esc(ven.aTitel)}</p>` : ""}`
+    + `<p class="witz">${esc(vt.aWitz)}</p>${en ? `<p class="witz" lang="en">${esc(ven.aWitz)}</p>` : ""}`
+    + `<p class="wahr">${esc(c.status)}</p>${en ? `<p class="wahr" lang="en">${esc(c.statusEn)}</p>` : ""}`
+    + `</div><div class="haken"><article class="tag" aria-label="${esc(t.nr)} ${esc(c.nr)}">`
+    + '<div class="tag-kopf"><b>DISORDER119</b><span>Archive</span></div>'
+    + `<p class="tag-nr"><span dir="ltr">N° ${esc(c.nr)}</span><span dir="ltr">${c.datum}</span></p><dl>`
+    + row(vt.item, ven.item, `<span class="fett">${esc(vt.wAngriff)}</span>`)
+    + row(vt.stil, ven.stil, esc(c.art))
+    + row(vt.zustand, ven.zustand, esc(vt.wBlock))
+    + row(vt.herkunft, ven.herkunft, `<span dir="ltr">${c.ip}</span><br>${c.netz}<br>${c.ort}`)
+    + row(t.geraet, ten.geraet, `<span dir="ltr">${c.geraet}</span>`)
+    + row(t.zeit, ten.zeit, `<span dir="ltr">${c.zeit}</span>`)
+    + row(t.anfrage, ten.anfrage, `<code dir="ltr">${c.nutzlast}</code>`)
+    + `</dl><div class="preis"><span>${esc(vt.preis)}${en ? `<small lang="en">${esc(ven.preis)}</small>` : ""}</span><strong>${esc(c.dauer)}</strong></div>`
+    + `<div class="code" aria-hidden="true"><div class="balken"></div><span dir="ltr">${esc(c.nr)}</span></div>`
+    + `<p class="klein">${esc(vt.klein)}</p></article></div></section>`
+    + statt + '</main>' + ERWISCHT_FUSS + '</body></html>';
+}
+
+// ---------------------------------------------------------------- Variante B: Universum
+function erwischtB(c) {
+  const { vt, ven, t, dir, en, sprache, variante, start } = c;
+  const links = [], rechts = [];
+  c.karten.slice(0, 8).forEach((x, i) => (i % 2 ? rechts : links).push(x));
+  const stern = (x, idx) =>
+    `<li class="s${idx === 3 ? " fern" : ""}"><a href="${esc(x.href)}" aria-label="${esc(x.marke)} – ${esc(x.name)} – ${esc(x.preis)}">`
+    + `<img src="${esc(x.klein)}" srcset="${esc(x.klein)} 220w, ${esc(x.gross)} 405w" sizes="(max-width:900px) 110px, 180px" alt="" width="220" height="293" decoding="async">`
+    + `<span><b>${esc(x.marke)}</b>${esc(x.preis)}</span></a></li>`;
+  const liste = arr => arr.map((x, i) => stern(x, i)).join("");
+  const row = (k, w) => `<div><dt>${esc(k)}</dt><dd>${w}</dd></div>`;
+  return erwischtKopf(sprache, dir, vt.bTitel, variante)
+    + '<body><div class="himmel" aria-hidden="true"></div>'
+    + `<main class="buehne"><ul class="schwarm links">${liste(links)}</ul>`
+    + `<section class="mitte"><p class="claim">${esc(CLAIM)}${c.vorschau ? " · PREVIEW" : ""}</p><p class="wort">Disorder119</p>`
+    + `<h1>${esc(vt.bTitel)}</h1>${en ? `<p class="h1en" lang="en">${esc(ven.bTitel)}</p>` : ""}`
+    + `<div class="log"><div class="log-kopf"><span>${esc(vt.log)}</span><b dir="ltr">${esc(c.nr)}</b></div><dl>`
+    + row("IP", `<span dir="ltr">${c.ip}</span>`) + row(t.netz, c.netz) + row(t.ort, c.ort)
+    + row(t.geraet, `<span dir="ltr">${c.geraet}</span>`) + row(t.zeit, `<span dir="ltr">${c.zeit}</span>`) + row(t.art, `<span dir="ltr">${esc(c.art)}</span>`)
+    + row(t.anfrage, `<code dir="ltr">${c.nutzlast}</code>`) + row(vt.dauer, esc(c.dauer))
+    + '</dl></div>'
+    + `<p class="wahr">${esc(c.status)}</p>${en ? `<p class="wahr" lang="en">${esc(c.statusEn)}</p>` : ""}`
+    + `<a class="archiv" href="${start}">${esc(vt.archiv)}</a><p class="spaeter">${esc(vt.spaeter)}${en ? ` · <span lang="en">${esc(ven.spaeter)}</span>` : ""}</p>`
+    + `</section><ul class="schwarm rechts">${liste(rechts)}</ul></main>`
+    + ERWISCHT_FUSS + '</body></html>';
+}
+
+// ---------------------------------------------------------------- Variante C: Magazin-Cover
+function erwischtC(c) {
+  const { vt, ven, dir, en, sprache, variante } = c;
+  const held = c.karten.find(x => /jacket|coat|jacke|mantel/i.test(x.kat)) || c.karten[0] || null;
+  const rest = c.karten.filter(x => x !== held).slice(0, 4);
+  const cover = held
+    ? `<figure class="held"><a href="${esc(held.href)}"><img src="${esc(held.gross)}" srcset="${esc(held.klein)} 220w, ${esc(held.gross)} 405w" sizes="(max-width:860px) 62vw, 400px" alt="${esc(held.marke)} ${esc(held.name)}" width="405" height="540" decoding="async">`
+      + `<figcaption><b>${esc(vt.cover)}${en ? ` · <span lang="en">${esc(ven.cover)}</span>` : ""}</b>${esc(held.marke)} — ${esc(held.name)} — ${esc(held.preis)}</figcaption></a></figure>`
+    : "";
+  const looks = rest.length
+    ? `<section class="look"><h2>LOOKS 02–05 — ${esc(vt.echteTeile)}${en ? `<span lang="en">${esc(ven.echteTeile)}</span>` : ""}</h2><ul class="looks">`
+      + rest.map((x, k) =>
+        `<li><a href="${esc(x.href)}"><div class="r"><img src="${esc(x.klein)}" srcset="${esc(x.klein)} 220w, ${esc(x.gross)} 405w" sizes="(max-width:860px) 45vw, 300px" alt="${esc(x.marke)} ${esc(x.name)}" width="220" height="293" loading="lazy" decoding="async"></div>`
+        + `<span class="n" aria-hidden="true">${String(k + 2).padStart(2, "0")}</span><span class="tm">${esc(x.marke)}</span><span class="tn">${esc(x.name)}</span><span class="tp">${esc(x.preis)}</span></a></li>`).join("")
+      + '</ul></section>'
+    : "";
+  const cr = (k, ke, w) => `<p><b>${esc(k)}${en ? ` <small lang="en">/ ${esc(ke)}</small>` : ""}</b>${w}</p>`;
+  return erwischtKopf(sprache, dir, `${vt.cTitel1} ${vt.cTitel2}`, variante)
+    + `<body><div class="leiste"><span dir="ltr">N° <b>${esc(c.nr)}</b></span><span class="weg">${esc(CLAIM)}</span><span dir="ltr">${c.datum} · 403${c.vorschau ? " · PREVIEW" : ""}</span></div>`
+    + '<svg class="titel" viewBox="0 0 1000 101" role="img" aria-label="Disorder119"><text x="0" y="101" textLength="1000" lengthAdjust="spacing">DISORDER119</text></svg>'
+    + `<div class="unterzeile"><span>${esc(CLAIM)}</span><span>Issue 403</span></div>`
+    + '<main><section class="cover"><div>'
+    + `<p class="kicker">${esc(vt.tag)}${en ? ` · <span lang="en">${esc(ven.tag)}</span>` : ""}</p>`
+    + `<h1>${esc(vt.cTitel1)}<em>${esc(vt.cTitel2)}</em></h1>${en ? `<p class="h1en" lang="en">${esc(ven.cTitel1)} ${esc(ven.cTitel2)}</p>` : ""}`
+    + '<ul class="zeilen">'
+    + `<li><span class="s">p.403</span><div><p>${esc(vt.z1)}</p>${en ? `<p lang="en">${esc(ven.z1)}</p>` : ""}</div></li>`
+    + `<li><span class="s">p.119</span><div><p>${esc(vt.z2)}</p>${en ? `<p lang="en">${esc(ven.z2)}</p>` : ""}</div></li>`
+    + '</ul></div>' + cover + '</section>'
+    + `<section class="look"><h2>LOOK 01 — ${esc(vt.angriffWort)}${en ? `<span lang="en">${esc(ven.angriffWort)}</span>` : ""}</h2><div class="credits">`
+    + cr(vt.getragen, ven.getragen, `<span dir="ltr">${c.ip}</span> · ${c.netz} · ${c.ort}`)
+    + cr(vt.acc, ven.acc, `<span dir="ltr">${c.geraet}</span>`)
+    + cr(vt.piece, ven.piece, `${esc(c.art)} — <code dir="ltr">${c.nutzlast}</code>`)
+    + cr(vt.shot, ven.shot, `<span dir="ltr">${c.zeit}</span>`)
+    + cr(vt.dauer, ven.dauer, esc(c.dauer))
+    + cr(vt.status, ven.status, `${esc(c.status)}${en ? ` <span lang="en">${esc(c.statusEn)}</span>` : ""}`)
+    + '</div></section>' + looks
+    + `<p class="spaeter">${esc(vt.spaeter)}${en ? ` <span lang="en">${esc(ven.spaeter)}</span>` : ""}</p>`
+    + `<div class="band" aria-hidden="true"><p>${BAND_INNER} ${BAND_INNER}</p></div></main>`
+    + ERWISCHT_FUSS + '</body></html>';
+}
+
+// d: { ip, land, stadt, region, netz, asn, ua, zeit, grund, nutzlast, nr, bis?,
+//      produkte?, sprache?, variante?, vorschau? }
 export function erwischtSeite(d = {}) {
-  const sprache = T[d.sprache] ? d.sprache : erwischtSprache(d.land);
-  const t = texte(sprache), en = texte("en");
-  const dir = RTL.has(sprache) ? "rtl" : "ltr";
+  const sprache = V[d.sprache] ? d.sprache : erwischtSprache(d.land);
+  const variante = erwischtVariante(d.nr, d.variante);
+  const vt = V[sprache] || V.en, ven = V.en, t = texte(sprache), ten = texte("en");
   const ort = [d.stadt, d.region && d.region !== d.stadt ? d.region : "", landName(d.land, sprache)].filter(Boolean).map(x => anzeigeText(x, 60)).join(", ") || "—";
   const netz = d.netz ? `${anzeigeText(d.netz, 60)}${d.asn ? ` (AS${Number(d.asn) || ""})` : ""}` : (d.asn ? `AS${Number(d.asn) || ""}` : "—");
-  const art = ART_NAME[d.grund] || "Attack";
-  const nr = String(d.nr || "").replace(/[^A-Z0-9-]/gi, "").slice(0, 16) || "—";
-  const zeile = (k, w, extra = "") => `<li class="z"><span class="k">${esc(k)}</span>${w}${extra}</li>`;
-  const ltr = inhalt => `<span class="w" dir="ltr">${inhalt}</span>`;
-  const zweitSprache = sprache !== "en";
-  return `<!DOCTYPE html><html lang="${esc(sprache)}" dir="${dir}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><title>403 · ${esc(t.titel)}</title><style>${ERWISCHT_CSS}</style></head>`
-    + `<body><main class="t"><div class="kopf" dir="ltr"><i></i><i></i><i></i><b>disorder119 // waechter</b>${d.vorschau ? '<span class="vs">PREVIEW</span>' : ""}</div>`
-    + '<ol class="log">'
-    + `<li class="z"><span class="p">$</span><span class="w">${esc(t.verfolgen)} …</span><span class="ok">✔</span></li>`
-    + zeile("IP", ltr(anzeigeText(d.ip || "—", 64)), '<span class="ok">✔</span>')
-    + zeile(t.netz, `<span class="w">${netz}</span>`, '<span class="ok">✔</span>')
-    + zeile(t.ort, `<span class="w">${ort}</span>`, '<span class="ok">✔</span>')
-    + zeile(t.geraet, ltr(anzeigeText(geraetText(d.ua), 60)), '<span class="ok">✔</span>')
-    + zeile(t.zeit, ltr(esc(utcZeit(d.zeit))))
-    + zeile(t.art, `<span class="w rot" dir="ltr">${esc(art)}</span>`)
-    + zeile(t.anfrage, `<code class="w" dir="ltr">${nutzlastText(d.nutzlast)}</code>`)
-    + zeile(t.nr, ltr(esc(nr)))
-    + "</ol>"
-    + `<h1 class="alarm" data-t="${esc(t.titel)}">${esc(t.titel)}</h1>`
-    + `<p class="satz">${esc(t.satz)}<span class="cur" aria-hidden="true"></span></p>`
-    + (zweitSprache ? `<p class="satz en" lang="en" dir="ltr">${esc(en.satz)}</p>` : "")
-    + `<p class="text">${esc(t.text)}</p>`
-    + (zweitSprache ? `<p class="text en" lang="en" dir="ltr">${esc(en.text)}</p>` : "")
-    + '<p class="fuss" dir="ltr">disorder119.com · <a href="/impressum/">Impressum</a></p>'
-    + "</main></body></html>";
+  const zeitRoh = utcZeit(d.zeit);
+  const c = {
+    sprache, variante, vt, ven, t, ten, dir: RTL.has(sprache) ? "rtl" : "ltr", en: sprache !== "en",
+    start: sprache === "fr" ? "/fr/" : sprache === "en" ? "/en/" : "/", vorschau: Boolean(d.vorschau),
+    ip: anzeigeText(d.ip || "—", 64), netz, ort, geraet: anzeigeText(geraetText(d.ua), 60),
+    zeit: esc(zeitRoh), datum: esc(zeitRoh.slice(0, 10)),
+    art: ART_NAME[d.grund] || "Attack", nr: String(d.nr || "").replace(/[^A-Z0-9-]/gi, "").slice(0, 16) || "—",
+    nutzlast: nutzlastText(d.nutzlast), status: t.text, statusEn: ten.text,
+    dauer: dauerText(d.bis, d.zeit, vt), karten: produktKarten(d.produkte, sprache, vt.locale),
+  };
+  return variante === "b" ? erwischtB(c) : variante === "c" ? erwischtC(c) : erwischtA(c);
 }
 
 // ---------------------------------------------------------------- Neutrale Sperrseite
@@ -372,7 +509,9 @@ function kopf(csp, extra = {}) {
 }
 
 export async function erwischtAntwort(request, daten, status = 403) {
-  return new Response(request?.method === "HEAD" ? null : erwischtSeite(daten), { status, headers: kopf(await erwischtCsp()) });
+  // CSP-Hash muss zum tatsaechlich ausgelieferten Variantenstil passen.
+  const variante = erwischtVariante(daten?.nr, daten?.variante);
+  return new Response(request?.method === "HEAD" ? null : erwischtSeite(daten), { status, headers: kopf(await erwischtCsp(variante)) });
 }
 
 export async function sperrAntwort(request, daten, status = 403) {
@@ -398,6 +537,7 @@ export function vorschauDaten(land, jetzt = Date.now()) {
   const [stadt, region, netz, asn] = VORSCHAU_ORTE[code] || ["Example City", "", "Example Network", 64519];
   return {
     ip: "203.0.113.42", land: code, stadt, region, netz, asn, zeit: jetzt, grund: "sql-injection",
+    bis: new Date((Number.isFinite(jetzt) ? jetzt : Date.now()) + 24 * 3600_000).toISOString(),
     ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
     nutzlast: "/fr/mieten/?item=1' AND 1=1 UNION SELECT NULL-- -", nr: "W-VORSCHAU", vorschau: true,
   };
