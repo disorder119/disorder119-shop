@@ -183,8 +183,8 @@ def patch_taxonomy() -> None:
     # whose title itself proves the more precise type.
     text = replace_once(
         text,
-        '    9432: "Underwear Shorts",\n    9490: "Sleepwear",',
-        '    9432: "Underwear Shorts",\n    9496: "Polo Shirt",  # title: Dior Herrenpolo Schwarz\n    9490: "Sleepwear",',
+        '    9432: "Shorts",\n    9490: "Sleepwear",',
+        '    9432: "Shorts",\n    9496: "Polo Shirt",  # title: Dior Herrenpolo Schwarz\n    9490: "Sleepwear",',
         "Dior Herrenpolo override",
     )
     old = '''    # Vague legacy titles are resolved from their full description next.\n    for pattern, product_type in rules:\n        if re.search(pattern, text):\n            return product_type\n\n    fallback = {'''

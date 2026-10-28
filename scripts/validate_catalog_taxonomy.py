@@ -91,7 +91,7 @@ def main() -> None:
         6235: ("Men", "Sneakers", "Shoes"),
         9524: ("Women", "Bomber Jacket", "Jackets"),
         9534: ("Men", "Sneakers", "Shoes"),
-        9432: ("Women", "Underwear Shorts", "Pants"),
+        9432: ("Women", "Shorts", "Pants"),
         # Der Rock lief unter Herren, weil Walter Van Beirendonck als
         # Herrenlabel gefuehrt wird. Die Groesse auf dem Etikett (M / 38 / 10)
         # ist Damenkonfektion; seit dem Durchgang vom 17.09.2026 entscheidet

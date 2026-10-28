@@ -36,7 +36,7 @@ DEPARTMENT_OVERRIDES = {
     9496: "Men",    # title: Dior Langarm-Poloshirt Herren Schwarz
     9495: "Men",    # companion Dior polo, label size 46
     9463: "Women",  # Prada Heels
-    9432: "Women",  # JPG underwear shorts, S/36/8
+    9432: "Women",  # JPG Lounge-Shorts, S/36/8
     9434: "Men",    # size 48 sweatshirt
 
     # Durchgang 17.09.2026: jedes Stueck einzeln angesehen (Fotos, Schnitt,
@@ -145,7 +145,7 @@ PRODUCT_TYPE_OVERRIDES = {
     9463: "Heels",
     9386: "Hat",
     9434: "Sweatshirt",
-    9432: "Underwear Shorts",
+    9432: "Shorts",
     9496: "Polo Shirt",  # title: Dior Herrenpolo Schwarz
     9490: "Sleepwear",
     9489: "Set",
