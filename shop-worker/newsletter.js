@@ -549,23 +549,29 @@ export async function unsubscribe(env, rawToken, { reqId = crypto.randomUUID(), 
 export async function overview(env, { limit = 100 } = {}) {
   const db = env.DB;
   const counts = { PENDING: 0, CONFIRMED: 0, UNSUBSCRIBED: 0 };
-  const { results: groups } = await db.prepare("SELECT status, COUNT(*) AS n FROM newsletter_subscribers GROUP BY status").all();
-  for (const group of groups || []) counts[group.status] = Number(group.n || 0);
-  // Alle Anmeldungen, neueste zuerst: bestaetigte, noch offene und
-  // abgemeldete - die Admin-App zeigt den Status dazu.
-  const { results } = await db.prepare(`SELECT s.email_normalized AS email, s.status, s.lang, s.source,
+  // Die vier Abfragen gleichzeitig statt nacheinander (live je ~50 ms) -
+  // die Uebersicht der Admin-App wartet beim Start auf diese Karte.
+  const [{ results: groups }, { results }, brevoList, nichtInBrevo] = await Promise.all([
+    db.prepare("SELECT status, COUNT(*) AS n FROM newsletter_subscribers GROUP BY status").all(),
+    // Alle Anmeldungen, neueste zuerst: bestaetigte, noch offene und
+    // abgemeldete - die Admin-App zeigt den Status dazu.
+    db.prepare(`SELECT s.email_normalized AS email, s.status, s.lang, s.source,
       s.requested_at AS requestedAt, s.confirmed_at AS confirmedAt, s.unsubscribed_at AS unsubscribedAt,
       s.coupon_hint AS couponHint, c.status AS couponStatus
     FROM newsletter_subscribers s LEFT JOIN reward_coupons c ON c.id = s.coupon_id
     ORDER BY COALESCE(s.unsubscribed_at, s.confirmed_at, s.requested_at) DESC LIMIT ?`)
-    .bind(Math.max(1, Math.min(500, Number(limit) || 100))).all();
+      .bind(Math.max(1, Math.min(500, Number(limit) || 100))).all(),
+    knownListId(env),
+    db.prepare(`SELECT COUNT(*) AS n FROM newsletter_subscribers
+      WHERE status='CONFIRMED' AND brevo_synced_at IS NULL`).first(),
+  ]);
+  for (const group of groups || []) counts[group.status] = Number(group.n || 0);
   return {
     confirmed: counts.CONFIRMED,
     pending: counts.PENDING,
     unsubscribed: counts.UNSUBSCRIBED,
-    brevoList: await knownListId(env),
-    notInBrevo: Number((await db.prepare(`SELECT COUNT(*) AS n FROM newsletter_subscribers
-      WHERE status='CONFIRMED' AND brevo_synced_at IS NULL`).first())?.n || 0),
+    brevoList,
+    notInBrevo: Number(nichtInBrevo?.n || 0),
     subscribers: (results || []).map(r => ({ ...r, couponRedeemed: r.couponStatus === "REDEEMED" })),
   };
 }

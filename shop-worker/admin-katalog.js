@@ -16,6 +16,7 @@ import {
   listDirectory,
   mergeViaPullRequest,
   readRepoFile,
+  readRepoFileParallel,
   recentCommits,
 } from "./github-datei.js";
 import { istSandbox, sandboxWiederVerfuegbar } from "./sandbox.js";
@@ -141,7 +142,8 @@ export async function loadCatalog(env) {
   ]);
   try {
     const [{ text: itemsText, sha }, commits] = await Promise.all([
-      readRepoFile(env, ITEMS_PATH, { userAgent: USER_AGENT }), history,
+      // Ordnerliste und Inhalt gleichzeitig (github-datei.js) - eine Rundreise weniger.
+      readRepoFileParallel(env, ITEMS_PATH, { userAgent: USER_AGENT }), history,
     ]);
     return `{"ok":true,"sha":${JSON.stringify(sha)},"commits":${JSON.stringify(commits)},"items":${itemsText}}`;
   } finally { clearTimeout(timer); }

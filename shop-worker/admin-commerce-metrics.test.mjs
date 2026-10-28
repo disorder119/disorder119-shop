@@ -134,7 +134,8 @@ test("commerce metrics keep sales refunds separate from rental refunds", async (
   seed(db);
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async function (input, init) {
-    if (String(input) === "https://disorder119.com/data/catalog.json") {
+    // Katalog kommt aus oeffentlicher-katalog.js (GitHub main zuerst, disorder119.com als Rueckfall).
+    if (String(input).endsWith("/data/catalog.json")) {
       return new Response(JSON.stringify([
         { id: 920001, article: "SALE-1", title: "Sale Test Piece", brand: "Test Brand", gallery: ["img/sale.jpg"] },
         { id: 920002, article: "RENT-1", title: "Rental Test Piece", brand: "Rental Brand", gallery: ["img/rent.jpg"] },

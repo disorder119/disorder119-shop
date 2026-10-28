@@ -85,6 +85,40 @@ export async function readRepoFile(env, path, { userAgent = "disorder119-shop-wo
   return { text: await blob.text(), sha: String(entry.sha) };
 }
 
+/** Git-Blob-SHA (SHA-1 ueber "blob <Laenge>\0<Inhalt>") - wie GitHub ihn nennt. */
+async function gitBlobSha(text) {
+  const inhalt = new TextEncoder().encode(String(text));
+  const kopf = new TextEncoder().encode(`blob ${inhalt.length}\0`);
+  const alles = new Uint8Array(kopf.length + inhalt.length);
+  alles.set(kopf);
+  alles.set(inhalt, kopf.length);
+  const hash = await crypto.subtle.digest("SHA-1", alles);
+  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Wie readRepoFile, aber Ordnerliste (SHA) und Rohinhalt gleichzeitig: eine
+ * Rundreise zu GitHub statt zwei nacheinander (Katalog-Ansicht der Admin-App).
+ * Passt der Inhalt nicht zum SHA (dazwischen ein Commit) oder scheitert der
+ * Rohabruf, kommt der Blob zum SHA wie bisher hinterher.
+ */
+export async function readRepoFileParallel(env, path, { userAgent = "disorder119-shop-worker", repo = SHOP_REPO, ref } = {}) {
+  const slash = path.lastIndexOf("/");
+  const dir = slash === -1 ? "" : path.slice(0, slash);
+  const name = path.slice(slash + 1);
+  const stand = encodeURIComponent(ref || repo.branch);
+  const [entries, roh] = await Promise.all([
+    ghJson(env, repo, `/contents/${dir}?ref=${stand}`, { userAgent }),
+    gh(env, repo, `/contents/${path}?ref=${stand}`, { userAgent, accept: "application/vnd.github.raw+json" })
+      .then(res => res.text()).catch(() => null),
+  ]);
+  const entry = Array.isArray(entries) ? entries.find(e => e?.name === name && e?.type === "file") : null;
+  if (!entry?.sha) throw new GithubError("github_file_missing");
+  if (typeof roh === "string" && await gitBlobSha(roh) === String(entry.sha)) return { text: roh, sha: String(entry.sha) };
+  const blob = await gh(env, repo, `/git/blobs/${entry.sha}`, { userAgent, accept: "application/vnd.github.raw+json" });
+  return { text: await blob.text(), sha: String(entry.sha) };
+}
+
 /**
  * Neuer Commit auf `parent` mit geaenderten Dateien. files:
  *   { path, text }       - Textdatei (UTF-8, ohne Base64)
