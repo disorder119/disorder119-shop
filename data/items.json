@@ -163,7 +163,7 @@
     "title": "Prada Loafer Herren Rotbraun",
     "brand": "Prada",
     "price": 135,
-    "status": "Verkauft",
+    "status": "Verfügbar",
     "category": "Shoes",
     "size": "9",
     "color": "Rotbraun",
@@ -183,7 +183,7 @@
     "look": "assets/img/b2-237/0.webp",
     "price_estimated": false,
     "brightness": 0.19,
-    "public_status": "SOLD",
+    "public_status": "AVAILABLE",
     "data_quality_open": [],
     "data_quality_sources": {
       "color": "explicit-title-color"
