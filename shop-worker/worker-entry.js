@@ -35,7 +35,8 @@ import { handleKarte, isKarteRoute } from "./karte.js";
 import { handleAdresse, isAdresseRoute } from "./adresse.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
-import { handleIncomingEmail, handlePostfach, isPostfachRoute } from "./postfach.js";
+import { handleIncomingEmail, handlePostfach, isPostfachRoute, postfachMeldungNachholen } from "./postfach.js";
+import { zahlungsMeldungenNachholen } from "./zahlung.js";
 import { SEITENAUFRUF_PFAD, besucherAufraeumen, entsperrtMelden, handleBesucher, istBesucherRoute } from "./besucher.js";
 import { sitzungenMelden } from "./besucher-zusammenfassung.js";
 import { geoGesperrt, geoSperrAntwort } from "./geo-sperre.js";
@@ -611,6 +612,10 @@ const worker = {
     // (Sammelmeldung bei Angriffswellen, abgelaufene Vorfaelle loeschen).
     await runBackground(ctx, sitzungenMelden(env, scheduledTime, { limit: 25 }), "besucher_summary_failed", reqId);
     await runBackground(ctx, waechterPflegen(env, scheduledTime), "waechter_maintenance_failed", reqId);
+    // Telegram-Meldungen, die beim ersten Versuch nicht ankamen (Zahlungen) bzw.
+    // gedrosselt gesammelt wurden (Postfach), nachholen.
+    await runBackground(ctx, zahlungsMeldungenNachholen(env, reqId, new Date(scheduledTime)), "payment_notice_retry_failed", reqId);
+    await runBackground(ctx, postfachMeldungNachholen(env, scheduledTime), "mailbox_notice_retry_failed", reqId);
     // Zaehler gegen Missbrauch (IP-Hashes) nach Ablauf ihres Fensters loeschen.
     await runBackground(ctx, kontingentAufraeumen(env.DB, new Date(scheduledTime)), "kontingent_cleanup_failed", reqId);
     // Offene Halte (Kasse, Miete) zaehlen hoechstens 30 Minuten - danach weg.

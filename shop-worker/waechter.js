@@ -46,7 +46,7 @@ import {
 } from "./waechter-regeln.js";
 import { geraetUndBrowser, landName } from "./besucher.js";
 import { weckerStellen } from "./besucher-sitzung.js";
-import { sendTelegramMessage, telegramTransportReady, telegramZeile } from "./notifications.js";
+import { sendTelegramMessage, telegramFremd, telegramTransportReady, telegramZeile } from "./notifications.js";
 import { isPacklinkWebhookRoute } from "./packlink.js";
 
 const MINUTE = 60_000;
@@ -343,7 +343,7 @@ function dauerText(sperre) {
 }
 
 function netzText(netz, asn) {
-  const name = telegramZeile(netz || "", 50);
+  const name = telegramFremd(netz || "", 50);
   return name ? `${name}${asn ? ` (AS${Number(asn)})` : ""}` : (asn ? `AS${Number(asn)}` : "");
 }
 
@@ -352,8 +352,8 @@ export function waechterText(sperre) {
   return [
     `🛡 SICHERHEIT: verdächtiger Besucher gesperrt (${dauerText(sperre)})`,
     `📍 ${landName(sperre.land) || "Land unbekannt"}${netz ? ` · ${netz}` : ""}`,
-    `📱 ${telegramZeile(sperre.ua_kurz || "unbekannt", 60)}`,
-    `🔎 ${GRUND_TEXT[sperre.grund] || sperre.grund}${sperre.beispiel ? `: ${telegramZeile(sperre.beispiel, 90)}` : ""}`,
+    `📱 ${telegramFremd(sperre.ua_kurz || "unbekannt", 60)}`,
+    `🔎 ${GRUND_TEXT[sperre.grund] || sperre.grund}${sperre.beispiel ? `: ${telegramFremd(sperre.beispiel, 90)}` : ""}`,
     `🔁 ${Number(sperre.versuche || 1)} ${Number(sperre.versuche || 1) === 1 ? "Versuch" : "Versuche"}`,
     `⏳ gesperrt bis ${berlinKurz(sperre.bis)}${Number(sperre.selbst) === 1 ? " (Mensch kann sich per Turnstile selbst entsperren)" : ""}`,
     "Aufheben: Admin-App → Besucher → Sicherheit",
@@ -372,7 +372,7 @@ export function kampagneText(k) {
   const laender = json(k.laender, []).map(([land, n]) => `${landName(land) || "unbekannt"} ${n}`).join(", ");
   const netze = json(k.netze, []).slice(0, 4).map(([asn, name, n]) => `${netzText(name, asn)} ${n}`).join(", ");
   return [
-    `⚠️ Verteilter Angriff: ${GRUND_TEXT[k.grund] || k.grund} auf ${telegramZeile(zielAusSignatur(k.signatur), 70)}`,
+    `⚠️ Verteilter Angriff: ${GRUND_TEXT[k.grund] || k.grund} auf ${telegramFremd(zielAusSignatur(k.signatur), 70)}`,
     `🌐 ${Number(k.anschluesse || 0)} Anschlüsse${laender ? ` · ${laender}` : ""}`,
     ...(netze ? [`🏢 Netze: ${netze}`] : []),
     `🔒 strenger Modus bis ${berlinKurz(k.streng_bis)}: gleiches Netz schon beim 1. Scanner-Pfad gesperrt`,

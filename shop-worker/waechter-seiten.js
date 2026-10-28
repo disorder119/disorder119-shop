@@ -158,32 +158,33 @@ body{margin:0;min-height:100vh;background:#050505 repeating-linear-gradient(0deg
 .kopf i{width:10px;height:10px;border-radius:50%;background:#ff3b3b;display:inline-block}.kopf i+i{background:#ffb300}.kopf i+i+i{background:#33ff66}.kopf b{font-weight:400;margin-inline-start:6px}
 .vs{margin-inline-start:auto;color:#050505;background:#ffb300;padding:1px 7px;border-radius:2px;font-weight:700}
 .log{list-style:none;margin:0;padding:0}
-.z{display:flex;flex-wrap:wrap;gap:2px 14px;padding:3px 0;opacity:0;clip-path:inset(0 100% 0 0);animation:an .01s steps(1) forwards,tip .8s steps(24,end) forwards}
-[dir=rtl] .z{clip-path:inset(0 0 0 100%)}
-.z:nth-child(1){animation-delay:.15s,.15s}.z:nth-child(2){animation-delay:.75s,.75s}.z:nth-child(3){animation-delay:1.2s,1.2s}.z:nth-child(4){animation-delay:1.65s,1.65s}.z:nth-child(5){animation-delay:2.1s,2.1s}.z:nth-child(6){animation-delay:2.55s,2.55s}.z:nth-child(7){animation-delay:3s,3s}.z:nth-child(8){animation-delay:3.45s,3.45s}.z:nth-child(9){animation-delay:3.9s,3.9s}
+.z{display:flex;flex-wrap:wrap;gap:2px 14px;padding:3px 0;animation:tip .8s steps(24,end) both}
+[dir=rtl] .z{animation-name:tipr}
+.z:nth-child(1){animation-delay:.15s}.z:nth-child(2){animation-delay:.75s}.z:nth-child(3){animation-delay:1.2s}.z:nth-child(4){animation-delay:1.65s}.z:nth-child(5){animation-delay:2.1s}.z:nth-child(6){animation-delay:2.55s}.z:nth-child(7){animation-delay:3s}.z:nth-child(8){animation-delay:3.45s}.z:nth-child(9){animation-delay:3.9s}
 .k{color:#7fdc95;min-width:13ch}
 .w{color:#eaffee;overflow-wrap:anywhere;word-break:break-word;min-width:0;flex:1 1 16ch}
 .ok{color:#33ff66}
 .p{color:#ffb300}
 .rot{color:#ff4d4d;font-weight:700}
 code.w{color:#ffc2c2;background:#1b0606;border:1px solid #521313;padding:1px 6px;border-radius:3px;font:inherit}
-.alarm{margin:30px 0 10px;font-size:clamp(30px,8vw,66px);line-height:1.08;color:#ff3131;letter-spacing:.02em;position:relative;opacity:0;animation:an .01s 4.5s steps(1) forwards,zit 3s 4.5s infinite;text-shadow:0 0 18px rgba(255,40,40,.45)}
+.alarm{margin:30px 0 10px;font-size:clamp(30px,8vw,66px);line-height:1.08;color:#ff3131;letter-spacing:.02em;position:relative;animation:an .2s 4.5s both,zit 3s 4.5s infinite;text-shadow:0 0 18px rgba(255,40,40,.45)}
 .alarm::before,.alarm::after{content:attr(data-t);position:absolute;inset:0;pointer-events:none}
 .alarm::before{color:#00e5ff;clip-path:inset(0 0 58% 0);animation:g1 1.7s 4.5s infinite steps(2)}
 .alarm::after{color:#33ff66;clip-path:inset(62% 0 0 0);animation:g2 2.1s 4.5s infinite steps(2)}
-.satz{font-size:clamp(19px,3.8vw,30px);line-height:1.3;color:#fff;margin:6px 0;opacity:0;animation:an .01s 5s steps(1) forwards}
+.satz{font-size:clamp(19px,3.8vw,30px);line-height:1.3;color:#fff;margin:6px 0;animation:an .2s 5s both}
 .satz.en{font-size:clamp(15px,2.5vw,19px);color:#9fe0ad}
-.text{color:#d3ecd8;max-width:62ch;margin:16px 0 0;opacity:0;animation:an .01s 5.4s steps(1) forwards}
+.text{color:#d3ecd8;max-width:62ch;margin:16px 0 0;animation:an .2s 5.4s both}
 .text.en{margin-top:4px;color:#8fbf9a}
 .cur{display:inline-block;width:.6em;height:1.05em;background:#33ff66;vertical-align:text-bottom;margin-inline-start:4px;animation:bl 1s steps(1) infinite}
 .fuss{margin-top:30px;font-size:12px;color:#5f8f6c}.fuss a{color:#7fdc95}
-@keyframes an{to{opacity:1}}
-@keyframes tip{to{clip-path:inset(0 0 0 0)}}
+@keyframes an{from{opacity:0}to{opacity:1}}
+@keyframes tip{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes tipr{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0 0 0 0)}}
 @keyframes bl{50%{opacity:0}}
 @keyframes zit{0%,92%,100%{transform:none}93%{transform:translate(2px,-1px)}95%{transform:translate(-2px,1px)}97%{transform:translate(1px,1px)}}
 @keyframes g1{0%{transform:translate(2px,0)}50%{transform:translate(-3px,1px)}100%{transform:translate(1px,-1px)}}
 @keyframes g2{0%{transform:translate(-2px,0)}50%{transform:translate(3px,-1px)}100%{transform:translate(-1px,1px)}}
-@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}.z,.alarm,.satz,.text{opacity:1;clip-path:none}.alarm::before,.alarm::after{display:none}}`;
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}.alarm::before,.alarm::after{display:none}}`;
 
 const SPERRE_CSS = `:root{color-scheme:dark}
 html{background:#000;color:#f2efe7;font:16px/1.6 "Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}

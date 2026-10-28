@@ -131,7 +131,7 @@ test("Angriff sperrt sofort fuer 24 h ohne Turnstile - nur Hash, eine gebuendelt
     assert.equal(tg.nachrichten.length, 1);
     assert.match(tg.nachrichten[0], /SICHERHEIT: verdächtiger Besucher gesperrt \(24 h\)/);
     assert.match(tg.nachrichten[0], /China · Chinanet \(AS4134\)/);
-    assert.match(tg.nachrichten[0], /sqlmap\/1\.7\.2/);
+    assert.match(tg.nachrichten[0], /sqlmap\/1․7․2/, "Fremdtext entschaerft: nicht klickbar");
     assert.match(tg.nachrichten[0], /SQL-Injection: \/\?id=1' OR '1'='1/);
     assert.ok(!tg.nachrichten[0].includes(IP), "keine IP in Telegram");
     // Weitere Versuche: keine zweite Nachricht, Anzahl steigt.
