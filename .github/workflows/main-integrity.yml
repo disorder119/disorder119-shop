@@ -5,6 +5,12 @@ on:
     branches: [main]
   push:
     branches: [main]
+  # Ein Push mit "[skip ci]" (oder [ci skip], [no ci], [skip actions]) im
+  # Commit startet KEINEN push-Workflow. Der geplante Lauf liest deshalb alle
+  # 15 Minuten die Push-Aktivitaet von main nach und prueft sie genauso.
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -13,146 +19,55 @@ permissions:
 jobs:
   provenance:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
+    outputs:
+      heal_before: ${{ steps.pruefung.outputs.heal_before }}
+      heal_after: ${{ steps.pruefung.outputs.heal_after }}
     steps:
       - name: Pull requests are the approved change path
         if: github.event_name == 'pull_request'
         run: echo "PR path detected — provenance OK."
 
+      - name: Pruefskript aus dem vertrauten Stand holen
+        if: github.event_name != 'pull_request'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' && github.event.before || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      # Jeder Commit von before bis sha muss belegt sein: gemergter PR nach
+      # main, die Automatik dieses Repos (Pusher github-actions[bot] - nicht
+      # Name/E-Mail im Commit, die frei waehlbar sind) oder ein Shop-Verkauf
+      # des Eigentuemers (nur Statuszeilen eines Artikels). Die Logik steht in
+      # scripts/main_provenance.py (Tests: scripts/test_main_provenance.py);
+      # bei push kommt das Skript aus dem Stand VOR dem Push, damit ein Push
+      # seine eigene Pruefung nicht aendern kann. Verzoegert indexierte
+      # PR-Zuordnung meldet es als "PR provenance noch nicht indexiert" und
+      # wiederholt die Abfrage bis zu 12-mal. API-Fehler machen den Lauf rot,
+      # loesen aber keinen Revert aus.
       - name: Main push must come from a merged PR or trusted automation
-        if: github.event_name == 'push'
+        id: pruefung
+        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          SHA: ${{ github.sha }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          PUSHER: ${{ github.actor }}
+          MODUS: ${{ github.event_name == 'push' && 'push' || 'audit' }}
         run: |
           set -euo pipefail
-          # Die Antwort enthaelt die vollstaendige Dateiliste des Commits samt
-          # Diffs. Als Kommandozeilenargument sprengt sie bei groesseren
-          # Commits das Kernel-Limit fuer ein einzelnes Argument: python
-          # startet dann gar nicht ("Argument list too long", exit 126), der
-          # Schritt gilt als fehlgeschlagen, und der Self-Heal-Job macht einen
-          # regulaer gemergten Pull Request rueckgaengig. Gemessen am
-          # 2026-09-16: 120114 Bytes bestanden, 123889 Bytes scheiterten -
-          # rund 150 geaenderte Dateien reichen also schon. Deshalb landen
-          # beide Antworten in Dateien und werden von dort gelesen. Die
-          # Pruefung selbst bleibt unveraendert.
-          commit_json_file="${RUNNER_TEMP:-/tmp}/provenance-commit.json"
-          prs_json_file="${RUNNER_TEMP:-/tmp}/provenance-pulls.json"
-          curl -fsSL \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$REPO/commits/$SHA" -o "$commit_json_file"
-
-          # GitHub can expose a freshly squash-merged commit before the
-          # commit->pulls association has finished indexing. Retry that one
-          # eventual-consistency edge instead of self-healing a legitimate PR.
-          echo "[]" > "$prs_json_file"
-          for attempt in $(seq 1 12); do
-            curl -fsSL \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/$REPO/commits/$SHA/pulls" -o "$prs_json_file"
-            if python - "$prs_json_file" "$SHA" <<'PY'
-          import json, sys
-          with open(sys.argv[1], encoding="utf-8") as fh:
-              prs = json.load(fh)
-          sha = sys.argv[2]
-          approved = [
-              pr for pr in prs
-              if pr.get("merged_at")
-              and (pr.get("base") or {}).get("ref") == "main"
-              and pr.get("merge_commit_sha") == sha
-          ]
-          raise SystemExit(0 if approved else 1)
-          PY
-            then
-              break
-            fi
-            if [ "$attempt" -lt 12 ]; then
-              echo "PR provenance noch nicht indexiert (Versuch $attempt/12); erneuter Check in 5s."
-              sleep 5
-            fi
-          done
-
-          python - "$commit_json_file" "$prs_json_file" "$SHA" <<'PY'
-          import json, sys
-          with open(sys.argv[1], encoding="utf-8") as fh:
-              commit = json.load(fh)
-          with open(sys.argv[2], encoding="utf-8") as fh:
-              prs = json.load(fh)
-          sha = sys.argv[3]
-          approved_prs = [
-              pr for pr in prs
-              if pr.get("merged_at")
-              and (pr.get("base") or {}).get("ref") == "main"
-              and pr.get("merge_commit_sha") == sha
-          ]
-          if approved_prs:
-              print("Merged PR provenance OK:", ", ".join("#" + str(pr["number"]) for pr in approved_prs))
-              raise SystemExit(0)
-
-          raw = commit.get("commit") or {}
-          author = raw.get("author") or {}
-          github_author = (commit.get("author") or {}).get("login")
-          name = author.get("name") or ""
-          message = raw.get("message") or ""
-          trusted_actions_identity = github_author == "actions"
-
-          if (trusted_actions_identity and name == "disorder119-bot" and
-                  message.startswith("Automatischer Rebuild nach Shop- und SEO-Validierung")):
-              print("Validated rebuild automation provenance OK.")
-              raise SystemExit(0)
-          if (trusted_actions_identity and name == "disorder119-guard" and
-                  message.startswith("Automatischer Schutz-Revert eines unautorisierten main-Push")):
-              print("Main guard self-heal provenance OK.")
-              raise SystemExit(0)
-
-          # Verkauf aus dem Shop-Worker (shop-worker/worker.js, markCatalogSold):
-          # nach bezahlter Bestellung setzt er genau einen Artikel auf SOLD.
-          # Ohne diese Ausnahme dreht der Self-Heal den Verkauf zurueck und das
-          # Einzelstueck steht wieder als verfuegbar im Shop. Zugelassen nur,
-          # wenn der Commit vom Repo-Eigentuemer kommt, ausschliesslich
-          # data/items.json aendert und dort nur die Statuszeilen eines Artikels
-          # auf SOLD/Verkauft setzt. Ein Preis, ein Text oder eine zweite Datei
-          # im selben Commit - oder ein Diff, den GitHub nicht mitliefert -
-          # fuehrt wie bisher zum Revert.
-          import os, re
-          owner = (os.environ.get("REPO") or "").split("/")[0]
-          files = commit.get("files") or []
-          if (re.fullmatch(r"Verkauft: Artikel \d+", message.strip())
-                  and owner and github_author == owner
-                  and len(files) == 1
-                  and files[0].get("filename") == "data/items.json"
-                  and files[0].get("status") == "modified"):
-              patch = files[0].get("patch") or ""
-              removed, added, lines_ok = [], [], bool(patch)
-              for line in patch.splitlines():
-                  if line.startswith("@@") or line.startswith(" ") or line == "":
-                      continue
-                  if line.startswith("-"):
-                      removed.append(line[1:].strip().rstrip(","))
-                  elif line.startswith("+"):
-                      added.append(line[1:].strip().rstrip(","))
-                  else:
-                      lines_ok = False
-              status_line = re.compile(r'"(public_status|status)": "[^"\\]*"')
-              if (lines_ok
-                      and all(status_line.fullmatch(z) for z in removed)
-                      and sorted(added) in (
-                          ['"public_status": "SOLD"'],
-                          ['"public_status": "SOLD"', '"status": "Verkauft"'],
-                      )
-                      and sorted(z.split(":")[0] for z in removed) == sorted(z.split(":")[0] for z in added)):
-                  print("Shop sale provenance OK:", message.strip())
-                  raise SystemExit(0)
-
-          raise SystemExit(
-              "UNAUTHORIZED MAIN PUSH: commit is neither a merged PR nor a trusted GitHub Actions rebuild/guard commit."
-          )
-          PY
+          if [ ! -f scripts/main_provenance.py ]; then
+            # Erster Lauf nach Einfuehrung des Skripts: Stand vor dem Push kennt es noch nicht.
+            git fetch --depth=1 origin "${GITHUB_SHA}"
+            git checkout -q FETCH_HEAD -- scripts/main_provenance.py
+          fi
+          if [ "$MODUS" = "push" ]; then
+            python scripts/main_provenance.py
+          else
+            python scripts/main_provenance.py --audit --stunden 3
+          fi
 
   production-policy:
     runs-on: ubuntu-24.04
@@ -179,10 +94,13 @@ jobs:
             exit 1
           fi
 
+  # Zurueckgedreht wird nur der gemeldete unbelegte Push - im geplanten Lauf
+  # nur, wenn er noch die Spitze von main ist (sonst bleibt der Lauf rot und
+  # GitHub meldet den Fehlschlag per Mail).
   self-heal:
     name: Unautorisierten Main-Push automatisch neutralisieren
     needs: provenance
-    if: always() && github.event_name == 'push' && needs.provenance.result == 'failure'
+    if: always() && github.event_name != 'pull_request' && needs.provenance.result == 'failure' && needs.provenance.outputs.heal_after != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -191,14 +109,20 @@ jobs:
       - name: Unautorisierten Stand auschecken
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ needs.provenance.outputs.heal_after }}
           fetch-depth: 0
 
       - name: Vorherigen Main-Baum als Schutz-Revert wiederherstellen
         env:
-          BEFORE: ${{ github.event.before }}
+          BEFORE: ${{ needs.provenance.outputs.heal_before }}
+          AFTER: ${{ needs.provenance.outputs.heal_after }}
         run: |
           set -euo pipefail
+          git fetch origin main
+          if [ "$(git rev-parse origin/main)" != "$AFTER" ]; then
+            echo "main ist seit dem unbelegten Push weitergelaufen; kein automatischer Revert (bitte von Hand pruefen)."
+            exit 1
+          fi
           if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
             echo "Kein sicherer vorheriger main-Commit vorhanden; automatischer Revert verweigert."
             exit 1

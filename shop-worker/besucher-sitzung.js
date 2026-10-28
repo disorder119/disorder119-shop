@@ -78,8 +78,13 @@ async function offeneSitzung(env, besucher) {
 
 // Aktivitaet eines Besuchers verbuchen. Gibt die Sitzungs-ID zurueck oder
 // null (z. B. Abschied ohne laufenden Besuch, Migration 0040 fehlt).
+// neuErlaubt (optional): async () => boolean, wird nur vor dem Anlegen eines
+// NEUEN Besuchs gefragt (Obergrenze je Anschluss und Tag, besucher.js).
+// Ergebnis dann SITZUNG_GRENZE: der Aufruf zaehlt gar nicht.
+export const SITZUNG_GRENZE = "GRENZE";
+
 export async function sitzungBeruehren(env, ctx, info, now = Date.now()) {
-  const { besucher, einwilligung = false, wiederkehr = null, abschied = false, entsperrt = false } = info || {};
+  const { besucher, einwilligung = false, wiederkehr = null, abschied = false, entsperrt = false, neuErlaubt = null } = info || {};
   if (!env?.DB || !besucher) return null;
   const { ruheMs, abschiedMs } = sitzungsZeiten(env);
   const zeit = iso(now);
@@ -94,6 +99,7 @@ export async function sitzungBeruehren(env, ctx, info, now = Date.now()) {
       }
       if (!offen) {
         if (abschied) return null;
+        if (typeof neuErlaubt === "function" && !(await neuErlaubt())) return SITZUNG_GRENZE;
         const faellig = now + ruheMs;
         const neu = await env.DB.prepare(`INSERT INTO besucher_sitzungen
           (besucher, beginn, zuletzt, faellig, offen, einwilligung, besuch_nr, erster_besuch, vorher_besuch, entsperrt)

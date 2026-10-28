@@ -802,3 +802,46 @@ test("throttled receipts never crowd out failed receipts of other declarations",
     netz.restore();
   }
 });
+
+test("unassigned declarations: at most 10 receipts a day; per mailbox counted canonically; Telegram without personal data", async () => {
+  const DB = sqliteD1(allMigrations());
+  seed(DB, { status: "DELIVERED" });
+  const netz = fakeNetz();
+  const env = { ...ENV(DB), LOGIN_IP_PEPPER: "p".repeat(48) };
+  try {
+    const antworten = [];
+    for (let i = 0; i < 12; i++) {
+      antworten.push(await widerrufenVon(DB, `198.51.100.${150 + i}`,
+        { name: `Spam ${i}`, email: `ziel${i}@example.test`, bestellnummer: "gibt es nicht", umfang: "GANZ", nachricht: "Konto gesperrt: https://evil.example/x", bestaetigt: true }, env));
+    }
+    assert.deepEqual(antworten.map(a => a.status), Array(12).fill(200));
+    assert.equal(antworten.filter(a => a.data.bestaetigungGesendet).length, 10, "nur 10 Bestaetigungen ohne Bestellung");
+    assert.equal(wert(DB, "SELECT COUNT(*) AS n FROM widerrufe").n, 12, "jede Erklaerung gespeichert");
+    for (const t of netz.telegram) {
+      assert.doesNotMatch(t.text, /Spam \d|ziel\d|example\.test|evil/, "keine Personendaten oder Freitext in Telegram");
+    }
+    assert.match(netz.telegram[0].text, /Noch keiner Bestellung zugeordnet/);
+    // Die Eingangsbestaetigung gibt den Freitext ohne klickbaren Link wieder.
+    const mail = netz.mails.find(m => m.to?.[0]?.email === "ziel0@example.test");
+    assert.doesNotMatch(mail.textContent, /https:\/\/evil|evil\.example/);
+  } finally {
+    netz.restore();
+  }
+});
+
+test("receipts per mailbox count all spellings of the same address", async () => {
+  const DB = sqliteD1(allMigrations());
+  seed(DB, { status: "DELIVERED" });
+  const netz = fakeNetz();
+  const env = { ...ENV(DB), LOGIN_IP_PEPPER: "p".repeat(48) };
+  try {
+    const schreibweisen = ["opfer@gmail.com", "o.pfer@gmail.com", "opfer+1@gmail.com", "OPFER@googlemail.com", "op.fer+x@gmail.com", "opfer+2@googlemail.com"];
+    const antworten = [];
+    for (const [i, email] of schreibweisen.entries()) {
+      antworten.push(await widerrufenVon(DB, `203.0.113.${10 + i}`, { name: "X", email, bestellnummer: NUMMER, umfang: "GANZ", bestaetigt: true }, env));
+    }
+    assert.deepEqual(antworten.map(a => a.data.bestaetigungGesendet), [true, true, true, true, true, false]);
+  } finally {
+    netz.restore();
+  }
+});

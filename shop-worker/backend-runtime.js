@@ -1,5 +1,6 @@
 import { MAX_RENTAL_DAYS, MAX_REQUEST_BYTES } from "./commerce-core.js";
-import { PASSKEY_ORIGINS, activePasskeyCount, resolveAdminSession } from "./admin-passkeys.js";
+import { activePasskeyCount, passkeyRpId, resolveAdminSession } from "./admin-passkeys.js";
+import { lokalErlaubt } from "./lokale-entwicklung.js";
 import { istSandbox } from "./sandbox.js";
 
 export const BACKEND_HARDENING_VERSION = "backend-runtime-v3";
@@ -10,8 +11,6 @@ const PUBLIC_ORIGINS = Object.freeze([
   "https://disorder119.com",
   "https://www.disorder119.com",
   "https://admin.disorder119.com",
-  "http://localhost:8765",
-  "http://127.0.0.1:8765",
 ]);
 
 const EXACT_METHODS = Object.freeze({
@@ -80,8 +79,9 @@ function isLive(env) {
   return String(env?.PAYPAL_ENVIRONMENT || "sandbox").toLowerCase() === "live";
 }
 
-function allowedOrigin(origin) {
-  return Boolean(origin && PUBLIC_ORIGINS.includes(origin));
+// localhost:8765 nur in der lokalen Entwicklung (LOKALE_ENTWICKLUNG="1").
+function allowedOrigin(origin, env = null) {
+  return Boolean(origin && (PUBLIC_ORIGINS.includes(origin) || lokalErlaubt(origin, env)));
 }
 
 function bearerToken(request) {
@@ -334,7 +334,12 @@ export async function guardRuntimeRequest(request, env, url = new URL(request.ur
   // Reject abusive public writes before cloning/reading their body. Provider
   // callbacks retain their own verification and limiter, and authenticated
   // Admin work keeps its route-specific controls.
-  if (REQUEST_BODY_METHODS.has(request.method) && (!pathname.startsWith('/admin/') || pathname.startsWith('/admin/auth/'))
+  // Seitenaufrufe vom Storefront-Worker (Dienstbindung storefront.intern)
+  // tragen keine CF-Connecting-IP: sie landeten sonst alle im selben Eimer
+  // "body-ingress:unknown" (20/min fuer den ganzen Shop). Sie haben ihren
+  // eigenen Zaehler je Anschluss in besucher.js.
+  const intern = url.hostname === 'storefront.intern' && pathname.startsWith('/intern/');
+  if (REQUEST_BODY_METHODS.has(request.method) && !intern && (!pathname.startsWith('/admin/') || pathname.startsWith('/admin/auth/'))
       && pathname !== '/paypal-webhook' && !/^\/packlink\/webhook\/[^/]{1,200}$/.test(pathname)) {
     // /rental-quote zaehlt sein eigener Begrenzer je Anschluss (QUOTE_LIMITER,
     // worker.js): das Mietfenster fragt je Stueck einmal, ein volles Paket
@@ -370,7 +375,7 @@ function baseSecurityHeaders(requestId) {
   };
 }
 
-export function runtimeErrorResponse(err, requestId, origin = null) {
+export function runtimeErrorResponse(err, requestId, origin = null, env = null) {
   const status = err instanceof RuntimeGuardError ? err.status : 500;
   const code = err instanceof RuntimeGuardError ? err.code : "INTERNAL_RUNTIME_ERROR";
   const headers = new Headers({
@@ -378,7 +383,7 @@ export function runtimeErrorResponse(err, requestId, origin = null) {
     "Vary": "Origin",
     ...baseSecurityHeaders(requestId),
   });
-  if (allowedOrigin(origin)) headers.set("Access-Control-Allow-Origin", origin);
+  if (allowedOrigin(origin, env)) headers.set("Access-Control-Allow-Origin", origin);
   return new Response(JSON.stringify({ error: code, requestId }), { status, headers });
 }
 
@@ -414,15 +419,19 @@ export async function finalizeRuntimeResponse(response, request, env, requestId,
   // Das erlaubt der Browser nur mit dieser Freigabe - und nur fuer genau die
   // Admin-Adressen, die die Antwort ohnehin schon als Origin zulaesst.
   const origin = request.headers.get("Origin");
-  if (pathname.startsWith("/admin") && origin && PASSKEY_ORIGINS[origin]
+  if (pathname.startsWith("/admin") && origin && passkeyRpId(origin, env)
       && headers.get("Access-Control-Allow-Origin") === origin) {
     headers.set("Access-Control-Allow-Credentials", "true");
   }
   headers.set("X-Request-Id", requestId);
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "no-referrer");
-  if (!headers.has('Content-Security-Policy') && !/text\/html/i.test(headers.get('Content-Type') || '')) {
-    headers.set('Content-Security-Policy',"default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
+  if (!headers.has('Content-Security-Policy')) {
+    // HTML (z. B. Rechnung aus buchhaltung.js): nur eigene Inline-Stile und
+    // Bilder als data:-Adresse, kein Skript, keine fremden Quellen.
+    headers.set('Content-Security-Policy', /text\/html/i.test(headers.get('Content-Type') || '')
+      ? "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+      : "default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
   }
   // Kartenkacheln (karte.js) darf der Browser behalten - alles andere nie.
   if (!(pathname.startsWith("/karte/") && out.ok)) headers.set("Cache-Control", "no-store");

@@ -19,7 +19,9 @@ import { sichtzeitBody, sichtzeitSpeichern, zeitIntervalle, zeitGruppen, sichtze
 // Lesbare Namen ("iPhone · Hamburg (Fuchs)") entstehen nur zur Anzeige aus
 // Geraet, Ort und dem Tages-Schluessel; das Tier wechselt mit dem Tagessalz.
 import { safeText } from "./commerce-core.js";
-import { sitzungBeruehren, wiederkehrAusBody } from "./besucher-sitzung.js";
+import { SITZUNG_GRENZE, sitzungBeruehren, wiederkehrAusBody } from "./besucher-sitzung.js";
+import { kontingentBelegen } from "./kontingent.js";
+import { anschlussVonIp, ipPepper } from "./privacy-security.js";
 import { geoSperrListe } from "./geo-sperre.js";
 
 const SHOP_ORIGINS = Object.freeze([
@@ -448,6 +450,37 @@ async function ereignisSpeichern(env, e, server) {
   }
 }
 
+// Obergrenze fuer NEUE Besuche je Anschluss (IPv6 je /64) und Tag sowie
+// insgesamt: ein Skript mit wechselnder Browserkennung oder IPv6-Adresse legt
+// sonst beliebig viele Besuche an (D1-Schreiblast, Telegram-Zusammenfassungen).
+// Gezaehlt mit einem Hash des Anschlusses (kontingent.js, nach einem Tag weg).
+// Faellt die Zaehlung aus, wird gezaehlt wie bisher (nur Statistik).
+function neuerBesuch(env, ip, now) {
+  return async () => {
+    try {
+      const netz = anschlussVonIp(ip);
+      if (!netz || !env?.DB) return true;
+      const schluessel = await sha256Hex(`besuch-neu:${netz}:${ipPepper(env)}`);
+      const belegt = await kontingentBelegen(env.DB, {
+        art: "besuch-neu",
+        schluessel,
+        jeSchluessel: zahlAus(env?.BESUCHER_NEU_JE_ANSCHLUSS, 60, 5, 1000),
+        gesamt: zahlAus(env?.BESUCHER_NEU_GESAMT, 5000, 100, 100000),
+        jetzt: new Date(now),
+      });
+      return belegt.ok;
+    } catch {
+      return true;
+    }
+  };
+}
+
+function zahlAus(wert, standard, min, max) {
+  const n = Number(wert);
+  if (!Number.isFinite(n) || String(wert ?? "").trim() === "") return standard;
+  return Math.min(max, Math.max(min, Math.floor(n)));
+}
+
 export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
   const origin = request.headers.get("Origin");
   if (request.method === "OPTIONS") {
@@ -462,7 +495,8 @@ export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
   if (!besucherAktiv(env) || !env.DB || istBot(ua)) return leer(origin);
 
   if (env.RATE_LIMITER && typeof env.RATE_LIMITER.limit === "function") {
-    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    // Je Anschluss (IPv6 je /64): neue Adressen im selben Netz helfen nicht.
+    const ip = anschlussVonIp(request.headers.get("CF-Connecting-IP")) || "unknown";
     const result = await env.RATE_LIMITER.limit({ key: `besuch:${ip}` });
     if (result && result.success === false) throw new BesucherError("RATE_LIMITED", 429);
   }
@@ -477,9 +511,11 @@ export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
   if (consentBody.t === "sichtzeit") {
     if (!sichtzeitBody(consentBody)) throw new BesucherError("INVALID_VISIBLE_TIME",400);
     const besucher = await besucherSchluessel(env, request, now);
-    if (!await sichtzeitSpeichern(env,besucher,consentBody,now)) throw new BesucherError("INVALID_VISIBLE_TIME",400);
     // Sichtbare Zeit ist ein Lebenszeichen: der Besuch laeuft noch.
-    await sitzungBeruehren(env, ctx, { besucher, einwilligung: true }, now);
+    const sitzung = await sitzungBeruehren(env, ctx, { besucher, einwilligung: true,
+      neuErlaubt: neuerBesuch(env, request.headers.get("CF-Connecting-IP"), now) }, now);
+    if (sitzung === SITZUNG_GRENZE) return leer(origin);
+    if (!await sichtzeitSpeichern(env,besucher,consentBody,now)) throw new BesucherError("INVALID_VISIBLE_TIME",400);
     return leer(origin);
   }
   const daten = ereignisAusBody(raw);
@@ -499,7 +535,9 @@ export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
   const cf = request.cf || {};
   const { geraet, browser, system } = geraetUndBrowser(ua);
   const besucher = await besucherSchluessel(env, request, now);
-  await sitzungBeruehren(env, ctx, { besucher, einwilligung: true, wiederkehr: wiederkehrAusBody(consentBody) }, now);
+  const sitzung = await sitzungBeruehren(env, ctx, { besucher, einwilligung: true, wiederkehr: wiederkehrAusBody(consentBody),
+    neuErlaubt: neuerBesuch(env, request.headers.get("CF-Connecting-IP"), now) }, now);
+  if (sitzung === SITZUNG_GRENZE) return leer(origin);
   if (consentBody.s === 1 && ["seite", "artikel"].includes(daten.typ)
     && await vomServerGezaehlt(env, besucher, daten, now)) return leer(origin);
   const map = daten.artikelId ? await katalog(env) : new Map();
@@ -575,7 +613,7 @@ export async function seitenaufrufAnnehmen(request, env, ctx, now = Date.now()) 
   const fertig = new Response(null, { status: 204, headers: sicherheitsHeader() });
   if (!besucherAktiv(env) || !env.DB || !ip || istBot(ua)) return fertig;
   if (env.RATE_LIMITER && typeof env.RATE_LIMITER.limit === "function") {
-    const result = await env.RATE_LIMITER.limit({ key: `seitenaufruf:${ip}` });
+    const result = await env.RATE_LIMITER.limit({ key: `seitenaufruf:${anschlussVonIp(ip) || ip}` });
     if (result && result.success === false) return fertig;
   }
 
@@ -583,7 +621,7 @@ export async function seitenaufrufAnnehmen(request, env, ctx, now = Date.now()) 
   const nummer = artikelAusPfad(pfad);
   const { geraet, browser, system } = geraetUndBrowser(ua);
   const besucher = await schluesselAus(env, ip, ua, now);
-  await sitzungBeruehren(env, ctx, { besucher }, now);
+  if (await sitzungBeruehren(env, ctx, { besucher, neuErlaubt: neuerBesuch(env, ip, now) }, now) === SITZUNG_GRENZE) return fertig;
   const eintrag = nummer ? (await katalog(env)).get(nummer) : null;
 
   await ereignisSpeichern(env, {

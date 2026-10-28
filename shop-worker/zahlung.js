@@ -23,7 +23,7 @@ import { safeText } from "./commerce-core.js";
 import { paypalApiBase, paypalToken } from "./erstattung.js";
 import { captureStatements, decimalCents } from "./tax-evidence.js";
 import { euroAmount, sendInvoiceAfterCapture } from "./customer-mail.js";
-import { sendTelegramMessage } from "./notifications.js";
+import { sendTelegramMessage, telegramTransportReady } from "./notifications.js";
 
 const STUNDE_MS = 60 * 60 * 1000;
 // Spaetestens dann zieht der Cron ein: drei Tage Garantiezeit minus sechs
@@ -270,11 +270,51 @@ async function inhaberMelden(env, zahlung, art, grund, reqId) {
         zahlungFehlerText(grund) || "PayPal hat das Einziehen nicht bestätigt.",
         "Der Shop versucht es automatisch weiter. Bitte erst versenden, wenn das Geld eingezogen ist (Admin-App → Bestellung → „Jetzt einziehen“).",
       ];
+  let gesendet = false;
   try {
-    await sendTelegramMessage(env, zeilen.join("\n"), reqId);
+    gesendet = Boolean((await sendTelegramMessage(env, zeilen.join("\n"), reqId))?.sent);
+    if (!gesendet) log("warn", "payment_owner_notice_failed", reqId, { orderId: String(zahlung.order_id), message: "not_sent" });
   } catch (err) {
     log("warn", "payment_owner_notice_failed", reqId, { orderId: String(zahlung.order_id), message: safeText(err?.message, 120) });
   }
+  if (!gesendet) {
+    // Nicht angekommen: als offen vormerken (nur Bestellnummer, Betrag und
+    // Lage - keine Kundendaten); zahlungsMeldungenNachholen im Cron schickt
+    // sie erneut. Der Anspruch bleibt, damit nichts doppelt kommt.
+    try {
+      await db.prepare(`UPDATE audit_events SET event_type='PAYMENT_OWNER_NOTICE_PENDING', metadata_json=?
+        WHERE id=? AND event_type='PAYMENT_OWNER_NOTICE'`)
+        .bind(JSON.stringify({ art, grund, text: zeilen.join("\n").slice(0, 1500) }), claimId).run();
+    } catch {
+      // Dann bleibt es bei der einen verpassten Meldung.
+    }
+  }
+}
+
+// Cron (alle 15 Minuten): Meldungen an den Inhaber, die Telegram nicht
+// angenommen hat, erneut schicken (hoechstens 3 Tage lang, 5 je Lauf).
+export async function zahlungsMeldungenNachholen(env, reqId = crypto.randomUUID(), now = new Date()) {
+  const db = env?.DB;
+  if (!db || !telegramTransportReady(env)) return { gesendet: 0 };
+  let gesendet = 0;
+  const seit = new Date(now.getTime() - 3 * 24 * 3_600_000).toISOString();
+  const { results } = await db.prepare(`SELECT id, metadata_json FROM audit_events
+    WHERE event_type='PAYMENT_OWNER_NOTICE_PENDING' AND created_at>=? ORDER BY created_at LIMIT 5`).bind(seit).all();
+  for (const row of results || []) {
+    let daten = {};
+    try { daten = JSON.parse(row.metadata_json || "{}") || {}; } catch {}
+    if (!daten.text) continue;
+    try {
+      const ergebnis = await sendTelegramMessage(env, String(daten.text), reqId);
+      if (!ergebnis?.sent) continue;
+    } catch {
+      continue;
+    }
+    await db.prepare("UPDATE audit_events SET event_type='PAYMENT_OWNER_NOTICE', metadata_json=? WHERE id=? AND event_type='PAYMENT_OWNER_NOTICE_PENDING'")
+      .bind(JSON.stringify({ art: daten.art || null, grund: daten.grund || null, nachgeholt: true }), row.id).run();
+    gesendet += 1;
+  }
+  return { gesendet };
 }
 
 // --------------------------------------------------------------- Einziehen

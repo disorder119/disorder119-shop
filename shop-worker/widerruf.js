@@ -38,6 +38,8 @@ import {
 import { schonErstattet } from "./erstattung.js";
 import { reservierteZahlung } from "./zahlung.js";
 import { kontingentBelegen, kontingentFreigeben, kontingentStand } from "./kontingent.js";
+import { hashText, kontingenteBelegen, kontingenteFreigeben, oeffentlichesBudget } from "./oeffentliche-mails.js";
+import { canonicalEmail } from "./newsletter.js";
 import { privateNetzHash } from "./privacy-security.js";
 
 const SHOP_ORIGINS = Object.freeze([
@@ -61,6 +63,11 @@ const OFFEN = Object.freeze(["EINGEGANGEN", "IN_BEARBEITUNG"]);
 // Vorgemerkt wird je Anschluss nur, was er noch verschicken duerfte.
 export const WIDERRUF_MAILS_JE_ANSCHLUSS = 5;
 export const WIDERRUF_MAILS_JE_TAG = 100;
+// Zusaetzlich: Erklaerungen, die keiner Bestellung zugeordnet sind (Spam an
+// fremde Adressen sieht so aus), hoechstens 10 Bestaetigungen am Tag; je
+// Postfach (kanonische Adresse, z. B. ohne +Zusatz) hoechstens 5 am Tag.
+// Alle zusammen zaehlen im gemeinsamen Budget oeffentlicher Mails.
+export const WIDERRUF_MAILS_OHNE_BESTELLUNG_JE_TAG = 10;
 const NACHHOLEN = "widerruf:nachholen:";
 const NACHHOLEN_TAGE = 3;
 
@@ -329,17 +336,21 @@ export async function eingangBestaetigen(env, row, order, reqId = crypto.randomU
 
   let platz = null;
   if (row.quelle === "WEBSITE" && !manuell) {
-    platz = await kontingentBelegen(db, {
-      art: "widerruf-mail",
-      schluessel: netz,
-      jeSchluessel: netz ? WIDERRUF_MAILS_JE_ANSCHLUSS : null,
-      fensterMs: TAG_MS,
-      gesamt: WIDERRUF_MAILS_JE_TAG,
-      gesamtFensterMs: TAG_MS,
-      bezug: row.id,
-      reqId,
-      jetzt: now,
-    });
+    const belegt = await kontingenteBelegen(db, [
+      { art: "widerruf-adresse", schluessel: await hashText(`widerruf:${canonicalEmail(row.email)}`), jeSchluessel: BESTAETIGUNGEN_JE_ADRESSE_UND_TAG, fensterMs: TAG_MS, bezug: row.id },
+      {
+        art: "widerruf-mail",
+        schluessel: netz,
+        jeSchluessel: netz ? WIDERRUF_MAILS_JE_ANSCHLUSS : null,
+        fensterMs: TAG_MS,
+        gesamt: WIDERRUF_MAILS_JE_TAG,
+        gesamtFensterMs: TAG_MS,
+        bezug: row.id,
+      },
+      row.order_id ? null : { art: "widerruf-ohne-bestellung", gesamt: WIDERRUF_MAILS_OHNE_BESTELLUNG_JE_TAG, gesamtFensterMs: TAG_MS, bezug: row.id },
+      oeffentlichesBudget(env, row.id),
+    ], { jetzt: now, reqId });
+    platz = belegt.ok ? { ok: true, ids: belegt.ids } : { ok: false, grund: belegt.art === "widerruf-mail" ? belegt.grund : belegt.art === "widerruf-adresse" ? "ADRESSE" : "GESAMT" };
     if (!platz.ok) {
       let grund = platz.grund;
       // Nur an der Tagesgrenze vormerken - und je Anschluss nicht mehr, als er
@@ -386,7 +397,7 @@ export async function eingangBestaetigen(env, row, order, reqId = crypto.randomU
     });
     if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
   } catch (err) {
-    await kontingentFreigeben(db, platz?.id);
+    await kontingenteFreigeben(db, platz?.ids || []);
     try {
       await db.prepare("DELETE FROM audit_events WHERE id=? AND event_type='WITHDRAWAL_RECEIPT_CLAIMED'").bind(claimId).run();
     } catch {
@@ -413,10 +424,12 @@ export async function eingangBestaetigen(env, row, order, reqId = crypto.randomU
 function inhaberText(row, order, lage, reserviert = false) {
   const frist = erstattungsfrist(row.eingegangen_at);
   const fristText = frist ? berlinZeit(frist).split(",")[0] : "";
-  const umfang = row.umfang === "TEIL" ? `Teilwiderruf: ${safeText(row.teile_text || "", 200)}` : "Ganzer Vertrag";
+  // Ohne Personendaten (Name, Adresse, Freitext): die stehen in der
+  // Admin-App, Telegram bekommt nur, dass etwas zu tun ist.
+  const umfang = row.umfang === "TEIL" ? "Teilwiderruf (welche Stücke: Admin-App)" : "Ganzer Vertrag";
   const kopf = order
     ? `Bestellung ${order.order_number}`
-    : `Eingabe: „${safeText(row.bestellnummer_eingabe || "", 80)}“ – keiner Bestellung zugeordnet`;
+    : "Noch keiner Bestellung zugeordnet – Angaben in der Admin-App";
   const was = lage === "NICHT_VERSENDET" && reserviert
     ? "NOCH NICHT VERSENDET – bitte nicht verschicken! Die Zahlung ist nur reserviert: Admin-App → Bestellung → „Stornieren“ gibt sie frei (keine PayPal-Gebühr)."
     : lage === "NICHT_VERSENDET"
@@ -432,9 +445,8 @@ function inhaberText(row, order, lage, reserviert = false) {
   return [
     "DISORDER119 — WIDERRUF EINGEGANGEN",
     kopf,
-    `${safeText(row.name, 120)} · ${safeText(row.email, 200)}`,
     umfang,
-    ...(row.nachricht ? [`Nachricht: ${safeText(row.nachricht, 300)}`] : []),
+    ...(row.nachricht ? ["Mit Nachricht (Admin-App → Widerrufe)"] : []),
     `Eingegangen: ${berlinZeit(row.eingegangen_at)}`,
     was,
     ...(fristText ? [`Rückzahlung spätestens bis ${fristText} (bei Rücksendung: sobald die Ware da ist oder der Versand nachgewiesen ist).`] : []),

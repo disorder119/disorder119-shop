@@ -219,6 +219,17 @@ Zwei Quellen landen in `besucher_ereignisse` (`besucher.js`), beide mit taeglich
 
 **Waechter** (`waechter-regeln.js`, `waechter.js`, Migration 0041): Scanner-Pfade (WordPress, `.env`, `.git`, PHP ...), Angriffsproben (SQL-Injection, XSS, `../`, `${jndi:`) und Angriffs-Programme (sqlmap, nikto, nuclei ...) bekommen sofort 404/403. Angriffe und Programme sperren den Anschluss (IPv6 je /64) sofort 24 h, Scanner-Pfade ab 3 in 10 Min., nicht vorhandene Seiten ab 20 in 5 Min., Fluten (`WAECHTER_FLUT` 120 Seiten/Min. im Storefront, `WAECHTER_LIMITER` 240 API-Anfragen/Min.) ab 3 Treffern in 10 Min. Gespeichert wird nur ein Hash mit `LOGIN_IP_PEPPER`, Land, Kurzform der Browserkennung, gekuerzter Pfad, Grund, Anzahl. Telegram warnt hoechstens einmal je Anschluss und Stunde; ab `WAECHTER_TELEGRAM_EINZELN` (Standard 5) Sperren in 15 Min. sammelt der Cron eine Wellen-Meldung. Nie gesperrt: bekannte/verifizierte Bots, `/paypal-webhook`, Packlink-Webhook, `/ebay/*`, `/manager/*`, `/admin/*`, `/intern/*`. Admin: `GET /admin/besucher/sicherheit`, `POST /admin/besucher/sicherheit/aufheben` (`{id}`, nur Inhaber). `WAECHTER=aus` schaltet ab. Ohne Migration oder Pfeffer bleibt der Shop offen (fail-open).
 
+**Waechter 2** (Migration 0042, `waechter-seiten.js`, 28.10.2026):
+- Kampagnen: dieselbe Signatur (Grund + Pfad ohne Sprache, Zahlen zu 0, Parameter-Namen) von >= 3 Anschluessen in 10 Min. = verteilter Angriff (`waechter_kampagnen`). Dann `WAECHTER_KAMPAGNE_STUNDEN` (Standard 2, 1-6) streng: Anschluesse aus beteiligten Netzen (cf.asn) sperrt schon der 1. Scanner-Pfad. Hoster/Rechenzentren (`istHosting`) immer: 1. Scanner-Pfad, 404-Flut ab 10. iCloud Privat-Relay/Mobilfunk nie.
+- Wiederholer: neue Sperre innerhalb von 7 Tagen nach Ende der letzten = 7 Tage. Vom Inhaber aufgehoben (`admin_frei`) zaehlt nicht.
+- Selbst-Entsperrung: milde Sperren (`selbst=1`, alles ausser eindeutigen Angriffen) zeigen auf disorder119.com eine dreisprachige Sperrseite mit Turnstile; `POST /_waechter/entsperren` -> Dienstbindung `/intern/waechter/entsperren` -> siteverify mit `TURNSTILE_SECRET`. Rueckfall danach: ohne Turnstile, 7 Tage.
+- Erwischt-Seite (403, Landessprache + Englisch, nur CSS per CSP-Hash) nur fuer die Anfrage mit eindeutigem Angriffsmuster und fuer Scanner-Pfade, die sperren. Unbeteiligte am selben Anschluss sehen die neutrale Sperrseite. Rechtsseiten und `/assets/` bleiben immer erreichbar, die API-Widerrufsfunktion `/widerruf` ebenfalls. Vorschau: `https://disorder119.com/_waechter/vorschau?land=FR` (`&seite=sperre`).
+- Angriffsmuster von fremden Seiten (`Sec-Fetch-Site: cross-site`) werden nur abgewiesen, nie gezaehlt.
+- Bots: Ausnahme nur fuer Cloudflare-verifizierte Bots oder Kennung + Netz des Betreibers (z. B. Googlebot nur aus AS15169); auch dann gilt die Flut-Grenze (429 ohne Sperre).
+- API: falsche Gutschein-Codes (`enum`, 12 in 30 Min.), fehlgeschlagene `/capture-order` (`kasse`, 8 in 30 Min.), Newsletter-Falle `website` (`falle`, 2 am Tag) sperren mit Turnstile-Option.
+- Telegram: neue Sperren/Kampagnen gesammelt (Wecker ca. 1 Min. nach der ersten, Cron als Rueckfall), hoechstens alle 10 Min. eine Nachricht.
+- Ausrollen: Migration 0042 -> `wrangler deploy` -> `--env sandbox` -> Storefront (CI).
+
 Reihenfolge beim Ausrollen: Migrationen `0040_besucher_zusammenfassung.sql` und `0041_waechter.sql`, dann dieser Worker (`npx wrangler deploy` legt den Durable Object an), dann `npx wrangler deploy -c wrangler.storefront.toml` bzw. der Storefront-Lauf in `rebuild.yml` (die Dienstbindung braucht den Shop-Worker).
 
 ## Testshop (Sandbox)
@@ -299,3 +310,15 @@ Ueberlappende Zeitintervalle werden vereinigt. Sichtbarer Tab beweist keine
 Aufmerksamkeit, IP-/UA-basierte Tagespseudonyme sind keine eindeutigen Menschen,
 Anfrage-Klicks keine gesendeten Nachrichten. Netzabbrueche/Blocker/Tabende und
 Tageswechsel koennen Messluecken hinterlassen. Alte unbekannte Werte nicht fuellen.
+
+## Lokale Entwicklung der Admin-App
+
+`http://localhost:8765` (und `127.0.0.1:8765`) ist im Livebetrieb und im Testshop keine erlaubte Herkunft mehr – weder fuer Passkeys noch fuer Admin-Anfragen oder CORS (`lokale-entwicklung.js`). Lokal den Worker mit `wrangler dev --var LOKALE_ENTWICKLUNG:1` starten; die Variable nie in `wrangler.toml` eintragen.
+
+## Protokolle
+
+`[observability.logs] invocation_logs = false` (API, Testshop-API, Storefront, Testshop-Storefront): Cloudflare speichert keine Aufrufprotokolle mit der vollen Adresse samt Query mehr (Bestaetigungs-/Anmeldecodes in `?bestaetigen=`, `?anmeldung=`, `?abmelden=`, PLZ/Strasse der Abholortsuche). Eigene `console`-Zeilen mit Request-ID bleiben. Der Zugangspass der Shop-Sperre reist im Kopf `X-D119-Pass` statt in `?pass=`.
+
+## Datenpflege (Cron)
+
+`datenpflege.js` loescht alle 15 Minuten: unbestaetigte Newsletter-Anmeldungen nach 30 Tagen (nie mit Rabattcode), abgelaufene Konto-Anmeldelinks nach zwei Tagen, Einmal-Schluessel und Admin-/Kundensitzungen einen Tag nach Ablauf bzw. Abmeldung.

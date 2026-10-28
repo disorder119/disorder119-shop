@@ -79,8 +79,10 @@ assert.equal(
 
 assert.match(workerEntry, /const ADMIN_REQUEST_ORIGINS = new Set/);
 assert.match(workerEntry, /https:\/\/admin\.disorder119\.com/);
-assert.match(workerEntry, /function assertAdminOrigin\(request\)/);
+assert.match(workerEntry, /function assertAdminOrigin\(request, env\)/);
 assert.match(workerEntry, /ADMIN_ORIGIN_FORBIDDEN/);
-assert.match(workerEntry, /assertAdminOrigin\(request\);/);
+assert.match(workerEntry, /assertAdminOrigin\(request, env\);/);
+// localhost nur mit LOKALE_ENTWICKLUNG="1", nie fest in der Liste.
+assert.doesNotMatch(workerEntry.slice(workerEntry.indexOf("const ADMIN_REQUEST_ORIGINS"), workerEntry.indexOf("const ADMIN_REQUEST_ORIGINS") + 200), /localhost/);
 
 console.log("Admin system schema/origin boundary: OK");

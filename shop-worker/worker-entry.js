@@ -35,7 +35,8 @@ import { handleKarte, isKarteRoute } from "./karte.js";
 import { handleAdresse, isAdresseRoute } from "./adresse.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
-import { handleIncomingEmail, handlePostfach, isPostfachRoute } from "./postfach.js";
+import { handleIncomingEmail, handlePostfach, isPostfachRoute, postfachMeldungNachholen } from "./postfach.js";
+import { zahlungsMeldungenNachholen } from "./zahlung.js";
 import { SEITENAUFRUF_PFAD, besucherAufraeumen, entsperrtMelden, handleBesucher, istBesucherRoute } from "./besucher.js";
 import { sitzungenMelden } from "./besucher-zusammenfassung.js";
 import { geoGesperrt, geoSperrAntwort } from "./geo-sperre.js";
@@ -44,6 +45,7 @@ import {
   istWaechterAdmin,
   istWaechterIntern,
   waechterIntern,
+  waechterFehlversuch,
   waechterNachher,
   waechterPflegen,
   waechterVorab,
@@ -53,6 +55,8 @@ export { BesucherWecker } from "./besucher-wecker.js";
 import { istSandbox, testshopFetch } from "./sandbox.js";
 import { httpsErzwingen, mitHsts } from "./https-pflicht.js";
 import { kontingentAufraeumen } from "./kontingent.js";
+import { datenPflegen } from "./datenpflege.js";
+import { lokalErlaubt } from "./lokale-entwicklung.js";
 import { halteAufraeumen } from "./offene-halte.js";
 import { applePayDomainSicherstellen } from "./paypal-einrichtung.js";
 import { handleNewsletter, isNewsletterRoute } from "./newsletter.js";
@@ -79,10 +83,10 @@ import {
   scopeAdminEnv,
 } from "./backend-runtime.js";
 
+// localhost:8765 nur in der lokalen Entwicklung (LOKALE_ENTWICKLUNG="1",
+// lokale-entwicklung.js) - im Livebetrieb nie.
 const ADMIN_REQUEST_ORIGINS = new Set([
   "https://admin.disorder119.com",
-  "http://localhost:8765",
-  "http://127.0.0.1:8765",
 ]);
 
 function requestId(request) {
@@ -126,10 +130,10 @@ function isLegacyAdminRoute(pathname) {
   return pathname === "/rental-requests" || pathname.startsWith("/rental-request/");
 }
 
-function assertAdminOrigin(request) {
+function assertAdminOrigin(request, env) {
   const origin = request.headers.get("Origin");
   if (!origin) return;
-  if (!ADMIN_REQUEST_ORIGINS.has(origin)) {
+  if (!ADMIN_REQUEST_ORIGINS.has(origin) && !lokalErlaubt(origin, env)) {
     throw new RuntimeGuardError("ADMIN_ORIGIN_FORBIDDEN", 403);
   }
 }
@@ -139,7 +143,7 @@ async function authorizeRouteEnv(request, env, url, reqId) {
   const legacyAdminRoute = isLegacyAdminRoute(url.pathname);
   if (!adminRoute && !legacyAdminRoute) return { env, request };
 
-  assertAdminOrigin(request);
+  assertAdminOrigin(request, env);
   if (request.method === "OPTIONS" && adminRoute) return { env, request };
 
   let requiredRole;
@@ -338,7 +342,13 @@ const worker = {
       }
 
       if (isGameRewardsRoute(url.pathname)) {
-        return finish(await handleGameRewards(request, runtimeEnv, url, reqId, origin));
+        const antwort = await handleGameRewards(request, runtimeEnv, url, reqId, origin);
+        // Waechter: falsche Gutschein-Codes zaehlen (Durchprobieren).
+        if (url.pathname === "/coupons/validate" && antwort.ok) {
+          const ergebnis = await antwort.clone().json().catch(() => null);
+          if (ergebnis && ergebnis.valid === false) await waechterFehlversuch(request, runtimeEnv, ctx, url, "enum");
+        }
+        return finish(antwort);
       }
 
       if (url.pathname === "/rental-bundle") {
@@ -418,7 +428,10 @@ const worker = {
       // Newsletter: Anmeldung, Bestaetigung und Abmeldung von der Website,
       // /admin/newsletter fuer die Liste in der Admin-App.
       if (isNewsletterRoute(url)) {
-        return finish(await handleNewsletter(request, runtimeEnv, url, reqId, origin));
+        return finish(await handleNewsletter(request, runtimeEnv, url, reqId, origin, {
+          // Verstecktes Feld ausgefuellt: Bot - zaehlt beim Waechter.
+          falle: () => waechterFehlversuch(request, runtimeEnv, ctx, url, "falle"),
+        }));
       }
 
       // Packlink PRO (DPD, DHL): Angebote, Etikett kaufen, Entwurf, Sendungsnummer.
@@ -491,6 +504,11 @@ const worker = {
         } catch (error) {
           throw couponRuntimeError(error);
         }
+      }
+
+      // Waechter: viele fehlgeschlagene Zahlungsabschluesse von einem Anschluss.
+      if (shouldInspectCapture && response.status >= 400 && response.status < 500 && response.status !== 429) {
+        await waechterFehlversuch(request, runtimeEnv, ctx, url, "kasse");
       }
 
       if (!response.ok || !requestCopy || !runtimeEnv.DB) return finish(response);
@@ -594,10 +612,17 @@ const worker = {
     // (Sammelmeldung bei Angriffswellen, abgelaufene Vorfaelle loeschen).
     await runBackground(ctx, sitzungenMelden(env, scheduledTime, { limit: 25 }), "besucher_summary_failed", reqId);
     await runBackground(ctx, waechterPflegen(env, scheduledTime), "waechter_maintenance_failed", reqId);
+    // Telegram-Meldungen, die beim ersten Versuch nicht ankamen (Zahlungen) bzw.
+    // gedrosselt gesammelt wurden (Postfach), nachholen.
+    await runBackground(ctx, zahlungsMeldungenNachholen(env, reqId, new Date(scheduledTime)), "payment_notice_retry_failed", reqId);
+    await runBackground(ctx, postfachMeldungNachholen(env, scheduledTime), "mailbox_notice_retry_failed", reqId);
     // Zaehler gegen Missbrauch (IP-Hashes) nach Ablauf ihres Fensters loeschen.
     await runBackground(ctx, kontingentAufraeumen(env.DB, new Date(scheduledTime)), "kontingent_cleanup_failed", reqId);
     // Offene Halte (Kasse, Miete) zaehlen hoechstens 30 Minuten - danach weg.
     await runBackground(ctx, halteAufraeumen(env.DB, new Date(scheduledTime)), "open_hold_cleanup_failed", reqId);
+    // Datensparsamkeit: unbestaetigte Newsletter-Anmeldungen (30 Tage),
+    // abgelaufene Anmeldelinks, Einmal-Schluessel und Sitzungen (datenpflege.js).
+    await runBackground(ctx, datenPflegen(env, scheduledTime), "data_retention_failed", reqId);
     await runBackground(ctx, applePayDomainSicherstellen(env, scheduledTime), "apple_pay_domain_failed", reqId);
     // Einmal am Tag: Kassenpreise (Deutschland, EU) gegen den DHL-Produktkatalog.
     await runBackground(ctx, katalogAbgleich(env, scheduledTime), "dhl_catalog_check_failed", reqId);

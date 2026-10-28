@@ -226,6 +226,18 @@
     haken.appendChild(text);
     form.appendChild(haken);
 
+    // Falle fuer Bots: fuer Menschen unsichtbar und nicht erreichbar. Wer es
+    // ausfuellt, bekommt "gesendet", aber der Server speichert nichts.
+    var falle = el("input");
+    falle.type = "text";
+    falle.name = "website";
+    falle.tabIndex = -1;
+    falle.autocomplete = "off";
+    falle.setAttribute("aria-hidden", "true");
+    falle.setAttribute("aria-label", "Website");
+    falle.style.cssText = "position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;opacity:0";
+    form.appendChild(falle);
+
     var msg = el("p", "d119-nl__msg");
     msg.setAttribute("role", "status");
     msg.setAttribute("aria-live", "polite");
@@ -247,7 +259,7 @@
       }
       knopf.disabled = true;
       meldung(msg, "", t.sende);
-      senden("/newsletter/subscribe", { email: adresse, consent: true, lang: LANG, source: quelle })
+      senden("/newsletter/subscribe", { email: adresse, consent: true, lang: LANG, source: quelle, website: String(falle.value || "") })
         .then(function () {
           form.classList.add("d119-nl__form--fertig");
           merken(POPUP_KEY, "angemeldet");

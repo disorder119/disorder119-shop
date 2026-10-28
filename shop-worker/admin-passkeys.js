@@ -18,6 +18,7 @@
 // Umgesetzt nach WebAuthn Level 2, ohne fremde Bibliothek: CBOR, COSE und die
 // Signaturpruefung sind klein genug, um sie hier vollstaendig zu pruefen, und
 // jede Zeile Fremdcode waere Angriffsflaeche an der sensibelsten Stelle.
+import { lokaleEntwicklung } from "./lokale-entwicklung.js";
 import { safeText } from "./commerce-core.js";
 import { sendTelegramMessage } from "./notifications.js";
 
@@ -31,10 +32,17 @@ const RP_NAME = "DISORDER119 Admin";
 
 // Nur diese Seiten duerfen Admin-Passkeys anlegen oder benutzen. Der Wert ist
 // die Relying-Party-ID: der Passkey gilt nur fuer genau diesen Hostnamen.
+// http://localhost:8765 (lokale Entwicklung) nur mit LOKALE_ENTWICKLUNG="1",
+// siehe lokale-entwicklung.js - im Livebetrieb nie.
 export const PASSKEY_ORIGINS = Object.freeze({
   "https://admin.disorder119.com": "admin.disorder119.com",
-  "http://localhost:8765": "localhost",
 });
+
+export function passkeyRpId(origin, env) {
+  if (!origin) return null;
+  if (PASSKEY_ORIGINS[origin]) return PASSKEY_ORIGINS[origin];
+  return origin === "http://localhost:8765" && lokaleEntwicklung(env) ? "localhost" : null;
+}
 
 const ALGORITHMS = Object.freeze({ ES256: -7, RS256: -257 });
 
@@ -377,7 +385,7 @@ export async function resolveAdminSession(request, env) {
 
 async function lookupSession(request, env, token) {
   const origin = request.headers.get("Origin");
-  if (!origin || !PASSKEY_ORIGINS[origin]) return null;
+  if (!origin || !passkeyRpId(origin, env)) return null;
   const fetchSite = request.headers.get("Sec-Fetch-Site");
   if (fetchSite && fetchSite !== "same-site" && fetchSite !== "same-origin") return null;
   if (!/^[A-Za-z0-9_-]{40,64}$/.test(token)) return null;
@@ -410,8 +418,8 @@ async function createSession(env, passkeyId) {
 
 // ------------------------------------------------------------------- Ablaeufe
 
-function rpIdFor(origin) {
-  const rpId = origin ? PASSKEY_ORIGINS[origin] : null;
+function rpIdFor(origin, env) {
+  const rpId = passkeyRpId(origin, env);
   if (!rpId) throw new AdminAuthError("ORIGIN_NOT_ALLOWED", 403);
   return rpId;
 }
@@ -424,7 +432,7 @@ async function issueChallenge(env, purpose, origin, grant = null) {
   await db.prepare("DELETE FROM admin_auth_challenges WHERE expires_at<?").bind(now.toISOString()).run();
   await db.prepare(`INSERT INTO admin_auth_challenges (id,purpose,rp_id,origin,grant_ref,created_at,expires_at)
     VALUES (?,?,?,?,?,?,?)`).bind(
-    challenge, purpose, rpIdFor(origin), origin, grant, now.toISOString(),
+    challenge, purpose, rpIdFor(origin, env), origin, grant, now.toISOString(),
     new Date(now.getTime() + CHALLENGE_TTL_MS).toISOString(),
   ).run();
   return challenge;
@@ -505,7 +513,7 @@ async function registrationOptions(request, env, origin, body) {
   const existing = await env.DB.prepare("SELECT id FROM admin_passkeys WHERE revoked_at IS NULL").all();
   return {
     challenge,
-    rp: { id: rpIdFor(origin), name: RP_NAME },
+    rp: { id: rpIdFor(origin, env), name: RP_NAME },
     user: { id: base64url(new TextEncoder().encode(USER_HANDLE)), name: "admin", displayName: RP_NAME },
     pubKeyCredParams: [
       { type: "public-key", alg: ALGORITHMS.ES256 },
@@ -591,7 +599,7 @@ async function verifyRegistration(env, origin, body, reqId) {
 
 async function loginOptions(env, origin) {
   const db = requireDb(env);
-  const rpId = rpIdFor(origin);
+  const rpId = rpIdFor(origin, env);
   const challenge = await issueChallenge(env, "login", origin);
   const rows = await db.prepare("SELECT id FROM admin_passkeys WHERE revoked_at IS NULL AND rp_id=?").bind(rpId).all();
   return {
@@ -717,7 +725,8 @@ function headers(origin, extra = {}) {
     Vary: "Origin",
     ...extra,
   };
-  if (origin && PASSKEY_ORIGINS[origin]) {
+  // origin kommt nur geprueft hierher (handleAdminAuth: passkeyRpId).
+  if (origin) {
     out["Access-Control-Allow-Origin"] = origin;
     out["Access-Control-Allow-Credentials"] = "true";
     out["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS";
@@ -752,15 +761,17 @@ async function rateLimit(request, env) {
 }
 
 export async function handleAdminAuth(request, env, url, reqId = crypto.randomUUID()) {
-  const origin = request.headers.get("Origin");
+  // Nur eine erlaubte Herkunft wird weitergereicht; alles andere gilt als keine.
+  const roh = request.headers.get("Origin");
+  const origin = roh && passkeyRpId(roh, env) ? roh : null;
   try {
     if (request.method === "OPTIONS") {
-      if (!origin || !PASSKEY_ORIGINS[origin]) return new Response(null, { status: 403, headers: headers(null) });
+      if (!origin) return new Response(null, { status: 403, headers: headers(null) });
       return new Response(null, { status: 204, headers: headers(origin) });
     }
     // Jede Anmelde-Route nur von einer Admin-Seite aus - nie von der Shop-Seite
     // und nie ohne Origin (etwa ein Skript mit gestohlenem Cookie).
-    if (!origin || !PASSKEY_ORIGINS[origin]) throw new AdminAuthError("ORIGIN_NOT_ALLOWED", 403);
+    if (!origin) throw new AdminAuthError("ORIGIN_NOT_ALLOWED", 403);
     const path = url.pathname.replace(/\/+$/, "");
     await rateLimit(request, env);
 

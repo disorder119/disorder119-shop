@@ -37,6 +37,10 @@ PATTERNS = (
     ("Telegram bot token", re.compile(r"\b\d{6,12}:[A-Za-z0-9_-]{20,}\b")),
     ("Stripe secret key", re.compile(r"\bsk_(?:live|test)_[A-Za-z0-9]{16,}\b")),
     ("AWS access key", re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b")),
+    # Brevo-API-Schluessel (xkeysib-<64 Hex>-<16 Zeichen>) und Meta-/Facebook-
+    # Zugangstoken (EAA..., Graph API) - beide haben ein festes Praefix.
+    ("Brevo API key", re.compile(r"\bxkeysib-[a-f0-9]{32,}-[A-Za-z0-9]{8,}\b")),
+    ("Meta access token", re.compile(r"\bEAA[A-Za-z0-9]{20,}\b")),
 )
 
 SENSITIVE_ASSIGNMENT = re.compile(
@@ -46,6 +50,7 @@ SENSITIVE_ASSIGNMENT = re.compile(
     r"CLOUDFLARE_API_TOKEN|PACKLINK_API_KEY|PACKLINK_WEBHOOK_TOKEN|DHL_API_KEY|"
     r"DHL_PRIVAT_API_KEY|DHL_PASSWORD|MAIL_API_KEY|BREVO_API_KEY|CUSTOMER_AUTH_SECRET"
     r"|EBAY_CLIENT_SECRET|EBAY_CERT_ID|EBAY_VERIFICATION_TOKEN|EBAY_PRIVATE_KEY"
+    r"|LOGIN_IP_PEPPER|TESTSHOP_PASSWORT|PAYPAL_WEBHOOK_ID|META_ACCESS_TOKEN|META_CAPI_TOKEN"
     r")\b['\"]?\s*[:=]\s*['\"]([^'\"]+)['\"]"
 )
 
