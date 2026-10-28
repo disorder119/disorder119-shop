@@ -118,3 +118,30 @@ test('an unknown address gets the designed 404 page without asking the origin',a
   const kopf=await edge.fetch(new Request('https://disorder119.com/gibtsnicht/',{method:'HEAD'}),{},{},async()=>{calls++;return new Response('x');});
   assert.equal(kopf.status,404);assert.equal(await kopf.text(),'');assert.equal(calls,0);
 });
+
+// Liefergebiet: dezenter Hinweis fuer Laender ausserhalb Europa/USA, sonst Seite unveraendert.
+const ausLand=(path,country,headers={})=>{const r=new Request('https://disorder119.com'+path,{headers:{'User-Agent':IPHONE,...headers}});if(country!==undefined)Object.defineProperty(r,'cf',{value:{country}});return r;};
+const seiteMitBody=async()=>new Response('<!DOCTYPE html><html lang="de"><head><title>A</title></head><body class="kasse-seite"><main>Shop</main></body></html>',{headers:{'Content-Type':'text/html; charset=utf-8'}});
+test('Besucher ausserhalb Europa/USA sehen oben den Hinweis zum Liefergebiet',async()=>{
+  for (const [land,pfad,sprache,text] of [['JP','/','en','We currently ship to Europe and the USA only.'],['SA','/en/artikel/119/','en','We currently ship to Europe and the USA only.'],['MA','/fr/faq/','fr','Nous livrons uniquement en Europe et aux États-Unis.'],['CA','/kasse/','en','We currently ship to Europe and the USA only.']]) {
+    const r=await edge.fetch(ausLand(pfad,land),{},{},seiteMitBody);
+    const body=await r.text();
+    assert.equal(r.status,200,land);
+    assert.ok(body.indexOf('<body class="kasse-seite"><div class="d119-liefergebiet" role="note"')>0,land+': direkt hinter <body>');
+    assert.match(body,new RegExp('<span lang="'+sprache+'">'+text.replace(/\./g,'\.')+'</span>'),land);
+    assert.equal(r.headers.get('Cache-Control'),'no-store','nie fuer andere Besucher zwischengespeichert');
+    assert.doesNotMatch(body.match(/<div class="d119-liefergebiet"[\s\S]*?<\/div>/)[0],/<script/i);
+  }
+  assert.match(await (await edge.fetch(ausLand('/','JP'),{},{},seiteMitBody)).text(),/· Wir versenden nur nach Europa und in die USA\./,'deutsche Seite: zusaetzlich deutsch');
+});
+test('Europa, USA, unbekannte Laender und Bots bekommen keinen Hinweis',async()=>{
+  const ohne='<!DOCTYPE html><html lang="de"><head><title>A</title></head><body class="kasse-seite"><main>Shop</main></body></html>';
+  for (const land of ['DE','AT','FR','PL','GB','CH','NO','UA','RS','XK','US','XX','T1','',undefined]) {
+    const r=await edge.fetch(ausLand('/',land),{},{},seiteMitBody);
+    assert.equal(await r.text(),ohne,String(land));
+  }
+  const bot=await edge.fetch(ausLand('/','JP',{'User-Agent':'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'}),{},{},seiteMitBody);
+  assert.doesNotMatch(await bot.text(),/d119-liefergebiet/);
+  // Keine Laender-Sperre dafuer: Asien bleibt erreichbar.
+  for (const land of ['JP','CN','SG','SA']) assert.equal((await edge.fetch(ausLand('/',land),{},{},seiteMitBody)).status,200,land);
+});
