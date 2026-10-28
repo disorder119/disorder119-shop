@@ -1320,7 +1320,7 @@
         var ids = zustand.stuecke.map(function (it) { return it.id; });
         var zustellung = zustellungDaten();
         var inhalt = { itemIds: ids, adresse: zustellung ? { name: adresse().name, land: "DE" } : adresse(), email: f.email.value.trim(),
-          createAccount: $("kKonto").checked, versand: wahl.id, versandPreisCents: wahl.preisCents };
+          createAccount: $("kKonto").checked, versand: wahl.id, versandPreisCents: wahl.preisCents, sprache: LANG };
         if (zustellung) inhalt.zustellung = zustellung;
         var fingerabdruck = JSON.stringify(inhalt);
         return schutz.then(function (S) {

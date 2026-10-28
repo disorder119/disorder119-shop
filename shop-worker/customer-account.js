@@ -14,9 +14,11 @@ import { safeText } from "./commerce-core.js";
 import {
   SHOP_URL,
   escapeHtml,
+  mailSprache,
   mailTransportReady,
   normalizeEmail,
   sendMail,
+  shopLink,
   trackingUrlFor,
 } from "./customer-mail.js";
 
@@ -108,31 +110,64 @@ function plusDays(days, from = new Date()) {
 
 // ------------------------------------------------------------------- Anmeldung
 
-function loginMail(link) {
+// Texte des Anmeldelinks in der Sprache der Kontoseite (/konto/, /en/konto/,
+// /fr/konto/). Rueckfall Deutsch.
+const LOGIN_MAIL_TEXT = Object.freeze({
+  de: {
+    subject: "Dein Anmeldelink für DISORDER119",
+    einleitungText: "Hier ist dein Anmeldelink:",
+    gilt: min => `Der Link gilt ${min} Minuten und funktioniert genau einmal.`,
+    ignorier: "Wenn du dich nicht anmelden wolltest, ignorier diese Mail einfach — ohne Klick passiert nichts.",
+    titel: "Dein Anmeldelink",
+    ohnePasswort: "Ein Klick genügt — kein Passwort nötig.",
+    knopf: "Konto öffnen",
+  },
+  en: {
+    subject: "Your sign-in link for DISORDER119",
+    einleitungText: "Here is your sign-in link:",
+    gilt: min => `The link is valid for ${min} minutes and works exactly once.`,
+    ignorier: "If you didn’t ask to sign in, simply ignore this email — nothing happens without a click.",
+    titel: "Your sign-in link",
+    ohnePasswort: "One click is enough — no password needed.",
+    knopf: "Open account",
+  },
+  fr: {
+    subject: "Ton lien de connexion pour DISORDER119",
+    einleitungText: "Voici ton lien de connexion :",
+    gilt: min => `Le lien est valable ${min} minutes et fonctionne une seule fois.`,
+    ignorier: "Si tu n’as pas demandé à te connecter, ignore simplement cet e-mail — rien ne se passe sans clic.",
+    titel: "Ton lien de connexion",
+    ohnePasswort: "Un clic suffit — aucun mot de passe nécessaire.",
+    knopf: "Ouvrir le compte",
+  },
+});
+
+function loginMail(link, sprache = "de") {
+  const t = LOGIN_MAIL_TEXT[mailSprache(sprache)];
   const safeLink = escapeHtml(link);
   return {
-    subject: "Dein Anmeldelink für DISORDER119",
+    subject: t.subject,
     text: [
       "DISORDER119",
       "",
-      "Hier ist dein Anmeldelink:",
+      t.einleitungText,
       link,
       "",
-      `Der Link gilt ${LOGIN_TOKEN_TTL_MINUTES} Minuten und funktioniert genau einmal.`,
-      "Wenn du dich nicht anmelden wolltest, ignorier diese Mail einfach — ohne Klick passiert nichts.",
+      t.gilt(LOGIN_TOKEN_TTL_MINUTES),
+      t.ignorier,
     ].join("\n"),
     html: `<!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><title>Anmeldelink</title></head>
+<html lang="${mailSprache(sprache)}"><head><meta charset="utf-8"><title>${escapeHtml(t.titel)}</title></head>
 <body style="margin:0;padding:0;background:#f2efe7;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2efe7;padding:24px 12px;">
 <tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#141310;font-size:15px;line-height:1.55;">
   <tr><td style="background:#0b0b0b;color:#f2efe7;padding:22px 28px;letter-spacing:0.22em;font-size:13px;font-weight:700;">DISORDER119</td></tr>
   <tr><td style="padding:28px;">
-    <h1 style="margin:0 0 12px;font-size:20px;">Dein Anmeldelink</h1>
-    <p style="margin:0 0 20px;">Ein Klick genügt — kein Passwort nötig.</p>
-    <p style="margin:0 0 20px;"><a href="${safeLink}" style="display:inline-block;background:#0b0b0b;color:#f2efe7;text-decoration:none;padding:13px 22px;font-weight:700;letter-spacing:0.06em;">Konto öffnen</a></p>
-    <p style="margin:0;color:#6f6a60;font-size:13px;">Der Link gilt ${LOGIN_TOKEN_TTL_MINUTES} Minuten und funktioniert genau einmal. Wenn du dich nicht anmelden wolltest, ignorier diese Mail einfach — ohne Klick passiert nichts.</p>
+    <h1 style="margin:0 0 12px;font-size:20px;">${escapeHtml(t.titel)}</h1>
+    <p style="margin:0 0 20px;">${escapeHtml(t.ohnePasswort)}</p>
+    <p style="margin:0 0 20px;"><a href="${safeLink}" style="display:inline-block;background:#0b0b0b;color:#f2efe7;text-decoration:none;padding:13px 22px;font-weight:700;letter-spacing:0.06em;">${escapeHtml(t.knopf)}</a></p>
+    <p style="margin:0;color:#6f6a60;font-size:13px;">${escapeHtml(t.gilt(LOGIN_TOKEN_TTL_MINUTES))} ${escapeHtml(t.ignorier)}</p>
   </td></tr>
 </table>
 </td></tr></table>
@@ -169,7 +204,7 @@ export function loginDailyCap(env) {
 // oeffentlich: von aussen ausgeloest (Konto-Anmeldung) - zaehlt im gemeinsamen
 // Tagesbudget (oeffentliche-mails.js). Der Link nach einem Kauf mit
 // "Konto anlegen" ist Teil der Bestellung und zaehlt dort nicht.
-export async function requestLoginLink(env, rawEmail, reqId = crypto.randomUUID(), ipHash = "", { oeffentlich = true } = {}) {
+export async function requestLoginLink(env, rawEmail, reqId = crypto.randomUUID(), ipHash = "", { oeffentlich = true, sprache = "de" } = {}) {
   if (!env?.DB) throw new AccountError("ACCOUNT_DATABASE_NOT_CONFIGURED", 503);
   if (!mailTransportReady(env)) throw new AccountError("ACCOUNT_MAIL_NOT_CONFIGURED", 503);
   const email = normalizeEmail(rawEmail);
@@ -222,9 +257,12 @@ export async function requestLoginLink(env, rawEmail, reqId = crypto.randomUUID(
       safeText(ipHash, 64) || null,
     ).run();
 
-  const base = safeText(env.ACCOUNT_URL || `${SHOP_URL}/konto/`, 200);
+  // Die Kontoseite in der Sprache der Anfrage (/konto/, /en/konto/,
+  // /fr/konto/). ACCOUNT_URL bleibt der ausdrueckliche Vorrang, falls gesetzt.
+  const sprachBasis = mailSprache(sprache) === "de" ? `${SHOP_URL}/konto/` : shopLink(sprache, "konto/");
+  const base = safeText(env.ACCOUNT_URL || sprachBasis, 200);
   const link = `${base}${base.includes("?") ? "&" : "?"}anmeldung=${encodeURIComponent(token)}`;
-  const message = loginMail(link);
+  const message = loginMail(link, sprache);
   try {
     const delivery = await sendMail(env, {
       to: email,
@@ -245,19 +283,20 @@ export async function requestLoginLink(env, rawEmail, reqId = crypto.randomUUID(
 // Bestellung merkt nur die ausdrueckliche Wahl aus der Kasse.
 export async function sendRequestedAccountLink(env, orderId, reqId = crypto.randomUUID()) {
   if (!env?.DB || !orderId) return false;
-  const row = await env.DB.prepare(`SELECT c.email FROM order_contact_snapshots c
+  const row = await env.DB.prepare(`SELECT c.email,o.sprache FROM order_contact_snapshots c
     JOIN commerce_orders o ON o.id=c.order_id
     WHERE c.order_id=? AND c.account_requested=1 AND c.account_link_queued_at IS NULL AND o.status='PAID'`)
     .bind(String(orderId)).first();
   const email = normalizeEmail(row?.email);
   if (!email) return false;
+  const sprache = mailSprache(row?.sprache);
   const stamp = new Date().toISOString();
   const claim = await env.DB.prepare(`UPDATE order_contact_snapshots SET account_link_queued_at=?
     WHERE order_id=? AND account_requested=1 AND account_link_queued_at IS NULL`)
     .bind(stamp, String(orderId)).run();
   if (!claim.meta?.changes) return false;
   try {
-    const result = await requestLoginLink(env, email, reqId, "", { oeffentlich: false });
+    const result = await requestLoginLink(env, email, reqId, "", { oeffentlich: false, sprache });
     if (result.queued) return true;
   } catch (err) {
     await env.DB.prepare(`UPDATE order_contact_snapshots SET account_link_queued_at=NULL
@@ -691,7 +730,7 @@ export async function handleAccountRequest(request, env, url, reqId = crypto.ran
       // Immer dieselbe Antwort, egal ob verschickt, ungueltig oder zu oft
       // angefordert: ob es zu dieser Adresse ein Konto gibt, geht niemanden
       // etwas an, der die Adresse nur erraten hat.
-      await requestLoginLink(env, body.email, reqId, ipHash);
+      await requestLoginLink(env, body.email, reqId, ipHash, { sprache: mailSprache(body.lang) });
       return json({
         ok: true,
         hinweis: "Falls zu dieser Adresse ein Konto passt, ist der Anmeldelink unterwegs.",
