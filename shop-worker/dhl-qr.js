@@ -301,13 +301,16 @@ export function katalogProdukte(catalog, land3) {
 
 // Preis je Paketklasse fuer ein Land: zuerst die bekannten Inlands-IDs
 // (PAK02 ... PAK315), sonst das verfolgbare Paket mit passendem Hoechstgewicht
-// (keine Paeckchen, keine Varianten mit Zusatzleistung wie ".HVERSI").
+// (keine Paeckchen, kein Express, keine Varianten mit Zusatzleistung wie ".HVERSI").
+// Stand 28.10.2026 (live): Die Schnittstelle fuehrt fuer EU-Laender nur PAK30
+// (45,49 EUR), fuer IT/ES/CZ/IE zusaetzlich EXPRESS* - Paket 2-20 kg in die EU
+// gibt es nur auf dhl.de (die Admin-App verlinkt dorthin).
 const KLASSEN_KG = Object.freeze({ S: 2, M: 5, L: 10, XL: 20, XXL: 30 });
 export function katalogPreise(catalog, land3) {
   const preise = {};
   const ids = {};
   const pakete = katalogProdukte(catalog, land3)
-    .filter(p => p.tracking && p.cents && !p.id.includes(".") && !/^PAECK/i.test(p.id) && !/p(ä|ae)ckchen/i.test(p.name));
+    .filter(p => p.tracking && p.cents && !p.id.includes(".") && !/^(PAECK|EXPRESS)/i.test(p.id) && !/p(ä|ae)ckchen|express/i.test(p.name));
   for (const klasse of GROESSEN) {
     let treffer = null;
     for (const id of KLASSEN_PRODUKTE[klasse]) {
