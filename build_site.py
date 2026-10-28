@@ -1712,7 +1712,7 @@ WIDERRUF_SEITE = {
         <li>Das Geld kommt über PayPal zurück, sobald die Ware bei uns ist oder du uns den Versand nachweist – spätestens 14 Tage nach Eingang deines Widerrufs. Beim Widerruf der ganzen Bestellung auch die Standard-Versandkosten.</li>
       </ol></div>
     <div class="konto-block"><h2>Rücksendeadresse</h2>
-      <address class="widerruf__adresse">Joel Bittner — Disorder119<br>Nelseestraße 25<br>63739 Aschaffenburg<br>Deutschland</address></div>
+      <address class="widerruf__adresse"><span data-nosnippet>Joel Bittner — Disorder119<br>Nelseestraße 25<br>63739 Aschaffenburg<br>Deutschland</span></address></div>
     <div class="konto-block"><h2>Lieber per E-Mail oder Brief?</h2>
       <p>Das geht genauso: Schreib uns an {email} oder per Post an die Adresse oben. Die vollständige Widerrufsbelehrung steht in den <a href="{home}agb/">AGB</a>.</p></div>
   </section>
@@ -1789,7 +1789,7 @@ WIDERRUF_SEITE = {
         <li>The money comes back via PayPal as soon as the goods are with us or you show us proof of dispatch – no later than 14 days after we receive your withdrawal. If you withdraw from the whole order, this includes the standard shipping costs.</li>
       </ol></div>
     <div class="konto-block"><h2>Return address</h2>
-      <address class="widerruf__adresse">Joel Bittner — Disorder119<br>Nelseestraße 25<br>63739 Aschaffenburg<br>Germany</address></div>
+      <address class="widerruf__adresse"><span data-nosnippet>Joel Bittner — Disorder119<br>Nelseestraße 25<br>63739 Aschaffenburg<br>Germany</span></address></div>
     <div class="konto-block"><h2>Prefer email or post?</h2>
       <p>That works just as well: write to {email} or send a letter to the address above. The full withdrawal instructions are in the <a href="{home}agb/">terms and conditions</a>.</p></div>
   </section>
@@ -1866,7 +1866,7 @@ WIDERRUF_SEITE = {
         <li>L’argent te revient via PayPal dès que les biens sont chez nous ou que tu nous prouves l’envoi – au plus tard 14 jours après réception de ta rétractation. En cas de rétractation de toute la commande, les frais de livraison standard sont inclus.</li>
       </ol></div>
     <div class="konto-block"><h2>Adresse de retour</h2>
-      <address class="widerruf__adresse">Joel Bittner — Disorder119<br>Nelseestraße 25<br>63739 Aschaffenburg<br>Allemagne</address></div>
+      <address class="widerruf__adresse"><span data-nosnippet>Joel Bittner — Disorder119<br>Nelseestraße 25<br>63739 Aschaffenburg<br>Allemagne</span></address></div>
     <div class="konto-block"><h2>Plutôt par e-mail ou par courrier ?</h2>
       <p>C’est tout aussi valable : écris-nous à {email} ou envoie une lettre à l’adresse ci-dessus. Les informations complètes sur la rétractation figurent dans les <a href="{home}agb/">CGV</a>.</p></div>
   </section>
