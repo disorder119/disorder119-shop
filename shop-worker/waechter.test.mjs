@@ -295,3 +295,18 @@ test("Gesperrter Angreifer erzeugt hoechstens eine Schreibung je Minute, die Spe
     assert.equal(await waechterGesperrt(env, IP, T0 + 30 * 3_600_000), true);
   } finally { tg.zurueck(); }
 });
+
+test("Abrufe anderer Cloudflare-Worker ohne Browserkennung (Testshop) werden nie gesperrt", async () => {
+  const gesendet = [], laeuft = [];
+  const env = { BESUCH: { fetch: async (url, init) => { gesendet.push({ url, body: JSON.parse(init.body) }); return new Response(JSON.stringify({ gesperrt: true }), { status: 200 }); } } };
+  const ctx = { waitUntil: p => laeuft.push(p) };
+  const anfrage = p => { const r = new Request(`https://disorder119.com${p}`, { headers: { "CF-Connecting-IP": "2a06:98c0:3600::103" } }); Object.defineProperty(r, "cf", { value: { asn: 13335, country: "DE" } }); return r; };
+  const origin = async () => new Response("<p>ok</p>", { headers: { "Content-Type": "text/html" } });
+  assert.equal((await edge.fetch(anfrage("/"), env, ctx, origin)).status, 200, "keine Sperrabfrage, keine Sperre");
+  assert.equal((await edge.fetch(anfrage("/wp-login.php"), env, ctx, origin)).status, 404);
+  assert.equal((await edge.fetch(anfrage("/gibtsnicht/"), env, ctx, origin)).status, 404);
+  await Promise.all(laeuft);
+  assert.equal(gesendet.filter(g => g.url.endsWith("/pruefen")).length, 0);
+  const vorfaelle = gesendet.filter(g => g.url.endsWith("/vorfall"));
+  assert.deepEqual(vorfaelle.map(v => [v.body.art, v.body.bot]), [["probe", true]], "Probe nur als Bot gemeldet, 404 gar nicht");
+});

@@ -175,7 +175,10 @@ export default {
     // Waechter: Angriffsproben sofort abweisen, gesperrte Anschluesse und Fluten stoppen.
     const ip=request.headers.get('CF-Connecting-IP')||'';
     const ua=request.headers.get('User-Agent')||'';
-    const bot=bekannterBot(request,ua);
+    // Abrufe anderer Cloudflare-Worker ohne Browserkennung (z. B. der Testshop
+    // test.disorder119.com, sandbox-edge.js) teilen sich Cloudflare-Adressen:
+    // nie sperren, sonst traefe eine Sperre alle.
+    const bot=bekannterBot(request,ua) || (!ua && Number(request.cf?.asn)===13335);
     const html=(status,body)=>new Response(request.method==='HEAD'?null:body,{status,headers:storefrontHeaders(new Response(null,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}}))});
     const probe=waechterPruefen(url,ua);
     if (probe) {

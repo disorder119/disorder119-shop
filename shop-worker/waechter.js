@@ -284,7 +284,8 @@ export async function waechterVorab(request, env, ctx, url, now = Date.now()) {
   const ip = request.headers.get("CF-Connecting-IP") || "";
   if (!ip) return null;
   const ua = request.headers.get("User-Agent") || "";
-  const bot = bekannterBot(request, ua);
+  // Abrufe anderer Cloudflare-Worker ohne Browserkennung (Testshop) nie sperren.
+  const bot = bekannterBot(request, ua) || (!ua && Number(request.cf?.asn) === 13335);
   const land = String(request.cf?.country || "").toUpperCase();
   const treffer = waechterPruefen(url, ua);
   if (treffer) {
@@ -312,7 +313,7 @@ export function waechterNachher(request, env, ctx, url, status, now = Date.now()
   if (status !== 404 || !waechterAktiv(env) || waechterAusnahme(url)) return;
   const ip = request.headers.get("CF-Connecting-IP") || "";
   const ua = request.headers.get("User-Agent") || "";
-  if (!ip || bekannterBot(request, ua) || gedrosselt(`404|${ip}`, 2000, now)) return;
+  if (!ip || bekannterBot(request, ua) || (!ua && Number(request.cf?.asn) === 13335) || gedrosselt(`404|${ip}`, 2000, now)) return;
   const laeuft = waechterVorfall(env, ctx, { ip, ua, land: String(request.cf?.country || "").toUpperCase(), pfad: kurzPfad(url), art: "404", grund: "zu-viele-404" }, now);
   if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(laeuft);
 }

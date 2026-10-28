@@ -109,7 +109,8 @@ export function zusammenfassungText(s, lauf, map = new Map(), { heuteNr = 1, ges
   const sprachen = [];
   if (s.sprache) sprachen.push(`Seite ${spracheName(s.sprache) || s.sprache}`);
   if (s.browserSprache) sprachen.push(`Browser ${spracheName(s.browserSprache) || s.browserSprache}`);
-  if (sprachen.length) zeilen.push(`🗣 ${sprachen.join(" · ")}`);
+  if (s.sprache && s.browserSprache && s.sprache === s.browserSprache) zeilen.push(`🗣 ${spracheName(s.sprache) || s.sprache}`);
+  else if (sprachen.length) zeilen.push(`🗣 ${sprachen.join(" · ")}`);
   zeilen.push(`↪️ ${herkunftText(s)}`);
   zeilen.push(wiederkehrText(lauf, heuteNr));
 
