@@ -609,6 +609,7 @@ img[data-d119-image-protected] {
 .info__versand span { display: block; }
 .info__versand strong { color: var(--paper); font-weight: 700; }
 .info__versand .info__lieferung { margin-top: 3px; color: var(--paper); }
+.info__versand .info__liefergebiet { margin-top: 3px; }
 
 /* "Sicher bezahlen" unter "Jetzt kaufen": Logos und ein kurzer Satz */
 .d119-zahlart {

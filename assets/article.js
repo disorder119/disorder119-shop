@@ -69,7 +69,7 @@
       autoDescTemplate: "{name}{facts}. Aus dem kuratierten Archiv von Disorder119.",
       checkoutTitle: "Deine Bestellung", checkoutShipping: "Versand", checkoutTotal: "Gesamt",
       shipTitle: "Versandart", shipParcel: "Paket", shipLoading: "wird berechnet …", shipDays1: "1 Werktag", shipDaysN: "{n} Werktage",
-      shipParcelS: "bis 2 kg", shipParcelM: "bis 5 kg", shipParcelL: "bis 10 kg", shipParcelXL: "bis 20 kg", shipParcelXXL: "bis 31,5 kg", shipHint: "Versand innerhalb Deutschlands",
+      shipParcelS: "bis 2 kg", shipParcelM: "bis 5 kg", shipParcelL: "bis 10 kg", shipParcelXL: "bis 20 kg", shipParcelXXL: "bis 31,5 kg", shipHint: "Versand innerhalb Deutschlands", shipAusland: "Wir versenden nach Europa und in die USA – außerhalb Deutschlands auf Anfrage.",
       shipFree: "kostenlos", shipFreeFrom: "Ab {betrag} Warenwert versenden wir kostenlos.",
       shipArrives: "Heute bestellt – voraussichtlich bei dir zwischen {von} und {bis}.",
       payTrust: "Sicher bezahlen – bei PayPal mit Käuferschutz", stickyFree: "Versand kostenlos", stickyShip: "zzgl. Versand",
@@ -114,7 +114,7 @@
       autoDescTemplate: "{name}{facts}. From the curated archive of Disorder119.",
       checkoutTitle: "Your order", checkoutShipping: "Shipping", checkoutTotal: "Total",
       shipTitle: "Shipping method", shipParcel: "parcel", shipLoading: "calculating …", shipDays1: "1 working day", shipDaysN: "{n} working days",
-      shipParcelS: "up to 2 kg", shipParcelM: "up to 5 kg", shipParcelL: "up to 10 kg", shipParcelXL: "up to 20 kg", shipParcelXXL: "up to 31.5 kg", shipHint: "Shipping within Germany",
+      shipParcelS: "up to 2 kg", shipParcelM: "up to 5 kg", shipParcelL: "up to 10 kg", shipParcelXL: "up to 20 kg", shipParcelXXL: "up to 31.5 kg", shipHint: "Shipping within Germany", shipAusland: "We ship to Europe and the USA – outside Germany on request.",
       shipFree: "free", shipFreeFrom: "Free shipping from {betrag} goods value.",
       shipArrives: "Order today – expected to arrive between {von} and {bis}.",
       payTrust: "Secure payment – with PayPal Buyer Protection", stickyFree: "Free shipping", stickyShip: "plus shipping",
@@ -159,7 +159,7 @@
       autoDescTemplate: "{name}{facts}. Issu de l'archive sélectionnée de Disorder119.",
       checkoutTitle: "Votre commande", checkoutShipping: "Livraison", checkoutTotal: "Total",
       shipTitle: "Mode d'envoi", shipParcel: "colis", shipLoading: "calcul en cours …", shipDays1: "1 jour ouvré", shipDaysN: "{n} jours ouvrés",
-      shipParcelS: "jusqu’à 2 kg", shipParcelM: "jusqu’à 5 kg", shipParcelL: "jusqu’à 10 kg", shipParcelXL: "jusqu’à 20 kg", shipParcelXXL: "jusqu’à 31,5 kg", shipHint: "Livraison en Allemagne",
+      shipParcelS: "jusqu’à 2 kg", shipParcelM: "jusqu’à 5 kg", shipParcelL: "jusqu’à 10 kg", shipParcelXL: "jusqu’à 20 kg", shipParcelXXL: "jusqu’à 31,5 kg", shipHint: "Livraison en Allemagne", shipAusland: "Nous livrons en Europe et aux États-Unis – hors d’Allemagne sur demande.",
       shipFree: "gratuit", shipFreeFrom: "Livraison gratuite dès {betrag} d’articles.",
       shipArrives: "Commande aujourd’hui – livraison prévue entre le {von} et le {bis}.",
       payTrust: "Paiement sécurisé – avec la Protection des achats PayPal", stickyFree: "Livraison gratuite", stickyShip: "hors livraison",
@@ -608,6 +608,11 @@
         datum.textContent = lieferung;
         hinweis.appendChild(datum);
       }
+      // Zeile 4: Liefergebiet (AGB § 4) - Europa und USA, ausserhalb Deutschlands auf Anfrage.
+      var gebiet = document.createElement("span");
+      gebiet.className = "info__liefergebiet";
+      gebiet.textContent = t("shipAusland");
+      hinweis.appendChild(gebiet);
       if (typeof updateOrderLinks === "function") updateOrderLinks();
     });
     versandLaden();

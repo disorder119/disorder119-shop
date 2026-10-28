@@ -149,6 +149,38 @@ async function anschlussGesperrt(env,ip) {
   return gesperrt;
 }
 
+// Liefergebiet (AGB § 4, FAQ "Wohin versendet ihr?"): Europa - EU, EWR,
+// Schweiz, Grossbritannien, Balkan und Osteuropa ohne Russland/Belarus - und
+// die USA. Ueber die Kasse geht Deutschland, die anderen Laender auf Anfrage.
+// Besucher aus allen anderen Laendern sehen oben auf jeder Seite einen
+// dezenten Hinweis. Das Land kommt von Cloudflare (request.cf.country, aus
+// der IP); gespeichert oder gezaehlt wird dafuer nichts. Gesperrt wird nichts.
+export const LIEFERLAENDER=Object.freeze([
+  // EU
+  'AT','BE','BG','CY','CZ','DE','DK','EE','ES','FI','FR','GR','HR','HU','IE','IT','LT','LU','LV','MT','NL','PL','PT','RO','SE','SI','SK',
+  // EWR, Schweiz, Grossbritannien, Kleinstaaten und Kronbesitzungen
+  'IS','LI','NO','CH','GB','AD','MC','SM','VA','GI','JE','GG','IM','FO','AX',
+  // Balkan und Osteuropa
+  'AL','BA','ME','MK','RS','XK','MD','UA',
+  // USA
+  'US',
+]);
+const LIEFER_HINWEIS_STIL='margin:0;padding:8px 16px;background:#161616;color:#f2efe7;border-bottom:1px solid rgba(242,239,231,.16);'
+  +'font:500 12px/1.45 Helvetica Neue,Helvetica,Arial,sans-serif;letter-spacing:.02em;text-align:center';
+export function lieferHinweis(request,url,bot=false) {
+  if (bot) return '';
+  const land=String(request?.cf?.country||'').toUpperCase();
+  // Unbekannt (XX), Tor (T1) oder interne Abrufe ohne Land: kein Hinweis.
+  if (!/^[A-Z]{2}$/.test(land) || land==='XX' || LIEFERLAENDER.includes(land)) return '';
+  const pfad=url?.pathname||'/';
+  const text=/^\/fr(?:\/|$)/.test(pfad)
+    ? '<span lang="fr">Nous livrons uniquement en Europe et aux États-Unis.</span>'
+    : /^\/en(?:\/|$)/.test(pfad)
+      ? '<span lang="en">We currently ship to Europe and the USA only.</span>'
+      : '<span lang="en" style="display:inline-block">We currently ship to Europe and the USA only.</span> <span lang="de" style="display:inline-block;margin-left:.6em;opacity:.72">Wir versenden nur nach Europa und in die USA.</span>';
+  return '<div class="d119-liefergebiet" role="note" style="'+LIEFER_HINWEIS_STIL+'">'+text+'</div>';
+}
+
 export function storefrontHeaders(response) {
   const headers=new Headers(response.headers);
   headers.set('Strict-Transport-Security','max-age=31536000; includeSubDomains');
@@ -231,7 +263,7 @@ export default {
     if (response.status===404 && !bot) vorfallMelden(env,ctx,request,url,{art:'404',grund:'zu-viele-404'});
     besuchMelden(request,url,response.status,env,ctx);
     if(request.method==='GET' && /text\/html/i.test(headers.get('Content-Type')||'') && response.status!==304) {
-      try { return await secureHtml(response,headers); }
+      try { return await secureHtml(response,headers,undefined,response.ok?lieferHinweis(request,url,bot):''); }
       catch { return fail(502,'Website vorübergehend nicht erreichbar.'); }
     }
     return new Response(request.method==='HEAD'?null:response.body,{status:response.status,statusText:response.statusText,headers});

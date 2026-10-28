@@ -731,7 +731,15 @@ def cta_html(it, shop_config, home, lang):
             "en": " Plus shipping depending on parcel size and service (standard or express) – the exact amount is shown before you order.",
             "fr": " Livraison en sus selon la taille du colis et le mode d'envoi (standard ou express) – le montant exact est indiqué avant la commande.",
         }
-    note_text = trust_notes.get(lang, trust_notes["de"]) + ship_notes.get(lang, ship_notes["de"])
+    # Liefergebiet (AGB § 4, FAQ "Wohin versendet ihr?"): die Kasse liefert
+    # innerhalb Deutschlands, Europa und USA nur auf Anfrage, sonst nirgends.
+    liefergebiet = {
+        "de": " Wir versenden nach Europa und in die USA – außerhalb Deutschlands auf Anfrage.",
+        "en": " We ship to Europe and the USA – outside Germany on request.",
+        "fr": " Nous livrons en Europe et aux États-Unis – hors d'Allemagne sur demande.",
+    }
+    ship_notes = {sprache: text + liefergebiet[sprache] for sprache, text in ship_notes.items()}
+    note_text =trust_notes.get(lang, trust_notes["de"]) + ship_notes.get(lang, ship_notes["de"])
     parts.append('<p class="info__note">' + esc(note_text) + '</p>')
     parts.append(product_data_gap_html(it, lang))
     if not shop_config["whatsappNumber"] and not shop_config["email"]:

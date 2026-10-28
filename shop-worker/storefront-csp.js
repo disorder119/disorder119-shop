@@ -155,8 +155,11 @@ export async function boundedHtml(response) {
   finally { reader.releaseLock(); }
 }
 
-export async function secureHtml(response,headers,apiOrigin='https://api.disorder119.com') {
-  const html=await boundedHtml(response);
+// vorBody: fertiges, skriptfreies HTML direkt hinter <body> (z. B. der Hinweis
+// zum Liefergebiet aus storefront-edge.js). Leer = Seite unveraendert.
+export async function secureHtml(response,headers,apiOrigin='https://api.disorder119.com',vorBody='') {
+  const original=await boundedHtml(response);
+  const html=vorBody?original.replace(/<body\b[^>]*>/i,tag=>tag+vorBody):original;
   const hashes=await inlineScriptHashes(html);
   const nonce=btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(18))));
   headers.set('Content-Security-Policy',contentSecurityPolicy(hashes,nonce,apiOrigin));
