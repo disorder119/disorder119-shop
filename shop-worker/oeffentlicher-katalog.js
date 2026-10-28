@@ -32,12 +32,17 @@ export function katalogQuellen(basis = "") {
   return shop === KATALOG_ROH ? [KATALOG_ROH] : [KATALOG_ROH, shop];
 }
 
+// Eigene Frist statt AbortSignal.timeout(): dessen Zeitgeber haelt in Node den
+// Prozess nicht am Leben (Tests brachen in der CI als "cancelled" ab), und so
+// wird er nach jedem Abruf sauber abgeraeumt.
 async function laden(holen, basis, frist) {
   for (const url of katalogQuellen(basis)) {
+    const abbruch = new AbortController();
+    const wecker = setTimeout(() => abbruch.abort(new Error("katalog_frist")), frist);
     try {
       const res = await holen(url, {
         headers: { Accept: "application/json", "User-Agent": "disorder119-shop-worker" },
-        signal: AbortSignal.timeout(frist),
+        signal: abbruch.signal,
         cf: { cacheTtl: 120, cacheEverything: true },
       });
       if (!res || !res.ok) continue;
@@ -46,6 +51,8 @@ async function laden(holen, basis, frist) {
       if (liste) return { liste, ok: true };
     } catch {
       // naechste Quelle
+    } finally {
+      clearTimeout(wecker);
     }
   }
   return { liste: [], ok: false };
