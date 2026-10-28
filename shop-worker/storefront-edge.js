@@ -177,7 +177,7 @@ export function lieferHinweis(request,url,bot=false) {
     ? '<span lang="fr">Nous livrons uniquement en Europe et aux États-Unis.</span>'
     : /^\/en(?:\/|$)/.test(pfad)
       ? '<span lang="en">We currently ship to Europe and the USA only.</span>'
-      : '<span lang="en">We currently ship to Europe and the USA only.</span> <span lang="de" style="opacity:.72">· Wir versenden nur nach Europa und in die USA.</span>';
+      : '<span lang="en" style="display:inline-block">We currently ship to Europe and the USA only.</span> <span lang="de" style="display:inline-block;margin-left:.6em;opacity:.72">Wir versenden nur nach Europa und in die USA.</span>';
   return '<div class="d119-liefergebiet" role="note" style="'+LIEFER_HINWEIS_STIL+'">'+text+'</div>';
 }
 
