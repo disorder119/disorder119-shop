@@ -45,7 +45,6 @@
 <link rel="preload" as="image" href="/assets/img/9479/display/0.webp" imagesrcset="/assets/img/9479/grid/0.webp 405w, /assets/img/9479/display/0.webp 720w" imagesizes="308px" media="(min-width: 601px)" fetchpriority="high">
 <link rel="preload" as="image" href="/assets/img/9378/thumbs/0.webp" media="(max-width: 600px)" fetchpriority="high">
 <link rel="preload" as="image" href="/assets/img/9378/display/0.webp" imagesrcset="/assets/img/9378/grid/0.webp 405w, /assets/img/9378/display/0.webp 720w" imagesizes="308px" media="(min-width: 601px)" fetchpriority="high">
-<link rel="preload" href="/data/catalog.json" as="fetch" crossorigin="anonymous">
 <link rel="stylesheet" href="/assets/app.css?v=7d75946f99">
 <link rel="stylesheet" href="/assets/theme.css?v=d320763616">
 <script src="/assets/ansicht.js" defer></script>
@@ -57,48 +56,48 @@
 
 
 <div class="mode-rail-hint hidden" id="modeRailHint" role="status">
-  <span class="mode-rail-hint__text" data-i18n="modeHint">Entdecke auch Match, Universum &amp; Baukasten</span>
-  <button type="button" class="mode-rail-hint__close" id="modeRailHintClose" data-i18n-aria="hintCloseAria" aria-label="Hinweis schließen">✕</button>
+  <span class="mode-rail-hint__text" data-i18n="modeHint">Also discover Match, the Universe & the outfit builder</span>
+  <button type="button" class="mode-rail-hint__close" id="modeRailHintClose" data-i18n-aria="hintCloseAria" aria-label="Close hint">✕</button>
 </div>
 
 <div class="swipe-view hidden" id="swipeView">
   <span class="swipe-view__progress" id="swipeProgress"></span>
   <div id="swipeStage"></div>
   <div class="swipe-view__actions" id="swipeActions">
-    <button type="button" class="swipe-btn swipe-btn--nope" id="swipeNope" data-i18n-aria="swipeNopeAria" aria-label="Nicht mein Stil">✕</button>
-    <button type="button" class="swipe-btn swipe-btn--like" id="swipeLike" data-i18n-aria="swipeLikeAria" aria-label="Merken">♥</button>
+    <button type="button" class="swipe-btn swipe-btn--nope" id="swipeNope" data-i18n-aria="swipeNopeAria" aria-label="Not my style">✕</button>
+    <button type="button" class="swipe-btn swipe-btn--like" id="swipeLike" data-i18n-aria="swipeLikeAria" aria-label="Save">♥</button>
   </div>
-  <p class="swipe-view__hint" id="swipeHintText" data-i18n="swipeHint">Ziehen oder klicken — ✕ überspringen, ♥ merken</p>
-  <a href="/" class="view-enter-btn" data-enter-classic data-i18n="toArchive">Zum Archiv →</a>
+  <p class="swipe-view__hint" id="swipeHintText" data-i18n="swipeHint">Drag or click — ✕ skip, ♥ save</p>
+  <a href="/" class="view-enter-btn" data-enter-classic data-i18n="toArchive">To the archive →</a>
 </div>
 
 <div class="chaos-view hidden" id="chaosView">
   <div class="chaos-screen" id="chaosScreen">
-    <canvas class="chaos-sky" id="chaosSky" tabindex="0" data-i18n-aria="chaosSkyLabel" aria-label="Universum: Maus bewegen zum Umsehen, Trackpad oder Mausrad zum Zoomen, Doppelklick öffnet ein Teil."></canvas>
+    <canvas class="chaos-sky" id="chaosSky" tabindex="0" data-i18n-aria="chaosSkyLabel" aria-label="Universe: pieces floating in space. On desktop move the mouse to look around, use the trackpad or wheel to zoom, double-click to open a piece. Arrow up and down zoom."></canvas>
     <div id="chaosItems"></div>
   </div>
   <span class="chaos-tooltip" id="chaosTooltip"></span>
   <p class="chaos-hint is-gone" id="chaosHint" aria-hidden="true"></p>
   <div class="chaos-game" id="chaosGame" hidden>
     <div class="chaos-game__hud">
-      <span class="chaos-game__stat"><span class="chaos-game__label" data-i18n="gameTime">Zeit</span><strong id="chaosGameTime">45</strong></span>
-      <span class="chaos-game__stat"><span class="chaos-game__label" data-i18n="gameScore">Warenwert</span><strong id="chaosGameScore">0 €</strong></span>
-      <span class="chaos-game__stat"><span class="chaos-game__label" data-i18n="gameCombo">Serie</span><strong id="chaosGameCombo">×1</strong></span>
+      <span class="chaos-game__stat"><span class="chaos-game__label" data-i18n="gameTime">Time</span><strong id="chaosGameTime">45</strong></span>
+      <span class="chaos-game__stat"><span class="chaos-game__label" data-i18n="gameScore">Value</span><strong id="chaosGameScore">0 €</strong></span>
+      <span class="chaos-game__stat"><span class="chaos-game__label" data-i18n="gameCombo">Streak</span><strong id="chaosGameCombo">×1</strong></span>
     </div>
     <p class="chaos-game__banner" id="chaosGameBanner" aria-live="assertive"></p>
-    <p class="chaos-game__keys" data-i18n="gameKeys">Fadenkreuz auf Teile steuern · Leertaste oder Maustaste: Turbo · Esc: beenden</p>
+    <p class="chaos-game__keys" data-i18n="gameKeys">Steer the crosshair onto pieces · Space or mouse button: boost · Esc: quit</p>
     <section class="chaos-game__result" id="chaosGameResult" role="dialog" aria-modal="true" aria-labelledby="chaosGameResultTitle" hidden>
-      <p class="chaos-game__eyebrow" data-i18n="gameTitle">Warp-Jagd</p>
+      <p class="chaos-game__eyebrow" data-i18n="gameTitle">Warp Hunt</p>
       <h2 class="chaos-game__title" id="chaosGameResultTitle">Warp-Jagd vorbei</h2>
       <p class="chaos-game__line" id="chaosGameResultLine"></p>
       <p class="chaos-game__best" id="chaosGameBest"></p>
       <button type="button" class="chaos-game__find" id="chaosGameFind" hidden>
-        <span class="chaos-game__find-label" data-i18n="gameTopFind">Bester Fund</span>
+        <span class="chaos-game__find-label" data-i18n="gameTopFind">Best find</span>
         <span class="chaos-game__find-text" id="chaosGameFindText"></span>
       </button>
       <div class="chaos-game__actions">
-        <button type="button" class="view-enter-btn" id="chaosGameAgain" data-i18n="gameAgain">Nochmal</button>
-        <button type="button" class="view-enter-btn" id="chaosGameBack" data-i18n="gameBack">Zurück ins Universum</button>
+        <button type="button" class="view-enter-btn" id="chaosGameAgain" data-i18n="gameAgain">Play again</button>
+        <button type="button" class="view-enter-btn" id="chaosGameBack" data-i18n="gameBack">Back to the universe</button>
       </div>
     </section>
   </div>
@@ -108,18 +107,18 @@
       <span class="chaos-focus__title" id="chaosFocusTitle">Näher heranzoomen</span>
       <span class="chaos-focus__meta" id="chaosFocusMeta"></span>
     </button>
-    <button type="button" class="view-enter-btn" id="chaosShuffle" data-i18n="chaosShuffle">Mischen</button>
+    <button type="button" class="view-enter-btn" id="chaosShuffle" data-i18n="chaosShuffle">Shuffle</button>
     <button type="button" class="view-enter-btn" data-d119-game-launch aria-label="Dodge the Drop starten">GAME</button>
-    <a href="/" class="view-enter-btn" data-enter-classic data-i18n="toArchive">Zum Archiv →</a>
+    <a href="/" class="view-enter-btn" data-enter-classic data-i18n="toArchive">To the archive →</a>
   </div>
 </div>
 
 <div class="outfit-view hidden" id="outfitView">
-  <a href="/" class="outfit-view__close" data-enter-classic data-i18n-aria="closeAria" aria-label="Schließen">✕</a>
+  <a href="/" class="outfit-view__close" data-enter-classic data-i18n-aria="closeAria" aria-label="Close">✕</a>
 
   <div class="outfit-view__head">
-    <p class="outfit-view__eyebrow" data-i18n="outfitEyebrow">Outfit-Baukasten</p>
-    <h2 class="outfit-view__title" data-i18n="outfitTitle">Bau dir einen Look</h2>
+    <p class="outfit-view__eyebrow" data-i18n="outfitEyebrow">Outfit builder</p>
+    <h2 class="outfit-view__title" data-i18n="outfitTitle">Build a look</h2>
     <p class="outfit-view__status" id="outfitStatus">Wähl ein Oberteil zum Start.</p>
   </div>
 
@@ -129,21 +128,21 @@
 
       <div class="outfit-view__footer">
         <div class="outfit-total">
-          <span data-i18n="cartTotal">Gesamt</span>
+          <span data-i18n="cartTotal">Total</span>
           <span id="outfitTotal">0,00 €</span>
         </div>
         <div class="outfit-view__actions">
-          <button type="button" class="view-enter-btn" id="outfitRandom" data-i18n-aria="outfitRandomAria" aria-label="Überrasch mich">🎲</button>
-          <button type="button" class="view-enter-btn" id="outfitReset" data-i18n="outfitResetLabel">Neu</button>
-          <button type="button" class="view-enter-btn outfit-cta" id="outfitAddCart" data-i18n="addToCart" disabled>In den Warenkorb</button>
+          <button type="button" class="view-enter-btn" id="outfitRandom" data-i18n-aria="outfitRandomAria" aria-label="Surprise me">🎲</button>
+          <button type="button" class="view-enter-btn" id="outfitReset" data-i18n="outfitResetLabel">Reset</button>
+          <button type="button" class="view-enter-btn outfit-cta" id="outfitAddCart" data-i18n="addToCart" disabled>Add to cart</button>
         </div>
       </div>
     </div>
 
     <div class="outfit-figure">
-      <p class="outfit-figure__label" data-i18n="outfitLookLabel">Dein Look</p>
+      <p class="outfit-figure__label" data-i18n="outfitLookLabel">Your look</p>
       <div class="outfit-figure__stage">
-        <p class="outfit-figure__empty" id="lookBoardEmpty" data-i18n="outfitEmptyLook">Wähl Teile aus,<br>um deinen Look zu sehen.</p>
+        <p class="outfit-figure__empty" id="lookBoardEmpty" data-i18n="outfitEmptyLook">Pick pieces<br>to see your look.</p>
         <div class="look-card look-card--jacket" id="figJacket"><img alt="" /></div>
         <div class="look-card look-card--top" id="figTop"><img alt="" /></div>
         <div class="look-card look-card--bottom" id="figBottom"><img alt="" /></div>
@@ -157,17 +156,17 @@
 <div class="outfit-picker" id="outfitPicker" role="dialog" aria-modal="true" aria-labelledby="outfitPickerTitle">
   <div class="outfit-picker__head">
     <span class="outfit-picker__title" id="outfitPickerTitle">Teil wählen</span>
-    <button type="button" class="modal__close" id="outfitPickerClose" data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
+    <button type="button" class="modal__close" id="outfitPickerClose" data-i18n-aria="closeAria" aria-label="Close">✕</button>
   </div>
-  <input type="text" id="outfitPickerSearch" class="outfit-picker__search" data-i18n-placeholder="outfitPickerSearchPh" placeholder="Suche nach Marke, Titel …" autocomplete="off">
+  <input type="text" id="outfitPickerSearch" class="outfit-picker__search" data-i18n-placeholder="outfitPickerSearchPh" placeholder="Search by brand, title …" autocomplete="off">
   <div class="outfit-picker__filters">
-    <select id="outfitPickerSize"><option value="" data-i18n="outfitPickerAllSizes">Alle Größen</option></select>
-    <input type="number" id="outfitPickerPriceMax" min="0" step="10" data-i18n-placeholder="outfitPickerPriceMaxPh" placeholder="Preis bis (€)">
+    <select id="outfitPickerSize"><option value="" data-i18n="outfitPickerAllSizes">All sizes</option></select>
+    <input type="number" id="outfitPickerPriceMax" min="0" step="10" data-i18n-placeholder="outfitPickerPriceMaxPh" placeholder="Price up to (€)">
   </div>
   <div class="outfit-picker__grid" id="outfitPickerGrid"></div>
 </div>
 
-<nav class="mode-rail site-header hidden" id="modeRail" data-i18n-aria="modeRailAria" aria-label="Ansicht wechseln">
+<nav class="mode-rail site-header hidden" id="modeRail" data-i18n-aria="modeRailAria" aria-label="Switch view">
   <button type="button" class="site-header__menu" id="menuToggle" aria-label="Menü öffnen" aria-expanded="false">
     <span class="mode-rail__icon" aria-hidden="true">▦</span>
   </button>
@@ -177,13 +176,13 @@
       <span class="mode-rail__icon" aria-hidden="true">♥</span>
       <span class="mode-rail__label" data-i18n="modeMatch">Match</span>
     </a>
-    <a href="/chaos/" class="mode-rail__btn" data-mode-view="chaos" aria-label="Universum" data-i18n-aria="modeChaos">
+    <a href="/chaos/" class="mode-rail__btn" data-mode-view="chaos" aria-label="Universe" data-i18n-aria="modeChaos">
       <span class="mode-rail__icon" aria-hidden="true">✦</span>
-      <span class="mode-rail__label" data-i18n="modeChaos">Universum</span>
+      <span class="mode-rail__label" data-i18n="modeChaos">Universe</span>
     </a>
     <a href="/baukasten/" class="mode-rail__btn" data-mode-view="outfit" aria-label="Outfit-Baukasten">
       <span class="mode-rail__icon" aria-hidden="true">⛃</span>
-      <span class="mode-rail__label" data-i18n="modeBaukasten">Baukasten</span>
+      <span class="mode-rail__label" data-i18n="modeBaukasten">Outfit builder</span>
     </a>
   </div>
 </nav>
@@ -196,7 +195,7 @@
      Warenkorb liegt (wie eine Benachrichtigung), bleibt aber ueber allen
      Ansichten sichtbar (eigenstaendiges Element ausserhalb von #modeRail
      und #appShell, daher von deren hidden-Zustand unberuehrt). -->
-<a class="cart-bag" id="cartToggle" href="/cart/" data-i18n-aria="cartOpenAria" aria-label="Warenkorb öffnen">
+<a class="cart-bag" id="cartToggle" href="/cart/" data-i18n-aria="cartOpenAria" aria-label="Open cart">
   <svg viewBox="0 0 240 300" role="img" aria-hidden="true">
     <title>Disorder119 Warenkorb</title>
     <g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
@@ -212,37 +211,37 @@
 <div class="menu-backdrop" id="menuBackdrop">
   <aside class="menu-drawer" id="menuDrawer" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
     <div class="menu-drawer__head">
-      <span id="menuTitle" data-i18n="menuTitle">Menü</span>
-      <button type="button" class="menu-drawer__close" id="menuClose" data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
+      <span id="menuTitle" data-i18n="menuTitle">Menu</span>
+      <button type="button" class="menu-drawer__close" id="menuClose" data-i18n-aria="closeAria" aria-label="Close">✕</button>
     </div>
 
     <nav class="menu-drawer__nav" aria-label="Kategorien">
-      <button type="button" data-menu-status="all" data-i18n="menuAllItems">Alle Artikel</button>
-      <button type="button" data-menu-categories="Jackets,Coats" data-i18n="menuJackets">Jacken</button>
+      <button type="button" data-menu-status="all" data-i18n="menuAllItems">All pieces</button>
+      <button type="button" data-menu-categories="Jackets,Coats" data-i18n="menuJackets">Jackets</button>
       <button type="button" data-menu-categories="Tops,Shirts,Knitwear" data-i18n="menuTops">Tops</button>
-      <button type="button" data-menu-categories="Pants" data-i18n="menuPants">Hosen</button>
-      <button type="button" data-menu-categories="Skirts" data-i18n="menuSkirts">Röcke</button>
-      <button type="button" data-menu-categories="Dresses" data-i18n="menuDresses">Kleider</button>
-      <button type="button" data-menu-categories="Shoes" data-i18n="menuShoes">Schuhe</button>
-      <button type="button" data-menu-categories="Accessories,Objects" data-i18n="menuAccessories">Accessoires</button>
-      <button type="button" id="menuBrandsToggle" aria-expanded="false" data-i18n="menuBrands">Marken</button>
+      <button type="button" data-menu-categories="Pants" data-i18n="menuPants">Trousers</button>
+      <button type="button" data-menu-categories="Skirts" data-i18n="menuSkirts">Skirts</button>
+      <button type="button" data-menu-categories="Dresses" data-i18n="menuDresses">Dresses</button>
+      <button type="button" data-menu-categories="Shoes" data-i18n="menuShoes">Shoes</button>
+      <button type="button" data-menu-categories="Accessories,Objects" data-i18n="menuAccessories">Accessories</button>
+      <button type="button" id="menuBrandsToggle" aria-expanded="false" data-i18n="menuBrands">Brands</button>
       <div class="menu-drawer__brands hidden" id="menuBrandList"></div>
-      <button type="button" data-menu-status="Verkauft" data-i18n="menuArchive">Archiv</button>
-      <a href="/mieten/" id="menuRental" data-i18n="menuRental">Mieten &amp; Ausleihen</a>
+      <button type="button" data-menu-status="Verkauft" data-i18n="menuArchive">Archive</button>
+      <a href="/mieten/" id="menuRental" data-i18n="menuRental">Rental</a>
     </nav>
 
     <div class="menu-drawer__section">
       <button type="button" id="menuCart">
-        <span data-i18n="menuCart">Warenkorb</span>
+        <span data-i18n="menuCart">Cart</span>
         <span>(<span id="menuCartCount">0</span>)</span>
       </button>
     </div>
 
     <div class="menu-drawer__section">
-      <button type="button" data-ansicht-umschalten aria-pressed="false">Weiße Ansicht</button>
+      <button type="button" data-ansicht-umschalten aria-pressed="false">White view</button>
     </div>
 
-    <div class="menu-drawer__languages" role="group" data-i18n-aria="langGroupAria" aria-label="Sprache wählen">
+    <div class="menu-drawer__languages" role="group" data-i18n-aria="langGroupAria" aria-label="Choose language">
       <button type="button" data-lang="de">DE</button>
       <button type="button" data-lang="en">EN</button>
       <button type="button" data-lang="fr">FR</button>
@@ -251,18 +250,18 @@
 </div>
 
 
-<div class="app-shell hidden" id="appShell">
+<div class="app-shell" id="appShell">
 <div class="masthead">
   <div class="masthead__top reveal" style="animation-delay:0.05s">
-    <p class="eyebrow" data-i18n="eyebrow">Designer-, Vintage- und Contemporary-Pieces mit Fokus auf Qualität, Authentizität und Zeitlosigkeit</p>
+    <p class="eyebrow" data-i18n="eyebrow">Designer, vintage and contemporary pieces with a focus on quality, authenticity and timelessness</p>
     <div class="wordmark-block">
-      <p class="wordmark-kicker" data-i18n="wordmarkKicker">Das kuratierte Archiv von</p>
+      <p class="wordmark-kicker" data-i18n="wordmarkKicker">The curated archive of</p>
       <h1 class="wordmark" aria-label="Disorder119">
         <span class="wordmark__line" style="animation-delay:0.1s">Disorder119</span>
       </h1>
     </div>
     <div class="masthead__actions">
-      <div class="lang-switch" id="langSwitch" role="group" data-i18n-aria="langGroupAria" aria-label="Sprache wählen">
+      <div class="lang-switch" id="langSwitch" role="group" data-i18n-aria="langGroupAria" aria-label="Choose language">
         <button type="button" class="lang-switch__btn" data-lang="de">DE</button>
         <button type="button" class="lang-switch__btn" data-lang="en">EN</button>
         <button type="button" class="lang-switch__btn" data-lang="fr">FR</button>
@@ -273,27 +272,27 @@
     <div class="masthead__meta">
       <div class="meta-figure">
         <span class="meta-figure__value" id="metaTotal">—</span>
-        <span class="meta-figure__label" data-i18n="metaTotalLabel">Objekte im Archiv</span>
+        <span class="meta-figure__label" data-i18n="metaTotalLabel">Pieces in the archive</span>
       </div>
       <div class="meta-figure">
         <span class="meta-figure__value" id="metaAvailable">—</span>
-        <span class="meta-figure__label" data-i18n="metaAvailableLabel">Verfügbar</span>
+        <span class="meta-figure__label" data-i18n="metaAvailableLabel">Available</span>
       </div>
       <div class="meta-figure">
         <span class="meta-figure__value" id="metaBrands">—</span>
-        <span class="meta-figure__label" data-i18n="metaBrandsLabel">Marken</span>
+        <span class="meta-figure__label" data-i18n="metaBrandsLabel">Brands</span>
       </div>
     </div>
-    <div class="masthead__index">Prada · Dior · Saint Laurent<br />Jean Paul Gaultier · Y-3 · <span id="brandLineMore">u.v.m.</span></div>
+    <div class="masthead__index">Prada · Dior · Saint Laurent<br />Jean Paul Gaultier · Y-3 · <span id="brandLineMore">&amp; more</span></div>
   </div>
 </div>
 
 <div class="rail">
   <div class="rail__search">
-    <input id="searchInput" type="text" data-i18n-placeholder="searchPlaceholder" placeholder="Suche nach Marke, Titel" autocomplete="off" />
+    <input id="searchInput" type="text" data-i18n-placeholder="searchPlaceholder" placeholder="Search by brand, item, size" autocomplete="off" />
   </div>
   <div class="catalog-heading">
-    <span id="catalogTitle">Verfügbar</span>
+    <span id="catalogTitle">Available</span>
     <span class="rail__count" id="railCount"></span>
   </div>
   <div class="catalog-controls" aria-hidden="true">
@@ -301,84 +300,84 @@
     <div class="chip-row" id="categoryChips"></div>
   </div>
   <div class="rail__right">
-    <button class="theme-toggle" id="moreFiltersToggle" type="button" aria-expanded="false" data-i18n="moreFilters">Weitere Filter</button>
-    <select class="rail__sort" id="sortSelect" aria-label="Artikel sortieren">
-      <option value="brightness" data-i18n="sortBrightness">Hell → Dunkel</option>
-      <option value="new" data-i18n="sortNew">Neueste zuerst</option>
-      <option value="price-asc" data-i18n="sortPriceAsc">Preis aufsteigend</option>
-      <option value="price-desc" data-i18n="sortPriceDesc">Preis absteigend</option>
-      <option value="brand" data-i18n="sortBrand">Marke A–Z</option>
+    <button class="theme-toggle" id="moreFiltersToggle" type="button" aria-expanded="false" data-i18n="moreFilters">More filters</button>
+    <select class="rail__sort" id="sortSelect" aria-label="Sort items">
+      <option value="brightness" data-i18n="sortBrightness">Light → dark</option>
+      <option value="new" data-i18n="sortNew">Newest first</option>
+      <option value="price-asc" data-i18n="sortPriceAsc">Price ascending</option>
+      <option value="price-desc" data-i18n="sortPriceDesc">Price descending</option>
+      <option value="brand" data-i18n="sortBrand">Brand A–Z</option>
     </select>
-    <button class="theme-toggle" id="mountToggle" type="button">Ansicht: Schwarz</button>
+    <button class="theme-toggle" id="mountToggle" type="button">View: black</button>
   </div>
   <div class="filter-panel hidden" id="filterPanel">
     <div class="filter-field">
-      <label for="filterDepartment" data-i18n="filterDepartmentLabel">Bereich</label>
-      <select id="filterDepartment"><option value="" data-i18n="filterAllDepartments">Alle Bereiche</option></select>
+      <label for="filterDepartment" data-i18n="filterDepartmentLabel">Department</label>
+      <select id="filterDepartment"><option value="" data-i18n="filterAllDepartments">All departments</option></select>
     </div>
     <div class="filter-field">
-      <label for="filterProductType" data-i18n="filterProductTypeLabel">Produkttyp</label>
-      <select id="filterProductType"><option value="" data-i18n="filterAllProductTypes">Alle Produkttypen</option></select>
+      <label for="filterProductType" data-i18n="filterProductTypeLabel">Product type</label>
+      <select id="filterProductType"><option value="" data-i18n="filterAllProductTypes">All product types</option></select>
     </div>
     <div class="filter-field">
-      <label for="filterBrand" data-i18n="filterBrandLabel">Marke</label>
-      <select id="filterBrand"><option value="" data-i18n="filterAllBrands">Alle Marken</option></select>
+      <label for="filterBrand" data-i18n="filterBrandLabel">Brand</label>
+      <select id="filterBrand"><option value="" data-i18n="filterAllBrands">All brands</option></select>
     </div>
     <div class="filter-field">
-      <label for="filterSize" data-i18n="filterSizeLabel">Größe</label>
-      <select id="filterSize"><option value="" data-i18n="filterAllSizes">Alle Größen</option></select>
+      <label for="filterSize" data-i18n="filterSizeLabel">Size</label>
+      <select id="filterSize"><option value="" data-i18n="filterAllSizes">All sizes</option></select>
     </div>
     <div class="filter-field">
-      <label for="filterColor" data-i18n="filterColorLabel">Farbe</label>
-      <select id="filterColor"><option value="" data-i18n="filterAllColors">Alle Farben</option></select>
+      <label for="filterColor" data-i18n="filterColorLabel">Colour</label>
+      <select id="filterColor"><option value="" data-i18n="filterAllColors">All colours</option></select>
     </div>
     <div class="filter-field">
-      <label for="filterCondition" data-i18n="filterConditionLabel">Zustand</label>
-      <select id="filterCondition"><option value="" data-i18n="filterAllConditions">Alle Zustände</option></select>
+      <label for="filterCondition" data-i18n="filterConditionLabel">Condition</label>
+      <select id="filterCondition"><option value="" data-i18n="filterAllConditions">All conditions</option></select>
     </div>
     <div class="filter-field filter-field--price">
-      <label data-i18n="filterPriceLabel">Preis (€)</label>
+      <label data-i18n="filterPriceLabel">Price (€)</label>
       <div class="filter-price-inputs">
-        <input type="number" id="filterPriceMin" min="0" data-i18n-placeholder="filterPriceFrom" placeholder="von">
+        <input type="number" id="filterPriceMin" min="0" data-i18n-placeholder="filterPriceFrom" placeholder="from">
         <span>–</span>
-        <input type="number" id="filterPriceMax" min="0" data-i18n-placeholder="filterPriceTo" placeholder="bis">
+        <input type="number" id="filterPriceMax" min="0" data-i18n-placeholder="filterPriceTo" placeholder="to">
       </div>
     </div>
-    <button type="button" class="filter-reset" id="filterReset" data-i18n="filterResetLabel">Filter zurücksetzen</button>
+    <button type="button" class="filter-reset" id="filterReset" data-i18n="filterResetLabel">Reset filters</button>
   </div>
   <div class="active-filter-row hidden" id="activeFilters" aria-live="polite"></div>
 </div>
 
 <div class="grid-wrap" role="main">
-  <div class="grid" id="grid"></div>
+  <div class="grid" id="grid" data-ssr-initial="1"><a class="plate" data-ssr-item-id="9479" href="/en/artikel/120/"><div class="plate__frame"><picture><source media="(max-width: 600px)" srcset="/assets/img/9479/thumbs/0.webp"><img src="/assets/img/9479/display/0.webp" srcset="/assets/img/9479/grid/0.webp 405w, /assets/img/9479/display/0.webp 720w" sizes="308px" alt="Alexander McQueen Denim Jacket Women Grey" loading="eager" fetchpriority="high" decoding="sync"></picture></div><div class="plate__body"><button type="button" class="plate__brand" data-brand-filter>Alexander McQueen</button><span class="plate__title">Alexander McQueen Denim Jacket Women Grey</span><span class="plate__size">46</span><div class="plate__row"><span class="plate__price">130,00 €</span></div></div></a><a class="plate" data-ssr-item-id="9378" href="/en/artikel/18/"><div class="plate__frame"><picture><source media="(max-width: 600px)" srcset="/assets/img/9378/thumbs/0.webp"><img src="/assets/img/9378/display/0.webp" srcset="/assets/img/9378/grid/0.webp 405w, /assets/img/9378/display/0.webp 720w" sizes="308px" alt="Walter Van Beirendonck Top Women Neon Green" loading="eager" fetchpriority="high" decoding="sync"></picture></div><div class="plate__body"><button type="button" class="plate__brand" data-brand-filter>Walter Van Beirendonck</button><span class="plate__title">Walter Van Beirendonck Top Women Neon Green</span><span class="plate__size">M</span><div class="plate__row"><span class="plate__price">99,00 €</span></div></div></a></div>
   <div class="empty-state" id="emptyState">
-    <p class="empty-state__title" data-i18n="emptyTitle">Keine Treffer im Archiv</p>
-    <p data-i18n="emptyBody">Versuche einen anderen Suchbegriff oder setze die Filter zurück.</p>
+    <p class="empty-state__title" data-i18n="emptyTitle">No matches in the archive</p>
+    <p data-i18n="emptyBody">Try a different search term or reset the filters.</p>
   </div>
   <div class="load-more-wrap">
-    <button type="button" class="load-more" id="loadMoreBtn" data-i18n="loadMore">Weitere laden</button>
+    <button type="button" class="load-more" id="loadMoreBtn" data-i18n="loadMore">Load more</button>
   </div>
 </div>
 
 <footer class="footer">
   <div class="footer__newsletter" data-d119-newsletter data-quelle="footer"></div>
   <nav class="footer__nav" aria-label="Footer">
-    <a href="/ueber-uns/" data-info="about" data-i18n="footerAbout">Über Disorder119</a>
-    <button type="button" id="footerArchive" data-i18n="menuArchive">Archiv</button>
+    <a href="/ueber-uns/" data-info="about" data-i18n="footerAbout">About Disorder119</a>
+    <button type="button" id="footerArchive" data-i18n="menuArchive">Archive</button>
     <a href="/faq/" data-info="faq" data-i18n="footerFaq">FAQ</a>
-    <a href="/konto/" data-i18n="footerAccount">Konto</a>
-    <a href="mailto:disorder119shop@gmail.com" data-i18n="footerContact">Kontakt</a>
+    <a href="/konto/" data-i18n="footerAccount">Account</a>
+    <a href="mailto:disorder119shop@gmail.com" data-i18n="footerContact">Contact</a>
   </nav>
   <span id="footerStamp" class="footer__stamp"></span>
-  <a class="footer__widerruf" href="/widerruf/" data-widerruf data-i18n="legalWiderruf">Vertrag widerrufen</a>
+  <a class="footer__widerruf" href="/widerruf/" data-widerruf data-i18n="legalWiderruf">Withdraw from contract here</a>
   <div class="footer__legal">
-    <a href="/impressum/" data-legal="impressum" data-i18n="legalImpressum">Impressum</a>
-    <a href="/agb/" data-legal="agb" data-i18n="legalAgb">AGB</a>
-    <a href="/datenschutz/" data-legal="datenschutz" data-i18n="legalDatenschutz">Datenschutz</a>
-    <button type="button" data-ansicht-umschalten aria-pressed="false">Weiße Ansicht</button>
+    <a href="/impressum/" data-legal="impressum" data-i18n="legalImpressum">Legal notice</a>
+    <a href="/agb/" data-legal="agb" data-i18n="legalAgb">Terms</a>
+    <a href="/datenschutz/" data-legal="datenschutz" data-i18n="legalDatenschutz">Privacy</a>
+    <button type="button" data-ansicht-umschalten aria-pressed="false">White view</button>
   </div>
   <a class="footer__cart" id="footerCartToggle" href="/cart/">
-    <span data-i18n="menuCart">Warenkorb</span>
+    <span data-i18n="menuCart">Cart</span>
     <span>(<span id="footerCartCount">0</span>)</span>
   </a>
 </footer>
@@ -392,28 +391,26 @@
      open/visible-Klasse und ist standardmaessig unsichtbar. -->
 <div class="legal-backdrop" id="legalBackdrop">
   <div class="legal-panel">
-    <button type="button" class="legal-panel__close" id="legalClose" data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
+    <button type="button" class="legal-panel__close" id="legalClose" data-i18n-aria="closeAria" aria-label="Close">✕</button>
     <div id="legalContent"></div>
   </div>
 </div>
 
 <div class="cookie-note" id="cookieNote" hidden>
-  <p data-i18n="cookieText">Diese Seite verwendet keine Tracking- oder Marketing-Cookies. Warenkorb und Outfit-Baukasten
-  speichern deine Auswahl nur lokal im Browser (localStorage), damit sie beim nächsten
-  Besuch noch da ist — diese Daten verlassen nie deinen Browser.</p>
+  <p data-i18n="cookieText">This site does not use tracking or marketing cookies. Your cart and outfit builder only save your selection locally in your browser (localStorage), so they're still there on your next visit — this data never leaves your browser.</p>
   <div class="cookie-note__actions">
-    <button type="button" id="cookieNoteOk" data-i18n="cookieOk">Verstanden</button>
+    <button type="button" id="cookieNoteOk" data-i18n="cookieOk">Got it</button>
   </div>
 </div>
 
 <div class="modal-backdrop" id="modalBackdrop">
   <div class="modal" id="modal" role="dialog" aria-modal="true">
     <div class="modal__media">
-      <button class="modal__share" id="modalShare" type="button" data-i18n-aria="shareAria" aria-label="Teilen">↗</button>
-      <span class="modal__share-toast" id="modalShareToast" data-i18n="shareToast">Link kopiert</span>
-      <button class="modal__close" id="modalClose" type="button" data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
-      <button class="modal__nav modal__nav--prev" id="modalPrev" type="button" data-i18n-aria="prevPhotoAria" aria-label="Vorheriges Foto">‹</button>
-      <button class="modal__nav modal__nav--next" id="modalNext" type="button" data-i18n-aria="nextPhotoAria" aria-label="Nächstes Foto">›</button>
+      <button class="modal__share" id="modalShare" type="button" data-i18n-aria="shareAria" aria-label="Share">↗</button>
+      <span class="modal__share-toast" id="modalShareToast" data-i18n="shareToast">Link copied</span>
+      <button class="modal__close" id="modalClose" type="button" data-i18n-aria="closeAria" aria-label="Close">✕</button>
+      <button class="modal__nav modal__nav--prev" id="modalPrev" type="button" data-i18n-aria="prevPhotoAria" aria-label="Previous photo">‹</button>
+      <button class="modal__nav modal__nav--next" id="modalNext" type="button" data-i18n-aria="nextPhotoAria" aria-label="Next photo">›</button>
       <img id="modalImg" src="" alt="" />
       <div class="modal__counter" id="modalCounter"></div>
       <div class="modal__dots" id="modalDots"></div>
@@ -428,13 +425,13 @@
       <div class="modal__facts" id="modalFacts"></div>
       <button type="button" class="cart-cta" id="modalCartBtn"></button>
       <div class="modal__desc" id="modalDesc"></div>
-      <p class="modal__note" data-i18n="modalNote">Disorder119-Archiv</p>
+      <p class="modal__note" data-i18n="modalNote">Disorder119 archive</p>
     </div>
   </div>
 </div>
 
 <div class="cart-backdrop" id="cartBackdrop">
-  <div class="cart-drawer" id="cartDrawer" role="dialog" aria-modal="true" data-i18n-aria="cartAria" aria-label="Warenkorb">
+  <div class="cart-drawer" id="cartDrawer" role="dialog" aria-modal="true" data-i18n-aria="cartAria" aria-label="Cart">
     <div class="cart-drawer__head">
       <div class="cart-drawer__brand">
         <svg class="cart-drawer__brand-icon" viewBox="0 0 240 300" role="img" aria-hidden="true">
@@ -448,9 +445,9 @@
           <circle cx="120" cy="166" r="28" fill="currentColor"/>
           <text id="cartCountDrawer" x="120" y="176" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" style="fill: var(--surface);">0</text>
         </svg>
-        <h2 data-i18n="cartHeading">Warenkorb</h2>
+        <h2 data-i18n="cartHeading">Cart</h2>
       </div>
-      <button class="modal__close" id="cartClose" type="button" data-i18n-aria="closeAria" aria-label="Schließen">✕</button>
+      <button class="modal__close" id="cartClose" type="button" data-i18n-aria="closeAria" aria-label="Close">✕</button>
     </div>
     <div class="cart-drawer__body" id="cartBody"></div>
     <div class="cart-drawer__foot" id="cartFoot"></div>
@@ -460,13 +457,8 @@
 
 <script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "paypalClientId": "BAAcvD8X1aHIk42UUDAMZkYZ2i5gKLPCXZDBzbWjsh-axJ_6551l-FXgDdboqGtmZSidZbGWon2cQ_SuaI", "shopWorkerUrl": "https://api.disorder119.com", "turnstileSiteKey": "0x4AAAAAAFHqI2j_AitAYIKF", "environment": "live", "features": {"paypalCheckout": true, "customerAccounts": true}};</script>
 <script src="/assets/pwa.js?v=b32fa09366"></script>
-<script src="/assets/app.js?v=98239b12dc"></script>
-<script src="/assets/catalog-filter-simplify.js"></script>
-<script src="/assets/archiv-navigation.js?v=e52f257ecc"></script>
-<script src="/assets/rental-v2.js"></script>
-<script src="/assets/rental-v2-ui.js"></script>
-<script src="/assets/rental-v2-picker.js"></script>
+<script>/* FOCUS3_MOBILE_RUNTIME_AFTER_LCP */(function(){var s=["/assets/app.js?v=98239b12dc","/assets/catalog-filter-simplify.js","/assets/archiv-navigation.js?v=e52f257ecc","/assets/rental-v2.js","/assets/rental-v2-ui.js","/assets/rental-v2-picker.js"],i=0,started=false;function next(){if(i>=s.length)return;var e=document.createElement("script");e.src=s[i++];e.onload=next;e.onerror=next;document.body.appendChild(e);}function boot(){if(started)return;started=true;next();}function later(){setTimeout(boot,180);}if(document.readyState==="complete")later();else window.addEventListener("load",later,{once:true});})();</script>
 
-<script src="/assets/newsletter.js?v=6cdb92755d" defer></script>
+<script src="/assets/newsletter.js?v=2d3e72755d" defer></script>
 </body>
 </html>
