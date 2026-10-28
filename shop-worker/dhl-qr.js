@@ -3,6 +3,9 @@
 // Nutzt die DHL-Online-Frankierung per Schnittstelle ("Parcel DE Private
 // Shipping"). Dafuer braucht es keinen Geschaeftskundenvertrag, nur einen
 // kostenlosen Zugang im DHL-Entwicklerportal (Secret DHL_PRIVAT_API_KEY).
+// Seit 28.10.2026 auch in die EU: dieselben Produkte (PAK02 ... PAK315) mit
+// dem Empfaengerland als ISO-3-Code - DHL rechnet dann den EU-Preis ("Paket
+// EU"), Zollpapiere braucht es innerhalb der EU nicht.
 //
 //   1. Admin-App, Bestellung: "QR-Versandmarke" -> der Server legt bei DHL
 //      einen Warenkorb mit fertig ausgefuellter Adresse an.
@@ -16,6 +19,8 @@
 import { safeText } from "./commerce-core.js";
 import { versandSperre } from "./erstattung-auftrag.js";
 import { ZahlungFehler, zahlungSicherstellen } from "./zahlung.js";
+import { iso3, plzNormalisieren, plzSondergebiet } from "./laender.js";
+import { GROESSEN, VERSAND, zoneFuerLand } from "./versand-config.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -51,26 +56,38 @@ export function dhlQrReady(env = {}) {
 // ------------------------------------------------------------------- Adressen
 
 // DHL Online Frankierung nimmt nur Latin-1 und lehnt diese Zeichen ab:
-// ? * ^ ! # % $ : { } [ ]. Umlaute sind Latin-1 und bleiben; "ł" oder Emojis
-// verlieren wir lieber, als die ganze Marke an der Validierung scheitern zu lassen.
+// ? * ^ ! # % $ : { } [ ]. Umlaute sind Latin-1 und bleiben; "č", "ő" & Co.
+// verlieren ihren Akzent. Buchstaben ohne Zerlegung (polnisch "ł", kroatisch
+// "đ", maltesisch "ħ") werden umgeschrieben; Emojis verlieren wir lieber, als
+// die ganze Marke an der Validierung scheitern zu lassen.
+const UMSCHRIFT = Object.freeze({ "Ł": "L", "ł": "l", "Đ": "D", "đ": "d", "Ħ": "H", "ħ": "h", "ı": "i", "Œ": "OE", "œ": "oe",
+  "Ŀ": "L", "ŀ": "l", "Ŋ": "N", "ŋ": "n", "ĸ": "k", "Ŧ": "T", "ŧ": "t", "Ș": "S", "ș": "s", "Ț": "T", "ț": "t" });
 export function dhlText(value, max) {
   let out = "";
   for (const zeichen of String(value || "").normalize("NFC")) {
     if (/[?*^!#%$:{}[\]]/.test(zeichen)) { out += " "; continue; }
     if (zeichen.codePointAt(0) <= 0xff) { out += zeichen; continue; }
+    if (UMSCHRIFT[zeichen]) { out += UMSCHRIFT[zeichen]; continue; }
     const basis = zeichen.normalize("NFKD").replace(/[̀-ͯ]/g, "");
     if (basis && [...basis].every(c => c.codePointAt(0) <= 0xff)) out += basis;
   }
   return out.replace(/[\u0000-\u001f\u007f-\u009f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
-// "Musterstraße 12a" -> ["Musterstraße", "12a"]. Scheitert die Trennung,
-// bleibt die Hausnummer leer - die Admin-App zeigt beide Felder zum Pruefen.
+// "Musterstraße 12a" -> ["Musterstraße", "12a"], auch "Rue de la Paix 12bis"
+// oder "Calle Mayor s/n". Steht die Nummer vorn ("12 rue de la Paix"), wird
+// sie ebenfalls erkannt. Scheitert die Trennung, bleibt die Hausnummer leer -
+// die Admin-App zeigt beide Felder zum Pruefen.
+const NUMMER = String.raw`(?:\d+\s*[a-zA-Z]{0,3}(?:\s*[-/]\s*\d+\s*[a-zA-Z]{0,3})?|[sS]\s*/\s*[nN])`;
 export function splitStreet(line) {
   const text = dhlText(line, 60);
-  const match = /^(.*?\D)[\s,]*(\d+\s*[a-zA-Z]?(?:\s*[-/]\s*\d+\s*[a-zA-Z]?)?)$/.exec(text);
-  if (!match) return { street: text, streetNumber: "" };
-  return { street: match[1].replace(/[\s,]+$/, ""), streetNumber: match[2].replace(/\s+/g, "") };
+  const hinten = new RegExp(String.raw`^(.*?\D)[\s,]*(` + NUMMER + String.raw`)$`).exec(text);
+  if (hinten && /[A-Za-zÀ-ÿ]{2}/.test(hinten[1])) {
+    return { street: hinten[1].replace(/[\s,]+$/, ""), streetNumber: hinten[2].replace(/\s+/g, "") };
+  }
+  const vorn = /^(\d+[a-zA-Z]{0,3}(?:[-/]\d+[a-zA-Z]{0,3})?)[\s,]+(\D.*)$/.exec(text);
+  if (vorn && /[A-Za-zÀ-ÿ]{2}/.test(vorn[2])) return { street: vorn[2].trim(), streetNumber: vorn[1].replace(/\s+/g, "") };
+  return { street: text, streetNumber: "" };
 }
 
 export function senderAddress(env) {
@@ -98,15 +115,36 @@ export function istAbholort(receiver = {}) {
 // Vorschlag aus der Bestellung; die Admin-App darf jedes Feld ueberschreiben.
 // Die Kasse speichert eine Abholort-Bestellung als "Packstation 162" mit dem
 // Zusatz "Postnummer 12345678" - daraus wird hier das DHL-Format.
+// Lieferland der Bestellung (zweistellig, aus der Kasse). Alte Bestellungen
+// ohne Land waren immer Deutschland.
+export function empfaengerLand(contact = {}) {
+  const land = String(contact.country_code || contact.countryCode || "DE").trim().toUpperCase();
+  return land || "DE";
+}
+
 export function receiverAddress(contact = {}, override = {}) {
   const name = override.name ?? (contact.recipient_name
     || [contact.given_name, contact.surname].filter(Boolean).join(" "));
+  const land = empfaengerLand(contact);
   const split = splitStreet(contact.address_line1 || "");
   const street = dhlText(override.street ?? split.street, 50);
   const streetNumber = dhlText(override.streetNumber ?? split.streetNumber, 10);
-  const plz = dhlText(override.plz ?? contact.postal_code, 5);
+  const plzRoh = dhlText(override.plz ?? contact.postal_code, 12);
   const city = dhlText(override.city ?? contact.city, 40);
   const zusatz = dhlText(override.addressAddition ?? contact.address_line2, 50);
+  if (land !== "DE") {
+    // EU-Ausland: DHL "Province-Based Address" (Doku Parcel DE Private
+    // Shipping) - Name in name2, Land als ISO-3-Code, PLZ in der Schreibweise
+    // des Landes. Einen Adresszusatz kennt das Format nicht, er geht in name3.
+    const receiver = {
+      name2: dhlText(name, 50), street, streetNumber,
+      plz: plzNormalisieren(land, plzRoh) || plzRoh,
+      city, country: iso3(land) || land,
+    };
+    if (zusatz) receiver.name3 = zusatz;
+    return receiver;
+  }
+  const plz = dhlText(plzRoh, 5);
   if (ABHOLORT_STRASSE.test(street)) {
     const postnummer = String(override.postnummer ?? (/\b(\d{6,10})\b/.exec(zusatz.replace(/(\d)\s+(?=\d)/g, "$1")) || [])[1] ?? "").replace(/\s+/g, "");
     return {
@@ -124,11 +162,30 @@ export function receiverAddress(contact = {}, override = {}) {
   return receiver;
 }
 
+// Etiketten gibt es fuer alle Laender der Kasse (versand.zonen): Deutschland
+// und die EU - dorthin ohne Zollinhaltserklaerung. Alles andere (Schweiz,
+// Grossbritannien, USA ...) braucht Zollpapiere und laeuft "auf Anfrage"
+// ausserhalb dieser Anbindung.
 export function assertReceiver(receiver, countryCode = "DE") {
-  if (String(countryCode || "DE").toUpperCase() !== "DE") {
-    throw new DhlQrError("NUR_INLANDSVERSAND", 409, "Die QR-Marke ist für Sendungen innerhalb Deutschlands.");
+  const land = String(countryCode || "DE").toUpperCase();
+  if (!zoneFuerLand(land)) {
+    throw new DhlQrError("LAND_NICHT_ANGEBUNDEN", 409, `${land}: nur Deutschland und EU-Länder ohne Zoll.`);
   }
   const fehlend = [];
+  if (land !== "DE") {
+    if (istAbholort(receiver)) throw new DhlQrError("ABHOLORT_NUR_DE", 409, "Packstation und Filiale gibt es nur in Deutschland.");
+    if (!receiver.name2) fehlend.push("Name");
+    if (!receiver.street) fehlend.push("Straße");
+    if (!receiver.streetNumber) fehlend.push("Hausnummer");
+    if (!plzNormalisieren(land, receiver.plz)) fehlend.push("PLZ");
+    if (!receiver.city) fehlend.push("Ort");
+    if (receiver.country !== iso3(land)) fehlend.push("Land");
+    if (fehlend.length) throw new DhlQrError("ADRESSE_UNVOLLSTAENDIG", 409, fehlend.join(", "));
+    if (plzSondergebiet(land, plzNormalisieren(land, receiver.plz))) {
+      throw new DhlQrError("SONDERGEBIET_MIT_ZOLL", 409, "Dieses Gebiet liegt außerhalb des EU-Zollgebiets.");
+    }
+    return;
+  }
   if (istAbholort(receiver)) {
     if (!receiver.name1) fehlend.push("Name");
     if (!/^\d{6,10}$/.test(receiver.name2 || "")) fehlend.push("Postnummer");
@@ -179,23 +236,126 @@ export function safeDhlCheckoutUrl(value) {
   } catch { return false; }
 }
 
-export async function listProducts(env) {
-  if (productCache && productCache.until > Date.now() && productCache.base === apiBase(env)) return productCache.products;
+// Produktkatalog der Online-Frankierung, einmal geladen und 12 h gemerkt
+// (DHL empfiehlt das ausdruecklich). Jedes Produkt (PAK02, PAK05 ...) hat
+// Regionen mit Laenderlisten (ISO-3) und Preis - dasselbe Produkt kostet nach
+// Oesterreich mehr als im Inland.
+async function katalogLaden(env) {
+  if (productCache && productCache.until > Date.now() && productCache.base === apiBase(env)) return productCache.catalog;
   const catalog = await (await dhl(env, "/catalog/current/products")).json();
-  const products = Object.entries(catalog?.products || {}).map(([id, product]) => {
-    const inland = (product.regions || []).find(r => (r.countries || []).includes("DEU") && !r.unavailable);
-    if (!inland) return null;
+  productCache = { until: Date.now() + PRODUCT_CACHE_MS, base: apiBase(env), catalog: catalog || {} };
+  return productCache.catalog;
+}
+
+// Region eines Produkts fuer ein Land (ISO-3) - oder null.
+function regionFuer(product, land3) {
+  return (product?.regions || []).find(r => (r.countries || []).includes(land3) && !r.unavailable) || null;
+}
+
+// Verfolgbare Produkte fuer ein Lieferland (zweistellig, Standard DE), billigste zuerst.
+export async function listProducts(env, land = "DE") {
+  const land3 = iso3(String(land || "DE").toUpperCase());
+  if (!land3) return [];
+  const catalog = await katalogLaden(env);
+  return Object.entries(catalog?.products || {}).map(([id, product]) => {
+    const region = regionFuer(product, land3);
+    if (!region) return null;
     const attrs = product.attributes || {};
     return {
       id: safeText(id, 40),
       name: safeText(attrs.displayName?.text || id, 80),
       maxWeightG: Number(attrs.maxWeight || 0) || null,
       tracking: attrs.tracking !== false,
-      priceCents: Math.round(Number(inland.price?.amount || 0) * 100) || null,
+      priceCents: Math.round(Number(region.price?.amount || 0) * 100) || null,
     };
-  }).filter(Boolean).filter(p => p.tracking).sort((a, b) => (a.priceCents || 0) - (b.priceCents || 0));
-  productCache = { until: Date.now() + PRODUCT_CACHE_MS, base: apiBase(env), products, defaultProduct: catalog?.defaultProduct || null };
-  return products;
+  }).filter(Boolean).filter(p => p.tracking).sort((a, b) => (a.priceCents || 0) - (b.priceCents || 0) || a.id.localeCompare(b.id));
+}
+
+// ----------------------------------------------------- Abgleich mit der Kasse
+
+// Welches DHL-Produkt zu welcher Paketklasse der Kasse gehoert. International
+// heisst die oberste Stufe "30 kg", das Produkt bleibt PAK315 (dhl.de-Links
+// "Preise international"); PAK30 als Rueckfall.
+const KLASSEN_PRODUKTE = Object.freeze({ S: ["PAK02"], M: ["PAK05"], L: ["PAK10"], XL: ["PAK20"], XXL: ["PAK315", "PAK30", "PAK31"] });
+
+export function katalogPreise(catalog, land3) {
+  const preise = {};
+  for (const klasse of GROESSEN) {
+    for (const id of KLASSEN_PRODUKTE[klasse]) {
+      const region = regionFuer(catalog?.products?.[id], land3);
+      const cents = region ? Math.round(Number(region.price?.amount || 0) * 100) : 0;
+      if (cents > 0) { preise[klasse] = cents; break; }
+    }
+  }
+  return preise;
+}
+
+// Die festen Kassenpreise (config/shop-config.json) gegen den DHL-Katalog:
+// je Zone der Standardtarif ohne Warenwert-Grenze, je Land und Paketklasse.
+// Ergebnis fuer Protokoll und Admin-App - die Kasse rechnet weiter mit ihren
+// Preisen, damit ein kurzer DHL-Ausfall nie den Checkout stoppt.
+export function katalogAbgleichen(catalog, konfig = VERSAND) {
+  const abweichungen = [];
+  const fehlend = [];
+  const zonen = {};
+  for (const zone of Object.values(konfig.zonen || {})) {
+    const tarif = konfig.tarife.find(t => t.zone === zone.key && t.art === "standard" && !t.abWarenwertCents && !t.bisWarenwertCents);
+    if (!tarif) continue;
+    const gruppen = new Map();
+    for (const land of zone.laender) {
+      const dhlPreise = katalogPreise(catalog, iso3(land));
+      if (!Object.keys(dhlPreise).length) { fehlend.push(land); continue; }
+      for (const klasse of GROESSEN) {
+        if (dhlPreise[klasse] && dhlPreise[klasse] !== tarif.preise[klasse]) {
+          abweichungen.push({ zone: zone.key, land, paket: klasse, kasseCents: tarif.preise[klasse], dhlCents: dhlPreise[klasse] });
+        }
+      }
+      const schluessel = JSON.stringify(dhlPreise);
+      gruppen.set(schluessel, [...(gruppen.get(schluessel) || []), land]);
+    }
+    zonen[zone.key] = { tarif: tarif.id, kasse: { ...tarif.preise }, dhl: [...gruppen].map(([preise, laender]) => ({ preise: JSON.parse(preise), laender })) };
+  }
+  // Hoeherversicherung international: Produkte mit "HVERSI" im Namen (z. B. PAK05.HVERSI1000.EU).
+  const versicherung = Object.keys(catalog?.products || {}).filter(id => /HVERSI/i.test(id)).slice(0, 40);
+  return { zonen, abweichungen: abweichungen.slice(0, 60), anzahlAbweichungen: abweichungen.length, fehlend, versicherung };
+}
+
+const ABGLEICH_ENTITY = Object.freeze({ type: "versand", id: "dhl-katalog" });
+const TAG_MS = 24 * 3_600_000;
+
+// Cron: hoechstens einmal am Tag. Nichts wird gekauft - nur der Katalog gelesen.
+export async function katalogAbgleich(env, now = Date.now()) {
+  if (!env?.DB || !dhlQrReady(env)) return { uebersprungen: "NICHT_EINGERICHTET" };
+  const letzte = await env.DB.prepare(`SELECT created_at FROM audit_events WHERE entity_type=? AND entity_id=?
+    ORDER BY created_at DESC LIMIT 1`).bind(ABGLEICH_ENTITY.type, ABGLEICH_ENTITY.id).first();
+  if (letzte && Number(now) - Date.parse(letzte.created_at) < TAG_MS) return { uebersprungen: "HEUTE_SCHON" };
+  let ergebnis;
+  let ereignis = "DHL_KATALOG_GEPRUEFT";
+  try {
+    ergebnis = { environment: apiBase(env) === API.live ? "live" : "sandbox", ...katalogAbgleichen(await katalogLaden(env)) };
+    if (ergebnis.anzahlAbweichungen || ergebnis.fehlend.length) ereignis = "DHL_KATALOG_ABWEICHUNG";
+  } catch (err) {
+    ereignis = "DHL_KATALOG_FEHLER";
+    ergebnis = { code: safeText(err?.code || err?.message || "unbekannt", 60), detail: safeText(err?.detail || "", 120) };
+  }
+  if (ereignis !== "DHL_KATALOG_GEPRUEFT") {
+    console.warn(JSON.stringify({ level: "warn", event: "dhl_katalog_abgleich", ergebnis: ereignis, abweichungen: ergebnis.anzahlAbweichungen || 0 }));
+  }
+  await env.DB.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'SYSTEM',?,?,?,NULL,?,?)`).bind(crypto.randomUUID(), ABGLEICH_ENTITY.type, ABGLEICH_ENTITY.id, ereignis,
+    JSON.stringify(ergebnis).slice(0, 12000), new Date(Number(now)).toISOString()).run();
+  return { ereignis, ...ergebnis };
+}
+
+// Letzter Abgleich fuer die Admin-App (Hinweis, falls die Preise abweichen).
+async function letzterAbgleich(env) {
+  try {
+    const row = await env.DB?.prepare(`SELECT event_type,metadata_json,created_at FROM audit_events WHERE entity_type=? AND entity_id=?
+      ORDER BY created_at DESC LIMIT 1`).bind(ABGLEICH_ENTITY.type, ABGLEICH_ENTITY.id).first();
+    if (!row) return null;
+    const daten = JSON.parse(row.metadata_json || "{}");
+    return { ereignis: row.event_type, am: row.created_at, abweichungen: daten.abweichungen || [], fehlend: daten.fehlend || [] };
+  } catch { return null; }
 }
 
 // --------------------------------------------------------------- Ablauf je Auftrag
@@ -249,9 +409,16 @@ export async function createMark(env, orderId, body = {}) {
   // the buyer. Validate local prerequisites before any capture attempt.
   const produkt = safeText(body.produkt, 40);
   if (!/^[A-Z0-9.]{3,40}$/.test(produkt)) throw new DhlQrError("PRODUKT_FEHLT", 400);
+  const land = empfaengerLand(order);
   const receiver = receiverAddress(order, body.empfaenger || {});
-  assertReceiver(receiver, order.country_code);
+  assertReceiver(receiver, land);
   if (!dhlQrReady(env)) throw new DhlQrError('DHL_QR_NICHT_EINGERICHTET',503);
+  // Das Produkt muss DHL fuer dieses Land anbieten (PAK05 nach Oesterreich
+  // ist "Paket EU" mit EU-Preis) - vor dem Einziehen, damit nichts umsonst
+  // eingezogen wird.
+  if (!(await listProducts(env, land)).some(p => p.id === produkt)) {
+    throw new DhlQrError("PRODUKT_NICHT_FUER_LAND", 409, `${produkt} → ${land}`);
+  }
   try {
     await zahlungSicherstellen(env, order.id, crypto.randomUUID(), { anlass: "VERSAND" });
   } catch (err) {
@@ -405,7 +572,12 @@ export async function handleDhlQr(request, env, url, reqId = crypto.randomUUID()
 
     const path = url.pathname.replace(/\/+$/, "");
     if (path === "/admin/versand/dhl-produkte" && request.method === "GET") {
-      return new Response(JSON.stringify({ ok: true, environment: apiBase(env) === API.live ? 'live' : 'sandbox', produkte: await listProducts(env) }), { status: 200, headers: headers(origin) });
+      // ?land=FR: Produkte und Preise fuer dieses Lieferland (Standard DE).
+      const land = String(url.searchParams.get("land") || "DE").trim().toUpperCase();
+      if (!/^[A-Z]{2}$/.test(land)) throw new DhlQrError("LAND_UNGUELTIG", 400);
+      if (!zoneFuerLand(land)) throw new DhlQrError("LAND_NICHT_ANGEBUNDEN", 409, `${land}: nur Deutschland und EU-Länder ohne Zoll.`);
+      return new Response(JSON.stringify({ ok: true, environment: apiBase(env) === API.live ? 'live' : 'sandbox', land,
+        produkte: await listProducts(env, land), abgleich: await letzterAbgleich(env) }), { status: 200, headers: headers(origin) });
     }
     const match = /^\/admin\/versand\/([^/]+)\/qr$/.exec(path);
     const orderId = decodeURIComponent(match[1]);

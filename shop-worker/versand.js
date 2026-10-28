@@ -2,9 +2,11 @@
 // serverseitige Pruefung der gewaehlten Option.
 //
 // Ablauf:
-//   1. Produktseite und Warenkorb fragen GET /versand/optionen?artikel=<IDs>.
-//      Die Paketgroesse bestimmt der Server selbst aus Produktart und
-//      Kategorie (versand-config.js) - der Browser rechnet nichts.
+//   1. Produktseite und Warenkorb fragen GET /versand/optionen?artikel=<IDs>,
+//      die Kasse zusaetzlich mit &land=<Lieferland> (Deutschland oder ein
+//      EU-Land, versand.zonen). Die Paketgroesse bestimmt der Server selbst
+//      aus Produktart und Kategorie (versand-config.js) - der Browser
+//      rechnet nichts.
 //   2. Gezeigt wird je erlaubtem Paketdienst (DPD, DHL ...) der guenstigste
 //      "Standard" mit Zustellung an die Haustuer, der billigste zuerst, dazu
 //      "Express" (guenstigster Express-Dienst, falls Packlink einen anbietet
@@ -25,7 +27,7 @@
 import { parsePriceToCents, safeText } from "./commerce-core.js";
 import { lieferfenster } from "./lieferzeit.js";
 import { angeboteLaden } from "./packlink.js";
-import { PAKETE, VERSAND, dienstErlaubt, paketFuer, paketFuerArtikel } from "./versand-config.js";
+import { PAKETE, VERSAND, dienstErlaubt, lieferlaender, paketFuer, paketFuerArtikel, zoneFuerLand } from "./versand-config.js";
 
 const CACHE_MS = 10 * 60 * 1000;
 const KATALOG_CACHE_MS = 5 * 60 * 1000;
@@ -132,23 +134,44 @@ async function angeboteFuer(env, paket) {
 
 // Feste Tarife (config/shop-config.json versand.quelle "fest"): DHL zu
 // Privatpreisen je Paketklasse, das Etikett kommt als QR-Marke ueber die Admin-App.
-export function festeOptionen(paket, konfig = VERSAND) {
+// Nur die Tarife der Zone des Lieferlands (Deutschland: "DHL Paket", EU:
+// "DHL Paket EU"); die Laufzeit kommt je Land aus versand.zonen.
+export function festeOptionen(paket, konfig = VERSAND, land = "DE") {
   const p = paketFuer(paket);
-  return konfig.tarife.map(t => ({
-    id: `fest-${t.id}-${p.key}`,
-    art: t.art,
-    titel: t.titel,
-    preisCents: t.preise[p.key],
-    laufzeit: t.laufzeitTage ? (t.laufzeitTage === 1 ? "1 Tag" : `${t.laufzeitTage} Tage`) : "",
-    quelle: "fest",
-    packlinkServiceId: null,
-    carrier: t.carrier,
-    serviceName: t.titel,
-    paket: p.key,
-    abholstation: t.abholstation,
-    versichertBisCents: t.versichertBisCents,
-    abWarenwertCents: t.abWarenwertCents,
-  })).sort((a, b) => a.preisCents - b.preisCents || a.id.localeCompare(b.id));
+  const zone = zoneFuerLand(land, konfig);
+  if (!zone) return [];
+  const spanne = zone.laufzeitTage[String(land).toUpperCase()] || null;
+  return konfig.tarife.filter(t => (t.zone || "DE") === zone.key).map(t => {
+    const von = spanne ? spanne[0] : t.laufzeitTage;
+    const bis = spanne ? spanne[1] : t.laufzeitTage;
+    return {
+      id: `fest-${t.id}-${p.key}`,
+      art: t.art,
+      titel: t.titel,
+      preisCents: t.preise[p.key],
+      laufzeit: !von ? "" : von === bis ? (von === 1 ? "1 Tag" : `${von} Tage`) : `${von}–${bis} Tage`,
+      laufzeitVon: von || null,
+      laufzeitBis: bis || null,
+      quelle: "fest",
+      packlinkServiceId: null,
+      carrier: t.carrier,
+      serviceName: t.titel,
+      paket: p.key,
+      zone: zone.key,
+      abholstation: t.abholstation,
+      versichertBisCents: t.versichertBisCents,
+      abWarenwertCents: t.abWarenwertCents,
+      bisWarenwertCents: t.bisWarenwertCents,
+    };
+  }).sort((a, b) => a.preisCents - b.preisCents || a.id.localeCompare(b.id));
+}
+
+// Lieferland pruefen: zweistellig und in einer Zone der Kasse, sonst 422.
+export function lieferlandAus(wert) {
+  const land = String(wert ?? "DE").trim().toUpperCase() || "DE";
+  if (!/^[A-Z]{2}$/.test(land)) throw new VersandError("LAND_UNGUELTIG", 400);
+  if (!zoneFuerLand(land)) throw new VersandError("LAND_NICHT_BELIEFERT", 422);
+  return land;
 }
 
 // Woher die Preise kommen: config/shop-config.json (versand.quelle). Der
@@ -160,13 +183,19 @@ export function versandQuelle(env, konfig = VERSAND) {
 }
 
 // Optionen fuer eine Paketgroesse. Ohne Verbindung zu Packlink: Ersatzpreis.
-export async function versandOptionen(env, paket) {
+// land: Lieferland (zweistellig). Packlink und der Ersatzpreis gelten nur
+// fuer Deutschland; ins EU-Ausland geht es nur mit festen DHL-Tarifen.
+export async function versandOptionen(env, paket, land = "DE") {
   const p = paketFuer(paket);
+  const zone = zoneFuerLand(land);
+  if (!zone) throw new VersandError("LAND_NICHT_BELIEFERT", 422);
   if (versandQuelle(env) === "fest") {
-    const optionen = festeOptionen(p.key);
-    if (optionen.length) return { paket: p.key, quelle: "fest", optionen };
-    return { paket: p.key, quelle: "ersatz", optionen: [ersatzOption(p.key)] };
+    const optionen = festeOptionen(p.key, VERSAND, land);
+    if (optionen.length) return { paket: p.key, quelle: "fest", optionen, land, zone: zone.key };
+    if (zone.key !== "DE") throw new VersandError("LAND_NICHT_BELIEFERT", 422);
+    return { paket: p.key, quelle: "ersatz", optionen: [ersatzOption(p.key)], land, zone: zone.key };
   }
+  if (zone.key !== "DE") throw new VersandError("LAND_NICHT_BELIEFERT", 422);
   try {
     const optionen = optionenAus(await angeboteFuer(env, p.key), p.key);
     if (optionen.length) return { paket: p.key, quelle: "packlink", optionen };
@@ -185,11 +214,14 @@ export async function versandOptionen(env, paket) {
 export function versandkostenfreiAnwenden(roh, warenwertCents, konfig = VERSAND) {
   const wert = Number.isSafeInteger(warenwertCents) && warenwertCents > 0 ? warenwertCents : 0;
   // Optionen, die erst ab einem Warenwert gelten (Hoeherversicherung ueber
-  // 500 EUR), sonst gar nicht anbieten.
-  const passend = roh.optionen.filter(o => !(o.abWarenwertCents > wert));
+  // 500 EUR) oder nur bis zu einem (Stufen der EU-Hoeherversicherung), sonst
+  // gar nicht anbieten.
+  const passend = roh.optionen.filter(o => !(o.abWarenwertCents > wert) && !(o.bisWarenwertCents && wert > o.bisWarenwertCents));
   const ergebnis = passend.length === roh.optionen.length ? roh : { ...roh, optionen: passend };
   const grenze = konfig.versandkostenfrei;
-  if (!grenze) return ergebnis;
+  // Versandkostenfrei nur in den Zonen der Konfiguration (Inhaber: nur
+  // Deutschland) - in die EU zahlt die Kundschaft den DHL-Preis.
+  if (!grenze || !(grenze.zonen || ["DE"]).includes(roh.zone || "DE")) return ergebnis;
   const erreicht = wert >= grenze.abCents;
   const standards = ergebnis.optionen.filter(o => o.art === "standard").map(o => o.preisCents);
   const basis = standards.length ? Math.min(...standards) : 0;
@@ -211,10 +243,15 @@ export function oeffentlicheOptionen(ergebnis, jetzt = new Date()) {
     paket: p.key,
     paketName: p.name,
     quelle: ergebnis.quelle,
+    // Lieferland dieser Preise und alle Laender der Kasse (Auswahl in der Kasse).
+    land: ergebnis.land || "DE",
+    zone: ergebnis.zone || "DE",
+    laender: lieferlaender(),
     optionen: ergebnis.optionen.map(o => {
       // Werktage als Zahl, damit Produktseite und Warenkorb sie in ihrer
       // Sprache anzeigen koennen ("2 Tage", "2 days", "2 jours").
-      const tage = Number(/(\d+)/.exec(o.laufzeit || "")?.[1]) || null;
+      const tage = Number.isInteger(o.laufzeitVon) ? o.laufzeitVon : Number(/(\d+)/.exec(o.laufzeit || "")?.[1]) || null;
+      const tageBis = Number.isInteger(o.laufzeitBis) && o.laufzeitBis > tage ? o.laufzeitBis : tage;
       return {
         id: o.id,
         art: o.art,
@@ -223,13 +260,15 @@ export function oeffentlicheOptionen(ergebnis, jetzt = new Date()) {
         preis: (o.preisCents / 100).toFixed(2),
         laufzeit: o.laufzeit,
         tage,
+        // EU: Laufzeit als Spanne ("2-4 Werktage" nach Italien).
+        ...(tageBis !== tage ? { tageBis } : {}),
         carrier: o.carrier,
-        // Nur DHL liefert an Packstation und Filiale.
+        // Nur DHL liefert an Packstation und Filiale - und nur in Deutschland.
         abholstation: o.abholstation === true,
         // Feste Tarife: bis zu welchem Warenwert der Paketdienst haftet.
         ...(Number.isSafeInteger(o.versichertBisCents) && o.versichertBisCents > 0 ? { versichertBisCents: o.versichertBisCents } : {}),
         // Voraussichtlich bei der Kundschaft: { von, bis } als Datum.
-        lieferung: lieferfenster(tage, jetzt),
+        lieferung: lieferfenster(tage, jetzt, tageBis),
       };
     }),
     // "Ab 99 € versandkostenfrei" - fuer "Noch 9,00 € bis zum kostenlosen Versand".
@@ -243,9 +282,10 @@ export function oeffentlicheOptionen(ergebnis, jetzt = new Date()) {
 // Browser), Preis aus der eigenen, frisch gerechneten Liste. `gesehenCents`
 // ist der Preis, den die Kundschaft vor dem Kaufknopf gesehen hat,
 // `warenwertCents` die Summe der echten Artikelpreise (versandkostenfrei ab).
-export async function versandFuerBestellung(env, items, gewaehlteId, gesehenCents, warenwertCents = 0) {
+// `land`: Lieferland der Bestellung - der Preis gilt nur fuer dieses Land.
+export async function versandFuerBestellung(env, items, gewaehlteId, gesehenCents, warenwertCents = 0, land = "DE") {
   const paket = paketFuerArtikel(items);
-  const ergebnis = versandkostenfreiAnwenden(await versandOptionen(env, paket), warenwertCents);
+  const ergebnis = versandkostenfreiAnwenden(await versandOptionen(env, paket, lieferlandAus(land)), warenwertCents);
   const id = safeText(gewaehlteId, 40);
   const gewaehlt = id ? ergebnis.optionen.find(o => o.id === id) : ergebnis.optionen[0];
   if (!gewaehlt) throw new VersandError("VERSAND_OPTION_UNGUELTIG", 409, oeffentlicheOptionen(ergebnis));
@@ -363,6 +403,8 @@ export async function handleVersandOptionen(request, env, url, reqId = crypto.ra
       if (ergebnis && ergebnis.success === false) throw new VersandError("RATE_LIMITED", 429);
     }
     const ids = artikelIdsAus(url.searchParams.get("artikel"));
+    // Lieferland aus der Kasse (?land=FR); Produktseite und Warenkorb fragen ohne -> Deutschland.
+    const land = lieferlandAus(url.searchParams.get("land") || "DE");
     let paket = VERSAND.standardGroesse;
     let warenwertCents = 0;
     try {
@@ -375,10 +417,14 @@ export async function handleVersandOptionen(request, env, url, reqId = crypto.ra
     } catch (err) {
       console.warn(JSON.stringify({ level: "warn", event: "versand_katalog_fehlt", requestId: reqId, code: safeText(err?.message || "unbekannt", 60) }));
     }
-    const ergebnis = versandkostenfreiAnwenden(await versandOptionen(env, paket), warenwertCents);
+    const ergebnis = versandkostenfreiAnwenden(await versandOptionen(env, paket, land), warenwertCents);
     return antwort({ ok: true, ...oeffentlicheOptionen(ergebnis) }, 200, origin);
   } catch (err) {
-    if (err instanceof VersandError) return antwort({ error: err.code, requestId: reqId }, err.status, origin);
+    if (err instanceof VersandError) {
+      // Unbelieferte Laender: die Liste der Kasse mitschicken, damit sie neu waehlen kann.
+      const laender = err.code === "LAND_NICHT_BELIEFERT" ? { laender: lieferlaender() } : {};
+      return antwort({ error: err.code, ...laender, requestId: reqId }, err.status, origin);
+    }
     console.error(JSON.stringify({ level: "error", event: "versand_optionen_fehler", requestId: reqId, message: safeText(err?.message || "unknown", 160) }));
     return antwort({ error: "VERSAND_NICHT_VERFUEGBAR", requestId: reqId }, 503, origin);
   }

@@ -732,11 +732,12 @@ def cta_html(it, shop_config, home, lang):
             "fr": " Livraison en sus selon la taille du colis et le mode d'envoi (standard ou express) – le montant exact est indiqué avant la commande.",
         }
     # Liefergebiet (AGB § 4, FAQ "Wohin versendet ihr?"): die Kasse liefert
-    # innerhalb Deutschlands, Europa und USA nur auf Anfrage, sonst nirgends.
+    # nach Deutschland und in alle EU-Laender (seit 28.10.2026, ohne Zoll),
+    # uebriges Europa und USA nur auf Anfrage, sonst nirgends.
     liefergebiet = {
-        "de": " Wir versenden nach Europa und in die USA – außerhalb Deutschlands auf Anfrage.",
-        "en": " We ship to Europe and the USA – outside Germany on request.",
-        "fr": " Nous livrons en Europe et aux États-Unis – hors d'Allemagne sur demande.",
+        "de": " In alle EU-Länder liefern wir direkt über die Kasse, ins übrige Europa und in die USA auf Anfrage.",
+        "en": " We deliver to every EU country straight through checkout – to the rest of Europe and the USA on request.",
+        "fr": " Nous livrons dans tous les pays de l'UE directement via la caisse – ailleurs en Europe et aux États-Unis sur demande.",
     }
     ship_notes = {sprache: text + liefergebiet[sprache] for sprache, text in ship_notes.items()}
     note_text =trust_notes.get(lang, trust_notes["de"]) + ship_notes.get(lang, ship_notes["de"])
