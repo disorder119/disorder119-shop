@@ -299,3 +299,15 @@ Ueberlappende Zeitintervalle werden vereinigt. Sichtbarer Tab beweist keine
 Aufmerksamkeit, IP-/UA-basierte Tagespseudonyme sind keine eindeutigen Menschen,
 Anfrage-Klicks keine gesendeten Nachrichten. Netzabbrueche/Blocker/Tabende und
 Tageswechsel koennen Messluecken hinterlassen. Alte unbekannte Werte nicht fuellen.
+
+## Lokale Entwicklung der Admin-App
+
+`http://localhost:8765` (und `127.0.0.1:8765`) ist im Livebetrieb und im Testshop keine erlaubte Herkunft mehr – weder fuer Passkeys noch fuer Admin-Anfragen oder CORS (`lokale-entwicklung.js`). Lokal den Worker mit `wrangler dev --var LOKALE_ENTWICKLUNG:1` starten; die Variable nie in `wrangler.toml` eintragen.
+
+## Protokolle
+
+`[observability.logs] invocation_logs = false` (API, Testshop-API, Storefront, Testshop-Storefront): Cloudflare speichert keine Aufrufprotokolle mit der vollen Adresse samt Query mehr (Bestaetigungs-/Anmeldecodes in `?bestaetigen=`, `?anmeldung=`, `?abmelden=`, PLZ/Strasse der Abholortsuche). Eigene `console`-Zeilen mit Request-ID bleiben. Der Zugangspass der Shop-Sperre reist im Kopf `X-D119-Pass` statt in `?pass=`.
+
+## Datenpflege (Cron)
+
+`datenpflege.js` loescht alle 15 Minuten: unbestaetigte Newsletter-Anmeldungen nach 30 Tagen (nie mit Rabattcode), abgelaufene Konto-Anmeldelinks nach zwei Tagen, Einmal-Schluessel und Admin-/Kundensitzungen einen Tag nach Ablauf bzw. Abmeldung.

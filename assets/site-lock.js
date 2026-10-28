@@ -120,7 +120,8 @@
     if (document.body) bauen(); else document.addEventListener("DOMContentLoaded", bauen);
   }
 
-  fetch(API + "/site-status" + (pass ? "?pass=" + encodeURIComponent(pass) : ""), { credentials: "omit", cache: "no-store" })
+  // Den Zugangspass im Kopf schicken, nie in der Adresse (Protokolle).
+  fetch(API + "/site-status", { credentials: "omit", cache: "no-store", headers: pass ? { "X-D119-Pass": pass } : {} })
     .then(function (res) { return res.json(); })
     .then(function (s) {
       if (!s || !s.locked) { schreiben(ZULETZT, ""); freigeben(); return; }

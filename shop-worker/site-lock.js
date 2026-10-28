@@ -116,7 +116,7 @@ function kopf(origin, erlaubt) {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-D119-Pass",
     "Access-Control-Max-Age": "600",
     Vary: "Origin",
   };
@@ -153,7 +153,10 @@ export async function handleSiteLock(request, env, url, reqId = crypto.randomUUI
     if (path === "/site-status" && request.method === "GET") {
       const sperre = await sperreLesen(env);
       if (!sperre.locked) return antwort({ locked: false }, 200, origin, erlaubt);
-      const zugang = await passGueltig(sperre, url.searchParams.get("pass"));
+      // Zugangspass im Kopf X-D119-Pass (assets/site-lock.js), nicht in der
+      // Adresse - Adressen landen in Protokollen. ?pass= nur noch fuer alte,
+      // zwischengespeicherte Skripte.
+      const zugang = await passGueltig(sperre, request.headers.get("X-D119-Pass") || url.searchParams.get("pass"));
       return antwort({ locked: true, access: zugang, message: sperre.message || "" }, 200, origin, erlaubt);
     }
 

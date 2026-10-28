@@ -216,6 +216,7 @@ jobs:
         run: |
           python scripts/test_d1_migrations.py
           python scripts/test_backend_hardening_migration.py
+          python scripts/test_main_provenance.py
 
       - name: Katalog-Taxonomie auf Quelldaten anwenden
         run: python scripts/apply_catalog_taxonomy.py

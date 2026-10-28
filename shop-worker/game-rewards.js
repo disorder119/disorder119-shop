@@ -1,13 +1,15 @@
 import { TAG_MS, kontingentBelegen, kontingentFreigeben } from "./kontingent.js";
 import { privateNetzHash } from "./privacy-security.js";
+import { LOKALE_ORIGINS, lokaleEntwicklung } from "./lokale-entwicklung.js";
 
 const ALLOWED_ORIGINS = new Set([
   "https://disorder119.com",
   "https://www.disorder119.com",
   "https://admin.disorder119.com",
-  "http://localhost:8765",
-  "http://127.0.0.1:8765",
 ]);
+// localhost:8765 nur in der lokalen Entwicklung (LOKALE_ENTWICKLUNG="1");
+// handleGameRewards setzt den Schalter je Anfrage aus env.
+let lokal = false;
 
 export const GAME_VERSION = "archive-raid-v3";
 export const GAME_RULES = Object.freeze({
@@ -97,7 +99,7 @@ function requireDb(env) {
 }
 
 function allowedOrigin(origin) {
-  return Boolean(origin && ALLOWED_ORIGINS.has(origin));
+  return Boolean(origin && (ALLOWED_ORIGINS.has(origin) || (lokal && LOKALE_ORIGINS.includes(origin))));
 }
 
 function headers(origin) {
@@ -466,6 +468,7 @@ export async function handleGameRewards(
   requestId = "",
   origin = request.headers.get("Origin"),
 ) {
+  lokal = lokaleEntwicklung(env);
   if (request.method === "OPTIONS") {
     if (origin && !allowedOrigin(origin)) return new Response(null, { status: 403 });
     const preflight = new Headers(headers(origin));
