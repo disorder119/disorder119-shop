@@ -252,3 +252,34 @@ test("create-order: Packstation nur in Deutschland, Schweiz nur auf Anfrage", as
     netz.restore();
   }
 });
+
+test("PayPal lehnt eine EU-Anschrift ab: klare Meldung, Stuecke sofort wieder frei", async () => {
+  versandCacheLeeren();
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    const u = new URL(String(url));
+    if (u.host === "api.github.com") {
+      if (u.pathname.endsWith("/contents/data")) return Response.json([{ name: "items.json", type: "file", sha: "b".repeat(40) }]);
+      if (u.pathname.endsWith(`/git/blobs/${"b".repeat(40)}`)) return new Response(JSON.stringify(ITEMS));
+    }
+    if (u.host === "api-m.sandbox.paypal.com") {
+      if (u.pathname === "/v1/oauth2/token") return Response.json({ access_token: "tok" });
+      if (u.pathname === "/v2/checkout/orders") {
+        return Response.json({ name: "UNPROCESSABLE_ENTITY", details: [{ issue: "SHIPPING_ADDRESS_INVALID" }] }, { status: 422 });
+      }
+    }
+    return new Response("{}", { status: 404 });
+  };
+  const DB = sqliteD1(allMigrations());
+  try {
+    const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+    const r = await bestellen(env, { itemIds: [9427], adresse: { name: "Giulia Rossi", strasse: "Via Roma", hausnummer: "12", plz: "00184", ort: "Roma", land: "IT" },
+      versand: "fest-dhl-eu-S", versandPreisCents: 1449 }, "k-eu-0000000000005");
+    assert.equal(r.status, 422);
+    assert.equal(r.data.error, "PAYPAL_ADRESSE_ABGELEHNT");
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reservations WHERE status='RESERVED'").get().n, 0);
+    assert.equal(DB.raw.prepare("SELECT status FROM inventory WHERE item_id=9427").get()?.status ?? "AVAILABLE", "AVAILABLE");
+  } finally {
+    globalThis.fetch = original;
+  }
+});

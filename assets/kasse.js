@@ -28,7 +28,7 @@
       land: "Land", fehltPlzLand: "Bitte prüf die Postleitzahl – so sieht sie in {land} aus: {beispiel}.",
       fehltNummerEu: "Bitte gib die Hausnummer an (z. B. 12, 12bis oder s/n).", latein: "Bitte schreib Name und Adresse in lateinischen Buchstaben – so druckt DHL das Etikett.",
       sondergebiet: "In dieses Gebiet (z. B. Kanaren, Ceuta, Melilla, Åland, französische Überseegebiete) brauchen Pakete Zollpapiere – das geht nur auf Anfrage. Schreib uns.",
-      nurDeAbhol: "Packstation und Filiale gibt es nur in Deutschland.", freiNurDe: "Kostenloser Versand ab {grenze} gilt innerhalb Deutschlands. In die EU zahlst du den DHL-Preis für dein Paket – ohne Zoll.",
+      nurDeAbhol: "Packstation und Filiale gibt es nur in Deutschland.", paypalAdresse: "PayPal hat die Lieferadresse nicht angenommen. Bitte prüf PLZ, Ort und Straße – oder schreib uns, dann klären wir die Bestellung per E-Mail.", freiNurDe: "Kostenloser Versand ab {grenze} gilt innerhalb Deutschlands. In die EU zahlst du den DHL-Preis für dein Paket – ohne Zoll.",
       agb: "AGB & Widerruf", datenschutz: "Datenschutz", impressum: "Impressum", widerruf: "Vertrag widerrufen",
       rueckgabe: "14 Tage gesetzliches Widerrufsrecht ab Warenerhalt; bei getrennten Lieferungen einer Bestellung ab Erhalt der letzten Ware. Den Rückversand beim Widerruf zahlst du selbst. Wir erstatten unverzüglich, spätestens 14 Tage nach Eingang deines Widerrufs; bis zum Warenerhalt oder Versandnachweis dürfen wir die Rückzahlung zurückhalten. Keine freiwillige verlängerte Rückgabefrist. Gesetzliche Mängelrechte bleiben unberührt.",
       laedt: "Wird geladen …", leer: "Dein Warenkorb ist leer.", zumArchiv: "Zum Archiv",
@@ -95,7 +95,7 @@
       land: "Country", fehltPlzLand: "Please check the postcode – in {land} it looks like this: {beispiel}.",
       fehltNummerEu: "Please enter the house number (e.g. 12, 12bis or s/n).", latein: "Please write your name and address in Latin letters – that is how DHL prints the label.",
       sondergebiet: "Parcels to this area (e.g. the Canary Islands, Ceuta, Melilla, Åland, French overseas territories) need customs papers – on request only. Please message us.",
-      nurDeAbhol: "Packstations and post offices are only available in Germany.", freiNurDe: "Free shipping from {grenze} applies within Germany. To the EU you pay DHL's price for your parcel – no customs.",
+      nurDeAbhol: "Packstations and post offices are only available in Germany.", paypalAdresse: "PayPal did not accept the delivery address. Please check postcode, town and street – or message us and we will arrange the order by e-mail.", freiNurDe: "Free shipping from {grenze} applies within Germany. To the EU you pay DHL's price for your parcel – no customs.",
       agb: "Terms & withdrawal", datenschutz: "Privacy", impressum: "Legal notice", widerruf: "Withdraw from contract here",
       rueckgabe: "Statutory 14-day withdrawal period from receipt of the goods; for separate deliveries of one order, from receipt of the last item. You pay the direct cost of returning goods after withdrawal. We reimburse without undue delay, no later than 14 days after receiving your withdrawal; reimbursement may be withheld until we receive the goods or evidence of their return. No additional voluntary return period. Statutory rights for defective goods remain unaffected.",
       laedt: "Loading …", leer: "Your cart is empty.", zumArchiv: "To the archive",
@@ -162,7 +162,7 @@
       land: "Pays", fehltPlzLand: "Vérifie le code postal – en {land}, il ressemble à ceci : {beispiel}.",
       fehltNummerEu: "Indique le numéro (p. ex. 12, 12bis ou s/n).", latein: "Écris ton nom et ton adresse en lettres latines – c’est ainsi que DHL imprime l’étiquette.",
       sondergebiet: "Vers cette zone (p. ex. Canaries, Ceuta, Melilla, Åland, outre-mer français), les colis demandent des documents douaniers – uniquement sur demande. Écris-nous.",
-      nurDeAbhol: "Les Packstations et bureaux de poste n’existent qu’en Allemagne.", freiNurDe: "La livraison gratuite dès {grenze} s’applique en Allemagne. Vers l’UE, tu paies le tarif DHL de ton colis – sans douane.",
+      nurDeAbhol: "Les Packstations et bureaux de poste n’existent qu’en Allemagne.", paypalAdresse: "PayPal n’a pas accepté l’adresse de livraison. Vérifie le code postal, la ville et la rue – ou écris-nous, nous réglerons la commande par e-mail.", freiNurDe: "La livraison gratuite dès {grenze} s’applique en Allemagne. Vers l’UE, tu paies le tarif DHL de ton colis – sans douane.",
       agb: "CGV & rétractation", datenschutz: "Confidentialité", impressum: "Mentions légales", widerruf: "Se rétracter du contrat ici",
       rueckgabe: "Délai légal de rétractation de 14 jours à compter de la réception des biens ; pour une commande livrée séparément, de la réception du dernier article. Les frais directs de renvoi après rétractation sont à ta charge. Remboursement sans retard excessif, au plus tard 14 jours après réception de ta rétractation ; il peut être différé jusqu'à réception des biens ou d'une preuve de leur renvoi. Aucun délai de retour volontaire supplémentaire. Les droits légaux en cas de défaut restent inchangés.",
       laedt: "Chargement …", leer: "Ton panier est vide.", zumArchiv: "Vers l'archive",
@@ -1246,6 +1246,7 @@
     if (code === "SONDERGEBIET_NICHT_BELIEFERT") return t("sondergebiet");
     if (code === "ADRESSE_NUR_LATEIN") return t("latein");
     if (code === "ABHOLSTATION_NUR_DE") return t("nurDeAbhol");
+    if (code === "PAYPAL_ADRESSE_ABGELEHNT") return t("paypalAdresse");
     if (code === "ADRESSE_UNVOLLSTAENDIG") return t("pruefen");
     if (code === "EMAIL_REQUIRED") return t("fehltEmail");
     if (/^TURNSTILE_|^schutz_/.test(code)) return t("botCheck");

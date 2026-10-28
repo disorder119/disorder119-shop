@@ -678,7 +678,18 @@ async function createPaypalOrder(env, items, itemCents, shippingCents, idempoten
       },
     }),
   });
-  if (!res.ok) throw new Error(`paypal_create_${res.status}`);
+  if (!res.ok) {
+    // PayPal prueft die mitgeschickte Anschrift (SET_PROVIDED_ADDRESS). Lehnt
+    // es sie ab - etwa ein Format, das PayPal fuer ein EU-Land anders erwartet -,
+    // bekommt die Kasse eine klare Meldung statt eines Serverfehlers; die
+    // Stuecke gibt create-order sofort wieder frei. Ins Log nur der Code.
+    const issue = res.status === 422 ? await paypalIssue(res) : "";
+    if (/ADDRESS|POSTAL|CITY|STATE|COUNTRY|ZIP/.test(issue)) {
+      console.warn(JSON.stringify({ level: "warn", event: "paypal_adresse_abgelehnt", issue, land: adresse?.land || null }));
+      throw new PublicError("PAYPAL_ADRESSE_ABGELEHNT", 422);
+    }
+    throw new Error(`paypal_create_${res.status}${issue ? `_${issue}` : ""}`);
+  }
   return res.json();
 }
 
