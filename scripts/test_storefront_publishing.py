@@ -95,6 +95,49 @@ class PublishingTests(unittest.TestCase):
             publisher.verify_manifest(output)
             with self.assertRaises(ValueError): exporter.export(root, output, 'HEAD', node)
 
+    def test_asset_versions_are_content_hashes_leaves_first_and_never_touch_inline_scripts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            public = Path(directory)
+            (public / 'assets').mkdir()
+            files = {
+                'assets/site-lock.js': 'lock()',
+                'assets/runtime.js': 's.src="/assets/site-lock.js?v=20261008-1";',
+                'assets/pwa.js': 's.src="/assets/runtime.js?v=20261008-1";',
+                'assets/upgrade.js': 'var V="1";css("/assets/promos.css?v=" + V);js("/assets/missing.js?v=" + V);',
+                'assets/promos.css': 'a{}',
+                'assets/rental.js': 'rent()',
+                'assets/app.js': 'app()',
+            }
+            for name, text in files.items():
+                (public / name).write_text(text, encoding='utf-8')
+            fixed = '<script>try{document.write(\'<script src="/assets/rental.js"></scr\'+\'ipt>\')}catch(e){}</script>'
+            page = ('<head><link rel="stylesheet" href="/assets/promos.css?v=abc">\r\n'
+                    '<script src="/assets/pwa.js?v=old"></script>' + fixed + '</head><body>'
+                    '<script>/* FOCUS3_MOBILE_RUNTIME_AFTER_LCP */(function(){var s=["/assets/app.js?v=0","/assets/rental.js"],i=0;})();</script>'
+                    '<script>window.SHOP_CONFIG = {"logo":"/assets/rental.js"};</script>'
+                    '<a href="/assets/img/x.webp">x</a><script src="/assets/gone.js"></script></body>')
+            (public / 'index.html').write_bytes(page.encode('utf-8'))
+            changed = exporter.asset_versionen(public)
+            h = lambda name: hashlib.sha256((public / name).read_bytes()).hexdigest()[:10]
+            runtime = (public / 'assets/runtime.js').read_text('utf-8')
+            self.assertEqual(runtime, f's.src="/assets/site-lock.js?v={h("assets/site-lock.js")}";')
+            self.assertIn(f'/assets/runtime.js?v={h("assets/runtime.js")}', (public / 'assets/pwa.js').read_text('utf-8'))
+            upgrade = (public / 'assets/upgrade.js').read_text('utf-8')
+            self.assertIn(f'css("/assets/promos.css?v={h("assets/promos.css")}")', upgrade)
+            self.assertIn('js("/assets/missing.js?v=" + V)', upgrade)  # unknown file stays untouched
+            html = (public / 'index.html').read_bytes().decode('utf-8')
+            self.assertIn(f'href="/assets/promos.css?v={h("assets/promos.css")}">\r\n', html)
+            self.assertIn(f'<script src="/assets/pwa.js?v={h("assets/pwa.js")}"></script>', html)
+            self.assertIn(f'"/assets/app.js?v={h("assets/app.js")}","/assets/rental.js?v={h("assets/rental.js")}"', html)
+            self.assertIn(fixed, html)  # CSP-hashed inline code unchanged
+            self.assertIn('{"logo":"/assets/rental.js"}', html)
+            self.assertIn('<script src="/assets/gone.js"></script>', html)
+            self.assertEqual(changed, {'assets/runtime.js', 'assets/pwa.js', 'assets/upgrade.js', 'index.html'})
+            self.assertGreater(exporter.asset_versionen_pruefen(public), 4)
+            self.assertEqual(exporter.asset_versionen(public), set())  # idempotent
+            (public / 'assets/site-lock.js').write_text('changed()', encoding='utf-8')
+            with self.assertRaises(ValueError): exporter.asset_versionen_pruefen(public)
+
     def test_remote_head_checks_are_unambiguous(self):
         with patch.object(publisher, 'git', return_value=b'a' * 40 + b'\trefs/heads/main\n'):
             self.assertEqual(publisher.main_head(), 'a' * 40)

@@ -260,10 +260,38 @@ def main() -> None:
     require(home.count('fetchpriority="high" decoding="sync"') >= 2, "kritische SSR-Bilder decodieren nicht synchron")
     require(RUNTIME_MARKER in home, "Mobile-Startseite verschiebt den vollen Runtime-Boot nicht aus dem LCP-Fenster")
     require(any(it.get("grid_image") for it in catalog if it.get("public_status") == "AVAILABLE"), "catalog.json enthaelt keine mobile Grid-Bildquelle")
+    validate_foreign_homes()
 
     subprocess.run(["node", "--check", str(BASE / "assets" / "app.js")], check=True)
     print("Mobile-LCP-Struktur: OK — HTML-first, pinned hydration, paint gate, mobile thumbnails und Runtime nach LCP.")
     validate_repository_hardening()
+
+
+def validate_foreign_homes() -> None:
+    """/en/ und /fr/ wie die deutsche Startseite: sichtbar, uebersetzt, SSR-Kacheln."""
+    from app_i18n import app_text  # Tabelle aus app.js, wie im Build
+
+    ansicht = (BASE / "assets" / "ansicht.js").read_text(encoding="utf-8")
+    require('dunkel: "White view"' in ansicht and 'dunkel: "Affichage blanc"' in ansicht,
+            "build_site.py ANSICHT_WEISS passt nicht mehr zu assets/ansicht.js")
+
+    for lang in ("en", "fr"):
+        path = BASE / lang / "index.html"
+        if not path.is_file():
+            continue
+        page = path.read_text(encoding="utf-8")
+        require('<div class="app-shell" id="appShell">' in page, f"/{lang}/ blendet die Seite bis app.js aus")
+        require('data-ssr-initial="1"' in page and page.count("data-ssr-item-id=") >= 2,
+                f"/{lang}/ enthaelt keine initialen Produktkarten")
+        require(page.count('rel="preload" as="image"') >= 2, f"/{lang}/ laedt die ersten Produktbilder nicht vor")
+        require(RUNTIME_MARKER in page, f"/{lang}/ laedt die Skripte nicht erst nach dem LCP")
+        # Jede statische Beschriftung steht schon in der Seitensprache im HTML.
+        ohne_skripte = re.sub(r"<script\b[^>]*>.*?</script\s*>", "", page, flags=re.S | re.I)
+        for m in re.finditer(r'<([a-zA-Z][\w-]*)\b[^>]*\sdata-i18n="([^"]+)"[^>]*>(.*?)</\1\s*>', ohne_skripte, re.S):
+            soll = app_text(lang, m.group(2))
+            if "<" in soll or "<" in m.group(3):
+                continue  # HTML-Inhalte prueft der Browser-Smoke
+            require(m.group(3) == soll, f"/{lang}/: {m.group(2)} steht nicht uebersetzt im HTML: {m.group(3)[:40]!r}")
 
 
 if __name__ == "__main__":

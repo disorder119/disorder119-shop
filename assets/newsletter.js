@@ -147,11 +147,15 @@
       return /\/assets\/newsletter\.css/.test(l.getAttribute("href") || "");
     });
     if (vorhanden) return;
+    // Beim Ausliefern (scripts/export_storefront_assets.py) steht hier der
+    // Inhalts-Hash von newsletter.css; sonst gilt die Version dieses Skripts.
+    var CSS_URL = "/assets/newsletter.css?v=quelle";
     var version = "";
     try { version = new URL((SELF && SELF.src) || "", location.href).searchParams.get("v") || ""; } catch (e) {}
     var link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "/assets/newsletter.css" + (version ? "?v=" + encodeURIComponent(version) : "");
+    link.href = /\?v=[a-f0-9]{10}$/.test(CSS_URL) ? CSS_URL
+      : "/assets/newsletter.css" + (version ? "?v=" + encodeURIComponent(version) : "");
     document.head.appendChild(link);
   }
 

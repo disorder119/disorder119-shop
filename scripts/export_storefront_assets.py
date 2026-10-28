@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -25,6 +26,114 @@ def node_json(node, cwd, script, value):
     result = subprocess.check_output([node, "--input-type=module", "-e", script],
         cwd=cwd, input=json.dumps(value).encode())
     return json.loads(result)
+
+
+# Ladezeit (28.10.2026): Der Storefront-Worker (shop-worker/storefront-assets.js)
+# gibt Skripten und Stilen mit ?v=<sha256[:10] des Inhalts> ein Jahr Browser-
+# Cache. 17 Dateien hatten keine oder eine handgepflegte Version
+# (?v=20261008-1) und wurden bei jedem Seitenwechsel neu nachgefragt. Beim
+# Ausliefern bekommt deshalb jeder Verweis auf /assets/*.js|css den echten
+# Inhalts-Hash - in den Seiten (src/href und die Liste im Startseiten-Lader)
+# und in Skripten, die andere Dateien nachladen (Blaetter zuerst, weil sich
+# der Hash eines Skripts mit den Verweisen darin aendert). Die Quellen in Git
+# bleiben unveraendert; die CI-Patch-Skripte und Regressionspruefungen sehen
+# weiter ihre gewohnten Verweise. Andere Inline-Skripte werden nie angefasst
+# (CSP-Hashes in storefront-csp.js).
+_ASSET_REF = r"/assets/(?P<datei>[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*\.(?:js|css))"
+# "…/x.js?v=20261008-1" (Literal) und "…/x.css?v=" + ASSET_VERSION (Verkettung)
+_JS_LITERAL = re.compile(r"(?P<q>[\"'])" + _ASSET_REF + r"\?v=[A-Za-z0-9._-]+(?P=q)")
+_JS_VERKETTET = re.compile(r"(?P<q>[\"'])" + _ASSET_REF + r"\?v=(?P=q)\s*\+\s*[A-Za-z_$][\w$]*")
+_HTML_ATTR = re.compile(r"(?P<attr>\s(?:src|href)=\")" + _ASSET_REF + r"(?:\?v=[^\"]*)?\"")
+_LADER_EINTRAG = re.compile(r"\"" + _ASSET_REF + r"(?:\?v=[^\"]*)?\"")
+_SKRIPT = re.compile(r"(<script\b[^>]*>)(.*?)(</script\s*>)", re.S | re.I)
+LADER_MARKER = "/* FOCUS3_MOBILE_RUNTIME_AFTER_LCP */"
+
+
+def _kurz_hash(body: bytes) -> str:
+    return hashlib.sha256(body).hexdigest()[:10]
+
+
+def asset_versionen(public: Path) -> set[str]:
+    """Setzt Inhalts-Hashes an alle Verweise; gibt die geaenderten Pfade zurueck."""
+    assets = public / "assets"
+    skripte = {p.relative_to(assets).as_posix(): p for p in assets.rglob("*.js")} if assets.is_dir() else {}
+    verweise = {}
+    for name, pfad in skripte.items():
+        text = pfad.read_bytes().decode("utf-8")
+        ziele = {m.group("datei") for rx in (_JS_LITERAL, _JS_VERKETTET) for m in rx.finditer(text)}
+        verweise[name] = {z for z in ziele if (assets / z).is_file() and z != name}
+    hashes, geaendert, offen = {}, set(), dict(verweise)
+
+    def hash_von(datei: str) -> str:
+        if datei not in hashes:
+            hashes[datei] = _kurz_hash((assets / datei).read_bytes())
+        return hashes[datei]
+
+    while offen:
+        bereit = sorted(n for n, ziele in offen.items() if not (ziele & offen.keys()))
+        if not bereit:
+            raise ValueError("Zyklische Skript-Verweise: " + ", ".join(sorted(offen)))
+        for name in bereit:
+            del offen[name]
+            if not verweise[name]:
+                continue
+            pfad = skripte[name]
+            alt = pfad.read_bytes().decode("utf-8")
+
+            def setzen(m):
+                datei = m.group("datei")
+                if datei not in verweise[name]:
+                    return m.group(0)
+                return f'{m.group("q")}/assets/{datei}?v={hash_von(datei)}{m.group("q")}'
+            neu = _JS_VERKETTET.sub(setzen, _JS_LITERAL.sub(setzen, alt))
+            if neu != alt:
+                pfad.write_bytes(neu.encode("utf-8"))
+                geaendert.add("assets/" + name)
+            hashes.pop(name, None)
+
+    def html_setzen(m):
+        datei = m.group("datei")
+        if not (assets / datei).is_file():
+            return m.group(0)
+        return f'{m.group("attr")}/assets/{datei}?v={hash_von(datei)}"'
+
+    def lader_setzen(m):
+        datei = m.group("datei")
+        if not (assets / datei).is_file():
+            return m.group(0)
+        return f'"/assets/{datei}?v={hash_von(datei)}"'
+
+    for seite in public.rglob("*.html"):
+        alt = seite.read_bytes().decode("utf-8")
+        teile, pos = [], 0
+        for m in _SKRIPT.finditer(alt):
+            teile.append(_HTML_ATTR.sub(html_setzen, alt[pos:m.start()]))
+            kopf, inhalt, fuss = m.group(1), m.group(2), m.group(3)
+            # src-Attribut im Skript-Tag selbst; Inhalt nur beim Startseiten-Lader.
+            kopf = _HTML_ATTR.sub(html_setzen, kopf)
+            if inhalt.startswith(LADER_MARKER):
+                inhalt = _LADER_EINTRAG.sub(lader_setzen, inhalt)
+            teile.append(kopf + inhalt + fuss)
+            pos = m.end()
+        teile.append(_HTML_ATTR.sub(html_setzen, alt[pos:]))
+        neu = "".join(teile)
+        if neu != alt:
+            seite.write_bytes(neu.encode("utf-8"))
+            geaendert.add(seite.relative_to(public).as_posix())
+    return geaendert
+
+
+def asset_versionen_pruefen(public: Path) -> int:
+    """Jeder ?v=-Verweis mit Hash-Form muss zum ausgelieferten Inhalt passen."""
+    geprueft = 0
+    for pfad in list(public.rglob("*.html")) + list((public / "assets").rglob("*.js")):
+        for m in re.finditer(_ASSET_REF + r"\?v=(?P<v>[a-f0-9]{10})(?![a-f0-9])", pfad.read_bytes().decode("utf-8")):
+            ziel = public / "assets" / m.group("datei")
+            if ziel.is_file():
+                if _kurz_hash(ziel.read_bytes()) != m.group("v"):
+                    raise ValueError(f"Asset-Version passt nicht: {pfad.relative_to(public)} -> {m.group(0)}")
+                geprueft += 1
+    return geprueft
 
 
 def export(root: Path, target: Path, revision: str, node="node"):
@@ -95,6 +204,13 @@ def export(root: Path, target: Path, revision: str, node="node"):
             process.stdout.close()
             if process.wait() != 0:
                 raise RuntimeError("Git object export failed.")
+    # Inhalts-Hashes an alle Skript-/Stil-Verweise (siehe asset_versionen).
+    versioniert = asset_versionen(public)
+    for row in manifest:
+        if row["path"] in versioniert:
+            body = (public / row["path"]).read_bytes()
+            row.update(bytes=len(body), sha256=hashlib.sha256(body).hexdigest(), asset_versions=True)
+    asset_versionen_pruefen(public)
     for required in ("index.html", "en/index.html", "fr/index.html", "data/catalog.json",
                      "data/items.json", "kasse/index.html", "feed/google-merchant.xml",
                      "google7945c4dc594a9a9c.html", ".well-known/apple-developer-merchantid-domain-association"):
