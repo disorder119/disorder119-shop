@@ -215,7 +215,10 @@ async function entsperren(request,env,url,ip) {
 function waechterVorschau(request,url) {
   const land=String(url.searchParams.get('land')||'FR').toUpperCase().slice(0,2);
   if (url.searchParams.get('seite')==='sperre') {
-    return sperrAntwort(request,{sprache:sperrSprache(url.searchParams.get('sprache')==='en'?'/en/':url.searchParams.get('sprache')==='fr'?'/fr/':'/',land),
+    // Sprache: ?sprache=de|en|fr, sonst nach ?land=, ohne beides Deutsch.
+    const gewaehlt=['de','en','fr'].includes(url.searchParams.get('sprache'))?url.searchParams.get('sprache')
+      :sperrSprache('/',url.searchParams.get('land')?land:'DE');
+    return sperrAntwort(request,{sprache:gewaehlt,
       selbst:url.searchParams.get('selbst')!=='0',bis:new Date(Date.now()+24*3600_000).toISOString(),zurueck:'/'},200);
   }
   const sprache=String(url.searchParams.get('sprache')||'').slice(0,8);
