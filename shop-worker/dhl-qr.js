@@ -326,14 +326,18 @@ export function katalogAbgleichen(catalog, konfig = VERSAND) {
 }
 
 const ABGLEICH_ENTITY = Object.freeze({ type: "versand", id: "dhl-katalog" });
-const TAG_MS = 24 * 3_600_000;
+const STUNDE_MS = 3_600_000;
+const TAG_MS = 24 * STUNDE_MS;
 
 // Cron: hoechstens einmal am Tag. Nichts wird gekauft - nur der Katalog gelesen.
 export async function katalogAbgleich(env, now = Date.now()) {
   if (!env?.DB || !dhlQrReady(env)) return { uebersprungen: "NICHT_EINGERICHTET" };
-  const letzte = await env.DB.prepare(`SELECT created_at FROM audit_events WHERE entity_type=? AND entity_id=?
+  const letzte = await env.DB.prepare(`SELECT event_type,created_at FROM audit_events WHERE entity_type=? AND entity_id=?
     ORDER BY created_at DESC LIMIT 1`).bind(ABGLEICH_ENTITY.type, ABGLEICH_ENTITY.id).first();
-  if (letzte && Number(now) - Date.parse(letzte.created_at) < TAG_MS) return { uebersprungen: "HEUTE_SCHON" };
+  // Nach einem Fehler (DHL nicht erreichbar ...) schon nach einer Stunde erneut,
+  // sonst einmal am Tag.
+  const pause = letzte?.event_type === "DHL_KATALOG_FEHLER" ? STUNDE_MS : TAG_MS;
+  if (letzte && Number(now) - Date.parse(letzte.created_at) < pause) return { uebersprungen: "HEUTE_SCHON" };
   let ergebnis;
   let ereignis = "DHL_KATALOG_GEPRUEFT";
   try {

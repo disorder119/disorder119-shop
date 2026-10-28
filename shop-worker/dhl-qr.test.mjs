@@ -382,6 +382,14 @@ test("catalog check: shop prices against DHL per zone and country, once a day", 
     assert.equal(liste.data.abgleich.ereignis, "DHL_KATALOG_ABWEICHUNG");
     assert.equal(liste.data.abgleich.abweichungen[0].land, "MT");
     assert.equal((await katalogAbgleich({ DB }, jetzt + 2 * 86_400_000)).uebersprungen, "NICHT_EINGERICHTET");
+    // Nach einem Fehler: nach einer Stunde erneut, nicht erst morgen.
+    const DB2 = seed();
+    const fehlerAm = jetzt + 3 * 86_400_000;
+    DB2.raw.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,metadata_json,created_at)
+      VALUES ('f1','SYSTEM','versand','dhl-katalog','DHL_KATALOG_FEHLER','{}',?)`).run(new Date(fehlerAm).toISOString());
+    const env2 = envWith(DB2, { DHL_PRIVAT_ENVIRONMENT: "live" });
+    assert.equal((await katalogAbgleich(env2, fehlerAm + 30 * 60_000)).uebersprungen, "HEUTE_SCHON");
+    assert.equal((await katalogAbgleich(env2, fehlerAm + 61 * 60_000)).ereignis, "DHL_KATALOG_ABWEICHUNG");
   } finally {
     globalThis.fetch = original;
   }
