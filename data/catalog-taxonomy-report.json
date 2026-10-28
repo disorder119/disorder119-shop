@@ -36,7 +36,7 @@
     "Set": 1,
     "Shirt": 1,
     "Shoes": 1,
-    "Shorts": 2,
+    "Shorts": 3,
     "Skirt": 14,
     "Sleepwear": 1,
     "Sneakers": 16,
@@ -52,7 +52,6 @@
     "Trench Coat": 1,
     "Trousers": 15,
     "Tunic": 1,
-    "Underwear Shorts": 1,
     "Vest": 7,
     "Wallet": 1
   },
@@ -351,7 +350,7 @@
     {
       "id": 9432,
       "article": "73",
-      "title": "Jean Paul Gaultier Unterhose Damen Lila",
+      "title": "Jean Paul Gaultier Lounge-Shorts Damen Lila",
       "structuredSize": "S / 36 / 8",
       "descriptionLabelSize": "S"
     },
