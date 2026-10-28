@@ -210,7 +210,7 @@ jobs:
         run: node --test shop-worker/besucher.test.mjs scripts/test_besucher_foreground.cjs
 
       - name: Commerce Unit Tests
-        run: node --test shop-worker/commerce-core.test.mjs shop-worker/admin-api.test.mjs shop-worker/admin-insights.test.mjs shop-worker/admin-commerce-metrics.test.mjs shop-worker/admin-cases.test.mjs shop-worker/operations-monitor.test.mjs shop-worker/admin-system.test.mjs shop-worker/kontingent.test.mjs shop-worker/offene-halte.test.mjs
+        run: node --test shop-worker/commerce-core.test.mjs shop-worker/admin-api.test.mjs shop-worker/admin-insights.test.mjs shop-worker/admin-commerce-metrics.test.mjs shop-worker/admin-cases.test.mjs shop-worker/operations-monitor.test.mjs shop-worker/admin-system.test.mjs shop-worker/kontingent.test.mjs shop-worker/offene-halte.test.mjs shop-worker/oeffentlicher-katalog.test.mjs
 
       - name: D1-Migrationskette ausfuehren
         run: |

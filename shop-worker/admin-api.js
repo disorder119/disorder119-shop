@@ -46,6 +46,7 @@ import {
   zahlungSicherstellen,
   zahlungView,
 } from "./zahlung.js";
+import { katalogNachId } from "./oeffentlicher-katalog.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -195,24 +196,11 @@ async function auditAdmin(env, entityType, entityId, eventType, reqId, metadata 
     ).run();
 }
 
-async function loadCatalogMap() {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 1500);
-  try {
-    const res = await fetch("https://disorder119.com/data/catalog.json", {
-      headers: { Accept: "application/json", "User-Agent": "disorder119-admin-worker" },
-      signal: controller.signal,
-    });
-    if (!res.ok) return new Map();
-    const items = await res.json();
-    const map = new Map();
-    if (Array.isArray(items)) {
-      for (const item of items) map.set(Number(item.id), item);
-    }
-    return map;
-  } catch {
-    return new Map();
-  } finally { clearTimeout(timer); }
+// Namen und Bilder aus dem oeffentlichen Katalog (oeffentlicher-katalog.js).
+// Frueher direkt von disorder119.com: aus dem Worker (gleiche Zone) kam nach
+// 1,5 s nichts - Mieten und Inventar zeigten dann nur Nummern.
+function loadCatalogMap(env) {
+  return katalogNachId({ env });
 }
 
 function catalogView(item) {
@@ -237,7 +225,7 @@ async function getOverview(env, url) {
   cutoff.setUTCHours(0, 0, 0, 0);
   const cutoffIso = cutoff.toISOString();
 
-  const summary = await db.batch([
+  const summaryStmts = [
     db.prepare(`SELECT COUNT(*) AS total,
       SUM(CASE WHEN status='PAYMENT_PENDING' THEN 1 ELSE 0 END) AS paymentPending,
       SUM(CASE WHEN status='PAID' THEN 1 ELSE 0 END) AS paid,
@@ -291,22 +279,36 @@ async function getOverview(env, url) {
       (SELECT COUNT(*) FROM shipments WHERE status='EXCEPTION') AS shipmentExceptions,
       (SELECT COUNT(*) FROM reservations WHERE status='RESERVED' AND expires_at <= datetime('now')) AS stalePurchaseReservations,
       (SELECT COUNT(*) FROM idempotency_keys WHERE expires_at <= datetime('now')) AS expiredIdempotencyKeys`),
-  ]);
-
-  const ordersDaily = await db.prepare(`SELECT substr(o.created_at,1,10) AS day, COUNT(*) AS orders,
+  ];
+  const ordersDailyStmt = db.prepare(`SELECT substr(o.created_at,1,10) AS day, COUNT(*) AS orders,
     COALESCE(SUM(o.total_cents),0) AS orderValueCents
     FROM commerce_orders o WHERE o.created_at>=? AND EXISTS (SELECT 1 FROM payments p
       WHERE p.order_id=o.id AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED')
         AND p.provider_payment_id IS NOT NULL)
-    GROUP BY substr(o.created_at,1,10) ORDER BY day`).bind(cutoffIso).all();
-  const paymentsDaily = await db.prepare(`SELECT substr(${CAPTURE_TIME_SQL},1,10) AS day,
+    GROUP BY substr(o.created_at,1,10) ORDER BY day`).bind(cutoffIso);
+  const paymentsDailyStmt = db.prepare(`SELECT substr(${CAPTURE_TIME_SQL},1,10) AS day,
     COUNT(*) AS payments, COALESCE(SUM(amount_cents),0) AS capturedCents
     FROM payments WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND provider_payment_id IS NOT NULL AND ${CAPTURE_TIME_SQL}>=?
-    GROUP BY substr(${CAPTURE_TIME_SQL},1,10) ORDER BY day`).bind(cutoffIso).all();
-  const rentalsDaily = await db.prepare(`SELECT substr(created_at,1,10) AS day, COUNT(*) AS rentals,
+    GROUP BY substr(${CAPTURE_TIME_SQL},1,10) ORDER BY day`).bind(cutoffIso);
+  const rentalsDailyStmt = db.prepare(`SELECT substr(created_at,1,10) AS day, COUNT(*) AS rentals,
     COALESCE(SUM(total_price_cents),0) AS quotedRentalCents
-    FROM rental_reservations WHERE created_at>=? GROUP BY substr(created_at,1,10) ORDER BY day`).bind(cutoffIso).all();
+    FROM rental_reservations WHERE created_at>=? GROUP BY substr(created_at,1,10) ORDER BY day`).bind(cutoffIso);
 
+  const topPurchasedStmt = db.prepare(`SELECT oi.item_id AS itemId, oi.article_no AS articleNo,
+    MAX(oi.title_snapshot) AS title, COUNT(*) AS orders, COALESCE(SUM(oi.unit_price_cents),0) AS valueCents
+    FROM order_items oi JOIN commerce_orders o ON o.id=oi.order_id
+    WHERE EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id
+      AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND p.provider_payment_id IS NOT NULL)
+    GROUP BY oi.item_id,oi.article_no ORDER BY valueCents DESC LIMIT 8`);
+  const topRentedStmt = db.prepare(`SELECT i.item_id AS itemId, i.article_no AS articleNo,
+    COUNT(*) AS requests, COALESCE(SUM(rr.total_price_cents),0) AS quotedRentalCents
+    FROM rental_reservations rr JOIN inventory i ON i.id=rr.inventory_id
+    WHERE rr.status NOT IN ('CANCELLED') GROUP BY i.item_id,i.article_no ORDER BY requests DESC, quotedRentalCents DESC LIMIT 8`);
+  // Alles in einer Rundreise zu D1: jede Abfrage einzeln kostete live rund
+  // 50 ms (Worker in Frankfurt, Datenbank in Madrid).
+  const ergebnisse = await db.batch([...summaryStmts, ordersDailyStmt, paymentsDailyStmt, rentalsDailyStmt, topPurchasedStmt, topRentedStmt]);
+  const summary = ergebnisse.slice(0, summaryStmts.length);
+  const [ordersDaily, paymentsDaily, rentalsDaily, topPurchased, topRentedRows] = ergebnisse.slice(summaryStmts.length);
   const byDay = new Map();
   const touch = day => {
     if (!byDay.has(day)) byDay.set(day, { day, orders: 0, orderValueCents: 0, capturedCents: 0, rentals: 0, quotedRentalCents: 0 });
@@ -316,17 +318,7 @@ async function getOverview(env, url) {
   for (const row of paymentsDaily.results || []) Object.assign(touch(row.day), { capturedCents: row.capturedCents || 0 });
   for (const row of rentalsDaily.results || []) Object.assign(touch(row.day), { rentals: row.rentals || 0, quotedRentalCents: row.quotedRentalCents || 0 });
 
-  const topPurchased = await db.prepare(`SELECT oi.item_id AS itemId, oi.article_no AS articleNo,
-    MAX(oi.title_snapshot) AS title, COUNT(*) AS orders, COALESCE(SUM(oi.unit_price_cents),0) AS valueCents
-    FROM order_items oi JOIN commerce_orders o ON o.id=oi.order_id
-    WHERE EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id
-      AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND p.provider_payment_id IS NOT NULL)
-    GROUP BY oi.item_id,oi.article_no ORDER BY valueCents DESC LIMIT 8`).all();
-  const topRentedRows = await db.prepare(`SELECT i.item_id AS itemId, i.article_no AS articleNo,
-    COUNT(*) AS requests, COALESCE(SUM(rr.total_price_cents),0) AS quotedRentalCents
-    FROM rental_reservations rr JOIN inventory i ON i.id=rr.inventory_id
-    WHERE rr.status NOT IN ('CANCELLED') GROUP BY i.item_id,i.article_no ORDER BY requests DESC, quotedRentalCents DESC LIMIT 8`).all();
-  const catalog = (topRentedRows.results || []).length ? await loadCatalogMap() : new Map();
+  const catalog = (topRentedRows.results || []).length ? await loadCatalogMap(env) : new Map();
   const topRented = (topRentedRows.results || []).map(row => ({ ...row, catalog: catalogView(catalog.get(Number(row.itemId))) }));
 
   const first = result => (result?.results && result.results[0]) || {};
@@ -366,8 +358,10 @@ async function getOrders(env, url) {
     binds.push(like, like, like, like);
   }
   const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
-  const count = await db.prepare(`SELECT COUNT(*) AS total FROM commerce_orders o ${clause}`).bind(...binds).first();
-  const rows = await db.prepare(`SELECT o.*,
+  // Zahl und Seite in einer Rundreise (db.batch) statt nacheinander.
+  const [countResult, rows] = await db.batch([
+    db.prepare(`SELECT COUNT(*) AS total FROM commerce_orders o ${clause}`).bind(...binds),
+    db.prepare(`SELECT o.*,
       (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=o.id) AS itemCount,
       (SELECT GROUP_CONCAT(oi.title_snapshot,' · ') FROM order_items oi WHERE oi.order_id=o.id) AS itemTitles,
       (SELECT GROUP_CONCAT(oi.item_id) FROM order_items oi WHERE oi.order_id=o.id) AS itemIds,
@@ -380,7 +374,9 @@ async function getOrders(env, url) {
       (SELECT s.tracking_number FROM shipments s WHERE s.order_id=o.id ORDER BY s.created_at DESC LIMIT 1) AS trackingNumber,
       (SELECT n.body FROM admin_notes n WHERE n.entity_type='ORDER' AND n.entity_id=o.id ORDER BY n.created_at DESC LIMIT 1) AS latestNote
     FROM commerce_orders o ${clause} ORDER BY o.created_at DESC LIMIT ? OFFSET ?`)
-    .bind(...binds, limit, offset).all();
+    .bind(...binds, limit, offset),
+  ]);
+  const count = countResult?.results?.[0];
   return {
     total: Number(count?.total || 0), limit, offset,
     orders: (rows.results || []).map(row => ({ ...row, nextStatuses: orderNextStatuses(row.status) })),
@@ -1010,12 +1006,16 @@ async function getRentals(env, url) {
     binds.push(like, like, like, like, like);
   }
   const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
-  const count = await db.prepare(`SELECT COUNT(*) AS total FROM rental_reservations rr JOIN inventory i ON i.id=rr.inventory_id ${clause}`).bind(...binds).first();
-  const rows = await db.prepare(`SELECT rr.*,i.item_id AS itemId,i.article_no AS articleNo,i.status AS inventoryStatus,i.sale_price_cents AS salePriceCents,
+  // Zahl und Seite in einer Rundreise; den Katalog nur, wenn es Zeilen gibt.
+  const [countResult, rows] = await db.batch([
+    db.prepare(`SELECT COUNT(*) AS total FROM rental_reservations rr JOIN inventory i ON i.id=rr.inventory_id ${clause}`).bind(...binds),
+    db.prepare(`SELECT rr.*,i.item_id AS itemId,i.article_no AS articleNo,i.status AS inventoryStatus,i.sale_price_cents AS salePriceCents,
       (SELECT n.body FROM admin_notes n WHERE n.entity_type='RENTAL' AND n.entity_id=rr.id ORDER BY n.created_at DESC LIMIT 1) AS latestNote
     FROM rental_reservations rr JOIN inventory i ON i.id=rr.inventory_id ${clause}
-    ORDER BY rr.created_at DESC LIMIT ? OFFSET ?`).bind(...binds, limit, offset).all();
-  const catalog = await loadCatalogMap();
+    ORDER BY rr.created_at DESC LIMIT ? OFFSET ?`).bind(...binds, limit, offset),
+  ]);
+  const count = countResult?.results?.[0];
+  const catalog = (rows.results || []).length ? await loadCatalogMap(env) : new Map();
   return {
     total: Number(count?.total || 0), limit, offset,
     rentals: (rows.results || []).map(row => ({
@@ -1028,6 +1028,8 @@ async function getRentals(env, url) {
 
 async function getRentalDetail(env, id) {
   const db = requireDb(env);
+  // Katalog parallel zur Datenbank holen; scheitert nie (leere Map).
+  const katalogLaden = loadCatalogMap(env);
   const rental = await db.prepare(`SELECT rr.*,i.item_id AS itemId,i.article_no AS articleNo,i.status AS inventoryStatus,i.sale_price_cents AS salePriceCents
     FROM rental_reservations rr JOIN inventory i ON i.id=rr.inventory_id WHERE rr.id=?`).bind(id).first();
   if (!rental) throw new AdminError("RENTAL_NOT_FOUND", 404);
@@ -1039,7 +1041,7 @@ async function getRentalDetail(env, id) {
     db.prepare("SELECT * FROM audit_events WHERE entity_id=? ORDER BY created_at DESC LIMIT 200").bind(id),
     db.prepare("SELECT * FROM admin_notes WHERE entity_type='RENTAL' AND entity_id=? ORDER BY created_at DESC").bind(id),
   ]);
-  const catalog = await loadCatalogMap();
+  const catalog = await katalogLaden;
   return {
     rental: { ...rental, catalog: catalogView(catalog.get(Number(rental.itemId))) },
     nextStatuses: rentalNextStatuses(rental.status),
@@ -1083,8 +1085,8 @@ async function getInventory(env, url) {
   const query = status
     ? db.prepare("SELECT * FROM inventory WHERE status=? ORDER BY updated_at DESC LIMIT ?").bind(status, limit)
     : db.prepare("SELECT * FROM inventory ORDER BY updated_at DESC LIMIT ?").bind(limit);
-  const rows = await query.all();
-  const catalog = await loadCatalogMap();
+  // Datenbank und Katalog gleichzeitig (der Katalog liegt meist im Speicher).
+  const [rows, catalog] = await Promise.all([query.all(), loadCatalogMap(env)]);
   let items = (rows.results || []).map(row => ({ ...row, catalog: catalogView(catalog.get(Number(row.item_id))) }));
   if (q) {
     items = items.filter(row => {

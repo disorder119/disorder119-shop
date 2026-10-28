@@ -6,6 +6,7 @@
 // catalog.json der Website, die Bilder direkt von disorder119.com - die
 // freigestellten Fotos stehen auf Schwarz wie im Shop.
 import { MAIL_FARBE, SELLER, SHOP_URL, escapeHtml } from "./customer-mail.js";
+import { oeffentlicherKatalog } from "./oeffentlicher-katalog.js";
 
 // Eine Quelle fuer die Mailfarben: customer-mail.js (Bestellbestaetigung,
 // Versandmail) und die Newsletter sehen gleich aus.
@@ -39,10 +40,9 @@ function preisText(preis, lang) {
 // Bild. Faellt der Abruf aus, kommt die Mail eben ohne Raster - nie ohne Code.
 export async function neuesteArtikel(anzahl = 4, lang = "de", fetcher = fetch) {
   try {
-    const res = await fetcher(`${SHOP_URL}/data/catalog.json`, { cf: { cacheTtl: 600, cacheEverything: true } });
-    if (!res || !res.ok) return [];
-    const daten = await res.json();
-    const liste = Array.isArray(daten) ? daten : Array.isArray(daten?.items) ? daten.items : [];
+    // GitHub main zuerst (oeffentlicher-katalog.js): von disorder119.com kam
+    // aus dem Worker (gleiche Zone) nach ~39 s ein 522 - die Mail wartete so lange.
+    const liste = await oeffentlicherKatalog({ fetcher });
     return liste
       .filter(it => it && it.public_status === "AVAILABLE" && Number(it.price) > 0 && (it.grid_image || it.look))
       .sort((a, b) => Number(b.id) - Number(a.id))

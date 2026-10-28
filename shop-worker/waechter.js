@@ -659,21 +659,49 @@ function adminAntwort(daten, status, origin) {
   return new Response(daten === null ? null : JSON.stringify(daten), { status, headers });
 }
 
-async function kampagnenListe(env, seit, now) {
-  try {
-    const { results } = await env.DB.prepare(`SELECT * FROM waechter_kampagnen WHERE zuletzt>=? OR streng_bis>?
-      ORDER BY zuletzt DESC LIMIT 50`).bind(seit, iso(now)).all();
-    return (results || []).map(k => ({
+function kampagnenAbfrage(env, seit, now) {
+  return env.DB.prepare(`SELECT * FROM waechter_kampagnen WHERE zuletzt>=? OR streng_bis>?
+      ORDER BY zuletzt DESC LIMIT 50`).bind(seit, iso(now));
+}
+
+function kampagnenAus(results, now) {
+  return (results || []).map(k => ({
       id: k.id, grund: k.grund, grundText: GRUND_TEXT[k.grund] || k.grund, ziel: zielAusSignatur(k.signatur), beispiel: k.beispiel,
       seit: k.seit, zuletzt: k.zuletzt, strengBis: k.streng_bis, aktiv: Date.parse(k.streng_bis) > now,
       anschluesse: Number(k.anschluesse || 0), versuche: Number(k.versuche || 0), gemeldet: Boolean(k.gemeldet_zeit),
       laender: json(k.laender, []).map(([land, n]) => ({ land, landName: landName(land), anschluesse: Number(n || 0) })),
       netze: json(k.netze, []).map(([asn, name, n]) => ({ asn: Number(asn) || null, name: String(name || ""), anschluesse: Number(n || 0) })),
-    }));
+  }));
+}
+
+async function kampagnenListe(env, seit, now) {
+  try {
+    const { results } = await kampagnenAbfrage(env, seit, now).all();
+    return kampagnenAus(results, now);
   } catch (err) {
     if (!fehlendeTabelle(err)) throw err;
     return [];
   }
+}
+
+// Sperren, Vorfaelle der letzten 24 h und Kampagnen in einer Rundreise zu D1
+// (einzeln live je ~50 ms). Fehlt eine Tabelle, scheitert der Batch als
+// Ganzes - dann einzeln wie bisher, mit den Rueckfaellen.
+async function sicherheitLesen(env, seit, now) {
+  const sperrenAbfrage = () => env.DB.prepare(`SELECT * FROM waechter_sperren WHERE zuletzt>=? OR bis>? ORDER BY zuletzt DESC LIMIT 200`)
+    .bind(seit, iso(now));
+  const heuteAbfrage = () => env.DB.prepare("SELECT COUNT(*) AS n FROM waechter_vorfaelle WHERE zeit>=?").bind(iso(now - TAG));
+  if (typeof env.DB.batch === "function") {
+    try {
+      const [s, h, k] = await env.DB.batch([sperrenAbfrage(), heuteAbfrage(), kampagnenAbfrage(env, seit, now)]);
+      return { results: s?.results || [], heute: h?.results?.[0] || null, kampagnen: kampagnenAus(k?.results, now) };
+    } catch {
+      // einzeln weiter
+    }
+  }
+  const { results } = await sperrenAbfrage().all();
+  const heute = await heuteAbfrage().first();
+  return { results, heute, kampagnen: await kampagnenListe(env, seit, now) };
 }
 
 export async function handleWaechterAdmin(request, env, url, now = Date.now()) {
@@ -687,8 +715,7 @@ export async function handleWaechterAdmin(request, env, url, now = Date.now()) {
     if (pfad === "/admin/besucher/sicherheit" && request.method === "GET") {
       const tage = ganzzahl(url.searchParams.get("tage"), 7, 1, 30);
       const seit = iso(now - tage * TAG);
-      const { results } = await env.DB.prepare(`SELECT * FROM waechter_sperren WHERE zuletzt>=? OR bis>? ORDER BY zuletzt DESC LIMIT 200`)
-        .bind(seit, iso(now)).all();
+      const { results, heute, kampagnen } = await sicherheitLesen(env, seit, now);
       const sperren = (results || []).map(s => {
         const dauerTage = Math.max(1, Math.round((Date.parse(s.bis) - Date.parse(s.seit)) / TAG));
         return {
@@ -708,8 +735,6 @@ export async function handleWaechterAdmin(request, env, url, now = Date.now()) {
         const e = laender.get(key) || { land: s.land, landName: s.landName, sperren: 0, versuche: 0 };
         e.sperren++; e.versuche += s.versuche; laender.set(key, e);
       }
-      const heute = await env.DB.prepare("SELECT COUNT(*) AS n FROM waechter_vorfaelle WHERE zeit>=?").bind(iso(now - TAG)).first();
-      const kampagnen = await kampagnenListe(env, seit, now);
       return adminAntwort({
         ok: true, tage, erstellt: iso(now), aktiv: waechterAktiv(env),
         aktiveSperren: sperren.filter(s => s.aktiv).length,

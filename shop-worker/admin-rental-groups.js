@@ -1,4 +1,5 @@
 import { RENTAL_STATUSES, canTransitionRental, safeText } from "./commerce-core.js";
+import { oeffentlicherKatalog } from "./oeffentlicher-katalog.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -84,19 +85,15 @@ function groupTransitions(status) {
   return RENTAL_STATUSES.filter(next => next !== current && canTransitionRental(current, next));
 }
 
-async function loadCatalogMap() {
-  try {
-    const res = await fetch("https://disorder119.com/data/catalog.json", {
-      headers: { Accept: "application/json", "User-Agent": "disorder119-rental-group-admin" },
-    });
-    if (!res.ok) return new Map();
-    const items = await res.json();
-    return new Map((Array.isArray(items) ? items : []).map(item => [Number(item.id), {
-      id: Number(item.id), brand: String(item.brand || ""), title: String(item.title || ""),
-      article: String(item.article || item.id || ""), size: String(item.size || ""), category: String(item.category || ""),
-      image: Array.isArray(item.gallery) && item.gallery[0] ? `/${String(item.gallery[0]).replace(/^\//, "")}` : null,
-    }]));
-  } catch { return new Map(); }
+// Oeffentlicher Katalog fuer Namen und Bilder (oeffentlicher-katalog.js). Frueher
+// direkt von disorder119.com: aus dem Worker (gleiche Zone) kam nach ~39 s ein 522.
+async function loadCatalogMap(env) {
+  const items = await oeffentlicherKatalog({ env });
+  return new Map(items.filter(item => item && item.id !== undefined && item.id !== null).map(item => [Number(item.id), {
+    id: Number(item.id), brand: String(item.brand || ""), title: String(item.title || ""),
+    article: String(item.article || item.id || ""), size: String(item.size || ""), category: String(item.category || ""),
+    image: Array.isArray(item.gallery) && item.gallery[0] ? `/${String(item.gallery[0]).replace(/^\//, "")}` : null,
+  }]));
 }
 
 function parseMetadata(value) {
@@ -156,7 +153,7 @@ async function groupDetail(env, id) {
          OR entity_id IN (SELECT id FROM rental_reservations WHERE group_id=?)
       ORDER BY created_at DESC LIMIT 300`).bind(id, id),
   ]);
-  const catalog = await loadCatalogMap();
+  const catalog = await loadCatalogMap(env);
   const items = (children.results || []).map(row => ({ ...row, catalog: catalog.get(Number(row.itemId)) || null }));
   return {
     group,

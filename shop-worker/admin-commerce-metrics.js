@@ -1,5 +1,6 @@
 // Disorder119 extended private commerce metrics.
 // Read-only calculations over D1. No provider actions or public customer data.
+import { oeffentlicherKatalog } from "./oeffentlicher-katalog.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -91,22 +92,15 @@ function safeCatalogItem(item) {
   };
 }
 
-async function loadCatalog() {
-  try {
-    const response = await fetch("https://disorder119.com/data/catalog.json", {
-      headers: { Accept: "application/json", "User-Agent": "disorder119-commerce-metrics" },
-    });
-    if (!response.ok) return new Map();
-    const rows = await response.json();
-    const map = new Map();
-    for (const item of Array.isArray(rows) ? rows : []) {
-      const safe = safeCatalogItem(item);
-      if (safe && Number.isFinite(safe.id)) map.set(safe.id, safe);
-    }
-    return map;
-  } catch {
-    return new Map();
+// Oeffentlicher Katalog fuer Namen und Bilder (oeffentlicher-katalog.js). Frueher
+// direkt von disorder119.com: aus dem Worker (gleiche Zone) kam nach ~39 s ein 522.
+async function loadCatalog(env) {
+  const map = new Map();
+  for (const item of await oeffentlicherKatalog({ env })) {
+    const safe = safeCatalogItem(item);
+    if (safe && Number.isFinite(safe.id)) map.set(safe.id, safe);
   }
+  return map;
 }
 
 export function mergeCustomerValue(salesRows = [], rentalRows = []) {
@@ -186,7 +180,7 @@ async function buildCommerceMetrics(env, url) {
   cutoff.setUTCHours(0, 0, 0, 0);
   const cutoffIso = cutoff.toISOString();
 
-  const [salesPeriod, rentalRefunds, returnRate, damageExposure, paymentMix, orderMix, rentalMix] = await db.batch([
+  const ersteStmts = [
     db.prepare(`WITH period_paid AS (
         SELECT order_id, SUM(amount_cents) AS captured_cents
         FROM payments
@@ -228,9 +222,9 @@ async function buildCommerceMetrics(env, url) {
       FROM commerce_orders WHERE created_at>=? GROUP BY status ORDER BY count DESC`).bind(cutoffIso),
     db.prepare(`SELECT status,COUNT(*) AS count,COALESCE(SUM(total_price_cents),0) AS rentalValueCents
       FROM rental_reservations WHERE created_at>=? GROUP BY status ORDER BY count DESC`).bind(cutoffIso),
-  ]);
+  ];
 
-  const salesTopRows = await db.prepare(`WITH paid_orders AS (
+  const salesTopRowsStmt = db.prepare(`WITH paid_orders AS (
       SELECT DISTINCT order_id FROM payments
       WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND provider_payment_id IS NOT NULL
         AND COALESCE((SELECT COALESCE(e.occurred_at,e.observed_at) FROM tax_cash_events e
@@ -239,15 +233,15 @@ async function buildCommerceMetrics(env, url) {
     SELECT oi.item_id AS itemId,MAX(oi.article_no) AS articleNo,MAX(oi.title_snapshot) AS title,
       COUNT(*) AS count,COALESCE(SUM(oi.unit_price_cents),0) AS valueCents
     FROM order_items oi JOIN paid_orders p ON p.order_id=oi.order_id
-    GROUP BY oi.item_id ORDER BY valueCents DESC,count DESC LIMIT 20`).bind(cutoffIso).all();
+    GROUP BY oi.item_id ORDER BY valueCents DESC,count DESC LIMIT 20`).bind(cutoffIso);
 
-  const rentalTopRows = await db.prepare(`SELECT i.item_id AS itemId,MAX(i.article_no) AS articleNo,
+  const rentalTopRowsStmt = db.prepare(`SELECT i.item_id AS itemId,MAX(i.article_no) AS articleNo,
       COUNT(*) AS count,COALESCE(SUM(rr.total_price_cents),0) AS valueCents
     FROM rental_reservations rr JOIN inventory i ON i.id=rr.inventory_id
     WHERE rr.status IN ('CONFIRMED','ACTIVE','RETURN_DUE','RETURNED') AND rr.created_at>=?
-    GROUP BY i.item_id ORDER BY valueCents DESC,count DESC LIMIT 20`).bind(cutoffIso).all();
+    GROUP BY i.item_id ORDER BY valueCents DESC,count DESC LIMIT 20`).bind(cutoffIso);
 
-  const salesCustomerRows = await db.prepare(`WITH paid AS (
+  const salesCustomerRowsStmt = db.prepare(`WITH paid AS (
       SELECT order_id,SUM(amount_cents) AS captured_cents
       FROM payments WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND provider_payment_id IS NOT NULL GROUP BY order_id
     ), refunded AS (
@@ -264,9 +258,9 @@ async function buildCommerceMetrics(env, url) {
     LEFT JOIN refunded r ON r.order_id=o.id
     LEFT JOIN order_contact_snapshots cs ON cs.order_id=o.id
     WHERE COALESCE(NULLIF(cs.email,''),NULLIF(o.guest_email,'')) IS NOT NULL
-    GROUP BY LOWER(COALESCE(NULLIF(cs.email,''),NULLIF(o.guest_email,'')))`).all();
+    GROUP BY LOWER(COALESCE(NULLIF(cs.email,''),NULLIF(o.guest_email,'')))`);
 
-  const rentalCustomerRows = await db.prepare(`SELECT
+  const rentalCustomerRowsStmt = db.prepare(`SELECT
       LOWER(COALESCE(NULLIF(c.email_normalized,''),NULLIF(rr.guest_email,''))) AS email,
       COUNT(*) AS rentals,COALESCE(SUM(rr.total_price_cents),0) AS rentalContractValueCents,
       MIN(rr.created_at) AS firstCommerceAt,MAX(rr.created_at) AS lastCommerceAt
@@ -274,9 +268,16 @@ async function buildCommerceMetrics(env, url) {
     LEFT JOIN customers c ON c.id=rr.customer_id
     WHERE rr.status IN ('CONFIRMED','ACTIVE','RETURN_DUE','RETURNED')
       AND COALESCE(NULLIF(c.email_normalized,''),NULLIF(rr.guest_email,'')) IS NOT NULL
-    GROUP BY LOWER(COALESCE(NULLIF(c.email_normalized,''),NULLIF(rr.guest_email,'')))`).all();
+    GROUP BY LOWER(COALESCE(NULLIF(c.email_normalized,''),NULLIF(rr.guest_email,'')))`);
 
-  const catalog = await loadCatalog();
+  // Eine Rundreise zu D1 statt 5 nacheinander (live je ~50 ms), der
+  // Katalog kommt gleichzeitig (oeffentlicher-katalog.js, meist aus dem Speicher).
+  const [alle, catalog] = await Promise.all([
+    db.batch([...ersteStmts, salesTopRowsStmt, rentalTopRowsStmt, salesCustomerRowsStmt, rentalCustomerRowsStmt]),
+    loadCatalog(env),
+  ]);
+  const [salesPeriod, rentalRefunds, returnRate, damageExposure, paymentMix, orderMix, rentalMix] = alle.slice(0, ersteStmts.length);
+  const [salesTopRows, rentalTopRows, salesCustomerRows, rentalCustomerRows] = alle.slice(ersteStmts.length);
   const customers = mergeCustomerValue(salesCustomerRows.results || [], rentalCustomerRows.results || []);
   const period = salesPeriod.results?.[0] || {};
   const rentalsRefund = rentalRefunds.results?.[0] || {};
