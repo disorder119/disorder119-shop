@@ -156,8 +156,11 @@ def patch_generated_index(text: str) -> str:
 def main() -> None:
     changed = []
     targets = [(BUILD, patch_build), (APP, patch_app), (CSS, patch_css), (ARTICLE_CSS, patch_article_css)]
-    if INDEX.is_file():
-        targets.append((INDEX, patch_generated_index))
+    # /en/ und /fr/ sind seit dem 28.10.2026 ebenfalls serverseitig sichtbar
+    # (build_site.py startseite_vorab_zeigen) und bekommen denselben Lader.
+    for index in (INDEX, BASE / "en" / "index.html", BASE / "fr" / "index.html"):
+        if index.is_file():
+            targets.append((index, patch_generated_index))
     for path, fn in targets:
         before = path.read_text(encoding="utf-8")
         after = fn(before)

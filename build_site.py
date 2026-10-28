@@ -35,6 +35,8 @@ from seo_text import compose_description, seo_title  # noqa: E402
 # sonst Marke + Produktart + Bereich + Farbe) - geteilt mit
 # scripts/repair_public_article_integrity.py.
 from english_titles import english_description, english_title, farbe_en  # noqa: E402
+# Beschriftungen aus der I18N-Tabelle von assets/app.js (Startseite /en/, /fr/).
+from app_i18n import app_text  # noqa: E402
 SITE_URL = "https://disorder119.com/"
 DATA_PATH = BASE / "data" / "items.json"
 
@@ -1312,9 +1314,14 @@ def initial_archive_card_html(it, lang):
     if not size_raw or size_raw == "Unknown":
         size_raw = it.get("size") or ""
     size_label = size_tr(size_raw, lang) if size_raw else ""
+    # Wie app.js cardSizeLabel: reine Zahlen bei Schuhen als EU-Groesse.
+    schuh = (it.get("taxonomy_category") or it.get("category")) == "Shoes"
+    if size_label and schuh and re.fullmatch(r"\d+(?:[.,]\d+)?", size_label):
+        size_label = "EU " + size_label
     price = float(it.get("price") or 0)
     if price > 0:
-        price_text = ("ca. " if it.get("price_estimated") else "") + fmt_price_de(price)
+        praefix = app_text(lang, "priceEstimatedPrefix") if it.get("price_estimated") else ""
+        price_text = praefix + fmt_price_de(price)
     else:
         price_text = ph["price_on_request"]
     picture = ""
@@ -1459,20 +1466,110 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     return out
 
 
-# Ladezeit /en/ und /fr/: Dort baut erst app.js das Archiv (die Beschriftungen
-# uebersetzt der Browser, deshalb kein Server-Rendering wie auf der deutschen
-# Startseite). Bisher lief das nacheinander: HTML -> app.js -> catalog.json ->
-# Kachelbild. Jetzt holt der Browser den Katalog und die ersten zwei
-# Kachelbilder (gleiche Auswahl wie app.js: verfuegbar, hellste zuerst)
-# gleichzeitig mit app.js. crossorigin="anonymous" passt zum fetch() in
-# app.js, sonst laedt der Browser den Katalog doppelt.
-def startseite_ohne_ssr_vorladen(out):
-    anker = '<link rel="stylesheet" href="/assets/app.css'
-    if anker not in out or 'data-ssr-initial="1"' in out:
-        return out
-    links = initial_archive_preloads()
-    links += '\n<link rel="preload" href="/data/catalog.json" as="fetch" crossorigin="anonymous">'
-    return out.replace(anker, links + "\n" + anker, 1)
+# Ladezeit /en/ und /fr/ (28.10.2026): Bisher war dort die ganze Seite
+# versteckt, bis app.js nach dem Laden die deutschen Beschriftungen
+# uebersetzt und das Archiv gebaut hatte - am Handy ein schwarzer Bildschirm
+# (LCP 2,3-2,6 s gegen 1,25 s auf Deutsch). Jetzt bekommen sie dasselbe wie
+# die deutsche Startseite: sichtbar, die ersten zwei Kacheln fertig im HTML,
+# Bilder vorgeladen, Skripte erst nach dem Laden (apply_focus_three_followup).
+# Die Beschriftungen setzt der Build mit genau der Tabelle, die app.js
+# verwendet (I18N in assets/app.js), so wie applyLanguage() es im Browser tut:
+# data-i18n (Inhalt), data-i18n-placeholder, data-i18n-aria, brandLineMore,
+# mountToggle. app.js setzt sie beim Start noch einmal - gleiche Texte, kein
+# Springen. Inline-Skripte bleiben unberuehrt (CSP-Hashes). Die Tabelle liest
+# scripts/app_i18n.py.
+
+
+ANSICHT_WEISS = {"en": "White view", "fr": "Affichage blanc"}  # wie assets/ansicht.js
+
+
+def _attribut_setzen(tag, name, wert):
+    wert = html.escape(wert, quote=True)
+    muster = re.compile(r'(\s' + re.escape(name) + r'=")[^"]*(")')
+    if muster.search(tag):
+        return muster.sub(lambda m: m.group(1) + wert + m.group(2), tag, count=1)
+    ende = len(tag) - (2 if tag.endswith("/>") else 1)
+    return tag[:ende].rstrip() + f' {name}="{wert}"' + tag[ende:]
+
+
+def _inhalt_ersetzen(segment, start_tag_muster, neuer_inhalt):
+    """Ersetzt den Inhalt jedes passenden Elements (wie el.innerHTML = ...).
+    Verschachtelte Elemente gleichen Namens werden mitgezaehlt; liegt ein
+    weiteres passendes Element im ersetzten Inhalt, verschwindet es - wie
+    im Browser, wo das aeussere innerHTML gewinnt."""
+    aus, pos = [], 0
+    while True:
+        m = start_tag_muster.search(segment, pos)
+        if not m:
+            break
+        name = m.group("tag").lower()
+        inhalt_start = m.end()
+        oeffnen = re.compile(r"<" + name + r"\b", re.I)
+        schliessen = re.compile(r"</" + name + r"\s*>", re.I)
+        tiefe, such = 1, inhalt_start
+        while tiefe:
+            o, s = oeffnen.search(segment, such), schliessen.search(segment, such)
+            if not s:
+                raise ValueError(f"Kein </{name}> zu {m.group(0)[:60]}")
+            if o and o.start() < s.start():
+                tiefe, such = tiefe + 1, o.end()
+            else:
+                tiefe, such = tiefe - 1, s.end()
+        ende_inhalt = s.start()
+        aus.append(segment[pos:inhalt_start])
+        aus.append(neuer_inhalt(m))
+        pos = ende_inhalt
+    aus.append(segment[pos:])
+    return "".join(aus)
+
+
+def html_vorab_uebersetzen(out, lang):
+    """Statische Beschriftungen einer Bundle-Seite in lang setzen (wie applyLanguage)."""
+    teile = re.split(r"(<script\b[^>]*>.*?</script\s*>)", out, flags=re.S | re.I)
+    i18n_tag = re.compile(r'<(?P<tag>[a-zA-Z][\w-]*)\b[^>]*\sdata-i18n="(?P<key>[^"]+)"[^>]*>')
+    for n in range(0, len(teile), 2):
+        segment = teile[n]
+        segment = re.sub(r'<[a-zA-Z][^>]*\sdata-i18n-placeholder="([^"]+)"[^>]*>',
+                         lambda m: _attribut_setzen(m.group(0), "placeholder", app_text(lang, m.group(1))), segment)
+        segment = re.sub(r'<[a-zA-Z][^>]*\sdata-i18n-aria="([^"]+)"[^>]*>',
+                         lambda m: _attribut_setzen(m.group(0), "aria-label", app_text(lang, m.group(1))), segment)
+        segment = _inhalt_ersetzen(segment, i18n_tag, lambda m: app_text(lang, m.group("key")))
+        segment = _inhalt_ersetzen(segment, re.compile(r'<(?P<tag>span)\b[^>]*\sid="brandLineMore"[^>]*>'),
+                                   lambda m: html.escape(app_text(lang, "brandLineMore"), quote=False))
+        segment = _inhalt_ersetzen(segment, re.compile(r'<(?P<tag>button)\b[^>]*\sid="mountToggle"[^>]*>'),
+                                   lambda m: html.escape(app_text(lang, "viewDark"), quote=False))
+        # Archiv-Ueberschrift im Startzustand (app.js render: statusAvailable)
+        segment = _inhalt_ersetzen(segment, re.compile(r'<(?P<tag>span)\b[^>]*\sid="catalogTitle"[^>]*>'),
+                                   lambda m: html.escape(app_text(lang, "statusAvailable"), quote=False))
+        # Umschalter Schwarz/Weiss als Text (ansicht.js TEXT[lang].dunkel).
+        weiss = ANSICHT_WEISS.get(lang)
+        if weiss:
+            segment = _inhalt_ersetzen(segment, re.compile(r'<(?P<tag>button)\b[^>]*\sdata-ansicht-umschalten\b[^>]*>'),
+                                       lambda m: html.escape(weiss, quote=False))
+        # Sortierfeld: app.js setzt diese Beschriftung fest im Code (PERF_A11Y_95_ARCHIVE).
+        sortier = {"en": "Sort items", "fr": "Trier les articles"}.get(lang)
+        if sortier:
+            segment = re.sub(r'<select\b[^>]*\sid="sortSelect"[^>]*>',
+                             lambda m: _attribut_setzen(m.group(0), "aria-label", sortier), segment)
+        teile[n] = segment
+    return "".join(teile)
+
+
+def startseite_vorab_zeigen(out, lang):
+    """EN/FR-Startseite wie die deutsche: sichtbar, uebersetzt, erste Kacheln im HTML."""
+    out = html_vorab_uebersetzen(out, lang)
+    ersetzungen = (
+        ('<div class="app-shell hidden" id="appShell">', '<div class="app-shell" id="appShell">'),
+        ('<div class="grid" id="grid"></div>',
+         '<div class="grid" id="grid" data-ssr-initial="1">' + initial_archive_grid_html(lang) + '</div>'),
+        ('<link rel="stylesheet" href="/assets/app.css',
+         initial_archive_preloads() + '\n<link rel="stylesheet" href="/assets/app.css'),
+    )
+    for alt, neu in ersetzungen:
+        if out.count(alt) != 1:
+            raise SystemExit(f"FEHLER: Startseite {lang}: erwartete genau einmal {alt!r}")
+        out = out.replace(alt, neu, 1)
+    return out
 
 
 def build_index():
@@ -1481,7 +1578,7 @@ def build_index():
         ph = META_PHRASES[lang]
         out = render_bundle_page(lang, "", ph["home_title"], ph["home_desc"], shop_config, include_item_list=True)
         if lang != "de":
-            out = startseite_ohne_ssr_vorladen(out)
+            out = startseite_vorab_zeigen(out, lang)
         path = BASE / "index.html" if lang == "de" else BASE / lang / "index.html"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(out, encoding="utf-8")
