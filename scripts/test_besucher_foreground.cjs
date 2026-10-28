@@ -2,7 +2,7 @@
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),vm=require("node:vm"),path=require("node:path");
 function setup({allowed=false,dnt=false,own=false}={}){
  let now=1800000000000,mono=0,seq=0;const events=[],timers=new Map(),listeners={},elements=[],storage=new Map();
- if(allowed)storage.set("d119_analytics_consent_v1",JSON.stringify({version:1,allowed:true,at:now}));if(own)storage.set("d119_nicht_zaehlen","1");
+ if(allowed)storage.set("d119_analytics_consent_v1",JSON.stringify({version:2,allowed:true,at:now}));if(own)storage.set("d119_nicht_zaehlen","1");
  function el(tag){const e={tag,children:[],handlers:{},className:"",classList:{contains:()=>false},setAttribute(){},append(...xs){this.children.push(...xs)},appendChild(x){this.children.push(x)},remove(){},addEventListener(t,f){this.handlers[t]=f}};elements.push(e);return e;}
  const modal=el("modal"),doc={visibilityState:"visible",referrer:"https://instagram.com/private?secret=x",documentElement:{lang:"de",getAttribute:()=>"de"},body:el("body"),createElement:el,getElementById:()=>modal,addEventListener(t,f){(listeners["d:"+t]??=[]).push(f)}};
  const loc={pathname:"/",hash:""},win={SHOP_CONFIG:{shopWorkerUrl:"https://api.example.invalid"},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},performance:{now:()=>mono},crypto:{getRandomValues:a=>{a.fill(++seq);return a}},addEventListener(t,f){(listeners["w:"+t]??=[]).push(f)},MutationObserver:class{constructor(f){this.f=f;win.observer=this}observe(){}}};

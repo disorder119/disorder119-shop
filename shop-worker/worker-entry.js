@@ -36,7 +36,20 @@ import { handleAdresse, isAdresseRoute } from "./adresse.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
 import { handleIncomingEmail, handlePostfach, isPostfachRoute } from "./postfach.js";
-import { besucherAufraeumen, entsperrtMelden, handleBesucher, istBesucherRoute } from "./besucher.js";
+import { SEITENAUFRUF_PFAD, besucherAufraeumen, entsperrtMelden, handleBesucher, istBesucherRoute } from "./besucher.js";
+import { sitzungenMelden } from "./besucher-zusammenfassung.js";
+import { geoGesperrt, geoSperrAntwort } from "./geo-sperre.js";
+import {
+  handleWaechterAdmin,
+  istWaechterAdmin,
+  istWaechterIntern,
+  waechterIntern,
+  waechterNachher,
+  waechterPflegen,
+  waechterVorab,
+} from "./waechter.js";
+// Durable Object fuer die puenktliche Besuchs-Zusammenfassung (wrangler.toml).
+export { BesucherWecker } from "./besucher-wecker.js";
 import { istSandbox, testshopFetch } from "./sandbox.js";
 import { httpsErzwingen, mitHsts } from "./https-pflicht.js";
 import { kontingentAufraeumen } from "./kontingent.js";
@@ -248,6 +261,10 @@ const worker = {
     if (aussen) {
       const nurHttps = httpsErzwingen(request);
       if (nurHttps) return nurHttps;
+      // Geo-Sperre (geo-sperre.js) wie auf disorder119.com. PayPal-, Packlink-
+      // und eBay-Meldungen kommen aus nie gesperrten Laendern (US) bzw. ohne
+      // Laenderangabe ueber die interne Dienstbindung.
+      if (geoGesperrt(request, env)) return geoSperrAntwort(request);
     }
     // Testshop (api-test.disorder119.com): Herkunft rein und raus uebersetzen.
     // HSTS auch fuer Antworten, die nicht ueber finish laufen (/sandbox/verkauft).
@@ -260,9 +277,20 @@ const worker = {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin");
     const reqId = requestId(request);
-    const finish = response => finalizeRuntimeResponse(response, request, env, reqId, url.pathname);
+    const finish = response => {
+      // Waechter: 404 der API zaehlen (Scanner raten Adressen).
+      waechterNachher(request, env, ctx, url, response?.status);
+      return finalizeRuntimeResponse(response, request, env, reqId, url.pathname);
+    };
+
+    // Waechter-Meldungen und -Abfragen des Storefront-Workers (Dienstbindung).
+    if (istWaechterIntern(url)) return waechterIntern(request, env, ctx, url);
 
     try {
+      // Waechter (waechter.js): Angriffsproben, gesperrte Anschluesse, Fluten.
+      const abgewiesen = await waechterVorab(request, env, ctx, url);
+      if (abgewiesen) return finish(abgewiesen);
+
       if (isEbayRoute(url)) {
         await guardRuntimeRequest(request, env, url);
         return finish(await handleEbayGateway(request, env, url));
@@ -367,8 +395,19 @@ const worker = {
 
       // Live-Besucher: /besuch vom Shop (nur mit Einwilligung), Seitenaufrufe
       // vom Storefront-Worker (Dienstbindung) und die Auswertung der Admin-App.
+      // Sicherheit (Waechter-Sperren) in der Admin-App: Liste und "Sperre aufheben".
+      if (istWaechterAdmin(url)) {
+        return finish(await handleWaechterAdmin(request, runtimeEnv, url));
+      }
+
       if (istBesucherRoute(url)) {
-        return finish(await handleBesucher(request, runtimeEnv, url, reqId, ctx));
+        const antwort = await handleBesucher(request, runtimeEnv, url, reqId, ctx);
+        // Nebenbei faellige Besuchs-Zusammenfassungen schicken (Rueckfall,
+        // falls der Wecker fehlt; doppelt senden verhindert der Status 3).
+        if (url.pathname === "/besuch" || url.pathname === SEITENAUFRUF_PFAD) {
+          await runBackground(ctx, sitzungenMelden(runtimeEnv, Date.now(), { limit: 3 }), "besucher_summary_failed", reqId);
+        }
+        return finish(antwort);
       }
 
       // Postfach der Admin-App (Mails an kontakt@disorder119.com).
@@ -551,6 +590,10 @@ const worker = {
       reqId,
     );
     await runBackground(ctx, besucherAufraeumen(env, scheduledTime), "besucher_cleanup_failed", reqId);
+    // Besuchs-Zusammenfassungen, die der Wecker verpasst hat, und Waechter
+    // (Sammelmeldung bei Angriffswellen, abgelaufene Vorfaelle loeschen).
+    await runBackground(ctx, sitzungenMelden(env, scheduledTime, { limit: 25 }), "besucher_summary_failed", reqId);
+    await runBackground(ctx, waechterPflegen(env, scheduledTime), "waechter_maintenance_failed", reqId);
     // Zaehler gegen Missbrauch (IP-Hashes) nach Ablauf ihres Fensters loeschen.
     await runBackground(ctx, kontingentAufraeumen(env.DB, new Date(scheduledTime)), "kontingent_cleanup_failed", reqId);
     // Offene Halte (Kasse, Miete) zaehlen hoechstens 30 Minuten - danach weg.

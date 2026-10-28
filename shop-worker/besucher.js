@@ -1,22 +1,26 @@
 import { sichtzeitBody, sichtzeitSpeichern, zeitIntervalle, zeitGruppen, sichtzeitIndex, sichtzeitZwischen, verbundeneZeiten, vereinigteZeit } from "./besucher-sichtzeit.js";
 // Live-Besucher: der Shop meldet Seitenaufrufe, angesehene Artikel,
 // Warenkorb-Aenderungen und geoeffnete Anfragen an POST /besuch. Der Worker
-// legt sie in D1 ab, schickt die wichtigen Momente an den Telegram-Bot und
-// zeigt sie der Admin-App unter /admin/besucher/*.
+// legt sie in D1 ab und zeigt sie der Admin-App unter /admin/besucher/*.
+// Telegram bekommt je Besuch genau EINE Zusammenfassung, erst wenn der
+// Besucher gegangen ist (besucher-sitzung.js, besucher-zusammenfassung.js).
 //
 // Zwei Quellen: Ohne Einwilligung meldet nur der Storefront-Worker jeden
 // echten Seitenaufruf (seitenaufrufAnnehmen, ohne Skript und ohne Stadt).
 // Erst mit Einwilligung kommt assets/besucher.js dazu: Artikel im Overlay,
-// Seitenwechsel ohne Neuladen, Warenkorb, Anfragen, Verweildauer, Stadt.
+// Seitenwechsel ohne Neuladen, Warenkorb, Anfragen, Verweildauer, Stadt,
+// Abschied beim Schliessen und die Besuchszahl aus dem Browser-Speicher.
 //
 // Datenschutz: keine Cookies, keine IP in der Datenbank oder in Telegram.
 // Der Besucher-Schluessel ist ein Hash aus IP, Browserkennung und einem
 // Tagessalz, das der Cron nach Tagesende loescht. Ort (Stadt/Region/Land)
 // kommt grob aus request.cf. Browser mit "Do Not Track" oder Global Privacy
 // Control senden gar nichts (siehe assets/besucher.js und storefront-edge.js).
+// Lesbare Namen ("iPhone · Hamburg (Fuchs)") entstehen nur zur Anzeige aus
+// Geraet, Ort und dem Tages-Schluessel; das Tier wechselt mit dem Tagessalz.
 import { safeText } from "./commerce-core.js";
-import { sendTelegramMessage, telegramTransportReady } from "./notifications.js";
-import { sperreLesen } from "./site-lock.js";
+import { sitzungBeruehren, wiederkehrAusBody } from "./besucher-sitzung.js";
+import { geoSperrListe } from "./geo-sperre.js";
 
 const SHOP_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -36,7 +40,6 @@ const SPRACHEN = Object.freeze(["de", "en", "fr"]);
 const MAX_BODY = 2048;
 const SITZUNG_MS = 30 * 60 * 1000;
 const STANDARD_AUFBEWAHRUNG_TAGE = 30;
-const STANDARD_TELEGRAM_PRO_STUNDE = 40;
 const KATALOG_CACHE_MS = 10 * 60 * 1000;
 
 const BOT_UA = /bot\b|bot\/|crawl|spider|slurp|headless|lighthouse|pagespeed|preview|facebookexternalhit|whatsapp|telegram|discord|curl|wget|python|node-fetch|undici|go-http|java\/|okhttp|axios|postman|monitor|uptime/i;
@@ -59,13 +62,12 @@ export function besucherAktiv(env) {
   return !["aus", "false", "0", "off", "nein"].includes(schalter(env, "BESUCHER_TRACKING"));
 }
 
-// "wichtig" (Standard): neuer Besucher, Warenkorb, Anfrage.
-// "alles": zusaetzlich jeder angesehene Artikel. "aus": nichts.
+// "zusammenfassung" (Standard): je Besuch eine Nachricht, wenn er vorbei ist.
+// "aus": nichts. Fruehere Werte ("wichtig", "alles") gelten als Zusammenfassung.
 export function telegramModus(env) {
   const wert = schalter(env, "BESUCHER_TELEGRAM");
   if (["aus", "false", "0", "off", "nein"].includes(wert)) return "aus";
-  if (wert === "alles") return "alles";
-  return "wichtig";
+  return "zusammenfassung";
 }
 
 function ganzzahl(value, fallback, min, max) {
@@ -153,7 +155,84 @@ export function geraetUndBrowser(userAgent) {
   else if (/Firefox\/|FxiOS/i.test(ua)) browser = "Firefox";
   else if (/Chrome\/|CriOS/i.test(ua)) browser = "Chrome";
   else if (/Safari\//i.test(ua)) browser = "Safari";
-  return { geraet, browser };
+  return { geraet, browser, system: systemAus(ua, geraet) };
+}
+
+// Betriebssystem mit Hauptversion, so grob wie die Browserkennung es hergibt
+// (macOS und Windows 10/11 melden ihre Version ohnehin nicht genauer).
+export function systemAus(userAgent, geraet = null) {
+  const ua = String(userAgent || "");
+  const g = geraet || geraetUndBrowser(ua).geraet;
+  if (g === "iPhone" || g === "iPad") {
+    const v = /(?:iPhone OS|CPU OS|iOS) (\d{1,2})[_.]/i.exec(ua)?.[1];
+    const name = g === "iPad" ? "iPadOS" : "iOS";
+    return v ? `${name} ${v}` : name;
+  }
+  if (/Android/i.test(ua)) {
+    const v = /Android (\d{1,2})/i.exec(ua)?.[1];
+    return v ? `Android ${v}` : "Android";
+  }
+  if (/Windows NT 10\.0/i.test(ua)) return "Windows 10/11";
+  if (/Windows NT 6\.3/i.test(ua)) return "Windows 8.1";
+  if (/Windows NT 6\.[12]/i.test(ua)) return "Windows 7/8";
+  if (/Windows/i.test(ua)) return "Windows";
+  if (/CrOS/i.test(ua)) return "ChromeOS";
+  if (/Macintosh|Mac OS X/i.test(ua)) return "macOS";
+  if (/Linux/i.test(ua)) return "Linux";
+  return null;
+}
+
+// Nur der erste Sprachcode aus Accept-Language ("de-DE,de;q=0.9" -> "de").
+export function browserSpracheAus(value) {
+  const treffer = /^\s*([a-z]{2,3})(?:[-_][a-z0-9]{1,8})*\s*(?:[;,]|$)/i.exec(String(value || ""));
+  return treffer ? treffer[1].toLowerCase() : null;
+}
+
+export function spracheName(code) {
+  const c = String(code || "").toLowerCase();
+  if (!/^[a-z]{2,3}$/.test(c)) return null;
+  try {
+    return new Intl.DisplayNames(["de"], { type: "language" }).of(c) || c;
+  } catch {
+    return c;
+  }
+}
+
+// Kampagne aus utm_source/utm_campaign des Einstiegslinks ("instagram/herbst").
+function kampagnenTeil(value) {
+  const text = String(value || "").trim().toLowerCase().slice(0, 40);
+  return /^[a-z0-9][a-z0-9._-]*$/.test(text) ? text : "";
+}
+export function kampagneAus(quelle, kampagne) {
+  const teile = [kampagnenTeil(quelle), kampagnenTeil(kampagne)].filter(Boolean);
+  return teile.length ? teile.join("/") : null;
+}
+
+// ---------------------------------------------------------------- Lesbare Namen
+
+const TIERE = Object.freeze([
+  "Fuchs", "Luchs", "Otter", "Dachs", "Falke", "Reh", "Igel", "Biber", "Eule", "Wolf", "Hase", "Kranich",
+  "Specht", "Möwe", "Robbe", "Elch", "Bär", "Marder", "Wiesel", "Hirsch", "Kauz", "Adler", "Rabe", "Schwan",
+  "Storch", "Panda", "Koala", "Lama", "Zebra", "Tiger", "Puma", "Gecko", "Delfin", "Wal", "Pinguin", "Kolibri",
+  "Flamingo", "Gepard", "Jaguar", "Steinbock", "Gämse", "Murmeltier", "Seehund", "Papagei", "Libelle", "Hummel",
+  "Eisvogel", "Waschbär",
+]);
+
+// Tages-Spitzname aus dem Schluessel: unterscheidet zwei "iPhone · Deutschland"
+// am selben Tag. Wechselt mit dem Tagessalz, wie der Schluessel selbst.
+export function besucherTier(schluessel) {
+  const hex = String(schluessel || "").replace(/[^0-9a-f]/gi, "").slice(0, 8);
+  if (!hex) return TIERE[0];
+  return TIERE[parseInt(hex, 16) % TIERE.length];
+}
+
+export function besucherName({ geraet, stadt, land } = {}) {
+  const ort = stadt || landName(land) || "Ort unbekannt";
+  return `${geraet || "Gerät unbekannt"} · ${ort}`;
+}
+
+export function besucherLabel(schluessel, info = {}) {
+  return `${besucherName(info)} (${besucherTier(schluessel)})`;
 }
 
 export function istBot(userAgent) {
@@ -236,8 +315,15 @@ async function katalog(env) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const liste = await res.json();
     const map = new Map();
+    // Overlay-Ereignisse tragen die Katalog-ID, Produktseiten-Adressen die
+    // Artikelnummer (url_slug): beide fuehren zum selben Eintrag.
     for (const it of Array.isArray(liste) ? liste : []) {
       if (it && it.id !== undefined) map.set(String(it.id), it);
+    }
+    for (const it of Array.isArray(liste) ? liste : []) {
+      for (const key of [it?.url_slug, it?.article]) {
+        if (key !== undefined && key !== null && /^\d{1,9}$/.test(String(key)) && !map.has(String(key))) map.set(String(key), it);
+      }
     }
     katalogCache = { bis: jetzt + KATALOG_CACHE_MS, map };
     return map;
@@ -247,8 +333,15 @@ async function katalog(env) {
     return katalogCache.map;
   }
 }
+export const katalogLaden = katalog;
 
-function euro(preis) {
+// Dem Inhaber zeigen wir die Artikelnummer (#238), nicht die Katalog-ID.
+export function artikelNummer(artikelId, it) {
+  const nr = it?.article ?? it?.url_slug;
+  return nr !== undefined && nr !== null && String(nr).trim() ? String(nr).trim() : String(artikelId || "");
+}
+
+export function euro(preis) {
   const n = Number(preis);
   return Number.isFinite(n) && n > 0 ? `${n.toLocaleString("de-DE")} €` : "";
 }
@@ -269,7 +362,7 @@ export function artikelText(artikelId, it) {
   if (!it) return `Artikel ${artikelId}`;
   const name = artikelName(it);
   const preis = euro(it.price);
-  return `Artikel ${artikelId} – ${safeText(name, 120)}${preis ? ` (${preis})` : ""}`;
+  return `#${artikelNummer(artikelId, it)} ${safeText(name, 120)}${preis ? ` (${preis})` : ""}`;
 }
 
 // ---------------------------------------------------------------- Besucher-Schluessel
@@ -316,7 +409,9 @@ export function ereignisAusBody(raw) {
   }
   if (!body || typeof body !== "object" || Array.isArray(body)) throw new BesucherError("INVALID_JSON", 400);
   const typ = String(body.t || "");
-  if (typ === "verlassen") return { typ, pfad: pfadAus(body.p) };
+  // w=1: Seitenwechsel innerhalb des Shops (Link geklickt) - nur fuer die
+  // Verweildauer, kein Abschied.
+  if (typ === "verlassen") return { typ, pfad: pfadAus(body.p), weiter: body.w === 1 };
   if (!BESUCHER_TYPEN.includes(typ)) throw new BesucherError("INVALID_TYPE", 400);
   const artikelId = artikelIdAus(body.a);
   if (["artikel", "warenkorb_rein", "warenkorb_raus"].includes(typ) && !artikelId) {
@@ -335,65 +430,22 @@ export function ereignisAusBody(raw) {
   };
 }
 
-async function zuletztGesehen(env, besucher) {
-  const row = await env.DB.prepare("SELECT MAX(zeit) AS zuletzt FROM besucher_ereignisse WHERE besucher=?")
-    .bind(besucher).first();
-  return row?.zuletzt || null;
-}
-
-async function telegramBudget(env, now) {
-  const max = ganzzahl(env?.BESUCHER_TELEGRAM_PRO_STUNDE, STANDARD_TELEGRAM_PRO_STUNDE, 0, 1000);
-  if (max === 0) return false;
-  const seit = new Date(now - 60 * 60 * 1000).toISOString();
-  const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM besucher_ereignisse WHERE gemeldet=1 AND zeit>=?")
-    .bind(seit).first();
-  return Number(row?.n || 0) < max;
-}
-
-function ortText(e) {
-  const land = landName(e.land);
-  const teile = [e.stadt, e.region && e.region !== e.stadt ? e.region : null, land].filter(Boolean);
-  return teile.length ? teile.join(", ") : "unbekanntem Ort";
-}
-
-export function telegramText(e, neu, katalogEintrag, warenkorbTitel = []) {
-  const wer = `${besucherKuerzel(e.besucher)} · ${ortText(e)} · ${e.geraet} · ${e.browser}`;
-  const artikel = artikelText(e.artikelId, katalogEintrag);
-  const zeilen = [];
-  if (e.typ === "warenkorb_rein") {
-    zeilen.push("🛒 IN DEN WARENKORB", artikel, wer, `Warenkorb jetzt: ${e.warenkorb} ${e.warenkorb === 1 ? "Teil" : "Teile"}`);
-  } else if (e.typ === "anfrage") {
-    const kanal = e.kanal === "whatsapp" ? "WhatsApp" : e.kanal === "email" ? "E-Mail" : e.kanal === "gmail" ? "Gmail" : e.kanal === "paypal" ? "PayPal" : "Anfrage";
-    zeilen.push(`💬 ANFRAGE GEÖFFNET (${kanal})`, wer, `${e.warenkorb} ${e.warenkorb === 1 ? "Teil" : "Teile"} im Warenkorb`);
-    for (const titel of warenkorbTitel.slice(0, 8)) zeilen.push(`• ${titel}`);
-  } else if (neu) {
-    zeilen.push("👀 BESUCHER GERADE IM SHOP", `📍 ${ortText(e)}`, `📱 ${e.geraet} · ${e.browser}`);
-    if (e.quelle) zeilen.push(`↪️ kommt von ${e.quelle}`);
-    else zeilen.push("↪️ Herkunft nicht übermittelt (direkt oder unbekannt)");
-    zeilen.push(artikel ? `👉 ${artikel}` : `👉 Seite ${e.pfad}`, `Besucher ${besucherKuerzel(e.besucher)}`);
-  } else {
-    zeilen.push(`👁 ${besucherKuerzel(e.besucher)} schaut: ${artikel || e.pfad}`);
+// Ein Ereignis speichern. Fehlen die Spalten aus Migration 0040 noch, wird
+// ohne Betriebssystem/Browsersprache/Kampagne gespeichert statt gar nicht.
+async function ereignisSpeichern(env, e, server) {
+  const basis = [e.besucher, e.zeit, e.typ, e.pfad, e.artikelId, e.titel, e.warenkorb, e.kanal, e.quelle, e.sprache,
+    e.land, server ? null : e.region, server ? null : e.stadt, e.geraet, e.browser];
+  try {
+    return await env.DB.prepare(`INSERT INTO besucher_ereignisse
+      (besucher, zeit, typ, pfad, artikel_id, titel, warenkorb, kanal, quelle, sprache, land, region, stadt, geraet, browser, gemeldet, server, system, browser_sprache, kampagne)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?)`)
+      .bind(...basis, server ? 1 : 0, e.system || null, e.browserSprache || null, e.kampagne || null).run();
+  } catch (err) {
+    if (!/no such column/i.test(String(err?.message || err))) throw err;
+    return env.DB.prepare(`INSERT INTO besucher_ereignisse
+      (besucher, zeit, typ, pfad, artikel_id, titel, warenkorb, kanal, quelle, sprache, land, region, stadt, geraet, browser, gemeldet${server ? ", server" : ""})
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0${server ? ",1" : ""})`).bind(...basis).run();
   }
-  return zeilen.join("\n");
-}
-
-function sollMelden(modus, e, neu) {
-  if (modus === "aus") return false;
-  if (e.typ === "warenkorb_rein" || e.typ === "anfrage") return true;
-  if (neu && e.typ !== "warenkorb_raus") return true;
-  return modus === "alles" && e.typ === "artikel";
-}
-
-async function warenkorbTitelFuer(env, besucher, map) {
-  // Letzter Stand je Artikel dieses Besuchers heute: drin, wenn zuletzt "rein".
-  const { results } = await env.DB.prepare(`SELECT artikel_id, typ FROM besucher_ereignisse
-    WHERE besucher=? AND typ IN ('warenkorb_rein','warenkorb_raus') ORDER BY id`).bind(besucher).all();
-  const drin = new Map();
-  for (const row of results || []) {
-    if (row.typ === "warenkorb_rein") drin.set(row.artikel_id, true);
-    else drin.delete(row.artikel_id);
-  }
-  return [...drin.keys()].map(id => artikelText(id, map.get(String(id))));
 }
 
 export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
@@ -418,18 +470,22 @@ export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
   const raw = await request.text();
   if (new TextEncoder().encode(raw).byteLength > MAX_BODY) throw new BesucherError("REQUEST_TOO_LARGE", 413);
   // No statistics, day identifier, cart events or Telegram before opt-in.
+  // Version 1: aeltere, noch zwischengespeicherte Skripte (ohne Besuchszahl).
   let consentBody;
   try { consentBody = JSON.parse(raw); } catch { throw new BesucherError("INVALID_JSON",400); }
-  if (consentBody?.consentVersion !== 1) return leer(origin);
+  if (![1, 2].includes(consentBody?.consentVersion)) return leer(origin);
   if (consentBody.t === "sichtzeit") {
     if (!sichtzeitBody(consentBody)) throw new BesucherError("INVALID_VISIBLE_TIME",400);
     const besucher = await besucherSchluessel(env, request, now);
     if (!await sichtzeitSpeichern(env,besucher,consentBody,now)) throw new BesucherError("INVALID_VISIBLE_TIME",400);
+    // Sichtbare Zeit ist ein Lebenszeichen: der Besuch laeuft noch.
+    await sitzungBeruehren(env, ctx, { besucher, einwilligung: true }, now);
     return leer(origin);
   }
   const daten = ereignisAusBody(raw);
   if (daten.typ === "verlassen") {
-    // Nur der Zeitpunkt fuer die Verweildauer: keine Meldung, kein Ort.
+    // Zeitpunkt fuer die Verweildauer; ausser beim Wechsel auf eine andere
+    // Shop-Seite zugleich der Abschied (Zusammenfassung nach wenigen Minuten).
     const besucher = await besucherSchluessel(env, request, now);
     try {
       await env.DB.prepare("INSERT INTO besucher_verlassen (besucher, zeit, pfad) VALUES (?,?,?)")
@@ -437,19 +493,19 @@ export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
     } catch {
       // Migration 0020 noch nicht eingespielt: ohne Verweildauer weiter.
     }
+    if (!daten.weiter) await sitzungBeruehren(env, ctx, { besucher, einwilligung: true, abschied: true }, now);
     return leer(origin);
   }
   const cf = request.cf || {};
-  const { geraet, browser } = geraetUndBrowser(ua);
+  const { geraet, browser, system } = geraetUndBrowser(ua);
   const besucher = await besucherSchluessel(env, request, now);
+  await sitzungBeruehren(env, ctx, { besucher, einwilligung: true, wiederkehr: wiederkehrAusBody(consentBody) }, now);
   if (consentBody.s === 1 && ["seite", "artikel"].includes(daten.typ)
     && await vomServerGezaehlt(env, besucher, daten, now)) return leer(origin);
-  const zuletzt = await zuletztGesehen(env, besucher);
-  const neu = !zuletzt || Date.parse(zuletzt) < now - SITZUNG_MS;
-  const map = daten.artikelId || daten.typ === "anfrage" ? await katalog(env) : new Map();
+  const map = daten.artikelId ? await katalog(env) : new Map();
   const eintrag = daten.artikelId ? map.get(daten.artikelId) : null;
 
-  const e = {
+  await ereignisSpeichern(env, {
     ...daten,
     besucher,
     zeit: new Date(now).toISOString(),
@@ -459,47 +515,15 @@ export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
     stadt: kurz(cf.city, 80),
     geraet,
     browser,
-  };
-
-  const modus = telegramModus(env);
-  const melden = sollMelden(modus, e, neu) && telegramTransportReady(env) && await telegramBudget(env, now);
-
-  const insert = await env.DB.prepare(`INSERT INTO besucher_ereignisse
-    (besucher, zeit, typ, pfad, artikel_id, titel, warenkorb, kanal, quelle, sprache, land, region, stadt, geraet, browser, gemeldet)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .bind(e.besucher, e.zeit, e.typ, e.pfad, e.artikelId, e.titel, e.warenkorb, e.kanal, e.quelle, e.sprache,
-      e.land, e.region, e.stadt, e.geraet, e.browser, melden ? 1 : 0)
-    .run();
-
-  if (melden) {
-    const warenkorbTitel = e.typ === "anfrage" ? await warenkorbTitelFuer(env, besucher, map) : [];
-    await telegramNachEintrag(env, ctx, telegramText(e, neu, eintrag, warenkorbTitel), insert);
-  }
+    system,
+    browserSprache: browserSpracheAus(request.headers.get("Accept-Language")),
+  }, false);
   return leer(origin);
 }
 
-// Schlaegt Telegram fehl, gilt das Ereignis wieder als ungemeldet (zaehlt dann
-// nicht gegen den Stunden-Deckel).
-function telegramNachEintrag(env, ctx, text, insert) {
-  const senden = sendTelegramMessage(env, text)
-    .catch(err => {
-      console.error(JSON.stringify({
-        level: "error",
-        event: "besucher_telegram_failed",
-        message: String(err?.message || err).slice(0, 160),
-      }));
-      const id = insert?.meta?.last_row_id;
-      if (id) return env.DB.prepare("UPDATE besucher_ereignisse SET gemeldet=0 WHERE id=?").bind(id).run().catch(() => {});
-    });
-  if (ctx && typeof ctx.waitUntil === "function") {
-    ctx.waitUntil(senden);
-    return Promise.resolve();
-  }
-  return senden;
-}
-
 // Das Startereignis von assets/besucher.js (s=1) meldet denselben
-// Seitenaufruf, den der Storefront-Worker schon gezaehlt hat.
+// Seitenaufruf, den der Storefront-Worker schon gezaehlt hat. Produktseiten
+// speichert der Server unter der Katalog-ID, das Skript schickt sie auch so.
 async function vomServerGezaehlt(env, besucher, daten, now) {
   try {
     const row = await env.DB.prepare(`SELECT 1 AS da FROM besucher_ereignisse
@@ -519,9 +543,9 @@ async function vomServerGezaehlt(env, besucher, daten, now) {
 // BESUCH hierher - auch solange der Shop gesperrt ist. Das braucht kein
 // Skript, keinen Speicher im Browser und keine Einwilligung: verarbeitet wird
 // nur, was jeder Webserver beim Abruf einer Seite ohnehin erhaelt (Adresse der
-// Seite, verweisende Website, Browserkennung, IP fuer den Tages-Schluessel,
-// Land). Bewusst ohne Stadt und Region; die IP landet weder in D1 noch in
-// Telegram.
+// Seite samt Kampagnen-Kennung, verweisende Website, Browserkennung und
+// -sprache, IP fuer den Tages-Schluessel, Land). Bewusst ohne Stadt und
+// Region; die IP landet weder in D1 noch in Telegram.
 export const INTERN_HOST = "storefront.intern";
 export const SEITENAUFRUF_PFAD = "/intern/seitenaufruf";
 
@@ -533,11 +557,6 @@ export function artikelAusPfad(pfad) {
 function spracheAusPfad(pfad) {
   const treffer = /^\/(en|fr)(?:\/|$)/.exec(String(pfad || ""));
   return treffer ? treffer[1] : "de";
-}
-
-async function gesperrtHinweis(env) {
-  const sperre = await sperreLesen(env);
-  return sperre.locked ? "\n🔒 Shop ist gesperrt: ohne Passwort sieht man nur die Sperrseite" : "";
 }
 
 export async function seitenaufrufAnnehmen(request, env, ctx, now = Date.now()) {
@@ -561,17 +580,18 @@ export async function seitenaufrufAnnehmen(request, env, ctx, now = Date.now()) 
   }
 
   const pfad = pfadAus(body.p);
-  const artikelId = artikelAusPfad(pfad);
-  const { geraet, browser } = geraetUndBrowser(ua);
+  const nummer = artikelAusPfad(pfad);
+  const { geraet, browser, system } = geraetUndBrowser(ua);
   const besucher = await schluesselAus(env, ip, ua, now);
-  const zuletzt = await zuletztGesehen(env, besucher);
-  const neu = !zuletzt || Date.parse(zuletzt) < now - SITZUNG_MS;
-  const eintrag = artikelId ? (await katalog(env)).get(artikelId) : null;
+  await sitzungBeruehren(env, ctx, { besucher }, now);
+  const eintrag = nummer ? (await katalog(env)).get(nummer) : null;
 
-  const e = {
-    typ: artikelId ? "artikel" : "seite",
+  await ereignisSpeichern(env, {
+    typ: nummer ? "artikel" : "seite",
     pfad,
-    artikelId,
+    // Adresse traegt die Artikelnummer; gespeichert wird wie im Overlay die
+    // Katalog-ID, damit beide Wege beim selben Artikel landen.
+    artikelId: eintrag && /^\d{1,9}$/.test(String(eintrag.id ?? "")) ? String(eintrag.id) : nummer,
     warenkorb: 0,
     kanal: null,
     quelle: quelleAus(body.r),
@@ -582,36 +602,20 @@ export async function seitenaufrufAnnehmen(request, env, ctx, now = Date.now()) 
     land: kurz(body.land, 2),
     geraet,
     browser,
-  };
-
-  const melden = sollMelden(telegramModus(env), e, neu) && telegramTransportReady(env) && await telegramBudget(env, now);
-  const insert = await env.DB.prepare(`INSERT INTO besucher_ereignisse
-    (besucher, zeit, typ, pfad, artikel_id, titel, warenkorb, kanal, quelle, sprache, land, region, stadt, geraet, browser, gemeldet, server)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,NULL,?,?,?,1)`)
-    .bind(e.besucher, e.zeit, e.typ, e.pfad, e.artikelId, e.titel, e.warenkorb, e.kanal, e.quelle, e.sprache,
-      e.land, e.geraet, e.browser, melden ? 1 : 0)
-    .run();
-
-  if (melden) {
-    const text = telegramText(e, neu, eintrag) + (neu ? await gesperrtHinweis(env) : "");
-    await telegramNachEintrag(env, ctx, text, insert);
-  }
+    system,
+    browserSprache: browserSpracheAus(body.sl),
+    kampagne: kampagneAus(body.us, body.uc),
+  }, true);
   return fertig;
 }
 
-// Bei gesperrtem Shop: jemand hat das richtige Passwort eingegeben. Nur
-// Geraet, Browser und Land - wie bei der Besuchsmeldung, ohne IP.
-export async function entsperrtMelden(request, env, now = Date.now()) {
+// Bei gesperrtem Shop: jemand hat das richtige Passwort eingegeben. Keine
+// eigene Nachricht mehr - die Zusammenfassung des Besuchs nennt es.
+export async function entsperrtMelden(request, env, now = Date.now(), ctx = null) {
   const ua = request.headers.get("User-Agent") || "";
-  if (!besucherAktiv(env) || !env.DB || istBot(ua) || telegramModus(env) === "aus" || !telegramTransportReady(env)) return;
-  if (!(await telegramBudget(env, now))) return;
-  const { geraet, browser } = geraetUndBrowser(ua);
-  const land = landName(request.cf?.country) || "unbekanntem Land";
-  try {
-    await sendTelegramMessage(env, `🔓 PASSWORT EINGEGEBEN\nJemand hat den gesperrten Shop geöffnet\n📍 ${land}\n📱 ${geraet} · ${browser}`);
-  } catch (err) {
-    console.error(JSON.stringify({ level: "error", event: "besucher_telegram_failed", message: String(err?.message || err).slice(0, 160) }));
-  }
+  if (!besucherAktiv(env) || !env.DB || istBot(ua)) return;
+  const besucher = await besucherSchluessel(env, request, now);
+  await sitzungBeruehren(env, ctx, { besucher, entsperrt: true }, now);
 }
 
 // ---------------------------------------------------------------- Aufraeumen (Cron)
@@ -623,6 +627,7 @@ export async function besucherAufraeumen(env, now = Date.now()) {
   const alt = await env.DB.prepare("DELETE FROM besucher_ereignisse WHERE zeit<?").bind(grenze).run();
   await env.DB.prepare("DELETE FROM besucher_verlassen WHERE zeit<?").bind(grenze).run().catch(() => {});
   await env.DB.prepare("DELETE FROM besucher_sichtzeit WHERE zuletzt<?").bind(grenze).run().catch(() => {});
+  await env.DB.prepare("DELETE FROM besucher_sitzungen WHERE zuletzt<? AND gemeldet<>3").bind(grenze).run().catch(() => {});
   // Salz von gestern und frueher weg: alte Schluessel sind danach nicht mehr
   // einer IP zuzuordnen.
   await env.DB.prepare("DELETE FROM besucher_salz WHERE tag<>?").bind(tagUtc(now)).run();
@@ -655,12 +660,13 @@ async function live(env, url, now) {
     let b = nachBesucher.get(row.besucher);
     if (!b) {
       b = {
-        besucher: besucherKuerzel(row.besucher),
+        schluessel: row.besucher,
         seit: row.zeit,
         zuletzt: row.zeit,
         ort: { stadt: row.stadt, region: row.region, land: row.land, landName: landName(row.land) },
         geraet: row.geraet,
         browser: row.browser,
+        system: row.system || null,
         quelle: row.quelle,
         sprache: row.sprache,
         warenkorb: 0,
@@ -670,13 +676,22 @@ async function live(env, url, now) {
     }
     b.zuletzt = row.zeit;
     if (!b.quelle && row.quelle) b.quelle = row.quelle;
+    if (!b.system && row.system) b.system = row.system;
     // Server-Meldungen kennen nur das Land; die Stadt kommt erst mit Einwilligung.
     if (!b.ort.stadt && row.stadt) b.ort = { stadt: row.stadt, region: row.region, land: row.land, landName: landName(row.land) };
     if (["warenkorb_rein", "warenkorb_raus", "anfrage"].includes(row.typ)) b.warenkorb = row.warenkorb;
     b.ereignisse.push(ereignisAusgabe(row));
   }
+  // Lesbarer Name statt Kennung; der Schluessel selbst verlaesst den Server nicht.
   const besucher = [...nachBesucher.values()]
-    .map(b => ({ ...b, aktiv: Date.parse(b.zuletzt) >= now - 5 * 60 * 1000, ereignisse: b.ereignisse.slice(-40) }))
+    .map(({ schluessel, ...b }) => ({
+      ...b,
+      besucher: besucherLabel(schluessel, { geraet: b.geraet, stadt: b.ort.stadt, land: b.ort.land }),
+      name: besucherName({ geraet: b.geraet, stadt: b.ort.stadt, land: b.ort.land }),
+      tier: besucherTier(schluessel),
+      aktiv: Date.parse(b.zuletzt) >= now - 5 * 60 * 1000,
+      ereignisse: b.ereignisse.slice(-40),
+    }))
     .sort((a, b) => b.zuletzt.localeCompare(a.zuletzt));
   return { ok: true, minuten, jetztAktiv: besucher.filter(b => b.aktiv).length, besucher };
 }
@@ -738,7 +753,14 @@ function berlin(iso) {
   return { tag: `${teile.year}-${teile.month}-${teile.day}`, stunde: Number(teile.hour) };
 }
 
-export function sitzungenBilden(zeilen, verlassen = [], sichtzeit = []) {
+export function sitzungenBilden(zeilen, verlassen = [], sichtzeit = [], lebenslauf = []) {
+  // Ablauf aus besucher_sitzungen (Einwilligung, Besuchszahl, Meldung) je
+  // Schluessel, zeitlich passend zugeordnet.
+  const laufJe = new Map();
+  for (const l of lebenslauf || []) {
+    if (!laufJe.has(l.besucher)) laufJe.set(l.besucher, []);
+    laufJe.get(l.besucher).push(l);
+  }
   const zeitenJe = new Map();
   for(const z of sichtzeit){if(!zeitenJe.has(z.besucher))zeitenJe.set(z.besucher,[]);zeitenJe.get(z.besucher).push(z);}
   for(const [key,liste] of zeitenJe)zeitenJe.set(key,zeitGruppen(zeitIntervalle(liste)));
@@ -766,7 +788,11 @@ export function sitzungenBilden(zeilen, verlassen = [], sichtzeit = []) {
     const erste = schritte[0];
     sitzungen.push({
       id: `${aktuell.schluessel.slice(0, 12)}-${erste.t}`,
-      besucher: besucherKuerzel(aktuell.schluessel),
+      // Lesbar statt "#A1B2": Geraet · Stadt/Land (Tagesname).
+      besucher: besucherLabel(aktuell.schluessel, { geraet: aktuell.geraet, stadt: aktuell.ort.stadt, land: aktuell.ort.land }),
+      name: besucherName({ geraet: aktuell.geraet, stadt: aktuell.ort.stadt, land: aktuell.ort.land }),
+      tier: besucherTier(aktuell.schluessel),
+      ...laufInfo(laufJe.get(aktuell.schluessel), erste.t, bis),
       start: new Date(erste.t).toISOString(),
       ende: new Date(bis).toISOString(),
       dauerMs: bis - erste.t,
@@ -778,7 +804,10 @@ export function sitzungenBilden(zeilen, verlassen = [], sichtzeit = []) {
       ort: aktuell.ort,
       geraet: aktuell.geraet,
       browser: aktuell.browser,
+      system: aktuell.system || null,
       sprache: aktuell.sprache,
+      browserSprache: aktuell.browserSprache || null,
+      kampagne: aktuell.kampagne || null,
       quelle: aktuell.quelle,
       herkunft: herkunftAus(aktuell.quelle),
       einstieg: erste.artikelId ? `Artikel ${erste.artikelId}` : erste.pfad,
@@ -814,13 +843,19 @@ export function sitzungenBilden(zeilen, verlassen = [], sichtzeit = []) {
         ort: { stadt: z.stadt, region: z.region, land: z.land, landName: landName(z.land) },
         geraet: z.geraet,
         browser: z.browser,
+        system: z.system || null,
         sprache: z.sprache,
+        browserSprache: z.browser_sprache || null,
+        kampagne: z.kampagne || null,
         quelle: z.quelle,
         schritte: [],
       };
     } else {
       vorher.dauerMs = Math.min(t - vorher.t, MAX_SCHRITT_MS);
       if (!aktuell.quelle && z.quelle) aktuell.quelle = z.quelle;
+      if (!aktuell.system && z.system) aktuell.system = z.system;
+      if (!aktuell.browserSprache && z.browser_sprache) aktuell.browserSprache = z.browser_sprache;
+      if (!aktuell.kampagne && z.kampagne) aktuell.kampagne = z.kampagne;
       if (!aktuell.ort.stadt && z.stadt) aktuell.ort = { stadt: z.stadt, region: z.region, land: z.land, landName: landName(z.land) };
     }
     aktuell.schritte.push({
@@ -831,6 +866,22 @@ export function sitzungenBilden(zeilen, verlassen = [], sichtzeit = []) {
   abschliessen();
   sitzungen.sort((a, b) => b.start.localeCompare(a.start));
   return sitzungen;
+}
+
+// Einwilligung, Besuchszahl und Telegram-Status aus besucher_sitzungen.
+function laufInfo(liste, von, bis) {
+  const passend = (liste || []).filter(l => Date.parse(l.beginn) <= bis + 60_000 && Date.parse(l.zuletzt) >= von - 60_000);
+  if (!passend.length) return { einwilligung: null, wiederkehr: null, meldung: null, entsperrt: false };
+  const mit = passend.find(l => l.besuch_nr) || passend[0];
+  const meldung = passend.map(l => l.gemeldet).includes(1) ? "gesendet"
+    : passend.some(l => l.gemeldet === 0 || l.gemeldet === 3) ? "ausstehend"
+    : passend[0].meldung_grund || "nicht gesendet";
+  return {
+    einwilligung: passend.some(l => l.einwilligung === 1),
+    wiederkehr: mit.besuch_nr ? { nr: mit.besuch_nr, erster: mit.erster_besuch || null, vorher: mit.vorher_besuch || null } : null,
+    meldung,
+    entsperrt: passend.some(l => l.entsperrt === 1),
+  };
 }
 
 function rangliste(map, n = 10) {
@@ -853,6 +904,10 @@ export function auswertungBerechnen(sitzungen, tage, now) {
   const orte = new Map();
   const geraete = new Map();
   const browser = new Map();
+  const systeme = new Map();
+  const sprachen = new Map();
+  const kampagnen = new Map();
+  const laender = new Map();
   const einstieg = new Map();
   const artikel = new Map();
   const dauern = [];
@@ -876,6 +931,15 @@ export function auswertungBerechnen(sitzungen, tage, now) {
     plus(orte, [s.ort.stadt, s.ort.landName].filter(Boolean).join(", ") || "unbekannt");
     plus(geraete, s.geraet || "unbekannt");
     plus(browser, s.browser || "unbekannt");
+    if (s.system) plus(systeme, s.system);
+    if (s.browserSprache) plus(sprachen, spracheName(s.browserSprache) || s.browserSprache);
+    if (s.kampagne) plus(kampagnen, s.kampagne);
+    const landKey = s.ort?.land || "??";
+    if (!laender.has(landKey)) laender.set(landKey, { land: s.ort?.land || null, landName: landName(s.ort?.land) || "unbekannt", besuche: 0, mitWarenkorb: 0, mitAnfrage: 0 });
+    const l = laender.get(landKey);
+    l.besuche++;
+    if (s.warenkorb > 0) l.mitWarenkorb++;
+    if (s.anfrage) l.mitAnfrage++;
     plus(einstieg, s.einstieg || "/");
     if (s.dauerBekannt) dauern.push(s.dauerMs);
     const gesehen = new Set();
@@ -935,6 +999,11 @@ export function auswertungBerechnen(sitzungen, tage, now) {
     orte: rangliste(orte, 15),
     geraete: rangliste(geraete),
     browser: rangliste(browser),
+    systeme: rangliste(systeme),
+    sprachen: rangliste(sprachen),
+    kampagnen: rangliste(kampagnen),
+    // Fuer die Weltkarte der Admin-App: Besuche je Land (ISO-Code).
+    laender: [...laender.values()].sort((a, b) => b.besuche - a.besuche),
     einstieg: rangliste(einstieg),
   };
 }
@@ -943,9 +1012,17 @@ async function auswertung(env, url, now) {
   const tage = ganzzahl(url.searchParams.get("tage"), 7, 1, 90);
   const limit = ganzzahl(url.searchParams.get("limit"), 150, 1, 500);
   const seit = new Date(now - tage * 24 * 60 * 60 * 1000).toISOString();
-  const { results: zeilen } = await env.DB.prepare(`SELECT besucher, zeit, typ, pfad, artikel_id, titel, warenkorb, kanal,
-      quelle, sprache, land, region, stadt, geraet, browser, server
-    FROM besucher_ereignisse WHERE zeit>=? ORDER BY besucher, zeit, id LIMIT ${MAX_ZEILEN}`).bind(seit).all();
+  let zeilen;
+  try {
+    zeilen = (await env.DB.prepare(`SELECT besucher, zeit, typ, pfad, artikel_id, titel, warenkorb, kanal,
+        quelle, sprache, land, region, stadt, geraet, browser, server, system, browser_sprache, kampagne
+      FROM besucher_ereignisse WHERE zeit>=? ORDER BY besucher, zeit, id LIMIT ${MAX_ZEILEN}`).bind(seit).all()).results;
+  } catch {
+    // Migration 0040 fehlt noch: ohne System, Browsersprache und Kampagne.
+    zeilen = (await env.DB.prepare(`SELECT besucher, zeit, typ, pfad, artikel_id, titel, warenkorb, kanal,
+        quelle, sprache, land, region, stadt, geraet, browser, server
+      FROM besucher_ereignisse WHERE zeit>=? ORDER BY besucher, zeit, id LIMIT ${MAX_ZEILEN}`).bind(seit).all()).results;
+  }
   let verlassen = [];
   try {
     verlassen = (await env.DB.prepare("SELECT besucher, zeit, pfad FROM besucher_verlassen WHERE zeit>=? ORDER BY zeit LIMIT ?")
@@ -956,7 +1033,15 @@ async function auswertung(env, url, now) {
   let sichtzeit = [], sichtzeitVerfuegbar = true;
   try { sichtzeit = (await env.DB.prepare("SELECT besucher,beginn,zuletzt,pfad,artikel_id,sicht_ms,begrenzt FROM besucher_sichtzeit WHERE zuletzt>=? ORDER BY besucher,beginn LIMIT ?").bind(seit,MAX_ZEILEN).all()).results || []; }
   catch { sichtzeitVerfuegbar = false; }
-  const sitzungen = sitzungenBilden(zeilen || [], verlassen,sichtzeit);
+  let lebenslauf = [];
+  try {
+    lebenslauf = (await env.DB.prepare(`SELECT besucher, beginn, zuletzt, einwilligung, besuch_nr, erster_besuch, vorher_besuch,
+        entsperrt, gemeldet, meldung_grund FROM besucher_sitzungen WHERE zuletzt>=? ORDER BY besucher, beginn LIMIT ?`)
+      .bind(seit, MAX_ZEILEN).all()).results || [];
+  } catch {
+    // Migration 0040 fehlt noch.
+  }
+  const sitzungen = sitzungenBilden(zeilen || [], verlassen, sichtzeit, lebenslauf);
   return {
     ok: true,
     tage,
@@ -968,7 +1053,11 @@ async function auswertung(env, url, now) {
     ...auswertungBerechnen(sitzungen, tage, now),
     jetztAktiv: sitzungen.filter(s => Date.parse(s.ende) >= now - 5 * 60 * 1000).length,
     sitzungen: sitzungen.slice(0, limit),
-    einstellungen: { tracking: besucherAktiv(env), telegram: telegramModus(env), aufbewahrungTage: ganzzahl(env.BESUCHER_AUFBEWAHRUNG_TAGE,STANDARD_AUFBEWAHRUNG_TAGE,1,365) },
+    einstellungen: {
+      tracking: besucherAktiv(env), telegram: telegramModus(env),
+      aufbewahrungTage: ganzzahl(env.BESUCHER_AUFBEWAHRUNG_TAGE,STANDARD_AUFBEWAHRUNG_TAGE,1,365),
+      geoSperre: geoSperrListe(env),
+    },
   };
 }
 

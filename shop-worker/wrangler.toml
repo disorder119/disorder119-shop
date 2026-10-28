@@ -23,6 +23,12 @@ PAYPAL_ENVIRONMENT = "live"
 # DHL-Schluessel allein schaltet nicht auf Produktion. Labelkauf bleibt eine
 # ausdrueckliche Admin-Aktion mit Zahlung im DHL-Frontend.
 DHL_PRIVAT_ENVIRONMENT = "live"
+# Geo-Sperre (geo-sperre.js): aus diesen Laendern ist die API gar nicht
+# erreichbar (403). ISO-Codes mit Komma, "aus" schaltet ab; DE und US werden
+# nie gesperrt. Optional GEO_SPERRE_KONTINENTE = "AS" fuer ganz Asien.
+# Die Shop-Seite selbst (Storefront-Worker) liest dieselben Namen aus den
+# GitHub-Repository-Variablen (rebuild.yml) - beide gleich halten.
+GEO_SPERRE_LAENDER = "RU,BY,IN,KP,IR"
 
 # Produktionsfehler muessen nachtraeglich ueber Request-ID und strukturierte Logs
 # untersuchbar bleiben. Bei wachsendem Traffic kann die Sampling-Rate bewusst
@@ -58,6 +64,25 @@ name = "QUOTE_LIMITER"
 namespace_id = "1192"
 simple = { limit = 60, period = 60 }
 
+# Waechter (waechter.js): ueber alle oeffentlichen API-Wege zusammen
+# hoechstens 240 Anfragen je Anschluss und Minute (Admin, Manager und
+# Webhooks zaehlen nicht). Darueber 429; wer das wiederholt, wird 24 h gesperrt.
+[[ratelimits]]
+name = "WAECHTER_LIMITER"
+namespace_id = "1195"
+simple = { limit = 240, period = 60 }
+
+# Wecker fuer die Besuchs-Zusammenfassung (besucher-wecker.js): ein Durable
+# Object mit SQLite-Speicher (kostenloser Plan) haelt den naechsten Alarm.
+# Die Klasse legt der naechste `npx wrangler deploy` selbst an.
+[[durable_objects.bindings]]
+name = "BESUCHER_WECKER"
+class_name = "BesucherWecker"
+
+[[migrations]]
+tag = "v1-besucher-wecker"
+new_sqlite_classes = ["BesucherWecker"]
+
 # D1-Datenbank (DB), angelegt am 24.09.2026 in Westeuropa (WEUR). Die ID ist
 # kein Geheimnis, sie darf ins Repo. Zuerst schema.sql, dann die Dateien in
 # migrations/ der Nummer nach (siehe README.md).
@@ -85,6 +110,7 @@ ADMIN_SESSION_HOURS = "24"
 PAYPAL_ENVIRONMENT = "sandbox"
 DHL_PRIVAT_ENVIRONMENT = "sandbox"
 SANDBOX = "1"
+GEO_SPERRE_LAENDER = "RU,BY,IN,KP,IR"
 
 [env.sandbox.triggers]
 crons = ["*/15 * * * *"]
@@ -98,6 +124,15 @@ simple = { limit = 20, period = 60 }
 name = "QUOTE_LIMITER"
 namespace_id = "1193"
 simple = { limit = 60, period = 60 }
+
+[[env.sandbox.ratelimits]]
+name = "WAECHTER_LIMITER"
+namespace_id = "1196"
+simple = { limit = 240, period = 60 }
+
+[[env.sandbox.durable_objects.bindings]]
+name = "BESUCHER_WECKER"
+class_name = "BesucherWecker"
 
 [[env.sandbox.d1_databases]]
 binding = "DB"

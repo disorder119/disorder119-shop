@@ -6,6 +6,9 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import workerEntry from "./worker-entry.js";
+import { sitzungenMelden, zusammenfassungText } from "./besucher-zusammenfassung.js";
+import { sitzungBeruehren, weckerStellen } from "./besucher-sitzung.js";
+import { BesucherWecker } from "./besucher-wecker.js";
 import {
   artikelAusPfad,
   artikelName,
@@ -19,6 +22,11 @@ import {
   herkunftAus,
   auswertungBerechnen,
   sitzungenBilden,
+  besucherName,
+  besucherTier,
+  browserSpracheAus,
+  kampagneAus,
+  systemAus,
 } from "./besucher.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -60,8 +68,8 @@ function netz() {
     }
     if (url === `${SHOP}/data/catalog.json`) {
       return new Response(JSON.stringify([
-        { id: 6042, brand: "Prada", title: "Nylonjacke", price: 120 },
-        { id: 6184, brand: "Stone Island", title: "Overshirt", price: 90 },
+        { id: 6042, article: "42", url_slug: "42", brand: "Prada", title: "Nylonjacke", price: 120 },
+        { id: 6184, article: "84", url_slug: "84", brand: "Stone Island", title: "Overshirt", price: 90 },
       ]), { status: 200 });
     }
     throw new Error(`unerwarteter fetch: ${url}`);
@@ -93,7 +101,7 @@ test("Artikelname ohne doppelte Marke", () => {
 });
 
 test("Einordnung von Geraet, Browser, Bots und Herkunft", () => {
-  assert.deepEqual(geraetUndBrowser(IPHONE), { geraet: "iPhone", browser: "Safari" });
+  assert.deepEqual(geraetUndBrowser(IPHONE), { geraet: "iPhone", browser: "Safari", system: "iOS 18" });
   assert.equal(geraetUndBrowser("Mozilla/5.0 (Linux; Android 14) Mobile Instagram 300").browser, "Instagram-App");
   assert.equal(geraetUndBrowser("Mozilla/5.0 (Windows NT 10.0) Chrome/130.0 Safari/537.36 Edg/130.0").browser, "Edge");
   assert.equal(istBot("Googlebot/2.1"), true);
@@ -127,23 +135,41 @@ test("Besuch wird ohne IP gespeichert und Telegram meldet neuen Besucher, Warenk
     assert.equal(rows[0].quelle, "instagram.com");
     assert.equal(rows[0].stadt, "Aschaffenburg");
     assert.equal(rows[1].titel, "Prada – Nylonjacke");
-    assert.deepEqual(rows.map(r => r.gemeldet), [1, 0, 1, 1, 1]);
+    assert.deepEqual(rows.map(r => r.gemeldet), [0, 0, 0, 0, 0]);
+    assert.equal(rows[0].system, "iOS 18");
 
-    assert.equal(n.telegram.length, 4);
-    assert.match(n.telegram[0], /BESUCHER GERADE IM SHOP/);
-    assert.match(n.telegram[0], /Aschaffenburg, Bavaria, Deutschland/);
-    assert.match(n.telegram[0], /iPhone · Safari/);
-    assert.match(n.telegram[0], /kommt von instagram\.com/);
-    assert.match(n.telegram[1], /IN DEN WARENKORB\nArtikel 6042 – Prada – Nylonjacke \(120 €\)/);
-    assert.match(n.telegram[3], /ANFRAGE GEÖFFNET \(WhatsApp\)/);
-    assert.match(n.telegram[3], /• Artikel 6184 – Stone Island – Overshirt/);
-    for (const text of n.telegram) assert.ok(!text.includes("203.0.113.7"), "keine IP in Telegram");
+    // Waehrend des Besuchs: nichts an Telegram.
+    assert.equal(n.telegram.length, 0);
+    assert.equal((await sitzungenMelden(env, T0 + 180_000 + 9 * 60_000)).gesendet, 0, "noch nicht vorbei");
+    // Zehn Minuten nach der letzten Aktivitaet: genau eine Zusammenfassung.
+    assert.equal((await sitzungenMelden(env, T0 + 180_000 + 10 * 60_000)).gesendet, 1);
+    assert.equal((await sitzungenMelden(env, T0 + 180_000 + 20 * 60_000)).gesendet, 0, "nie doppelt");
+    assert.equal(n.telegram.length, 1);
+    const text = n.telegram[0];
+    assert.match(text, /^👋 BESUCH VORBEI · iPhone · Aschaffenburg \(\S+\)/);
+    assert.match(text, /📍 Aschaffenburg, Bavaria, Deutschland/);
+    assert.match(text, /📱 iPhone · iOS 18 · Safari/);
+    assert.match(text, /↪️ Instagram/);
+    assert.match(text, /1\. Startseite/);
+    assert.match(text, /2\. #42 Prada – Nylonjacke \(120 €\)/);
+    assert.match(text, /🛒 \+ #42 Prada – Nylonjacke/);
+    assert.match(text, /💬 Anfrage per WhatsApp geöffnet \(2 im Warenkorb\)/);
+    assert.match(text, /🧾 Am Ende im Warenkorb \(2\):\n• #42 Prada – Nylonjacke \(120 €\)\n• #84 Stone Island – Overshirt \(90 €\)/);
+    assert.match(text, /Statistik erlaubt/);
+    assert.match(text, /Keine Aktivität mehr/);
+    assert.ok(!text.includes("203.0.113.7"), "keine IP in Telegram");
+    assert.ok(!/604[2]|618[4]/.test(text), "Artikelnummer statt Katalog-ID");
 
-    // Anderer Besucher = anderer Schluessel; nach 30 Minuten Pause gilt er wieder als neu.
+    // Anderer Besucher = anderer Schluessel, eigene Zusammenfassung.
     await senden(env, { t: "seite", p: "/" }, { ip: "198.51.100.9" }, T0 + 200_000);
     assert.equal(db.raw.prepare("SELECT COUNT(DISTINCT besucher) AS n FROM besucher_ereignisse").get().n, 2);
+    await sitzungenMelden(env, T0 + 200_000 + 11 * 60_000);
+    assert.equal(n.telegram.length, 2);
+    // Derselbe Besucher kommt am selben Tag wieder: neuer Besuch, als zweiter erkannt.
     await senden(env, { t: "seite", p: "/" }, undefined, T0 + 180_000 + 31 * 60_000);
-    assert.equal(n.telegram.length, 6);
+    await sitzungenMelden(env, T0 + 180_000 + 45 * 60_000);
+    assert.equal(n.telegram.length, 3);
+    assert.match(n.telegram[2], /Heute schon der 2\. Besuch/);
   } finally {
     n.zurueck();
   }
@@ -180,16 +206,25 @@ test("Telegram-Deckel und Modus", async () => {
     const env = envMit(db, { BESUCHER_TELEGRAM_PRO_STUNDE: "1" });
     await senden(env, { t: "seite" }, { ip: "192.0.2.1" });
     await senden(env, { t: "seite" }, { ip: "192.0.2.2" }, T0 + 1000);
+    assert.deepEqual(await sitzungenMelden(env, T0 + 20 * 60_000), { gesendet: 1, uebersprungen: 1 });
     assert.equal(n.telegram.length, 1);
+    assert.deepEqual(db.raw.prepare("SELECT gemeldet, meldung_grund FROM besucher_sitzungen ORDER BY id").all().map(r => [r.gemeldet, r.meldung_grund]), [[1, null], [2, "deckel"]]);
 
-    const aus = envMit(d1(), { BESUCHER_TELEGRAM: "aus" });
+    const ausDb = d1();
+    const aus = envMit(ausDb, { BESUCHER_TELEGRAM: "aus" });
     await senden(aus, { t: "warenkorb_rein", a: 6042, n: 1 });
+    await sitzungenMelden(aus, T0 + 20 * 60_000);
     assert.equal(n.telegram.length, 1);
+    assert.equal(ausDb.raw.prepare("SELECT meldung_grund FROM besucher_sitzungen").get().meldung_grund, "aus");
 
+    // Fruehere Einstellung "alles" gilt jetzt als Zusammenfassung: eine Nachricht je Besuch.
     const alles = envMit(d1(), { BESUCHER_TELEGRAM: "alles" });
     await senden(alles, { t: "seite" });
     await senden(alles, { t: "artikel", a: 6184 }, undefined, T0 + 5000);
-    assert.match(n.telegram.at(-1), /schaut: Artikel 6184/);
+    assert.equal(n.telegram.length, 1);
+    await sitzungenMelden(alles, T0 + 20 * 60_000);
+    assert.equal(n.telegram.length, 2);
+    assert.match(n.telegram.at(-1), /#84 Stone Island – Overshirt/);
   } finally {
     n.zurueck();
   }
@@ -217,7 +252,9 @@ test("Admin sieht Live-Besucher und Statistik, ohne Anmeldung nicht", async () =
     assert.equal(live.besucher[0].ort.stadt, "Aschaffenburg");
     assert.equal(live.besucher[0].warenkorb, 1);
     assert.deepEqual(live.besucher[0].ereignisse.map(e => e.typ), ["seite", "artikel", "warenkorb_rein"]);
-    assert.match(live.besucher[0].besucher, /^#[0-9A-F]{4}$/);
+    assert.match(live.besucher[0].besucher, /^iPhone · Aschaffenburg \(\S+\)$/);
+    assert.equal(live.besucher[0].name, "iPhone · Aschaffenburg");
+    assert.equal(live.besucher[0].system, "iOS 18");
 
     const statRes = await handleBesucher(adminReq("/admin/besucher/statistik"), angemeldet, new URL("https://api.disorder119.com/admin/besucher/statistik?tage=7"), "r", null, T0 + 30_000);
     const stat = await statRes.json();
@@ -390,17 +427,25 @@ test("Seitenaufruf vom Server: ohne Einwilligung, ohne Stadt und IP, Telegram mi
     assert.equal(rows[1].titel, "Prada – Nylonjacke");
     assert.ok(!JSON.stringify(rows).includes("203.0.113.7"), "keine IP in der Datenbank");
 
-    assert.equal(n.telegram.length, 1, "nur der neue Besucher wird gemeldet");
-    assert.match(n.telegram[0], /BESUCHER GERADE IM SHOP/);
+    assert.equal(n.telegram.length, 0, "waehrend des Besuchs keine Nachricht");
+    await sitzungenMelden(env, T0 + 60_000 + 10 * 60_000);
+    assert.equal(n.telegram.length, 1, "eine Zusammenfassung nach dem Besuch");
+    assert.match(n.telegram[0], /BESUCH VORBEI · iPhone · Deutschland \(\S+\)/);
     assert.match(n.telegram[0], /📍 Deutschland\n/);
-    assert.match(n.telegram[0], /iPhone · Safari/);
-    assert.match(n.telegram[0], /kommt von instagram\.com/);
+    assert.match(n.telegram[0], /iPhone · iOS 18 · Safari/);
+    assert.match(n.telegram[0], /↪️ Instagram/);
+    assert.match(n.telegram[0], /1\. Startseite \(Archiv\) · ≈ 1:00 Min\./);
+    assert.match(n.telegram[0], /2\. #42 Prada – Nylonjacke \(120 €\)/);
+    assert.match(n.telegram[0], /ohne Einwilligung keine Wiedererkennung an anderen Tagen/);
+    assert.match(n.telegram[0], /Ohne Einwilligung: nur Seitenaufrufe/);
     assert.match(n.telegram[0], /Shop ist gesperrt/);
     assert.ok(!n.telegram[0].includes("203.0.113.7"), "keine IP in Telegram");
+    assert.ok(!n.telegram[0].includes("Aschaffenburg"), "ohne Einwilligung keine Stadt");
 
     // Offener Shop: kein Sperrhinweis.
     db.raw.prepare("UPDATE site_settings SET value=? WHERE key='site_lock'").run(JSON.stringify({ locked: false, version: 4 }));
     await zaehlen(env, aufrufVon("/", { ip: "198.51.100.9" }), T0 + 120_000);
+    await sitzungenMelden(env, T0 + 120_000 + 10 * 60_000);
     assert.equal(n.telegram.length, 2);
     assert.doesNotMatch(n.telegram[1], /gesperrt/);
   } finally {
@@ -441,9 +486,8 @@ test("Mit Einwilligung: Startereignis zaehlt nicht doppelt, Stadt und Warenkorb 
     await senden(env, { t: "seite", p: "/cart/" }, undefined, T0 + 70_000);
     const rows = db.raw.prepare("SELECT typ, server, stadt FROM besucher_ereignisse ORDER BY id").all();
     assert.deepEqual(rows.map(r => [r.typ, r.server]), [["seite", 1], ["warenkorb_rein", 0], ["seite", 0]]);
-    assert.equal(n.telegram.length, 2, "Besuch vom Server und Warenkorb, kein zweiter Besuchsalarm");
-    assert.match(n.telegram[1], /IN DEN WARENKORB/);
-    assert.match(n.telegram[1], /Aschaffenburg/);
+    assert.equal(n.telegram.length, 0, "keine Sofortmeldungen mehr");
+    assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM besucher_sitzungen").get().n, 1, "Server- und Browser-Meldungen sind ein Besuch");
 
     const angemeldet = { ...env, ADMIN_AUTH_CONTEXT: { role: "READER" } };
     const adminReq = pfad => new Request(`https://api.disorder119.com${pfad}`, { headers: { Origin: ADMIN } });
@@ -459,6 +503,10 @@ test("Mit Einwilligung: Startereignis zaehlt nicht doppelt, Stadt und Warenkorb 
     // Spaeteres Startereignis auf einer Seite, die der Server nicht gezaehlt hat: zaehlt.
     await senden(env, { t: "artikel", p: "/artikel/6184/", a: 6184, s: 1 }, undefined, T0 + 90_000);
     assert.equal(db.raw.prepare("SELECT COUNT(*) AS n FROM besucher_ereignisse").get().n, 4);
+    await sitzungenMelden(env, T0 + 90_000 + 10 * 60_000);
+    assert.equal(n.telegram.length, 1);
+    assert.match(n.telegram[0], /BESUCH VORBEI · iPhone · Aschaffenburg/);
+    assert.match(n.telegram[0], /Statistik erlaubt/);
   } finally {
     n.zurueck();
   }
@@ -476,14 +524,18 @@ test("Artikelnummer aus der Adresse und Meldung bei Passwort-Eingabe", async () 
   try {
     const req = new Request("https://api.disorder119.com/site-unlock", { method: "POST", headers: { "User-Agent": IPHONE, "CF-Connecting-IP": "203.0.113.7" } });
     Object.defineProperty(req, "cf", { value: { country: "DE", city: "Aschaffenburg" } });
-    await entsperrtMelden(req, envMit(db), T0);
+    // Seitenaufruf der Sperrseite, dann das Passwort: keine eigene Nachricht,
+    // die Zusammenfassung des Besuchs nennt es.
+    const env = envMit(db);
+    await zaehlen(env, aufrufVon("/"), T0);
+    await entsperrtMelden(req, env, T0 + 5_000);
+    assert.equal(n.telegram.length, 0);
+    assert.equal(db.raw.prepare("SELECT entsperrt FROM besucher_sitzungen").get().entsperrt, 1);
+    await sitzungenMelden(env, T0 + 16 * 60_000);
     assert.equal(n.telegram.length, 1);
-    assert.match(n.telegram[0], /PASSWORT EINGEGEBEN/);
+    assert.match(n.telegram[0], /🔓 Hat das Passwort für den gesperrten Shop eingegeben/);
     assert.match(n.telegram[0], /📍 Deutschland/);
-    assert.match(n.telegram[0], /iPhone · Safari/);
     assert.ok(!n.telegram[0].includes("Aschaffenburg") && !n.telegram[0].includes("203.0.113.7"));
-    await entsperrtMelden(req, envMit(db, { BESUCHER_TELEGRAM: "aus" }), T0);
-    assert.equal(n.telegram.length, 1);
   } finally {
     n.zurueck();
   }
@@ -578,4 +630,233 @@ test("Indizierte Zeitabfragen entsprechen der direkten Vereinigung auch bei Luec
  for(let a=0;a<80000;a+=3711)for(let b=a;b<90000;b+=5417)for(const k of [undefined,{pfad:"/",artikelId:null},{pfad:"/",artikelId:"1"}])assert.equal(sichtzeitZwischen(index,a,b,k),vereinigteZeit(rows,a,b,k));
  assert.equal(sichtzeitZwischen(index,0,90000,{pfad:"/",artikelId:"2"}),0);assert.equal(sichtzeitZwischen(index,0,90000,{pfad:"/missing"}),null);
  const groups=zeitGruppen([...rows,{von:3600000,bis:3601000,ms:1000,pfad:"/"}]);assert.equal(groups.length,2);assert.equal(verbundeneZeiten(groups,1800000).bis,3601000);assert.equal(verbundeneZeiten(groups,71001).intervalle.length,0);
+});
+
+// ---------------------------------------------------------------- Zusammenfassung nach dem Besuch (0040)
+
+const MIN = 60_000;
+const v2 = body => ({ ...body, consentVersion: 2 });
+
+test("Abschied per Beacon: Zusammenfassung schon nach drei Minuten, Seitenwechsel im Shop zaehlt nicht als Abschied", async () => {
+  const db = d1();
+  const n = netz();
+  try {
+    const env = envMit(db);
+    await senden(env, v2({ t: "seite", p: "/", s: 1, wn: 1, we: "2026-09-27" }), undefined, T0);
+    // Klick auf eine Produktseite: verlassen mit w=1 -> kein Abschied.
+    await senden(env, v2({ t: "verlassen", p: "/", w: 1 }), undefined, T0 + 20_000);
+    let lauf = db.raw.prepare("SELECT * FROM besucher_sitzungen").get();
+    assert.equal(lauf.abschied, null);
+    assert.equal(lauf.faellig, new Date(T0 + 10 * MIN).toISOString());
+    await senden(env, v2({ t: "artikel", p: "/artikel/42/", a: 6042 }), undefined, T0 + 21_000);
+    // Tab geschlossen / App gewechselt.
+    await senden(env, v2({ t: "verlassen", p: "/artikel/42/" }), undefined, T0 + 80_000);
+    lauf = db.raw.prepare("SELECT * FROM besucher_sitzungen").get();
+    assert.equal(lauf.abschied, new Date(T0 + 80_000).toISOString());
+    assert.equal(lauf.faellig, new Date(T0 + 80_000 + 3 * MIN).toISOString());
+    assert.equal((await sitzungenMelden(env, T0 + 80_000 + 2 * MIN)).gesendet, 0);
+    assert.equal((await sitzungenMelden(env, T0 + 80_000 + 3 * MIN)).gesendet, 1);
+    assert.match(n.telegram[0], /🚪 Seite geschlossen bzw\. App gewechselt/);
+    assert.match(n.telegram[0], /🆕 Erster Besuch \(laut Browser-Speicher\)/);
+  } finally {
+    n.zurueck();
+  }
+});
+
+test("Kurz in eine andere App und zurueck: derselbe Besuch, eine Nachricht", async () => {
+  const db = d1();
+  const n = netz();
+  try {
+    const env = envMit(db);
+    await senden(env, v2({ t: "seite", p: "/" }), undefined, T0);
+    await senden(env, v2({ t: "verlassen", p: "/" }), undefined, T0 + MIN);
+    // Nach zwei Minuten wieder sichtbar: Sichtzeit-Meldung haelt den Besuch offen.
+    await senden(env, v2({ t: "sichtzeit", v: "c".repeat(24), ms: 0, p: "/" }), undefined, T0 + 3 * MIN);
+    assert.equal((await sitzungenMelden(env, T0 + 4 * MIN + 1000)).gesendet, 0, "Abschied durch Rueckkehr aufgehoben");
+    await senden(env, v2({ t: "warenkorb_rein", a: "6184", n: 1 }), undefined, T0 + 5 * MIN);
+    await sitzungenMelden(env, T0 + 16 * MIN);
+    assert.equal(n.telegram.length, 1);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) n FROM besucher_sitzungen").get().n, 1);
+    assert.match(n.telegram[0], /⏱ Keine Aktivität mehr/);
+  } finally {
+    n.zurueck();
+  }
+});
+
+test("Wiederkehr mit Einwilligung: Besuchszahl und Daten aus dem Browser, ohne Kennung", async () => {
+  const db = d1();
+  const n = netz();
+  try {
+    const env = envMit(db);
+    await senden(env, v2({ t: "seite", p: "/", s: 1, wn: 3, we: "2026-09-01", wv: "2026-09-20" }), undefined, T0);
+    // Version 1 (altes Skript) und Unsinn werden fuer die Besuchszahl ignoriert.
+    await senden(env, { t: "seite", p: "/cart/", wn: 99, consentVersion: 1 }, { ip: "192.0.2.80" }, T0);
+    await senden(env, v2({ t: "seite", p: "/", wn: "x<script>", we: "gestern" }), { ip: "192.0.2.81" }, T0);
+    const zeilen = db.raw.prepare("SELECT besuch_nr, erster_besuch, vorher_besuch, einwilligung FROM besucher_sitzungen ORDER BY id").all();
+    assert.deepEqual(zeilen.map(z => [z.besuch_nr, z.erster_besuch, z.vorher_besuch, z.einwilligung]),
+      [[3, "2026-09-01", "2026-09-20", 1], [null, null, null, 1], [null, null, null, 1]]);
+    await sitzungenMelden(env, T0 + 11 * MIN);
+    const text = n.telegram.find(t => /3\. Besuch/.test(t));
+    assert.match(text, /🔁 3\. Besuch · zuerst am 01\.09\.2026 · davor zuletzt am 20\.09\.2026/);
+  } finally {
+    n.zurueck();
+  }
+});
+
+test("Jeder faellige Besuch wird genau einmal gemeldet, auch bei gleichzeitigen Laeufen; Fehler werden wiederholt", async () => {
+  const db = d1();
+  let versuche = 0, kaputt = 2;
+  const telegram = [];
+  const original = globalThis.fetch;
+  globalThis.fetch = async (input, init = {}) => {
+    const url = String(input?.url || input);
+    if (url.startsWith("https://api.telegram.org/")) {
+      versuche++;
+      if (kaputt-- > 0) return new Response(JSON.stringify({ ok: false, description: "Bad Gateway" }), { status: 502 });
+      telegram.push(JSON.parse(init.body).text);
+      return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 });
+    }
+    if (url === `${SHOP}/data/catalog.json`) return new Response("[]", { status: 200 });
+    throw new Error(url);
+  };
+  katalogCacheLeeren();
+  try {
+    const env = envMit(db);
+    await senden(env, { t: "seite", p: "/" }, undefined, T0);
+    // Zwei Fehlversuche, jeweils 5 Minuten spaeter erneut.
+    await sitzungenMelden(env, T0 + 11 * MIN);
+    assert.equal(db.raw.prepare("SELECT gemeldet, versuche FROM besucher_sitzungen").get().versuche, 1);
+    await sitzungenMelden(env, T0 + 16 * MIN);
+    // Dritter Versuch klappt - drei Laeufe gleichzeitig senden trotzdem nur einmal.
+    await Promise.all([sitzungenMelden(env, T0 + 21 * MIN), sitzungenMelden(env, T0 + 21 * MIN), sitzungenMelden(env, T0 + 21 * MIN)]);
+    assert.equal(telegram.length, 1);
+    assert.equal(versuche, 3);
+    assert.equal(db.raw.prepare("SELECT gemeldet FROM besucher_sitzungen").get().gemeldet, 1);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("Wecker: neuer Besuch und Abschied stellen den Durable-Object-Alarm, der Alarm meldet und stellt sich neu", async () => {
+  const db = d1();
+  const n = netz();
+  try {
+    const gestellt = [];
+    const ns = { idFromName: name => name, get: () => ({ fetch: async url => { gestellt.push(Number(new URL(url).searchParams.get("t"))); return new Response(null, { status: 204 }); } }) };
+    const env = envMit(db, { BESUCHER_WECKER: ns });
+    await senden(env, v2({ t: "seite", p: "/" }), undefined, T0);
+    assert.deepEqual(gestellt, [T0 + 10 * MIN]);
+    await senden(env, v2({ t: "artikel", a: 6042 }), undefined, T0 + MIN);
+    assert.equal(gestellt.length, 1, "Verlaengern braucht keinen neuen Alarm");
+    await senden(env, v2({ t: "verlassen", p: "/" }), undefined, T0 + 2 * MIN);
+    assert.deepEqual(gestellt, [T0 + 10 * MIN, T0 + 5 * MIN]);
+
+    // Der Durable Object selbst: Alarm frueher stellen, nie spaeter.
+    let alarm = null;
+    const state = { storage: { getAlarm: async () => alarm, setAlarm: async t => { alarm = t; } } };
+    const wecker = new BesucherWecker(state, env);
+    const stellen = t => wecker.fetch(new Request(`https://wecker.intern/stellen?t=${t}`, { method: "POST" }));
+    const jetzt = Date.now();
+    assert.equal((await stellen(jetzt + 600_000)).status, 204);
+    await stellen(jetzt + 900_000);
+    assert.equal(alarm, jetzt + 600_000);
+    await stellen(jetzt + 300_000);
+    assert.equal(alarm, jetzt + 300_000);
+    assert.equal((await wecker.fetch(new Request("https://wecker.intern/x", { method: "POST" }))).status, 400);
+    // Alarm: meldet alles Faellige (hier: der Besuch von T0 liegt in der Vergangenheit).
+    alarm = null;
+    await wecker.alarm();
+    assert.equal(n.telegram.length, 1);
+    assert.equal(alarm, null, "nichts mehr offen, kein neuer Alarm");
+    // Ohne Bindung: kein Fehler.
+    assert.equal(await weckerStellen({}, null, Date.now()), false);
+  } finally {
+    n.zurueck();
+  }
+});
+
+test("Ohne Migration 0040 zaehlt der Shop weiter, nur ohne Zusammenfassung", async () => {
+  const db = d1();
+  const n = netz();
+  try {
+    db.raw.exec("DROP TABLE besucher_sitzungen");
+    const env = envMit(db);
+    assert.equal((await senden(env, { t: "seite", p: "/" })).status, 204);
+    assert.equal((await zaehlen(env, aufrufVon("/artikel/42/"), T0 + 1000)).status, 204);
+    assert.equal(db.raw.prepare("SELECT COUNT(*) n FROM besucher_ereignisse").get().n, 2);
+    assert.deepEqual(await sitzungenMelden(env, T0 + 60 * MIN), { gesendet: 0, uebersprungen: 0 });
+    assert.equal(await sitzungBeruehren(env, null, { besucher: "x" }, T0), null);
+  } finally {
+    n.zurueck();
+  }
+});
+
+test("Produktseiten nach Artikelnummer landen beim selben Artikel wie das Overlay", async () => {
+  const db = d1();
+  const n = netz();
+  try {
+    const env = envMit(db);
+    await zaehlen(env, aufrufVon("/artikel/42/", { sl: "en-GB", us: "Instagram", uc: "herbst-drop" }));
+    const row = db.raw.prepare("SELECT artikel_id, titel, browser_sprache, kampagne, system FROM besucher_ereignisse").get();
+    assert.deepEqual({ ...row }, { artikel_id: "6042", titel: "Prada – Nylonjacke", browser_sprache: "en", kampagne: "instagram/herbst-drop", system: "iOS 18" });
+    await sitzungenMelden(env, T0 + 11 * MIN);
+    assert.match(n.telegram[0], /🗣 Seite Deutsch · Browser Englisch/);
+    assert.match(n.telegram[0], /Kampagne instagram\/herbst-drop/);
+  } finally {
+    n.zurueck();
+  }
+});
+
+test("Auswertung fuer die Admin-App: lesbare Namen, Laender fuer die Weltkarte, Meldestatus und Geo-Sperre", async () => {
+  const db = d1();
+  const n = netz();
+  try {
+    const env = envMit(db);
+    await senden(env, v2({ t: "seite", p: "/", s: 1, wn: 2, we: "2026-09-01", wv: "2026-09-10" }), undefined, T0);
+    await zaehlen(env, aufrufVon("/", { ip: "192.0.2.90", land: "AT" }), T0 + 1000);
+    await zaehlen(env, aufrufVon("/", { ip: "192.0.2.91", land: "AT" }), T0 + 2000);
+    await sitzungenMelden(env, T0 + 11 * MIN);
+    const req = new Request("https://api.disorder119.com/admin/besucher/auswertung", { headers: { Origin: ADMIN } });
+    const a = await (await handleBesucher(req, { ...env, ADMIN_AUTH_CONTEXT: { role: "READER" } },
+      new URL("https://api.disorder119.com/admin/besucher/auswertung?tage=7"), "r", null, T0 + 12 * MIN)).json();
+    assert.deepEqual(a.laender.map(l => [l.land, l.besuche]), [["AT", 2], ["DE", 1]]);
+    assert.equal(a.laender[0].landName, "Österreich");
+    const mit = a.sitzungen.find(s => s.einwilligung);
+    assert.match(mit.besucher, /^iPhone · Aschaffenburg \(\S+\)$/);
+    assert.equal(mit.name, "iPhone · Aschaffenburg");
+    assert.deepEqual(mit.wiederkehr, { nr: 2, erster: "2026-09-01", vorher: "2026-09-10" });
+    assert.equal(mit.meldung, "gesendet");
+    assert.equal(mit.system, "iOS 18");
+    const ohne = a.sitzungen.find(s => !s.einwilligung);
+    assert.match(ohne.besucher, /^iPhone · Österreich \(\S+\)$/);
+    assert.deepEqual(a.einstellungen.geoSperre, { laender: ["RU", "BY", "IN", "KP", "IR"], kontinente: [] });
+    assert.equal(a.einstellungen.telegram, "zusammenfassung");
+    assert.deepEqual(a.systeme, [{ name: "iOS 18", besuche: 3 }]);
+    const schluessel = db.raw.prepare("SELECT besucher FROM besucher_ereignisse").get().besucher;
+    assert.ok(!JSON.stringify(a).includes("203.0.113.7") && !JSON.stringify(a).includes(schluessel), "weder IP noch Schluessel");
+  } finally {
+    n.zurueck();
+  }
+});
+
+test("Lesbare Namen, Betriebssystem, Browsersprache und Kampagne", () => {
+  assert.equal(besucherName({ geraet: "iPhone", stadt: "Hamburg", land: "DE" }), "iPhone · Hamburg");
+  assert.equal(besucherName({ geraet: "Windows-PC", land: "AT" }), "Windows-PC · Österreich");
+  assert.equal(besucherName({}), "Gerät unbekannt · Ort unbekannt");
+  assert.equal(besucherTier("a1b2c3"), besucherTier("a1b2c3"), "stabil fuer denselben Tages-Schluessel");
+  assert.notEqual(new Set(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b"].map(x => besucherTier(x.repeat(8)))).size, 1);
+  assert.equal(systemAus("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/130 Mobile Safari/537.36"), "Android 14");
+  assert.equal(systemAus("Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X)"), "iPadOS 17");
+  assert.equal(systemAus("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130"), "Windows 10/11");
+  assert.equal(systemAus("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605"), "macOS");
+  assert.equal(browserSpracheAus("de-DE,de;q=0.9,en;q=0.8"), "de");
+  assert.equal(browserSpracheAus("*"), null);
+  assert.equal(browserSpracheAus(""), null);
+  assert.equal(kampagneAus("Instagram", "Herbst_Drop"), "instagram/herbst_drop");
+  assert.equal(kampagneAus("<script>", "a b"), null);
+  // Die Zusammenfassung kommt ohne Netz aus und bleibt unter dem Telegram-Limit.
+  const s = sitzungenBilden(Array.from({ length: 60 }, (_, i) => ({ besucher: "f".repeat(20), zeit: new Date(T0 + i * 1000).toISOString(), typ: "seite", pfad: `/seite-${i}/`, land: "DE", geraet: "Mac", browser: "Safari", server: 1 })))[0];
+  const text = zusammenfassungText(s, { einwilligung: 0, zuletzt: s.ende }, new Map(), { schluessel: "f".repeat(20) });
+  assert.ok(text.length < 4096);
+  assert.match(text, /… und 46 weitere Schritte/);
 });

@@ -442,7 +442,7 @@
   if (/^https:\/\//.test(String(SHOP_CONFIG.shopWorkerUrl || ""))) {
     try {
       var besucherScript = document.createElement("script");
-      besucherScript.src = "/assets/besucher.js?v=server-20261008";
+      besucherScript.src = "/assets/besucher.js?v=zusammenfassung-20261028";
       besucherScript.defer = true;
       document.head.appendChild(besucherScript);
     } catch (e) {}

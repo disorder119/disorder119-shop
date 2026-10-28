@@ -29,7 +29,7 @@ test('confirmation contains full terms and withdrawal form in HTML and plain tex
   for(const body of [mail.text,mail.html]) {
     assert.match(body,/Geltungsbereich/); assert.match(body,/Bestellung und Vertragsschluss/);
     assert.match(body,/Gewährleistung/);assert.match(body,/Muster-Widerrufsformular/);
-    assert.match(body,/2026-10-14-1/);assert.match(body,/\+49 152 0829 7741/);assert.match(body,/office@example.test/);
+    assert.match(body,/2026-10-28-1/);assert.match(body,/\+49 152 0829 7741/);assert.match(body,/office@example.test/);
     assert.doesNotMatch(body,/\{email\}/);
   }
   assert.doesNotMatch(mail.text,/<h3>/);
@@ -50,4 +50,18 @@ test('withdrawal keeps the statutory period, return costs and refund proof in al
   assert.match(CONTRACT_HTML,/einschließlich der Lieferkosten/);
   const checkout=fs.readFileSync(new URL('../kasse_template.html',import.meta.url),'utf8');
   assert.ok(checkout.indexOf('id="kasseRueckgabe"')<checkout.indexOf('id="kasseZahlen"'));
+});
+
+test('privacy policy names the visit summary, the visit count in browser storage, regional blocking and the 24-hour attack blocks in all languages',()=>{
+  const source=JSON.parse(fs.readFileSync(new URL('../config/legal-content.json',import.meta.url),'utf8'));
+  assert.equal(source.version,'2026-10-28-1');
+  for(const [lang,stand,zusammenfassung,sperre,waechter] of [
+    ['de',/Stand: 28\. Oktober 2026/,/Zusammenfassung per Telegram/,/Länder-Sperre/,/für 24 Stunden/],
+    ['en',/Updated 28 October 2026/,/Telegram summary/,/Regional blocking/,/for 24 hours/],
+    ['fr',/Mise à jour : 28 octobre 2026/,/résumé Telegram/,/Blocage régional/,/pendant 24 heures/],
+  ]) {
+    const text=source.legal.legalDatenschutzHtml[lang];
+    for(const rule of [stand,zusammenfassung,sperre,waechter,/d119_besuche_v1/,/utm_source/])assert.match(text,rule,lang);
+    assert.doesNotMatch(text,/(?:Bei einem neuen Besuch|For a new visit|Pour une nouvelle visite)/,lang+': old instant notification text removed');
+  }
 });

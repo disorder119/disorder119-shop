@@ -65,12 +65,13 @@ test('real page views reach the shop Worker after the page, also while the shop 
   const response=await edge.fetch(seite('/artikel/119/',{Referer:'https://l.instagram.com/'}),z.env,z.ctx,html);
   assert.equal(response.status,200);assert.equal(await response.text(),'<html><p>Shop</p></html>');
   await Promise.all(z.laeuft);
-  assert.equal(z.gesendet.length,1);
-  assert.equal(z.gesendet[0].url,'https://storefront.intern/intern/seitenaufruf');
-  assert.deepEqual(z.gesendet[0].body,{p:'/artikel/119/',r:'https://l.instagram.com/',ua:IPHONE,ip:'203.0.113.7',land:''});
+  const aufrufe=()=>z.gesendet.filter(g=>g.url.endsWith('/intern/seitenaufruf'));
+  assert.equal(aufrufe().length,1);
+  assert.equal(aufrufe()[0].url,'https://storefront.intern/intern/seitenaufruf');
+  assert.deepEqual(aufrufe()[0].body,{p:'/artikel/119/',r:'https://l.instagram.com/',ua:IPHONE,ip:'203.0.113.7',land:'',sl:'',us:'',uc:''});
   await edge.fetch(seite('/'),z.env,z.ctx,async()=>new Response(null,{status:304}));
   await Promise.all(z.laeuft);
-  assert.equal(z.gesendet.length,2,'revalidated page still counts');
+  assert.equal(aufrufe().length,2,'revalidated page still counts');
 });
 test('assets, data, prefetch, bots, privacy signals, objection cookie, errors and HEAD are never counted',async()=>{
   const z=zaehler();
@@ -87,7 +88,7 @@ test('assets, data, prefetch, bots, privacy signals, objection cookie, errors an
   for(const req of nicht) await edge.fetch(req,z.env,z.ctx,html);
   await edge.fetch(seite('/artikel/999999/'),z.env,z.ctx,async()=>new Response('fehlt',{status:404}));
   await Promise.all(z.laeuft);
-  assert.equal(z.gesendet.length,0);
+  assert.equal(z.gesendet.filter(g=>g.url.endsWith('/intern/seitenaufruf')).length,0);
   assert.equal(seitenaufruf(seite('/',{Cookie:'d119_nicht_zaehlen=0'}),new URL('https://disorder119.com/'),200).p,'/');
 });
 test('a failing or missing visit counter never breaks the page',async()=>{
