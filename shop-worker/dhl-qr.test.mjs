@@ -357,8 +357,12 @@ test("catalog check: shop prices against DHL per zone and country, once a day", 
   } };
   const ergebnis = katalogAbgleichen(katalog);
   // Deutschland und die EU stimmen - bis auf Malta im Beispiel.
-  assert.deepEqual(ergebnis.abweichungen, [{ zone: "EU", land: "MT", paket: "M", kasseCents: 1749, dhlCents: 1999 }]);
-  assert.deepEqual(ergebnis.zonen.DE.dhl, [{ preise: { S: 619, M: 769, L: 1049, XL: 1899, XXL: 2399 }, laender: ["DE"] }]);
+  assert.deepEqual(ergebnis.abweichungen, [{ zone: "EU", land: "MT", paket: "M", kasseCents: 1749, dhlCents: 1999, produkt: "PAK05" }]);
+  assert.deepEqual(ergebnis.zonen.DE.dhl, [{ preise: { S: 619, M: 769, L: 1049, XL: 1899, XXL: 2399 },
+    ids: { S: "PAK02", M: "PAK05", L: "PAK10", XL: "PAK20", XXL: "PAK315" }, laender: ["DE"] }]);
+  assert.deepEqual(ergebnis.klassenFehlend, {});
+  assert.equal(ergebnis.version, 2);
+  assert.deepEqual(ergebnis.muster.AT.map(p => p.id), ["PAK02", "PAK05", "PAK10", "PAK20", "PAK05.HVERSI1000.EU", "PAK315"]);
   assert.equal(ergebnis.zonen.EU.dhl[0].laender.length, 25);
   assert.deepEqual(ergebnis.versicherung, ["PAK05.HVERSI1000.EU"]);
   assert.deepEqual(ergebnis.fehlend, []);
@@ -418,4 +422,34 @@ test("a redirect from DHL is not followed but reported", async () => {
   } finally {
     globalThis.fetch = original;
   }
+});
+
+test("catalog check: foreign parcels under other ids are found by weight, gaps are reported", async () => {
+  const { katalogAbgleichen, katalogPreise } = await import("./dhl-qr.js");
+  const katalog = { products: {
+    PAK02: { attributes: { maxWeight: 2000 }, regions: [{ countries: ["DEU"], price: { amount: 6.19 } }] },
+    PAKINT02: { attributes: { displayName: { text: "Paket International bis 2 kg" }, maxWeight: 2000 }, regions: [{ countries: ["AUT", "FRA"], price: { amount: 14.49 } }] },
+    PAKINT05: { attributes: { maxWeight: 5000 }, regions: [{ countries: ["AUT", "FRA"], price: { amount: 17.49 } }] },
+    PAECKINT: { attributes: { displayName: { text: "Päckchen International" }, maxWeight: 2000 }, regions: [{ countries: ["AUT"], price: { amount: 10.49 } }] },
+    "PAKINT05.HVERSI1000": { attributes: { maxWeight: 5000 }, regions: [{ countries: ["AUT"], price: { amount: 31.49 } }] },
+  } };
+  const at = katalogPreise(katalog, "AUT");
+  assert.deepEqual({ ...at }, { S: 1449, M: 1749 });
+  assert.deepEqual(at.ids, { S: "PAKINT02", M: "PAKINT05" });
+  const ergebnis = katalogAbgleichen(katalog);
+  assert.deepEqual(ergebnis.klassenFehlend.AT, ["L", "XL", "XXL"]);
+  assert.ok(ergebnis.fehlend.includes("SE"));
+  assert.deepEqual(ergebnis.muster.SE, []);
+});
+
+test("catalog check reruns at once after a new version of the check is deployed", async () => {
+  const { katalogAbgleich } = await import("./dhl-qr.js");
+  const DB = seed();
+  const jetzt = Date.parse("2031-01-01T10:00:00Z");
+  DB.raw.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,metadata_json,created_at)
+    VALUES ('a1','SYSTEM','versand','dhl-katalog','DHL_KATALOG_ABWEICHUNG','{"zonen":{}}',?)`).run(new Date(jetzt).toISOString());
+  const env = envWith(DB, { DHL_PRIVAT_ENVIRONMENT: "live" });
+  const neu = await katalogAbgleich(env, jetzt + 15 * 60_000);
+  assert.equal(neu.version, 2);
+  assert.equal((await katalogAbgleich(env, jetzt + 30 * 60_000)).uebersprungen, "HEUTE_SCHON");
 });
