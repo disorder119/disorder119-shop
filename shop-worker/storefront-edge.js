@@ -166,7 +166,7 @@ export const LIEFERLAENDER=Object.freeze([
   'US',
 ]);
 const LIEFER_HINWEIS_STIL='margin:0;padding:8px 16px;background:#161616;color:#f2efe7;border-bottom:1px solid rgba(242,239,231,.16);'
-  +'font:500 12px/1.45 "Helvetica Neue",Helvetica,Arial,sans-serif;letter-spacing:.02em;text-align:center';
+  +'font:500 12px/1.45 Helvetica Neue,Helvetica,Arial,sans-serif;letter-spacing:.02em;text-align:center';
 export function lieferHinweis(request,url,bot=false) {
   if (bot) return '';
   const land=String(request?.cf?.country||'').toUpperCase();

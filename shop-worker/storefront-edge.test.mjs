@@ -128,6 +128,7 @@ test('Besucher ausserhalb Europa/USA sehen oben den Hinweis zum Liefergebiet',as
     const body=await r.text();
     assert.equal(r.status,200,land);
     assert.ok(body.indexOf('<body class="kasse-seite"><div class="d119-liefergebiet" role="note"')>0,land+': direkt hinter <body>');
+    assert.match(body,/<div class="d119-liefergebiet" role="note" style="[^"]*"><span lang="/,land+': style-Attribut sauber geschlossen');
     assert.match(body,new RegExp('<span lang="'+sprache+'">'+text.replace(/\./g,'\.')+'</span>'),land);
     assert.equal(r.headers.get('Cache-Control'),'no-store','nie fuer andere Besucher zwischengespeichert');
     assert.doesNotMatch(body.match(/<div class="d119-liefergebiet"[\s\S]*?<\/div>/)[0],/<script/i);
