@@ -283,15 +283,45 @@ export async function listProducts(env, land = "DE") {
 // "Preise international"); PAK30 als Rueckfall.
 const KLASSEN_PRODUKTE = Object.freeze({ S: ["PAK02"], M: ["PAK05"], L: ["PAK10"], XL: ["PAK20"], XXL: ["PAK315", "PAK30", "PAK31"] });
 
+// Produkte, die DHL fuer ein Land (ISO-3) fuehrt: { id, name, kg, cents, tracking }.
+export function katalogProdukte(catalog, land3) {
+  return Object.entries(catalog?.products || {}).map(([id, product]) => {
+    const region = regionFuer(product, land3);
+    if (!region) return null;
+    const attrs = product.attributes || {};
+    return {
+      id: safeText(id, 40),
+      name: safeText(attrs.displayName?.text || "", 60),
+      kg: Number(attrs.maxWeight || 0) / 1000 || null,
+      cents: Math.round(Number(region.price?.amount || 0) * 100) || null,
+      tracking: attrs.tracking !== false,
+    };
+  }).filter(Boolean).sort((a, b) => (a.cents || 0) - (b.cents || 0) || a.id.localeCompare(b.id));
+}
+
+// Preis je Paketklasse fuer ein Land: zuerst die bekannten Inlands-IDs
+// (PAK02 ... PAK315), sonst das verfolgbare Paket mit passendem Hoechstgewicht
+// (keine Paeckchen, keine Varianten mit Zusatzleistung wie ".HVERSI").
+const KLASSEN_KG = Object.freeze({ S: 2, M: 5, L: 10, XL: 20, XXL: 30 });
 export function katalogPreise(catalog, land3) {
   const preise = {};
+  const ids = {};
+  const pakete = katalogProdukte(catalog, land3)
+    .filter(p => p.tracking && p.cents && !p.id.includes(".") && !/^PAECK/i.test(p.id) && !/p(ä|ae)ckchen/i.test(p.name));
   for (const klasse of GROESSEN) {
+    let treffer = null;
     for (const id of KLASSEN_PRODUKTE[klasse]) {
       const region = regionFuer(catalog?.products?.[id], land3);
       const cents = region ? Math.round(Number(region.price?.amount || 0) * 100) : 0;
-      if (cents > 0) { preise[klasse] = cents; break; }
+      if (cents > 0) { treffer = { id, cents }; break; }
     }
+    if (!treffer) {
+      const kg = KLASSEN_KG[klasse];
+      treffer = pakete.find(p => klasse === "XXL" ? p.kg >= 30 : p.kg === kg) || null;
+    }
+    if (treffer) { preise[klasse] = treffer.cents; ids[klasse] = treffer.id; }
   }
+  Object.defineProperty(preise, "ids", { value: ids, enumerable: false });
   return preise;
 }
 
@@ -299,9 +329,14 @@ export function katalogPreise(catalog, land3) {
 // je Zone der Standardtarif ohne Warenwert-Grenze, je Land und Paketklasse.
 // Ergebnis fuer Protokoll und Admin-App - die Kasse rechnet weiter mit ihren
 // Preisen, damit ein kurzer DHL-Ausfall nie den Checkout stoppt.
+// Fuer drei Beispiellaender steht die ganze Produktliste mit im Protokoll -
+// so laesst sich nachsehen, wie DHL die Auslandsprodukte nennt.
+export const ABGLEICH_VERSION = 2;
+const MUSTER_LAENDER = Object.freeze(["AT", "FR", "SE"]);
 export function katalogAbgleichen(catalog, konfig = VERSAND) {
   const abweichungen = [];
   const fehlend = [];
+  const klassenFehlend = {};
   const zonen = {};
   for (const zone of Object.values(konfig.zonen || {})) {
     const tarif = konfig.tarife.find(t => t.zone === zone.key && t.art === "standard" && !t.abWarenwertCents && !t.bisWarenwertCents);
@@ -310,19 +345,23 @@ export function katalogAbgleichen(catalog, konfig = VERSAND) {
     for (const land of zone.laender) {
       const dhlPreise = katalogPreise(catalog, iso3(land));
       if (!Object.keys(dhlPreise).length) { fehlend.push(land); continue; }
+      const ohne = GROESSEN.filter(k => !dhlPreise[k]);
+      if (ohne.length) klassenFehlend[land] = ohne;
       for (const klasse of GROESSEN) {
         if (dhlPreise[klasse] && dhlPreise[klasse] !== tarif.preise[klasse]) {
-          abweichungen.push({ zone: zone.key, land, paket: klasse, kasseCents: tarif.preise[klasse], dhlCents: dhlPreise[klasse] });
+          abweichungen.push({ zone: zone.key, land, paket: klasse, kasseCents: tarif.preise[klasse], dhlCents: dhlPreise[klasse], produkt: dhlPreise.ids[klasse] });
         }
       }
-      const schluessel = JSON.stringify(dhlPreise);
+      const schluessel = JSON.stringify({ preise: dhlPreise, ids: dhlPreise.ids });
       gruppen.set(schluessel, [...(gruppen.get(schluessel) || []), land]);
     }
-    zonen[zone.key] = { tarif: tarif.id, kasse: { ...tarif.preise }, dhl: [...gruppen].map(([preise, laender]) => ({ preise: JSON.parse(preise), laender })) };
+    zonen[zone.key] = { tarif: tarif.id, kasse: { ...tarif.preise }, dhl: [...gruppen].map(([g, laender]) => ({ ...JSON.parse(g), laender })) };
   }
   // Hoeherversicherung international: Produkte mit "HVERSI" im Namen (z. B. PAK05.HVERSI1000.EU).
   const versicherung = Object.keys(catalog?.products || {}).filter(id => /HVERSI/i.test(id)).slice(0, 40);
-  return { zonen, abweichungen: abweichungen.slice(0, 60), anzahlAbweichungen: abweichungen.length, fehlend, versicherung };
+  const muster = Object.fromEntries(MUSTER_LAENDER.map(land => [land, katalogProdukte(catalog, iso3(land)).slice(0, 30)]));
+  return { version: ABGLEICH_VERSION, zonen, abweichungen: abweichungen.slice(0, 60), anzahlAbweichungen: abweichungen.length,
+    fehlend, klassenFehlend, versicherung, produkteGesamt: Object.keys(catalog?.products || {}).length, muster };
 }
 
 const ABGLEICH_ENTITY = Object.freeze({ type: "versand", id: "dhl-katalog" });
@@ -332,17 +371,21 @@ const TAG_MS = 24 * STUNDE_MS;
 // Cron: hoechstens einmal am Tag. Nichts wird gekauft - nur der Katalog gelesen.
 export async function katalogAbgleich(env, now = Date.now()) {
   if (!env?.DB || !dhlQrReady(env)) return { uebersprungen: "NICHT_EINGERICHTET" };
-  const letzte = await env.DB.prepare(`SELECT event_type,created_at FROM audit_events WHERE entity_type=? AND entity_id=?
+  const letzte = await env.DB.prepare(`SELECT event_type,created_at,metadata_json FROM audit_events WHERE entity_type=? AND entity_id=?
     ORDER BY created_at DESC LIMIT 1`).bind(ABGLEICH_ENTITY.type, ABGLEICH_ENTITY.id).first();
   // Nach einem Fehler (DHL nicht erreichbar ...) schon nach einer Stunde erneut,
-  // sonst einmal am Tag.
+  // sonst einmal am Tag - und sofort, wenn der letzte Eintrag von einer
+  // aelteren Fassung des Abgleichs stammt (neuer Code ausgerollt).
+  let version = null;
+  try { version = JSON.parse(letzte?.metadata_json || "{}").version ?? null; } catch { version = null; }
   const pause = letzte?.event_type === "DHL_KATALOG_FEHLER" ? STUNDE_MS : TAG_MS;
-  if (letzte && Number(now) - Date.parse(letzte.created_at) < pause) return { uebersprungen: "HEUTE_SCHON" };
+  const veraltet = letzte && letzte.event_type !== "DHL_KATALOG_FEHLER" && version !== ABGLEICH_VERSION;
+  if (letzte && !veraltet && Number(now) - Date.parse(letzte.created_at) < pause) return { uebersprungen: "HEUTE_SCHON" };
   let ergebnis;
   let ereignis = "DHL_KATALOG_GEPRUEFT";
   try {
     ergebnis = { environment: apiBase(env) === API.live ? "live" : "sandbox", ...katalogAbgleichen(await katalogLaden(env)) };
-    if (ergebnis.anzahlAbweichungen || ergebnis.fehlend.length) ereignis = "DHL_KATALOG_ABWEICHUNG";
+    if (ergebnis.anzahlAbweichungen || ergebnis.fehlend.length || Object.keys(ergebnis.klassenFehlend).length) ereignis = "DHL_KATALOG_ABWEICHUNG";
   } catch (err) {
     ereignis = "DHL_KATALOG_FEHLER";
     ergebnis = { code: safeText(err?.code || err?.message || "unbekannt", 60), detail: safeText(err?.detail || "", 120) };
@@ -352,7 +395,7 @@ export async function katalogAbgleich(env, now = Date.now()) {
   }
   await env.DB.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
     VALUES (?,'SYSTEM',?,?,?,NULL,?,?)`).bind(crypto.randomUUID(), ABGLEICH_ENTITY.type, ABGLEICH_ENTITY.id, ereignis,
-    JSON.stringify(ergebnis).slice(0, 12000), new Date(Number(now)).toISOString()).run();
+    JSON.stringify(ergebnis).slice(0, 30000), new Date(Number(now)).toISOString()).run();
   return { ereignis, ...ergebnis };
 }
 
