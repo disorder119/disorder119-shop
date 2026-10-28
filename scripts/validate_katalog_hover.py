@@ -57,6 +57,23 @@ def main() -> None:
                 fail(f"Artikel {row.get('id')}: hover_image {hover} ist nicht freigestellt")
         mit_hover += 1
 
+    # Ladezeit am PC: app.js setzt fuer jede Kachel (Titel- und Hover-Bild)
+    # ein srcset mit Kachel- und Anzeigefassung, ohne nachzusehen, ob es die
+    # Dateien gibt. build_site.py (build_image_variants) muss sie also fuer
+    # jeden oeffentlichen Artikel erzeugt haben.
+    if "gridSrcset(" in app:
+        def variante(pfad: str, ordner: str) -> Path:
+            kopf, _, datei = pfad.rpartition("/")
+            return BASE / kopf / ordner / datei
+
+        for row in catalog:
+            gallery = row.get("gallery") or []
+            bilder = ([gallery[0]] if gallery else []) + ([row["hover_image"]] if row.get("hover_image") else [])
+            for bild in bilder:
+                for ordner in ("grid", "display"):
+                    if not variante(bild, ordner).is_file():
+                        fail(f"Artikel {row.get('id')}: Kachelfassung {ordner} zu {bild} fehlt (build_site.py baut sie)")
+
     for artikel in GEMELDET:
         row = by_id.get(artikel)
         if not row:
