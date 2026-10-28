@@ -508,6 +508,9 @@ test("Storefront: Vorschau fuer die Admin-App zeigt Beispieldaten und meldet nic
   const sperr = await edge.fetch(anfrage("/_waechter/vorschau?seite=sperre&sprache=en"), u.env, u.ctx, seite);
   assert.equal(sperr.status, 200);
   assert.match(await sperr.text(), /<html lang="en">/);
+  for (const [query, sprache] of [["seite=sperre", "de"], ["seite=sperre&selbst=0", "de"], ["seite=sperre&land=FR", "fr"], ["seite=sperre&sprache=quatsch", "de"]]) {
+    assert.match(await (await edge.fetch(anfrage(`/_waechter/vorschau?${query}`), u.env, u.ctx, seite)).text(), new RegExp(`<html lang="${sprache}">`), query);
+  }
   await Promise.all(u.laeuft);
   assert.equal(u.gesendet.length, 0);
 });
