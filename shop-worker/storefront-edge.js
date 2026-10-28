@@ -175,11 +175,49 @@ async function anschlussSperre(env,ip) {
   return eintrag.gesperrt?eintrag:null;
 }
 
-function erwischt(request,url,grund,nr) {
+// Gecachte Liste verfuegbarer Teile fuer den "Erwischt"-Bildschirm: nur echte
+// AVAILABLE-Artikel, je Marke eins, mit Vorschaubild. Wird bei jedem echten
+// Katalog-Abruf warm gehalten; nur wenn der Cache kalt ist, holt der Worker
+// catalog.json selbst (kurze Frist). Faellt alles aus, bleibt die Liste leer
+// und die Seite rendert ohne Teile. Keine D1-Abfrage, kein Telegram.
+const ERWISCHT_TTL=600_000;
+let erwischtCache={zeit:0,liste:[]};
+export function erwischtCacheLeeren(){erwischtCache={zeit:0,liste:[]};}
+export function erwischtProdukteAus(catalogArray){
+  if(!Array.isArray(catalogArray))return [];
+  const marken=new Set(),out=[];
+  for(const i of catalogArray){
+    if(!i||i.public_status!=='AVAILABLE'||!i.grid_image||!i.brand||!i.title)continue;
+    if(marken.has(i.brand))continue; marken.add(i.brand);
+    out.push({marke:i.brand,titel:i.title,titelEn:i.title_en||i.title,preis:i.price,nr:i.article,bild:i.grid_image,kat:i.product_type||''});
+    if(out.length>=60)break;
+  }
+  return out;
+}
+function erwischtCacheSetzen(catalogArray){
+  try{ const liste=erwischtProdukteAus(catalogArray); if(liste.length) erwischtCache={zeit:Date.now(),liste}; }catch{}
+}
+// Fuer Angriffs-/Scanner-Antworten: nur die warme Liste, nie den Ursprung
+// fragen (eine Angriffsanfrage erreicht den Ursprung nie).
+function erwischtProdukteCache(){ return erwischtCache.liste; }
+// Nur fuer die Admin-Vorschau: bei kaltem Cache einmal catalog.json holen.
+async function erwischtProdukteHolen(originFetch){
+  const jetzt=Date.now();
+  if(erwischtCache.liste.length && jetzt-erwischtCache.zeit<ERWISCHT_TTL) return erwischtCache.liste;
+  if(typeof originFetch!=='function') return erwischtCache.liste;
+  try{
+    const res=await mitFrist(originFetch(new Request('https://disorder119.com/data/catalog.json',{method:'GET'})),1200);
+    if(res && res.ok){ erwischtCacheSetzen(await res.json()); } else res?.body?.cancel?.();
+  }catch{}
+  return erwischtCache.liste;
+}
+
+function erwischt(request,url,grund,nr,bis,produkte) {
   const cf=request.cf||{},netz=netzVon(request);
-  // IP nur anzeigen (sie steht ohnehin in der Anfrage), nie speichern.
+  // IP nur anzeigen (sie steht ohnehin in der Anfrage), nie speichern. bis gibt
+  // die echte Sperrdauer; produkte ist die gecachte Liste verfuegbarer Teile.
   return erwischtAntwort(request,{ip:request.headers.get('CF-Connecting-IP')||'',land:cf.country,stadt:cf.city,region:cf.region,
-    netz:netz.name,asn:netz.asn,ua:request.headers.get('User-Agent')||'',zeit:Date.now(),grund,nutzlast:`${url.pathname}${url.search}`,nr});
+    netz:netz.name,asn:netz.asn,ua:request.headers.get('User-Agent')||'',zeit:Date.now(),grund,nutzlast:`${url.pathname}${url.search}`,nr,bis:bis||null,produkte:produkte||[]});
 }
 
 function sperrSeiteAntwort(request,url,sperre,fehler=false,zurueck=`${url.pathname}${url.search}`) {
@@ -212,7 +250,7 @@ async function entsperren(request,env,url,ip) {
 
 // Vorschau fuer die Admin-App (Sicherheit): nur Beispieldaten, nichts wird
 // gemeldet, gespeichert oder gesperrt.
-function waechterVorschau(request,url) {
+async function waechterVorschau(request,url,env,ctx,originFetch) {
   const land=String(url.searchParams.get('land')||'FR').toUpperCase().slice(0,2);
   if (url.searchParams.get('seite')==='sperre') {
     // Sprache: ?sprache=de|en|fr, sonst nach ?land=, ohne beides Deutsch.
@@ -222,7 +260,9 @@ function waechterVorschau(request,url) {
       selbst:url.searchParams.get('selbst')!=='0',bis:new Date(Date.now()+24*3600_000).toISOString(),zurueck:'/'},200);
   }
   const sprache=String(url.searchParams.get('sprache')||'').slice(0,8);
-  return erwischtAntwort(request,{...vorschauDaten(land),...(sprache?{sprache}:{})},200);
+  const variante=['a','b','c'].includes(String(url.searchParams.get('variante')||'').toLowerCase())?String(url.searchParams.get('variante')).toLowerCase():'';
+  const produkte=await erwischtProdukteHolen(originFetch);
+  return erwischtAntwort(request,{...vorschauDaten(land),...(sprache?{sprache}:{}),...(variante?{variante}:{}),produkte},200);
 }
 
 // Liefergebiet (AGB § 4, FAQ "Wohin versendet ihr?"): Europa - EU, EWR,
@@ -291,7 +331,7 @@ export default {
     const bot=bekannterBot(request,ua) || (!ua && Number(request.cf?.asn)===13335);
     const html=(status,body)=>new Response(request.method==='HEAD'?null:body,{status,headers:storefrontHeaders(new Response(null,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}}))});
     // Vorschau der Waechter-Seiten (Admin-App -> Sicherheit), nur Beispieldaten.
-    if (url.pathname===VORSCHAU_PFAD && ['GET','HEAD'].includes(request.method)) return waechterVorschau(request,url);
+    if (url.pathname===VORSCHAU_PFAD && ['GET','HEAD'].includes(request.method)) return waechterVorschau(request,url,env,ctx,originFetch);
     const probe=waechterPruefen(url,ua);
     if (probe) {
       // Fremde Seite (Bild/Link mit Angriffsmuster) oder Bot: nur abweisen.
@@ -302,19 +342,26 @@ export default {
       }
       const nr=vorfallNummer();
       if (probe.art==='angriff') {
-        vorfallMelden(env,ctx,request,url,{art:'angriff',grund:probe.grund,pfad:probe.detail,nr});
-        return erwischt(request,url,probe.grund,nr);
+        // Auf die Sperrantwort kurz warten, um die echte Dauer (bis) zu zeigen;
+        // ohne Angabe bleibt die Dauer neutral ("gesperrt"). Kein extra Schreib-
+        // zugriff: die Meldung schreibt der Shop-Worker ohnehin.
+        const laeuft=vorfallMelden(env,ctx,request,url,{art:'angriff',grund:probe.grund,pfad:probe.detail,nr});
+        const bis=laeuft?(await mitFrist(laeuft,1200))?.bis||null:null;
+        return erwischt(request,url,probe.grund,nr,bis,erwischtProdukteCache());
       }
       // Scanner-Pfad: sperrt der Shop-Worker deshalb (Schwelle, Hoster,
       // Kampagne), zeigt schon diese Anfrage die "Erwischt"-Seite. Auf das
       // Ergebnis wird hoechstens 1,5 s gewartet - nur Scanner warten.
       const gemerkt=sperrMerker.get(ip);
       let gesperrt=Boolean(gemerkt?.gesperrt && gemerkt.ablauf>Date.now());
+      let bis=gemerkt?.bis||null;
       if (!gesperrt) {
         const laeuft=vorfallMelden(env,ctx,request,url,{art:'probe',grund:probe.grund,pfad:probe.detail,nr});
-        gesperrt=Boolean(laeuft && (await mitFrist(laeuft,1500))?.gesperrt===true);
+        const res=laeuft?await mitFrist(laeuft,1500):null;
+        gesperrt=Boolean(res?.gesperrt===true);
+        bis=res?.bis||bis;
       }
-      return gesperrt?erwischt(request,url,probe.grund,nr):html(404,SEITE_404);
+      return gesperrt?erwischt(request,url,probe.grund,nr,bis,erwischtProdukteCache()):html(404,SEITE_404);
     }
     if (url.pathname===ENTSPERREN_PFAD) {
       if (ip && typeof env?.WAECHTER_FLUT?.limit==='function') {
@@ -367,8 +414,12 @@ export default {
     try { response=await originFetch(originRequest); } catch { return fail(502,'Website vorübergehend nicht erreichbar.'); }
     const headers=storefrontHeaders(response);
     if (filtered && response.ok) {
+      let parsed;
+      try { parsed=await response.json(); } catch { return fail(502,'Katalog vorübergehend nicht verfügbar.'); }
+      // Produktliste des "Erwischt"-Bildschirms aus echtem Traffic warm halten.
+      erwischtCacheSetzen(parsed);
       let body;
-      try { body=JSON.stringify(publicCatalog(await response.json())); } catch { return fail(502,'Katalog vorübergehend nicht verfügbar.'); }
+      try { body=JSON.stringify(publicCatalog(parsed)); } catch { return fail(502,'Katalog vorübergehend nicht verfügbar.'); }
       headers.delete('Content-Length'); headers.delete('Content-Encoding');headers.delete('ETag');headers.delete('Last-Modified');
       headers.set('Content-Type','application/json; charset=utf-8');headers.set('Cache-Control','no-store');
       return new Response(request.method==='HEAD'?null:body,{status:200,headers});
