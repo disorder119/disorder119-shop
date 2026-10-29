@@ -12,7 +12,8 @@ import { anschlussVonIp } from './privacy-security.js';
 const PAGES = new Set(['agb','baukasten','cart','chaos','datenschutz','faq','impressum','kasse','konto','match','mieten','newsletter','ueber-uns','universe','widerruf']);
 // google7945c4dc594a9a9c.html: Inhaberschaft fuer die Google Search Console (Konto disorder119shop), muss dauerhaft erreichbar bleiben.
 const ROOT_FILES = new Set(['index.html','404.html','offline.html','robots.txt','sitemap.xml','manifest.webmanifest','sw.js','favicon.ico','google7945c4dc594a9a9c.html']);
-const FIELDS = new Set(['id','article','url_slug','title','title_en','color_en','brand','price','price_estimated','public_status','status','category','size','color','condition','brightness','gallery','look','department','product_type','taxonomy_category','size_normalized','rental_price','grid_image','hover_image','foto_hell']);
+const FIELDS = new Set(['id','article','url_slug','title','title_en','title_fr','color_en','color_fr','brand','price','price_estimated','public_status','status','category','size','color','condition','brightness','gallery','look','department','product_type','taxonomy_category','size_normalized','rental_price','grid_image','hover_image','foto_hell']);
+const CATALOG_CATEGORIES = new Set(['jackets','coats','tops','shirts','knitwear','pants','skirts','dresses','shoes','accessories','objects']);
 // Gestaltete Fehlerseite fuer Adressen, die es im Shop nicht gibt. Steht hier
 // fertig im Worker: der Ursprung wird fuer solche Pfade nie gefragt.
 const SEITE_404='<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Seite nicht gefunden – Disorder119</title>'
@@ -34,7 +35,16 @@ export function publicPath(pathname) {
   if (decoded === '/data/catalog.json' || decoded === '/data/items.json') return true;
   if (parts[0] === 'en' || parts[0] === 'fr') parts.shift();
   if (!parts.length || (parts.length===1 && ROOT_FILES.has(parts[0]))) return true;
-  if (parts[0]==='artikel') return /^\d+(?:\.html)?$/.test(parts[1]||'') && (parts.length===2 || (parts.length===3 && parts[2]==='index.html'));
+  if (parts[0]==='artikel') return !/^9999(?:\.html)?$/.test(parts[1]||'') && /^\d+(?:\.html)?$/.test(parts[1]||'') && (parts.length===2 || (parts.length===3 && parts[2]==='index.html'));
+  if (parts[0]==='katalog') {
+    const route=parts.slice(1);
+    if (route.at(-1)==='index.html') route.pop();
+    if (route[0]==='kategorie') {
+      if (!CATALOG_CATEGORIES.has(route[1])) return false;
+      route.splice(0,2);
+    }
+    return route.length===0 || (route.length===2 && route[0]==='seite' && /^[1-9]\d*$/.test(route[1]) && Number(route[1])>=2 && Number.isSafeInteger(Number(route[1])));
+  }
   // Produkt-Feed fuer Google Merchant Center (build_site.py: feed/google-merchant.xml)
   if (parts[0]==='feed') return parts.length===2 && /^[a-z0-9-]+\.xml$/.test(parts[1]);
   return PAGES.has(parts[0]) && (parts.length===1 || (parts.length===2 && parts[1]==='index.html'));
@@ -42,7 +52,7 @@ export function publicPath(pathname) {
 
 export function publicCatalog(value) {
   if (!Array.isArray(value)) throw new Error('INVALID_PUBLIC_CATALOG');
-  return value.filter(item=>item && ['AVAILABLE','SOLD'].includes(item.public_status))
+  return value.filter(item=>item && String(item.id)!=='9999' && ['AVAILABLE','SOLD'].includes(item.public_status))
     .map(item=>Object.fromEntries(Object.entries(item).filter(([key,val])=>FIELDS.has(key) &&
       (val===null || ['string','number','boolean'].includes(typeof val) || (['gallery','size_normalized'].includes(key) && Array.isArray(val) && val.every(x=>typeof x==='string'))))));
 }

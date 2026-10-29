@@ -144,6 +144,22 @@ class PublishingTests(unittest.TestCase):
         with patch.object(publisher, 'git', return_value=b''):
             with self.assertRaises(RuntimeError): publisher.main_head()
 
+    def test_live_security_header_verification_rejects_missing_or_weakened_controls(self):
+        headers = {
+            'X-Content-Type-Options': 'nosniff',
+            'Content-Security-Policy': "default-src 'self'; frame-ancestors 'none'",
+            'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+            'X-Frame-Options': 'DENY',
+            'Referrer-Policy': 'strict-origin-when-cross-origin',
+        }
+        publisher.check_security_headers(headers, '/')
+        for key in headers:
+            with self.subTest(missing=key), self.assertRaises(AssertionError):
+                publisher.check_security_headers({name:value for name,value in headers.items() if name != key}, '/')
+        for value in ('max-age=0', 'max-age=3153600', 'not-max-age=31536000', 'max-age=31536000invalid'):
+            with self.subTest(hsts=value), self.assertRaises(AssertionError):
+                publisher.check_security_headers(dict(headers, **{'Strict-Transport-Security': value}), '/')
+
     def test_activation_api_only_changes_version_distribution(self):
         old = [{'version_id': 'old', 'percentage': 100}]
         with patch.object(publisher, 'api', return_value={}) as api:

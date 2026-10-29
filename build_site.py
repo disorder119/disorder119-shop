@@ -30,11 +30,12 @@ BASE = Path(__file__).parent
 sys.path.insert(0, str(BASE / "scripts"))
 from sync_legal_content import sync_legal_content
 sync_legal_content(BASE)
-from seo_text import compose_description, seo_title  # noqa: E402
+from seo_text import compose_description, distinct_metadata_name, is_internal_product, seo_title  # noqa: E402
 # Englische Titel/Farben fuer /en/ (Wort-fuer-Wort aus dem deutschen Titel,
 # sonst Marke + Produktart + Bereich + Farbe) - geteilt mit
 # scripts/repair_public_article_integrity.py.
 from english_titles import english_description, english_title, farbe_en  # noqa: E402
+from french_titles import french_color, french_description, french_title  # noqa: E402
 # Beschriftungen aus der I18N-Tabelle von assets/app.js (Startseite /en/, /fr/).
 from app_i18n import app_text  # noqa: E402
 SITE_URL = "https://disorder119.com/"
@@ -83,6 +84,7 @@ PWA_JS_VERSION = _asset_version("assets/pwa.js")
 PRODUCT_CRITICAL_CSS = """:root{--ink:#000;--paper:#f2efe7;--rule:rgba(242,239,231,.14);--rule-strong:rgba(242,239,231,.28);--text-muted:rgba(242,239,231,.58);--surface:#121212;color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;padding:0;overflow-x:hidden}body{background:#000;color:#f2efe7;font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}a{color:inherit}.page-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--rule)}.page-head__brand{font-family:"Helvetica Neue Condensed","Arial Narrow",Helvetica,Arial,sans-serif;font-weight:800;text-transform:uppercase;font-size:1.3rem;letter-spacing:-.01em;text-decoration:none}.page-head__right,.lang-switch{display:flex;align-items:center}.page-head__right{gap:12px}.lang-switch{gap:2px;border:1px solid var(--rule-strong)}.lang-switch__btn{display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;text-decoration:none}.page-head__back{display:none!important}.page-head__menu{display:none}.article-sequence-nav{max-width:1240px;margin:16px auto 0;padding:0 clamp(20px,5vw,48px);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px}.article-sequence-nav__link{min-height:38px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap}.article-sequence-nav__link--prev{justify-self:start}.article-sequence-nav__link--archive{justify-self:center}.article-sequence-nav__link--next{justify-self:end}.product{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:clamp(24px,4vw,56px);max-width:1240px;margin:0 auto;padding:clamp(20px,3vw,40px) clamp(20px,5vw,48px) 60px}.gallery,.info{min-width:0}.gallery{position:sticky;top:16px;align-self:start}.gallery__stage{position:relative;background:#121212;aspect-ratio:3/4;overflow:hidden}.gallery__stage img{width:100%;height:100%;object-fit:contain;display:block;background:#121212}.gallery__nav{position:absolute;top:50%;transform:translateY(-50%)}.gallery__nav--prev{left:10px}.gallery__nav--next{right:10px}.gallery__counter{position:absolute;right:10px;bottom:10px}.gallery__badge{position:absolute;left:10px;top:10px}.gallery__thumbs{display:flex;gap:8px;margin-top:10px;overflow-x:auto}.gallery__thumbs--reserved{min-height:84px}@media(max-width:860px){.page-head{position:relative;min-height:74px;padding:14px 16px;gap:8px}.page-head__menu{width:38px;height:38px;flex:0 0 38px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-decoration:none}.page-head__menu span{display:block;width:22px;height:1px;background:currentColor}.page-head__brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;font-size:.7rem;line-height:1;letter-spacing:.01em;white-space:nowrap}.page-head__right{margin-left:auto;justify-content:flex-end;flex-wrap:nowrap!important;gap:7px}.lang-switch{gap:2px}.lang-switch__btn{width:32px;height:32px;flex:0 0 32px;padding:0;font-size:.59rem}.page-head__cart{position:relative;width:34px;height:34px;flex:0 0 34px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:0}.page-head__cart>span:first-child{display:none}.article-sequence-nav{max-width:none;width:auto;margin:0;padding:0 16px;min-height:58px;grid-template-columns:1fr auto 1fr;gap:0;border-bottom:1px solid rgba(242,239,231,.18)}.article-sequence-nav__link{min-width:0;min-height:58px;padding:0 10px}.article-sequence-nav__link--archive{padding-left:22px;padding-right:22px;border-left:1px solid rgba(242,239,231,.16);border-right:1px solid rgba(242,239,231,.16)}.product{grid-template-columns:1fr;gap:22px;padding:12px 16px 48px}.gallery{position:static}.gallery__stage{border:0}.gallery__thumbs--reserved{min-height:100px}}@media(max-width:380px){.page-head{padding-left:12px;padding-right:12px}.page-head__menu{width:34px;flex-basis:34px}.page-head__brand{font-size:.68rem}.page-head__right{gap:5px}.lang-switch__btn{width:30px;height:30px;flex-basis:30px}.page-head__cart{width:31px;height:31px;flex-basis:31px}.article-sequence-nav{padding:0 12px}.article-sequence-nav__link{padding:0 6px}.article-sequence-nav__link--archive{padding-left:12px;padding-right:12px}.product{padding-left:12px;padding-right:12px}}"""
 PRODUCT_CRITICAL_CSS += "@media(max-width:860px){.lang-switch__btn{width:26px;flex-basis:26px}}"
 PRODUCT_CRITICAL_CSS += ":root[data-theme=hell]{--ink:#fff;--paper:#151514;--rule:rgba(21,21,20,.12);--rule-strong:rgba(21,21,20,.26);--surface:#f3f2ef;color-scheme:light}:root[data-theme=hell] body{background:#fff;color:#151514}:root[data-theme=hell] .gallery__stage,:root[data-theme=hell] .gallery__stage img{background:#fff}"
+PRODUCT_CRITICAL_CSS += ".gallery__stage>picture{display:block;width:100%;height:100%}"
 # Produktseite am Desktop: Die drei Stylesheets kommen dort zusaetzlich als
 # normales (blockierendes) <link media=...>. Nur mit dem kritischen Inline-CSS
 # sprang die Seite nach dem Nachladen sichtbar (Kopfzeile 4 px hoeher,
@@ -359,7 +361,10 @@ LEGAL_EMAIL_PENDING = {
     "fr": 'sera ajoutée dès la mise en ligne de la boutique',
 }
 
-ITEMS = json.loads(DATA_PATH.read_text(encoding="utf-8"))
+SOURCE_ITEMS = json.loads(DATA_PATH.read_text(encoding="utf-8"))
+# Internal checkout fixtures remain in the private source, never in public pages,
+# catalogue data, feeds, related items or the sitemap.
+ITEMS = [it for it in SOURCE_ITEMS if not is_internal_product(it)]
 
 # Manche Marken im Rohbestand sind eigentlich Linien/Kollaborationen einer
 # anderen Marke und sollen im Shop nicht als eigene Marke gezaehlt/gefiltert
@@ -393,19 +398,27 @@ def fmt_price_de(v):
 def item_title(it, lang="de"):
     """Sichtbarer Artikeltitel: im englischen Shop englisch, sonst der
     gepflegte (deutsche) Titel aus data/items.json."""
-    return english_title(it) if lang == "en" else (it.get("title") or "")
+    if lang == "en":
+        return english_title(it)
+    if lang == "fr":
+        return french_title(it)
+    return it.get("title") or ""
 
 
 def item_description(it, lang):
     """Eigener Beschreibungstext der Sprache; im EN-Shop ohne deutsche
     Titel-/Farbreste (english_description)."""
     text = {"de": it.get("desc_de") or it.get("desc"), "en": it.get("desc_en"), "fr": it.get("desc_fr")}[lang]
-    return english_description(it, text) if lang == "en" and text else text
+    if lang == "en" and text:
+        return english_description(it, text)
+    return french_description(it, text) if lang == "fr" and text else text
 
 
 def item_color(it, lang="de"):
     farbe = it.get("color") or ""
-    return (farbe_en(farbe) or farbe) if lang == "en" else farbe
+    if lang == "en":
+        return farbe_en(farbe) or farbe
+    return french_color(farbe) if lang == "fr" else farbe
 
 
 def display_name(it, lang="de"):
@@ -413,7 +426,7 @@ def display_name(it, lang="de"):
     title = it.get("title") or ""
     # Eigenstaendig fuer Deutsch: shop-worker/commerce-core.test.mjs fuehrt
     # genau diese Funktion ohne den Rest des Moduls aus.
-    if lang == "en":
+    if lang in {"en", "fr"}:
         title = item_title(it, lang)
     # Steht die Marke schon irgendwo im Titel - etwa hinter einer Linie wie
     # "MM6 Maison Margiela" oder "Pierre Balmain" -, wird sie nicht noch
@@ -422,6 +435,14 @@ def display_name(it, lang="de"):
     if brand and re.search(r"(?<!\w)" + re.escape(brand) + r"(?!\w)", title, re.I):
         return title
     return (brand + " " + title).strip()
+
+
+def product_metadata_name(it, lang):
+    """Disambiguate separate archive pieces using maintained facts, not H1 noise."""
+    name = display_name(it, lang)
+    peers = [other for other in ITEMS if other.get("public_status") != "DRAFT"
+             and display_name(other, lang).casefold() == name.casefold()]
+    return distinct_metadata_name(name, it, peers, lang, item_color(it, lang))
 
 
 def title_size(it, lang):
@@ -438,7 +459,7 @@ def title_size(it, lang):
 def meta_description(it, lang):
     ph = META_PHRASES[lang]
     cat = cat_tr(it.get("category") or "", lang)
-    name = display_name(it, lang)
+    name = product_metadata_name(it, lang)
     if it.get("public_status") == "SOLD":
         return ph["sold"].format(name=name)
     tail = []
@@ -507,7 +528,7 @@ def related_card_html(x, lang):
         # Hauptbilds - und verzoegerte dessen Ladestart um 1892 ms. Das
         # ohnehin vorhandene Vorschaubild (220x293) hat genau die richtige
         # Groesse. width/height reservieren zusaetzlich den Platz.
-        '<img src="/' + esc(card_image(x)) + '" alt="' + esc(display_name(x, lang)) + '" loading="lazy" decoding="async" width="220" height="293" />' +
+        '<img src="/' + esc(card_image(x)) + '" alt="' + esc(display_name(x, lang)) + '" loading="lazy" decoding="async" fetchpriority="low" width="220" height="293" />' +
         (price_html if sold else "") +
         "</div>"
         '<span class="related-card__brand">' + esc(x.get("brand") or ph["no_brand"]) + "</span>"
@@ -877,9 +898,19 @@ def card_image(it):
 
 
 
+def image_intrinsic_attributes(relative_path):
+    """Reserve the actual source aspect ratio, including non-portrait photos."""
+    from PIL import Image
+    try:
+        with Image.open(BASE / relative_path) as image:
+            return f' width="{image.width}" height="{image.height}"'
+    except (OSError, ValueError):
+        return ""
+
+
 def build_page(it, shop_config, lang):
     name = display_name(it, lang)
-    title_tag = seo_title(name, it.get("product_type"), title_size(it, lang), lang)
+    title_tag = seo_title(product_metadata_name(it, lang), it.get("product_type"), title_size(it, lang), lang)
     desc = meta_description(it, lang)
     raw_body_desc = item_description(it, lang) or ""
     body_desc = raw_body_desc.strip() or auto_description(it, lang)
@@ -887,6 +918,7 @@ def build_page(it, shop_config, lang):
     hero = gallery[0] if gallery else "assets/favicon.png"
     hero_display_candidate = display_path(hero)
     hero_display = hero_display_candidate if (BASE / hero_display_candidate).is_file() else hero
+    hero_dimensions = image_intrinsic_attributes(hero_display)
     mobile_candidate = mobile_hero_path(hero)
     hero_mobile = mobile_candidate if (BASE / mobile_candidate).is_file() else hero_display
     hell = foto_hell(grid_thumb_path(it))
@@ -1025,9 +1057,9 @@ def build_page(it, shop_config, lang):
   <div class="gallery"{gallery_attr}>
     <div class="gallery__stage">
 {'      <span class="gallery__badge">SOLD</span>' if sold else ""}
-      <picture style="display:contents">
+      <picture>
         <source media="(max-width: 600px)" srcset="/{esc(hero_mobile)}">
-      <img id="galleryMain" src="/{esc(hero_display)}" alt="{esc(name)}" fetchpriority="high" decoding="sync">
+      <img id="galleryMain" src="/{esc(hero_display)}" alt="{esc(name)}"{hero_dimensions} fetchpriority="high" decoding="sync">
       </picture>
       <button type="button" class="gallery__nav gallery__nav--prev" id="galleryPrev" data-i18n-aria="prevPhotoAria" aria-label="{esc(ui(lang, 'prevPhotoAria'))}">‹</button>
       <button type="button" class="gallery__nav gallery__nav--next" id="galleryNext" data-i18n-aria="nextPhotoAria" aria-label="{esc(ui(lang, 'nextPhotoAria'))}">›</button>
@@ -1050,6 +1082,7 @@ def build_page(it, shop_config, lang):
   <div data-d119-newsletter data-quelle="artikel"></div>
   <p data-i18n="footerNote">{esc(ui(lang, 'footerNote'))}</p>
   <p><a href="{home}" data-i18n="footerFullArchive">{esc(ui(lang, 'footerFullArchive'))}</a></p>
+  <p><a href="{home}katalog/">{esc(CATALOG_COPY[lang]['all'])}</a></p>
   {artikel_recht_nav(home, lang)}
 </div>
 <div class="lightbox" id="lightbox">
@@ -1385,6 +1418,163 @@ def initial_archive_preloads():
     return "\n".join(links)
 
 
+# Real HTML catalogue pages complement the interactive archive. They deliberately
+# do not load app.js: its infinite-scroll/filter state continues to belong to the
+# homepage, while every item here is reachable through ordinary links without JS.
+CATALOG_PAGE_SIZE = 24
+CATALOG_CATEGORY_SLUGS = {
+    "Jackets": "jackets", "Coats": "coats", "Tops": "tops", "Shirts": "shirts",
+    "Knitwear": "knitwear", "Pants": "pants", "Skirts": "skirts", "Dresses": "dresses",
+    "Shoes": "shoes", "Accessories": "accessories",
+    "Objects": "objects",
+}
+CATALOG_COPY = {
+    "de": {"title": "Designer Second Hand & Vintage Katalog", "all": "Alle Stücke",
+           "archive": "Interaktives Archiv", "categories": "Kategorien", "page": "Seite",
+           "of": "von", "previous": "Zurück", "next": "Weiter", "sold": "Verkauft",
+           "intro": "Verfügbare Einzelstücke und bereits verkaufte Stücke aus dem Disorder119-Archiv.",
+           "description": "{name} bei Disorder119: Designer- und Vintage-Einzelstücke aus zweiter Hand, mit Fotos, Größen und Beschreibungen."},
+    "en": {"title": "Designer Second Hand & Vintage Catalogue", "all": "All pieces",
+           "archive": "Interactive archive", "categories": "Categories", "page": "Page",
+           "of": "of", "previous": "Previous", "next": "Next", "sold": "Sold",
+           "intro": "Available one-off pieces and previously sold pieces from the Disorder119 archive.",
+           "description": "{name} at Disorder119: one-off pre-owned designer and vintage pieces, with photos, sizes and descriptions."},
+    "fr": {"title": "Catalogue de mode de créateurs et vintage d’occasion", "all": "Toutes les pièces",
+           "archive": "Archive interactive", "categories": "Catégories", "page": "Page",
+           "of": "sur", "previous": "Précédente", "next": "Suivante", "sold": "Vendu",
+           "intro": "Pièces uniques disponibles et pièces déjà vendues des archives Disorder119.",
+           "description": "{name} chez Disorder119 : pièces uniques de créateurs et vintage d’occasion, avec photos, tailles et descriptions."},
+}
+CATALOG_CSS = """html,body{margin:0}.catalogue{max-width:1280px;margin:auto;padding:24px 20px 48px}.catalogue__head,.catalogue__languages,.catalogue__pagination,.catalogue__categories{display:flex;flex-wrap:wrap;gap:12px;align-items:center}.catalogue__head{justify-content:space-between;margin-bottom:32px}.catalogue__brand{font-weight:800;letter-spacing:.04em;text-decoration:none}.catalogue h1{font-size:clamp(1.5rem,4vw,2.4rem);line-height:1.2;margin:0 0 16px}.catalogue__intro{max-width:720px;line-height:1.6;margin-bottom:24px}.catalogue__categories{padding:16px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-bottom:28px}.catalogue a{color:inherit}.catalogue__categories a,.catalogue__pagination a,.catalogue__pagination span{padding:8px 10px}.catalogue [aria-current=page]{font-weight:700;text-decoration:underline}.catalogue .grid{width:100%;margin:0}.catalogue__pagination{justify-content:center;margin:32px 0}.catalogue__foot{padding-top:24px;border-top:1px solid var(--rule)}.catalogue .plate__brand{font:inherit}.catalogue .plate__price--sold{color:var(--text-muted)}"""
+
+
+def catalog_segment(category=None, page=1):
+    segment = "katalog/"
+    if category:
+        segment += "kategorie/" + CATALOG_CATEGORY_SLUGS[category] + "/"
+    return segment + (("seite/" + str(page) + "/") if page > 1 else "")
+
+
+def catalog_page_specs():
+    public = [it for it in ITEMS if it.get("public_status") in {"AVAILABLE", "SOLD"}]
+    public.sort(key=lambda it: it.get("public_status") == "SOLD")
+    groups = [(None, public)] + [
+        (category, [it for it in public if (it.get("taxonomy_category") or it.get("category")) == category])
+        for category in CATALOG_CATEGORY_SLUGS
+    ]
+    specs = []
+    for category, items in groups:
+        if not items:
+            continue
+        pages = (len(items) + CATALOG_PAGE_SIZE - 1) // CATALOG_PAGE_SIZE
+        for page in range(1, pages + 1):
+            specs.append({"segment": catalog_segment(category, page), "category": category,
+                          "page": page, "pages": pages, "count": len(items),
+                          "items": items[(page - 1) * CATALOG_PAGE_SIZE:page * CATALOG_PAGE_SIZE]})
+    return specs
+
+
+def catalog_card_html(it, lang, position):
+    card = initial_archive_card_html(it, lang)
+    card = re.sub(r' data-ssr-item-id="[^"]*"', "", card)
+    # The standalone page has no brand-filter action or nested interactive button.
+    card = card.replace('<button type="button" class="plate__brand" data-brand-filter>', '<span class="plate__brand">')
+    card = card.replace('</button>', '</span>')
+    if it.get("public_status") == "SOLD":
+        card = re.sub(r'<span class="plate__price">.*?</span>',
+                      '<span class="plate__price plate__price--sold">' + CATALOG_COPY[lang]["sold"] + '</span>', card)
+    if position >= 2:
+        card = card.replace('loading="eager"', 'loading="lazy"').replace('fetchpriority="high"', 'fetchpriority="auto"')
+    return card.replace('decoding="sync"', 'decoding="async"')
+
+
+def catalog_categories_html(lang, current=None):
+    copy = CATALOG_COPY[lang]
+    categories = {spec["category"] for spec in catalog_page_specs()}
+    links = []
+    for category in [None] + list(CATALOG_CATEGORY_SLUGS):
+        if category is not None and category not in categories:
+            continue
+        label = copy["all"] if category is None else cat_tr(category, lang)
+        active = ' aria-current="page"' if current == category else ""
+        links.append('<a href="' + lang_home(lang) + catalog_segment(category) + '"' + active + '>' + esc(label) + '</a>')
+    return '<nav class="catalogue__categories" aria-label="' + copy["categories"] + '">' + "".join(links) + '</nav>'
+
+
+def catalog_pagination_html(spec, lang):
+    if spec["pages"] < 2:
+        return ""
+    copy = CATALOG_COPY[lang]
+    links = []
+    def link(page, label, rel=""):
+        return '<a href="' + lang_home(lang) + catalog_segment(spec["category"], page) + '"' + rel + '>' + esc(label) + '</a>'
+    if spec["page"] > 1:
+        links.append(link(spec["page"] - 1, copy["previous"], ' rel="prev"'))
+    for page in range(1, spec["pages"] + 1):
+        if page == spec["page"]:
+            links.append('<span aria-current="page">' + str(page) + '</span>')
+        else:
+            links.append(link(page, str(page)))
+    if spec["page"] < spec["pages"]:
+        links.append(link(spec["page"] + 1, copy["next"], ' rel="next"'))
+    return '<nav class="catalogue__pagination" aria-label="' + copy["page"] + '">' + "".join(links) + '</nav>'
+
+
+def catalog_page_html(spec, lang, shop_config):
+    copy = CATALOG_COPY[lang]
+    name = cat_tr(spec["category"], lang) if spec["category"] else copy["title"]
+    heading = name + " · " + copy["page"] + " " + str(spec["page"]) + " " + copy["of"] + " " + str(spec["pages"])
+    title = heading + " | Disorder119"
+    description = copy["description"].format(name=name) + " " + copy["page"] + " " + str(spec["page"]) + "."
+    urls = {l: SITE_URL.rstrip("/") + lang_home(l) + spec["segment"] for l in LANGS}
+    canonical = urls[lang]
+    item_list = json.loads(item_list_jsonld(spec["items"], lang))
+    item_list["name"] = heading
+    item_list["@id"] = canonical + "#items"
+    for index, entry in enumerate(item_list["itemListElement"]):
+        entry["position"] = (spec["page"] - 1) * CATALOG_PAGE_SIZE + index + 1
+    schemas = [site_entities_jsonld(shop_config), webpage_jsonld(title, description, canonical, lang),
+               page_breadcrumb_jsonld(heading, canonical, lang), json.dumps(item_list, ensure_ascii=False)]
+    structured = "\n".join('<script type="application/ld+json">' + block + '</script>' for block in schemas)
+    languages = "".join('<a href="' + lang_home(l) + spec["segment"] + '" lang="' + l + '"'
+                        + (' aria-current="page"' if l == lang else '') + '>' + l.upper() + '</a>' for l in LANGS)
+    cards = "".join(catalog_card_html(it, lang, index) for index, it in enumerate(spec["items"]))
+    return f'''<!DOCTYPE html>
+<html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{esc(title)}</title><meta name="description" content="{esc(description)}">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<link rel="canonical" href="{canonical}">{hreflang_block(urls)}
+<meta property="og:type" content="website"><meta property="og:site_name" content="Disorder119"><meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(description)}"><meta property="og:url" content="{canonical}"><meta property="og:image" content="{SITE_URL}assets/og-image.png">
+<link rel="icon" href="/assets/favicon.png"><link rel="stylesheet" href="/assets/app.css?v={APP_CSS_VERSION}"><link rel="stylesheet" href="/assets/theme.css?v={THEME_CSS_VERSION}">
+<style>{CATALOG_CSS}</style>{structured}<script src="/assets/ansicht.js" defer></script></head>
+<body><main class="catalogue"><header class="catalogue__head"><a class="catalogue__brand" href="{lang_home(lang)}">DISORDER119</a><a href="{lang_home(lang)}">{copy['archive']}</a><nav class="catalogue__languages" aria-label="Language">{languages}</nav></header>
+<h1>{esc(heading)}</h1><p class="catalogue__intro">{copy['intro']}</p>{catalog_categories_html(lang, spec['category'])}
+<div class="grid">{cards}</div>{catalog_pagination_html(spec, lang)}
+<footer class="catalogue__foot"><a href="{lang_home(lang)}">{copy['archive']} →</a></footer></main></body></html>'''
+
+
+def build_catalog_pages():
+    shop_config = get_shop_config()
+    specs = catalog_page_specs()
+    for lang in LANGS:
+        base = BASE / lang_home(lang).strip("/") / "katalog"
+        # A smaller inventory must not leave stale page/category URLs behind.
+        if base.is_dir():
+            for path in base.rglob("index.html"):
+                path.unlink()
+            for path in sorted(base.rglob("*"), reverse=True):
+                if path.is_dir():
+                    try:
+                        path.rmdir()
+                    except OSError:
+                        pass
+        for spec in specs:
+            directory = BASE / lang_home(lang).strip("/") / spec["segment"]
+            directory.mkdir(parents=True, exist_ok=True)
+            (directory / "index.html").write_text(catalog_page_html(spec, lang, shop_config), encoding="utf-8")
+    print(f"{len(specs) * len(LANGS)} crawlbare Katalogseiten geschrieben.")
+
+
 # Kein Zustand je Artikel (Wunsch des Inhabers, 07.10.2026): jede
 # Produktseite traegt denselben allgemeinen Hinweis, Besonderheiten stehen
 # als "Hinweis zum Zustand" in der Beschreibung (siehe AGB Abschnitt 3).
@@ -1464,6 +1654,10 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__THEME_VERSION__", THEME_CSS_VERSION)
     out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)
     out = out.replace("__PWA_JS_VERSION__", PWA_JS_VERSION)
+    # A normal link remains discoverable before app.js hydrates the archive.
+    marker = '<nav class="footer__nav" aria-label="Footer">'
+    out = out.replace(marker, marker + '<a href="' + lang_home(lang) + 'katalog/">'
+                      + esc(CATALOG_COPY[lang]["all"]) + '</a>', 1)
     return out
 
 
@@ -2073,6 +2267,19 @@ def article_dir(lang, item_id):
 
 def build_articles():
     shop_config = get_shop_config()
+    for it in SOURCE_ITEMS:
+        if not is_internal_product(it):
+            continue
+        for slug in {str(it.get("id") or ""), str(it.get("url_slug") or "")}:
+            if not re.fullmatch(r"[0-9]+", slug):
+                continue
+            for lang in LANGS:
+                page = article_dir(lang, slug) / "index.html"
+                page.unlink(missing_ok=True)
+                try:
+                    page.parent.rmdir()
+                except OSError:
+                    pass
     count = 0
     de_pages_by_id = {}
     for it in ITEMS:
@@ -2141,6 +2348,7 @@ def build_sitemap():
         [("", None)]
         + [("artikel/" + str(it.get("url_slug", it["id"])) + "/", it) for it in public_items]
         + [(slug + "/", None) for slug in indexable_specials]
+        + [(spec["segment"], None) for spec in catalog_page_specs()]
     )
 
     def url_entry(lang, segment, item=None):
@@ -2380,6 +2588,10 @@ def build_catalog_json():
         farbe = farbe_en(it.get("color") or "")
         if farbe:
             row["color_en"] = farbe
+        row["title_fr"] = french_title(it)
+        couleur = french_color(it.get("color") or "")
+        if couleur:
+            row["color_fr"] = couleur
     CATALOG_PATH.write_text(
         json.dumps(catalog, ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",
@@ -2716,6 +2928,7 @@ def main():
     build_widerruf_pages()
     build_mobile_heroes()
     build_articles()
+    build_catalog_pages()
     build_catalog_json()
     build_merchant_feed()
     build_sitemap()

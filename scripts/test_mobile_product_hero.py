@@ -1,6 +1,7 @@
 """Regression: responsive first paint must preserve curated source bytes."""
 import hashlib
 import importlib.util
+import re
 import sys
 import tempfile
 import unittest
@@ -11,6 +12,30 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import build_site
 
 class MobileHeroTests(unittest.TestCase):
+    def test_pwa_preparation_preserves_catalogue_footer_and_deferred_product_scripts(self):
+        from apply_pwa import patch_build
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "build_site.py").read_text()
+        self.assertTrue(patch_build(source) == source, "PWA preparation must preserve the current generator verbatim")
+
+    def test_mobile_hero_geometry_is_stable_when_full_styles_arrive(self):
+        # Product CSS loads independently of the inline first-paint shell.
+        # The intermediate base stylesheet used to move the photo down 4px.
+        root = Path(__file__).resolve().parents[1]
+        layers = {
+            "critical": build_site.PRODUCT_CRITICAL_CSS,
+            "base": (root / "assets/article.css").read_text(),
+            "final": (root / "assets/product-page-v4.css").read_text(),
+        }
+        geometry = {}
+        for name, css in layers.items():
+            match = re.search(r"\.product\s*\{\s*grid-template-columns:\s*1fr;([^}]+)\}", css)
+            self.assertIsNotNone(match, name)
+            rules = dict(re.findall(r"([a-z-]+):\s*([^;]+)(?:;|$)", match.group(1)))
+            geometry[name] = (rules.get("gap"), rules.get("padding"))
+        self.assertEqual(geometry["base"], geometry["final"])
+        self.assertEqual(geometry["critical"], geometry["final"])
+
     def test_derivative_preserves_original_and_refreshes_changed_source(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

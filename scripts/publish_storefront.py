@@ -88,9 +88,12 @@ def deploy_versions(versions, message):
 
 def check_public(revision, manifest):
     entries = {r["path"]: r for r in manifest["files"]}
-    paths = ["/", "/en/", "/fr/", "/cart/", "/kasse/", "/widerruf/", "/agb/",
+    paths = ["/", "/en/", "/fr/", "/cart/", "/kasse/", "/widerruf/", "/agb/", "/robots.txt", "/sitemap.xml",
              "/feed/google-merchant.xml", "/google7945c4dc594a9a9c.html",
              "/.well-known/apple-developer-merchantid-domain-association", "/data/catalog.json"]
+    for path in ("katalog/index.html", "fr/katalog/index.html", "katalog/seite/2/index.html", "katalog/kategorie/objects/index.html"):
+        if path in entries:
+            paths.append("/" + path.removesuffix("index.html"))
     rows = json.loads((ROOT / ".storefront-build/public/data/catalog.json").read_text("utf-8"))
     for item in rows[:3]:
         paths.append("/artikel/" + str(item.get("url_slug", item["id"])) + "/")
@@ -104,17 +107,34 @@ def check_public(revision, manifest):
             assert response.status == 200, path
             assert response.headers.get("X-Disorder119-Hosting") == "cloudflare-assets", path
             assert response.headers.get("X-Disorder119-Release") == revision, path
-            assert response.headers.get("X-Content-Type-Options") == "nosniff", path
-            assert "frame-ancestors 'none'" in response.headers.get("Content-Security-Policy", ""), path
+            check_security_headers(response.headers, path)
             if path == "/data/catalog.json":
                 assert json.loads(body) == rows, "Public catalog changed."
-            elif path.lstrip("/") in entries:
+                assert all(str(row.get("id")) != "9999" for row in rows), "Internal fixture was published."
+            elif path == "/robots.txt":
+                assert "Sitemap: https://disorder119.com/sitemap.xml" in body.decode("utf-8"), path
+            elif path == "/sitemap.xml":
+                import xml.etree.ElementTree as ET
+                urls = [entry.text for entry in ET.fromstring(body).findall("{*}url/{*}loc")]
+                assert urls and len(urls) == len(set(urls)), "Sitemap is empty or contains duplicate URLs."
+                assert not any(re.search(r"/artikel/9999/", url or "") for url in urls), "Internal fixture was indexed."
+            if path != "/data/catalog.json" and path.lstrip("/") in entries:
                 assert hashlib.sha256(body).hexdigest() == entries[path.lstrip("/")]["sha256"], path
             results.append({"path": path, "status": response.status})
     # This is deliberately a health GET, never a payment, email or shipment.
     with urllib.request.urlopen(urllib.request.Request("https://api.disorder119.com/health", headers={"User-Agent": UA}), timeout=30) as response:
         assert response.status == 200
     return results
+
+
+def check_security_headers(headers, path):
+    """Deployment verification must check the controls actually served live."""
+    assert headers.get("X-Content-Type-Options") == "nosniff", path
+    assert "frame-ancestors 'none'" in headers.get("Content-Security-Policy", ""), path
+    hsts = re.search(r"(?:^|;)\s*max-age=(\d+)(?:\s*;|$)", headers.get("Strict-Transport-Security", ""), re.I)
+    assert hsts and int(hsts.group(1)) >= 31536000, path
+    assert headers.get("X-Frame-Options", "").upper() == "DENY", path
+    assert headers.get("Referrer-Policy") == "strict-origin-when-cross-origin", path
 
 
 def activate_and_verify(version, previous, revision, manifest, state_path):

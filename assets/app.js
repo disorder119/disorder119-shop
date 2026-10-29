@@ -109,6 +109,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   // Englischer Shop: englische Titel (title_en aus build_site.py) fuer
   // Kacheln, Warenkorb, Match, Baukasten und Universum. Deutsch bleibt.
   if (LANG === "en") ITEMS.forEach(function (it) { if (it && it.title_en) it.title = it.title_en; });
+  if (LANG === "fr") ITEMS.forEach(function (it) { if (it && it.title_fr) it.title = it.title_fr; });
   // Farbnamen fuer /en/ aus color/color_en derselben Artikel. Die Filterwerte
   // bleiben die deutschen Farben, nur die Anzeige wird englisch.
   var COLOR_EN = {};
@@ -118,9 +119,17 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     if (de.length !== en.length) return;
     de.forEach(function (c, i) { if (c.trim() && en[i].trim()) COLOR_EN[c.trim()] = en[i].trim(); });
   });
+  var COLOR_FR = {};
+  if (LANG === "fr") ITEMS.forEach(function (it) {
+    if (!it || !it.color || !it.color_fr) return;
+    var de = String(it.color).split(","), fr = String(it.color_fr).split(",");
+    if (de.length !== fr.length) return;
+    de.forEach(function (c, i) { if (c.trim() && fr[i].trim()) COLOR_FR[c.trim()] = fr[i].trim(); });
+  });
   function trColor(color) {
-    if (LANG !== "en" || !color) return color || "";
-    return String(color).split(",").map(function (c) { return COLOR_EN[c.trim()] || c.trim(); }).join(", ");
+    var colors = LANG === "en" ? COLOR_EN : LANG === "fr" ? COLOR_FR : null;
+    if (!colors || !color) return color || "";
+    return String(color).split(",").map(function (c) { return colors[c.trim()] || c.trim(); }).join(", ");
   }
 
   var I18N = {
