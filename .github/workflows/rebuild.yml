@@ -69,7 +69,17 @@ jobs:
           node-version: "22"
 
       - name: Abhaengigkeiten installieren
-        run: pip install pillow
+        run: pip install pillow PyYAML==6.0.3
+
+      - name: Release-Gates pruefen
+        run: python -m unittest discover -s scripts -p test_release_quality_gate.py -v
+
+      - name: SEO-Regressionspruefungen
+        run: |
+          python scripts/test_seo_catalog.py
+          python scripts/test_french_titles.py
+          node scripts/test_archive_localization.cjs
+          python scripts/test_mobile_product_hero.py
 
       - name: Python Syntax pruefen
         run: python -m py_compile build_site.py scripts/*.py
@@ -239,6 +249,9 @@ jobs:
       - name: Oeffentliche Produktseiten reparieren und DRAFT isolieren
         run: python scripts/repair_public_article_integrity.py
 
+      - name: Crawlbare Katalogseiten und Sprachmetadaten pruefen
+        run: python scripts/validate_seo_catalog.py
+
       - name: Smartphone-App/PWA pruefen
         run: python scripts/validate_pwa.py
 
@@ -330,9 +343,27 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  quality:
+    name: Exakt vorbereiteten Shop im Browser pruefen
+    needs: rebuild
+    uses: ./.github/workflows/browser-smoke.yml
+    with:
+      rebuild_patch_artifact: disorder119-rebuild-patch-${{ github.run_id }}
+    permissions:
+      contents: read
+
+  security:
+    name: Exakt vorbereiteten Shop auf Sicherheit pruefen
+    needs: rebuild
+    uses: ./.github/workflows/security-gate.yml
+    with:
+      rebuild_patch_artifact: disorder119-rebuild-patch-${{ github.run_id }}
+    permissions:
+      contents: read
+
   publish:
     name: Validierten Main-Rebuild publizieren
-    needs: rebuild
+    needs: [rebuild, quality, security]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     outputs:
@@ -356,6 +387,7 @@ jobs:
         id: publish
         run: |
           set -euo pipefail
+          test -f rebuild.patch
           git fetch origin main
           if [ "$(git rev-parse origin/main)" != "${{ github.sha }}" ]; then
             echo "Main wurde inzwischen geaendert; veralteten Rebuild nicht publizieren."

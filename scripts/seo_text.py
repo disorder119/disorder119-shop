@@ -22,6 +22,38 @@ TITLE_SUFFIX = " | Disorder119"
 TITLE_MAX = 60          # darueber kuerzt Google den Titel in der Trefferliste
 DESCRIPTION_MAX = 160   # dito fuer die Beschreibung
 
+
+def is_internal_product(item: dict) -> bool:
+    """Checkout fixtures stay in source data but never become public inventory."""
+    return str(item.get("id", "")) == "9999" or item.get("internal_only") is True
+
+
+def distinct_metadata_name(name: str, item: dict, peers: list[dict], lang: str,
+                           color: str = "") -> str:
+    """Distinguish genuine archive pieces without changing their visible name.
+
+    Prefer maintained size/colour facts. A catalogue reference is only needed
+    when multiple pieces still have exactly the same identifying facts.
+    """
+    if len(peers) < 2:
+        return name
+    size = str(item.get("size") or "").strip()
+    raw_color = str(item.get("color") or "").strip().casefold()
+    facts = []
+    if size and size.casefold() not in {"unknown", "unbekannt", "inconnu"}:
+        facts.append({"de": "Gr.", "en": "Size", "fr": "Taille"}[lang] + " " + size)
+    if color and color.casefold() not in name.casefold():
+        facts.append(color)
+    same_facts = [peer for peer in peers
+                  if str(peer.get("size") or "").strip().casefold() == size.casefold()
+                  and str(peer.get("color") or "").strip().casefold() == raw_color]
+    if not facts or len(same_facts) > 1:
+        reference = str(item.get("article") or item.get("url_slug") or item.get("id") or "").strip()
+        # References are for identification in search results, never garment claims.
+        if reference:
+            facts.append({"de": "Art.", "en": "Ref.", "fr": "Réf."}[lang] + " " + reference)
+    return name + ((" · " + ", ".join(facts)) if facts else "")
+
 # Produktart im Singular. Schluessel sind die Werte aus product_type.
 TYPE_TR = {
     "Accessory": ("Accessoire", "Accessory", "Accessoire"),
@@ -164,7 +196,7 @@ def seo_title(name: str, product_type: str | None, size_label: str, lang: str) -
         # Marke und Produktart stehen ohnehin vorn.
         if len(mit_secondhand) + len(TITLE_SUFFIX) <= TITLE_MAX + 15:
             basis = mit_secondhand
-    if size_label:
+    if size_label and f"{SIZE_WORD[lang]} {size_label}".casefold() not in basis.casefold():
         mit_groesse = f"{basis} · {SIZE_WORD[lang]} {size_label}"
         if len(mit_groesse) + len(TITLE_SUFFIX) <= TITLE_MAX:
             basis = mit_groesse

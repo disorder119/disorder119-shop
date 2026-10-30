@@ -62,10 +62,9 @@ def patch_build(text: str) -> str:
     )
     text = replace_once(
         text,
-        '    out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)\n    return out\n',
+        '    out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)\n',
         '    out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)\n'
-        '    out = out.replace("__PWA_JS_VERSION__", PWA_JS_VERSION)\n'
-        '    return out\n',
+        '    out = out.replace("__PWA_JS_VERSION__", PWA_JS_VERSION)\n',
         "bundle PWA version token",
     )
     if ARTICLE_MARKER not in text:

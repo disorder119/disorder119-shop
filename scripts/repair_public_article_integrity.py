@@ -20,9 +20,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # eigene Kopie; weil dieses Skript die Meta-Beschreibung nach dem Bauen
 # erneut setzt, hat es jede Aenderung am Generator stillschweigend
 # ueberschrieben.
-from seo_text import compose_description  # noqa: E402
+from seo_text import compose_description, distinct_metadata_name, is_internal_product  # noqa: E402
 # Englische Titel und desc_en ohne deutsche Reste - wie in build_site.py.
-from english_titles import english_description, english_title  # noqa: E402
+from english_titles import english_description, english_title, farbe_en  # noqa: E402
+from french_titles import french_color, french_description, french_title  # noqa: E402
 
 BASE = Path(__file__).resolve().parents[1]
 ITEMS_PATH = BASE / "data" / "items.json"
@@ -86,7 +87,9 @@ def tr(table: dict, value: str, lang: str) -> str:
 
 
 def item_title(item: dict, lang: str = "de") -> str:
-    return english_title(item) if lang == "en" else (item.get("title") or "")
+    if lang == "en":
+        return english_title(item)
+    return french_title(item) if lang == "fr" else (item.get("title") or "")
 
 
 def display_name(item: dict, lang: str = "de") -> str:
@@ -99,9 +102,17 @@ def display_name(item: dict, lang: str = "de") -> str:
     return (brand + " " + title).strip()
 
 
-def meta_description(item: dict, lang: str) -> str:
+def meta_description(item: dict, lang: str, public_items: list[dict] | None = None) -> str:
     ph = META[lang]
     name = display_name(item, lang)
+    peers = [other for other in (public_items or [])
+             if display_name(other, lang).casefold() == name.casefold()]
+    color = str(item.get("color") or "")
+    if lang == "fr":
+        color = french_color(color)
+    elif lang == "en":
+        color = farbe_en(color) or color
+    name = distinct_metadata_name(name, item, peers, lang, color)
     if item.get("public_status") == "SOLD":
         return ph["sold"].format(name=name)
     parts: list[str] = []
@@ -117,6 +128,8 @@ def meta_description(item: dict, lang: str) -> str:
                     "en": item.get("desc_en"), "fr": item.get("desc_fr")}[lang]
     if lang == "en" and eigener_text:
         eigener_text = english_description(item, eigener_text)
+    elif lang == "fr" and eigener_text:
+        eigener_text = french_description(item, eigener_text)
     return compose_description(prefix, eigener_text, ph["suffix"], name)
 
 
@@ -176,7 +189,7 @@ def related_card(item: dict, lang: str) -> str:
     return (
         f'<a class="related-card" href="{prefix}artikel/{item.get("url_slug",item["id"])}/">'
         '<div class="related-card__frame">'
-        f'<img src="/{html.escape(hero, quote=True)}" alt="{html.escape(display_name(item, lang), quote=True)}" loading="lazy" decoding="async" width="220" height="293" />'
+        f'<img src="/{html.escape(hero, quote=True)}" alt="{html.escape(display_name(item, lang), quote=True)}" loading="lazy" decoding="async" fetchpriority="low" width="220" height="293" />'
         + price + "</div>"
         f'<span class="related-card__brand">{html.escape(item.get("brand") or "")}</span>'
         f'<span class="related-card__title">{html.escape(item_title(item, lang))}</span>'
@@ -230,7 +243,7 @@ def repair_page(item: dict, public_items: list[dict], lang: str) -> None:
     if not page.exists():
         raise SystemExit(f"FEHLER: öffentliche Produktseite fehlt: {page.relative_to(BASE)}")
     text = page.read_text(encoding="utf-8")
-    desc = meta_description(item, lang)
+    desc = meta_description(item, lang, public_items)
     for marker in (
         '<meta name="description" content="',
         '<meta property="og:description" content="',
@@ -271,8 +284,8 @@ def repair_page(item: dict, public_items: list[dict], lang: str) -> None:
 
 def main() -> None:
     items = json.loads(ITEMS_PATH.read_text(encoding="utf-8"))
-    public_items = [item for item in items if item.get("public_status") != "DRAFT"]
-    drafts = [item for item in items if item.get("public_status") == "DRAFT"]
+    public_items = [item for item in items if item.get("public_status") != "DRAFT" and not is_internal_product(item)]
+    drafts = [item for item in items if item.get("public_status") == "DRAFT" or is_internal_product(item)]
 
     removed = 0
     for item in drafts:
