@@ -337,3 +337,75 @@ test("checkout page reloaded while the own open order holds the coupon: the code
     netz.restore();
   }
 });
+
+// Artikel-Code (Migration 0045): Wort-Code mit Festpreis fuer genau ein
+// Stueck - nur diese Zeile wird guenstiger, einmal einloesbar.
+async function artikelCode(DB, code, itemId, festpreisCents, label) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(code));
+  const hash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
+  DB.raw.prepare(`INSERT INTO reward_coupons (id,code_hash,code_hint,discount_bps,username_key,status,created_at,item_id,fixed_price_cents,item_label)
+    VALUES (?,?,?,10000,'artikelcode','ACTIVE',?,?,?,?)`).run(`ac-${itemId}`, hash, code.slice(-4), new Date().toISOString(), itemId, festpreisCents, label);
+}
+
+test("item code: lowercase word code sets exactly this piece to the fixed price", async () => {
+  versandCacheLeeren();
+  const netz = workerNetz();
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  await artikelCode(DB, "CLOSERWITHNYLON", 9428, 9000, "Jean Paul Gaultier T-Shirt");
+  const anWorker = (ziel, init = {}) => worker.fetch(new Request(ziel, {
+    method: init.method || "GET", headers: { ...(init.headers || {}), Origin: "https://disorder119.com" }, body: init.body,
+  }), env);
+  try {
+    // Pruefen im Warenkorb: Festpreis und Name kommen vom Server.
+    const pruefung = await anWorker("https://api.disorder119.com/coupons/validate", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: " closerwithnylon " }),
+    });
+    assert.deepEqual(await pruefung.json(), { valid: true, oneTime: true, itemId: 9428, fixedPriceCents: 9000, itemLabel: "Jean Paul Gaultier T-Shirt" });
+
+    const s = seite({ search: "?artikel=9428", store: { [CODE_KEY]: "closerwithnylon" }, felder: KUNDIN,
+      antworten: { "/data/catalog.json": json([STUECK]), "/versand/optionen": anWorker, "/create-order": anWorker } });
+    s.laden(PROMOS);
+    s.laden(KASSE);
+    await ruhe();
+    assert.equal(await s.kontext.zahlung.createOrder(), "PAYPAL-1");
+    const betrag = netz.patches.at(-1);
+    assert.equal(betrag.breakdown ? betrag.breakdown.item_total.value : betrag.value, "90.00", "150 EUR -> 90 EUR");
+    const bestellung = DB.raw.prepare("SELECT id,subtotal_cents FROM commerce_orders").get();
+    assert.equal(bestellung.subtotal_cents, 9000);
+    assert.equal(DB.raw.prepare("SELECT unit_price_cents FROM order_items WHERE order_id=?").get(bestellung.id).unit_price_cents, 9000);
+    assert.deepEqual({ ...DB.raw.prepare("SELECT status,reserved_order_id FROM reward_coupons").get() },
+      { status: "RESERVED", reserved_order_id: bestellung.id });
+  } finally {
+    netz.restore();
+  }
+});
+
+test("item code for a piece that is not in the order: order cancelled, code free again, browser forgets it", async () => {
+  versandCacheLeeren();
+  const netz = workerNetz();
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, GITHUB_TOKEN: "gh-test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
+  await artikelCode(DB, "CLOSERWITHNYLON", 6216, 7000, "Y-3 Grafik-Beanie");
+  const anWorker = (ziel, init = {}) => worker.fetch(new Request(ziel, {
+    method: init.method || "GET", headers: { ...(init.headers || {}), Origin: "https://disorder119.com" }, body: init.body,
+  }), env);
+  try {
+    const s = seite({ search: "?artikel=9428", store: { [CODE_KEY]: "CLOSERWITHNYLON" }, felder: KUNDIN,
+      antworten: { "/data/catalog.json": json([STUECK]), "/versand/optionen": anWorker, "/create-order": anWorker } });
+    s.laden(PROMOS);
+    s.laden(KASSE);
+    await ruhe();
+    const fehler = await s.kontext.zahlung.createOrder().then(() => null, e => e);
+    assert.equal(fehler?.code, "COUPON_NOT_FOR_ORDER");
+    s.kontext.zahlung.onError(fehler);
+    assert.equal(s.speicher.has(CODE_KEY), false, "Code vergessen, der naechste Klick bestellt ohne");
+    assert.match(s.document.getElementById("kasseStatus").textContent, /nur für ein bestimmtes Teil/);
+    assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders").get().status, "CANCELLED");
+    assert.deepEqual({ ...DB.raw.prepare("SELECT status,reserved_order_id FROM reward_coupons").get() },
+      { status: "ACTIVE", reserved_order_id: null });
+    assert.equal(netz.patches.length, 0, "PayPal-Betrag nie veraendert");
+  } finally {
+    netz.restore();
+  }
+});

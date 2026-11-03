@@ -55,9 +55,9 @@
   }
   function copy() {
     var all = {
-      de: { label: "GUTSCHEINCODE", placeholder: "Code eingeben", apply: "PRÜFEN", valid: "10 % Rabatt aktiv", invalid: "Code ist nicht gültig oder bereits benutzt.", preview: "10 % vorgemerkt · wird beim Checkout serverseitig geprüft.", offline: "Code gespeichert · Prüfung erfolgt beim Checkout." },
-      en: { label: "COUPON CODE", placeholder: "Enter code", apply: "APPLY", valid: "10% discount active", invalid: "Code is invalid or has already been used.", preview: "10% queued · server validation happens at checkout.", offline: "Code saved · validation happens at checkout." },
-      fr: { label: "CODE PROMO", placeholder: "Saisir le code", apply: "VÉRIFIER", valid: "Réduction de 10 % active", invalid: "Code invalide ou déjà utilisé.", preview: "10 % enregistré · validation serveur au paiement.", offline: "Code enregistré · validation au paiement." }
+      de: { label: "GUTSCHEINCODE", placeholder: "Code eingeben", apply: "PRÜFEN", valid: "10 % Rabatt aktiv", invalid: "Code ist nicht gültig oder bereits benutzt.", preview: "10 % vorgemerkt · wird beim Checkout serverseitig geprüft.", offline: "Code gespeichert · Prüfung erfolgt beim Checkout.", artikel: "{label} für {preis} € – der Code gilt nur für dieses Teil." },
+      en: { label: "COUPON CODE", placeholder: "Enter code", apply: "APPLY", valid: "10% discount active", invalid: "Code is invalid or has already been used.", preview: "10% queued · server validation happens at checkout.", offline: "Code saved · validation happens at checkout.", artikel: "{label} for €{preis} – this code is valid for this piece only." },
+      fr: { label: "CODE PROMO", placeholder: "Saisir le code", apply: "VÉRIFIER", valid: "Réduction de 10 % active", invalid: "Code invalide ou déjà utilisé.", preview: "10 % enregistré · validation serveur au paiement.", offline: "Code enregistré · validation au paiement.", artikel: "{label} à {preis} € – ce code est valable uniquement pour cette pièce." }
     };
     return all[language()];
   }
@@ -84,6 +84,14 @@
     }
   }
 
+  // Artikel-Code (Festpreis fuer genau ein Stueck): Name und Preis vom Server.
+  function artikelText(c, result) {
+    var cents = Number(result.fixedPriceCents) || 0;
+    var preis = cents % 100 ? (cents / 100).toFixed(2) : String(cents / 100);
+    if (language() !== "en") preis = preis.replace(".", ",");
+    return c.artikel.replace("{label}", String(result.itemLabel || "").trim() || "1 Teil").replace("{preis}", preis);
+  }
+
   function setStatus(form, kind, text) {
     var status = form && form.querySelector("[data-coupon-status]");
     if (!status) return;
@@ -102,7 +110,8 @@
     setStatus(form, "pending", "…");
     var result = await validateCoupon(code);
     button.disabled = false;
-    if (result.valid === true) setStatus(form, "valid", result.preview ? c.preview : c.valid);
+    if (result.valid === true && result.fixedPriceCents) setStatus(form, "valid", artikelText(c, result));
+    else if (result.valid === true) setStatus(form, "valid", result.preview ? c.preview : c.valid);
     else if (result.valid === false) setStatus(form, "invalid", c.invalid);
     else setStatus(form, "saved", c.offline);
   }
@@ -199,7 +208,8 @@
     return nativeFetch(input, init).then(function (response) {
       if (!response || response.ok || typeof response.clone !== "function") return response;
       return response.clone().json().then(function (data) {
-        if (data && data.error === "COUPON_INVALID_OR_USED") forgetCode(code);
+        // COUPON_NOT_FOR_ORDER: Artikel-Code, aber das Stueck ist nicht in der Bestellung.
+        if (data && (data.error === "COUPON_INVALID_OR_USED" || data.error === "COUPON_NOT_FOR_ORDER")) forgetCode(code);
         return response;
       }, function () { return response; });
     });
