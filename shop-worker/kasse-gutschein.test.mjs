@@ -364,10 +364,14 @@ test("item code: lowercase word code sets exactly this piece to the fixed price"
     assert.deepEqual(await pruefung.json(), { valid: true, oneTime: true, itemId: 9428, fixedPriceCents: 9000, itemLabel: "Jean Paul Gaultier T-Shirt" });
 
     const s = seite({ search: "?artikel=9428", store: { [CODE_KEY]: "closerwithnylon" }, felder: KUNDIN,
-      antworten: { "/data/catalog.json": json([STUECK]), "/versand/optionen": anWorker, "/create-order": anWorker } });
+      antworten: { "/data/catalog.json": json([STUECK]), "/versand/optionen": anWorker, "/create-order": anWorker, "/coupons/validate": anWorker } });
     s.laden(PROMOS);
     s.laden(KASSE);
     await ruhe();
+    // Die Kasse zeigt den Abzug schon vor PayPal: eigene Zeile, Gesamt gesenkt.
+    const summe = s.document.getElementById("kasseSumme").children.map(r => r.children.map(z => z.textContent));
+    assert.ok(summe.some(r => r.join(" | ") === "Gutschein CLOSERWITHNYLON | − 60,00 €"), JSON.stringify(summe));
+    assert.ok(summe.some(r => r.join(" | ") === "Gesamt | 90,00 €"), JSON.stringify(summe));
     assert.equal(await s.kontext.zahlung.createOrder(), "PAYPAL-1");
     const betrag = netz.patches.at(-1);
     assert.equal(betrag.breakdown ? betrag.breakdown.item_total.value : betrag.value, "90.00", "150 EUR -> 90 EUR");

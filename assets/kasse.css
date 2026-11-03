@@ -556,6 +556,7 @@
 .kasse-form--abholort #kZusatz { opacity: 0.55; }
 
 .kasse-summe__ziel dd { text-align: right; overflow-wrap: anywhere; }
+.kasse-summe__rabatt dd { color: var(--text); font-weight: 600; white-space: nowrap; }
 
 @media (max-width: 520px) {
   .kasse-wohin { grid-template-columns: minmax(0, 1fr); }
