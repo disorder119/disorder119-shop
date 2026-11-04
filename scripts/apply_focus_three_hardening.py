@@ -189,7 +189,8 @@ def product_data_gap_html(it, lang):
     old_cta = '''    parts.append('<p class="info__note">' + esc(trust_notes.get(lang, trust_notes["de"])) + '</p>')\n    if not shop_config["whatsappNumber"] and not shop_config["email"]:\n'''
     # note_text statt trust_notes[...]: der Hinweis traegt seit der
     # Versandpauschale zusaetzlich den Satz zu den Versandkosten.
-    new_cta = '''    parts.append('<p class="info__note">' + esc(note_text) + '</p>')\n    parts.append(product_data_gap_html(it, lang))\n    if not shop_config["whatsappNumber"] and not shop_config["email"]:\n'''
+    # Seit 04.11.2026 steht note_html (Trenner-Spans fuer den Handy-Umbruch) im Build.
+    new_cta = '''    parts.append('<p class="info__note">' + note_html + '</p>')\n    parts.append(product_data_gap_html(it, lang))\n    if not shop_config["whatsappNumber"] and not shop_config["email"]:\n'''
     text = replace_once(text, old_cta, new_cta, "product data gap disclosure")
     return text
 
