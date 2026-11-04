@@ -70,6 +70,10 @@ def aehnliche_teile(it, items, exclude_ids=(), n=4):
             continue
         if not (x.get("gallery") or [None])[0]:
             continue
+        # Immer dieselbe Kategorie (scripts/validate_catalog_taxonomy.py prueft
+        # das auf jeder Seite); die Punkte ordnen nur innerhalb der Kategorie.
+        if _kategorie(it) and _kategorie(x) != _kategorie(it):
+            continue
         punkte = aehnlichkeit(it, x)
         if punkte <= 0:
             continue
