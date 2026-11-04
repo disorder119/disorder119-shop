@@ -1001,7 +1001,7 @@ def build_page(it, shop_config, lang):
 <script src="/assets/ansicht.js" defer></script>
 <script src="/assets/zurueck.js" defer></script>
 <script>try{{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}}catch(e){{}}</script>
-<script src="/assets/catalog-number-links.js" defer></script>
+<script src="/assets/catalog-number-links.js" defer></script>{ui_tags()}
 </head>
 <body>
 <div class="page-head">
@@ -1062,7 +1062,7 @@ def build_page(it, shop_config, lang):
   window.ARTICLE_SHOP_CONFIG = {json.dumps(shop_config, ensure_ascii=False)};
   window.ARTICLE_LANG = "{lang}";
 </script>
-<script src="/assets/newsletter.js?v={NEWSLETTER_ASSET_VERSION}" fetchpriority="low" defer></script>{ui_tags()}
+<script src="/assets/newsletter.js?v={NEWSLETTER_ASSET_VERSION}" fetchpriority="low" defer></script>
 <script src="/assets/pwa.js?v={PWA_JS_VERSION}" defer></script>
 <script src="/assets/article.js?v={ARTICLE_JS_VERSION}" fetchpriority="low" defer></script>
 </body>
@@ -1466,7 +1466,7 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     # Oberflaeche vor den Versions-Tokens einhaengen: scripts/apply_pwa.py erwartet
     # APP_JS_VERSION, PWA_JS_VERSION und "return out" direkt hintereinander.
     if include_item_list:
-        out = out.replace("</body>", ui_tags() + "\n</body>", 1)
+        out = out.replace("</head>", ui_tags() + "\n</head>", 1)
     out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)
     out = out.replace("__PWA_JS_VERSION__", PWA_JS_VERSION)
     return out
@@ -2138,7 +2138,12 @@ LLMS_PATH = BASE / "llms.txt"
 # (Foto, Marke, Titel, Preis, Groesse) fuer WhatsApp/Instagram.
 def ui_tags():
     v = _asset_version("assets/d119-ui.js")[:8] + _asset_version("assets/d119-ui.css")[:4]
-    return f'\n<link rel="stylesheet" href="/assets/d119-ui.css?v={v}">\n<script src="/assets/d119-ui.js?v={v}" defer></script>'
+    # Stylesheet nicht blockierend und beides mit niedriger Prioritaet (Muster wie theme.css/newsletter.js:
+    # sonst verdraengen die beiden Dateien auf dem Handy die erste Darstellung um rund eine Sekunde): die Kopf-Regeln der Startseite stehen inline in
+    # index_template.html, alles andere (Slideshow, Teilen, Zuletzt angesehen ...) braucht es erst nach dem Laden.
+    return (f'\n<link rel="preload" as="style" href="/assets/d119-ui.css?v={v}" fetchpriority="low" onload="this.onload=null;this.rel=\'stylesheet\'">'
+            f'<noscript><link rel="stylesheet" href="/assets/d119-ui.css?v={v}"></noscript>'
+            f'\n<script src="/assets/d119-ui.js?v={v}" fetchpriority="low" defer></script>')
 
 
 def og_bild_url(it, hero):

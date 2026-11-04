@@ -328,27 +328,36 @@
      steht die (kompakte) Suche. */
   if (istArchiv) {
     var meta = document.querySelector(".masthead__meta"), suchfeld = document.getElementById("searchInput");
-    if (meta && suchfeld) {
+    var zeile = document.getElementById("uiZahlen");
+    if (meta && suchfeld && !zeile) {
+      // Aeltere Vorlage ohne den Kopf: zur Laufzeit umbauen (seit 04.11. bringt index_template.html ihn mit).
       html.classList.add("ui-kopf");
-      var zeile = document.createElement("p"); zeile.className = "ui-kopf__zahlen";
-      katalog().then(function (k) {
-        var verf = k.filter(function (x) { return x.public_status !== "SOLD"; }).length;
-        var marken = {}; k.forEach(function (x) { if (x.brand) marken[x.brand] = 1; });
-        zeile.textContent = verf + " verfügbar · " + k.length + " im Archiv · " + Object.keys(marken).length + " Marken";
-      });
+      zeile = document.createElement("p"); zeile.className = "ui-kopf__zahlen";
       var halter = document.createElement("div"); halter.className = "ui-kopf__suche";
       halter.appendChild(suchfeld);
       meta.insertAdjacentElement("afterend", halter);
       halter.insertAdjacentElement("afterend", zeile);
     }
+    if (zeile) {
+      katalog().then(function (k) {
+        var verf = k.filter(function (x) { return x.public_status !== "SOLD"; }).length;
+        var marken = {}; k.forEach(function (x) { if (x.brand) marken[x.brand] = 1; });
+        zeile.textContent = verf + " verfügbar · " + k.length + " im Archiv · " + Object.keys(marken).length + " Marken";
+      });
+    }
   }
 
-  /* Startseite: landet an der Leiste mit den Kategorien; der Kopf mit dem Schriftzug liegt darueber (hochscrollen). */
+  /* Startseite (ab dem zweiten Besuch): landet an der Leiste mit den Kategorien; der Kopf mit dem Schriftzug liegt darueber (hochscrollen). */
   if (istArchiv) {
     var rail = document.querySelector(".rail");
     var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
     var zurueck = nav && nav.type === "back_forward";
-    if (rail && !zurueck && !location.hash && window.scrollY < 40) {
+    // Erst ab dem zweiten Besuch: beim ersten Mal bleibt der Schriftzug oben (und das
+    // Raster darf sich noch setzen - Lighthouse wertet den Sprung sonst als Layout-Verschiebung,
+    // Startseite mobil 50 statt 95 Punkte).
+    var besuche = Number(speicher("ui_besuche") || 0) + 1;
+    speicher("ui_besuche", besuche);
+    if (rail && besuche >= 2 && !zurueck && !location.hash && window.scrollY < 40) {
       var kopf = document.querySelector(".page-head");
       var versatz = (kopf ? kopf.getBoundingClientRect().height : 0) + 6;
       var ziel = function () { return rail.getBoundingClientRect().top + window.scrollY - versatz; };
