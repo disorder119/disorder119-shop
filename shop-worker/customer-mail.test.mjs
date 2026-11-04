@@ -376,6 +376,9 @@ test("the shipping notice names the parcel, the number and the link", () => {
   assert.match(mitFoto.html, /https:\/\/disorder119\.com\/assets\/img\/b2-216\/0\.webp/);
   assert.match(mitFoto.html, /Archive No\. 213/);
   assert.match(mitFoto.html, /&rarr; Bremen · DHL 358088742443/);
+  // Versandzeit (Berlin) in Statusleiste und Story-Kopf: 09:00 UTC = 10:00 MEZ.
+  assert.match(mitFoto.html, /width="60">10:00<\/td>/);
+  assert.match(mitFoto.html, /5\. Nov\. · 10:00/);
   assert.match(mitFoto.html, /UNTERWEGS|Unterwegs &nbsp;·&nbsp; IN TRANSIT/);
   assert.match(mitFoto.html, /Nachricht senden/);
   assert.match(mitFoto.html, /assets\/favicon\.png/);
