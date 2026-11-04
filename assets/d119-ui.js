@@ -21,9 +21,22 @@
     clearTimeout(toastEl._t);
     toastEl._t = setTimeout(function () { toastEl.classList.remove("is-sichtbar"); }, ms || 2600);
   }
-  var katalogVersprechen = null;
-  function katalog() {
-    if (!katalogVersprechen) katalogVersprechen = fetch(location.origin + "/data/catalog.json").then(function (r) { return r.json(); }).catch(function () { return []; });
+  // catalog.json (gross) erst nach dem Laden der Seite und einer Ruhepause holen,
+  // damit es dem ersten Bild nicht die Leitung streitig macht (Lighthouse-Schwelle
+  // Startseite). Tippt jemand vorher in die Suche, kommt es sofort (katalog(true)).
+  var katalogAufloesen, katalogGestartet = false;
+  var katalogVersprechen = new Promise(function (r) { katalogAufloesen = r; });
+  var ruhe = new Promise(function (r) {
+    var los = function () { (window.requestIdleCallback || function (fn) { setTimeout(fn, 1); })(function () { setTimeout(r, 900); }); };
+    if (document.readyState === "complete") los(); else window.addEventListener("load", los, { once: true });
+  });
+  function katalogStarten() {
+    if (katalogGestartet) return;
+    katalogGestartet = true;
+    fetch(location.origin + "/data/catalog.json").then(function (r) { return r.json(); }).catch(function () { return []; }).then(katalogAufloesen);
+  }
+  function katalog(sofort) {
+    if (sofort) katalogStarten(); else ruhe.then(katalogStarten);
     return katalogVersprechen;
   }
   function teilZu(k, slug) { return k.find(function (x) { return String(x.url_slug || x.id) === String(slug); }); }
@@ -364,7 +377,7 @@
         var q = norm(such.value);
         if (q.length < 2) { box.innerHTML = ""; return; }
         timer = setTimeout(function () {
-          katalog().then(function (k) {
+          katalog(true).then(function (k) {
             var marken = {}, kandidaten = [];
             k.forEach(function (it) {
               if (it.brand) { marken[it.brand] = (marken[it.brand] || 0) + 1; }
