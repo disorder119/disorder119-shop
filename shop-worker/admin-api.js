@@ -347,7 +347,8 @@ async function getOrders(env, url) {
   const q = safeText(url.searchParams.get("q"), 120);
   if (statuses.length > 6 || statuses.some(s => !ORDER_STATUSES.includes(s))) throw new AdminError("INVALID_ORDER_STATUS", 400);
 
-  const where = [];
+  // Versteckte Testbestellungen (commerce_orders.versteckt, Migration 0048) nie in der Liste.
+  const where = ["o.versteckt=0"];
   const binds = [];
   if (statuses.length) { where.push(`o.status IN (${statuses.map(() => "?").join(",")})`); binds.push(...statuses); }
   if (q) {

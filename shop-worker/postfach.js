@@ -237,6 +237,9 @@ export async function mailSpeichern(env, mail, groesse, empfaenger) {
 // naechste Nachricht bzw. der Cron (postfachMeldungNachholen) gesammelt.
 export const POSTFACH_MELDUNG_MINUTEN = 10;
 const MELDUNG_SCHLUESSEL = "postfach_telegram_gemeldet";
+// Bis zu welcher Zeile (rowid) gemeldet wurde: ein Zeitstempel reicht nicht, zwei
+// Mails in derselben Millisekunde wie die Meldung wuerden sonst nie gemeldet.
+const MELDUNG_ROWID_SCHLUESSEL = "postfach_telegram_gemeldet_rowid";
 
 export function postfachText(anzahl, seit = null) {
   if (anzahl <= 1) return "📬 Neue Mail an kontakt@disorder119.com – Absender und Inhalt: Admin-App → Postfach";
@@ -253,8 +256,13 @@ export async function postfachMeldungNachholen(env, now = Date.now()) {
   const vorher = await env.DB.prepare("SELECT value FROM site_settings WHERE key=?").bind(MELDUNG_SCHLUESSEL).first();
   const seit = vorher?.value || null;
   if (seit && seit > grenze) return 0;
-  const offen = await env.DB.prepare("SELECT COUNT(*) AS n, MIN(received_at) AS erste FROM postfach WHERE received_at>?")
-    .bind(seit || new Date(now - 24 * 3_600_000).toISOString()).first();
+  const rowidVorher = await env.DB.prepare("SELECT value FROM site_settings WHERE key=?").bind(MELDUNG_ROWID_SCHLUESSEL).first();
+  const abRowid = Number(rowidVorher?.value || 0);
+  // Ohne Zeilenmarke (erste Meldung bzw. Bestand vor dieser Version): nach Zeit -
+  // seit der letzten Meldung, sonst die letzten 24 Stunden.
+  const abZeit = abRowid ? "" : (seit || new Date(now - 24 * 3_600_000).toISOString());
+  const offen = await env.DB.prepare("SELECT COUNT(*) AS n, MIN(received_at) AS erste, MAX(rowid) AS letzte FROM postfach WHERE rowid>? AND received_at>?")
+    .bind(abRowid, abZeit).first();
   const anzahl = Number(offen?.n || 0);
   if (!anzahl) return 0;
   // Anspruch atomar: nur wer den alten Wert noch sieht, meldet.
@@ -267,6 +275,10 @@ export async function postfachMeldungNachholen(env, now = Date.now()) {
     gesendet = Boolean((await sendTelegramMessage(env, postfachText(anzahl, offen.erste)))?.sent);
   } catch {
     gesendet = false;
+  }
+  if (gesendet) {
+    await env.DB.prepare("INSERT OR REPLACE INTO site_settings (key,value,updated_at) VALUES (?,?,?)")
+      .bind(MELDUNG_ROWID_SCHLUESSEL, String(Number(offen?.letzte || 0)), jetzt).run().catch(() => {});
   }
   if (!gesendet) {
     // Nicht angekommen: Anspruch zuruecknehmen, der Cron versucht es erneut.
