@@ -820,12 +820,24 @@ function stueckBild(item) {
     : Number.isInteger(itemId) && itemId > 0 ? `${SHOP_URL}/assets/og/${itemId}.jpg` : "";
 }
 
+// Versandzeitpunkt in Berliner Zeit: "14:32" fuer die Statusleiste des iPhones,
+// "4. Nov." / "Nov 4" / "4 nov." fuer den Story-Kopf (Inhaber 04.11.2026:
+// "immer genau die Uhrzeit, wann es losgesendet wurde").
+export function versandZeit(datum, sprache = "de") {
+  const d = datum instanceof Date ? datum : new Date(String(datum || ""));
+  if (Number.isNaN(d.getTime())) return { uhr: "", tag: "" };
+  const l = mailSprache(sprache);
+  const uhr = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Berlin" }).format(d);
+  const tag = new Intl.DateTimeFormat(LOCALE[l], { day: "numeric", month: "short", timeZone: "Europe/Berlin" }).format(d);
+  return { uhr, tag };
+}
+
 // iPhone-Rahmen (Dynamic Island, Statusleiste, Home-Balken) um einen Bildschirm.
-function iphone(bildschirm) {
+function iphone(bildschirm, uhr = "9:41") {
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="width:290px;background:#050505;border:2px solid #222222;border-radius:46px;font-family:${MAIL_SCHRIFT};">
     <tr><td style="padding:6px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#000000;border-radius:40px;">
-        <tr><td style="padding:12px 22px 0 24px;font-size:12px;font-weight:700;color:#ffffff;" width="60">9:41</td>
+        <tr><td style="padding:12px 22px 0 24px;font-size:12px;font-weight:700;color:#ffffff;" width="60">${escapeHtml(uhr || "9:41")}</td>
             <td align="center" style="padding:10px 0 0;"><div style="width:92px;height:28px;background:#000000;border:1px solid #161616;border-radius:16px;margin:0 auto;font-size:0;line-height:0;">&nbsp;</div></td>
             <td align="right" style="padding:12px 22px 0 0;font-size:11px;font-weight:700;color:#ffffff;white-space:nowrap;" width="70">&#9679;&#9679;&#9679; &#9650; &#9646;</td></tr>
         <tr><td colspan="3" style="padding:0;">${bildschirm}</td></tr>
@@ -843,7 +855,7 @@ function storyBand(text) {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:7px 0;font-family:${MAIL_SCHRIFT};font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:#ffffff;white-space:nowrap;border-top:1px solid #222222;border-bottom:1px solid #222222;">${text}</td></tr></table>`;
 }
 
-function storyBildschirm(item, bild, { sprache, stadt, tracking, carrier }) {
+function storyBildschirm(item, bild, { sprache, stadt, tracking, carrier, zeit = "" }) {
   const t = STORY_TEXT[mailSprache(sprache)];
   const titel = escapeHtml(stueckTitel(item, sprache));
   const nr = safeText(item.article_no || item.articleNo || "", 40);
@@ -856,7 +868,7 @@ function storyBildschirm(item, bild, { sprache, stadt, tracking, carrier }) {
     <tr><td style="padding:6px 8px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${seg}</tr></table></td></tr>
     <tr><td style="padding:8px 10px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
       <td width="34"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="padding:2px;border:1.5px solid #ffffff;border-radius:50%;"><img src="${SHOP_URL}/assets/favicon.png" width="26" height="26" alt="" style="display:block;width:26px;height:26px;border-radius:50%;background:#000000;border:0;"></td></tr></table></td>
-      <td style="padding-left:8px;font-size:13px;font-weight:600;color:#ffffff;">disorder119 <span style="font-weight:400;color:#a8a8a8;padding-left:4px;">${escapeHtml(t.zeit)}</span></td>
+      <td style="padding-left:8px;font-size:13px;font-weight:600;color:#ffffff;">disorder119 <span style="font-weight:400;color:#a8a8a8;padding-left:4px;">${escapeHtml(zeit || t.zeit)}</span></td>
       <td align="right" style="font-size:16px;color:#ffffff;white-space:nowrap;letter-spacing:2px;">&middot;&middot;&middot; &nbsp;&#10005;</td></tr></table></td></tr>
     <tr><td style="padding:12px 0 0;">${band}</td></tr>
     <tr><td align="center" style="padding:20px 0 18px;"><img src="${escapeHtml(bild)}" width="196" alt="${titel}" style="display:block;width:196px;max-width:196px;height:auto;border:0;"></td></tr>
@@ -872,11 +884,14 @@ function storyBildschirm(item, bild, { sprache, stadt, tracking, carrier }) {
   </table>`;
 }
 
-function versandMotiv(order, items, { sprache = "de", stadt = "", tracking = "", carrier = "DHL" } = {}) {
+function versandMotiv(order, items, { sprache = "de", stadt = "", tracking = "", carrier = "DHL", datum = new Date() } = {}) {
   if (!items.length) return "";
   const bild = stueckBild(items[0]);
   if (!bild) return "";
-  return iphone(storyBildschirm(items[0], bild, { sprache, stadt, tracking, carrier }));
+  const { uhr, tag } = versandZeit(datum, sprache);
+  // Story-Kopf: "4. Nov. · 14:32" - Instagram zeigt sonst "2 Std.", hier zaehlt die echte Versandzeit.
+  const zeit = uhr ? `${tag} · ${uhr}` : "";
+  return iphone(storyBildschirm(items[0], bild, { sprache, stadt, tracking, carrier, zeit }), uhr);
 }
 
 // Marke und Groesse aus dem oeffentlichen Katalog (fuer den Anhaenger der
@@ -939,7 +954,7 @@ export function formatShippingConfirmation(order = {}, options = {}) {
     : `<p style="margin:0;text-align:center;color:${F.leise};">${escapeHtml(t.versandMit(carrier))}</p>`;
   const stadt = safeText(order.city || order.contact?.city || "", 60);
   const kopf = `<p style="margin:0 auto;max-width:440px;color:${F.leise};">${t.kopf(`<strong style="color:${F.text};">${escapeHtml(number)}</strong>`, escapeHtml(stadt))}</p>`;
-  const marke = versandMotiv(order, items, { sprache, stadt, tracking, carrier });
+  const marke = versandMotiv(order, items, { sprache, stadt, tracking, carrier, datum: options.datum || order.shipped_at || new Date() });
   const inhalt = [
     marke ? `<tr><td align="center" style="padding:26px 0 0;">${marke}</td></tr>` : "",
     `<tr><td style="padding:${marke ? "14px" : "26px"} 4px 0;">${nummerBox}</td></tr>`,
@@ -1473,7 +1488,7 @@ export async function sendInvoiceAfterCaptureByProviderOrder(env, providerOrderI
 
 async function loadShippedOrder(env, orderId) {
   const order = await env.DB.prepare(`SELECT o.id,o.order_number,o.status,o.total_cents,o.shipping_cents,
-      s.carrier,s.tracking_number
+      s.carrier,s.tracking_number,s.shipped_at
     FROM commerce_orders o
     LEFT JOIN shipments s ON s.order_id=o.id
     WHERE o.id=? ORDER BY s.created_at DESC LIMIT 1`).bind(String(orderId)).first();
