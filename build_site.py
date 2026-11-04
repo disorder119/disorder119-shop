@@ -893,6 +893,9 @@ def build_page(it, shop_config, lang):
     hell = foto_hell(grid_thumb_path(it))
     gallery_attr = f' style="--d119-hell:{hell}"' if hell else ""
     home = lang_home(lang)
+    seq_prev, seq_next = sequenz_nachbarn(it)
+    nav_prev_attr = f' href="{home}artikel/{esc(seq_prev)}/" rel="prev"' if seq_prev else ' style="visibility:hidden"'
+    nav_next_attr = f' href="{home}artikel/{esc(seq_next)}/" rel="next"' if seq_next else ' style="visibility:hidden"'
     canonical = SITE_URL.rstrip("/") + home + "artikel/" + str(it.get("url_slug", it["id"])) + "/"
     hreflang_links = "\n".join(
         '<link rel="alternate" hreflang="' + l + '" href="'
@@ -1018,9 +1021,9 @@ def build_page(it, shop_config, lang):
   </div>
 </div>
 <nav class="article-sequence-nav" aria-label="{esc(product_nav_copy['nav_aria'])}">
-  <a class="article-sequence-nav__link article-sequence-nav__link--prev" aria-label="{esc(product_nav_copy['prev_aria'])}" style="visibility:hidden">{esc(product_nav_copy['prev'])}</a>
+  <a class="article-sequence-nav__link article-sequence-nav__link--prev" aria-label="{esc(product_nav_copy['prev_aria'])}"{nav_prev_attr}>{esc(product_nav_copy['prev'])}</a>
   <a class="article-sequence-nav__link article-sequence-nav__link--archive" href="{home}" aria-label="{esc(product_nav_copy['archive_aria'])}">{esc(product_nav_copy['archive'])}</a>
-  <a class="article-sequence-nav__link article-sequence-nav__link--next" aria-label="{esc(product_nav_copy['next_aria'])}" style="visibility:hidden">{esc(product_nav_copy['next'])}</a>
+  <a class="article-sequence-nav__link article-sequence-nav__link--next" aria-label="{esc(product_nav_copy['next_aria'])}"{nav_next_attr}>{esc(product_nav_copy['next'])}</a>
 </nav>
 <div class="product" role="main">
   <div class="gallery"{gallery_attr}>
@@ -1281,6 +1284,31 @@ def initial_archive_items(limit=2):
         key=lambda it: it.get("brightness") if isinstance(it.get("brightness"), (int, float)) else 0.5,
         reverse=True,
     )[:limit]
+
+
+# Vorheriger/Naechster auf der Produktseite schon im HTML (Inhaber 04.11.: die Links
+# erschienen erst eine Sekunde nach "Zum Archiv", weil pwa-runtime.js sie aus
+# catalog.json nachlud). Dieselbe Reihenfolge wie dort: verfuegbare Teile nach
+# Helligkeit, rundum. Hat die Kundschaft im Archiv gefiltert, ersetzt pwa-runtime.js
+# die Links durch die gespeicherte Reihenfolge.
+_SEQUENZ = None
+
+
+def sequenz_nachbarn(it):
+    global _SEQUENZ
+    if _SEQUENZ is None:
+        verfuegbar = [x for x in ITEMS if x.get("public_status") == "AVAILABLE"]
+        _SEQUENZ = [(str(x["id"]), str(x.get("url_slug", x["id"]))) for x in sorted(
+            verfuegbar,
+            key=lambda x: x.get("brightness") if isinstance(x.get("brightness"), (int, float)) else 0.5,
+            reverse=True,
+        )]
+    ids = [x[0] for x in _SEQUENZ]
+    aktuell = str(it.get("id"))
+    if aktuell not in ids or len(ids) < 2:
+        return None, None
+    i = ids.index(aktuell)
+    return _SEQUENZ[(i - 1) % len(ids)][1], _SEQUENZ[(i + 1) % len(ids)][1]
 
 
 def grid_thumb_path(it):

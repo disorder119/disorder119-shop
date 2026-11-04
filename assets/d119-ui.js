@@ -253,11 +253,12 @@
         orbit.appendChild(label);
         masthead.classList.add("ui-orbit-host"); masthead.appendChild(orbit);
         var schmal = window.innerWidth < 760, maxSichtbar = schmal ? 2 : 4, lebend = [], idx = 0;
-        // Plaetze: links und rechts vom Schriftzug, auf dem Handy in den oberen Ecken.
-        // Nur im Kopfbereich neben dem Schriftzug: links/rechts, obere Haelfte (unten stehen Suche und Zahlen).
+        // Plaetze neben dem Schriftzug, nie dahinter (Inhaber 04.11.): auf dem Handy klein in den
+        // beiden oberen Ecken ueber der Zeile "Das kuratierte Archiv von", am Rechner links/rechts
+        // am Rand in der oberen Haelfte (unten stehen Suche und Zahlen).
         var plaetze = schmal
-          ? [[4, 6], [70, 6]]
-          : [[4, 8], [84, 8], [6, 44], [82, 44]];
+          ? ["left:8px;top:0", "right:8px;top:0"]
+          : ["left:3%;top:8%", "right:3%;top:8%", "left:5%;top:44%", "right:5%;top:44%"];
         function zufall(a, b) { return a + Math.random() * (b - a); }
         function auftauchen() {
           var it = teile[idx % teile.length]; idx++;
@@ -265,8 +266,8 @@
           if (lebend.length >= maxSichtbar) platz = plaetze[(idx - 1 - maxSichtbar) % plaetze.length];
           var a = document.createElement("a"); a.className = "ui-orbit__teil"; a.href = "/artikel/" + (it.url_slug || it.id) + "/";
           a.title = (it.brand || "") + (it.title ? " – " + it.title : "");
-          var groesse = schmal ? 78 : 100;
-          a.style.cssText = "left:" + platz[0] + "%;top:" + platz[1] + "%;width:" + groesse + "px;--rot:" + zufall(-4, 4).toFixed(1) + "deg;--dx:" + zufall(-8, 8).toFixed(0) + "px;--dy:" + zufall(-10, -4).toFixed(0) + "px;--dauer:" + zufall(12, 18).toFixed(1) + "s";
+          var groesse = schmal ? 54 : 100;
+          a.style.cssText = platz + ";width:" + groesse + "px;--rot:" + zufall(-4, 4).toFixed(1) + "deg;--dx:" + zufall(-8, 8).toFixed(0) + "px;--dy:" + zufall(-10, -4).toFixed(0) + "px;--dauer:" + zufall(12, 18).toFixed(1) + "s";
           a.innerHTML = '<img src="' + gridBild(it) + '" alt="" loading="lazy" decoding="async">';
           orbit.appendChild(a);
           requestAnimationFrame(function () { a.classList.add("is-da"); });
