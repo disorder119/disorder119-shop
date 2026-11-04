@@ -290,9 +290,6 @@ a { color: inherit; }
 @media (max-width: 860px) {
   .info__desc { font-size: 0.98rem; line-height: 1.6; }
   .info__desc-trenner { display: block; height: 6px; font-size: 0; }
-  /* Kleiner Hinweis unter dem Kaufknopf: lesbar statt 0,72rem-Block, je Punkt eine Zeile. */
-  .info__note { font-size: 0.84rem; line-height: 1.55; margin-top: 18px; }
-  .info__note-trenner { display: block; height: 4px; font-size: 0; }
 }
 
 /* Allgemeiner Gebraucht-Hinweis unter der Beschreibung (statt Zustand je Teil). */
@@ -338,6 +335,12 @@ a { color: inherit; }
   color: var(--text-faint);
   line-height: 1.5;
   margin: 14px 0 0;
+}
+/* Kleiner Hinweis unter dem Kaufknopf: am Handy lesbar statt 0,72rem-Block, je Punkt eine Zeile.
+   Muss hinter der Grundregel stehen, sonst gewinnt deren font-size (gleiche Spezifität). */
+@media (max-width: 860px) {
+  .info__note { font-size: 0.84rem; line-height: 1.55; margin-top: 18px; }
+  .info__note-trenner { display: block; height: 4px; font-size: 0; }
 }
 
 .info__config-warning {
