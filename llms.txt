@@ -18,7 +18,7 @@
 - Artikelnummer = Pfad: https://disorder119.com/artikel/<nummer>/ (Englisch /en/artikel/<nummer>/, Französisch /fr/artikel/<nummer>/).
 - Impressum und Rechtstexte sind für Menschen auf der Seite erreichbar und werden bewusst nicht indexiert.
 
-## Verfügbare Teile (196)
+## Verfügbare Teile (195)
 - [A.F. Vandevorst Cardigan mit Muster Damen](https://disorder119.com/artikel/191/): 190 € · Größe S · Grau
 - [A.F. Vandevorst Bluse Damen Blau](https://disorder119.com/artikel/192/): 175 € · Größe 42 · Blau
 - [Adidas Originals Sample-Parka Unisex Schwarz](https://disorder119.com/artikel/108/): 280 € · Größe M · Schwarz
@@ -186,7 +186,6 @@
 - [Y-3 Asymmetrisches Maxikleid Damen Schwarz](https://disorder119.com/artikel/200/): 155 € · Größe XS · Schwarz
 - [Y-3 Strohhut](https://disorder119.com/artikel/181/): 140 € · Größe S · Schwarz
 - [Y-3 Yohji Skull Zip-Hoodie Herren Schwarz](https://disorder119.com/artikel/241/): 130 € · Größe S · Schwarz
-- [Y-3 Grafik-Beanie](https://disorder119.com/artikel/213/): 120 € · Größe Einheitsgröße · Schwarz
 - [Y-3 Sport Uniform Cargohose Herren Schwarz](https://disorder119.com/artikel/280/): 120 € · Größe M · Schwarz
 - [Y-3 Kapuzenjacke Herren Schwarz](https://disorder119.com/artikel/8/): 110 € · Größe M · Schwarz
 - [Y-3 Zip-Hoodie Damen Schwarz](https://disorder119.com/artikel/42/): 110 € · Größe XS / 34 / 6 · Schwarz
@@ -216,4 +215,4 @@
 - [Yves Saint Laurent Leder-Winterjacke Unisex Schwarz](https://disorder119.com/artikel/204/): 490 € · Größe L (geschätzt) · Schwarz
 - [Yves Saint Laurent Rive Gauche Seidentop Damen Bunt](https://disorder119.com/artikel/142/): 120 € · Größe S / 36 / 8 · Orange, Bunt
 
-Weitere 81 Teile im Archiv sind verkauft und bleiben als Referenz sichtbar.
+Weitere 82 Teile im Archiv sind verkauft und bleiben als Referenz sichtbar.
