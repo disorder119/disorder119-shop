@@ -26,7 +26,7 @@ import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications
 import { sendInvoiceAfterCaptureByProviderOrder, sendOrderConfirmation, sendOrderConfirmationByProviderOrder } from "./customer-mail.js";
 import { handleAccountRequest, isAccountRoute, sendRequestedAccountLink, sendRequestedAccountLinkByProviderOrder } from "./customer-account.js";
 import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
-import { handleVersand, istVersandRoute } from "./dhl.js";
+import { dhlAutoMarken, handleVersand, istVersandRoute } from "./dhl.js";
 import { handleDhlQr, isDhlQrRoute, katalogAbgleich } from "./dhl-qr.js";
 import { handlePacklink, handlePacklinkWebhook, isPacklinkRoute, isPacklinkWebhookRoute } from "./packlink.js";
 import { handleVersandOptionen, isVersandOptionenRoute } from "./versand.js";
@@ -211,6 +211,8 @@ async function bestellungNachbereiten(env, ctx, orderId, providerOrderId, reqId)
   );
   await runBackground(ctx, redeemCouponAfterPayment(env, String(orderId), reqId), "coupon_redeem_failed", reqId);
   await runBackground(ctx, notifyPaidOrder(env, String(orderId), reqId), "sale_notification_failed", reqId);
+  // Geschaeftskundenvertrag mit Automatik (DHL_AUTO_MARKE): Marke sofort nach dem Kauf.
+  await runBackground(ctx, dhlAutoMarken(env, reqId), "dhl_auto_label_failed", reqId);
   await runBackground(ctx, sendRequestedAccountLink(env, String(orderId), reqId), "account_link_failed", reqId);
 }
 
@@ -573,6 +575,7 @@ const worker = {
                 reqId,
               );
               await runBackground(ctx, notifyPaidOrderByProviderOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_sale_notification_failed", reqId);
+              await runBackground(ctx, dhlAutoMarken(runtimeEnv, reqId), "dhl_auto_label_failed", reqId);
               await runBackground(ctx, sendRequestedAccountLinkByProviderOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_account_link_failed", reqId);
               // Eingezogene Reservierung: die Rechnung (hoechstens einmal).
               await runBackground(ctx, sendInvoiceAfterCaptureByProviderOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_invoice_failed", reqId);
@@ -607,6 +610,8 @@ const worker = {
     // Reservierte Zahlungen spaetestens am Ende der PayPal-Garantiezeit
     // einziehen, gepruefte Abbuchungen nachfragen, Rechnungen nachholen.
     await runBackground(ctx, zahlungenPflegen(env, reqId, new Date(scheduledTime)), "payment_capture_failed", reqId);
+    // DHL-Vertragsmarken fuer bezahlte Bestellungen ohne Sendung (nur mit DHL_AUTO_MARKE = "an").
+    await runBackground(ctx, dhlAutoMarken(env, reqId, scheduledTime), "dhl_auto_label_failed", reqId);
     await runBackground(ctx, paypalErstattungenAbgleichen(env, reqId, true), "paypal_refund_reconciliation_failed", reqId);
     // Nach dem Abgleich: wartende Erstattungen erneut versuchen, erledigte
     // abschliessen (Kundenmail, wieder im Shop), an Offenes erinnern.
