@@ -1,15 +1,14 @@
 {
   "schema": "catalog-taxonomy-v1",
-  "totalItems": 281,
-  "reviewedItems": 281,
+  "totalItems": 280,
+  "reviewedItems": 280,
   "departmentCounts": {
     "Men": 75,
     "Objects": 1,
-    "Unisex": 30,
+    "Unisex": 29,
     "Women": 175
   },
   "productTypeCounts": {
-    "Accessory": 1,
     "Backpack": 1,
     "Bag": 5,
     "Beanie": 2,

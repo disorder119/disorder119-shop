@@ -1,10 +1,10 @@
 {
   "summary": {
-    "items_total": 281,
-    "catalog_public": 277,
+    "items_total": 280,
+    "catalog_public": 276,
     "available": 195,
     "reserved": 0,
-    "sold": 82,
+    "sold": 81,
     "draft": 4
   },
   "quality": {
@@ -122,10 +122,9 @@
       "item_ids": []
     },
     "single_photo_only": {
-      "count": 2,
+      "count": 1,
       "item_ids": [
-        9402,
-        9999
+        9402
       ]
     },
     "price_on_request": {
