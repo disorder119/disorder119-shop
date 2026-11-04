@@ -1062,9 +1062,9 @@ def build_page(it, shop_config, lang):
   window.ARTICLE_SHOP_CONFIG = {json.dumps(shop_config, ensure_ascii=False)};
   window.ARTICLE_LANG = "{lang}";
 </script>
-<script src="/assets/newsletter.js?v={NEWSLETTER_ASSET_VERSION}" fetchpriority="low" defer></script>
+<script src="/assets/newsletter.js?v={NEWSLETTER_ASSET_VERSION}" fetchpriority="low" defer></script>{ui_tags()}
 <script src="/assets/pwa.js?v={PWA_JS_VERSION}" defer></script>
-<script src="/assets/article.js?v={ARTICLE_JS_VERSION}" fetchpriority="low" defer></script>{ui_tags()}
+<script src="/assets/article.js?v={ARTICLE_JS_VERSION}" fetchpriority="low" defer></script>
 </body>
 </html>
 """
@@ -1463,10 +1463,12 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
     out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
     out = out.replace("__THEME_VERSION__", THEME_CSS_VERSION)
-    out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)
-    out = out.replace("__PWA_JS_VERSION__", PWA_JS_VERSION)
+    # Oberflaeche vor den Versions-Tokens einhaengen: scripts/apply_pwa.py erwartet
+    # APP_JS_VERSION, PWA_JS_VERSION und "return out" direkt hintereinander.
     if include_item_list:
         out = out.replace("</body>", ui_tags() + "\n</body>", 1)
+    out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)
+    out = out.replace("__PWA_JS_VERSION__", PWA_JS_VERSION)
     return out
 
 
