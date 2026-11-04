@@ -413,14 +413,18 @@
   }
 
   // ---- Versand: Standard (und Express, wenn angeboten) mit Live-Preis
-  function versandLaden() {
+  // still: im Hintergrund neu laden (nach der Codepruefung) - Anzeige und Summe bleiben, bis die Antwort da ist.
+  function versandLaden(still) {
     var box = $("kasseVersand");
-    box.textContent = t("versandLaedt");
-    box.setAttribute("aria-busy", "true");
+    if (!still) {
+      box.textContent = t("versandLaedt");
+      box.setAttribute("aria-busy", "true");
+    }
     if (!WORKER) { zustand.versand = null; versandZeichnen(); return Promise.resolve(); }
     var ids = zustand.stuecke.map(function (it) { return it.id; }).join(",");
     var nr = ++versandAnfrage;
-    return fetch(WORKER + "/versand/optionen?artikel=" + encodeURIComponent(ids) + "&land=" + encodeURIComponent(zustand.land))
+    var codeParam = gespeicherterCode() ? "&code=" + encodeURIComponent(gespeicherterCode()) : "";
+    return fetch(WORKER + "/versand/optionen?artikel=" + encodeURIComponent(ids) + "&land=" + encodeURIComponent(zustand.land) + codeParam)
       .then(function (r) { return r.json().catch(function () { return null; }).then(function (d) { return r.ok ? d : (d && d.laender ? { laender: d.laender } : null); }); })
       .catch(function () { return null; })
       .then(function (daten) {
@@ -623,6 +627,8 @@
       if (!daten) return;
       if (daten.valid === true) gutscheinInfo = Object.assign({ code: code }, daten);
       summeZeichnen();
+      // Versandkostenfrei gilt ab 99 € nach Abzug des Codes: Versand im Hintergrund neu laden.
+      versandLaden(true);
     }).catch(function () { /* ohne Vorschau: der Abzug kommt bei PayPal */ });
   }
   function rechtZeichnen() {

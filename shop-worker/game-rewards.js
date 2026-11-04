@@ -85,6 +85,23 @@ export function discountForSubtotal(subtotalCents, discountBps = DISCOUNT_BPS) {
   };
 }
 
+// Warenwert nach Abzug eines Codes - ohne Datenbank, fuer die Versandregel
+// "versandkostenfrei ab" (versand.js, worker.js create-order). stuecke:
+// [{ id, cents }]. Artikel-Code: nur das eine Stueck auf den Festpreis (wie
+// artikelCodeAnwenden), Prozent-Code: wie discountForSubtotal. Ohne gueltigen
+// Code (row null) bleibt es die Summe.
+export function rabattierterWarenwert(row, stuecke = []) {
+  const summe = stuecke.reduce((s, it) => s + Math.max(0, Math.round(Number(it.cents) || 0)), 0);
+  if (!row) return summe;
+  if (row.item_id) {
+    const stueck = stuecke.find(it => Number(it.id) === Number(row.item_id));
+    const festpreis = Math.round(Number(row.fixed_price_cents) || 0);
+    const rabatt = stueck ? Math.round(Number(stueck.cents) || 0) - festpreis : 0;
+    return stueck && festpreis > 0 && rabatt > 0 && rabatt < summe ? summe - rabatt : summe;
+  }
+  return discountForSubtotal(summe, row.discount_bps).totalCents;
+}
+
 export function scoreIsPlausible(game, score, durationMs) {
   const rule = GAME_RULES[normalizeGame(game)];
   const value = Math.round(Number(score));
