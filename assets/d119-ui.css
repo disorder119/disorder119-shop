@@ -1,0 +1,99 @@
+/* Oberflaeche (04.11.2026), gehoert zu assets/d119-ui.js. */
+
+/* 1 · Seitenwechsel: ruhige Ueberblendung zwischen Archiv und Produktseite (Safari 18.2+, Chrome). */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: ui-raus .22s ease-in both; }
+::view-transition-new(root) { animation: ui-rein .32s ease-out both; }
+@keyframes ui-raus { to { opacity: 0; } }
+@keyframes ui-rein { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }
+
+/* Keine Scrollbar unter den Fotos (Windows zeigte einen grauen Balken); wischen/scrollen geht weiter. */
+.gallery__thumbs { scrollbar-width: none; }
+.gallery__thumbs::-webkit-scrollbar { display: none; }
+
+/* 2 · Nächstes Teil reinziehen: Karte, die mit dem Finger hereinkommt. */
+html.ui-zieht { overflow-x: hidden; }
+html.ui-zieht .product { transition: none; }
+.product { transition: transform .22s ease-out; will-change: transform; }
+.ui-peek { position: fixed; top: 50%; width: min(72vw, 300px); z-index: 65; transform: translateX(100%); opacity: 0; display: none; grid-template-rows: auto auto; background: #141414; color: #f2efe7; border: 1px solid rgba(242,239,231,.18); border-radius: 18px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.6); text-decoration: none; transition: transform .22s ease-out, opacity .22s; margin-top: -45vw; }
+.ui-peek.is-aktiv { display: grid; }
+.ui-peek--rechts { right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.ui-peek--links { left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.ui-peek img { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; background: #1b1b1b; }
+.ui-peek span { display: block; padding: 10px 12px 12px; font: 13px/1.35 system-ui, sans-serif; }
+.ui-peek b { display: block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; margin-bottom: 2px; }
+.ui-peek em { display: block; font-style: normal; font-weight: 700; margin-top: 4px; }
+
+/* 3 · Slideshow bei gedrückter Kachel. */
+.plate.ui-slideshow .plate__frame { outline: 2px solid rgba(242,239,231,.55); outline-offset: -2px; }
+.plate.ui-slideshow .plate__frame img { transition: opacity .15s; }
+.ui-slideshow__zaehler { position: absolute; right: 8px; bottom: 8px; background: rgba(0,0,0,.65); color: #fff; font: 700 11px/1 system-ui, sans-serif; padding: 5px 8px; border-radius: 999px; pointer-events: none; }
+.plate .plate__frame { position: relative; }
+
+/* 6 · „Zum Home-Bildschirm“ (nur iPhone). */
+.ui-home { position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 80; background: #161616; color: #f2efe7; border: 1px solid rgba(242,239,231,.18); border-radius: 18px; padding: 14px 16px 14px 14px; font: 14px/1.45 system-ui, sans-serif; box-shadow: 0 18px 50px rgba(0,0,0,.55); transform: translateY(130%); transition: transform .35s cubic-bezier(.2,.8,.2,1); display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+.ui-home.is-sichtbar { transform: translateY(0); }
+.ui-home__icon { width: 44px; height: 44px; border-radius: 10px; background: #000 url('/assets/favicon.png') center/70% no-repeat; border: 1px solid rgba(242,239,231,.2); }
+.ui-home strong { display: block; font-size: 15px; }
+.ui-home small { opacity: .8; }
+.ui-home__zu { background: transparent; border: 1px solid rgba(242,239,231,.3); color: inherit; border-radius: 999px; width: 32px; height: 32px; cursor: pointer; }
+.ui-home kbd { font: inherit; border: 1px solid rgba(242,239,231,.35); border-radius: 6px; padding: 0 5px; }
+
+/* 8 · „Zuletzt angesehen“. */
+.ui-zuletzt { padding: 10px 16px 0; text-align: center; }
+.ui-zuletzt__titel { font: 700 11px/1 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; opacity: .7; margin: 0 0 8px; }
+.ui-zuletzt__liste { display: flex; gap: 12px; width: max-content; max-width: 100%; margin: 0 auto; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.ui-zuletzt__liste::-webkit-scrollbar { display: none; }
+.ui-zuletzt__liste a { flex: 0 0 72px; scroll-snap-align: start; text-decoration: none; color: inherit; font: 600 10px/1.2 system-ui, sans-serif; }
+.ui-zuletzt__liste img { display: block; width: 72px; height: 96px; object-fit: cover; border-radius: 8px; background: #1b1b1b; margin-bottom: 4px; }
+.ui-zuletzt__liste a { flex-basis: 84px; }
+.ui-zuletzt__liste img { width: 84px; height: 112px; }
+.ui-zuletzt__liste b { display: block; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; opacity: .65; }
+.ui-zuletzt__liste span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.25; }
+.ui-zuletzt__liste em { display: block; font-style: normal; font-weight: 700; margin-top: 2px; }
+
+/* 9 · Teilen-Knopf und Auswahl am Rechner. */
+.ui-teilen { display: inline-flex; align-items: center; gap: 8px; margin: 18px 0 4px; background: transparent; color: inherit; border: 1px solid rgba(242,239,231,.4); border-radius: 999px; padding: 9px 16px 9px 13px; font: 700 12px/1 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; transition: background .2s, transform .15s; }
+.ui-teilen:hover { background: rgba(242,239,231,.1); }
+.ui-teilen:active { transform: scale(.97); }
+[data-theme="hell"] .ui-teilen { border-color: rgba(0,0,0,.4); }
+.ui-sheet { position: fixed; inset: 0; z-index: 95; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.ui-sheet.is-sichtbar { opacity: 1; pointer-events: auto; }
+.ui-sheet__box { width: min(420px, 100%); background: #161616; color: #f2efe7; border-radius: 18px 18px 0 0; padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); transform: translateY(20px); transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+.ui-sheet.is-sichtbar .ui-sheet__box { transform: none; }
+.ui-sheet__box p { margin: 0 0 10px; font: 700 12px/1 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+.ui-sheet__btn { display: flex; align-items: center; gap: 12px; width: 100%; background: transparent; color: inherit; border: 0; border-top: 1px solid rgba(242,239,231,.12); padding: 12px 4px; font: 600 15px/1 system-ui, sans-serif; text-decoration: none; cursor: pointer; text-align: left; }
+.ui-sheet__btn b { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff; font-size: 15px; }
+.ui-sheet__zu { width: 100%; margin-top: 10px; background: rgba(242,239,231,.1); color: inherit; border: 0; border-radius: 12px; padding: 12px; font: 600 14px/1 system-ui, sans-serif; cursor: pointer; }
+
+/* 12 · Suchvorschläge. */
+.ui-suggest { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0 2px; }
+.ui-suggest:empty { display: none; }
+.ui-suggest__hint { font: 600 12px/1 system-ui, sans-serif; opacity: .6; align-self: center; }
+.ui-suggest button { background: rgba(242,239,231,.08); border: 1px solid rgba(242,239,231,.25); color: inherit; border-radius: 999px; padding: 6px 11px; font: 600 12px/1 system-ui, sans-serif; cursor: pointer; }
+.ui-suggest button em { font-style: normal; opacity: .6; font-weight: 500; }
+[data-theme="hell"] .ui-suggest button { background: rgba(0,0,0,.05); border-color: rgba(0,0,0,.25); }
+
+/* Toast. */
+.ui-toast { position: fixed; left: 50%; top: 14px; transform: translate(-50%, -30px); z-index: 99; background: #f2efe7; color: #111; border-radius: 12px; padding: 10px 14px; font: 600 13px/1.3 system-ui, sans-serif; box-shadow: 0 12px 30px rgba(0,0,0,.4); opacity: 0; transition: opacity .25s, transform .25s; max-width: calc(100vw - 28px); }
+.ui-toast.is-sichtbar { opacity: 1; transform: translate(-50%, 0); }
+
+/* 8b · Schwebende "Zuletzt angesehen" um den Schriftzug. */
+.ui-orbit-host { position: relative; }
+.ui-orbit { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.ui-orbit__label { display: none; position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%); font: 600 10px/1 system-ui, sans-serif; letter-spacing: .18em; text-transform: uppercase; opacity: .35; white-space: nowrap; }
+.ui-orbit__teil { position: absolute; pointer-events: auto; display: block; opacity: 0; transform: translateY(28px) rotate(var(--rot)) scale(.96); transition: opacity 1.4s ease, transform 1.6s cubic-bezier(.2,.8,.2,1); filter: drop-shadow(0 18px 30px rgba(0,0,0,.55)); }
+.ui-orbit__teil.is-da { opacity: .88; transform: translateY(0) rotate(var(--rot)) scale(1); animation: ui-drift var(--dauer) ease-in-out infinite alternate; }
+.ui-orbit__teil.is-weg { opacity: 0 !important; transform: translateY(-18px) rotate(var(--rot)) scale(.98) !important; animation: none; transition-duration: 1s; }
+.ui-orbit__teil img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: contain; }
+.ui-orbit__teil:hover { opacity: 1; z-index: 2; animation-play-state: paused; transform: rotate(0deg) scale(1.12); }
+@keyframes ui-drift { from { translate: 0 0; } to { translate: var(--dx) var(--dy); } }
+@media (prefers-reduced-motion: reduce) { .ui-orbit__teil.is-da { animation: none; } }
+@media (max-width: 760px) { .ui-orbit__teil { filter: drop-shadow(0 10px 18px rgba(0,0,0,.5)); } }
+[data-theme="hell"] .ui-orbit__teil { filter: drop-shadow(0 14px 24px rgba(0,0,0,.25)); }
+
+
+/* Markenlink als Tippziel mindestens 24 px hoch (WCAG 2.5.8): seit die Bildlaufleiste der Vorschaubilder
+   ausgeblendet ist, liegt die Bildleiste am Handy dicht am Link - axe (Chromium-Smoke) verlangt dann die Hoehe. */
+.info__brand { display: inline-flex; align-items: center; min-height: 24px; }

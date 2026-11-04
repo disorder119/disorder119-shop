@@ -23,6 +23,11 @@ PAYPAL_ENVIRONMENT = "live"
 # DHL-Schluessel allein schaltet nicht auf Produktion. Labelkauf bleibt eine
 # ausdrueckliche Admin-Aktion mit Zahlung im DHL-Frontend.
 DHL_PRIVAT_ENVIRONMENT = "live"
+# Geschaeftskundenvertrag (dhl.js, Secrets DHL_API_KEY/DHL_USER/DHL_PASSWORD/DHL_EKP):
+# "live" = echte Marken auf Rechnung; DHL_AUTO_MARKE = "an" erzeugt die Marke
+# von selbst nach jedem Kauf (zieht dabei die PayPal-Reservierung ein).
+DHL_ENVIRONMENT = "live"
+DHL_AUTO_MARKE = "an"
 # Geo-Sperre (geo-sperre.js): aus diesen Laendern ist die API gar nicht
 # erreichbar (403). ISO-Codes mit Komma, "aus" schaltet ab; DE und US werden
 # nie gesperrt. Optional GEO_SPERRE_KONTINENTE = "AS" fuer ganz Asien.
@@ -117,6 +122,8 @@ preview_urls = false
 ADMIN_SESSION_HOURS = "24"
 PAYPAL_ENVIRONMENT = "sandbox"
 DHL_PRIVAT_ENVIRONMENT = "sandbox"
+DHL_ENVIRONMENT = "sandbox"
+DHL_AUTO_MARKE = "an"
 SANDBOX = "1"
 GEO_SPERRE_LAENDER = "RU,BY,IN,KP,IR"
 

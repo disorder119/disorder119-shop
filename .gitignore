@@ -45,3 +45,4 @@ tools/fotoquellen.local.json
 
 # Verified public asset export; never publish the repository root.
 .storefront-build/
+.vorschau-build/
