@@ -394,6 +394,37 @@
     if (nextBtn) nextBtn.hidden = true;
   }
 
+  // Test-Layout am Rechner (Inhaber 04.11.2026): ?ansicht=raster zeigt alle
+  // Fotos als Raster links, die Infos bleiben rechts stehen; der Browser merkt
+  // es sich (d119_produkt_raster), ?ansicht=standard stellt zurueck. Am Handy
+  // bleibt alles wie gehabt (article.css, nur ab 861px).
+  (function rasterAnsicht() {
+    var schluessel = "d119_produkt_raster";
+    var wahl = null;
+    try { wahl = new URLSearchParams(location.search).get("ansicht"); } catch (e) { wahl = null; }
+    try {
+      if (wahl === "raster") localStorage.setItem(schluessel, "1");
+      else if (wahl === "standard") localStorage.removeItem(schluessel);
+      if (localStorage.getItem(schluessel) !== "1") return;
+    } catch (e) { if (wahl !== "raster") return; }
+    var produkt = document.querySelector(".product");
+    var galerieEl = document.querySelector(".gallery");
+    if (!produkt || !galerieEl || !gallery.length) return;
+    produkt.classList.add("product--raster");
+    var raster = document.createElement("div");
+    raster.className = "gallery__raster" + (gallery.length === 1 ? " gallery__raster--einzeln" : "");
+    raster.id = "galleryRaster";
+    gallery.forEach(function (src, i) {
+      var knopf = document.createElement("button");
+      knopf.type = "button";
+      knopf.setAttribute("aria-label", (LANG === "fr" ? "Photo " : LANG === "en" ? "Photo " : "Foto ") + (i + 1) + " / " + gallery.length);
+      knopf.innerHTML = '<img src="' + src + '" alt="" ' + (i < 2 ? 'fetchpriority="high"' : 'loading="lazy"') + ' />';
+      knopf.addEventListener("click", function () { showPhoto(i); openLightbox(); });
+      raster.appendChild(knopf);
+    });
+    galerieEl.appendChild(raster);
+  })();
+
   if (prevBtn) prevBtn.addEventListener("click", function () { showPhoto(idx - 1); });
   if (nextBtn) nextBtn.addEventListener("click", function () { showPhoto(idx + 1); });
 
