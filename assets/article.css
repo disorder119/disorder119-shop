@@ -220,24 +220,6 @@ a { color: inherit; }
 .gallery-thumb.active { opacity: 1; border-color: var(--accent); }
 .gallery-thumb:hover { opacity: 1; }
 
-/* Test-Layout am Rechner (Inhaber 04.11.2026, "parallel fuer PC testweise"):
-   alle Fotos als zweispaltiges Raster links, die Infospalte bleibt rechts
-   stehen (sticky). Nur mit ?ansicht=raster (merkt sich der Browser) und nur
-   ab 861px; article.js setzt die Klasse und baut .gallery__raster. */
-@media (min-width: 861px) {
-  .product--raster { grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr); gap: clamp(24px, 4vw, 64px); }
-  .product--raster .gallery { position: static; }
-  .product--raster .gallery__stage, .product--raster .gallery__thumbs { display: none; }
-  .product--raster .info { position: sticky; top: 24px; align-self: start; }
-  .gallery__raster { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .gallery__raster--einzeln { grid-template-columns: 1fr; }
-  .gallery__raster button { padding: 0; border: 0; background: var(--surface); aspect-ratio: 3 / 4; cursor: zoom-in; overflow: hidden; }
-  .gallery__raster img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .gallery__raster button:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
-}
-.gallery__raster { display: none; }
-@media (min-width: 861px) { .product--raster .gallery__raster { display: grid; } }
-
 /* ---------- Info-Panel ---------- */
 
 .info__brand {
