@@ -422,7 +422,9 @@
     }
     if (!WORKER) { zustand.versand = null; versandZeichnen(); return Promise.resolve(); }
     var ids = zustand.stuecke.map(function (it) { return it.id; }).join(",");
-    var nr = ++versandAnfrage;
+    // Stilles Nachladen zaehlt nicht als neue Anfrage: eine noch laufende erste Antwort darf
+    // weiter gelten (sonst bleibt auf langsamen Geraeten die Versandwahl leer, bis die zweite da ist).
+    var nr = still ? versandAnfrage : ++versandAnfrage;
     var codeParam = gespeicherterCode() ? "&code=" + encodeURIComponent(gespeicherterCode()) : "";
     return fetch(WORKER + "/versand/optionen?artikel=" + encodeURIComponent(ids) + "&land=" + encodeURIComponent(zustand.land) + codeParam)
       .then(function (r) { return r.json().catch(function () { return null; }).then(function (d) { return r.ok ? d : (d && d.laender ? { laender: d.laender } : null); }); })
