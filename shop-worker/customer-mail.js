@@ -1,4 +1,5 @@
 import { LEGAL_VERSION, CONTRACT_HTML, CONTRACT_HTML_EN, CONTRACT_HTML_FR } from "./legal-content.js";
+import { PdfText } from "./pdf-text.js";
 // Transaktionsmails an Kundinnen und Kunden: Bestellbestaetigung, Versand,
 // Anmeldelink fuers Kundenkonto.
 //
@@ -162,7 +163,7 @@ const MAIL_SCHRIFT = "'Helvetica Neue',Helvetica,Arial,sans-serif";
 // Rahmen der Kundenmails: Tabellen und Inline-Styles, weil Outlook und Gmail
 // kein modernes CSS koennen. `vorschau` ist die Zeile, die das Postfach neben
 // dem Betreff zeigt.
-function kundenmailRahmen({ titel, eyebrow, kopf, inhalt, vorschau, sprache = "de" }) {
+function kundenmailRahmen({ titel, eyebrow, kopf, inhalt, vorschau, sprache = "de", fussVerkaeufer = true }) {
   const F = MAIL_FARBE;
   const l = mailSprache(sprache);
   return `<!DOCTYPE html>
@@ -185,7 +186,7 @@ ${vorschau ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;co
   ${inhalt}
   <tr><td style="padding:30px 4px 44px;border-top:1px solid ${F.linie};text-align:center;font-size:11px;line-height:1.6;color:${F.leise};">
     ${escapeHtml(allgemein(l).archiv)}<br>
-    ${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}, ${escapeHtml(SELLER.street)}, ${escapeHtml(SELLER.city)}
+    ${fussVerkaeufer ? `${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}, ${escapeHtml(SELLER.street)}, ${escapeHtml(SELLER.city)}` : `${escapeHtml(SELLER.brand)} · <a href="${shopLink(l)}" style="color:${F.leise};">disorder119.com</a>`}
   </td></tr>
 </table>
 </td></tr></table>
@@ -396,6 +397,71 @@ function vertragAus(roh, contactEmail) {
   return { html, text };
 }
 
+// ---------------------------------------------------------------------------
+// Fortlaufende Rechnungsnummer "2026-002" (Migration 0049) - atomar je Jahr.
+// Ohne Datenbank (Tests, Entwurf) null: dann bleibt die Bestellnummer die Nummer.
+// ---------------------------------------------------------------------------
+export async function naechsteRechnungsnummer(env, now = new Date()) {
+  if (!env?.DB) return null;
+  try {
+    const jahr = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric" }).format(now));
+    const jetzt = now.toISOString();
+    await env.DB.prepare("INSERT OR IGNORE INTO rechnungsnummern (jahr,zaehler,updated_at) VALUES (?,0,?)").bind(jahr, jetzt).run();
+    const row = await env.DB.prepare("UPDATE rechnungsnummern SET zaehler=zaehler+1,updated_at=? WHERE jahr=? RETURNING zaehler").bind(jetzt, jahr).first();
+    const zaehler = Number(row?.zaehler || 0);
+    if (!zaehler) return null;
+    return `${jahr}-${String(zaehler).padStart(3, "0")}`;
+  } catch (err) {
+    console.error(JSON.stringify({ level: "error", event: "rechnungsnummer_fehlgeschlagen", message: safeText(err?.message || "unknown", 120) }));
+    return null;
+  }
+}
+
+// Rechnung als PDF (gleiche Angaben wie das archivierte HTML aus tax-invoice.js).
+export function rechnungPdf(order = {}, invoice = {}, profile = {}) {
+  const seller = profile.seller || SELLER;
+  const contact = order.contact || {};
+  const items = Array.isArray(order.items) ? order.items : [];
+  const geld = c => new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(Number(c || 0) / 100);
+  const datum = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(invoice.issued_at || Date.now()));
+  const nummer = String(invoice.number || order.order_number || "");
+  const pdf = new PdfText({ titel: `Rechnung ${nummer}`, kopfzeile: `${seller.brand || "Disorder119"} · ${seller.name || ""} · ${seller.street || ""} · ${seller.city || ""}`, fusszeile: `Rechnung ${nummer}` });
+  pdf.ueberschrift("Rechnung");
+  pdf.absatz(`Rechnungsnummer ${nummer} · Ausgestellt am ${datum}${order.order_number && order.order_number !== nummer ? ` · Bestellung ${order.order_number}` : ""}`, { farbe: 0.3 });
+  pdf.block(["Rechnung an", contact.recipient_name || "", contact.address_line1 || "", contact.address_line2 || "", [contact.postal_code, contact.city].filter(Boolean).join(" "), landName(String(contact.country_code || "DE").toUpperCase(), "de") || contact.country_code || ""].filter(Boolean));
+  pdf.block([seller.name || "", (seller.brand || "") + (seller.street ? ` · ${seller.street}` : ""), [seller.city, seller.country].filter(Boolean).join(", "), profile.tax_number ? `Steuernummer: ${profile.tax_number}` : ""].filter(Boolean), { farbe: 0.3, groesse: 9 });
+  const itemsTotal = items.reduce((sum, i) => sum + Number(i.unit_price_cents || 0) * (i.quantity ?? 1), 0);
+  const g = order.gutschein && Number(order.gutschein.cents) > 0 ? order.gutschein : null;
+  pdf.tabelle([{ titel: "Artikel", breite: 5 }, { titel: "Interne Nr.", breite: 2 }, { titel: "Betrag", breite: 2, rechts: true }],
+    items.map(i => [String(i.title_snapshot || "") + (g && (g.itemId == null || Number(i.item_id) === Number(g.itemId)) ? ` – Preis vor Gutschein ${geld(Number(i.unit_price_cents || 0) + Number(g.cents))}, Gutschein ${g.code || ""} −${geld(g.cents)}` : ""),
+      "#" + String(i.article_no || "").replace(/^#+\s*/, ""), geld(i.unit_price_cents)]));
+  const rabatt = itemsTotal - Number(order.subtotal_cents || 0);
+  pdf.absatz([`Warenwert ${geld(itemsTotal)}`, rabatt > 0 ? `Rabatt −${geld(rabatt)}` : "", `Versand ${geld(order.shipping_cents)}`, `Gesamt ${geld(order.total_cents)}`].filter(Boolean).join("\n"), { fett: true });
+  pdf.absatz("Für diese Lieferung gilt die Steuerbefreiung für Kleinunternehmer gemäß § 19 UStG. Es wird keine Umsatzsteuer ausgewiesen.", { groesse: 9, farbe: 0.25 });
+  pdf.absatz(`Bestellung vom ${String(order.created_at || "").slice(0, 10)}. Lieferzeitpunkt gemäß gesondertem Liefer-/Versandnachweis. Zahlung über den Zahlungsanbieter; die Rechnung ist bereits beglichen.`, { groesse: 9, farbe: 0.25 });
+  return { name: `Rechnung ${nummer}.pdf`, b64: pdf.base64(), text: `Rechnung ${nummer}` };
+}
+
+// AGB und Widerrufsbelehrung als PDF-Anhang der Bestellbestaetigung (Textform,
+// dauerhafter Datentraeger) - statt des langen Blocks in der Mail selbst.
+export function vertragPdf(contract = {}) {
+  const pdf = new PdfText({ titel: `AGB und Widerrufsbelehrung · Version ${contract.version || LEGAL_VERSION}`, kopfzeile: "DISORDER119 · disorder119.com", fusszeile: `AGB und Widerrufsbelehrung · Version ${contract.version || LEGAL_VERSION}` });
+  const abschnitte = String(contract.text || "").split(/\n{2,}/);
+  for (const a of abschnitte) {
+    const z = a.trim();
+    if (!z) continue;
+    if (z.length < 70 && !/[.:;,]$/.test(z)) pdf.absatz(z, { fett: true, groesse: 11, nach: 3 });
+    else pdf.absatz(z, { groesse: 9.5 });
+  }
+  if (contract.verbindlich) {
+    pdf.neueSeite();
+    pdf.ueberschrift("Verbindliche deutsche Fassung", 14);
+    for (const a of String(contract.verbindlich.text || "").split(/\n{2,}/)) { const z = a.trim(); if (z) pdf.absatz(z, { groesse: 9.5 }); }
+  }
+  const text = String(contract.text || "") + (contract.verbindlich ? "\n\n" + String(contract.verbindlich.text || "") : "");
+  return { name: "AGB und Widerrufsbelehrung.pdf", b64: pdf.base64(), text };
+}
+
 // options.zahlung: fehlt = sofort eingezogen (Rechnung steht in dieser Mail),
 // "RESERVIERT" = PayPal hat nur reserviert, "EINGEZOGEN" = reserviert und
 // inzwischen eingezogen. In beiden neuen Faellen kommt die Rechnung mit dem
@@ -434,6 +500,7 @@ const BESTELLUNG_TEXT = Object.freeze({
     kontoKnopf: "Bestellung im Konto ansehen",
     verkaeufer: "Verkäufer",
     vertragText: v => `VERTRAGSINFORMATIONEN · Fassung ${v}`,
+    vertragAnhang: "Unsere AGB mit Widerrufsbelehrung und Muster-Widerrufsformular liegen dieser Mail als PDF bei.",
     vertragHtml: v => `Vertragsinformationen · Fassung ${v}`,
     verbindlich: "",
     onlinefassung: url => `Onlinefassung: ${url}`,
@@ -468,6 +535,7 @@ const BESTELLUNG_TEXT = Object.freeze({
     kontoKnopf: "View order in your account",
     verkaeufer: "Seller",
     vertragText: v => `CONTRACT INFORMATION · Version ${v}`,
+    vertragAnhang: "Our terms and conditions with the withdrawal policy and model withdrawal form are attached to this e-mail as a PDF (binding German version included).",
     vertragHtml: v => `Contract information · Version ${v}`,
     verbindlich: "Legally binding German version",
     onlinefassung: url => `Online version: ${url}`,
@@ -502,6 +570,7 @@ const BESTELLUNG_TEXT = Object.freeze({
     kontoKnopf: "Voir la commande dans ton compte",
     verkaeufer: "Vendeur",
     vertragText: v => `INFORMATIONS CONTRACTUELLES · Version ${v}`,
+    vertragAnhang: "Nos CGV avec l’information sur le droit de rétractation et le formulaire type sont jointes à cet e-mail en PDF (version allemande faisant foi incluse).",
     vertragHtml: v => `Informations contractuelles · Version ${v}`,
     verbindlich: "Version allemande faisant foi",
     onlinefassung: url => `Version en ligne : ${url}`,
@@ -522,7 +591,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
   const zahlung = ["RESERVIERT", "EINGEZOGEN"].includes(options.zahlung) ? options.zahlung : null;
   const invoice = zahlung
     ? { ready: false, deferred: true, grund: "RECHNUNG_NACH_EINZUG", number: safeText(order.order_number || "", 80) }
-    : renderInvoice(order,options.taxProfile||invoiceProfile({},SELLER),options.issuedAt);
+    : renderInvoice(order,options.taxProfile||invoiceProfile({},SELLER),options.issuedAt,options.rechnungsnummer||"");
   const documentNote = zahlung === "RESERVIERT"
     ? t.notizReserviert
     : zahlung === "EINGEZOGEN"
@@ -584,9 +653,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     `${a.email}: ${contactEmail}`,
     "",
     t.vertragText(contract.version),
-    contract.text,
-    ...(contract.verbindlich ? [t.verbindlich.toUpperCase(), contract.verbindlich.text] : []),
-    "",
+    t.vertragAnhang,
     t.onlinefassung(agbUrl),
   ].join("\n");
 
@@ -616,9 +683,8 @@ export function formatOrderConfirmation(order = {}, options = {}) {
       ${mailKnopf(kontoUrl, t.kontoKnopf)}`),
     mailAbschnitt(t.verkaeufer, `<p style="margin:0;color:${F.leise};">${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}<br>${escapeHtml(SELLER.street)}<br>${escapeHtml(SELLER.city)}<br>${escapeHtml(verkaeuferLand(sprache))}<br>${escapeHtml(a.telefon)}: ${escapeHtml(SELLER.phone)}<br>${escapeHtml(a.email)}: <a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a></p>`),
     `<tr><td style="padding:26px 4px 30px;">
-      ${vertragBlock(t.vertragHtml(contract.version), contract.html)}${contract.verbindlich ? `
-      <div style="margin-top:18px;">${vertragBlock(t.verbindlich, contract.verbindlich.html)}</div>` : ""}
-      <p style="margin:14px 0 0;font-size:12px;color:${F.leise};">${escapeHtml(t.alleBedingungen)}<a href="${agbUrl}" style="color:${F.text};">${agbUrl}</a></p>
+      <div style="border-top:1px solid ${F.linie};padding-top:18px;font-size:12px;line-height:1.55;color:${F.leise};"><p style="margin:0 0 6px;">${escapeHtml(t.vertragHtml(contract.version))}</p><p style="margin:0;">${escapeHtml(t.vertragAnhang)}</p>
+      <p style="margin:10px 0 0;">${escapeHtml(t.alleBedingungen)}<a href="${agbUrl}" style="color:${F.text};">${agbUrl}</a></p></div>
     </td></tr>`,
   ].join("");
   const html = kundenmailRahmen({
@@ -628,9 +694,13 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     inhalt,
     vorschau: t.vorschau(number, items.length, betrag(total)),
     sprache,
+    fussVerkaeufer: false,
   });
 
-  return { subject, text, html, invoice, sprache };
+  // Anhaenge: AGB + Widerrufsbelehrung immer, die Rechnung nur, wenn sie in dieser Mail steht.
+  const anhaenge = [vertragPdf(contract)];
+  if (invoice.ready) anhaenge.push(rechnungPdf(order, invoice, options.taxProfile || invoiceProfile({}, SELLER)));
+  return { subject, text, html, invoice, sprache, anhaenge };
 }
 
 // ---------------------------------------------------------------------------
@@ -826,6 +896,11 @@ export async function sendMail(env, message = {}) {
     const kopie = normalizeEmail(env.MAIL_BCC || "");
     if (kopie && kopie !== to) payload.bcc = [{ email: kopie }];
   }
+  // PDF-Anhaenge (Rechnung, AGB und Widerrufsbelehrung): Base64 aus pdf-text.js.
+  const anhaenge = (Array.isArray(message.anhaenge) ? message.anhaenge : [])
+    .filter(a => a && a.b64 && /^[A-Za-z0-9+/=]+$/.test(a.b64) && a.b64.length < 8_000_000)
+    .map(a => ({ name: safeText(a.name || "Anhang.pdf", 100), content: a.b64 }));
+  if (anhaenge.length) payload.attachment = anhaenge;
 
   let response;
   try {
@@ -1015,7 +1090,10 @@ export async function sendOrderConfirmation(env, orderId, reqId = crypto.randomU
       message={subject:saved.subject,html:saved.html,text:saved.text,invoice:JSON.parse(saved.invoice_json)};
     } else {
       const sprache=await bestellSprache(env,order.id);
-      message=formatOrderConfirmation(await titelFuerSprache(env,order,sprache),{contactEmail:mailSenderIdentity(env).email||safeText(env.MAIL_REPLY_TO||'',200),taxProfile:invoiceProfile(env,SELLER),zahlung:await zahlungsModus(env,order.id),sprache});
+      // Sofort eingezogen: die Rechnung steht in dieser Mail und bekommt ihre fortlaufende Nummer.
+      const modus=await zahlungsModus(env,order.id);
+      const rechnungsnummer=modus?null:await naechsteRechnungsnummer(env);
+      message=formatOrderConfirmation(await titelFuerSprache(env,order,sprache),{rechnungsnummer,contactEmail:mailSenderIdentity(env).email||safeText(env.MAIL_REPLY_TO||'',200),taxProfile:invoiceProfile(env,SELLER),zahlung:await zahlungsModus(env,order.id),sprache});
       await env.DB.prepare(`INSERT INTO order_confirmation_archive(order_id,subject,html,text,html_sha256,text_sha256,invoice_json,created_at) VALUES(?,?,?,?,?,?,?,?)`)
         .bind(order.id,message.subject,message.html,message.text,await pruefsumme(message.html),await pruefsumme(message.text),JSON.stringify(message.invoice),new Date().toISOString()).run();
     }
@@ -1030,6 +1108,7 @@ export async function sendOrderConfirmation(env, orderId, reqId = crypto.randomU
       html: message.html,
       text: message.text,
       tag: "order-confirmation",
+      anhaenge: message.anhaenge || (message.invoice?.ready ? [rechnungPdf(order, message.invoice, invoiceProfile(env, SELLER))] : []),
       // Diese eine Mail ist zugleich die Rechnung, deshalb geht ein
       // Durchschlag ins Shop-Postfach.
       kopieAnShop: true,
@@ -1072,12 +1151,12 @@ async function archiviereRechnung(env, order, message, recipient) {
     const versand = Number(order.shipping_cents ?? 0);
     const ergebnis = await env.DB.prepare(`INSERT OR IGNORE INTO rechnungen
       (id,order_id,rechnungsnummer,ausgestellt_am,waehrung,warenwert_cents,versand_cents,
-       gesamt_cents,empfaenger_email,html,text,pruefsumme,erstellt_am,document_type,html_sha256,tax_profile_json)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+       gesamt_cents,empfaenger_email,html,text,pruefsumme,erstellt_am,document_type,html_sha256,tax_profile_json,pdf_b64)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(
         crypto.randomUUID(),
         String(order.id),
-        safeText(order.order_number || "", 80),
+        safeText(invoice.number || order.order_number || "", 80),
         invoice.issued_at,
         order.currency || "EUR",
         warenwert,
@@ -1089,6 +1168,7 @@ async function archiviereRechnung(env, order, message, recipient) {
         await pruefsumme(invoice.text),
         jetzt,
         'invoice',await pruefsumme(invoice.html),JSON.stringify(invoice.profile),
+        (message.anhaenge || []).find(a => /^Rechnung /.test(String(a?.name || "")))?.b64 || null,
       ).run();
     return Boolean(ergebnis?.meta?.changes);
   } catch (err) {
@@ -1110,22 +1190,25 @@ async function archiviereRechnung(env, order, message, recipient) {
 // fragment, text und number.
 const RECHNUNGSMAIL_TEXT = Object.freeze({
   de: {
-    einleitung: (n, b) => `Den Betrag für deine Bestellung ${n} (${b}) haben wir jetzt über PayPal eingezogen. Hier ist deine Rechnung.`,
-    subject: n => `Deine Rechnung zur Bestellung ${n} – DISORDER119`,
+    einleitung: (n, b) => `Den Betrag für deine Bestellung ${n} (${b}) haben wir jetzt über PayPal eingezogen. Deine Rechnung liegt als PDF bei.`,
+    subject: n => `Deine Rechnung ${n} – DISORDER119`,
+    anhang: n => `Rechnung ${n} (PDF im Anhang)`,
     titel: "Deine Rechnung",
     eyebrow: "Rechnung",
     vorschau: (n, b) => `Rechnung ${n} · ${b}`,
   },
   en: {
-    einleitung: (n, b) => `We have now collected the amount for your order ${n} (${b}) via PayPal. Here is your invoice.`,
-    subject: n => `Your invoice for order ${n} – DISORDER119`,
+    einleitung: (n, b) => `We have now collected the amount for your order ${n} (${b}) via PayPal. Your invoice is attached as a PDF.`,
+    subject: n => `Your invoice ${n} – DISORDER119`,
+    anhang: n => `Invoice ${n} (PDF attached)`,
     titel: "Your invoice",
     eyebrow: "Invoice",
     vorschau: (n, b) => `Invoice ${n} · ${b}`,
   },
   fr: {
-    einleitung: (n, b) => `Nous avons maintenant débité via PayPal le montant de ta commande ${n} (${b}). Voici ta facture.`,
-    subject: n => `Ta facture pour la commande ${n} – DISORDER119`,
+    einleitung: (n, b) => `Nous avons maintenant débité via PayPal le montant de ta commande ${n} (${b}). Ta facture est jointe en PDF.`,
+    subject: n => `Ta facture ${n} – DISORDER119`,
+    anhang: n => `Facture ${n} (PDF en pièce jointe)`,
     titel: "Ta facture",
     eyebrow: "Facture",
     vorschau: (n, b) => `Facture ${n} · ${b}`,
@@ -1140,17 +1223,22 @@ export function formatInvoiceMail(order = {}, invoice = {}, options = {}) {
   const t = RECHNUNGSMAIL_TEXT[sprache];
   const hinweis = allgemein(sprache).rechnungDeutsch;
   const contactEmail = safeText(options.contactEmail || "", 200);
-  const number = safeText(order.order_number || invoice.number || "", 80) || "—";
+  const bestellnummer = safeText(order.order_number || "", 80) || "—";
+  const number = safeText(invoice.number || order.order_number || "", 80) || "—";
   const betrag = euroAmount(order.total_cents ?? 0, order.currency || "EUR", sprache);
-  const einleitung = t.einleitung(number, betrag);
+  const einleitung = t.einleitung(bestellnummer, betrag);
   const subject = t.subject(number);
+  const items = Array.isArray(order.items) ? order.items : [];
+  const stueckZeilen = items.map(i => `· ${safeText(i.title_snapshot || "", 160)} — ${euroAmount(i.unit_price_cents ?? 0, order.currency || "EUR", sprache)}`);
   const text = [
     "DISORDER119",
     "",
     einleitung,
     ...(hinweis ? [hinweis] : []),
     "",
-    String(invoice.text || ""),
+    t.anhang(number),
+    ...stueckZeilen,
+    `${BESTELLUNG_TEXT[sprache].gesamt}: ${betrag}`,
     "",
     fragenText(contactEmail, sprache),
   ].join("\n");
@@ -1158,17 +1246,21 @@ export function formatInvoiceMail(order = {}, invoice = {}, options = {}) {
   const kopf = `<p style="margin:0 auto;max-width:440px;color:${F.leise};">${escapeHtml(einleitung)}</p>${hinweis ? `
     <p style="margin:8px auto 0;max-width:440px;font-size:13px;color:${F.leise};">${escapeHtml(hinweis)}</p>` : ""}`;
   const inhalt = [
-    `<tr><td>${invoice.fragment || ""}</td></tr>`,
+    mailAbschnitt(t.anhang(number), `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">
+      ${items.map(item => stueckZeile(item, euroAmount(item.unit_price_cents ?? 0, order.currency || "EUR", sprache), sprache)).join("")}
+    </table>
+    <p style="margin:12px 0 0;font-size:17px;font-weight:700;color:${F.text};text-align:right;">${escapeHtml(BESTELLUNG_TEXT[sprache].gesamt)}: ${escapeHtml(betrag)}</p>`, false),
     fragenZeile(contactEmail, sprache),
   ].join("");
   const html = kundenmailRahmen({ titel: t.titel, eyebrow: t.eyebrow, kopf, inhalt, vorschau: t.vorschau(number, betrag), sprache });
-  return { subject, text, html, invoice, sprache };
+  const anhaenge = invoice.pdf ? [invoice.pdf] : [rechnungPdf(order, invoice, options.taxProfile || invoiceProfile({}, SELLER))];
+  return { subject, text, html, invoice, sprache, anhaenge };
 }
 
 // Eine archivierte Rechnung wieder als Rechnung lesen (fuer eine erneute Mail
 // nach einem Versandfehler) - nie neu ausstellen, was schon ausgestellt ist.
 async function archivierteRechnung(env, orderId) {
-  const row = await env.DB.prepare(`SELECT rechnungsnummer,ausgestellt_am,html,text,pruefsumme,html_sha256
+  const row = await env.DB.prepare(`SELECT rechnungsnummer,ausgestellt_am,html,text,pruefsumme,html_sha256,pdf_b64
     FROM rechnungen WHERE order_id=?`).bind(String(orderId)).first();
   if (!row) return null;
   if (await pruefsumme(row.text) !== row.pruefsumme || (row.html_sha256 && await pruefsumme(row.html) !== row.html_sha256)) {
@@ -1184,6 +1276,7 @@ async function archivierteRechnung(env, orderId) {
     html,
     text: row.text,
     fragment: start >= 0 && ende > start ? html.slice(start + 6, ende) : "",
+    pdf: row.pdf_b64 ? { name: `Rechnung ${row.rechnungsnummer}.pdf`, b64: String(row.pdf_b64), text: `Rechnung ${row.rechnungsnummer}` } : null,
   };
 }
 
@@ -1215,9 +1308,12 @@ export async function sendInvoiceAfterCapture(env, orderId, reqId = crypto.rando
 
   let invoice = await archivierteRechnung(env, order.id);
   if (!invoice) {
-    const neu = renderInvoice(order, invoiceProfile(env, SELLER), zahlung.eingezogen_am || new Date().toISOString());
-    if (!neu.ready) return { sent: false, reason: "INVOICE_NOT_READY", issues: neu.issues };
-    invoice = neu;
+    const profil = invoiceProfile(env, SELLER);
+    const probe = renderInvoice(order, profil, zahlung.eingezogen_am || new Date().toISOString());
+    if (!probe.ready) return { sent: false, reason: "INVOICE_NOT_READY", issues: probe.issues };
+    // Erst wenn die Rechnung ausgestellt werden kann, die fortlaufende Nummer ziehen.
+    const nummer = await naechsteRechnungsnummer(env);
+    invoice = nummer ? renderInvoice(order, profil, zahlung.eingezogen_am || new Date().toISOString(), nummer) : probe;
   }
 
   const claimId = `notify:email:invoice:${order.id}`;
@@ -1229,7 +1325,7 @@ export async function sendInvoiceAfterCapture(env, orderId, reqId = crypto.rando
 
   let archiviert = false;
   try {
-    const message = formatInvoiceMail(order, invoice, { contactEmail, sprache: await bestellSprache(env, order.id) });
+    const message = formatInvoiceMail(order, invoice, { contactEmail, sprache: await bestellSprache(env, order.id), taxProfile: invoiceProfile(env, SELLER) });
     archiviert = await archiviereRechnung(env, order, message, recipient);
     if (!archiviert) throw new Error("invoice_archive_failed");
     const delivery = await sendMail(env, {
@@ -1238,6 +1334,7 @@ export async function sendInvoiceAfterCapture(env, orderId, reqId = crypto.rando
       subject: message.subject,
       html: message.html,
       text: message.text,
+      anhaenge: message.anhaenge,
       tag: "invoice",
       // Beleg: Durchschlag ins Shop-Postfach.
       kopieAnShop: true,
