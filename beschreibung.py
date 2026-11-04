@@ -312,8 +312,9 @@ def akkordeon_html(it: dict, t: dict, lang: str, *, beschreibung_text: str, gebr
     zustand_html = (f'<p class="info__akk-text">{esc(zustand)}</p>' if zustand else "") + \
         f'<p class="info__gebraucht info__akk-text--klein" data-zustand-hinweis>{esc(gebraucht_hinweis)}</p>'
     out.append(leiste("zustand", zustand_html, offen=True))
-    if masse:
-        out.append(leiste("masse", f'<p class="info__akk-text">{esc(masse)}</p>'))
+    masse_leiste = masse_html(t, lang)
+    if masse or masse_leiste:
+        out.append(leiste("masse", masse_leiste + (f'<p class="info__akk-text info__akk-text--klein">{esc(masse)}</p>' if masse else "")))
     out.append(leiste("versand", f'<p class="info__akk-text">{esc(versand)}</p>'))
     if recht:
         out.append(leiste("recht", f'<p class="info__akk-text info__akk-text--klein">{esc(recht)}</p>'))
@@ -327,7 +328,8 @@ def trust_html(lang: str) -> str:
 
 
 def masse_html(t: dict, lang: str) -> str:
-    """Puppenmasse als Leiste unter dem Foto."""
+    """Puppenmasse als eine ruhige Zeile in der Klappleiste "Masse & Passform"
+    (Inhaber 05.11.2026: nicht mehr als Leiste unter dem Foto)."""
     if not t.get("masse"):
         return ""
     L = _LABEL[lang]
@@ -341,6 +343,6 @@ def masse_html(t: dict, lang: str) -> str:
         karten.append((L[key] if key else label, cm))
     if not karten:
         return ""
-    return ('<div class="gallery__masse" aria-label="' + esc(L["puppe"]) + '">'
-            + "".join(f"<div><small>{esc(label)}</small><b>{esc(cm)}</b><i>cm</i></div>" for label, cm in karten[:5])
-            + f'</div><p class="gallery__masse-hinweis">{esc(L["puppe"])}</p>')
+    return ('<dl class="info__masse">'
+            + "".join(f"<div><dt>{esc(label)}</dt><dd>{esc(cm)} cm</dd></div>" for label, cm in karten[:5])
+            + "</dl>")

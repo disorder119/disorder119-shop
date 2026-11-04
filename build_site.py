@@ -907,7 +907,6 @@ def build_page(it, shop_config, lang):
         it, teile, lang, beschreibung_text=body_desc, gebraucht_hinweis=GEBRAUCHT_HINWEIS[lang],
         frei_ab_text=euro_text(frei_ab_cents, lang) if frei_ab_cents else "")
     spec_rows_html = beschreibung.spec_rows_html(it, teile, lang, archiv_nr=str(it.get("url_slug") or ""))
-    masse_html = beschreibung.masse_html(teile, lang)
     trust_html = beschreibung.trust_html(lang)
     gallery = it.get("gallery") or []
     hero = gallery[0] if gallery else "assets/favicon.png"
@@ -1063,7 +1062,6 @@ def build_page(it, shop_config, lang):
       <span class="gallery__counter" id="galleryCounter">1 / {max(len(gallery), 1)}</span>
     </div>
     <div class="gallery__thumbs{' gallery__thumbs--reserved' if len(gallery) > 1 else ''}" id="galleryThumbs"></div>
-    {masse_html}
   </div>
   <div class="info">
     <a class="info__brand" href="{home}?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or ui(lang, "noBrand"))}</a>
