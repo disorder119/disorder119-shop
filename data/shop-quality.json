@@ -1,15 +1,15 @@
 {
   "summary": {
-    "items_total": 239,
-    "catalog_public": 235,
-    "available": 154,
+    "items_total": 281,
+    "catalog_public": 277,
+    "available": 196,
     "reserved": 0,
     "sold": 81,
     "draft": 4
   },
   "quality": {
     "missing_size": {
-      "count": 35,
+      "count": 36,
       "item_ids": [
         6042,
         6238,
@@ -45,7 +45,8 @@
         9486,
         9502,
         9503,
-        9537
+        9537,
+        9610
       ]
     },
     "missing_color": {

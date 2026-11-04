@@ -1,62 +1,67 @@
 {
   "schema": "catalog-taxonomy-v1",
-  "totalItems": 239,
-  "reviewedItems": 239,
+  "totalItems": 281,
+  "reviewedItems": 281,
   "departmentCounts": {
-    "Men": 54,
+    "Men": 75,
     "Objects": 1,
-    "Unisex": 24,
-    "Women": 160
+    "Unisex": 30,
+    "Women": 175
   },
   "productTypeCounts": {
     "Accessory": 1,
     "Backpack": 1,
-    "Bag": 2,
+    "Bag": 5,
     "Beanie": 2,
     "Belt": 4,
-    "Biker Jacket": 3,
-    "Blazer": 6,
+    "Biker Jacket": 4,
+    "Blazer": 9,
     "Blouse": 3,
     "Bomber Jacket": 1,
-    "Boots": 8,
-    "Cap": 3,
+    "Boots": 10,
+    "Cap": 4,
     "Cardigan": 5,
-    "Coat": 2,
-    "Dress": 17,
+    "Coat": 4,
+    "Dress": 19,
     "Hat": 3,
     "Heels": 1,
-    "Jacket": 48,
+    "Jacket": 59,
     "Joggers": 1,
     "Knit Top": 1,
     "Loafers": 2,
-    "Long Sleeve": 6,
-    "Polo Shirt": 6,
-    "Sandals": 3,
+    "Long Sleeve": 7,
+    "Polo Shirt": 8,
+    "Sandals": 4,
     "Scarf": 2,
-    "Set": 1,
+    "Set": 2,
     "Shirt": 1,
     "Shoes": 1,
     "Shorts": 3,
     "Skirt": 14,
     "Sleepwear": 1,
-    "Sneakers": 16,
+    "Sneakers": 18,
     "Suit": 2,
     "Sunglasses": 2,
-    "Sweater": 3,
-    "Sweatshirt": 4,
+    "Sweater": 4,
+    "Sweatshirt": 7,
     "Swim Shorts": 1,
-    "T-Shirt": 7,
+    "T-Shirt": 10,
     "Tank Top": 3,
     "Toaster": 1,
     "Top": 23,
     "Trench Coat": 1,
-    "Trousers": 15,
+    "Trousers": 17,
     "Tunic": 1,
-    "Vest": 7,
+    "Vest": 8,
     "Wallet": 1
   },
-  "missingSizeCount": 35,
+  "missingSizeCount": 36,
   "missingSize": [
+    {
+      "id": 9610,
+      "article": "248",
+      "title": "Isaac Sellam Jerseykleid mit Schlitz Damen Lila"
+    },
     {
       "id": 6239,
       "article": "236",
@@ -233,8 +238,85 @@
       "title": "Balmain Kunstfelljacke Damen"
     }
   ],
-  "sizeConflictCount": 43,
+  "sizeConflictCount": 54,
   "sizeConflicts": [
+    {
+      "id": 9640,
+      "article": "278",
+      "title": "Yohji Yamamoto x New Era 9FORTY Signatur-Cap Schwarz",
+      "structuredSize": "One Size",
+      "descriptionLabelSize": "Einheitsgröße (verstellbar)"
+    },
+    {
+      "id": 9638,
+      "article": "276",
+      "title": "Y-3 Rala Winter Leder-Boots Damen Schwarz",
+      "structuredSize": "EU 40",
+      "descriptionLabelSize": "EU 40 (UK 6½, D 6½, J 250)"
+    },
+    {
+      "id": 9637,
+      "article": "275",
+      "title": "Y-3 Stiefeletten mit Schnalle Damen Schwarz",
+      "structuredSize": "EU 41 1/3",
+      "descriptionLabelSize": "FR 41⅓ (US 9, UK 7½, JP 260)"
+    },
+    {
+      "id": 9630,
+      "article": "268",
+      "title": "Y-3 Boxing IV Zehensandalen Damen Schwarz",
+      "structuredSize": "EU 36 2/3",
+      "descriptionLabelSize": "EU 36 2/3 (box: D 4, UK 4, US 4½, J 225)"
+    },
+    {
+      "id": 9628,
+      "article": "266",
+      "title": "Y-3 Weite Hose Herren Weiß",
+      "structuredSize": "L",
+      "descriptionLabelSize": "L/G"
+    },
+    {
+      "id": 9626,
+      "article": "264",
+      "title": "Y-3 T-Shirt mit Propaganda-Print Herren Braun",
+      "structuredSize": "S",
+      "descriptionLabelSize": "S/P"
+    },
+    {
+      "id": 9615,
+      "article": "253",
+      "title": "Yohji Yamamoto Blazer mit offenen Kanten Damen Schwarz",
+      "structuredSize": "3",
+      "descriptionLabelSize": "3 (japanische Größe)"
+    },
+    {
+      "id": 9612,
+      "article": "250",
+      "title": "Y-3 Piqué-Poloshirt mit Logo-Ärmel Herren Rot",
+      "structuredSize": "M",
+      "descriptionLabelSize": "M (Etikett M/M)"
+    },
+    {
+      "id": 9609,
+      "article": "247",
+      "title": "Y-3 T-Shirt mit verwischtem Logo Herren Schwarz",
+      "structuredSize": "S",
+      "descriptionLabelSize": "S (Etikett S/P)"
+    },
+    {
+      "id": 9606,
+      "article": "244",
+      "title": "Calvin Klein Collection Jacke mit Kapuze Herren Schwarz",
+      "structuredSize": "IT 52",
+      "descriptionLabelSize": "IT 52 (Etikett 52/41)"
+    },
+    {
+      "id": 9602,
+      "article": "240",
+      "title": "Prada x North Sails America's Cup Fleecejacke Herren Schwarz",
+      "structuredSize": "XS",
+      "descriptionLabelSize": "IT S / EU XS / USA XXS"
+    },
     {
       "id": 9509,
       "article": "152",
