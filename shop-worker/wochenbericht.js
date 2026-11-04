@@ -86,16 +86,16 @@ export async function wochenDaten(env, now = Date.now()) {
   d.anfragen = await zahl(env, "SELECT COUNT(*) AS n FROM besucher_ereignisse WHERE zeit>=? AND zeit<? AND typ='anfrage'", von, bis);
   const platz = BEZAHLT.map(() => "?").join(",");
   const best = await env.DB.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(total_cents),0) AS cents FROM commerce_orders
-    WHERE created_at>=? AND created_at<? AND status IN (${platz})`).bind(von, bis, ...BEZAHLT).first().catch(() => null);
+    WHERE versteckt=0 AND created_at>=? AND created_at<? AND status IN (${platz})`).bind(von, bis, ...BEZAHLT).first().catch(() => null);
   d.bestellungen = Number(best?.n || 0);
   d.umsatzCents = Number(best?.cents || 0);
   const bestVor = await env.DB.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(total_cents),0) AS cents FROM commerce_orders
-    WHERE created_at>=? AND created_at<? AND status IN (${platz})`).bind(vorher, von, ...BEZAHLT).first().catch(() => null);
+    WHERE versteckt=0 AND created_at>=? AND created_at<? AND status IN (${platz})`).bind(vorher, von, ...BEZAHLT).first().catch(() => null);
   d.bestellungenVorwoche = Number(bestVor?.n || 0);
   d.umsatzVorwocheCents = Number(bestVor?.cents || 0);
   d.verkauft = await liste(env, `SELECT i.title_snapshot AS titel, i.unit_price_cents AS cents, i.article_no AS nr FROM order_items i
-    JOIN commerce_orders o ON o.id=i.order_id WHERE o.created_at>=? AND o.created_at<? AND o.status IN (${platz}) ORDER BY o.created_at LIMIT 10`, von, bis, ...BEZAHLT).catch(() => []);
-  d.storniert = await zahl(env, "SELECT COUNT(*) AS n FROM commerce_orders WHERE created_at>=? AND created_at<? AND status IN ('CANCELLED','REFUNDED')", von, bis).catch(() => 0);
+    JOIN commerce_orders o ON o.id=i.order_id WHERE o.versteckt=0 AND o.created_at>=? AND o.created_at<? AND o.status IN (${platz}) ORDER BY o.created_at LIMIT 10`, von, bis, ...BEZAHLT).catch(() => []);
+  d.storniert = await zahl(env, "SELECT COUNT(*) AS n FROM commerce_orders WHERE versteckt=0 AND created_at>=? AND created_at<? AND status IN ('CANCELLED','REFUNDED')", von, bis).catch(() => 0);
   d.sperren = await zahl(env, "SELECT COUNT(*) AS n FROM waechter_sperren WHERE seit>=? AND seit<?", von, bis).catch(() => 0);
   d.vorfaelle = await zahl(env, "SELECT COUNT(*) AS n FROM waechter_vorfaelle WHERE zeit>=? AND zeit<?", von, bis).catch(() => 0);
   d.kampagnen = await zahl(env, "SELECT COUNT(*) AS n FROM waechter_kampagnen WHERE seit>=? AND seit<?", von, bis).catch(() => 0);
