@@ -289,10 +289,14 @@ test("sale notification lists every piece of a multi-piece order", () => {
     { article_no: "9428", title_snapshot: "Jean Paul Gaultier T-Shirt" },
     { article_no: "9427", title_snapshot: "Jean Paul Gaultier Jeans" },
   ] });
-  assert.match(text, /Teile: 2/);
-  assert.match(text, /• 9428 Jean Paul Gaultier T-Shirt/);
-  assert.match(text, /• 9427 Jean Paul Gaultier Jeans/);
-  assert.match(formatSaleMessage({ order_number: "D119-2", article_no: "9428", title_snapshot: "Shirt", total_cents: 100 }), /Piece: Shirt/);
+  assert.match(text, /2 Teile:/);
+  assert.match(text, /• #9428 Jean Paul Gaultier T-Shirt/);
+  assert.match(text, /• #9427 Jean Paul Gaultier Jeans/);
+  assert.match(text, /VERKAUFT/);
+  const eins = formatSaleMessage({ id: "abc-1", order_number: "D119-2", article_no: "213", title_snapshot: "Beanie", total_cents: 7000, customer_city: "Bremen" });
+  assert.match(eins, /#213 · Beanie/);
+  assert.match(eins, /70,00s€ · nach Bremen/);
+  assert.match(eins, /https:\/\/admin\.disorder119\.com\/\?bestellung=abc-1/);
 });
 
 test("address suggestions: town for a postcode, streets for a prefix, strict input", async () => {

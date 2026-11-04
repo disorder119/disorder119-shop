@@ -384,6 +384,28 @@ async function getOrders(env, url) {
   };
 }
 
+// Was die Kundschaft per Mail bekommen hat, so wie verschickt (unveraenderliche
+// Archive order_confirmation_archive und rechnungen). Versand- und
+// Erstattungsmails werden nicht archiviert - sie stehen nur im Protokoll.
+async function getOrderMails(env, id) {
+  const db = requireDb(env);
+  const order = await db.prepare("SELECT id,order_number FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
+  if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
+  const [bestaetigung, rechnungen] = await db.batch([
+    db.prepare("SELECT subject,html,created_at FROM order_confirmation_archive WHERE order_id=?").bind(order.id),
+    db.prepare("SELECT rechnungsnummer,ausgestellt_am,gesamt_cents,empfaenger_email,html FROM rechnungen WHERE order_id=? ORDER BY ausgestellt_am").bind(order.id),
+  ]);
+  const mails = [];
+  for (const b of bestaetigung?.results || []) {
+    mails.push({ art: "bestaetigung", titel: "Bestellbestätigung", betreff: b.subject, gesendetAm: b.created_at, html: b.html });
+  }
+  for (const r of rechnungen?.results || []) {
+    mails.push({ art: "rechnung", titel: `Rechnung ${r.rechnungsnummer}`, betreff: `Rechnung ${r.rechnungsnummer}`, gesendetAm: r.ausgestellt_am,
+      an: r.empfaenger_email || null, gesamtCents: Number(r.gesamt_cents || 0), html: r.html });
+  }
+  return { orderId: order.id, orderNumber: order.order_number, mails };
+}
+
 async function getOrderDetail(env, id) {
   const db = requireDb(env);
   const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
@@ -681,6 +703,13 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN", optionen =
       status=COALESCE(?,status), shipped_at=CASE WHEN ?='SHIPPED' THEN COALESCE(shipped_at,?) ELSE shipped_at END,
       delivered_at=CASE WHEN ?='DELIVERED' THEN COALESCE(delivered_at,?) ELSE delivered_at END, updated_at=? WHERE id=?`)
       .bind(carrier, service, trackingNumber, shipmentStatus, shipmentStatus, now, shipmentStatus, now, now, shipment.id).run();
+    if (trackingNumber) {
+      // DHL-Online-Frankierung ohne Rueckmeldung (dhl-qr.js, Kennung "ohne-..."): DHL meldet
+      // den Kauf nicht zurueck. Sobald der Inhaber die Sendungsnummer eintraegt, ist die
+      // Marke bezahlt - so kommen ihre Kosten in Steuer-Datensatz und Manager.
+      await db.prepare(`UPDATE dhl_qr_marken SET state='PAYED',shipment_number=COALESCE(shipment_number,?),paid_at=COALESCE(paid_at,?),updated_at=?
+        WHERE order_id=? AND state IN ('PREPAID','INPAYMENT') AND cart_id LIKE 'ohne-%'`).bind(trackingNumber, now, now, order.id).run().catch(() => {});
+    }
     await auditAdmin(env, "shipment", shipment.id, "SHIPMENT_UPDATED", reqId, { orderId: order.id, status: shipmentStatus || undefined, carrier: carrier || undefined, tracking: Boolean(trackingNumber) }, actorType);
   } else if (effectiveStatus === "DELIVERED") {
     await db.prepare("UPDATE shipments SET status='DELIVERED',delivered_at=COALESCE(delivered_at,?),updated_at=? WHERE order_id=?")
@@ -1461,6 +1490,10 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
       return adminJson(await updateOrderContact(env, decodeURIComponent(contactMatch[1]), await readJson(request), reqId), 200, origin);
     }
 
+    const mailsMatch = /^\/admin\/orders\/([^/]+)\/mails$/.exec(path);
+    if (mailsMatch && request.method === "GET") {
+      return adminJson(await getOrderMails(env, decodeURIComponent(mailsMatch[1])), 200, origin);
+    }
     const orderMatch = /^\/admin\/orders\/([^/]+)$/.exec(path);
     if (orderMatch) {
       const id = decodeURIComponent(orderMatch[1]);
