@@ -268,6 +268,11 @@
       renderArticleSequence(stored, currentId, lang);
       return;
     }
+    // Seit 04.11.2026 stehen Vorheriger/Naechster (Standardreihenfolge) schon im HTML
+    // (build_site.py sequenz_nachbarn) - dann nichts nachladen.
+    var shell = ensureArticleNavShell(lang);
+    var serverNext = shell.querySelector(".article-sequence-nav__link--next");
+    if (serverNext && serverNext.getAttribute("href")) return;
 
     // Directly opened product pages use the normal public archive fallback:
     // AVAILABLE items only, never SOLD. The navigation shell is reserved from
