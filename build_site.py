@@ -752,8 +752,10 @@ def cta_html(it, shop_config, home, lang):
         "fr": " Nous livrons dans tous les pays de l'UE directement via la caisse – ailleurs en Europe et aux États-Unis sur demande.",
     }
     ship_notes = {sprache: text + liefergebiet[sprache] for sprache, text in ship_notes.items()}
-    note_text =trust_notes.get(lang, trust_notes["de"]) + ship_notes.get(lang, ship_notes["de"])
-    parts.append('<p class="info__note">' + esc(note_text) + '</p>')
+    note_text = trust_notes.get(lang, trust_notes["de"]) + ship_notes.get(lang, ship_notes["de"])
+    # Mittelpunkte als eigene Elemente: am Handy je Punkt eine Zeile (article.css info__note-trenner).
+    note_html = esc(note_text).replace(" · ", '<span class="info__note-trenner"> · </span>')
+    parts.append('<p class="info__note">' + note_html + '</p>')
     parts.append(product_data_gap_html(it, lang))
     if not shop_config["whatsappNumber"] and not shop_config["email"]:
         parts.append('<p class="info__config-warning" data-i18n="configWarning">' + esc(ui(lang, "configWarning")) + '</p>')
