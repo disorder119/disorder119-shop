@@ -15204,16 +15204,6 @@
    "abweichung": 0.0
   },
   {
-   "shop_id": 9606,
-   "gallery": "assets/img/9606/8.webp",
-   "article": "244",
-   "n": 9,
-   "freigestellt": "shooting 11 (22.10)/calvin klein collection size 52 #244 (9) freigestellt.png",
-   "freigestellt_sha256": "aafbfecb911fa60fda4321e971417dd55fa6e17b186f027c77ff19fdb3f56775",
-   "webp_sha256": "7ab51a36b03033ee124611d792a32a5c219a976ca1ffe1847b6b2e8b0727e1cc",
-   "abweichung": 0.0
-  },
-  {
    "shop_id": 9607,
    "gallery": "assets/img/9607/0.webp",
    "article": "245",
@@ -15704,16 +15694,6 @@
    "abweichung": 0.0
   },
   {
-   "shop_id": 9612,
-   "gallery": "assets/img/9612/6.webp",
-   "article": "250",
-   "n": 7,
-   "freigestellt": "shooting 11 (22.10)/y-3 polo red size m#250 (7) freigestellt.png",
-   "freigestellt_sha256": "258e5ee8aeac58cd566bd9d94b46894fb99dfc2027a65440983a415ad65a1d7b",
-   "webp_sha256": "4a3e751b6a1540f126f039b296ecc470b73f5ed8227398ef3523fa4c5edcbc34",
-   "abweichung": 0.0
-  },
-  {
    "shop_id": 9613,
    "gallery": "assets/img/9613/0.webp",
    "article": "251",
@@ -15781,16 +15761,6 @@
    "freigestellt": "shooting 11 (22.10)/givenchy polo black size m #251 (7) freigestellt.png",
    "freigestellt_sha256": "21a52c72d5f806961c7656b73d0e66197a763c99d10328e92b4161c1b4fbdbb2",
    "webp_sha256": "0637009d05768edf2ff922bf2c557fa3f2f05b124ea87348f8fdbb4f927f30a6",
-   "abweichung": 0.0
-  },
-  {
-   "shop_id": 9613,
-   "gallery": "assets/img/9613/7.webp",
-   "article": "251",
-   "n": 8,
-   "freigestellt": "shooting 11 (22.10)/givenchy polo black size m #251 (8) freigestellt.png",
-   "freigestellt_sha256": "7096a4029d7a8a837e712a2d69e41f5b4ed80805804d23858376528992b03cf0",
-   "webp_sha256": "8b7a6cdafbb7c8495d66f2a07599eb10fb1b11838fa31329b7e93cd558cd5e6f",
    "abweichung": 0.0
   },
   {
@@ -16071,16 +16041,6 @@
    "freigestellt": "shooting 11 (22.10)/jil sander mantel schwarz gr 42 #255 (4) freigestellt.png",
    "freigestellt_sha256": "61f6f22e69e0daa9b52077d90474a8e1797f7c2b8bb5c39b2522a8c4b43f0695",
    "webp_sha256": "0f3f5c1846423b6229182a462ccdac98557342e973b7dc88a0855cfbf727a17f",
-   "abweichung": 0.0
-  },
-  {
-   "shop_id": 9617,
-   "gallery": "assets/img/9617/4.webp",
-   "article": "255",
-   "n": 5,
-   "freigestellt": "shooting 11 (22.10)/jil sander mantel schwarz gr 42 #255 (5) freigestellt.png",
-   "freigestellt_sha256": "6341c84d49388c3c6150092e8e7d61d587f4b78d5770ce132d37a2f0c6b3d5ef",
-   "webp_sha256": "3e8b58bfbd923bb315434f12648baa90ce27cf476a9bc7747319fce631777f6b",
    "abweichung": 0.0
   },
   {
@@ -17107,16 +17067,6 @@
    "shop_id": 9633,
    "gallery": "assets/img/9633/3.webp",
    "article": "271",
-   "n": 4,
-   "freigestellt": "shooting 11 (22.10)/Margiela h&m guitar bag #271 (4) freigestellt.png",
-   "freigestellt_sha256": "b8408b104d8389347d700de1c706805453ee0253fada2149612b40ba372129d7",
-   "webp_sha256": "32e25426438f4741456b804a55473183d28ecdc6c5c6be4ad9f8f44552c28b23",
-   "abweichung": 0.0
-  },
-  {
-   "shop_id": 9633,
-   "gallery": "assets/img/9633/4.webp",
-   "article": "271",
    "n": 5,
    "freigestellt": "shooting 11 (22.10)/Margiela h&m guitar bag #271 (5) freigestellt.png",
    "freigestellt_sha256": "e75817005dd97ceb1f03cfd3c575b1d6d8069eeb81ba39b0f1bc1609c5da4f66",
@@ -17125,7 +17075,7 @@
   },
   {
    "shop_id": 9633,
-   "gallery": "assets/img/9633/5.webp",
+   "gallery": "assets/img/9633/4.webp",
    "article": "271",
    "n": 6,
    "freigestellt": "shooting 11 (22.10)/Margiela h&m guitar bag #271 (6) freigestellt.png",
@@ -17135,22 +17085,12 @@
   },
   {
    "shop_id": 9633,
-   "gallery": "assets/img/9633/6.webp",
+   "gallery": "assets/img/9633/5.webp",
    "article": "271",
    "n": 7,
    "freigestellt": "shooting 11 (22.10)/Margiela h&m guitar bag #271 (7) freigestellt.png",
    "freigestellt_sha256": "8140dd806e65d1c4cea7d33baeee81927f743ad6e14acc0d090d9f77f880a4cf",
    "webp_sha256": "31b2a36d2cf58318738963190b3f6d4b45da04f42570097b829b813a7a87a7ed",
-   "abweichung": 0.0
-  },
-  {
-   "shop_id": 9633,
-   "gallery": "assets/img/9633/7.webp",
-   "article": "271",
-   "n": 8,
-   "freigestellt": "shooting 11 (22.10)/Margiela h&m guitar bag #271 (8) freigestellt.png",
-   "freigestellt_sha256": "2197b54630cf7aa77db36b29ffa58cbeb44af01d769f5264f1f9a8f58b8b2fbb",
-   "webp_sha256": "fa46b2bfcd0486a39e2abbaf77c4024020549bfe36b957943bfe4d1820046c34",
    "abweichung": 0.0
   },
   {
