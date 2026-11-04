@@ -40,6 +40,7 @@
       freiFehlt: "Noch {betrag} bis zum kostenlosen Versand – ab {grenze} Warenwert übernehmen wir den günstigsten Standardversand.",
       lieferung: "Heute bestellt – voraussichtlich bei dir zwischen {von} und {bis}.", zahlart: "Mit PayPal-Käuferschutz",
       gutschein: "Gutschein {code} wird beim Bezahlen verrechnet.",
+      gutscheinZeile: "Gutschein {code}", gutscheinNurFuer: "Der Code {code} gilt nur für {label} – das Teil ist nicht in dieser Bestellung.",
       gutscheinWeg: "Dein Gutschein ist ungültig oder schon eingelöst – wir haben ihn entfernt. Klick bitte noch einmal auf PayPal, dann bezahlst du ohne Gutschein.",
       gutscheinNichtFuer: "Dieser Code gilt nur für ein bestimmtes Teil, das nicht in deiner Bestellung ist – wir haben ihn entfernt. Klick bitte noch einmal auf PayPal, dann bezahlst du ohne Code.",
       gutscheinReserviert: "Dein Gutschein ist gerade noch für eine offene, nicht bezahlte Bestellung reserviert – zum Beispiel nach einem geschlossenen PayPal-Fenster. Er bleibt gespeichert und ist nach spätestens 25 Minuten wieder frei. Versuch es dann bitte noch einmal.",
@@ -108,6 +109,7 @@
       freiFehlt: "{betrag} more for free shipping – from {grenze} goods value we cover the cheapest standard shipping.",
       lieferung: "Order today – expected to arrive between {von} and {bis}.", zahlart: "With PayPal Buyer Protection",
       gutschein: "Coupon {code} is applied when you pay.",
+      gutscheinZeile: "Coupon {code}", gutscheinNurFuer: "Code {code} is only valid for {label} – that piece is not in this order.",
       gutscheinWeg: "Your coupon is invalid or has already been used – we have removed it. Please click PayPal again to pay without the coupon.",
       gutscheinNichtFuer: "This code is only valid for a specific piece that is not in your order – we have removed it. Please click PayPal again to pay without the code.",
       gutscheinReserviert: "Your coupon is still reserved for an open, unpaid order – for example after closing the PayPal window. It stays saved and will be free again within 25 minutes at the latest. Please try again then.",
@@ -176,6 +178,7 @@
       freiFehlt: "Plus que {betrag} pour la livraison gratuite – dès {grenze} d’articles, nous offrons la livraison standard la moins chère.",
       lieferung: "Commande aujourd’hui – livraison prévue entre le {von} et le {bis}.", zahlart: "Avec la Protection des achats PayPal",
       gutschein: "Le bon {code} est déduit au paiement.",
+      gutscheinZeile: "Bon {code}", gutscheinNurFuer: "Le code {code} n'est valable que pour {label} – cette pièce n'est pas dans la commande.",
       gutscheinWeg: "Ton bon est invalide ou a déjà été utilisé – nous l'avons retiré. Clique à nouveau sur PayPal pour payer sans bon.",
       gutscheinNichtFuer: "Ce code n'est valable que pour une pièce précise qui ne fait pas partie de ta commande – nous l'avons retiré. Clique à nouveau sur PayPal pour payer sans code.",
       gutscheinReserviert: "Ton bon est encore réservé pour une commande ouverte non payée – par exemple après avoir fermé la fenêtre PayPal. Il reste enregistré et sera de nouveau disponible dans 25 minutes au plus tard. Réessaie ensuite.",
@@ -576,15 +579,51 @@
       liste.appendChild(reihe);
     }
     var ware = stueckeCents();
+    var code = gespeicherterCode();
+    var rabatt = PAYPAL_BEREIT ? rabattCents(code, ware) : 0;
     zeile(t("zwischensumme") + " (" + zustand.stuecke.length + ")", geld(ware));
+    if (rabatt > 0) zeile(tf("gutscheinZeile", { code: code }), "− " + geld(rabatt), "kasse-summe__rabatt");
     zeile(t("versandZeile") + (zustand.wahl ? " · " + versandName(zustand.wahl) : ""), zustand.wahl ? preisText(zustand.wahl.preisCents) : "…");
     if (abholung() && abhol.ort) zeile(t("lieferungAn"), abhol.ort.name + (abhol.ort.ort ? ", " + abhol.ort.ort : ""), "kasse-summe__ziel");
-    zeile(t("gesamt"), zustand.wahl ? geld(ware + zustand.wahl.preisCents) : "…", "kasse-summe__gesamt");
-    var code = "";
-    try { code = String(localStorage.getItem(CODE_KEY) || "").trim().toUpperCase(); } catch (e) { code = ""; }
+    zeile(t("gesamt"), zustand.wahl ? geld(ware - rabatt + zustand.wahl.preisCents) : "…", "kasse-summe__gesamt");
     var gs = $("kasseGutschein");
     gs.hidden = !(code && PAYPAL_BEREIT);
-    if (code && PAYPAL_BEREIT) gs.textContent = tf("gutschein", { code: code });
+    if (code && PAYPAL_BEREIT) {
+      var info = gutscheinInfo && gutscheinInfo.code === code ? gutscheinInfo : null;
+      gs.textContent = info && info.fixedPriceCents && !rabatt
+        ? tf("gutscheinNurFuer", { code: code, label: info.itemLabel || "1" })
+        : tf("gutschein", { code: code });
+    }
+  }
+  // ---- Gutschein vorab anzeigen: der Server prueft den Code (/coupons/validate),
+  //      die Kasse zeigt den Abzug schon vor PayPal. Verbindlich rechnet weiter
+  //      nur der Worker beim Anlegen der Bestellung.
+  var gutscheinInfo = null;
+  function gespeicherterCode() {
+    try { return String(localStorage.getItem(CODE_KEY) || "").trim().toUpperCase().replace(/\s+/g, ""); } catch (e) { return ""; }
+  }
+  // Artikel-Code: Stueckpreis minus Festpreis, nur wenn das Stueck in der
+  // Bestellung ist; Prozent-Code: Anteil vom Warenwert (wie discountForSubtotal).
+  function rabattCents(code, ware) {
+    var info = gutscheinInfo;
+    if (!code || !info || info.code !== code) return 0;
+    if (info.fixedPriceCents) {
+      var stueck = zustand.stuecke.filter(function (it) { return Number(it.id) === Number(info.itemId); })[0];
+      return stueck ? Math.max(0, Math.round(stueck.price * 100) - Number(info.fixedPriceCents)) : 0;
+    }
+    var prozent = Number(info.discountPercent) || 0;
+    return prozent > 0 ? Math.min(ware, Math.round(ware * prozent / 100)) : 0;
+  }
+  function gutscheinPruefen() {
+    var code = gespeicherterCode();
+    if (!code || !WORKER || !PAYPAL_BEREIT) return;
+    fetch(WORKER + "/coupons/validate", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: code }), credentials: "omit"
+    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (daten) {
+      if (!daten) return;
+      if (daten.valid === true) gutscheinInfo = Object.assign({ code: code }, daten);
+      summeZeichnen();
+    }).catch(function () { /* ohne Vorschau: der Abzug kommt bei PayPal */ });
   }
   function rechtZeichnen() {
     var p = $("kasseRecht");
@@ -1469,6 +1508,7 @@
   }
 
   rechtZeichnen();
+  gutscheinPruefen();
   artikelLaden().then(function () {
     if (!zustand.stuecke.length) return;
     if (PAYPAL_BEREIT && window.paypal && typeof window.paypal.Buttons === "function") paypalEinrichten();

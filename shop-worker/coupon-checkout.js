@@ -283,12 +283,17 @@ export async function applyCouponToCreatedOrder(env, code, createResult, request
       throw new CouponCheckoutError("COUPON_LOCAL_SYNC_FAILED", 502);
     }
 
+    // Mail und Rechnung zeigen den Abzug spaeter aus diesem Eintrag (Positionen
+    // tragen schon den rabattierten Preis). Artikel-Code: Wort-Code mit Stueck.
     await audit(env, orderId, requestId, "COUPON_RESERVED", {
       couponId: claim.couponId,
       discountBps: claim.discountBps,
       discountCents: claim.discountCents,
       originalTotalCents: originalTotal,
       discountedTotalCents: finalTotal,
+      code: claim.zeileId ? code : "",
+      codeHint: code.slice(-4),
+      itemId: claim.itemId || null,
     });
 
     return {

@@ -423,7 +423,7 @@ const BESTELLUNG_TEXT = Object.freeze({
     zahlungsartReserviert: "Zahlungsart: PayPal – reserviert, Abbuchung mit dem Versand",
     zahlungsart: "Zahlungsart: PayPal",
     bestellung: "BESTELLUNG",
-    zwischensumme: "Zwischensumme",
+    zwischensumme: "Zwischensumme", vorGutschein: "Warenwert vor Gutschein", gutschein: code => `Gutschein ${code}`,
     gesamt: "Gesamt",
     lieferadresse: "Lieferadresse",
     wieWeiter: "Wie es weitergeht",
@@ -457,7 +457,7 @@ const BESTELLUNG_TEXT = Object.freeze({
     zahlungsartReserviert: "Payment method: PayPal – reserved, charged when we ship",
     zahlungsart: "Payment method: PayPal",
     bestellung: "ORDER",
-    zwischensumme: "Subtotal",
+    zwischensumme: "Subtotal", vorGutschein: "Items before coupon", gutschein: code => `Coupon ${code}`,
     gesamt: "Total",
     lieferadresse: "Delivery address",
     wieWeiter: "What happens next",
@@ -491,7 +491,7 @@ const BESTELLUNG_TEXT = Object.freeze({
     zahlungsartReserviert: "Moyen de paiement : PayPal – réservé, débité à l’expédition",
     zahlungsart: "Moyen de paiement : PayPal",
     bestellung: "COMMANDE",
-    zwischensumme: "Sous-total",
+    zwischensumme: "Sous-total", vorGutschein: "Articles avant bon", gutschein: code => `Bon ${code}`,
     gesamt: "Total",
     lieferadresse: "Adresse de livraison",
     wieWeiter: "La suite",
@@ -538,6 +538,8 @@ export function formatOrderConfirmation(order = {}, options = {}) {
   const subtotal = Number(order.subtotal_cents ?? order.subtotalCents ?? 0);
   const shipping = Number(order.shipping_cents ?? order.shippingCents ?? 0);
   const total = Number(order.total_cents ?? order.totalCents ?? subtotal + shipping);
+  const gutschein = order.gutschein && Number(order.gutschein.cents) > 0 ? order.gutschein : null;
+  const gutscheinName = gutschein ? t.gutschein(gutschein.code || (gutschein.hint ? `····${gutschein.hint}` : "")).trim() : "";
   const ordered = mailDatum(order.created_at || order.createdAt || new Date(), sprache);
   const delivery = deliveryLines(order.contact || {}, sprache);
   const betrag = cents => euroAmount(cents, currency, sprache);
@@ -564,6 +566,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     t.bestellung,
     ...itemTextLines,
     "",
+    ...(gutschein ? [`${t.vorGutschein}: ${betrag(subtotal + gutschein.cents)}`, `${gutscheinName}: − ${betrag(gutschein.cents)}`] : []),
     `${t.zwischensumme}: ${betrag(subtotal)}`,
     `${versandBezeichnung(order, sprache)}: ${versandBetrag(shipping, currency, sprache)}`,
     `${t.gesamt}: ${betrag(total)}`,
@@ -598,6 +601,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
       ${items.map(item => stueckZeile(item, betrag(item.unit_price_cents ?? item.unitPriceCents ?? 0), sprache)).join("")}
     </table>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">
+      ${gutschein ? summenZeile(t.vorGutschein, betrag(subtotal + gutschein.cents), false) + summenZeile(gutscheinName, `− ${betrag(gutschein.cents)}`, false) : ""}
       ${summenZeile(t.zwischensumme, betrag(subtotal), false)}
       ${summenZeile(versandBezeichnung(order, sprache), versandBetrag(shipping, currency, sprache), false)}
       ${summenZeile(t.gesamt, betrag(total), true)}
@@ -914,7 +918,26 @@ export async function loadOrderForConfirmation(env, orderId) {
   const contact = await env.DB.prepare(`SELECT email,recipient_name,given_name,surname,
       address_line1,address_line2,postal_code,city,region,country_code
     FROM order_contact_snapshots WHERE order_id=? LIMIT 1`).bind(String(orderId)).first();
-  return { ...order, items: items?.results || [], contact: contact || {}, versand: versand || null };
+  return { ...order, items: items?.results || [], contact: contact || {}, versand: versand || null,
+    gutschein: await bestellGutschein(env, orderId) };
+}
+
+// Eingeloester Gutschein (coupon-checkout.js protokolliert die Reservierung):
+// Betrag, Code bzw. Hinweis und ggf. das Stueck. Die Positionen tragen schon
+// den rabattierten Preis - Mail und Rechnung zeigen den Abzug nur als Info.
+export async function bestellGutschein(env, orderId) {
+  try {
+    const row = await env.DB.prepare(`SELECT metadata_json FROM audit_events WHERE entity_type='order' AND entity_id=?
+      AND event_type='COUPON_RESERVED' ORDER BY created_at DESC LIMIT 1`).bind(String(orderId)).first();
+    if (!row?.metadata_json) return null;
+    const m = JSON.parse(row.metadata_json);
+    const cents = Math.round(Number(m.discountCents) || 0);
+    if (cents <= 0) return null;
+    const code = safeText(m.code || "", 40).toUpperCase().replace(/[^A-Z0-9-]/g, "");
+    return { cents, code, hint: safeText(m.codeHint || "", 8), itemId: Number(m.itemId) || null };
+  } catch {
+    return null;
+  }
 }
 
 // Sprache der Bestellung (Migration 0043). Fehlt die Spalte oder die Zeile,
