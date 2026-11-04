@@ -285,6 +285,12 @@ a { color: inherit; }
   color: rgba(242, 239, 231, 0.85);
   margin: 0 0 22px;
 }
+/* Allgemeiner Hinweis ("Einzelstück · individuell fotografiert · …"): am Handy je Punkt eine
+   Zeile statt eines Blocks (Inhaber 04.11.), am Rechner weiter mit Mittelpunkt in einer Zeile. */
+@media (max-width: 860px) {
+  .info__desc { font-size: 0.98rem; line-height: 1.6; }
+  .info__desc-trenner { display: block; height: 6px; font-size: 0; }
+}
 
 /* Allgemeiner Gebraucht-Hinweis unter der Beschreibung (statt Zustand je Teil). */
 .info__gebraucht {

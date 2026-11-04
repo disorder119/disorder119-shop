@@ -97,3 +97,14 @@ html.ui-zieht .product { transition: none; }
 /* Markenlink als Tippziel mindestens 24 px hoch (WCAG 2.5.8): seit die Bildlaufleiste der Vorschaubilder
    ausgeblendet ist, liegt die Bildleiste am Handy dicht am Link - axe (Chromium-Smoke) verlangt dann die Hoehe. */
 .info__brand { display: inline-flex; align-items: center; min-height: 24px; }
+
+/* Helle Ansicht (data-theme="hell"): keine schwarzen Kacheln und Boxen (Inhaber 04.11.). */
+[data-theme="hell"] .ui-zuletzt__liste img, [data-theme="hell"] .ui-peek img { background: #efede8; }
+[data-theme="hell"] .ui-peek { background: #fff; color: #151514; border-color: rgba(0,0,0,.14); box-shadow: 0 24px 60px rgba(0,0,0,.18); }
+[data-theme="hell"] .ui-sheet { background: rgba(0,0,0,.35); }
+[data-theme="hell"] .ui-sheet__box { background: #fff; color: #151514; }
+[data-theme="hell"] .ui-sheet__btn { border-top-color: rgba(0,0,0,.1); }
+[data-theme="hell"] .ui-sheet__zu { background: rgba(0,0,0,.06); }
+[data-theme="hell"] .ui-home { background: #fff; color: #151514; border-color: rgba(0,0,0,.14); box-shadow: 0 18px 50px rgba(0,0,0,.18); }
+[data-theme="hell"] .ui-toast { background: #151514; color: #fff; }
+[data-theme="hell"] .ui-zuletzt__liste b, [data-theme="hell"] .ui-zuletzt__liste span, [data-theme="hell"] .ui-zuletzt__liste em { color: #151514; }
