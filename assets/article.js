@@ -268,8 +268,10 @@
     var priceEl = document.getElementById("priceBlock");
     if (priceEl) renderPriceBlock(priceEl);
 
+    // Strukturierte Beschreibung (beschreibung.py): der Text steht schon in
+    // der Seitensprache in den Klappleisten - nicht mit dem Rohtext ueberschreiben.
     var descEl = document.getElementById("itemDesc");
-    if (descEl) descEl.textContent = descriptionText();
+    if (descEl && !descEl.closest("[data-strukturiert]")) descEl.textContent = descriptionText();
 
     var soldNoteEl = document.getElementById("soldNote");
     if (soldNoteEl) soldNoteEl.textContent = t("soldNote");

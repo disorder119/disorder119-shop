@@ -675,3 +675,41 @@ img[data-d119-image-protected] {
 .page-foot__recht .fuss-ansicht { min-height: 32px; display: inline-flex; align-items: center; }
 .page-foot__recht .fuss-ansicht { background: none; border: 0; padding: 0; font: inherit; color: var(--text-muted, rgba(242,239,231,.58)); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .page-foot__recht .fuss-ansicht:hover { color: var(--paper); }
+
+/* ---------- Strukturierte Beschreibung (Inhaber 05.11.2026, beschreibung.py) ----------
+   Drei Schlagzeilen, Hook, Kaufknoepfe, Fakten als Tabelle, Klappleisten,
+   Vertrauensleiste; Puppenmasse als Leiste unter dem Foto. */
+.info__caption { font-family: "Helvetica Neue Condensed", "Arial Narrow", Helvetica, Arial, sans-serif; font-weight: 800; text-transform: uppercase; font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 0.96; letter-spacing: -0.01em; margin: 8px 0 14px; }
+.info__caption span { display: block; }
+.info__caption span:nth-child(2) { color: var(--text-muted); }
+.info__hook { font-size: 0.98rem; line-height: 1.55; color: rgba(242, 239, 231, 0.9); margin: 0 0 18px; max-width: 48ch; }
+.info__facts { display: block; border-top: 1px solid var(--rule); border-bottom: 0; padding: 0; margin: 20px 0 4px; }
+.info__facts > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--rule); }
+.info__facts .fact__label { margin: 0; flex: 0 0 auto; }
+.info__facts .fact__value { font-size: 0.84rem; text-align: right; }
+.info__akk { border-top: 1px solid var(--rule); margin-top: 16px; }
+.info__akk-item { border-bottom: 1px solid var(--rule); }
+.info__akk-item summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 13px 0; min-height: 44px; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }
+.info__akk-item summary::-webkit-details-marker { display: none; }
+.info__akk-item summary::after { content: "+"; font-size: 1.05rem; font-weight: 400; color: var(--text-muted); }
+.info__akk-item[open] summary::after { content: "–"; }
+.info__akk-item summary:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.info__akk-body { padding: 0 0 14px; }
+.info__akk .info__desc, .info__akk-text { white-space: pre-line; font-size: 0.86rem; line-height: 1.6; color: rgba(242, 239, 231, 0.8); margin: 0 0 10px; }
+.info__akk-text--klein { font-size: 0.74rem; color: var(--text-muted); }
+.info__akk .info__gebraucht { margin: 0 0 10px; }
+.info__trust { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0 0; }
+.info__trust div { border: 1px solid var(--rule); padding: 10px 6px; font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase; text-align: center; color: rgba(242, 239, 231, 0.72); line-height: 1.5; }
+.info__trust b { display: block; font-size: 0.88rem; letter-spacing: 0; margin-bottom: 2px; color: var(--paper); }
+.gallery__masse { display: flex; border: 1px solid var(--rule); margin-top: 12px; }
+.gallery__masse div { flex: 1; padding: 9px 4px; text-align: center; border-right: 1px solid var(--rule); }
+.gallery__masse div:last-child { border-right: 0; }
+.gallery__masse small { display: block; font-size: 0.54rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); }
+.gallery__masse b { font-size: 1rem; }
+.gallery__masse i { font-style: normal; font-size: 0.6rem; color: var(--text-muted); margin-left: 2px; }
+.gallery__masse-hinweis { margin: 6px 0 0; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); }
+@media (max-width: 860px) {
+  .info__caption { font-size: 1.5rem; }
+  .info__trust { grid-template-columns: repeat(2, 1fr); }
+  .gallery__masse { margin-top: 10px; }
+}
