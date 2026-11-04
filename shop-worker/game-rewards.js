@@ -61,6 +61,18 @@ export function normalizeCouponCode(value) {
   return /^D119-10-[A-Z0-9]{10}$/.test(code) ? code : "";
 }
 
+// Wort-Codes fuer genau ein Stueck mit Festpreis (Migration 0045), z. B.
+// CLOSERWITHNYLON: nur Buchstaben und Ziffern, 6-32 Zeichen.
+export function normalizeArtikelCode(value) {
+  const code = String(value || "").trim().toUpperCase().replace(/\s+/g, "");
+  return /^[A-Z0-9]{6,32}$/.test(code) ? code : "";
+}
+
+// Alles, was die Kasse einloesen kann: Spiel-/Newsletter-Code oder Artikel-Code.
+export function normalizeEinloesbarerCode(value) {
+  return normalizeCouponCode(value) || normalizeArtikelCode(value);
+}
+
 export function discountForSubtotal(subtotalCents, discountBps = DISCOUNT_BPS) {
   const subtotal = Math.max(0, Math.round(Number(subtotalCents) || 0));
   const bps = Math.max(0, Math.min(10000, Math.round(Number(discountBps) || 0)));
@@ -363,7 +375,7 @@ async function getLeaderboard(request, env, url, origin) {
 }
 
 export async function findValidCoupon(env, value) {
-  const code = normalizeCouponCode(value);
+  const code = normalizeEinloesbarerCode(value);
   if (!code) return null;
   const db = requireDb(env);
   const hash = await sha256Hex(code);
@@ -377,7 +389,7 @@ export async function findValidCoupon(env, value) {
 // Ein Code, der schon fuer genau diese Bestellung reserviert oder dort
 // eingeloest ist - fuer eine andere Bestellung bleibt er ungueltig.
 export async function findCouponHeldByOrder(env, value, orderId) {
-  const code = normalizeCouponCode(value);
+  const code = normalizeEinloesbarerCode(value);
   if (!code || !orderId) return null;
   const db = requireDb(env);
   const row = await db.prepare(`SELECT * FROM reward_coupons WHERE code_hash=?
@@ -399,7 +411,7 @@ async function couponRejectionForHash(db, hash) {
 }
 
 export async function couponRejectionCode(env, value) {
-  const code = normalizeCouponCode(value);
+  const code = normalizeEinloesbarerCode(value);
   if (!code) return "COUPON_INVALID_OR_USED";
   return couponRejectionForHash(requireDb(env), await sha256Hex(code));
 }
@@ -409,11 +421,17 @@ async function validateCoupon(request, env, origin) {
   const body = await readJson(request);
   const row = await findValidCoupon(env, body.code);
   if (!row) return json({ valid: false }, 200, origin);
+  if (row.item_id && row.fixed_price_cents) {
+    return json({
+      valid: true, oneTime: true, itemId: Number(row.item_id),
+      fixedPriceCents: Number(row.fixed_price_cents), itemLabel: String(row.item_label || ""),
+    }, 200, origin);
+  }
   return json({ valid: true, discountPercent: row.discount_bps / 100, oneTime: true }, 200, origin);
 }
 
 export async function claimCouponForOrder(env, value, orderId, subtotalCents) {
-  const code = normalizeCouponCode(value);
+  const code = normalizeEinloesbarerCode(value);
   if (!code) return null;
   const db = requireDb(env);
   const hash = await sha256Hex(code);
@@ -433,8 +451,31 @@ export async function claimCouponForOrder(env, value, orderId, subtotalCents) {
   if (!result.meta?.changes) throw new GameRewardError(await couponRejectionForHash(db, hash), 409);
 
   const row = await db.prepare("SELECT * FROM reward_coupons WHERE code_hash=?").bind(hash).first();
+  if (row.item_id) return artikelCodeAnwenden(db, row, String(orderId), subtotalCents);
   const money = discountForSubtotal(subtotalCents, row.discount_bps);
   return { couponId: row.id, orderId: String(orderId), ...money };
+}
+
+// Artikel-Code: nur die Zeile des Stuecks wird auf den Festpreis gesetzt, alle
+// anderen Stuecke der Bestellung bleiben unveraendert. Fehlt das Stueck (oder
+// waere der Festpreis nicht guenstiger), wird die Reservierung zurueckgegeben.
+async function artikelCodeAnwenden(db, row, orderId, subtotalCents) {
+  const zeile = await db.prepare("SELECT id,unit_price_cents FROM order_items WHERE order_id=? AND item_id=? LIMIT 1")
+    .bind(orderId, Number(row.item_id)).first();
+  const festpreis = Math.round(Number(row.fixed_price_cents) || 0);
+  const rabatt = zeile ? Math.round(Number(zeile.unit_price_cents) || 0) - festpreis : 0;
+  const subtotal = Math.max(0, Math.round(Number(subtotalCents) || 0));
+  if (!zeile || festpreis <= 0 || rabatt <= 0 || rabatt >= subtotal) {
+    await db.prepare(`UPDATE reward_coupons
+      SET status='ACTIVE',reserved_order_id=NULL,reserved_until=NULL
+      WHERE id=? AND status='RESERVED' AND reserved_order_id=?`).bind(row.id, orderId).run();
+    throw new GameRewardError("COUPON_NOT_FOR_ORDER", 409);
+  }
+  return {
+    couponId: row.id, orderId, subtotalCents: subtotal,
+    discountBps: Math.round(rabatt * 10000 / subtotal), discountCents: rabatt, totalCents: subtotal - rabatt,
+    zeileId: zeile.id, zeilenPreisCents: festpreis, itemId: Number(row.item_id),
+  };
 }
 
 export async function releaseCouponClaim(env, couponId, orderId) {
