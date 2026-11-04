@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="ui-kopf">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -51,6 +51,26 @@
 <script src="/assets/zurueck.js" defer></script>
 <script>try{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}catch(e){}</script>
 <script src="/assets/catalog-number-links.js" defer></script>
+<style>
+/* Archiv-Kopf (d119-ui): Suche als Linie, kleine Zahlenzeile - inline, damit nichts springt. */
+html.ui-kopf .masthead__meta { display: none; }
+html.ui-kopf .rail__search { display: none; }
+.ui-kopf__suche { margin: 22px auto 12px; position: relative; width: min(100%, 440px); }
+.ui-kopf__suche::before { content: ""; position: absolute; right: 6px; top: 50%; width: 13px; height: 13px; margin-top: -9px; border: 1.5px solid currentColor; border-radius: 50%; opacity: .6; box-sizing: border-box; }
+.ui-kopf__suche::after { content: ""; position: absolute; right: 2px; top: 50%; width: 7px; height: 1.5px; margin-top: 4px; background: currentColor; opacity: .6; transform: rotate(45deg); }
+.ui-kopf__suche #searchInput { width: 100%; box-sizing: border-box; padding: 10px 28px 10px 0; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; border: 0; border-bottom: 1px solid rgba(242,239,231,.35); border-radius: 0; background: transparent; color: inherit; box-shadow: none; text-align: center; }
+.ui-kopf__suche #searchInput::placeholder { color: inherit; opacity: .55; }
+.ui-kopf__suche #searchInput:focus { outline: none; border-bottom-color: #f2efe7; }
+[data-theme="hell"] .ui-kopf__suche #searchInput { border-bottom-color: rgba(0,0,0,.35); }
+[data-theme="hell"] .ui-kopf__suche #searchInput { background: rgba(0,0,0,.04); border-color: rgba(0,0,0,.3); }
+.ui-kopf__zahlen { min-height: 15px; margin: 0 0 6px; font: 500 11px/1.4 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; opacity: .55; }
+html.ui-kopf .masthead__bottom { display: flex; flex-direction: column; align-items: center; gap: 0; }
+html.ui-kopf .masthead__index { margin-top: 8px; }
+.ui-kopf__suche { flex: 0 0 auto; }
+</style>
+
+<link rel="preload" as="style" href="/assets/d119-ui.css?v=d9a18601148f" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="/assets/d119-ui.css?v=d9a18601148f"></noscript>
+<script src="/assets/d119-ui.js?v=d9a18601148f" fetchpriority="low" defer></script>
 </head>
 <body>
 
@@ -284,14 +304,16 @@
         <span class="meta-figure__label" data-i18n="metaBrandsLabel">Brands</span>
       </div>
     </div>
+    <div class="ui-kopf__suche">
+      <input id="searchInput" type="text" data-i18n-placeholder="searchPlaceholder" placeholder="Search by brand, item, size" autocomplete="off" />
+    </div>
+    <p class="ui-kopf__zahlen" id="uiZahlen">&nbsp;</p>
     <div class="masthead__index">Prada · Dior · Saint Laurent<br />Jean Paul Gaultier · Y-3 · <span id="brandLineMore">&amp; more</span></div>
   </div>
 </div>
 
 <div class="rail">
-  <div class="rail__search">
-    <input id="searchInput" type="text" data-i18n-placeholder="searchPlaceholder" placeholder="Search by brand, item, size" autocomplete="off" />
-  </div>
+  <div class="rail__search" hidden></div>
   <div class="catalog-heading">
     <span id="catalogTitle">Available</span>
     <span class="rail__count" id="railCount"></span>
