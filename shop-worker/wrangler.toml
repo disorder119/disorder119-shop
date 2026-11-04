@@ -28,6 +28,9 @@ DHL_PRIVAT_ENVIRONMENT = "live"
 # von selbst nach jedem Kauf (zieht dabei die PayPal-Reservierung ein).
 DHL_ENVIRONMENT = "live"
 DHL_AUTO_MARKE = "an"
+# Durchschlag (BCC) jeder Bestell-, Rechnungs-, Versand-, Erstattungs- und Widerrufsmail an den Inhaber
+# (customer-mail.js, nur Nachrichten mit kopieAnShop - nie Anmeldelinks oder Auskuenfte).
+MAIL_BCC = "disorder119shop@gmail.com"
 # Geo-Sperre (geo-sperre.js): aus diesen Laendern ist die API gar nicht
 # erreichbar (403). ISO-Codes mit Komma, "aus" schaltet ab; DE und US werden
 # nie gesperrt. Optional GEO_SPERRE_KONTINENTE = "AS" fuer ganz Asien.
