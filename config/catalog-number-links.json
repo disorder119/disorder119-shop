@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "confirmed_on": "2026-10-10",
+  "confirmed_on": "2026-10-29",
   "description": "Confirmed catalog article numbers. Product IDs and image paths are permanent identities; historical order and invoice snapshots retain their original numbers.",
   "links": [
     {
@@ -934,6 +934,174 @@
     {
       "shop_id": 6241,
       "article": "238"
+    },
+    {
+      "shop_id": 9601,
+      "article": "239"
+    },
+    {
+      "shop_id": 9602,
+      "article": "240"
+    },
+    {
+      "shop_id": 9603,
+      "article": "241"
+    },
+    {
+      "shop_id": 9604,
+      "article": "242"
+    },
+    {
+      "shop_id": 9605,
+      "article": "243"
+    },
+    {
+      "shop_id": 9606,
+      "article": "244"
+    },
+    {
+      "shop_id": 9607,
+      "article": "245"
+    },
+    {
+      "shop_id": 9608,
+      "article": "246"
+    },
+    {
+      "shop_id": 9609,
+      "article": "247"
+    },
+    {
+      "shop_id": 9610,
+      "article": "248"
+    },
+    {
+      "shop_id": 9611,
+      "article": "249"
+    },
+    {
+      "shop_id": 9612,
+      "article": "250"
+    },
+    {
+      "shop_id": 9613,
+      "article": "251"
+    },
+    {
+      "shop_id": 9614,
+      "article": "252"
+    },
+    {
+      "shop_id": 9615,
+      "article": "253"
+    },
+    {
+      "shop_id": 9616,
+      "article": "254"
+    },
+    {
+      "shop_id": 9617,
+      "article": "255"
+    },
+    {
+      "shop_id": 9618,
+      "article": "256"
+    },
+    {
+      "shop_id": 9619,
+      "article": "257"
+    },
+    {
+      "shop_id": 9620,
+      "article": "258"
+    },
+    {
+      "shop_id": 9621,
+      "article": "259"
+    },
+    {
+      "shop_id": 9622,
+      "article": "260"
+    },
+    {
+      "shop_id": 9623,
+      "article": "261"
+    },
+    {
+      "shop_id": 9624,
+      "article": "262"
+    },
+    {
+      "shop_id": 9625,
+      "article": "263"
+    },
+    {
+      "shop_id": 9626,
+      "article": "264"
+    },
+    {
+      "shop_id": 9627,
+      "article": "265"
+    },
+    {
+      "shop_id": 9628,
+      "article": "266"
+    },
+    {
+      "shop_id": 9629,
+      "article": "267"
+    },
+    {
+      "shop_id": 9630,
+      "article": "268"
+    },
+    {
+      "shop_id": 9631,
+      "article": "269"
+    },
+    {
+      "shop_id": 9632,
+      "article": "270"
+    },
+    {
+      "shop_id": 9633,
+      "article": "271"
+    },
+    {
+      "shop_id": 9634,
+      "article": "272"
+    },
+    {
+      "shop_id": 9635,
+      "article": "273"
+    },
+    {
+      "shop_id": 9636,
+      "article": "274"
+    },
+    {
+      "shop_id": 9637,
+      "article": "275"
+    },
+    {
+      "shop_id": 9638,
+      "article": "276"
+    },
+    {
+      "shop_id": 9639,
+      "article": "277"
+    },
+    {
+      "shop_id": 9640,
+      "article": "278"
+    },
+    {
+      "shop_id": 9641,
+      "article": "279"
+    },
+    {
+      "shop_id": 9642,
+      "article": "280"
     }
   ],
   "excluded_shop_ids": [

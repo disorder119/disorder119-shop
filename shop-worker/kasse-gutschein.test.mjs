@@ -371,7 +371,10 @@ test("item code: lowercase word code sets exactly this piece to the fixed price"
     s.laden(KASSE);
     await ruhe();
     // Die Kasse zeigt den Abzug schon vor PayPal: eigene Zeile, Gesamt gesenkt.
-    const summe = s.document.getElementById("kasseSumme").children.map(r => r.children.map(z => z.textContent));
+    // Die Vorschau kommt ueber /coupons/validate (Worker + SQLite) - auf langsamen Laeufern etwas spaeter.
+    const zeilen = () => s.document.getElementById("kasseSumme").children.map(r => r.children.map(z => z.textContent));
+    for (let i = 0; i < 100 && !zeilen().some(r => r[0] === "Gutschein CLOSERWITHNYLON"); i++) await ruhe();
+    const summe = zeilen();
     assert.ok(summe.some(r => r.join(" | ") === "Gutschein CLOSERWITHNYLON | − 60,00 €"), JSON.stringify(summe));
     assert.ok(summe.some(r => r.join(" | ") === "Gesamt | 90,00 €"), JSON.stringify(summe));
     assert.equal(await s.kontext.zahlung.createOrder(), "PAYPAL-1");
