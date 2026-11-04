@@ -25,6 +25,22 @@ function euroAmount(cents, currency = "EUR") {
   }
 }
 
+// Admin-App direkt auf dieser Bestellung (?bestellung=<id>) - am iPhone aus
+// Telegram heraus, dort dann "Warenkorb bei DHL anlegen".
+export const ADMIN_APP_URL = "https://admin.disorder119.com/";
+export function adminBestellungLink(order = {}) {
+  const id = safeText(order.id || "", 80);
+  return id ? `${ADMIN_APP_URL}?bestellung=${encodeURIComponent(id)}` : ADMIN_APP_URL;
+}
+
+// Vorschaubild des verkauften Teils: das Link-Vorschaubild (assets/og/<id>.jpg,
+// JPEG - WebP nimmt Telegram als Foto nicht zuverlaessig).
+export function verkaufsBild(order = {}) {
+  const erstes = Array.isArray(order.items) && order.items.length ? order.items[0] : order;
+  const id = Number(erstes?.item_id ?? order.item_id);
+  return Number.isInteger(id) && id > 0 ? `https://disorder119.com/assets/og/${id}.jpg` : null;
+}
+
 export function formatSaleMessage(order = {}) {
   const number = safeText(order.order_number || order.orderNumber || order.id || "", 80) || "—";
   const article = safeText(order.article_no || order.articleNo || "", 80);
@@ -32,18 +48,21 @@ export function formatSaleMessage(order = {}) {
   const amount = euroAmount(order.total_cents ?? order.totalCents, order.currency || "EUR");
   // Kasse mit mehreren Stuecken: jedes Teil eine Zeile.
   const teile = Array.isArray(order.items) && order.items.length > 1
-    ? order.items.map(it => `• ${safeText(it.article_no || "", 20)} ${safeText(it.title_snapshot || "", 120)}`.trim())
+    ? order.items.map(it => `• #${safeText(it.article_no || "", 20)} ${safeText(it.title_snapshot || "", 120)}`.trim())
     : null;
+  const stadt = safeText(order.customer_city || "", 60);
   return [
-    "DISORDER119 — SALE",
-    `Order: ${number}`,
-    ...(teile ? [`Teile: ${teile.length}`, ...teile] : [article ? `Artikel: ${article}` : null, `Piece: ${title}`]),
-    `Betrag: ${amount}`,
+    "🎉 VERKAUFT! 🎉",
+    ...(teile ? [`${teile.length} Teile:`, ...teile] : [`${article ? `#${article} · ` : ""}${title}`]),
+    `💶 ${amount}${stadt ? ` · nach ${stadt}` : ""}`,
     // Nur reserviert: eingezogen wird beim Etikett/Versand, spaetestens zum
     // angegebenen Zeitpunkt (zahlung.js). Bis dahin kostet ein Storno nichts.
     order.zahlung_status === "AUTHORIZED"
-      ? `Zahlung: PayPal reserviert – wird beim Versand eingezogen${order.capture_due_at ? ` (spätestens ${berlinZeitpunkt(order.capture_due_at)})` : ""}`
-      : "Zahlung: PayPal bestätigt",
+      ? `PayPal reserviert – Einzug beim Versand${order.capture_due_at ? ` (spätestens ${berlinZeitpunkt(order.capture_due_at)})` : ""}`
+      : "PayPal bestätigt",
+    `Bestellung ${number}`,
+    "📦 Jetzt DHL-Marke anlegen:",
+    adminBestellungLink(order),
   ].filter(Boolean).join("\n");
 }
 
@@ -184,6 +203,29 @@ export function telegramFremd(value, max = 120) {
   return telegramZeile(entschaerft, max);
 }
 
+// Foto mit Bildunterschrift und Knopf "Bestellung öffnen". Klappt das Foto
+// nicht (Bild fehlt, Telegram lehnt ab), kommt dieselbe Meldung als Text.
+export async function sendTelegramPhoto(env, photoUrl, caption, reqId = crypto.randomUUID(), knopf = null) {
+  if (!telegramTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
+  const text = istSandbox(env) ? sandboxTelegramText(String(caption ?? "")) : String(caption ?? "");
+  const cleanCaption = wohlgeformt(text.replace(/\r\n?/g, "\n").trim().slice(0, 1024));
+  const url = safeText(photoUrl || "", 400);
+  if (!/^https:\/\/disorder119\.com\/assets\/og\/\d+\.jpg$/.test(url) || !cleanCaption) return sendTelegramMessage(env, caption, reqId);
+  const chatId = await resolveTelegramChatId(env, reqId);
+  if (!chatId) return { sent: false, reason: "TARGET_NOT_CONNECTED" };
+  const body = { chat_id: chatId, photo: url, caption: cleanCaption };
+  if (knopf && /^https:\/\/admin\.disorder119\.com\//.test(String(knopf.url || ""))) {
+    body.reply_markup = { inline_keyboard: [[{ text: safeText(knopf.text || "Öffnen", 40), url: String(knopf.url) }]] };
+  }
+  try {
+    const payload = await telegramApi(env, "sendPhoto", body);
+    return { sent: true, messageId: payload?.result?.message_id ?? null, foto: true };
+  } catch (err) {
+    console.warn(JSON.stringify({ level: "warn", event: "telegram_photo_fallback", requestId: reqId, message: safeText(err?.message || "unknown", 120) }));
+    return sendTelegramMessage(env, caption, reqId);
+  }
+}
+
 export async function sendTelegramMessage(env, text, reqId = crypto.randomUUID()) {
   if (!telegramTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
   if (istSandbox(env)) text = sandboxTelegramText(text);
@@ -247,7 +289,7 @@ async function markDelivered(env, claimId) {
 
 async function loadPaidOrder(env, orderId) {
   return env.DB.prepare(`SELECT o.id,o.order_number,o.status,o.total_cents,o.currency,
-      oi.article_no,oi.title_snapshot
+      oi.article_no,oi.title_snapshot,oi.item_id,oi.bild
     FROM commerce_orders o
     LEFT JOIN order_items oi ON oi.order_id=o.id
     WHERE o.id=?
@@ -259,8 +301,12 @@ export async function notifyPaidOrder(env, orderId, reqId = crypto.randomUUID())
   if (!telegramNotificationReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
   const row = await loadPaidOrder(env, orderId);
   if (!row) return { sent: false, reason: "ORDER_NOT_FOUND" };
-  row.items = (await env.DB.prepare("SELECT article_no,title_snapshot FROM order_items WHERE order_id=? ORDER BY rowid")
+  row.items = (await env.DB.prepare("SELECT article_no,title_snapshot,item_id,bild FROM order_items WHERE order_id=? ORDER BY rowid")
     .bind(String(orderId)).all()).results || [];
+  try {
+    const kontakt = await env.DB.prepare("SELECT city FROM order_contact_snapshots WHERE order_id=? LIMIT 1").bind(String(orderId)).first();
+    row.customer_city = kontakt?.city || "";
+  } catch { row.customer_city = ""; }
   try {
     const zahlung = await env.DB.prepare(`SELECT status,capture_due_at FROM payments WHERE order_id=? AND provider='PAYPAL'
       ORDER BY created_at DESC LIMIT 1`).bind(String(orderId)).first();
@@ -277,7 +323,8 @@ export async function notifyPaidOrder(env, orderId, reqId = crypto.randomUUID())
   if (!claim.claimed) return { sent: false, duplicate: true };
 
   try {
-    const delivery = await sendTelegramMessage(env, formatSaleMessage(row), reqId);
+    const delivery = await sendTelegramPhoto(env, verkaufsBild(row), formatSaleMessage(row), reqId,
+      { text: "📦 Bestellung öffnen · DHL-Marke", url: adminBestellungLink(row) });
     if (!delivery.sent) throw new Error(delivery.reason || "telegram_not_sent");
   } catch (err) {
     await releaseFailedClaim(env, claim.claimId);

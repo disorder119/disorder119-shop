@@ -590,7 +590,8 @@
       versandZustand.laden = Promise.resolve(null);
       return versandZustand.laden;
     }
-    versandZustand.laden = fetch(worker + "/versand/optionen?artikel=" + encodeURIComponent(IT.id))
+    var gespeicherterCode = ""; try { gespeicherterCode = String(localStorage.getItem("d119_coupon_code") || "").trim().toUpperCase().replace(/\s+/g, ""); } catch (e) {}
+    versandZustand.laden = fetch(worker + "/versand/optionen?artikel=" + encodeURIComponent(IT.id) + (gespeicherterCode ? "&code=" + encodeURIComponent(gespeicherterCode) : ""))
       .then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; })
       .then(function (daten) {

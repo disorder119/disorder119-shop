@@ -28,6 +28,7 @@ import { parsePriceToCents, safeText } from "./commerce-core.js";
 import { lieferfenster } from "./lieferzeit.js";
 import { angeboteLaden } from "./packlink.js";
 import { PAKETE, VERSAND, dienstErlaubt, lieferlaender, paketFuer, paketFuerArtikel, zoneFuerLand } from "./versand-config.js";
+import { findValidCoupon, normalizeEinloesbarerCode, rabattierterWarenwert } from "./game-rewards.js";
 
 const CACHE_MS = 10 * 60 * 1000;
 const KATALOG_CACHE_MS = 5 * 60 * 1000;
@@ -429,9 +430,16 @@ export async function handleVersandOptionen(request, env, url, reqId = crypto.ra
       const artikel = await katalogArtikel(env, ids);
       // Unbekannte Nummern zaehlen trotzdem mit: zwei Teile bleiben zwei Teile.
       paket = paketFuerArtikel([...artikel, ...Array(Math.max(0, ids.length - artikel.length)).fill({})]);
-      // Warenwert wie beim Bestellen: nur verfuegbare Stuecke mit Preis.
-      warenwertCents = artikel.filter(it => it.public_status === "AVAILABLE")
-        .reduce((summe, it) => summe + (parsePriceToCents(it.price) || 0), 0);
+      // Warenwert wie beim Bestellen: nur verfuegbare Stuecke mit Preis - und
+      // nach Abzug eines Codes (?code=..., Kasse und Warenkorb schicken den
+      // gespeicherten Code mit), damit "versandkostenfrei ab" dasselbe sagt
+      // wie spaeter die Bestellung.
+      const stuecke = artikel.filter(it => it.public_status === "AVAILABLE")
+        .map(it => ({ id: it.id, cents: parsePriceToCents(it.price) || 0 }));
+      let gutschein = null;
+      const code = normalizeEinloesbarerCode(String(url.searchParams.get("code") || "").trim().slice(0, 40));
+      if (code) gutschein = await findValidCoupon(env, code).catch(() => null);
+      warenwertCents = rabattierterWarenwert(gutschein, stuecke);
     } catch (err) {
       console.warn(JSON.stringify({ level: "warn", event: "versand_katalog_fehlt", requestId: reqId, code: safeText(err?.message || "unbekannt", 60) }));
     }
