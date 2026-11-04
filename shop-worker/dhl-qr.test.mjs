@@ -43,7 +43,7 @@ function seed(contact = {}) {
 }
 
 // Nachbau der DHL-Schnittstelle: merkt sich jede Anfrage.
-function fakeDhl({ payAfter = 1 } = {}) {
+function fakeDhl({ payAfter = 1, ohneKennung = false } = {}) {
   const calls = [];
   let cartReads = 0;
   const original = globalThis.fetch;
@@ -71,7 +71,7 @@ function fakeDhl({ payAfter = 1 } = {}) {
     if (path === "/shopping-carts/pre-paid" && init.method === "POST") {
       return Response.json({
         shoppingcart: {
-          shoppingCartId: CART_ID, state: "PREPAID",
+          ...(ohneKennung ? {} : { shoppingCartId: CART_ID }), state: "PREPAID",
           download: { entryUrl: "https://www.dhl.de/send-parcel/gw/rest/init?token=XYZ" },
           items: [{ prices: [{ amount: "6.19" }] }],
         },
@@ -454,4 +454,24 @@ test("catalog check reruns at once after a new version of the check is deployed"
   const neu = await katalogAbgleich(env, jetzt + 15 * 60_000);
   assert.equal(neu.version, 2);
   assert.equal((await katalogAbgleich(env, jetzt + 30 * 60_000)).uebersprungen, "HEUTE_SCHON");
+});
+
+test("without a cart id from DHL (since 11/2026) the pay link still works and nothing is polled", async () => {
+  const DB = seed();
+  const env = envWith(DB);
+  const dhl = fakeDhl({ payAfter: 1, ohneKennung: true });
+  try {
+    const created = await call(env, "/admin/versand/o1/qr", { method: "POST", body: { produkt: "PAK02" } });
+    assert.equal(created.status, 200, JSON.stringify(created.data));
+    assert.equal(created.data.marke.state, "PREPAID");
+    assert.equal(created.data.marke.ohneAbgleich, true);
+    assert.equal(created.data.marke.bezahlLink, "https://www.dhl.de/send-parcel/gw/rest/init?token=XYZ");
+    assert.match(DB.raw.prepare("SELECT cart_id FROM dhl_qr_marken WHERE order_id='o1'").get().cart_id, /^ohne-[0-9a-f]{20}$/);
+    const before = dhl.calls.length;
+    const again = await call(env, "/admin/versand/o1/qr");
+    assert.equal(again.data.marke.state, "PREPAID");
+    assert.equal(dhl.calls.length, before, "kein Abruf bei DHL ohne Kennung");
+  } finally {
+    dhl.restore();
+  }
 });

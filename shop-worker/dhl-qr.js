@@ -446,6 +446,8 @@ function view(mark) {
     bezahlLink: mark.state === "PAYED" ? null : mark.entry_url,
     sendungsnummer: mark.shipment_number || null,
     qrPng: mark.qr_png_b64 ? `data:image/png;base64,${mark.qr_png_b64}` : null,
+    // true: DHL meldet den Bezahlstatus nicht zurueck (keine Warenkorb-Kennung) - Sendungsnummer von Hand eintragen.
+    ohneAbgleich: String(mark.cart_id).startsWith("ohne-"),
     erstelltAm: mark.created_at,
     bezahltAm: mark.paid_at || null,
   };
@@ -494,11 +496,21 @@ export async function createMark(env, orderId, body = {}) {
       },
     },
   });
-  const cart = (await response.json())?.shoppingcart || {};
-  const cartId = safeText(cart.shoppingCartId, 12);
+  const antwortJson = await response.json().catch(() => null);
+  const cart = antwortJson?.shoppingcart || {};
   const entryUrl = String(cart.download?.entryUrl || "");
-  if (!/^[A-Za-z0-9]{12}$/.test(cartId) || !safeDhlCheckoutUrl(entryUrl)) {
-    throw new DhlQrError("DHL_ANTWORT_UNGUELTIG", 502);
+  if (!safeDhlCheckoutUrl(entryUrl)) {
+    throw new DhlQrError("DHL_ANTWORT_UNGUELTIG", 502, "kein Bezahl-Link von DHL");
+  }
+  // Seit 11/2026 liefert DHL die Warenkorb-Kennung nicht mehr in der Antwort,
+  // sondern nur per registrierter Rueckruf-Adresse (notifyUrl, DHL-Serviceticket).
+  // Ohne Kennung: Marke trotzdem anlegen (Bezahl-Link geht), Kennung als
+  // "ohne-<hash>" merken - dann kann refreshMark nicht bei DHL nachfragen, und
+  // die Sendungsnummer wird nach dem Bezahlen von Hand eingetragen.
+  let cartId = safeText(cart.shoppingCartId, 12);
+  if (!/^[A-Za-z0-9]{12}$/.test(cartId)) {
+    const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(entryUrl));
+    cartId = "ohne-" + Array.from(new Uint8Array(hash)).slice(0, 10).map(b => b.toString(16).padStart(2, "0")).join("");
   }
   const price = (cart.items?.[0]?.prices || []).reduce((sum, p) => sum + Math.round(Number(p.amount || 0) * 100), 0);
   const now = new Date().toISOString();
@@ -523,6 +535,7 @@ export async function refreshMark(env, orderId) {
   const mark = await latestMark(env, safeText(orderId, 80));
   if (!mark || mark.state === "ERSETZT") return view(null);
   if (mark.state === "PAYED" && mark.qr_png_b64) return view(mark);
+  if (String(mark.cart_id).startsWith("ohne-") && mark.state !== "PAYED") return view(mark);
 
   const now = new Date().toISOString();
   if (mark.state !== "PAYED") {

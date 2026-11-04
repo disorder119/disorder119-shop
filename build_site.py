@@ -20,6 +20,7 @@ import datetime
 import hashlib
 import html
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -985,12 +986,12 @@ def build_page(it, shop_config, lang):
 <meta property="og:title" content="{esc(title_tag)}">
 <meta property="og:description" content="{esc(desc)}">
 <meta property="og:url" content="{canonical}">
-<meta property="og:image" content="{SITE_URL}{esc(hero)}">
+<meta property="og:image" content="{og_bild_url(it, hero)}">
 <meta property="og:image:alt" content="{esc(name)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{esc(title_tag)}">
 <meta name="twitter:description" content="{esc(desc)}">
-<meta name="twitter:image" content="{SITE_URL}{esc(hero)}">
+<meta name="twitter:image" content="{og_bild_url(it, hero)}">
 <meta name="twitter:image:alt" content="{esc(name)}">
 <script type="application/ld+json">{site_entities_jsonld(shop_config)}</script>
 {product_json_ld_tag(it, lang)}
@@ -1063,7 +1064,7 @@ def build_page(it, shop_config, lang):
 </script>
 <script src="/assets/newsletter.js?v={NEWSLETTER_ASSET_VERSION}" fetchpriority="low" defer></script>
 <script src="/assets/pwa.js?v={PWA_JS_VERSION}" defer></script>
-<script src="/assets/article.js?v={ARTICLE_JS_VERSION}" fetchpriority="low" defer></script>
+<script src="/assets/article.js?v={ARTICLE_JS_VERSION}" fetchpriority="low" defer></script>{ui_tags()}
 </body>
 </html>
 """
@@ -1464,6 +1465,8 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__THEME_VERSION__", THEME_CSS_VERSION)
     out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)
     out = out.replace("__PWA_JS_VERSION__", PWA_JS_VERSION)
+    if include_item_list:
+        out = out.replace("</body>", ui_tags() + "\n</body>", 1)
     return out
 
 
@@ -2127,6 +2130,92 @@ def page_fingerprint(segment, item, lang, public_items):
 
 LLMS_PATH = BASE / "llms.txt"
 
+# ---------------------------------------------------------------- Oberflaeche
+# assets/d119-ui.js/.css (04.11.2026, aus der UI-Vorschau uebernommen) auf der
+# Startseite und jeder Produktseite; Link-Vorschaubilder assets/og/<id>.jpg
+# (Foto, Marke, Titel, Preis, Groesse) fuer WhatsApp/Instagram.
+def ui_tags():
+    v = _asset_version("assets/d119-ui.js")[:8] + _asset_version("assets/d119-ui.css")[:4]
+    return f'\n<link rel="stylesheet" href="/assets/d119-ui.css?v={v}">\n<script src="/assets/d119-ui.js?v={v}" defer></script>'
+
+
+def og_bild_url(it, hero):
+    return f"{SITE_URL}assets/og/{esc(str(it['id']))}.jpg"
+
+
+def _og_schrift(groesse, fett=False):
+    from PIL import ImageFont
+    for name in (["arialbd.ttf", "Arial Bold.ttf"] if fett else ["arial.ttf", "Arial.ttf"]):
+        for ordner in (Path("C:/Windows/Fonts"), Path("/usr/share/fonts/truetype/dejavu")):
+            p = ordner / name
+            if p.is_file():
+                return ImageFont.truetype(str(p), groesse)
+    try:
+        return ImageFont.truetype("DejaVuSans-Bold.ttf" if fett else "DejaVuSans.ttf", groesse)
+    except OSError:
+        return ImageFont.load_default()
+
+
+def _og_zeilen(draw, text, schrift, breite, max_zeilen):
+    woerter, zeilen, aktuell = text.split(), [], ""
+    for w in woerter:
+        probe = (aktuell + " " + w).strip()
+        if draw.textlength(probe, font=schrift) <= breite:
+            aktuell = probe
+        else:
+            if aktuell:
+                zeilen.append(aktuell)
+            aktuell = w
+        if len(zeilen) == max_zeilen:
+            break
+    if aktuell and len(zeilen) < max_zeilen:
+        zeilen.append(aktuell)
+    if len(zeilen) == max_zeilen and " ".join(zeilen) != text:
+        zeilen[-1] = zeilen[-1].rstrip(".,") + " …"
+    return zeilen
+
+
+def og_bild_schreiben(it, ziel):
+    """1200x630: Foto links, Marke/Titel/Preis/Groesse rechts, dunkler Grund."""
+    from PIL import Image, ImageDraw
+    bild = Image.new("RGB", (1200, 630), (17, 17, 17))
+    draw = ImageDraw.Draw(bild)
+    look = BASE / (it.get("look") or (it.get("gallery") or [""])[0] or "")
+    if look.is_file():
+        foto = Image.open(look).convert("RGBA")
+        foto.thumbnail((540, 540))
+        feld = Image.new("RGBA", (560, 630), (24, 24, 24, 255))
+        feld.alpha_composite(foto, ((560 - foto.width) // 2, (630 - foto.height) // 2))
+        bild.paste(feld.convert("RGB"), (0, 0))
+    x = 610
+    draw.text((x, 54), "DISORDER119 · ARCHIV", font=_og_schrift(24, True), fill=(160, 160, 160))
+    draw.text((x, 110), (it.get("brand") or "").upper(), font=_og_schrift(46, True), fill=(242, 239, 231))
+    y = 180
+    for zeile in _og_zeilen(draw, item_title(it, "de"), _og_schrift(34), 540, 3):
+        draw.text((x, y), zeile, font=_og_schrift(34), fill=(242, 239, 231))
+        y += 44
+    preis = fmt_price_de(it["price"]) if it.get("public_status") != "SOLD" and it.get("price", 0) > 0 else "SOLD"
+    draw.text((x, y + 24), preis, font=_og_schrift(56, True), fill=(242, 239, 231))
+    # Nur die Groesse (Inhaber 04.11.: Farbe und "Second Hand" klingen billig, das Teil steht fuer sich).
+    if title_size(it, "de"):
+        draw.text((x, y + 104), "Größe " + title_size(it, "de"), font=_og_schrift(26), fill=(170, 170, 170))
+    draw.text((x, 560), "disorder119.com", font=_og_schrift(26, True), fill=(120, 120, 120))
+    ziel.parent.mkdir(parents=True, exist_ok=True)
+    bild.save(ziel, "JPEG", quality=82, optimize=True)
+
+
+def build_og_bilder():
+    public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
+    og_dir = BASE / "assets" / "og"
+    for it in public_items:
+        og_bild_schreiben(it, og_dir / f"{it['id']}.jpg")
+    # Verwaiste Bilder (Entwuerfe, geloeschte Artikel) weg.
+    gueltig = {f"{it['id']}.jpg" for it in public_items}
+    for alt in og_dir.glob("*.jpg"):
+        if alt.name not in gueltig:
+            alt.unlink()
+    print(f"{len(public_items)} Link-Vorschaubilder (assets/og) geschrieben.")
+
 
 def build_llms_txt():
     """llms.txt (llmstxt.org): Kurzbeschreibung des Shops fuer KI-Assistenten und
@@ -2781,6 +2870,7 @@ def main():
     build_merchant_feed()
     build_sitemap()
     build_llms_txt()
+    build_og_bilder()
     if "--thumbs" in sys.argv:
         build_thumbs()
 
