@@ -1055,6 +1055,33 @@ export function formatMailTestMessage(now = new Date()) {
   };
 }
 
+// Versandmail-Vorschau an eine Adresse des Inhabers: ein zufaelliges (oder
+// gewaehltes) verfuegbares Teil aus dem Katalog, Beispiel-Bestellung, keine
+// Buchung, kein Durchschlag ins Postfach. Admin: POST
+// /admin/notifications/mail/versand-test {to, itemId?, sprache?}.
+export async function sendShippingPreview(env, recipient, { itemId = null, sprache = "de", reqId = crypto.randomUUID(), now = new Date() } = {}) {
+  if (!mailTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
+  const to = normalizeEmail(recipient);
+  if (!to) return { sent: false, reason: "INVALID_RECIPIENT" };
+  let katalog;
+  try { katalog = await katalogNachId({ env, fetcher: env?.KATALOG_FETCH || null }); } catch { katalog = new Map(); }
+  const teile = [...katalog.values()].filter(k => k && Array.isArray(k.gallery) && k.gallery.length && String(k.public_status || k.status || "AVAILABLE").toUpperCase() === "AVAILABLE");
+  const teil = (itemId && katalog.get(Number(itemId))) || (teile.length ? teile[Math.floor(Math.random() * teile.length)] : null);
+  if (!teil) return { sent: false, reason: "NO_ITEM" };
+  const preisCents = Math.round(Number(teil.price) * 100) || 0;
+  const nummer = `D119-${now.toISOString().slice(0, 10).replace(/-/g, "")}-TEST${String(teil.id).slice(-4).padStart(4, "0")}`;
+  const order = {
+    order_number: nummer, carrier: "DHL", tracking_number: "00340434161094042557", city: "Aschaffenburg",
+    total_cents: preisCents, shipping_cents: 0, shipped_at: now.toISOString(),
+    items: [{ item_id: Number(teil.id), article_no: safeText(teil.article || teil.article_no || teil.url_slug || "", 40),
+      title_snapshot: safeText(teil.title || "", 180), title_en: safeText(teil.title_en || "", 180),
+      bild: safeText(teil.gallery[0] || "", 200), unit_price_cents: preisCents, brand: safeText(teil.brand || "", 60), size: safeText(teil.size || "", 40) }],
+  };
+  const message = formatShippingConfirmation(order, { contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200), sprache, datum: now });
+  const result = await sendMail(env, { to, subject: `[TEST] ${message.subject}`, html: message.html, text: message.text, tag: "shipping-preview" });
+  return { ...result, itemId: Number(teil.id), titel: order.items[0].title_snapshot, requestId: safeText(reqId, 120) };
+}
+
 export async function sendMailTest(env, recipient, reqId = crypto.randomUUID()) {
   const message = formatMailTestMessage(new Date());
   const result = await sendMail(env, {

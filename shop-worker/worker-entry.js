@@ -471,7 +471,7 @@ const worker = {
         return finish(await handleBuchhaltung(request, runtimeEnv, url, reqId, origin));
       }
 
-      if (url.pathname === "/admin/notifications/telegram/test" || url.pathname === "/admin/notifications/mail/test") {
+      if (url.pathname === "/admin/notifications/telegram/test" || url.pathname === "/admin/notifications/mail/test" || url.pathname === "/admin/notifications/mail/versand-test") {
         return finish(await handleAdminNotifications(request, runtimeEnv, url, reqId, origin));
       }
 
