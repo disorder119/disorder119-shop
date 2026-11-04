@@ -687,7 +687,7 @@ img[data-d119-image-protected] {
 .info > .info__trust { order: 10; }
 .info__akk .info__desc { margin-top: 0; padding-top: 0; border-top: 0; }
 .info__akk .info__gebraucht { margin: 8px 0 0; }
-   Drei Schlagzeilen, Hook, Kaufknoepfe, Fakten als Tabelle, Klappleisten,
+/* Drei Schlagzeilen, Hook, Kaufknoepfe, Fakten als Tabelle, Klappleisten,
    Vertrauensleiste; Puppenmasse als Leiste unter dem Foto. */
 .info__caption { font-family: "Helvetica Neue Condensed", "Arial Narrow", Helvetica, Arial, sans-serif; font-weight: 800; text-transform: uppercase; font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 0.96; letter-spacing: -0.01em; margin: 8px 0 14px; }
 .info__caption span { display: block; }
