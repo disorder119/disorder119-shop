@@ -273,11 +273,30 @@ def _absatz(lines: list) -> str:
     return "\n".join(lines).strip()
 
 
+def _woerter(text: str) -> set:
+    t = re.sub(r"\([^)]*\)", " ", _norm(text))
+    return {w for w in re.findall(r"[a-z0-9][a-z0-9-]{3,}", t)}
+
+
+def zustand_text(t: dict) -> str:
+    """Zustand + 'Hinweis zum Zustand' ohne Doppelung: steckt der Hinweis
+    (ohne Klammerzusatz wie 'siehe Fotos') schon fast ganz im Zustandstext,
+    entfaellt er."""
+    zustand = _absatz(t.get("zustand", []))
+    hinweise = []
+    for h in t.get("hinweis_zustand", []):
+        w = _woerter(h)
+        if zustand and w and len(w & _woerter(zustand)) / len(w) >= 0.7:
+            continue
+        hinweise.append(h)
+    return "\n".join(x for x in (zustand, *hinweise) if x).strip()
+
+
 def akkordeon_html(it: dict, t: dict, lang: str, *, beschreibung_text: str, gebraucht_hinweis: str, frei_ab_text: str = "") -> str:
     """Klappleisten; #itemDesc bleibt (Marker fuer apply_catalog_taxonomy.py und article.js)."""
     L = _LABEL[lang]
     haupt = _absatz(t.get("haupt", [])) or str(beschreibung_text or "").strip()
-    zustand = "\n\n".join(x for x in (_absatz(t.get("zustand", [])), _absatz(t.get("hinweis_zustand", []))) if x)
+    zustand = zustand_text(t)
     masse = "\n".join(x for x in (_absatz(t.get("foto", [])), _absatz(t.get("masse_hinweis", []))) if x)
     recht = "\n\n".join(x for x in (_absatz(t.get("recht", [])), _absatz(t.get("leitbild", [])), _absatz(t.get("rest", []))) if x)
     versand = L["versand_text"].format(frei=(L["frei"].format(betrag=frei_ab_text) if frei_ab_text else ""))
@@ -288,7 +307,10 @@ def akkordeon_html(it: dict, t: dict, lang: str, *, beschreibung_text: str, gebr
 
     out = ['<div class="info__akk" data-strukturiert>']
     out.append(leiste("beschreibung", '\n    <p class="info__desc" id="itemDesc">' + esc(haupt) + "</p>\n  "))
-    zustand_html = f'<p class="info__gebraucht" data-zustand-hinweis>{esc(gebraucht_hinweis)}</p>' + (f'<p class="info__akk-text">{esc(zustand)}</p>' if zustand else "")
+    # Erst der konkrete Zustand des Stuecks, darunter klein der allgemeine
+    # Gebraucht-Hinweis (gleich auf jeder Seite, data-zustand-hinweis zaehlt validate_focus_three.py).
+    zustand_html = (f'<p class="info__akk-text">{esc(zustand)}</p>' if zustand else "") + \
+        f'<p class="info__gebraucht info__akk-text--klein" data-zustand-hinweis>{esc(gebraucht_hinweis)}</p>'
     out.append(leiste("zustand", zustand_html, offen=True))
     if masse:
         out.append(leiste("masse", f'<p class="info__akk-text">{esc(masse)}</p>'))
