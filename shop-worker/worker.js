@@ -15,6 +15,7 @@ import {
 import { branchHead, createCommit, fastForward, readRepoFile } from "./github-datei.js";
 import { istSandbox, sandboxKatalogLaden, sandboxVerkauft } from "./sandbox.js";
 import { VersandError, versandFuerBestellung, versandWahlStatement } from "./versand.js";
+import { findValidCoupon, normalizeEinloesbarerCode, rabattierterWarenwert } from "./game-rewards.js";
 import { zoneFuerLand } from "./versand-config.js";
 import { lateinTauglich, plzNormalisieren, plzSondergebiet } from "./laender.js";
 import { AbholortError, abholadresse, zustellungAus } from "./abholorte.js";
@@ -1293,8 +1294,18 @@ export default {
         // das Lieferland der Adresse. Weicht der Preis von dem ab, den die
         // Kundschaft gesehen hat, gibt es 409 mit der aktuellen Liste - noch
         // bevor etwas reserviert wird. Ab dem Warenwert in
-        // versand.versandkostenfrei kostet der Standard 0 Cent (nur DE).
-        const gewaehlt = await versandFuerBestellung(env, items, body.versand, body.versandPreisCents, cents, adresse.land || "DE");
+        // versand.versandkostenfrei kostet der Standard 0 Cent (nur DE) -
+        // seit 04.11.2026 zaehlt der Warenwert NACH Abzug eines Codes (Inhaber:
+        // unter 99 € zahlt die Kundschaft den Versand, auch mit Rabatt).
+        let warenwertCents = cents;
+        try {
+          const codeFuerVersand = normalizeEinloesbarerCode(String(body.couponCode || "").trim());
+          if (codeFuerVersand) {
+            warenwertCents = rabattierterWarenwert(await findValidCoupon(env, codeFuerVersand),
+              items.map((it, i) => ({ id: it.id, cents: centsList[i] })));
+          }
+        } catch { warenwertCents = cents; }
+        const gewaehlt = await versandFuerBestellung(env, items, body.versand, body.versandPreisCents, warenwertCents, adresse.land || "DE");
         if (zustellung.art !== "haustuer" && !gewaehlt.abholstation) throw new PublicError("ABHOLSTATION_NUR_DHL", 422);
         const versand = { ...gewaehlt, zustellung };
         const shippingCents = versand.preisCents;

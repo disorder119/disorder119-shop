@@ -983,7 +983,8 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     cartVersand = { ids: ids, laedt: false, daten: null, fehler: !ids || !/^https:\/\//.test(worker) };
     if (cartVersand.fehler) return;
     cartVersand.laedt = true;
-    fetch(worker + "/versand/optionen?artikel=" + encodeURIComponent(ids))
+    var gespeicherterCode = ""; try { gespeicherterCode = String(localStorage.getItem("d119_coupon_code") || "").trim().toUpperCase().replace(/\s+/g, ""); } catch (e) {}
+    fetch(worker + "/versand/optionen?artikel=" + encodeURIComponent(ids) + (gespeicherterCode ? "&code=" + encodeURIComponent(gespeicherterCode) : ""))
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("HTTP_" + r.status)); })
       .then(function (daten) {
         if (cartVersand.ids !== ids) return;
