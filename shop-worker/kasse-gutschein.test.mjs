@@ -7,6 +7,8 @@ import fs from "node:fs";
 import vm from "node:vm";
 import worker from "./worker-entry.js";
 import { assertCouponUsable, CouponCheckoutError } from "./coupon-checkout.js";
+import { bestellGutschein, formatOrderConfirmation, loadOrderForConfirmation } from "./customer-mail.js";
+import { renderInvoice } from "./tax-invoice.js";
 import { claimCouponForOrder, issueRewardCoupon } from "./game-rewards.js";
 import { versandCacheLeeren } from "./versand.js";
 import { allMigrations, sqliteD1 } from "./test-d1.mjs";
@@ -380,6 +382,23 @@ test("item code: lowercase word code sets exactly this piece to the fixed price"
     assert.equal(DB.raw.prepare("SELECT unit_price_cents FROM order_items WHERE order_id=?").get(bestellung.id).unit_price_cents, 9000);
     assert.deepEqual({ ...DB.raw.prepare("SELECT status,reserved_order_id FROM reward_coupons").get() },
       { status: "RESERVED", reserved_order_id: bestellung.id });
+    // Mail und Rechnung nennen den Gutschein: Positionen tragen den bezahlten
+    // Preis, der Abzug steht als Info dabei.
+    assert.deepEqual(await bestellGutschein(env, bestellung.id), { cents: 6000, code: "CLOSERWITHNYLON", hint: "YLON", itemId: 9428 });
+    const order = await loadOrderForConfirmation(env, bestellung.id);
+    const profil = { mode: "small_business", confirmed: true, tax_number: "TEST-ONLY-123", seller: { name: "Muster", street: "Musterweg 1", city: "12345 Test", country: "DE" } };
+    const mail = formatOrderConfirmation({ ...order, status: "PAID" }, { contactEmail: "bestellung@disorder119.com", taxProfile: profil, zahlung: "EINGEZOGEN", sprache: "de" });
+    assert.ok(mail.text.includes("Warenwert vor Gutschein: 150,00 €"), mail.text);
+    assert.ok(mail.text.includes("Gutschein CLOSERWITHNYLON: − 60,00 €"), mail.text);
+    assert.ok(mail.text.includes("Zwischensumme: 90,00 €"), mail.text);
+    assert.match(mail.html, /Gutschein CLOSERWITHNYLON/);
+    const rechnung = renderInvoice({ ...order, status: "PAID" }, profil, "2026-11-04T10:00:00Z");
+    assert.equal(rechnung.ready, true, JSON.stringify(rechnung.issues));
+    assert.match(rechnung.html, /Preis vor Gutschein 150,00/);
+    assert.match(rechnung.html, /Gutschein CLOSERWITHNYLON −60,00/);
+    assert.match(rechnung.html, /§ 19 UStG/);
+    assert.match(rechnung.text, /Gutschein CLOSERWITHNYLON: −60,00/);
+    assert.match(rechnung.text, /Gesamt: 90,00/);
   } finally {
     netz.restore();
   }

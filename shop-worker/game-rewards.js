@@ -474,7 +474,7 @@ async function artikelCodeAnwenden(db, row, orderId, subtotalCents) {
   return {
     couponId: row.id, orderId, subtotalCents: subtotal,
     discountBps: Math.round(rabatt * 10000 / subtotal), discountCents: rabatt, totalCents: subtotal - rabatt,
-    zeileId: zeile.id, zeilenPreisCents: festpreis,
+    zeileId: zeile.id, zeilenPreisCents: festpreis, itemId: Number(row.item_id),
   };
 }
 
