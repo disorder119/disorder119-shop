@@ -351,13 +351,14 @@
   if (istArchiv) {
     var rail = document.querySelector(".rail");
     var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
-    var zurueck = nav && nav.type === "back_forward";
     // Erst ab dem zweiten Besuch: beim ersten Mal bleibt der Schriftzug oben (und das
     // Raster darf sich noch setzen - Lighthouse wertet den Sprung sonst als Layout-Verschiebung,
     // Startseite mobil 50 statt 95 Punkte).
     var besuche = Number(speicher("ui_besuche") || 0) + 1;
     speicher("ui_besuche", besuche);
-    if (rail && besuche >= 2 && !zurueck && !location.hash && window.scrollY < 40) {
+    // Auch beim Zurueck aus einem Teil (iPhone: Kopf soll oben liegen, nicht sichtbar sein) - nur wenn
+    // der Browser die alte Position nicht ohnehin wiederhergestellt hat (scrollY < 40).
+    if (rail && besuche >= 2 && !location.hash && window.scrollY < 40) {
       var kopf = document.querySelector(".page-head");
       var versatz = (kopf ? kopf.getBoundingClientRect().height : 0) + 6;
       var ziel = function () { return rail.getBoundingClientRect().top + window.scrollY - versatz; };
