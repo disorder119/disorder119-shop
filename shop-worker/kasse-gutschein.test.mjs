@@ -376,7 +376,9 @@ test("item code: lowercase word code sets exactly this piece to the fixed price"
     for (let i = 0; i < 100 && !zeilen().some(r => r[0] === "Gutschein CLOSERWITHNYLON"); i++) await ruhe();
     const summe = zeilen();
     assert.ok(summe.some(r => r.join(" | ") === "Gutschein CLOSERWITHNYLON | − 60,00 €"), JSON.stringify(summe));
-    assert.ok(summe.some(r => r.join(" | ") === "Gesamt | 90,00 €"), JSON.stringify(summe));
+    // Mit Code liegt der Warenwert (90 €) unter 99 € - der Versand (6,19 €) kommt dazu (Inhaber 04.11.2026).
+    assert.ok(summe.some(r => r.join(" | ") === "Versand · DHL Paket | 6,19 €"), JSON.stringify(summe));
+    assert.ok(summe.some(r => r.join(" | ") === "Gesamt | 96,19 €"), JSON.stringify(summe));
     assert.equal(await s.kontext.zahlung.createOrder(), "PAYPAL-1");
     const betrag = netz.patches.at(-1);
     assert.equal(betrag.breakdown ? betrag.breakdown.item_total.value : betrag.value, "90.00", "150 EUR -> 90 EUR");
@@ -401,7 +403,7 @@ test("item code: lowercase word code sets exactly this piece to the fixed price"
     assert.match(rechnung.html, /Gutschein CLOSERWITHNYLON −60,00/);
     assert.match(rechnung.html, /§ 19 UStG/);
     assert.match(rechnung.text, /Gutschein CLOSERWITHNYLON: −60,00/);
-    assert.match(rechnung.text, /Gesamt: 90,00/);
+    assert.match(rechnung.text, /Gesamt: 96,19/);
   } finally {
     netz.restore();
   }
