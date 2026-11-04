@@ -1,0 +1,219 @@
+# Disorder119
+
+> Kuratiertes Archiv für Second-Hand-Designermode aus Deutschland: Einzelstücke von A.F. Vandevorst, Adidas, Alexander McQueen, Ann Demeulemeester, Arc’teryx, Armani, Balenciaga, Balmain, Burberry, Calvin Klein Collection, Celine, Comme des Garçons u. a.. Jedes Teil gibt es genau einmal, Zustand gebraucht, Fotos vom tatsächlichen Stück. Sprachen: Deutsch (/), Englisch (/en/), Französisch (/fr/).
+
+## Kaufen
+- Preise in EUR, Endpreise (Kleinunternehmer, keine Umsatzsteuer ausgewiesen).
+- Versand mit DHL aus Deutschland nach Deutschland und in alle EU-Länder; Versandkosten stehen in der Kasse, ab 99 € Warenwert versandkostenfrei innerhalb Deutschlands.
+- Zahlung: PayPal, Apple Pay, Kreditkarte (über PayPal). Bezahlt wird erst beim Versand (Reservierung).
+- Widerruf 14 Tage: https://disorder119.com/widerruf/ · FAQ: https://disorder119.com/faq/ · AGB: https://disorder119.com/agb/ · Datenschutz: https://disorder119.com/datenschutz/
+- Kontakt: disorder119shop@gmail.com
+- Mieten einzelner Teile für Shootings/Events: https://disorder119.com/mieten/
+
+## Maschinenlesbar (für Einkaufs-Agenten)
+- Katalog als JSON (alle sichtbaren Teile, Preis, Größe, Bilder): https://disorder119.com/data/catalog.json
+- Produktfeed (Google-Merchant-Format): https://disorder119.com/feed/google-merchant.xml · Englisch: https://disorder119.com/feed/google-merchant-en.xml
+- Sitemap: https://disorder119.com/sitemap.xml
+- Jede Produktseite enthält schema.org Product + Offer als JSON-LD (Preis, Verfügbarkeit, Größe, Farbe, Zustand, Versand, Rückgabe).
+- Artikelnummer = Pfad: https://disorder119.com/artikel/<nummer>/ (Englisch /en/artikel/<nummer>/, Französisch /fr/artikel/<nummer>/).
+- Impressum und Rechtstexte sind für Menschen auf der Seite erreichbar und werden bewusst nicht indexiert.
+
+## Verfügbare Teile (196)
+- [A.F. Vandevorst Cardigan mit Muster Damen](https://disorder119.com/artikel/191/): 190 € · Größe S · Grau
+- [A.F. Vandevorst Bluse Damen Blau](https://disorder119.com/artikel/192/): 175 € · Größe 42 · Blau
+- [Adidas Originals Sample-Parka Unisex Schwarz](https://disorder119.com/artikel/108/): 280 € · Größe M · Schwarz
+- [Alexander McQueen Jeansjacke Damen Grau](https://disorder119.com/artikel/120/): 130 € · Größe 46 · Grau
+- [Ann Demeulemeester Schnürstiefel Damen Schwarz](https://disorder119.com/artikel/110/): 350 € · Größe 38 · Schwarz
+- [Ann Demeulemeester Top Damen Braun](https://disorder119.com/artikel/212/): 250 € · Größe 38 · Braun
+- [Arc’teryx Yoyo Rucksack Schwarz](https://disorder119.com/artikel/45/): 250 € · Größe One Size · Schwarz
+- [Armani Collezioni Daunenjacke Herren Grau](https://disorder119.com/artikel/112/): 120 € · Größe L · Grau
+- [Balenciaga Speedhunters Longsleeve Herren Schwarz](https://disorder119.com/artikel/57/): 240 € · Größe L · Schwarz, Grau
+- [Balenciaga SNCF Weste Damen Schwarz](https://disorder119.com/artikel/153/): 119 € · Größe 3 · Schwarz, Rot
+- [Balmain Kunstfelljacke Damen](https://disorder119.com/artikel/92/): 290 € · Größe S · Beige
+- [Balmain Winterjacke Damen Braun](https://disorder119.com/artikel/66/): 280 € · Größe 38 · Braun
+- [Balmain Kunstfelljacke mit Gürtel Damen Schwarz](https://disorder119.com/artikel/67/): 250 € · Größe 40 · Schwarz
+- [Balmain Jacke mit Kunstfellkragen Damen Braun](https://disorder119.com/artikel/91/): 250 € · Größe 38 · Braun
+- [Balmain Kurze Jacke mit Nieten Damen Schwarz](https://disorder119.com/artikel/65/): 250 € · Größe 40 · Schwarz
+- [Balmain Trenchcoat Damen Schwarz](https://disorder119.com/artikel/100/): 99 € · Größe L · Schwarz
+- [Balmain Mantel mit Kunstfellkragen Damen Braun](https://disorder119.com/artikel/126/): 90 € · Größe 42 · Braun
+- [Pierre Balmain Sweatshirt Herren Grau](https://disorder119.com/artikel/75/): 70 € · Größe 48 · Grau
+- [Pierre Balmain Steppjacke Damen Grau](https://disorder119.com/artikel/2/): 35 € · Größe M / 38 / 10 · Grau
+- [Burberry Nova Check Shorts Damen](https://disorder119.com/artikel/68/): 80 € · Größe 42 · Beige
+- [Calvin Klein Collection Jacke mit Kapuze Herren Schwarz](https://disorder119.com/artikel/244/): 120 € · Größe IT 52 · Schwarz
+- [Celine Cardigan Damen Orange](https://disorder119.com/artikel/127/): 80 € · Größe S / 36 / 8 · Orange
+- [Comme des Garçons Union-Jack-Top Damen](https://disorder119.com/artikel/59/): 400 € · Größe S / 36 / 8 · Rot, Weiß
+- [Comme des Garçons Junya Watanabe Kleid mit Wax-Print Damen Bunt](https://disorder119.com/artikel/258/): 310 € · Größe M · Mehrfarbig
+- [Diesel Leder-Bikerjacke mit Steppeinsätzen Herren Schwarz](https://disorder119.com/artikel/249/): 90 € · Größe M · Schwarz
+- [Dior Homme High-Top-Sneaker Herren Schwarz](https://disorder119.com/artikel/230/): 270 € · Größe 41 · Schwarz
+- [Dior Homme High-Top-Sneaker Herren Beige](https://disorder119.com/artikel/232/): 255 € · Größe 40 · Beige
+- [Dior Beachwear Blumenkleid Damen](https://disorder119.com/artikel/185/): 250 € · Größe 3 · Mehrfarbig
+- [Dior Zip-Jacke Herren Grau](https://disorder119.com/artikel/128/): 230 € · Größe 52 · Grau, Schwarz
+- [Dior Langarm-Poloshirt Herren Schwarz](https://disorder119.com/artikel/145/): 150 € · Größe 46 · Schwarz
+- [Dior Langarm-Poloshirt Herren Marineblau](https://disorder119.com/artikel/144/): 130 € · Größe 46 · Marineblau
+- [Dior Stricktop Damen Schwarz](https://disorder119.com/artikel/197/): 110 € · Größe 36 · Schwarz
+- [Dsquared2 Leder-Bikerjacke Herren](https://disorder119.com/artikel/184/): 460 € · Größe XL · Braun
+- [Dsquared2 Asymmetrische Bikerjacke Herren Braun](https://disorder119.com/artikel/156/): 280 € · Größe 52 · Braun
+- [Dsquared2 Surf Camp Jacke Herren Gelb](https://disorder119.com/artikel/157/): 145 € · Größe 50 · Gelb
+- [Giorgio Brato Lange Weste mit Fellkragen Damen](https://disorder119.com/artikel/188/): 250 € · Größe 46 · Grau
+- [Giorgio Brato Lederjacke Damen Schwarz](https://disorder119.com/artikel/113/): 250 € · Größe M · Schwarz
+- [Giorgio Brato Lederjacke Damen Braun](https://disorder119.com/artikel/4/): 150 € · Größe M · Braun
+- [Givenchy Piqué-Poloshirt mit Punktmuster Herren Schwarz](https://disorder119.com/artikel/251/): 70 € · Größe M · Schwarz
+- [Gucci Nadelstreifen-Blazer Damen Schwarz](https://disorder119.com/artikel/158/): 240 € · Größe 40 · Schwarz
+- [Helmut Lang Kapuzenjacke mit asymmetrischem Reißverschluss Damen Beige](https://disorder119.com/artikel/254/): 140 € · Größe S · Beige
+- [Helmut Lang Gestreiftes Hemd Herren Hellblau](https://disorder119.com/artikel/146/): 80 € · Größe L · Hellblau, Weiß
+- [Helmut Lang Logo-Hoodie Herren Schwarz](https://disorder119.com/artikel/265/): 70 € · Größe L · Schwarz
+- [Hysteric Glamour Pop-Up Toaster](https://disorder119.com/artikel/237/): 170 € · Größe ca. 28 x 18 x 15.5 cm
+- [Hysteric Glamour Kurzarm-Cardigan Damen Schwarz](https://disorder119.com/artikel/52/): 119 € · Größe M / 38 / 10 · Schwarz, Grün
+- [Isaac Sellam Experience Hose Damen Weiß](https://disorder119.com/artikel/159/): 700 € · Größe M · Weiß, Grau
+- [Isaac Sellam Lederblazer Damen Grau](https://disorder119.com/artikel/140/): 190 € · Größe 42 · Grau
+- [Isaac Sellam Jerseykleid mit Schlitz Damen Lila](https://disorder119.com/artikel/248/): 180 € · Lila
+- [Isabel Marant Kleid Damen Schwarz](https://disorder119.com/artikel/62/): 65 € · Größe XS / 0 · Schwarz
+- [Issey Miyake Breeze Knit Strickweste Damen Grün](https://disorder119.com/artikel/259/): 130 € · Größe 2 · Grün
+- [Jean Paul Gaultier Maille Blumenkleid Damen Bunt](https://disorder119.com/artikel/160/): 800 € · Größe L · Bunt
+- [Jean Paul Gaultier Tattoo-Kleid Damen Bunt](https://disorder119.com/artikel/116/): 650 € · Größe M · Bunt
+- [Jean Paul Gaultier Denim-Gürtel Blau](https://disorder119.com/artikel/63/): 600 € · Größe Größenverstellbar · Blau
+- [Jean Paul Gaultier Schwanengürtel Damen](https://disorder119.com/artikel/202/): 375 € · Größe Einheitsgröße (geschätzt) · Mehrfarbig
+- [Jean Paul Gaultier Classique Patchwork-Mesh-Top Damen](https://disorder119.com/artikel/210/): 360 € · Größe XL · Mehrfarbig
+- [Jean Paul Gaultier Mesh-Bluse Damen Bunt](https://disorder119.com/artikel/61/): 350 € · Größe M / 38 / 10 · Bunt
+- [Jean Paul Gaultier Jacke mit Barockmuster Damen](https://disorder119.com/artikel/71/): 350 € · Größe 42 · Burgunderrot, Creme
+- [Jean Paul Gaultier Classique Mesh-Top mit Print Damen](https://disorder119.com/artikel/209/): 340 € · Größe L · Rot
+- [Jean Paul Gaultier Jean's Set aus Faltenrock und Weste Damen Schwarz](https://disorder119.com/artikel/272/): 300 € · Größe IT 42 · Schwarz
+- [Jean Paul Gaultier Femme Blazer mit Schriftzeichen-Futter Damen Schwarz](https://disorder119.com/artikel/261/): 270 € · Größe IT 46 · Schwarz
+- [Jean Paul Gaultier Langer Rock mit Muster Damen](https://disorder119.com/artikel/211/): 200 € · Größe L · Beige
+- [Jean Paul Gaultier Jeansrock Damen Schwarz](https://disorder119.com/artikel/203/): 170 € · Größe 42 · Schwarz
+- [Jean Paul Gaultier Military-Jacke Damen Schwarz](https://disorder119.com/artikel/44/): 170 € · Größe M / 38 / 10 · Schwarz
+- [Jean Paul Gaultier Soleil Mesh-Top Damen Schwarz](https://disorder119.com/artikel/161/): 170 € · Größe L · Schwarz
+- [Jean Paul Gaultier Hose Damen Grau](https://disorder119.com/artikel/35/): 160 € · Größe Sonstige · Grau
+- [Jean Paul Gaultier T-Shirt mit Print Damen Blau](https://disorder119.com/artikel/70/): 150 € · Größe 36 · Blau
+- [Jean Paul Gaultier Soleil Mesh-Top Damen Weiß](https://disorder119.com/artikel/162/): 150 € · Größe L · Weiß
+- [Jean Paul Gaultier Lederjacke Damen Rosé](https://disorder119.com/artikel/166/): 130 € · Größe XS · Rose, Aprikose
+- [Jean Paul Gaultier Mesh-Top Damen Bunt](https://disorder119.com/artikel/50/): 125 € · Größe S / 36 / 8 · Bunt
+- [Jean Paul Gaultier Hose Grau](https://disorder119.com/artikel/69/): 110 € · Größe M / 38 / 10 · Grau, Schwarz
+- [Jean Paul Gaultier Lounge-Shorts Damen Lila](https://disorder119.com/artikel/73/): 99 € · Größe S / 36 / 8 · Lila, Bunt
+- [Jean Paul Gaultier Marmorierte Jeans Damen Blau](https://disorder119.com/artikel/238/): 90 € · Größe 38 · Blau
+- [Jean Paul Gaultier Zip-Jacke Damen Schwarz](https://disorder119.com/artikel/9/): 90 € · Größe S / 36 / 8 · Schwarz
+- [Jean Paul Gaultier Rock Damen Schwarz](https://disorder119.com/artikel/72/): 90 € · Größe S · Schwarz
+- [Jean Paul Gaultier Mesh-Tanktop Damen Weiß](https://disorder119.com/artikel/58/): 85 € · Größe S / 36 / 8 · Weiß
+- [Jean Paul Gaultier Maille Lounge-Set Unisex](https://disorder119.com/artikel/130/): 70 € · Größe Universal · Marineblau
+- [Jil Sander Sweet Angel Wende-Top Damen Schwarz](https://disorder119.com/artikel/176/): 140 € · Größe XL · Schwarz
+- [Jil Sander Mantel mit Reverskragen Damen Schwarz](https://disorder119.com/artikel/255/): 90 € · Größe 42 · Schwarz
+- [Jil Sander+ Cord-Weste Damen](https://disorder119.com/artikel/115/): 85 € · Größe 38 · Schwarz
+- [Jil Sander Blazer Damen Khaki](https://disorder119.com/artikel/114/): 70 € · Größe 40 · Khaki
+- [Jil Sander Blazer Damen Schwarz](https://disorder119.com/artikel/163/): 50 € · Größe 38 · Schwarz
+- [Just Cavalli Jacke Damen Schwarz](https://disorder119.com/artikel/167/): 350 € · Größe 42 · Schwarz
+- [Just Cavalli Steppmantel mit Herz-Logo Damen Schwarz](https://disorder119.com/artikel/243/): 130 € · Größe IT 42 · Schwarz
+- [Kiko Kostadinov Weste Herren Braun](https://disorder119.com/artikel/99/): 300 € · Größe 46 · Braun
+- [Maison Margiela x H&M Gitarrenkoffer-Tasche Schwarz](https://disorder119.com/artikel/271/): 700 € · Größe One Size · Schwarz
+- [Maison Margiela x H&M Candy-Wrapper-Clutch Silber](https://disorder119.com/artikel/270/): 130 € · Größe One Size · Silber
+- [Maison Margiela x H&M Blazer Damen Grau](https://disorder119.com/artikel/102/): 90 € · Größe 36 · Grau
+- [Maison Margiela x H&M Asymmetrischer Rock Damen Marineblau](https://disorder119.com/artikel/5/): 80 € · Größe M · Marineblau
+- [MM6 Maison Margiela Top Damen Schwarz](https://disorder119.com/artikel/27/): 40 € · Größe M / 38 / 10 · Schwarz
+- [Miu Miu Mantelkleid Damen Schwarz](https://disorder119.com/artikel/193/): 240 € · Größe XS / IT 40 · Schwarz
+- [Moose Knuckles Parka mit Lederdetails Herren Schwarz](https://disorder119.com/artikel/168/): 700 € · Größe M · Schwarz
+- [Neil Barrett Feldjacke mit Kapuze Herren Braun](https://disorder119.com/artikel/246/): 250 € · Größe M · Braun
+- [Neil Barrett Kapuzenjacke Herren Rot](https://disorder119.com/artikel/242/): 170 € · Größe M · Rot
+- [Ottolinger Mesh-Top mit Print Damen](https://disorder119.com/artikel/60/): 80 € · Größe XS / 34 / 6 · Rot, Blau
+- [Porsche Design Blouson Herren Schwarz](https://disorder119.com/artikel/260/): 100 € · Größe 48 · Schwarz
+- [Prada Kapuzenjacke mit Strand-Print Damen](https://disorder119.com/artikel/109/): 500 € · Größe M / 38 / 10 · Flieder
+- [Prada Challenge Funktionsjacke Herren Dunkelblau](https://disorder119.com/artikel/205/): 490 € · Größe L (geschätzt) · Dunkelblau
+- [Prada Linea Rossa Bikerjacke Herren](https://disorder119.com/artikel/190/): 460 € · Größe 48 · Schwarz
+- [Prada Bunny Pullover Damen Rosé](https://disorder119.com/artikel/3/): 320 € · Größe M / 38 / 10 · Rose
+- [Prada Gore-Tex-Jacke Damen Weiß](https://disorder119.com/artikel/90/): 300 € · Größe 38 · Weiß
+- [Prada Leichte Jacke Damen Creme](https://disorder119.com/artikel/133/): 300 € · Größe 46 · Creme, Beige
+- [Prada Wildleder-Chelsea-Boots Damen Grau](https://disorder119.com/artikel/223/): 285 € · Größe 40 · Grau
+- [Prada Leder-Boots Herren Schwarz](https://disorder119.com/artikel/222/): 275 € · Größe 7.5 · Schwarz
+- [Prada Plume Nylon-Sneaker Damen](https://disorder119.com/artikel/233/): 270 € · Größe 36 · Schwarz
+- [Prada Sport Fleecejacke Herren Grün](https://disorder119.com/artikel/206/): 265 € · Größe XXL · Grün
+- [Prada Sport Fleecejacke Herren Schwarz](https://disorder119.com/artikel/207/): 250 € · Größe XL · Schwarz
+- [Prada Jacke mit Gürtel Damen Schwarz](https://disorder119.com/artikel/87/): 250 € · Größe 42 · Schwarz
+- [Prada Jacke mit Streifenkragen Damen Hellblau](https://disorder119.com/artikel/199/): 240 € · Größe L · Hellblau
+- [Prada Stiefel Damen Schwarz](https://disorder119.com/artikel/134/): 240 € · Größe 39 · Schwarz
+- [Prada Steppweste Damen Rot](https://disorder119.com/artikel/136/): 230 € · Größe 44 · Rot
+- [Prada Leder-Chelsea-Boots Herren Schwarz](https://disorder119.com/artikel/228/): 225 € · Größe 9 · Schwarz
+- [Prada Sneaker mit Rillensohle Damen Schwarz](https://disorder119.com/artikel/220/): 220 € · Größe 37 · Schwarz
+- [Prada Walking-Sneaker Herren](https://disorder119.com/artikel/225/): 220 € · Größe US 9 · Braun
+- [Prada Jacke Damen](https://disorder119.com/artikel/46/): 190 € · Größe M · Schwarz
+- [Prada Jacke Damen Hellblau](https://disorder119.com/artikel/152/): 190 € · Größe S / IT 42 · Hellblau
+- [Prada America's Cup Sneaker Damen Dunkelblau](https://disorder119.com/artikel/229/): 180 € · Größe 37.5 · Dunkelblau
+- [Prada Fellstola Damen](https://disorder119.com/artikel/95/): 180 € · Braun
+- [Prada Langarm-Poloshirt mit Felloptik-Kragen Damen Schwarz](https://disorder119.com/artikel/83/): 170 € · Größe L · Schwarz
+- [Prada Sneaker mit Schnalle Damen Grün](https://disorder119.com/artikel/227/): 160 € · Größe 38.5 · Grün
+- [Prada Strickjacke Damen Lila](https://disorder119.com/artikel/11/): 160 € · Größe M · Violett
+- [Prada Melierter Cardigan Damen](https://disorder119.com/artikel/76/): 160 € · Größe M / IT 44 · Schwarz, Bunt
+- [Prada Zip-Hoodie Damen Schwarz](https://disorder119.com/artikel/77/): 160 € · Größe M · Schwarz
+- [Prada Sport T-Shirt Herren Schwarz](https://disorder119.com/artikel/183/): 155 € · Größe XL · Schwarz
+- [Prada Schal Dunkelgrün](https://disorder119.com/artikel/79/): 150 € · Größe One Size · Dunkelgrün, Khaki
+- [Prada Langarm-Poloshirt mit Felloptik-Kragen Damen Grau](https://disorder119.com/artikel/82/): 150 € · Größe L · Grau
+- [Prada Luna Rossa Sweatjacke Herren Schwarz](https://disorder119.com/artikel/118/): 145 € · Größe XL · Schwarz
+- [Prada Sport Half-Zip-Poloshirt Herren](https://disorder119.com/artikel/194/): 140 € · Größe S
+- [Prada Wildleder-Sneaker Herren Grau](https://disorder119.com/artikel/224/): 140 € · Größe 6 · Grau
+- [Prada America's Cup Sneaker Damen Schwarz](https://disorder119.com/artikel/132/): 140 € · Größe 36 · Schwarz
+- [Prada Loafer Herren Rotbraun](https://disorder119.com/artikel/234/): 135 € · Größe 9 · Rotbraun
+- [Prada Top aus Wolle Damen Schwarz](https://disorder119.com/artikel/107/): 130 € · Größe L / IT 46 · Schwarz
+- [Prada Jacke in Knitteroptik Damen Schwarz](https://disorder119.com/artikel/148/): 130 € · Größe 44 · Schwarz
+- [Prada Cap Schwarz](https://disorder119.com/artikel/179/): 130 € · Größe M · Schwarz
+- [Prada Pumps Damen Schwarz](https://disorder119.com/artikel/104/): 125 € · Größe 36 · Schwarz
+- [Prada Stiefeletten Damen Schwarz](https://disorder119.com/artikel/221/): 120 € · Größe 38 · Schwarz
+- [Prada Sport Mesh-Sneaker Damen Creme](https://disorder119.com/artikel/226/): 120 € · Größe 36 · Creme
+- [Prada Longsleeve Damen Schwarz](https://disorder119.com/artikel/94/): 120 € · Größe XS · Schwarz
+- [Prada Bomberjacke Damen Schwarz](https://disorder119.com/artikel/170/): 120 € · Größe S · Schwarz
+- [Prada Low-Top-Sneaker Herren Schwarz](https://disorder119.com/artikel/219/): 110 € · Größe 8.5 · Schwarz
+- [Prada Rock Damen Dunkelgrün](https://disorder119.com/artikel/81/): 99 € · Größe M / 38 / 10 · Dunkelgrün
+- [Prada Karierte Hose Damen Braun](https://disorder119.com/artikel/78/): 80 € · Größe M · Braun, Marineblau
+- [Prada Sport Low-Top-Sneaker Herren Schwarz](https://disorder119.com/artikel/277/): 70 € · Größe EU 41 · Schwarz
+- [Prada x North Sails America's Cup Fleecejacke Herren Schwarz](https://disorder119.com/artikel/240/): 60 € · Größe XS · Schwarz
+- [Raf Simons Kinetic Youth Lederweste Herren](https://disorder119.com/artikel/201/): 1200 € · Größe 52 · Grau
+- [Raf Simons Zweiknopf-Blazer Herren Schwarz](https://disorder119.com/artikel/257/): 230 € · Größe IT 50 · Schwarz
+- [Rick Owens DRKSHDW Longsleeve Unisex Khaki](https://disorder119.com/artikel/173/): 180 € · Größe M · Khaki, Braun
+- [Rundholz Asymmetrische Tunika Damen](https://disorder119.com/artikel/187/): 155 € · Größe Einheitsgröße · Braun
+- [Rundholz Gepunktete Slide-Sandalen Damen](https://disorder119.com/artikel/218/): 150 € · Größe 38 · Beige
+- [Rundholz Asymmetrischer Cardigan Damen Elfenbein](https://disorder119.com/artikel/196/): 125 € · Größe S · Elfenbein
+- [Rundholz Langarm-Top Damen Schwarz](https://disorder119.com/artikel/123/): 60 € · Größe S / 36 / 8 · Schwarz
+- [Rundholz Black Label Jacke mit Text-Patch Damen Schwarz](https://disorder119.com/artikel/239/): 95 € · Größe XL · Schwarz
+- [Stone Island Feinstrickpullover mit V-Ausschnitt Herren Blau](https://disorder119.com/artikel/252/): 90 € · Größe XL · Blau
+- [Walter Van Beirendonck Don't Worry Longsleeve Herren](https://disorder119.com/artikel/198/): 310 € · Größe XXL · Blau
+- [Walter Van Beirendonck Kleid Damen Blau](https://disorder119.com/artikel/16/): 250 € · Größe M / 38 / 10 · Blau, Grün
+- [Walter Van Beirendonck W.&L.T. Staff-T-Shirt Herren Schwarz](https://disorder119.com/artikel/274/): 140 € · Größe XXL · Schwarz, Orange
+- [Walter Van Beirendonck Top Damen Neongrün](https://disorder119.com/artikel/18/): 99 € · Größe M / 38 / 10 · Grün
+- [Walter Van Beirendonck Jeans-Shorts Damen Blau](https://disorder119.com/artikel/36/): 90 € · Größe 32 · Blau
+- [Walter Van Beirendonck Jeansrock Damen Blau](https://disorder119.com/artikel/37/): 85 € · Größe M / 38 / 10 · Blau
+- [Y's High-Top-Schuhe mit Riemen Damen Braun](https://disorder119.com/artikel/231/): 240 € · Größe 3 / EU 41 / 26 cm · Braun
+- [Y-3 Oversized Cargohose Herren](https://disorder119.com/artikel/217/): 315 € · Größe M · Schwarz
+- [Y-3 x Palace Coach-Jacke mit Karo-Einsätzen Herren Schwarz](https://disorder119.com/artikel/245/): 260 € · Größe M · Schwarz, Blau
+- [Y-3 Nylonjacke Herren Schwarz](https://disorder119.com/artikel/7/): 200 € · Größe M · Schwarz
+- [Y-3 Trainingsjacke Damen Grau](https://disorder119.com/artikel/189/): 175 € · Größe S · Grau
+- [Y-3 x Chito Longsleeve mit Airbrush-Print Unisex Schwarz](https://disorder119.com/artikel/273/): 170 € · Größe L · Schwarz, Weiß
+- [Y-3 Asymmetrisches Maxikleid Damen Schwarz](https://disorder119.com/artikel/200/): 155 € · Größe XS · Schwarz
+- [Y-3 Strohhut](https://disorder119.com/artikel/181/): 140 € · Größe S · Schwarz
+- [Y-3 Yohji Skull Zip-Hoodie Herren Schwarz](https://disorder119.com/artikel/241/): 130 € · Größe S · Schwarz
+- [Y-3 Grafik-Beanie](https://disorder119.com/artikel/213/): 120 € · Größe Einheitsgröße · Schwarz
+- [Y-3 Sport Uniform Cargohose Herren Schwarz](https://disorder119.com/artikel/280/): 120 € · Größe M · Schwarz
+- [Y-3 Kapuzenjacke Herren Schwarz](https://disorder119.com/artikel/8/): 110 € · Größe M · Schwarz
+- [Y-3 Zip-Hoodie Damen Schwarz](https://disorder119.com/artikel/42/): 110 € · Größe XS / 34 / 6 · Schwarz
+- [Y-3 Zip-Weste Damen Schwarz](https://disorder119.com/artikel/33/): 110 € · Größe S / 36 / 8 · Schwarz
+- [Y-3 Logo-Cap Grün](https://disorder119.com/artikel/208/): 105 € · Größe verstellbar · Grün
+- [Y-3 Klett-Sneaker Damen Schwarz](https://disorder119.com/artikel/121/): 90 € · Größe 36 · Schwarz, Grün
+- [Y-3 Logo-T-Shirt Herren](https://disorder119.com/artikel/186/): 85 € · Größe S · Schwarz
+- [Y-3 Weite Hose Herren Weiß](https://disorder119.com/artikel/266/): 85 € · Größe L · Weiß
+- [Y-3 Laufjacke mit Kapuze Herren Schwarz](https://disorder119.com/artikel/279/): 85 € · Größe M · Schwarz
+- [Y-3 Pufferjacke mit Kapuze Herren Dunkelblau](https://disorder119.com/artikel/256/): 80 € · Größe S · Dunkelblau
+- [Y-3 T-Shirt mit Propaganda-Print Herren Braun](https://disorder119.com/artikel/264/): 80 € · Größe S · Braun
+- [Y-3 Stiefeletten mit Schnalle Damen Schwarz](https://disorder119.com/artikel/275/): 80 € · Größe EU 41 1/3 · Schwarz, Weiß
+- [Y-3 Rala Winter Leder-Boots Damen Schwarz](https://disorder119.com/artikel/276/): 80 € · Größe EU 40 · Schwarz
+- [Y-3 Boxing IV Zehensandalen Damen Schwarz](https://disorder119.com/artikel/268/): 70 € · Größe EU 36 2/3 · Schwarz, Weiß, Orange
+- [Y-3 Sweatshirt mit Logo-Ärmel Damen Schwarz](https://disorder119.com/artikel/262/): 60 € · Größe XS · Schwarz
+- [Y-3 Oversized Hoodie mit Logo Damen Schwarz](https://disorder119.com/artikel/263/): 60 € · Größe XS · Schwarz
+- [Y-3 Laptop-Tasche Schwarz](https://disorder119.com/artikel/267/): 60 € · Größe One Size · Schwarz
+- [Y-3 Low-Top-Sneaker Unisex Rot](https://disorder119.com/artikel/269/): 60 € · Größe EU 40 · Rot, Weiß, Schwarz
+- [Y-3 T-Shirt mit verwischtem Logo Herren Schwarz](https://disorder119.com/artikel/247/): 55 € · Größe S · Schwarz
+- [Y-3 Poloshirt Herren Grün](https://disorder119.com/artikel/13/): 45 € · Größe M · Grün
+- [Y-3 Piqué-Poloshirt mit Logo-Ärmel Herren Rot](https://disorder119.com/artikel/250/): 45 € · Größe M · Rot
+- [Yohji Yamamoto Cat-Eye-Sonnenbrille Damen Dunkelblau](https://disorder119.com/artikel/236/): 420 € · Dunkelblau
+- [Yohji Yamamoto Wollhut](https://disorder119.com/artikel/182/): 380 € · Größe M (geschätzt) · Braun
+- [Yohji Yamamoto Sonnenbrille mit Logo-Bügeln](https://disorder119.com/artikel/235/): 310 €
+- [Yohji Yamamoto Blazer mit offenen Kanten Damen Schwarz](https://disorder119.com/artikel/253/): 270 € · Größe 3 · Schwarz
+- [Yohji Yamamoto x New Era 9FORTY Signatur-Cap Schwarz](https://disorder119.com/artikel/278/): 140 € · Größe One Size · Schwarz, Silber
+- [Yves Saint Laurent Leder-Winterjacke Unisex Schwarz](https://disorder119.com/artikel/204/): 490 € · Größe L (geschätzt) · Schwarz
+- [Yves Saint Laurent Rive Gauche Seidentop Damen Bunt](https://disorder119.com/artikel/142/): 120 € · Größe S / 36 / 8 · Orange, Bunt
+
+Weitere 81 Teile im Archiv sind verkauft und bleiben als Referenz sichtbar.

@@ -39,6 +39,7 @@ import { handleIncomingEmail, handlePostfach, isPostfachRoute, postfachMeldungNa
 import { zahlungsMeldungenNachholen } from "./zahlung.js";
 import { SEITENAUFRUF_PFAD, besucherAufraeumen, entsperrtMelden, handleBesucher, istBesucherRoute } from "./besucher.js";
 import { sitzungenMelden } from "./besucher-zusammenfassung.js";
+import { wochenberichtSenden } from "./wochenbericht.js";
 import { geoGesperrt, geoSperrAntwort } from "./geo-sperre.js";
 import {
   handleWaechterAdmin,
@@ -625,6 +626,8 @@ const worker = {
     // (Sammelmeldung bei Angriffswellen, abgelaufene Vorfaelle loeschen).
     await runBackground(ctx, sitzungenMelden(env, scheduledTime, { limit: 25 }), "besucher_summary_failed", reqId);
     await runBackground(ctx, waechterPflegen(env, scheduledTime), "waechter_maintenance_failed", reqId);
+    // Montags 08:00 Berlin: Wochenbericht (Besuche, Herkunft, Teile, Umsatz, Waechter).
+    await runBackground(ctx, wochenberichtSenden(env, scheduledTime), "weekly_report_failed", reqId);
     // Telegram-Meldungen, die beim ersten Versuch nicht ankamen (Zahlungen) bzw.
     // gedrosselt gesammelt wurden (Postfach), nachholen.
     await runBackground(ctx, zahlungsMeldungenNachholen(env, reqId, new Date(scheduledTime)), "payment_notice_retry_failed", reqId);

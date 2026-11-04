@@ -37,6 +37,7 @@ from seo_text import compose_description, seo_title  # noqa: E402
 from english_titles import english_description, english_title, farbe_en  # noqa: E402
 # Beschriftungen aus der I18N-Tabelle von assets/app.js (Startseite /en/, /fr/).
 from app_i18n import app_text  # noqa: E402
+from aehnliche_teile import aehnliche_teile  # noqa: E402
 SITE_URL = "https://disorder119.com/"
 DATA_PATH = BASE / "data" / "items.json"
 
@@ -476,11 +477,10 @@ def related_same_brand(it, n=4):
 
 
 def related_same_category(it, exclude_ids, n=4):
-    others = [x for x in ITEMS if x["id"] != it["id"] and x["id"] not in exclude_ids
-              and x.get("gallery") and x["gallery"][0]
-              and x.get("category") == it.get("category")]
-    others.sort(key=lambda x: (x.get("public_status") == "SOLD"))
-    return others[:n]
+    # "AEHNLICHE ARCHIVSTUECKE": Punktewertung nach Produktart, Bereich,
+    # Groesse, Preis, Marke, Farbe (scripts/aehnliche_teile.py) statt der
+    # ersten vier derselben Kategorie.
+    return aehnliche_teile(it, ITEMS, exclude_ids, n)
 
 
 def related_card_html(x, lang):
@@ -2125,6 +2125,67 @@ def page_fingerprint(segment, item, lang, public_items):
     return h.hexdigest()
 
 
+LLMS_PATH = BASE / "llms.txt"
+
+
+def build_llms_txt():
+    """llms.txt (llmstxt.org): Kurzbeschreibung des Shops fuer KI-Assistenten und
+    Einkaufs-Agenten plus die Liste aller verfuegbaren Teile mit Preis, Groesse
+    und Adresse. Ohne Anschrift (die bleibt im Impressum), ohne Entwuerfe.
+    Wird bei jedem Build neu geschrieben; storefront-edge.js liefert die Datei
+    an der Wurzel aus (ROOT_FILES)."""
+    public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
+    verfuegbar = [it for it in public_items if it.get("public_status") != "SOLD" and it.get("price", 0) > 0]
+    verfuegbar.sort(key=lambda it: (it.get("brand") or "", -float(it.get("price") or 0), str(it["id"])))
+    frei_ab = versandkostenfrei_ab_cents()
+    try:
+        email = json.loads(SHOP_CONFIG_PATH.read_text(encoding="utf-8")).get("email") or ""
+    except (OSError, ValueError):
+        email = ""
+    marken = sorted({it.get("brand") for it in verfuegbar if it.get("brand")}, key=str.lower)
+    site = SITE_URL.rstrip("/")
+    zeilen = [
+        "# Disorder119",
+        "",
+        "> Kuratiertes Archiv für Second-Hand-Designermode aus Deutschland: Einzelstücke von "
+        + ", ".join(marken[:12]) + (" und weiteren" if len(marken) > 12 else "")
+        + ". Jedes Teil gibt es genau einmal, Zustand gebraucht, Fotos vom tatsächlichen Stück. "
+        "Sprachen: Deutsch (/), Englisch (/en/), Französisch (/fr/).",
+        "",
+        "## Kaufen",
+        "- Preise in EUR, Endpreise (Kleinunternehmer, keine Umsatzsteuer ausgewiesen).",
+        "- Versand mit DHL aus Deutschland nach Deutschland und in alle EU-Länder; Versandkosten stehen in der Kasse"
+        + (f", ab {frei_ab // 100} € Warenwert versandkostenfrei innerhalb Deutschlands" if frei_ab else "") + ".",
+        "- Zahlung: PayPal, Apple Pay, Kreditkarte (über PayPal). Bezahlt wird erst beim Versand (Reservierung).",
+        f"- Widerruf 14 Tage: {site}/widerruf/ · FAQ: {site}/faq/ · AGB: {site}/agb/ · Datenschutz: {site}/datenschutz/",
+        f"- Kontakt: {email}" if email else "- Kontakt: über das Formular im Shop",
+        "- Mieten einzelner Teile für Shootings/Events: " + site + "/mieten/",
+        "",
+        "## Maschinenlesbar (für Einkaufs-Agenten)",
+        f"- Katalog als JSON (alle sichtbaren Teile, Preis, Größe, Bilder): {site}/data/catalog.json",
+        f"- Produktfeed (Google-Merchant-Format): {site}/feed/google-merchant.xml · Englisch: {site}/feed/google-merchant-en.xml",
+        f"- Sitemap: {site}/sitemap.xml",
+        "- Jede Produktseite enthält schema.org Product + Offer als JSON-LD (Preis, Verfügbarkeit, Größe, Farbe, Zustand, Versand, Rückgabe).",
+        "- Artikelnummer = Pfad: " + site + "/artikel/<nummer>/ (Englisch /en/artikel/<nummer>/, Französisch /fr/artikel/<nummer>/).",
+        "- Impressum und Rechtstexte sind für Menschen auf der Seite erreichbar und werden bewusst nicht indexiert.",
+        "",
+        f"## Verfügbare Teile ({len(verfuegbar)})",
+    ]
+    for it in verfuegbar:
+        url = site + lang_home("de") + "artikel/" + str(it.get("url_slug", it["id"])) + "/"
+        groesse = title_size(it, "de") or (it.get("size") or "")
+        fakten = [f"{float(it['price']):.0f} €"]
+        if groesse:
+            fakten.append("Größe " + str(groesse))
+        if it.get("color"):
+            fakten.append(str(it["color"]))
+        zeilen.append(f"- [{item_title(it, 'de')}]({url}): " + " · ".join(fakten))
+    verkauft = len(public_items) - len(verfuegbar)
+    if verkauft:
+        zeilen += ["", f"Weitere {verkauft} Teile im Archiv sind verkauft und bleiben als Referenz sichtbar."]
+    LLMS_PATH.write_text("\n".join(zeilen) + "\n", encoding="utf-8")
+
+
 def build_sitemap():
     public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
     heute = datetime.date.today().isoformat()
@@ -2719,6 +2780,7 @@ def main():
     build_catalog_json()
     build_merchant_feed()
     build_sitemap()
+    build_llms_txt()
     if "--thumbs" in sys.argv:
         build_thumbs()
 
