@@ -108,22 +108,34 @@ test("addresses are validated before anything is sent", () => {
 
 test("order confirmation carries every legally required part", () => {
   const mail = formatOrderConfirmation(ORDER, { contactEmail: "bestellung@disorder119.com", taxProfile: {mode:"small_business",confirmed:true,tax_number:"TEST-ONLY-123",seller:SELLER} });
+  const strasse = new RegExp(SELLER.street.replace(/[.*+?^${}()|[]\]/g, "\$&"));
   for (const part of [mail.text, mail.html]) {
     assert.match(part, /D119-20260923-ABC12345/);
     assert.match(part, /Prada Reversible Jacket/);
     assert.match(part, /119-42/);
-    assert.match(part, /23\.09\.2026/);
+    assert.match(part, /23.09.2026/);
     // Warenwert, Versand und Gesamt muessen einzeln nachvollziehbar sein.
     assert.match(part, /380,00/);
     assert.match(part, /5,90/);
     assert.match(part, /385,90/);
     assert.match(part, /§ 19 UStG/);
-    assert.match(part, /Widerrufsrecht/);
-    assert.match(part, /Muster-Widerrufsformular/);
-    assert.match(part, new RegExp(SELLER.street.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(part, strasse);
     assert.match(part, /Musterweg 3/);
+    // AGB und Widerrufsbelehrung liegen als PDF bei - die Mail sagt das.
+    assert.match(part, /als PDF bei/);
   }
   assert.match(mail.subject, /D119-20260923-ABC12345/);
+  // Anhaenge: Vertrag (mit Widerrufsrecht und Formular) und, weil sofort eingezogen, die Rechnung.
+  assert.equal(mail.anhaenge.length, 2);
+  assert.equal(mail.anhaenge[0].name, "AGB und Widerrufsbelehrung.pdf");
+  assert.match(mail.anhaenge[0].text, /Widerrufsrecht/);
+  assert.match(mail.anhaenge[0].text, /Muster-Widerrufsformular/);
+  assert.match(Buffer.from(mail.anhaenge[0].b64, "base64").toString("latin1"), /^%PDF-1.4/);
+  assert.match(mail.anhaenge[1].name, /^Rechnung .*.pdf$/);
+  // Der Verkaeufer steht im Abschnitt "Verkaeufer" (und in der eingebetteten Rechnung), nicht noch
+  // einmal in der Fusszeile - die nennt nur noch die Marke.
+  assert.doesNotMatch(mail.html, /Joel Bittner — Disorder119, Nelseestra/);
+  assert.ok(mail.html.includes('Disorder119 · <a href="https://disorder119.com/"'), "Fusszeile nennt nur die Marke");
 });
 
 test("hostile item titles cannot inject markup into the mail", () => {

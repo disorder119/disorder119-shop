@@ -6,7 +6,9 @@ const money=n=>new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).
 export function invoiceProfile(env={},seller={}) {
   return {mode:env.TAX_MODE||'unknown',confirmed:env.TAX_CONFIRMED==='true',tax_number:String(env.TAX_NUMBER||'').trim(),seller:{...seller}};
 }
-export function renderInvoice(order,profile,issuedAt=new Date().toISOString()) {
+// nummer: fortlaufende Rechnungsnummer (customer-mail.js naechsteRechnungsnummer, z. B. "2026-002");
+// ohne sie gilt wie frueher die Bestellnummer.
+export function renderInvoice(order,profile,issuedAt=new Date().toISOString(),nummer='') {
   const seller=profile.seller||{},contact=order.contact||{},items=order.items||[];
   const issues=[];
   if(profile.mode!=='small_business'||profile.confirmed!==true)issues.push('Umsatzsteuerstatus nicht bestätigt oder außerhalb des unterstützten Kleinunternehmerfalls.');
@@ -20,7 +22,7 @@ export function renderInvoice(order,profile,issuedAt=new Date().toISOString()) {
   const discount=itemsTotal-order.subtotal_cents;
   if(discount<0||order.total_cents!==order.subtotal_cents+order.shipping_cents)issues.push('Positionen, Rabatt, Versand und Gesamtbetrag stimmen nicht überein.');
   const ready=issues.length===0,date=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(issuedAt));
-  const number=String(order.order_number||'OFFEN');
+  const number=String(nummer||order.order_number||'OFFEN');
   const g=order.gutschein&&Number(order.gutschein.cents)>0?order.gutschein:null;
   const gName=g?`Gutschein ${g.code||(g.hint?'····'+g.hint:'')}`.trim():'';
   // Hinweis am Stueck: Preis vor Gutschein und Abzug; der Positionsbetrag ist bereits der rabattierte Preis.
@@ -31,7 +33,7 @@ export function renderInvoice(order,profile,issuedAt=new Date().toISOString()) {
   const taxNote=ready?'Für diese Lieferung gilt die Steuerbefreiung für Kleinunternehmer gemäß § 19 UStG. Es wird keine Umsatzsteuer ausgewiesen.':'Steuerliche Angaben noch ungeklärt. Dieser Entwurf ist keine ausgestellte Rechnung.';
   const fragment=`<section style="background:#fff;color:#171717;padding:32px;font:13px/1.5 Arial,sans-serif;max-width:760px;margin:0 auto">
     <header style="background:#080808;color:#fff;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:20px;break-inside:avoid;print-color-adjust:exact;-webkit-print-color-adjust:exact"><img src="${DOCUMENT_LOGO}" alt="DISORDER119 Logo" width="128" height="90" style="display:block;object-fit:contain"><div style="text-align:right;font-size:12px;letter-spacing:2px">DISORDER119</div></header>
-    <h1 style="font-size:27px;margin:28px 0 6px">${title}</h1><p>Nr. ${esc(number)} · Ausgestellt am ${esc(date)}</p>
+    <h1 style="font-size:27px;margin:28px 0 6px">${title}</h1><p>Nr. ${esc(number)} · Ausgestellt am ${esc(date)}${nummer&&order.order_number?` · Bestellung ${esc(order.order_number)}`:''}</p>
     ${ready?'':`<p style="border:2px solid #9b5700;padding:12px">${issues.map(esc).join('<br>')}</p>`}
     <table style="width:100%;margin:25px 0"><tr><td style="width:52%;vertical-align:top"><b>Rechnung an</b><br>${address.map(esc).join('<br>')}</td><td style="vertical-align:top"><b>${esc(seller.name||'Anbieter offen')}</b><br>${esc(seller.street||'')}<br>${esc(seller.city||'')}<br>${esc(seller.country||'')}<br>${profile.tax_number?'Steuernummer / USt-IdNr.: '+esc(profile.tax_number):'Steuerkennung: offen'}</td></tr></table>
     <table style="border-collapse:collapse;width:100%"><thead><tr style="background:#111;color:#fff;print-color-adjust:exact;-webkit-print-color-adjust:exact"><th style="text-align:left;padding:10px 0">Artikel</th><th>Menge</th><th style="text-align:right">Betrag</th></tr></thead><tbody>${rows}</tbody></table>
