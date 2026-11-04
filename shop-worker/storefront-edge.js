@@ -2,6 +2,7 @@ import { ARTICLE_NUMBER_ROUTES } from './catalog-number-routes.js';
 import { contentSecurityPolicy, secureHtml } from './storefront-csp.js';
 import { geoGesperrt, geoSperrAntwort } from './geo-sperre.js';
 import { bekannterBot, fremdAusgeloest, kurzPfad, netzVon, verifizierterBot, waechterPruefen } from './waechter-regeln.js';
+// (netzVon auch fuer die Seitenaufruf-Daten, siehe netzFelder)
 import { ENTSPERREN_PFAD, VORSCHAU_PFAD, erwischtAntwort, sichererRuecksprung, sperrAntwort, sperrSprache, vorfallNummer, vorschauDaten } from './waechter-seiten.js';
 import { anschlussVonIp } from './privacy-security.js';
 // Edge route in front of the existing static origin. No database or secrets.
@@ -77,7 +78,14 @@ export function seitenaufruf(request,url,status) {
   if (/^\/(?:assets|data|\.well-known)\//.test(url.pathname) || /\.(?!html$)[a-z0-9]+$/i.test(url.pathname)) return null;
   return {p:url.pathname.slice(0,200),r:(h.get('Referer')||'').slice(0,300),ua:(h.get('User-Agent')||'').slice(0,400),
     ip:(h.get('CF-Connecting-IP')||'').slice(0,64),land:String(request.cf?.country||'').slice(0,2),
-    sl:browserSprache(h.get('Accept-Language')),us:kampagnenWert(url.searchParams.get('utm_source')),uc:kampagnenWert(url.searchParams.get('utm_campaign'))};
+    sl:browserSprache(h.get('Accept-Language')),us:kampagnenWert(url.searchParams.get('utm_source')),uc:kampagnenWert(url.searchParams.get('utm_campaign')),
+    ...netzFelder(request)};
+}
+// Netz des Anschlusses (ASN, Betreiber) nur fuer die Bot-Einschaetzung des
+// Shop-Workers (Rechenzentrum oder Privatanschluss); dort nicht gespeichert.
+function netzFelder(request) {
+  const {asn,name}=netzVon(request);
+  return {asn:asn||0,netz:name};
 }
 
 // Seitenaufrufe ohne Abruf der Seite beim Server (assets/zurueck.js):
@@ -106,7 +114,8 @@ export function pingSeitenaufruf(request,body) {
   const r=String(body?.r||'').slice(0,300)||'https://disorder119.com/';
   return {p:ziel.pathname.slice(0,200),r,ua:(h.get('User-Agent')||'').slice(0,400),
     ip:(h.get('CF-Connecting-IP')||'').slice(0,64),land:String(request.cf?.country||'').slice(0,2),
-    sl:browserSprache(h.get('Accept-Language')),us:kampagnenWert(ziel.searchParams.get('utm_source')),uc:kampagnenWert(ziel.searchParams.get('utm_campaign'))};
+    sl:browserSprache(h.get('Accept-Language')),us:kampagnenWert(ziel.searchParams.get('utm_source')),uc:kampagnenWert(ziel.searchParams.get('utm_campaign')),
+    ...netzFelder(request)};
 }
 async function kurzerBody(request,max=1024) {
   if (Number(request.headers.get('Content-Length')||0)>max) return null;

@@ -23,7 +23,8 @@ import {
   auswertungBerechnen,
   sitzungenBilden,
   besucherName,
-  besucherTier,
+  besucherKennung,
+  besucherLabel,
   browserSpracheAus,
   kampagneAus,
   systemAus,
@@ -146,7 +147,8 @@ test("Besuch wird ohne IP gespeichert und Telegram meldet neuen Besucher, Warenk
     assert.equal((await sitzungenMelden(env, T0 + 180_000 + 20 * 60_000)).gesendet, 0, "nie doppelt");
     assert.equal(n.telegram.length, 1);
     const text = n.telegram[0];
-    assert.match(text, /^👋 BESUCH VORBEI · iPhone · Aschaffenburg \(\S+\)/);
+    assert.match(text, /^👋 BESUCH VORBEI · iPhone · Aschaffenburg · Nr\. [0-9A-F]{4}\n/);
+    assert.ok(!/Fuchs|Luchs|Otter|Dachs/.test(text), "kein Tiername mehr");
     assert.match(text, /📍 Aschaffenburg, Bavaria, Deutschland/);
     assert.match(text, /📱 iPhone · iOS 18 · Safari/);
     assert.match(text, /↪️ Instagram/);
@@ -252,7 +254,7 @@ test("Admin sieht Live-Besucher und Statistik, ohne Anmeldung nicht", async () =
     assert.equal(live.besucher[0].ort.stadt, "Aschaffenburg");
     assert.equal(live.besucher[0].warenkorb, 1);
     assert.deepEqual(live.besucher[0].ereignisse.map(e => e.typ), ["seite", "artikel", "warenkorb_rein"]);
-    assert.match(live.besucher[0].besucher, /^iPhone · Aschaffenburg \(\S+\)$/);
+    assert.match(live.besucher[0].besucher, /^iPhone · Aschaffenburg · Nr\. [0-9A-F]{4}$/);
     assert.equal(live.besucher[0].name, "iPhone · Aschaffenburg");
     assert.equal(live.besucher[0].system, "iOS 18");
 
@@ -430,7 +432,7 @@ test("Seitenaufruf vom Server: ohne Einwilligung, ohne Stadt und IP, Telegram mi
     assert.equal(n.telegram.length, 0, "waehrend des Besuchs keine Nachricht");
     await sitzungenMelden(env, T0 + 60_000 + 10 * 60_000);
     assert.equal(n.telegram.length, 1, "eine Zusammenfassung nach dem Besuch");
-    assert.match(n.telegram[0], /BESUCH VORBEI · iPhone · Deutschland \(\S+\)/);
+    assert.match(n.telegram[0], /BESUCH VORBEI · iPhone · Deutschland · Nr\. [0-9A-F]{4}\n/);
     assert.match(n.telegram[0], /📍 Deutschland\n/);
     assert.match(n.telegram[0], /iPhone · iOS 18 · Safari/);
     assert.match(n.telegram[0], /↪️ Instagram/);
@@ -822,13 +824,13 @@ test("Auswertung fuer die Admin-App: lesbare Namen, Laender fuer die Weltkarte, 
     assert.deepEqual(a.laender.map(l => [l.land, l.besuche]), [["AT", 2], ["DE", 1]]);
     assert.equal(a.laender[0].landName, "Österreich");
     const mit = a.sitzungen.find(s => s.einwilligung);
-    assert.match(mit.besucher, /^iPhone · Aschaffenburg \(\S+\)$/);
+    assert.match(mit.besucher, /^iPhone · Aschaffenburg · Nr\. [0-9A-F]{4}$/);
     assert.equal(mit.name, "iPhone · Aschaffenburg");
     assert.deepEqual(mit.wiederkehr, { nr: 2, erster: "2026-09-01", vorher: "2026-09-10" });
     assert.equal(mit.meldung, "gesendet");
     assert.equal(mit.system, "iOS 18");
     const ohne = a.sitzungen.find(s => !s.einwilligung);
-    assert.match(ohne.besucher, /^iPhone · Österreich \(\S+\)$/);
+    assert.match(ohne.besucher, /^iPhone · Österreich · Nr\. [0-9A-F]{4}$/);
     assert.deepEqual(a.einstellungen.geoSperre, { laender: ["RU", "BY", "IN", "KP", "IR"], kontinente: [] });
     assert.equal(a.einstellungen.telegram, "zusammenfassung");
     assert.deepEqual(a.systeme, [{ name: "iOS 18", besuche: 3 }]);
@@ -843,8 +845,9 @@ test("Lesbare Namen, Betriebssystem, Browsersprache und Kampagne", () => {
   assert.equal(besucherName({ geraet: "iPhone", stadt: "Hamburg", land: "DE" }), "iPhone · Hamburg");
   assert.equal(besucherName({ geraet: "Windows-PC", land: "AT" }), "Windows-PC · Österreich");
   assert.equal(besucherName({}), "Gerät unbekannt · Ort unbekannt");
-  assert.equal(besucherTier("a1b2c3"), besucherTier("a1b2c3"), "stabil fuer denselben Tages-Schluessel");
-  assert.notEqual(new Set(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b"].map(x => besucherTier(x.repeat(8)))).size, 1);
+  assert.equal(besucherKennung("a1b2c3d4"), "A1B2", "vier Zeichen aus dem Tages-Schluessel, kein Spitzname");
+  assert.equal(besucherKennung(""), "0000");
+  assert.equal(besucherLabel("2b96c8c5", { geraet: "iPhone", land: "DE" }), "iPhone · Deutschland · Nr. 2B96");
   assert.equal(systemAus("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/130 Mobile Safari/537.36"), "Android 14");
   assert.equal(systemAus("Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X)"), "iPadOS 17");
   assert.equal(systemAus("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130"), "Windows 10/11");
@@ -859,4 +862,49 @@ test("Lesbare Namen, Betriebssystem, Browsersprache und Kampagne", () => {
   const text = zusammenfassungText(s, { einwilligung: 0, zuletzt: s.ende }, new Map(), { schluessel: "f".repeat(20) });
   assert.ok(text.length < 4096);
   assert.match(text, /… und 46 weitere Schritte/);
+});
+
+test("Automatisierte Aufrufe (Hoster, Maschinentempo, Linux-Crawler) bekommen keine Telegram-Zusammenfassung", async () => {
+  const db = d1();
+  const n = netz();
+  const CHROME_WIN = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+  const CHROME_LINUX = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+  try {
+    const env = envMit(db);
+    // 1) Rechenzentrum (Hetzner): zwei Punkte schon beim ersten Aufruf.
+    await zaehlen(env, aufrufVon("/", { ua: CHROME_WIN, ip: "198.51.100.10", land: "DE", asn: 24940, netz: "Hetzner Online GmbH" }));
+    // 2) Drei Seiten in einer Sekunde, US-Windows ohne Herkunft: Maschinentempo.
+    await zaehlen(env, aufrufVon("/", { ua: CHROME_WIN, ip: "198.51.100.11", land: "US", asn: 7922, netz: "Comcast" }), T0 + 5000);
+    await zaehlen(env, aufrufVon("/match/", { ua: CHROME_WIN, ip: "198.51.100.11", land: "US", asn: 7922, netz: "Comcast" }), T0 + 5400);
+    await zaehlen(env, aufrufVon("/konto/", { ua: CHROME_WIN, ip: "198.51.100.11", land: "US", asn: 7922, netz: "Comcast" }), T0 + 5900);
+    // 3) Linux-Desktop aus den USA, eine Seite, keine Herkunft: 1 + 1 Punkte.
+    await zaehlen(env, aufrufVon("/fr/faq/", { ua: CHROME_LINUX, ip: "198.51.100.12", land: "US", asn: 7922, netz: "Comcast" }), T0 + 9000);
+    // 4) Echter Besucher: iPhone aus Deutschland, eine Seite, Telekom.
+    await zaehlen(env, aufrufVon("/artikel/6042/", { ip: "198.51.100.13", land: "DE", asn: 3320, netz: "Deutsche Telekom AG" }), T0 + 12_000);
+    // 5) Instagram-In-App-Browser aus den USA: Mensch, auch mit nur einer Seite ohne Herkunft.
+    await zaehlen(env, aufrufVon("/", { ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Instagram 350.0", ip: "198.51.100.14", land: "US", asn: 7922, netz: "Comcast" }), T0 + 15_000);
+
+    const ergebnis = await sitzungenMelden(env, T0 + 15_000 + 11 * 60_000);
+    assert.deepEqual(ergebnis, { gesendet: 2, uebersprungen: 3 });
+    assert.equal(n.telegram.length, 2);
+    assert.match(n.telegram[0], /iPhone · Deutschland · Nr\./);
+    assert.match(n.telegram[0], /#42 Prada – Nylonjacke/);
+    assert.ok(!/automatisiert/.test(n.telegram[0]));
+    assert.match(n.telegram[1], /Instagram-App/);
+    const laeufe = db.raw.prepare("SELECT gemeldet, meldung_grund, verdacht FROM besucher_sitzungen ORDER BY id").all();
+    assert.deepEqual(laeufe.map(l => [l.gemeldet, l.meldung_grund]), [[2, "bot"], [2, "bot"], [2, "bot"], [1, null], [1, null]]);
+    assert.ok(laeufe[0].verdacht >= 2 && laeufe[1].verdacht >= 2 && laeufe[2].verdacht >= 2);
+    assert.equal(laeufe[3].verdacht, 0);
+    assert.equal(laeufe[4].verdacht, 0);
+    assert.ok(!JSON.stringify(laeufe).includes("Hetzner"), "Netzname wird nicht gespeichert");
+
+    // BESUCHER_TELEGRAM=alles: auch die vermutlich automatisierten, mit Hinweis.
+    const alles = envMit(d1(), { BESUCHER_TELEGRAM: "alles" });
+    await zaehlen(alles, aufrufVon("/", { ua: CHROME_WIN, ip: "198.51.100.10", land: "DE", asn: 24940, netz: "Hetzner Online GmbH" }));
+    await sitzungenMelden(alles, T0 + 11 * 60_000);
+    assert.equal(n.telegram.length, 3);
+    assert.match(n.telegram[2], /🤖 Vermutlich automatisiert/);
+  } finally {
+    n.zurueck();
+  }
 });
