@@ -31,6 +31,23 @@
   function gridBild(it) { return it.grid_image ? "/" + it.grid_image : "/" + (it.look || (it.gallery || [])[0] || ""); }
   function vibrieren(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
 
+  // Seitenuebergang (CSS @view-transition) nur zwischen Seiten, die diese Datei laden (Start, Produkt).
+  // Sonst bricht der Browser den Uebergang mit "ViewTransition opt-in disabled" als Fehler ab
+  // (Chromium-Smoke-Test /match/). Die Promises immer abfangen - Abbrueche sind kein Fehler.
+  function mitUebergang(url) {
+    try { return /^\/(en\/|fr\/)?(artikel\/[^/]+\/)?$/.test(new URL(url, location.href).pathname); } catch (e) { return false; }
+  }
+  function uebergangStill(vt) {
+    if (!vt) return;
+    try { vt.ready.catch(function () {}); vt.finished.catch(function () {}); vt.updateCallbackDone.catch(function () {}); } catch (e) {}
+  }
+  window.addEventListener("pageswap", function (e) {
+    uebergangStill(e.viewTransition);
+    var ziel = e.activation && e.activation.entry && e.activation.entry.url;
+    if (e.viewTransition && !mitUebergang(ziel)) { try { e.viewTransition.skipTransition(); } catch (x) {} }
+  });
+  window.addEventListener("pagereveal", function (e) { uebergangStill(e.viewTransition); });
+
   /* 2 · Wischen = nächstes Teil reinziehen: unter den Fotos nach links/rechts ziehen, das nächste/vorige Teil
      schiebt sich mit dem Finger herein (Foto + Marke + Preis); loslassen ab einem Drittel = Wechsel. */
   if (istArtikel && grob) {
