@@ -24,6 +24,7 @@ import { kontingentBelegen } from "./kontingent.js";
 import { anschlussVonIp, ipPepper } from "./privacy-security.js";
 import { geoSperrListe } from "./geo-sperre.js";
 import { oeffentlicherKatalog, oeffentlichenKatalogLeeren } from "./oeffentlicher-katalog.js";
+import { istHosting } from "./waechter-regeln.js";
 
 const SHOP_ORIGINS = Object.freeze([
   "https://disorder119.com",
@@ -64,11 +65,14 @@ export function besucherAktiv(env) {
   return !["aus", "false", "0", "off", "nein"].includes(schalter(env, "BESUCHER_TRACKING"));
 }
 
-// "zusammenfassung" (Standard): je Besuch eine Nachricht, wenn er vorbei ist.
-// "aus": nichts. Fruehere Werte ("wichtig", "alles") gelten als Zusammenfassung.
+// "zusammenfassung" (Standard): je Besuch eine Nachricht, wenn er vorbei ist -
+// nur fuer Besuche, die nicht nach Crawler oder Scanner aussehen (Verdacht,
+// besucher-zusammenfassung.js). "alles": auch die vermutlich automatisierten.
+// "aus": nichts. Der fruehere Wert "wichtig" gilt als Zusammenfassung.
 export function telegramModus(env) {
   const wert = schalter(env, "BESUCHER_TELEGRAM");
   if (["aus", "false", "0", "off", "nein"].includes(wert)) return "aus";
+  if (wert === "alles") return "alles";
   return "zusammenfassung";
 }
 
@@ -225,20 +229,12 @@ export function kampagneAus(quelle, kampagne) {
 
 // ---------------------------------------------------------------- Lesbare Namen
 
-const TIERE = Object.freeze([
-  "Fuchs", "Luchs", "Otter", "Dachs", "Falke", "Reh", "Igel", "Biber", "Eule", "Wolf", "Hase", "Kranich",
-  "Specht", "Möwe", "Robbe", "Elch", "Bär", "Marder", "Wiesel", "Hirsch", "Kauz", "Adler", "Rabe", "Schwan",
-  "Storch", "Panda", "Koala", "Lama", "Zebra", "Tiger", "Puma", "Gecko", "Delfin", "Wal", "Pinguin", "Kolibri",
-  "Flamingo", "Gepard", "Jaguar", "Steinbock", "Gämse", "Murmeltier", "Seehund", "Papagei", "Libelle", "Hummel",
-  "Eisvogel", "Waschbär",
-]);
-
-// Tages-Spitzname aus dem Schluessel: unterscheidet zwei "iPhone · Deutschland"
-// am selben Tag. Wechselt mit dem Tagessalz, wie der Schluessel selbst.
-export function besucherTier(schluessel) {
-  const hex = String(schluessel || "").replace(/[^0-9a-f]/gi, "").slice(0, 8);
-  if (!hex) return TIERE[0];
-  return TIERE[parseInt(hex, 16) % TIERE.length];
+// Kurze Tageskennung aus dem Schluessel (vier Zeichen): unterscheidet zwei
+// "iPhone · Deutschland" am selben Tag. Wechselt mit dem Tagessalz, wie der
+// Schluessel selbst - kein Name, kein Spitzname.
+export function besucherKennung(schluessel) {
+  const hex = String(schluessel || "").replace(/[^0-9a-f]/gi, "").slice(0, 4).toUpperCase();
+  return hex.padEnd(4, "0");
 }
 
 export function besucherName({ geraet, stadt, land } = {}) {
@@ -247,7 +243,7 @@ export function besucherName({ geraet, stadt, land } = {}) {
 }
 
 export function besucherLabel(schluessel, info = {}) {
-  return `${besucherName(info)} (${besucherTier(schluessel)})`;
+  return `${besucherName(info)} · Nr. ${besucherKennung(schluessel)}`;
 }
 
 export function istBot(userAgent) {
@@ -627,7 +623,9 @@ export async function seitenaufrufAnnehmen(request, env, ctx, now = Date.now()) 
   const nummer = artikelAusPfad(pfad);
   const { geraet, browser, system } = geraetUndBrowser(ua);
   const besucher = await schluesselAus(env, ip, ua, now);
-  if (await sitzungBeruehren(env, ctx, { besucher, neuErlaubt: neuerBesuch(env, ip, now) }, now) === SITZUNG_GRENZE) return fertig;
+  // Netz nur fuer den Verdacht (Rechenzentrum/Hoster = 2 Punkte), nicht gespeichert.
+  const verdacht = istHosting(body.asn, body.netz) ? 2 : 0;
+  if (await sitzungBeruehren(env, ctx, { besucher, neuErlaubt: neuerBesuch(env, ip, now), verdacht }, now) === SITZUNG_GRENZE) return fertig;
   const eintrag = nummer ? (await katalog(env)).get(nummer) : null;
 
   await ereignisSpeichern(env, {
@@ -732,7 +730,7 @@ async function live(env, url, now) {
       ...b,
       besucher: besucherLabel(schluessel, { geraet: b.geraet, stadt: b.ort.stadt, land: b.ort.land }),
       name: besucherName({ geraet: b.geraet, stadt: b.ort.stadt, land: b.ort.land }),
-      tier: besucherTier(schluessel),
+      kennung: besucherKennung(schluessel),
       aktiv: Date.parse(b.zuletzt) >= now - 5 * 60 * 1000,
       ereignisse: b.ereignisse.slice(-40),
     }))
@@ -835,10 +833,10 @@ export function sitzungenBilden(zeilen, verlassen = [], sichtzeit = [], lebensla
     const erste = schritte[0];
     sitzungen.push({
       id: `${aktuell.schluessel.slice(0, 12)}-${erste.t}`,
-      // Lesbar statt "#A1B2": Geraet · Stadt/Land (Tagesname).
+      // Lesbar: Geraet · Stadt/Land · Nr. (Tageskennung, vier Zeichen).
       besucher: besucherLabel(aktuell.schluessel, { geraet: aktuell.geraet, stadt: aktuell.ort.stadt, land: aktuell.ort.land }),
       name: besucherName({ geraet: aktuell.geraet, stadt: aktuell.ort.stadt, land: aktuell.ort.land }),
-      tier: besucherTier(aktuell.schluessel),
+      kennung: besucherKennung(aktuell.schluessel),
       ...laufInfo(laufJe.get(aktuell.schluessel), erste.t, bis),
       start: new Date(erste.t).toISOString(),
       ende: new Date(bis).toISOString(),
@@ -918,7 +916,7 @@ export function sitzungenBilden(zeilen, verlassen = [], sichtzeit = [], lebensla
 // Einwilligung, Besuchszahl und Telegram-Status aus besucher_sitzungen.
 function laufInfo(liste, von, bis) {
   const passend = (liste || []).filter(l => Date.parse(l.beginn) <= bis + 60_000 && Date.parse(l.zuletzt) >= von - 60_000);
-  if (!passend.length) return { einwilligung: null, wiederkehr: null, meldung: null, entsperrt: false };
+  if (!passend.length) return { einwilligung: null, wiederkehr: null, meldung: null, entsperrt: false, verdacht: 0 };
   const mit = passend.find(l => l.besuch_nr) || passend[0];
   const meldung = passend.map(l => l.gemeldet).includes(1) ? "gesendet"
     : passend.some(l => l.gemeldet === 0 || l.gemeldet === 3) ? "ausstehend"
@@ -928,6 +926,8 @@ function laufInfo(liste, von, bis) {
     wiederkehr: mit.besuch_nr ? { nr: mit.besuch_nr, erster: mit.erster_besuch || null, vorher: mit.vorher_besuch || null } : null,
     meldung,
     entsperrt: passend.some(l => l.entsperrt === 1),
+    // Verdachtspunkte auf automatisierten Aufruf (Migration 0046, >= 2 = ohne Telegram).
+    verdacht: Math.max(0, ...passend.map(l => Number(l.verdacht || 0))),
   };
 }
 
@@ -1082,7 +1082,7 @@ async function auswertungLesen(env, seit) {
         env.DB.prepare("SELECT besucher, zeit, pfad FROM besucher_verlassen WHERE zeit>=? ORDER BY zeit LIMIT ?").bind(seit, MAX_ZEILEN),
         env.DB.prepare("SELECT besucher,beginn,zuletzt,pfad,artikel_id,sicht_ms,begrenzt FROM besucher_sichtzeit INDEXED BY idx_besucher_sichtzeit_zuletzt WHERE zuletzt>=? ORDER BY besucher,beginn LIMIT ?").bind(seit, MAX_ZEILEN),
         env.DB.prepare(`SELECT besucher, beginn, zuletzt, einwilligung, besuch_nr, erster_besuch, vorher_besuch,
-            entsperrt, gemeldet, meldung_grund FROM besucher_sitzungen INDEXED BY idx_besucher_sitzungen_zuletzt WHERE zuletzt>=? ORDER BY besucher, beginn LIMIT ?`).bind(seit, MAX_ZEILEN),
+            entsperrt, gemeldet, meldung_grund, verdacht FROM besucher_sitzungen INDEXED BY idx_besucher_sitzungen_zuletzt WHERE zuletzt>=? ORDER BY besucher, beginn LIMIT ?`).bind(seit, MAX_ZEILEN),
       ]);
       return {
         zeilen: e?.results || [], verlassen: v?.results || [], sichtzeit: z?.results || [],
@@ -1116,10 +1116,17 @@ async function auswertungLesen(env, seit) {
   let lebenslauf = [];
   try {
     lebenslauf = (await env.DB.prepare(`SELECT besucher, beginn, zuletzt, einwilligung, besuch_nr, erster_besuch, vorher_besuch,
-        entsperrt, gemeldet, meldung_grund FROM besucher_sitzungen WHERE zuletzt>=? ORDER BY besucher, beginn LIMIT ?`)
+        entsperrt, gemeldet, meldung_grund, verdacht FROM besucher_sitzungen WHERE zuletzt>=? ORDER BY besucher, beginn LIMIT ?`)
       .bind(seit, MAX_ZEILEN).all()).results || [];
   } catch {
-    // Migration 0040 fehlt noch.
+    try {
+      // Migration 0046 fehlt noch: ohne Verdacht.
+      lebenslauf = (await env.DB.prepare(`SELECT besucher, beginn, zuletzt, einwilligung, besuch_nr, erster_besuch, vorher_besuch,
+          entsperrt, gemeldet, meldung_grund FROM besucher_sitzungen WHERE zuletzt>=? ORDER BY besucher, beginn LIMIT ?`)
+        .bind(seit, MAX_ZEILEN).all()).results || [];
+    } catch {
+      // Migration 0040 fehlt noch.
+    }
   }
   return { zeilen, verlassen, sichtzeit, sichtzeitVerfuegbar, lebenslauf };
 }

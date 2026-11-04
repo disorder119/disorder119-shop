@@ -68,7 +68,7 @@ test('real page views reach the shop Worker after the page, also while the shop 
   const aufrufe=()=>z.gesendet.filter(g=>g.url.endsWith('/intern/seitenaufruf'));
   assert.equal(aufrufe().length,1);
   assert.equal(aufrufe()[0].url,'https://storefront.intern/intern/seitenaufruf');
-  assert.deepEqual(aufrufe()[0].body,{p:'/artikel/119/',r:'https://l.instagram.com/',ua:IPHONE,ip:'203.0.113.7',land:'',sl:'',us:'',uc:''});
+  assert.deepEqual(aufrufe()[0].body,{p:'/artikel/119/',r:'https://l.instagram.com/',ua:IPHONE,ip:'203.0.113.7',land:'',sl:'',us:'',uc:'',asn:0,netz:''});
   await edge.fetch(seite('/'),z.env,z.ctx,async()=>new Response(null,{status:304}));
   await Promise.all(z.laeuft);
   assert.equal(aufrufe().length,2,'revalidated page still counts');
@@ -178,7 +178,7 @@ test('bfcache/prefetch ping counts once in the same counter with the same except
   assert.equal(response.status,204);
   await Promise.all(z.laeuft);
   const aufrufe=()=>z.gesendet.filter(g=>g.url.endsWith('/intern/seitenaufruf'));
-  assert.deepEqual(aufrufe()[0].body,{p:'/en/artikel/119/',r:'https://disorder119.com/en/',ua:IPHONE,ip:'198.51.100.4',land:'',sl:'',us:'instagram',uc:''});
+  assert.deepEqual(aufrufe()[0].body,{p:'/en/artikel/119/',r:'https://disorder119.com/en/',ua:IPHONE,ip:'198.51.100.4',land:'',sl:'',us:'instagram',uc:'',asn:0,netz:''});
   // Zurueck/Vor ohne verweisende Seite gilt als Aufruf innerhalb des Shops; Dublette binnen 3 s faellt weg.
   await edge.fetch(ping({u:'/',a:'zurueck'}),z.env,z.ctx,nieUrsprung);
   await edge.fetch(ping({u:'/',a:'zurueck'}),z.env,z.ctx,nieUrsprung);

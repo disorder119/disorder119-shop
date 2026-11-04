@@ -77,6 +77,24 @@ const TURNSTILE_HOSTS = Object.freeze(["disorder119.com", "www.disorder119.com",
 const ADMIN_ORIGINS = Object.freeze(["https://admin.disorder119.com", "http://localhost:8765", "http://127.0.0.1:8765"]);
 const AUS = ["aus", "false", "0", "off", "nein"];
 
+// Telegram nur, wenn wirklich etwas in Gefahr ist (Standard): Kampagnen,
+// Fluten, durchprobierte Codes, Kassen-Fehlschlaege, Wiederholungstaeter und
+// hartnaeckige Angriffe (>= KRITISCH_VERSUCHE Treffer an einem Tag). Einzelne
+// Scanner-Pfade, 404-Fluten und abgewehrte Einzelproben bleiben still - sie
+// stehen in der Admin-App. WAECHTER_TELEGRAM=alles meldet jede Sperre.
+const KRITISCHE_GRUENDE = Object.freeze(["zu-viele-anfragen", "codes-durchprobiert", "kasse-fehlschlaege"]);
+const KRITISCH_VERSUCHE = 10;
+const WELLE_MIN = 5;
+const WELLE_FENSTER = 15 * MINUTE;
+
+function telegramAlles(env) {
+  return String(env?.WAECHTER_TELEGRAM ?? "").trim().toLowerCase() === "alles";
+}
+
+export function sperreKritisch({ grund, hart = false, wiederholt = false, kampagne = null, versuche = 1 } = {}) {
+  return Boolean(kampagne) || Boolean(wiederholt) || KRITISCHE_GRUENDE.includes(grund) || (Boolean(hart) && Number(versuche || 0) >= KRITISCH_VERSUCHE);
+}
+
 export function waechterAktiv(env) {
   return !AUS.includes(String(env?.WAECHTER ?? "").trim().toLowerCase());
 }
@@ -213,9 +231,12 @@ async function kampagnePruefen(env, v, now) {
     .bind(v.signatur, v.grund, v.pfad, seit, zeit, strengBis, anschluesse, Number(stand?.versuche || 0), JSON.stringify(laender), JSON.stringify(netze)).run();
   const neu = await env.DB.prepare("SELECT id FROM waechter_kampagnen WHERE signatur=?").bind(v.signatur).first();
   if (!neu) return null;
-  // Beteiligte, die schon gesperrt sind, der Kampagne zuordnen (eine Meldung).
-  await env.DB.prepare(`UPDATE waechter_sperren SET kampagne=? WHERE kampagne IS NULL AND aufgehoben IS NULL
-    AND anschluss IN (SELECT DISTINCT anschluss FROM waechter_vorfaelle WHERE signatur=? AND zeit>=?)`).bind(neu.id, v.signatur, seit).run();
+  // Beteiligte, die schon gesperrt sind, der Kampagne zuordnen (eine Meldung);
+  // bisher stille Sperren gehoeren jetzt zur Kampagne und werden mitgemeldet.
+  await env.DB.prepare(`UPDATE waechter_sperren SET kampagne=?,
+      sammeln=CASE WHEN gemeldet_zeit IS NULL THEN 1 ELSE sammeln END, sammeln_seit=COALESCE(sammeln_seit, ?)
+    WHERE kampagne IS NULL AND aufgehoben IS NULL
+    AND anschluss IN (SELECT DISTINCT anschluss FROM waechter_vorfaelle WHERE signatur=? AND zeit>=?)`).bind(neu.id, zeit, v.signatur, seit).run();
   return { id: neu.id, strengBis };
 }
 
@@ -259,6 +280,14 @@ export async function waechterVorfall(env, ctx, vorfall, now = Date.now()) {
         laufend.grund = grund;
       }
       await versuchZaehlen(env, laufend.id, hash, now, true);
+      // Hartnaeckig: ab KRITISCH_VERSUCHE Treffern wird eine bisher stille
+      // Angriffs-Sperre doch gemeldet (eine Schreibung, dann sammeln=1).
+      const gesamt = Number(laufend.versuche || 0) + (offeneVersuche.get(hash)?.n || 0);
+      if (hart && Number(laufend.sammeln) !== 1 && !laufend.gemeldet_zeit && gesamt >= KRITISCH_VERSUCHE) {
+        await env.DB.prepare("UPDATE waechter_sperren SET sammeln=1, sammeln_seit=? WHERE id=? AND sammeln=0").bind(zeit, laufend.id).run().catch(() => {});
+        const wecker = weckerStellen(env, ctx, now + BUENDEL_WARTEN).catch(() => false);
+        if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(wecker);
+      }
       return { gesperrt: true, grund: laufend.grund, selbst: Number(laufend.selbst) === 1, bis: laufend.bis };
     }
 
@@ -277,8 +306,9 @@ export async function waechterVorfall(env, ctx, vorfall, now = Date.now()) {
     else {
       let [schwelle, fenster, arten] = SCHWELLEN[art];
       if (art === "probe" && (hosting || kampagne)) schwelle = 1;
-      else if (art === "probe" && asn) {
-        try { if (await strengesNetz(env, asn, now)) schwelle = 1; } catch {}
+      if (art === "probe" && !kampagne && asn) {
+        // Im strengen Fenster einer Kampagne: die Sperre gehoert zur Kampagne (und wird mitgemeldet).
+        try { const strengId = await strengesNetz(env, asn, now); if (strengId) { schwelle = 1; kampagne = { id: strengId }; } } catch {}
       }
       if (art === "404" && hosting) schwelle = 10;
       let n = 1;
@@ -311,23 +341,40 @@ async function sperren(env, ctx, s) {
   const bis = iso(now + (wiederholt ? WIEDERHOLT_MS : SPERRE_MS));
   const versuche = Number((await env.DB.prepare("SELECT COUNT(*) AS n FROM waechter_vorfaelle WHERE anschluss=? AND zeit>=?")
     .bind(hash, iso(now - TAG)).first())?.n || 1);
+  // sammeln=1 heisst: in die naechste Telegram-Meldung. Eine noch nicht
+  // gemeldete Sperre (sammeln=1) bleibt beim Verlaengern gemeldet.
+  let melden = telegramAlles(env) || sperreKritisch({ grund: s.grund, hart: s.hart, wiederholt, kampagne: s.kampagne, versuche });
   await env.DB.prepare(`INSERT INTO waechter_sperren (anschluss, seit, bis, zuletzt, land, ua_kurz, grund, beispiel, versuche,
       sammeln, sammeln_seit, anzahl, selbst, asn, netz, kampagne, nr)
-    VALUES (?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(anschluss) DO UPDATE SET
       seit=excluded.seit, bis=excluded.bis, zuletzt=excluded.zuletzt,
       land=COALESCE(excluded.land, waechter_sperren.land), ua_kurz=excluded.ua_kurz,
       grund=excluded.grund, beispiel=COALESCE(excluded.beispiel, waechter_sperren.beispiel),
-      versuche=excluded.versuche, sammeln=1, sammeln_seit=excluded.sammeln_seit,
+      versuche=excluded.versuche, sammeln=MAX(waechter_sperren.sammeln, excluded.sammeln), sammeln_seit=excluded.sammeln_seit,
       anzahl=excluded.anzahl, selbst=excluded.selbst,
       asn=COALESCE(excluded.asn, waechter_sperren.asn), netz=COALESCE(excluded.netz, waechter_sperren.netz),
       kampagne=excluded.kampagne, nr=COALESCE(excluded.nr, waechter_sperren.nr),
       aufgehoben=NULL, admin_frei=NULL`)
-    .bind(hash, zeit, bis, zeit, s.land, uaKurz(s.ua), s.grund, s.pfad, versuche, zeit, anzahl, selbst, s.asn, s.netz, s.kampagne, s.nr).run();
+    .bind(hash, zeit, bis, zeit, s.land, uaKurz(s.ua), s.grund, s.pfad, versuche, melden ? 1 : 0, zeit, anzahl, selbst, s.asn, s.netz, s.kampagne, s.nr).run();
+  // Welle: ab WELLE_MIN Sperren in 15 Minuten werden alle noch stillen
+  // Sperren dieser Welle gemeldet - viele Angreifer auf einmal sind
+  // auffaellig, auch wenn jeder einzelne nur eine Probe war.
+  if (!melden) {
+    const welle = await env.DB.prepare("SELECT COUNT(*) AS n FROM waechter_sperren WHERE seit>=? AND aufgehoben IS NULL")
+      .bind(iso(now - WELLE_FENSTER)).first().catch(() => null);
+    if (Number(welle?.n || 0) >= WELLE_MIN) {
+      await env.DB.prepare("UPDATE waechter_sperren SET sammeln=1, sammeln_seit=COALESCE(sammeln_seit, ?) WHERE seit>=? AND aufgehoben IS NULL AND gemeldet_zeit IS NULL AND sammeln=0")
+        .bind(zeit, iso(now - WELLE_FENSTER)).run().catch(() => {});
+      melden = true;
+    }
+  }
   // Gebuendelte Telegram-Meldung in etwa einer Minute (Wecker), Cron als Rueckfall.
-  const wecker = weckerStellen(env, ctx, now + BUENDEL_WARTEN).catch(() => false);
-  if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(wecker);
-  return { gesperrt: true, grund: s.grund, selbst: selbst === 1, bis, wiederholt, kampagne: s.kampagne };
+  if (melden) {
+    const wecker = weckerStellen(env, ctx, now + BUENDEL_WARTEN).catch(() => false);
+    if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(wecker);
+  }
+  return { gesperrt: true, grund: s.grund, selbst: selbst === 1, bis, wiederholt, kampagne: s.kampagne, gemeldet: melden };
 }
 
 // ---------------------------------------------------------------- Telegram
