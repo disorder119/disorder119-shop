@@ -169,7 +169,22 @@ function kundenmailRahmen({ titel, eyebrow, kopf, inhalt, vorschau, sprache = "d
   return `<!DOCTYPE html>
 <html lang="${l}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">
-<title>${escapeHtml(titel)}</title></head>
+<title>${escapeHtml(titel)}</title>
+<style>
+  /* Handy (Inhaber 05.11.2026: "fuer iOS und PC optimieren"): kleinere Ueberschrift,
+     schmaleres iPhone-Motiv, weniger Rand. Gmail-App und Apple Mail lesen das,
+     Outlook ignoriert es und zeigt die Rechner-Groessen. */
+  @media only screen and (max-width: 480px) {
+    .mail-h1 { font-size: 21px !important; line-height: 1.2 !important; }
+    .mail-kopf { font-size: 14px !important; }
+    .mail-phone { width: 244px !important; }
+    .mail-phone-foto { width: 164px !important; max-width: 164px !important; }
+    .mail-phone-titel { font-size: 13px !important; }
+    .mail-phone-kopf { font-size: 11px !important; }
+    .mail-band { font-size: 8px !important; letter-spacing: 0.22em !important; }
+    .mail-nummer { font-size: 15px !important; letter-spacing: 0.04em !important; padding: 10px 12px !important; max-width: 100% !important; word-break: break-all !important; }
+  }
+</style></head>
 <body style="margin:0;padding:0;background:${F.grund};">
 ${vorschau ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${F.grund};">${escapeHtml(vorschau)}</div>` : ""}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${F.grund};">
@@ -180,7 +195,7 @@ ${vorschau ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;co
   </td></tr>
   <tr><td style="padding:40px 4px 6px;text-align:center;">
     <p style="margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:${F.leise};">${escapeHtml(eyebrow)}</p>
-    <h1 style="margin:0 0 16px;font-size:28px;line-height:1.15;font-weight:700;letter-spacing:-0.01em;text-transform:uppercase;color:${F.text};">${escapeHtml(titel)}</h1>
+    <h1 class="mail-h1" style="margin:0 0 16px;font-size:28px;line-height:1.15;font-weight:700;letter-spacing:-0.01em;text-transform:uppercase;color:${F.text};">${escapeHtml(titel)}</h1>
     ${kopf}
   </td></tr>
   ${inhalt}
@@ -834,7 +849,7 @@ export function versandZeit(datum, sprache = "de") {
 
 // iPhone-Rahmen (Dynamic Island, Statusleiste, Home-Balken) um einen Bildschirm.
 function iphone(bildschirm, uhr = "9:41") {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="width:290px;background:#050505;border:2px solid #222222;border-radius:46px;font-family:${MAIL_SCHRIFT};">
+  return `<table role="presentation" class="mail-phone" cellpadding="0" cellspacing="0" style="width:290px;background:#050505;border:2px solid #222222;border-radius:46px;font-family:${MAIL_SCHRIFT};">
     <tr><td style="padding:6px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#000000;border-radius:40px;">
         <tr><td style="padding:12px 22px 0 24px;font-size:12px;font-weight:700;color:#ffffff;" width="60">${escapeHtml(uhr || "9:41")}</td>
@@ -852,7 +867,7 @@ function iphone(bildschirm, uhr = "9:41") {
 // UNTERWEGS · IN TRANSIT, das Foto und Archiv-Nummer, Titel, Ziel, DHL-Nummer
 // (Entwurf C, D:\d119_tasks\versandmail\mockups6.py).
 function storyBand(text) {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:7px 0;font-family:${MAIL_SCHRIFT};font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:#ffffff;white-space:nowrap;border-top:1px solid #222222;border-bottom:1px solid #222222;">${text}</td></tr></table>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" class="mail-band" style="padding:7px 0;font-family:${MAIL_SCHRIFT};font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:#ffffff;white-space:nowrap;border-top:1px solid #222222;border-bottom:1px solid #222222;">${text}</td></tr></table>`;
 }
 
 function storyBildschirm(item, bild, { sprache, stadt, tracking, carrier, zeit = "" }) {
@@ -868,13 +883,13 @@ function storyBildschirm(item, bild, { sprache, stadt, tracking, carrier, zeit =
     <tr><td style="padding:6px 8px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${seg}</tr></table></td></tr>
     <tr><td style="padding:8px 10px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
       <td width="34"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="padding:2px;border:1.5px solid #ffffff;border-radius:50%;"><img src="${SHOP_URL}/assets/favicon.png" width="26" height="26" alt="" style="display:block;width:26px;height:26px;border-radius:50%;background:#000000;border:0;"></td></tr></table></td>
-      <td style="padding-left:8px;font-size:13px;font-weight:600;color:#ffffff;">disorder119 <span style="font-weight:400;color:#a8a8a8;padding-left:4px;">${escapeHtml(zeit || t.zeit)}</span></td>
+      <td class="mail-phone-kopf" style="padding-left:8px;font-size:13px;font-weight:600;color:#ffffff;white-space:nowrap;">disorder119 <span style="font-weight:400;color:#a8a8a8;padding-left:4px;">${escapeHtml(zeit || t.zeit)}</span></td>
       <td align="right" style="font-size:16px;color:#ffffff;white-space:nowrap;letter-spacing:2px;">&middot;&middot;&middot; &nbsp;&#10005;</td></tr></table></td></tr>
     <tr><td style="padding:12px 0 0;">${band}</td></tr>
-    <tr><td align="center" style="padding:20px 0 18px;"><img src="${escapeHtml(bild)}" width="196" alt="${titel}" style="display:block;width:196px;max-width:196px;height:auto;border:0;"></td></tr>
+    <tr><td align="center" style="padding:20px 0 18px;"><img class="mail-phone-foto" src="${escapeHtml(bild)}" width="196" alt="${titel}" style="display:block;width:196px;max-width:196px;height:auto;border:0;"></td></tr>
     <tr><td align="center" style="padding:0 18px 20px;">
       <div style="font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#777777;">${escapeHtml(t.archiv)}${nr ? ` ${escapeHtml(nr)}` : ""}</div>
-      <div style="font-size:15px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;color:#ffffff;margin-top:4px;">${titel}</div>
+      <div class="mail-phone-titel" style="font-size:15px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;color:#ffffff;margin-top:4px;">${titel}</div>
       ${ziel ? `<div style="font-family:'Courier New',Courier,monospace;font-size:10px;color:#777777;margin-top:8px;">${ziel}</div>` : ""}
     </td></tr>
     <tr><td style="padding:0;">${band}</td></tr>
@@ -948,12 +963,12 @@ export function formatShippingConfirmation(order = {}, options = {}) {
   const nummerBox = tracking
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:6px 0 22px;">
         <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${F.leise};">${escapeHtml(t.nummerLabel(carrier))}</p>
-        <div style="display:inline-block;border:1px solid ${F.text};padding:14px 20px;font-family:'Courier New',Courier,monospace;font-size:19px;font-weight:700;letter-spacing:0.08em;color:${F.text};">${escapeHtml(tracking)}</div>
+        <div class="mail-nummer" style="display:inline-block;border:1px solid ${F.text};padding:14px 20px;font-family:'Courier New',Courier,monospace;font-size:19px;font-weight:700;letter-spacing:0.08em;color:${F.text};">${escapeHtml(tracking)}</div>
       </td></tr></table>
       ${url ? mailKnopf(url, t.knopf) : ""}`
     : `<p style="margin:0;text-align:center;color:${F.leise};">${escapeHtml(t.versandMit(carrier))}</p>`;
   const stadt = safeText(order.city || order.contact?.city || "", 60);
-  const kopf = `<p style="margin:0 auto;max-width:440px;color:${F.leise};">${t.kopf(`<strong style="color:${F.text};">${escapeHtml(number)}</strong>`, escapeHtml(stadt))}</p>`;
+  const kopf = `<p class="mail-kopf" style="margin:0 auto;max-width:440px;color:${F.leise};">${t.kopf(`<strong style="color:${F.text};">${escapeHtml(number)}</strong>`, escapeHtml(stadt))}</p>`;
   const marke = versandMotiv(order, items, { sprache, stadt, tracking, carrier, datum: options.datum || order.shipped_at || new Date() });
   const inhalt = [
     marke ? `<tr><td align="center" style="padding:26px 0 0;">${marke}</td></tr>` : "",
