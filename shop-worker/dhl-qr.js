@@ -558,12 +558,92 @@ export async function refreshMark(env, orderId) {
     mark.paid_at = now;
   }
 
-  // QR einmal holen und aufheben - er aendert sich nicht mehr.
-  const png = await (await dhl(env, `/labels/${encodeURIComponent(mark.shipment_number)}/qr-code`, { accept: "image/png" })).arrayBuffer();
-  if (png.byteLength < 100 || png.byteLength > 200_000) throw new DhlQrError("DHL_ANTWORT_UNGUELTIG", 502);
-  const b64 = toBase64(png);
-  await db.prepare("UPDATE dhl_qr_marken SET qr_png_b64=?,updated_at=? WHERE id=?").bind(b64, now, mark.id).run();
-  return view({ ...mark, qr_png_b64: b64 });
+  // QR einmal holen und aufheben - er aendert sich nicht mehr. Seit DHLs
+  // Umstellung (04.11.2026) antwortet der QR-Abruf fuer Marken aus der
+  // Online-Frankierung mit WRONG_FORMAT: dann bleibt die Marke trotzdem
+  // bezahlt mit Sendungsnummer (die Kundschaft druckt die Marke bei dhl.de).
+  try {
+    const png = await (await dhl(env, `/labels/${encodeURIComponent(mark.shipment_number)}/qr-code`, { accept: "image/png" })).arrayBuffer();
+    if (png.byteLength < 100 || png.byteLength > 200_000) throw new DhlQrError("DHL_ANTWORT_UNGUELTIG", 502);
+    const b64 = toBase64(png);
+    await db.prepare("UPDATE dhl_qr_marken SET qr_png_b64=?,updated_at=? WHERE id=?").bind(b64, now, mark.id).run();
+    return view({ ...mark, qr_png_b64: b64 });
+  } catch (err) {
+    console.error(JSON.stringify({ level: "warn", event: "dhl_qr_png_unavailable", orderId: String(mark.order_id), code: safeText(err?.code || err?.message || "", 80), detail: safeText(err?.detail || "", 120) }));
+    return view(mark);
+  }
+}
+
+// --------------------------------------------- Warenkorb-Nummer aus der DHL-Mail
+//
+// Seit DHL keine Warenkorb-Kennung mehr zurueckgibt (Marken "ohne-..."), kommt
+// sie ueber die Auftragsbestaetigung der Online-Frankierung an kontakt@
+// ("Auftragsbestaetigung Ihrer Online Frankierung QM73WSTKZNES", im Text
+// "Warenkorb-Nr.: QM73WSTKZNES"). Mit dieser Nummer antwortet
+// /shopping-carts/{id} wieder: Bezahlstatus und Sendungsnummer (live geprueft
+// 04.11.2026). Zuordnung: die offene Marke ohne Kennung, bei mehreren die mit
+// passendem Preis, sonst die aelteste (Marken werden der Reihe nach gekauft).
+export function warenkorbAusMail(mail = {}) {
+  const betreff = String(mail.betreff || mail.subject || "");
+  const text = String(mail.text || mail.body_text || "");
+  const von = String(mail.vonEmail || mail.from_email || "").toLowerCase();
+  if (!/@(?:[a-z0-9-]+\.)*(dhl\.(?:com|de)|deutschepost\.de)$/.test(von)) return null;
+  const m = /Warenkorb-Nr\.?:?\s*([A-Z0-9]{12})\b/i.exec(text) || /Online[ -]Frankierung\s+([A-Z0-9]{12})\b/i.exec(betreff);
+  if (!m) return null;
+  const preis = /\/\s*(\d{1,3}),(\d{2})\s*€/.exec(text);
+  return { cartId: m[1].toUpperCase(), preisCents: preis ? Number(preis[1]) * 100 + Number(preis[2]) : null };
+}
+
+export async function warenkorbZuordnen(env, mail = {}, now = new Date().toISOString()) {
+  if (!env?.DB) return { zugeordnet: false, grund: "DATENBANK_FEHLT" };
+  const kennung = warenkorbAusMail(mail);
+  if (!kennung) return { zugeordnet: false, grund: "KEINE_DHL_MAIL" };
+  const db = env.DB;
+  const bekannt = await db.prepare("SELECT id,order_id,state FROM dhl_qr_marken WHERE cart_id=?").bind(kennung.cartId).first();
+  if (bekannt) return { zugeordnet: false, grund: "SCHON_ZUGEORDNET", orderId: bekannt.order_id, cartId: kennung.cartId };
+  const seit = new Date(Date.parse(now) - 14 * 86_400_000).toISOString();
+  const offene = (await db.prepare(`SELECT id,order_id,price_cents,created_at FROM dhl_qr_marken
+    WHERE cart_id LIKE 'ohne-%' AND state IN ('PREPAID','INPAYMENT') AND created_at>=?
+    ORDER BY created_at ASC`).bind(seit).all()).results || [];
+  if (!offene.length) return { zugeordnet: false, grund: "KEINE_OFFENE_MARKE", cartId: kennung.cartId };
+  let wahl = offene;
+  if (offene.length > 1 && kennung.preisCents) {
+    const passend = offene.filter(m => Number(m.price_cents) === kennung.preisCents);
+    if (passend.length) wahl = passend;
+  }
+  const marke = wahl[0];
+  const r = await db.prepare("UPDATE dhl_qr_marken SET cart_id=?,updated_at=? WHERE id=? AND cart_id LIKE 'ohne-%'").bind(kennung.cartId, now, marke.id).run();
+  if (!r?.meta?.changes) return { zugeordnet: false, grund: "MARKE_GEAENDERT", cartId: kennung.cartId };
+  await db.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'SYSTEM','order',?,'DHL_WARENKORB_AUS_MAIL',NULL,?,?)`)
+    .bind(crypto.randomUUID(), String(marke.order_id), JSON.stringify({ cartId: kennung.cartId, kandidaten: offene.length }), now).run().catch(() => {});
+  // Direkt nachsehen: meist ist die Marke in dem Moment schon bezahlt.
+  let marke2 = null;
+  try { marke2 = await refreshMark(env, marke.order_id); } catch (err) {
+    console.error(JSON.stringify({ level: "warn", event: "dhl_cart_refresh_after_mail_failed", orderId: String(marke.order_id), code: safeText(err?.code || err?.message || "", 80) }));
+  }
+  return { zugeordnet: true, orderId: marke.order_id, cartId: kennung.cartId, state: marke2?.state || null, sendungsnummer: marke2?.sendungsnummer || null };
+}
+
+// Cron: Marken mit Warenkorb-Kennung, die noch nicht bezahlt gemeldet sind,
+// bei DHL nachsehen (hoechstens 14 Tage, hoechstens 10 je Lauf).
+export async function dhlMarkenAbgleichen(env, now = Date.now()) {
+  if (!env?.DB || !dhlQrReady(env)) return { uebersprungen: true };
+  const seit = new Date(now - 14 * 86_400_000).toISOString();
+  const offene = (await env.DB.prepare(`SELECT order_id FROM dhl_qr_marken
+    WHERE cart_id NOT LIKE 'ohne-%' AND state IN ('PREPAID','INPAYMENT') AND created_at>=?
+    ORDER BY created_at ASC LIMIT 10`).bind(seit).all()).results || [];
+  const ergebnis = { geprueft: 0, bezahlt: [], fehler: [] };
+  for (const row of offene) {
+    try {
+      const m = await refreshMark(env, row.order_id);
+      ergebnis.geprueft += 1;
+      if (m?.state === "PAYED") ergebnis.bezahlt.push(String(row.order_id));
+    } catch (err) {
+      ergebnis.fehler.push({ orderId: String(row.order_id), code: safeText(err?.code || err?.message || "", 80) });
+    }
+  }
+  return ergebnis;
 }
 
 // Sendungsnummer an den Auftrag haengen, noch ohne "Versendet": abgegeben ist

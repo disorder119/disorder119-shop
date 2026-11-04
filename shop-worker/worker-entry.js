@@ -11,6 +11,7 @@ import {
   widerrufAusKonto,
   widerrufVonWebsite,
   zahlungenPflegen,
+  orderStatusAutomatisch,
 } from "./admin-api.js";
 import { isWiderrufRoute } from "./widerruf.js";
 import { handleAdminInsights } from "./admin-insights.js";
@@ -27,7 +28,8 @@ import { sendInvoiceAfterCaptureByProviderOrder, sendOrderConfirmation, sendOrde
 import { handleAccountRequest, isAccountRoute, sendRequestedAccountLink, sendRequestedAccountLinkByProviderOrder } from "./customer-account.js";
 import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
 import { dhlAutoMarken, handleVersand, istVersandRoute } from "./dhl.js";
-import { handleDhlQr, isDhlQrRoute, katalogAbgleich } from "./dhl-qr.js";
+import { dhlMarkenAbgleichen, handleDhlQr, isDhlQrRoute, katalogAbgleich } from "./dhl-qr.js";
+import { sendungenVerfolgen } from "./dhl-tracking.js";
 import { handlePacklink, handlePacklinkWebhook, isPacklinkRoute, isPacklinkWebhookRoute } from "./packlink.js";
 import { handleVersandOptionen, isVersandOptionenRoute } from "./versand.js";
 import { handleAbholorte, isAbholorteRoute } from "./abholorte.js";
@@ -612,6 +614,13 @@ const worker = {
     await runBackground(ctx, zahlungenPflegen(env, reqId, new Date(scheduledTime)), "payment_capture_failed", reqId);
     // DHL-Vertragsmarken fuer bezahlte Bestellungen ohne Sendung (nur mit DHL_AUTO_MARKE = "an").
     await runBackground(ctx, dhlAutoMarken(env, reqId, scheduledTime), "dhl_auto_label_failed", reqId);
+    // Online-Frankierung: offene Marken mit Warenkorb-Nummer (aus der DHL-Mail)
+    // bei DHL nachsehen - bezahlt? Sendungsnummer? (dhl-qr.js)
+    await runBackground(ctx, dhlMarkenAbgleichen(env, scheduledTime), "dhl_cart_refresh_failed", reqId);
+    // Sendungsverfolgung: unterwegs -> Versendet (Kundenmail), zugestellt -> Zugestellt (ohne Mail).
+    await runBackground(ctx, sendungenVerfolgen(env, reqId, scheduledTime, {
+      statusSetzen: (orderId, status) => orderStatusAutomatisch(env, orderId, status, reqId),
+    }), "dhl_tracking_failed", reqId);
     await runBackground(ctx, paypalErstattungenAbgleichen(env, reqId, true), "paypal_refund_reconciliation_failed", reqId);
     // Nach dem Abgleich: wartende Erstattungen erneut versuchen, erledigte
     // abschliessen (Kundenmail, wieder im Shop), an Offenes erinnern.

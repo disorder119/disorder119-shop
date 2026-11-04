@@ -364,7 +364,26 @@ test("the shipping notice names the parcel, the number and the link", () => {
     // Wer zurueckschicken will: Widerrufsfunktion mit eingetragener Bestellnummer.
     assert.match(part, /https:\/\/disorder119\.com\/widerruf\/\?bestellung=D119-20260923-ABC12345/);
   }
-  assert.match(mail.subject, /unterwegs/);
+  assert.match(mail.subject, /geht jetzt zu dir/);
+  // iPhone mit Story des gekauften Teils (kein Foto bekannt: kein Motiv, dafuer die Liste).
+  assert.doesNotMatch(mail.html, /assets\/og\//);
+  assert.doesNotMatch(mail.html, /Archive No\./);
+  assert.match(mail.html, /Im Paket/);
+  const mitFoto = formatShippingConfirmation({
+    order_number: "D119-1", carrier: "DHL", tracking_number: "358088742443", city: "Bremen",
+    items: [{ item_id: 6216, article_no: "213", title_snapshot: "Y-3 Grafik-Beanie", bild: "assets/img/b2-216/0.webp", unit_price_cents: 7000 }],
+  }, { datum: new Date("2026-11-05T09:00:00Z") });
+  assert.match(mitFoto.html, /https:\/\/disorder119\.com\/assets\/img\/b2-216\/0\.webp/);
+  assert.match(mitFoto.html, /Archive No\. 213/);
+  assert.match(mitFoto.html, /&rarr; Bremen · DHL 358088742443/);
+  assert.match(mitFoto.html, /UNTERWEGS|Unterwegs &nbsp;·&nbsp; IN TRANSIT/);
+  assert.match(mitFoto.html, /Nachricht senden/);
+  assert.match(mitFoto.html, /assets\/favicon\.png/);
+  assert.match(mitFoto.html, /auf dem Weg nach Bremen/);
+  assert.doesNotMatch(mitFoto.html, /Im Paket/);
+  const zwei = formatShippingConfirmation({ order_number: "D119-2", items: [{ item_id: 6216, title_snapshot: "X" }, { item_id: 6217, title_snapshot: "Y" }] });
+  assert.match(zwei.html, /assets\/og\/6216\.jpg/);
+  assert.match(zwei.html, /Im Paket/);
 });
 
 test("without a tracking number the notice still makes sense", () => {

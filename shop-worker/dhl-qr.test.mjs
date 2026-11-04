@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertReceiver, dhlText, handleDhlQr, receiverAddress, splitStreet, safeDhlCheckoutUrl } from "./dhl-qr.js";
+import { assertReceiver, dhlText, handleDhlQr, receiverAddress, splitStreet, safeDhlCheckoutUrl, warenkorbAusMail, warenkorbZuordnen, dhlMarkenAbgleichen } from "./dhl-qr.js";
 import { handleAdminRequest } from "./admin-api.js";
 import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 
@@ -231,6 +231,79 @@ test("after handing the parcel over, the order can be marked shipped", async () 
   assert.equal(direct.status, 200, await direct.clone().text());
   assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders WHERE id='o1'").get().status, "SHIPPED");
   assert.equal(DB.raw.prepare("SELECT status FROM shipments WHERE order_id='o1'").get().status, "SHIPPED");
+});
+
+const DHL_MAIL = {
+  vonEmail: "noreply@dhl.com",
+  betreff: "Auftragsbestätigung Ihrer Online Frankierung ABCDEF123456",
+  text: "Guten Tag,\n\ndanke, dass Sie die DHL Online Frankierung nutzen. Hiermit bestätigen wir Ihnen den folgenden Auftrag:\n\n1. 2 kg - Paket / 6,19 €\n\nRechnungsbetrag (inkl. 0,00 € MwSt.): 6,19 €\n\nWarenkorb-Nr.: ABCDEF123456\nZum Warenkorb: https://www.dhl.de/int-versenden/gw/rest/init?token=XYZ\n",
+};
+
+test("Warenkorb-Nummer aus der DHL-Auftragsbestaetigung", () => {
+  assert.deepEqual(warenkorbAusMail(DHL_MAIL), { cartId: "ABCDEF123456", preisCents: 619 });
+  assert.deepEqual(warenkorbAusMail({ ...DHL_MAIL, text: "ohne Nummer" }), { cartId: "ABCDEF123456", preisCents: null });
+  assert.equal(warenkorbAusMail({ ...DHL_MAIL, vonEmail: "noreply@dhl.com.evil.example" }), null);
+  assert.equal(warenkorbAusMail({ ...DHL_MAIL, vonEmail: "kundin@example.com" }), null);
+  assert.equal(warenkorbAusMail({ vonEmail: "noreply@dhl.com", betreff: "Newsletter", text: "Hallo" }), null);
+});
+
+test("DHL-Mail: Nummer an die offene Marke, Sendungsnummer bei DHL holen, Cron prueft nach", async () => {
+  const DB = seed();
+  const env = envWith(DB);
+  // Marke ohne Kennung (DHL antwortet ohne shoppingCartId), noch nicht bezahlt.
+  const dhl = fakeDhl({ ohneKennung: true, payAfter: 1 });
+  try {
+    const created = await call(env, "/admin/versand/o1/qr", { method: "POST", body: { produkt: "PAK02" } });
+    assert.equal(created.data.marke.ohneAbgleich, true);
+    // Mail kommt: Kennung wird zugeordnet, erste Abfrage sagt noch INPAYMENT.
+    const r = await warenkorbZuordnen(env, DHL_MAIL);
+    assert.equal(r.zugeordnet, true);
+    assert.equal(r.orderId, "o1");
+    assert.equal(DB.raw.prepare("SELECT cart_id,state FROM dhl_qr_marken").get().cart_id, CART_ID);
+    assert.equal(DB.raw.prepare("SELECT state FROM dhl_qr_marken").get().state, "INPAYMENT");
+    // Dieselbe Mail nochmal (Weiterleitung, Kopie): nichts passiert.
+    assert.equal((await warenkorbZuordnen(env, DHL_MAIL)).grund, "SCHON_ZUGEORDNET");
+    // Cron: jetzt bezahlt - Sendungsnummer haengt am Auftrag, Bestellung "Wird gepackt".
+    const cron = await dhlMarkenAbgleichen(env);
+    assert.deepEqual(cron.bezahlt, ["o1"]);
+    assert.equal(DB.raw.prepare("SELECT shipment_number FROM dhl_qr_marken").get().shipment_number, TRACKING);
+    assert.equal(DB.raw.prepare("SELECT tracking_number,status FROM shipments WHERE order_id='o1'").get().tracking_number, TRACKING);
+    assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders WHERE id='o1'").get().status, "PREPARING");
+    assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM audit_events WHERE event_type='DHL_WARENKORB_AUS_MAIL'").get().n, 1);
+  } finally {
+    dhl.restore();
+  }
+});
+
+test("DHL-Mail ohne passende offene Marke wird nur vermerkt", async () => {
+  const env = envWith(seed());
+  const r = await warenkorbZuordnen(env, DHL_MAIL);
+  assert.equal(r.zugeordnet, false);
+  assert.equal(r.grund, "KEINE_OFFENE_MARKE");
+  assert.equal((await warenkorbZuordnen(env, { vonEmail: "kundin@example.com", betreff: "Hi", text: "Warenkorb-Nr.: ABCDEF123456" })).grund, "KEINE_DHL_MAIL");
+});
+
+test("QR-Abruf scheitert (WRONG_FORMAT): Marke bleibt bezahlt mit Sendungsnummer", async () => {
+  const DB = seed();
+  const env = envWith(DB);
+  const dhl = fakeDhl({ payAfter: 0 });
+  const inner = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    if (String(url).includes("/qr-code")) return Response.json({ detail: "WRONG_FORMAT" }, { status: 400 });
+    return inner(url, init);
+  };
+  try {
+    await call(env, "/admin/versand/o1/qr", { method: "POST", body: { produkt: "PAK02" } });
+    const r = await call(env, "/admin/versand/o1/qr");
+    assert.equal(r.status, 200, JSON.stringify(r.data));
+    assert.equal(r.data.marke.state, "PAYED");
+    assert.equal(r.data.marke.sendungsnummer, TRACKING);
+    assert.equal(r.data.marke.qrPng, null);
+    assert.equal(DB.raw.prepare("SELECT tracking_number FROM shipments WHERE order_id='o1'").get().tracking_number, TRACKING);
+  } finally {
+    globalThis.fetch = inner;
+    dhl.restore();
+  }
 });
 
 test("incomplete or foreign addresses are stopped before anything is bought", async () => {

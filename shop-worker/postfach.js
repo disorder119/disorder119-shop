@@ -10,6 +10,7 @@
 // Anhänge werden nur mit Namen vermerkt, nicht gespeichert.
 
 import { sendTelegramMessage, telegramTransportReady, telegramZeile } from "./notifications.js";
+import { warenkorbZuordnen } from "./dhl-qr.js";
 
 const ADMIN_ORIGINS = Object.freeze(["https://admin.disorder119.com"]);
 const MAX_ROH_BYTES = 2 * 1024 * 1024;
@@ -314,6 +315,14 @@ export async function handleIncomingEmail(message, env, ctx) {
       if (env.DB) {
         await mailSpeichern(env, mail, roh.groesse, message.to);
         gespeichert = true;
+        // DHL-Auftragsbestaetigung der Online-Frankierung: Warenkorb-Nummer an
+        // die offene Marke haengen, Sendungsnummer bei DHL holen (dhl-qr.js).
+        if (/dhl\.(com|de)$|deutschepost\.de$/i.test(String(mail.vonEmail || ""))) {
+          const zuordnung = warenkorbZuordnen(env, mail).then(r => {
+            if (r?.zugeordnet) console.log(JSON.stringify({ level: "info", event: "dhl_cart_from_mail", orderId: String(r.orderId), state: r.state || null }));
+          }).catch(err => console.error(JSON.stringify({ level: "error", event: "dhl_cart_from_mail_failed", message: String(err?.message || err).slice(0, 160) })));
+          if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(zuordnung); else await zuordnung;
+        }
       }
     }
     if (telegramTransportReady(env)) {

@@ -224,7 +224,7 @@ test("shipping captures first: evidence with fee, invoice mailed exactly once, t
     assert.match(rechnung.textContent, /eingezogen/);
     assert.match(rechnung.textContent, /Rechnung/);
     assert.deepEqual(rechnung.bcc, [{ email: "kopie@disorder119.com" }]);
-    assert.ok(kundenmails(netz).some(m => /unterwegs|versendet|Sendung/i.test(m.subject)), "Versandmail");
+    assert.ok(kundenmails(netz).some(m => /unterwegs|versendet|Sendung|zu dir/i.test(m.subject)), "Versandmail");
 
     // Cron-Nachholen schickt die Rechnung nicht noch einmal, zieht nicht noch einmal ein.
     await zahlungenPflegen(ENV(DB), "cron", new Date(Date.now() + 80 * STUNDE));
