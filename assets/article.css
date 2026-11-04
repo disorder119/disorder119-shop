@@ -682,7 +682,7 @@ img[data-d119-image-protected] {
    Spezifitaet: Schlagzeilen und Hook direkt unter den Preis, Kaufen davor,
    Fakten, Klappleisten und Vertrauensleiste dahinter. */
 .info > .info__caption, .info > .info__hook { order: 3; }
-.info > .info__facts { order: 8; }
+.info > .info__facts { order: 8; margin: 20px 0 0; padding: 0; border-bottom: 0; }
 .info > .info__akk { order: 9; }
 .info > .info__trust { order: 10; }
 .info__akk .info__desc { margin-top: 0; padding-top: 0; border-top: 0; }
