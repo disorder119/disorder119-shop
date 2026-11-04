@@ -28,9 +28,10 @@ function euroAmount(cents, currency = "EUR") {
 // Admin-App direkt auf dieser Bestellung (?bestellung=<id>) - am iPhone aus
 // Telegram heraus, dort dann "Warenkorb bei DHL anlegen".
 export const ADMIN_APP_URL = "https://admin.disorder119.com/";
-export function adminBestellungLink(order = {}) {
+export function adminBestellungLink(order = {}, { dhl = false } = {}) {
   const id = safeText(order.id || "", 80);
-  return id ? `${ADMIN_APP_URL}?bestellung=${encodeURIComponent(id)}` : ADMIN_APP_URL;
+  if (!id) return ADMIN_APP_URL;
+  return `${ADMIN_APP_URL}?bestellung=${encodeURIComponent(id)}${dhl ? "&dhl=1" : ""}`;
 }
 
 // Vorschaubild des verkauften Teils: das Link-Vorschaubild (assets/og/<id>.jpg,
@@ -214,9 +215,12 @@ export async function sendTelegramPhoto(env, photoUrl, caption, reqId = crypto.r
   const chatId = await resolveTelegramChatId(env, reqId);
   if (!chatId) return { sent: false, reason: "TARGET_NOT_CONNECTED" };
   const body = { chat_id: chatId, photo: url, caption: cleanCaption };
-  if (knopf && /^https:\/\/admin\.disorder119\.com\//.test(String(knopf.url || ""))) {
-    body.reply_markup = { inline_keyboard: [[{ text: safeText(knopf.text || "Öffnen", 40), url: String(knopf.url) }]] };
-  }
+  // Ein Knopf oder eine Liste (je Knopf eine Zeile); nur Links in die Admin-App.
+  const knoepfe = (Array.isArray(knopf) ? knopf : knopf ? [knopf] : [])
+    .filter(k => k && /^https:\/\/admin\.disorder119\.com\//.test(String(k.url || "")))
+    .slice(0, 4)
+    .map(k => [{ text: safeText(k.text || "Öffnen", 40), url: String(k.url) }]);
+  if (knoepfe.length) body.reply_markup = { inline_keyboard: knoepfe };
   try {
     const payload = await telegramApi(env, "sendPhoto", body);
     return { sent: true, messageId: payload?.result?.message_id ?? null, foto: true };
@@ -323,8 +327,11 @@ export async function notifyPaidOrder(env, orderId, reqId = crypto.randomUUID())
   if (!claim.claimed) return { sent: false, duplicate: true };
 
   try {
-    const delivery = await sendTelegramPhoto(env, verkaufsBild(row), formatSaleMessage(row), reqId,
-      { text: "📦 Bestellung öffnen · DHL-Marke", url: adminBestellungLink(row) });
+    // Inhaber 05.11.2026: "DHL-Marke kaufen" fuehrt ueber die Admin-App (Passkey) direkt
+    // zur DHL-Bezahlseite - Warenkorb mit der Paketgroesse der Bestellung.
+    const knoepfe = [{ text: "🟡 DHL-Marke kaufen", url: adminBestellungLink(row, { dhl: true }) },
+      { text: "📦 Bestellung öffnen", url: adminBestellungLink(row) }];
+    const delivery = await sendTelegramPhoto(env, verkaufsBild(row), formatSaleMessage(row), reqId, knoepfe);
     if (!delivery.sent) throw new Error(delivery.reason || "telegram_not_sent");
   } catch (err) {
     await releaseFailedClaim(env, claim.claimId);
