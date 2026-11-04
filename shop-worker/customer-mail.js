@@ -1322,6 +1322,8 @@ export async function sendShippingConfirmation(env, orderId, reqId = crypto.rand
       html: message.html,
       text: message.text,
       tag: "shipping-confirmation",
+      // Durchschlag ins Shop-Postfach (MAIL_BCC), wie Bestell-, Rechnungs- und Erstattungsmail.
+      kopieAnShop: true,
     });
     if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
   } catch (err) {
@@ -1840,6 +1842,8 @@ export async function sendReturnInstructions(env, orderId, reqId = crypto.random
       html: message.html,
       text: message.text,
       tag: "return-instructions",
+      // Durchschlag ins Shop-Postfach (MAIL_BCC), wie Bestell-, Rechnungs- und Erstattungsmail.
+      kopieAnShop: true,
     });
     if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
   } catch (err) {
