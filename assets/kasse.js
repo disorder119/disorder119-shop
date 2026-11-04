@@ -426,10 +426,13 @@
     // weiter gelten (sonst bleibt auf langsamen Geraeten die Versandwahl leer, bis die zweite da ist).
     var nr = still ? versandAnfrage : ++versandAnfrage;
     var codeParam = gespeicherterCode() ? "&code=" + encodeURIComponent(gespeicherterCode()) : "";
+    var antwortDa;
+    versandLaufend = new Promise(function (r) { antwortDa = r; });
     return fetch(WORKER + "/versand/optionen?artikel=" + encodeURIComponent(ids) + "&land=" + encodeURIComponent(zustand.land) + codeParam)
       .then(function (r) { return r.json().catch(function () { return null; }).then(function (d) { return r.ok ? d : (d && d.laender ? { laender: d.laender } : null); }); })
       .catch(function () { return null; })
       .then(function (daten) {
+        antwortDa();
         // Nur die Antwort zum zuletzt gewaehlten Land zaehlt.
         if (nr !== versandAnfrage) return;
         if (daten && daten.laender) laenderSetzen(daten.laender);
@@ -437,6 +440,8 @@
       });
   }
   var versandAnfrage = 0;
+  // Laufende Versandabfrage: die Bestellung wartet darauf, statt ohne Versandwahl zu scheitern.
+  var versandLaufend = null;
   function versandSetzen(daten) {
     var gueltig = daten && daten.optionen && daten.optionen.length ? daten : null;
     if (gueltig && gueltig.frei && gueltig.frei.abCents) FREI_AB_CENTS = gueltig.frei.abCents;
@@ -1367,7 +1372,11 @@
       createOrder: function () {
         letzterFehler = "";
         melden("", status);
+        // Versandpreis noch unterwegs (langsames Netz, Nachladen nach der Codepruefung): kurz warten.
+        var warten = zustand.wahl || !versandLaufend ? Promise.resolve() : versandLaufend;
+        return warten.then(function () {
         var wahl = zustand.wahl;
+        if (!wahl) { melden(t(zustand.versand ? "versandWahlFehlt" : "versandFehlt"), status); return Promise.reject(new Error("VERSAND_FEHLT")); }
         var ids = zustand.stuecke.map(function (it) { return it.id; });
         var zustellung = zustellungDaten();
         var inhalt = { itemIds: ids, adresse: zustellung ? { name: adresse().name, land: "DE" } : adresse(), email: f.email.value.trim(),
@@ -1400,6 +1409,7 @@
           if (code === "COUPON_INVALID_OR_USED" || code === "COUPON_NOT_FOR_ORDER") summeZeichnen();
           letzterFehler = fehlerText(e);
           throw e;
+        });
         });
       },
       onApprove: function (daten) {
