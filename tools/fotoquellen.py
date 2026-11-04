@@ -30,6 +30,9 @@ LINKS = BASE / "config" / "catalog-number-links.json"
 ITEMS = BASE / "data" / "items.json"
 CACHE = BASE / ".fotoquellen-cache"
 NAME = re.compile(r"^(?P<name>.+?)\s*\((?P<n>\d+)\)\s*#\s*(?P<nr>\d+)\s+freigestellt$", re.IGNORECASE)
+# Seit Shooting 11 (Okt. 2026) heissen Originale "Name #Nr (n)"; die alte Form "(n) #Nr" hat Vorrang,
+# weil dort eine Zahl VOR "(n)" ein alter Foto-Tag ist ("#195 (1) #192" = Artikel 192).
+NAME_NEU = re.compile(r"^(?P<name>.+?)\s*#\s*(?P<nr>\d+)\s*\((?P<n>\d+)\)\s+freigestellt$", re.IGNORECASE)
 BILD = {".png", ".jpg", ".jpeg"}
 SIG_H = 160          # Vergleichshöhe in Pixeln
 SICHER = 6.0         # mittlere Abweichung (0-255) unter der ein Treffer als sicher gilt
@@ -49,7 +52,7 @@ def quelle() -> Path:
 
 def parse_name(stem: str):
     """(n, artikelnummer) aus 'name (n) #nr freigestellt', sonst None."""
-    m = NAME.match(stem.strip())
+    m = NAME.match(stem.strip()) or NAME_NEU.match(stem.strip())
     return (int(m.group("n")), m.group("nr")) if m else None
 
 

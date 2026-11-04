@@ -139,6 +139,12 @@ UNVERAENDERT = {
     "x", "vintage", "archive", "runway", "homme", "femme", "jersey", "tee",
 }
 
+# Shooting 11 (29.10.2026): Woerter der neuen Titel #239-#280
+WORTE.update({"clutch": "Clutch", "zehensandalen": "Thong Sandals", "text": "Text", "karo": "Check", "einsätzen": "Inserts", "steppeinsätzen": "Quilted Inserts", "schriftzeichen": "Calligraphy", "futter": "Lining", "reverskragen": "Lapel Collar", "kanten": "Edges", "schlitz": "Slit", "punktmuster": "Dot Pattern", "v-ausschnitt": "V-Neck", "herz": "Heart", "ärmel": "Sleeve", "reißverschluss": "Zip", "signatur": "Signature", "zweiknopf": "Two-Button", "gitarrenkoffer": "Guitar Case", "blouson": "Blouson", "stiefeletten": "Ankle Boots", "cargohose": "Cargo Trousers"})
+ADJEKTIVE.update({"offen": "Open", "verwischt": "Blurred"})
+VORSILBEN.update({"puffer": "Puffer", "feld": "Field", "lauf": "Running", "feinstrick": "Fine Knit", "jersey": "Jersey", "falten": "Pleated", "coach": "Coach"})
+UNVERAENDERT.update({"9forty", "airbrush", "boxing", "breeze", "candy", "chito", "coach", "era", "femme", "iv", "jean's", "junya", "knit", "laptop", "new", "north", "palace", "piqué", "propaganda", "rala", "sails", "skull", "staff", "uniform", "v", "watanabe", "wax", "winter", "wrapper", "yohji"})
+
 
 def _schluessel(wort: str) -> str:
     return wort.strip().lower()

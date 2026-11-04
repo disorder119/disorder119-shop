@@ -35,7 +35,11 @@ class PhotoSourcesTest(unittest.TestCase):
         self.assertEqual(parse_name('S10/A.F Vandevorst Bluse Blau #195 (1) #192 freigestellt.png'), (1, '192'))
         self.assertEqual(parse_name('S10\\y-3 rasta mütze #2017 (3) #214 freigestellt.png'), (3, '214'))
         self.assertIsNone(parse_name('top mm6 (2) freigestellt.png'))
-        self.assertIsNone(parse_name('gaultier jeans blau #241 (1) freigestellt.png'))
+        # Seit Shooting 11 (Okt. 2026) heissen Originale "Name #Nr (n)": die Nummer VOR "(n)" ist dann die
+        # Artikelnummer. Die alte Form "(n) #Nr" hat Vorrang (oben). Das fruehere Doppel "gaultier jeans blau #241"
+        # wurde lokal in "doppel-von-238" umbenannt, damit es nicht als Artikel 241 gelesen wird.
+        self.assertEqual(parse_name('rundholz black label jacke schwarz xl #239 (6) freigestellt.png'), (6, '239'))
+        self.assertIsNone(parse_name('gaultier jeans blau doppel-von-238 (1) freigestellt.png'))
         self.assertIsNone(parse_name('mm6 top  (1) #15.JPG'))
 
     def test_cutout_of_other_article_rejected(self):
