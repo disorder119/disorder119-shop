@@ -21,6 +21,8 @@ import hashlib
 import html
 import json
 import os
+import time
+import random
 import re
 import sys
 from pathlib import Path
@@ -1277,13 +1279,24 @@ def static_page_content_html(slug, lang, shop_config):
 # preloaded. This removes the previous request chain HTML -> app.js ->
 # catalog.json -> image that Lighthouse measured as ~4.8 s load delay.
 # The exact same cards are then hydrated by app.js instead of being replaced.
+_SSR_PAAR = {}
+
+
 def initial_archive_items(limit=2):
-    available = [it for it in ITEMS if it.get("public_status") == "AVAILABLE"]
-    return sorted(
-        available,
-        key=lambda it: it.get("brightness") if isinstance(it.get("brightness"), (int, float)) else 0.5,
-        reverse=True,
-    )[:limit]
+    # Die vorgeladenen Karten (Ladezeit) wechseln mit jedem Seitenbau: zwei zufaellige aus den
+    # zwoelf hellsten verfuegbaren Teilen (Inhaber 04.11.2026: Startseite soll nicht immer gleich
+    # aussehen; den Rest mischt app.js bei jedem Aufruf). Je Bau dieselbe Wahl fuer Vorladen und Raster.
+    if limit not in _SSR_PAAR:
+        available = [it for it in ITEMS if it.get("public_status") == "AVAILABLE"]
+        hell = sorted(
+            available,
+            key=lambda it: it.get("brightness") if isinstance(it.get("brightness"), (int, float)) else 0.5,
+            reverse=True,
+        )
+        kandidaten = hell[:max(limit, 12)]
+        wahl = random.Random(int(time.time())).sample(kandidaten, min(limit, len(kandidaten)))
+        _SSR_PAAR[limit] = sorted(wahl, key=lambda it: kandidaten.index(it))
+    return _SSR_PAAR[limit]
 
 
 # Vorheriger/Naechster auf der Produktseite schon im HTML (Inhaber 04.11.: die Links

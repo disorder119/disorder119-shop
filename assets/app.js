@@ -133,7 +133,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       searchPlaceholder: "Suche nach Marke, Artikel, Größe",
       statusAll: "Alle", statusAvailable: "Verfügbar", statusSold: "Archiv",
       categoryAll: "Alle Kategorien",
-      sortBrightness: "Hell → Dunkel", sortNew: "Neueste zuerst", sortPriceAsc: "Preis aufsteigend",
+      sortRandom: "Zufällig", sortBrightness: "Hell → Dunkel", sortNew: "Neueste zuerst", sortPriceAsc: "Preis aufsteigend",
       sortPriceDesc: "Preis absteigend", sortBrand: "Marke A–Z",
       mountBlack: "Fotomontage: Schwarz", mountWhite: "Fotomontage: Weiß", viewDark: "Ansicht: Schwarz", viewLight: "Ansicht: Weiß",
       moreFilters: "Weitere Filter",
@@ -277,7 +277,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       searchPlaceholder: "Search by brand, item, size",
       statusAll: "All", statusAvailable: "Available", statusSold: "Archive",
       categoryAll: "All categories",
-      sortBrightness: "Light → dark", sortNew: "Newest first", sortPriceAsc: "Price ascending",
+      sortRandom: "Shuffled", sortBrightness: "Light → dark", sortNew: "Newest first", sortPriceAsc: "Price ascending",
       sortPriceDesc: "Price descending", sortBrand: "Brand A–Z",
       mountBlack: "Photo backdrop: black", mountWhite: "Photo backdrop: white", viewDark: "View: black", viewLight: "View: white",
       moreFilters: "More filters",
@@ -421,7 +421,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       searchPlaceholder: "Recherche par marque, article, taille",
       statusAll: "Tous", statusAvailable: "Disponible", statusSold: "Archive",
       categoryAll: "Toutes les catégories",
-      sortBrightness: "Clair → foncé", sortNew: "Plus récent d'abord", sortPriceAsc: "Prix croissant",
+      sortRandom: "Aléatoire", sortBrightness: "Clair → foncé", sortNew: "Plus récent d'abord", sortPriceAsc: "Prix croissant",
       sortPriceDesc: "Prix décroissant", sortBrand: "Marque A–Z",
       mountBlack: "Fond photo : noir", mountWhite: "Fond photo : blanc", viewDark: "Affichage : noir", viewLight: "Affichage : blanc",
       moreFilters: "Plus de filtres",
@@ -1366,7 +1366,8 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     status: "Verfügbar",
     category: "all",
     categoryGroup: null,
-    sort: "brightness",
+    // Inhaber 04.11.2026: jede Ansicht in neuer Reihenfolge ("immer dieselben Sachen" nervt).
+    sort: "zufall",
     department: "",
     productType: "",
     brand: "",
@@ -1880,11 +1881,21 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     return raw;
   }
 
+  function zufallsWert(it) {
+    if (typeof it._zufall !== "number") it._zufall = Math.random();
+    return it._zufall;
+  }
   function sortItems(list) {
     var copy = list.slice();
     if (state.sort === "price-asc") copy.sort(function (a, b) { return a.price - b.price; });
     else if (state.sort === "price-desc") copy.sort(function (a, b) { return b.price - a.price; });
     else if (state.sort === "brand") copy.sort(function (a, b) { return a.brand.localeCompare(b.brand, "de"); });
+    else if (state.sort === "zufall") {
+      // Je Seitenaufruf eine neue Reihenfolge; innerhalb des Aufrufs bleibt sie beim
+      // Filtern stabil (Zufallswert wird je Teil einmal gezogen). Die beiden vorgeladenen
+      // Karten der Startseite bleiben beim allerersten Aufbau vorn (Ladezeit).
+      copy.sort(function (a, b) { return zufallsWert(a) - zufallsWert(b); });
+    }
     else if (state.sort === "brightness") {
       // Helle Teile zuerst, damit gegen den dunklen Seitenhintergrund nichts
       // "verschwindet" - je weiter man scrollt, desto dunkler/farbiger wird es.
