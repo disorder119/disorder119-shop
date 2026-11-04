@@ -740,8 +740,8 @@ export function trackingUrlFor(carrier, trackingNumber, sprache = "de") {
 
 const VERSANDMAIL_TEXT = Object.freeze({
   de: {
-    subject: n => `Deine Bestellung ${n} ist unterwegs`,
-    unterwegs: n => `Deine Bestellung ${n} ist unterwegs.`,
+    subject: n => `Deine Bestellung ${n} geht jetzt zu dir`,
+    unterwegs: n => `Deine Bestellung ${n} geht jetzt zu dir.`,
     imPaket: "Im Paket",
     nummer: (nr, c) => `Sendungsnummer: ${nr} (${c})`,
     versandMit: c => `Versand mit ${c}.`,
@@ -752,8 +752,8 @@ const VERSANDMAIL_TEXT = Object.freeze({
     widerrufHtml: ["Passt etwas nicht? Innerhalb von 14 Tagen nach Erhalt kannst du ", "den Vertrag hier widerrufen", "."],
     nummerLabel: c => `Sendungsnummer · ${c}`,
     knopf: "Sendung verfolgen",
-    kopf: nr => `Bestellung ${nr} hat unser Lager verlassen.`,
-    titel: "Dein Paket ist unterwegs",
+    kopf: (nr, stadt) => `Bestellung ${nr} ist bei DHL und auf dem Weg${stadt ? ` nach ${stadt}` : " zu dir"}.`,
+    titel: "Deine Bestellung geht jetzt zu dir",
     eyebrow: "Versandbestätigung",
     vorschauNummer: (nr, c) => `Sendungsnummer ${nr} · ${c}`,
     vorschauOhne: n => `Bestellung ${n} ist unterwegs`,
@@ -771,8 +771,8 @@ const VERSANDMAIL_TEXT = Object.freeze({
     widerrufHtml: ["Something not right? Within 14 days of receipt you can ", "withdraw from the contract here", "."],
     nummerLabel: c => `Tracking number · ${c}`,
     knopf: "Track parcel",
-    kopf: nr => `Order ${nr} has left our warehouse.`,
-    titel: "Your parcel is on its way",
+    kopf: (nr, stadt) => `Order ${nr} is with DHL and on its way${stadt ? ` to ${stadt}` : " to you"}.`,
+    titel: "Your order is on its way to you",
     eyebrow: "Shipping confirmation",
     vorschauNummer: (nr, c) => `Tracking number ${nr} · ${c}`,
     vorschauOhne: n => `Order ${n} is on its way`,
@@ -790,13 +790,110 @@ const VERSANDMAIL_TEXT = Object.freeze({
     widerrufHtml: ["Un souci ? Dans les 14 jours suivant la réception, tu peux ", "te rétracter du contrat ici", "."],
     nummerLabel: c => `Numéro de suivi · ${c}`,
     knopf: "Suivre le colis",
-    kopf: nr => `La commande ${nr} a quitté notre entrepôt.`,
-    titel: "Ton colis est en route",
+    kopf: (nr, stadt) => `La commande ${nr} est chez DHL et en route${stadt ? ` vers ${stadt}` : " vers toi"}.`,
+    titel: "Ta commande est en route vers toi",
     eyebrow: "Confirmation d’expédition",
     vorschauNummer: (nr, c) => `Numéro de suivi ${nr} · ${c}`,
     vorschauOhne: n => `Commande ${n} en route`,
   },
 });
+
+// Versandmail-Motiv (Inhaber 04.11.2026, "duester wie der Store, nicht cringe"):
+// ein iPhone, auf dem eine Story von disorder119 laeuft - Foto des gekauften
+// Teils, darunter Archiv-Nummer, Titel, "In Transit -> Stadt" und die
+// DHL-Nummer. Keine Sticker, keine Emojis. Entwurf C "Laufband" mit echter
+// Instagram-Oberflaeche (D:\d119_tasks\versandmail\mockups6.py); der Bildschirminhalt steckt in
+// storyBildschirm(), der Rahmen in iphone(). Nur Tabellen, Rahmen und
+// Inline-Styles; Outlook zeigt Ecken statt Rundungen. Foto aus
+// order_items.bild, sonst das Link-Vorschaubild assets/og/<id>.jpg; ohne Bild
+// entfaellt das Motiv (dann die Liste "Im Paket").
+const STORY_TEXT = Object.freeze({
+  de: { zeit: "2 Std.", archiv: "Archive No.", band: "Unterwegs", nachricht: "Nachricht senden…" },
+  en: { zeit: "2 h", archiv: "Archive No.", band: "On its way", nachricht: "Send message…" },
+  fr: { zeit: "2 h", archiv: "Archive No.", band: "En route", nachricht: "Envoyer un message…" },
+});
+
+function stueckBild(item) {
+  const pfad = safeText(item?.bild || "", 200).replace(/^\/+/, "");
+  const itemId = Number(item?.item_id);
+  return /^assets\/img\/[A-Za-z0-9_\/.-]+$/.test(pfad) ? `${SHOP_URL}/${pfad}`
+    : Number.isInteger(itemId) && itemId > 0 ? `${SHOP_URL}/assets/og/${itemId}.jpg` : "";
+}
+
+// iPhone-Rahmen (Dynamic Island, Statusleiste, Home-Balken) um einen Bildschirm.
+function iphone(bildschirm) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="width:290px;background:#050505;border:2px solid #222222;border-radius:46px;font-family:${MAIL_SCHRIFT};">
+    <tr><td style="padding:6px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#000000;border-radius:40px;">
+        <tr><td style="padding:12px 22px 0 24px;font-size:12px;font-weight:700;color:#ffffff;" width="60">9:41</td>
+            <td align="center" style="padding:10px 0 0;"><div style="width:92px;height:28px;background:#000000;border:1px solid #161616;border-radius:16px;margin:0 auto;font-size:0;line-height:0;">&nbsp;</div></td>
+            <td align="right" style="padding:12px 22px 0 0;font-size:11px;font-weight:700;color:#ffffff;white-space:nowrap;" width="70">&#9679;&#9679;&#9679; &#9650; &#9646;</td></tr>
+        <tr><td colspan="3" style="padding:0;">${bildschirm}</td></tr>
+        <tr><td colspan="3" align="center" style="padding:6px 0 8px;"><div style="width:110px;height:4px;background:#ffffff;border-radius:2px;margin:0 auto;font-size:0;line-height:0;">&nbsp;</div></td></tr>
+      </table></td></tr>
+  </table>`;
+}
+
+// Instagram-Story-Oberflaeche wie echt: Segmentbalken, Avatar mit Ring
+// (Favicon des Shops), "disorder119 · 2 Std.", "..." und "x", unten das Feld
+// "Nachricht senden" mit Herz und Senden. Dazwischen das Textband
+// UNTERWEGS · IN TRANSIT, das Foto und Archiv-Nummer, Titel, Ziel, DHL-Nummer
+// (Entwurf C, D:\d119_tasks\versandmail\mockups6.py).
+function storyBand(text) {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:7px 0;font-family:${MAIL_SCHRIFT};font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:#ffffff;white-space:nowrap;border-top:1px solid #222222;border-bottom:1px solid #222222;">${text}</td></tr></table>`;
+}
+
+function storyBildschirm(item, bild, { sprache, stadt, tracking, carrier }) {
+  const t = STORY_TEXT[mailSprache(sprache)];
+  const titel = escapeHtml(stueckTitel(item, sprache));
+  const nr = safeText(item.article_no || item.articleNo || "", 40);
+  const ziel = [stadt ? `&rarr; ${escapeHtml(stadt)}` : "", tracking ? `${escapeHtml(carrier)} ${escapeHtml(tracking)}` : ""].filter(Boolean).join(" · ");
+  const band = storyBand(`${escapeHtml(t.band)} &nbsp;·&nbsp; IN TRANSIT &nbsp;·&nbsp; ${escapeHtml(t.band)}`);
+  const seg = `<td style="height:2px;background:#ffffff;border-radius:2px;font-size:0;line-height:0;">&nbsp;</td><td style="width:3px;font-size:0;">&nbsp;</td>` +
+    `<td style="height:2px;background:#5a5a5a;border-radius:2px;font-size:0;line-height:0;">&nbsp;</td><td style="width:3px;font-size:0;">&nbsp;</td>` +
+    `<td style="height:2px;background:#5a5a5a;border-radius:2px;font-size:0;line-height:0;">&nbsp;</td>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#000000;font-family:${MAIL_SCHRIFT};">
+    <tr><td style="padding:6px 8px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${seg}</tr></table></td></tr>
+    <tr><td style="padding:8px 10px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td width="34"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="padding:2px;border:1.5px solid #ffffff;border-radius:50%;"><img src="${SHOP_URL}/assets/favicon.png" width="26" height="26" alt="" style="display:block;width:26px;height:26px;border-radius:50%;background:#000000;border:0;"></td></tr></table></td>
+      <td style="padding-left:8px;font-size:13px;font-weight:600;color:#ffffff;">disorder119 <span style="font-weight:400;color:#a8a8a8;padding-left:4px;">${escapeHtml(t.zeit)}</span></td>
+      <td align="right" style="font-size:16px;color:#ffffff;white-space:nowrap;letter-spacing:2px;">&middot;&middot;&middot; &nbsp;&#10005;</td></tr></table></td></tr>
+    <tr><td style="padding:12px 0 0;">${band}</td></tr>
+    <tr><td align="center" style="padding:20px 0 18px;"><img src="${escapeHtml(bild)}" width="196" alt="${titel}" style="display:block;width:196px;max-width:196px;height:auto;border:0;"></td></tr>
+    <tr><td align="center" style="padding:0 18px 20px;">
+      <div style="font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#777777;">${escapeHtml(t.archiv)}${nr ? ` ${escapeHtml(nr)}` : ""}</div>
+      <div style="font-size:15px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;color:#ffffff;margin-top:4px;">${titel}</div>
+      ${ziel ? `<div style="font-family:'Courier New',Courier,monospace;font-size:10px;color:#777777;margin-top:8px;">${ziel}</div>` : ""}
+    </td></tr>
+    <tr><td style="padding:0;">${band}</td></tr>
+    <tr><td style="padding:0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td style="padding:12px 10px 4px 12px;"><div style="border:1px solid #bfbfbf;border-radius:22px;padding:10px 14px;font-size:13px;color:#bfbfbf;">${escapeHtml(t.nachricht)}</div></td>
+      <td width="60" style="padding:12px 14px 4px 0;font-size:22px;color:#ffffff;white-space:nowrap;line-height:1;">&#9825;&nbsp;&nbsp;&#10148;</td></tr></table></td></tr>
+  </table>`;
+}
+
+function versandMotiv(order, items, { sprache = "de", stadt = "", tracking = "", carrier = "DHL" } = {}) {
+  if (!items.length) return "";
+  const bild = stueckBild(items[0]);
+  if (!bild) return "";
+  return iphone(storyBildschirm(items[0], bild, { sprache, stadt, tracking, carrier }));
+}
+
+// Marke und Groesse aus dem oeffentlichen Katalog (fuer den Anhaenger der
+// Versandmail). Faellt der Katalog aus, bleibt der Anhaenger ohne beides.
+export async function katalogAngaben(env, items = []) {
+  const ids = items.map(item => Number(item?.item_id)).filter(Number.isFinite);
+  if (!ids.length) return items;
+  try {
+    const katalog = await katalogNachId({ env, fetcher: env?.KATALOG_FETCH || null });
+    return items.map(item => {
+      const k = katalog.get(Number(item.item_id));
+      return k ? { ...item, brand: safeText(k.brand || "", 60), size: safeText(k.size || "", 40) } : item;
+    });
+  } catch {
+    return items;
+  }
+}
 
 export function formatShippingConfirmation(order = {}, options = {}) {
   const sprache = mailSprache(options.sprache || order.sprache);
@@ -840,10 +937,14 @@ export function formatShippingConfirmation(order = {}, options = {}) {
       </td></tr></table>
       ${url ? mailKnopf(url, t.knopf) : ""}`
     : `<p style="margin:0;text-align:center;color:${F.leise};">${escapeHtml(t.versandMit(carrier))}</p>`;
-  const kopf = `<p style="margin:0 auto;max-width:440px;color:${F.leise};">${t.kopf(`<strong style="color:${F.text};">${escapeHtml(number)}</strong>`)}</p>`;
+  const stadt = safeText(order.city || order.contact?.city || "", 60);
+  const kopf = `<p style="margin:0 auto;max-width:440px;color:${F.leise};">${t.kopf(`<strong style="color:${F.text};">${escapeHtml(number)}</strong>`, escapeHtml(stadt))}</p>`;
+  const marke = versandMotiv(order, items, { sprache, stadt, tracking, carrier });
   const inhalt = [
-    `<tr><td style="padding:26px 4px 0;">${nummerBox}</td></tr>`,
-    items.length ? mailAbschnitt(t.imPaket, `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">${items.map(item => stueckZeile(item, null, sprache)).join("")}</table>`) : "",
+    marke ? `<tr><td align="center" style="padding:26px 0 0;">${marke}</td></tr>` : "",
+    `<tr><td style="padding:${marke ? "14px" : "26px"} 4px 0;">${nummerBox}</td></tr>`,
+    // Bei einem Teil steht es schon auf der Briefmarke; mehrere Teile werden gelistet.
+    (items.length > 1 || (items.length && !marke)) ? mailAbschnitt(t.imPaket, `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">${items.map(item => stueckZeile(item, null, sprache)).join("")}</table>`) : "",
     `<tr><td style="padding:24px 4px 30px;">
       <p style="margin:0;font-size:13px;color:${F.leise};">${escapeHtml(t.erfasstHtml)}${contactEmail ? ` ${escapeHtml(a.fragenMit[0])}<a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a>${escapeHtml(a.fragenMit[1])}` : ""}</p>
       <p style="margin:12px 0 0;font-size:13px;color:${F.leise};">${escapeHtml(t.widerrufHtml[0])}<a href="${escapeHtml(widerrufLink)}" style="color:${F.text};">${escapeHtml(t.widerrufHtml[1])}</a>${escapeHtml(t.widerrufHtml[2])}</p>
@@ -1371,15 +1472,15 @@ export async function sendInvoiceAfterCaptureByProviderOrder(env, providerOrderI
 // ---------------------------------------------------------------------------
 
 async function loadShippedOrder(env, orderId) {
-  const order = await env.DB.prepare(`SELECT o.id,o.order_number,o.status,
+  const order = await env.DB.prepare(`SELECT o.id,o.order_number,o.status,o.total_cents,o.shipping_cents,
       s.carrier,s.tracking_number
     FROM commerce_orders o
     LEFT JOIN shipments s ON s.order_id=o.id
     WHERE o.id=? ORDER BY s.created_at DESC LIMIT 1`).bind(String(orderId)).first();
   if (!order) return null;
-  const items = await env.DB.prepare(`SELECT item_id,title_snapshot,article_no,bild FROM order_items
+  const items = await env.DB.prepare(`SELECT item_id,title_snapshot,article_no,bild,unit_price_cents FROM order_items
     WHERE order_id=? ORDER BY id`).bind(String(orderId)).all();
-  const contact = await env.DB.prepare(`SELECT email,recipient_name FROM order_contact_snapshots
+  const contact = await env.DB.prepare(`SELECT email,recipient_name,city FROM order_contact_snapshots
     WHERE order_id=? LIMIT 1`).bind(String(orderId)).first();
   return { ...order, items: items?.results || [], contact: contact || {} };
 }
@@ -1407,7 +1508,8 @@ export async function sendShippingConfirmation(env, orderId, reqId = crypto.rand
   if (!claim?.meta?.changes) return { sent: false, duplicate: true };
 
   const sprache = await bestellSprache(env, order.id);
-  const message = formatShippingConfirmation(await titelFuerSprache(env, order, sprache), {
+  const mitTiteln = await titelFuerSprache(env, order, sprache);
+  const message = formatShippingConfirmation({ ...mitTiteln, items: await katalogAngaben(env, mitTiteln.items) }, {
     contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200),
     sprache,
   });

@@ -88,6 +88,31 @@ test("eingehende Mail wird gespeichert und weitergeleitet", async () => {
   assert.equal(gespeichert[0][6], "Frage zur Prada-Jacke");
 });
 
+test("DHL-Auftragsbestaetigung wird gespeichert und an die Marken-Zuordnung gegeben", async () => {
+  const DB = sqliteD1(allMigrations());
+  const roh = [
+    "From: DHL <noreply@dhl.com>",
+    "To: kontakt@disorder119.com",
+    "Subject: =?UTF-8?Q?Auftragsbest=C3=A4tigung_Ihrer_Online_Frankierung_ABCDEF123456?=",
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    "Warenkorb-Nr.: ABCDEF123456",
+  ].join("\r\n");
+  const bytes = new TextEncoder().encode(roh);
+  const warten = [];
+  const message = {
+    from: "noreply@dhl.com", to: "kontakt@disorder119.com",
+    raw: new ReadableStream({ start(c) { c.enqueue(bytes); c.close(); } }),
+    forward: async () => {},
+    setReject: () => { throw new Error("darf nicht abweisen"); },
+  };
+  await handleIncomingEmail(message, { DB }, { waitUntil: p => warten.push(p) });
+  await Promise.all(warten);
+  assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM postfach").get().n, 1);
+  // Keine offene Marke: nichts zugeordnet, aber auch kein Fehler.
+  assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM dhl_qr_marken").get().n, 0);
+});
+
 // Telegram bekommt keine Personendaten aus Mails (Absender, Betreff): die
 // stehen nur in der Admin-App. Ein Betreff wie "=?UTF-8?Q?Rechnung=0A=0A
 // DISORDER119 — NEUES ADMIN-GERÄT ...?=" kann so auch keine falsche Meldung
