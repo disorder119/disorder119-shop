@@ -295,7 +295,7 @@ test("sale notification lists every piece of a multi-piece order", () => {
   assert.match(text, /VERKAUFT/);
   const eins = formatSaleMessage({ id: "abc-1", order_number: "D119-2", article_no: "213", title_snapshot: "Beanie", total_cents: 7000, customer_city: "Bremen" });
   assert.match(eins, /#213 · Beanie/);
-  assert.match(eins, /70,00s€ · nach Bremen/);
+  assert.match(eins, /70,00\s€ · nach Bremen/);
   assert.match(eins, /https:\/\/admin\.disorder119\.com\/\?bestellung=abc-1/);
 });
 
