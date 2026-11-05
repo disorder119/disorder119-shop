@@ -4,7 +4,9 @@ import { sha256 } from './tax-evidence.js';
 export const DATASET_FORMAT='disorder119.shop-dataset';
 const MAX_ROWS=10000;
 export const QUERIES={
-  orders:'SELECT id,order_number,status,currency,subtotal_cents,shipping_cents,total_cents,created_at,updated_at FROM commerce_orders ORDER BY id',
+  // Im Admin ausgeblendete Testbestellungen (versteckt=1) heissen im Export "TEST-…": der Manager
+  // bucht sie nicht als Verkauf (shop_sales._is_test) statt bei jedem Abruf einen Konflikt anzulegen.
+  orders:"SELECT id,CASE WHEN COALESCE(versteckt,0)=1 THEN 'TEST-'||order_number ELSE order_number END AS order_number,status,currency,subtotal_cents,shipping_cents,total_cents,created_at,updated_at FROM commerce_orders ORDER BY id",
   order_items:'SELECT id,order_id,item_id,article_no,title_snapshot,unit_price_cents,quantity,currency FROM order_items ORDER BY id',
   payments:'SELECT id,order_id,provider,provider_order_id,provider_payment_id,status,amount_cents,currency,created_at,updated_at FROM payments ORDER BY id',
   refunds:'SELECT id,order_id,rental_id,payment_id,provider_refund_id,amount_cents,currency,status,created_at,updated_at FROM refunds ORDER BY id',
