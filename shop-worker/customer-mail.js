@@ -193,11 +193,11 @@ ${vorschau ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;co
   <tr><td align="center" style="padding:36px 0 26px;border-bottom:1px solid ${F.linie};">
     <a href="${shopLink(l)}" style="font-size:15px;font-weight:700;letter-spacing:0.34em;color:${F.text};text-decoration:none;">DISORDER119</a>
   </td></tr>
-  <tr><td style="padding:40px 4px 6px;text-align:center;">
+  ${titel ? `<tr><td style="padding:40px 4px 6px;text-align:center;">
     <p style="margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:${F.leise};">${escapeHtml(eyebrow)}</p>
     <h1 class="mail-h1" style="margin:0 0 16px;font-size:28px;line-height:1.15;font-weight:700;letter-spacing:-0.01em;text-transform:uppercase;color:${F.text};">${escapeHtml(titel)}</h1>
     ${kopf}
-  </td></tr>
+  </td></tr>` : ""}
   ${inhalt}
   <tr><td style="padding:30px 4px 44px;border-top:1px solid ${F.linie};text-align:center;font-size:11px;line-height:1.6;color:${F.leise};">
     ${escapeHtml(allgemein(l).archiv)}<br>
@@ -993,6 +993,60 @@ export function formatShippingConfirmation(order = {}, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Freie Mail aus der Admin-App: eigener Text im Shop-Design (Absatz-Umbrueche,
+// Links klickbar, alles escaped). Ohne grosse Ueberschrift - wie ein Brief.
+// ---------------------------------------------------------------------------
+
+export function freieMail({ betreff = "", text = "", sprache = "de" } = {}) {
+  const F = MAIL_FARBE;
+  const subject = safeText(betreff, 200);
+  const roh = String(text || "").replace(/\r\n?/g, "\n").slice(0, 20_000).trim();
+  const verlinken = teil => escapeHtml(teil).replace(/https?:\/\/[^\s<>"']+/g, url =>
+    `<a href="${url}" style="color:${F.text};">${url}</a>`);
+  const absaetze = roh.split(/\n{2,}/).map(absatz => {
+    const zeilen = absatz.split("\n");
+    // Zitat einer Kundenmail ("> ...") leiser darstellen.
+    const zitat = zeilen.every(z => z.startsWith(">"));
+    const inhalt = zeilen.map(z => verlinken(zitat ? z.replace(/^>\s?/, "") : z)).join("<br>");
+    return zitat
+      ? `<p style="margin:0 0 16px;padding-left:12px;border-left:2px solid ${F.linie};color:${F.leise};font-size:14px;">${inhalt}</p>`
+      : `<p style="margin:0 0 16px;">${inhalt}</p>`;
+  }).join("");
+  const inhalt = `<tr><td style="padding:30px 4px 30px;font-size:15px;line-height:1.65;color:${F.text};text-align:left;">${absaetze}</td></tr>`;
+  const html = kundenmailRahmen({ titel: "", eyebrow: "", kopf: "", inhalt, vorschau: roh.slice(0, 110), sprache });
+  return { subject, text: roh, html };
+}
+
+// ---------------------------------------------------------------------------
+// Postausgang: jede verschickte Mail wird mit Inhalt gemerkt (Admin-App,
+// Postfach > Gesendet). Anmeldelinks und Bestaetigungslinks nur ohne Inhalt.
+// Bewusst fehlertolerant: das Merken darf den Versand nie verhindern.
+// ---------------------------------------------------------------------------
+
+const VERTRAULICHE_TAGS = new Set(["login-link", "newsletter-bestaetigung"]);
+
+async function postausgangMerken(env, eintrag) {
+  if (!env?.DB) return null;
+  const id = crypto.randomUUID();
+  const vertraulich = Boolean(eintrag.vertraulich);
+  try {
+    await env.DB.prepare(`INSERT INTO postausgang
+      (id, gesendet_am, an_email, an_name, betreff, html, text, tag, art, anhaenge_json, status, fehler, message_id, antwort_auf, vertraulich)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(id, new Date().toISOString(), eintrag.an || "", eintrag.anName || null, eintrag.betreff || "",
+        vertraulich ? null : String(eintrag.html || "").slice(0, 400_000) || null,
+        vertraulich ? null : String(eintrag.text || "").slice(0, 60_000) || null,
+        eintrag.tag || null, eintrag.art || "AUTO", JSON.stringify(eintrag.anhaenge || []), eintrag.status,
+        eintrag.fehler || null, eintrag.messageId || null, eintrag.antwortAuf || null, vertraulich ? 1 : 0)
+      .run();
+    return id;
+  } catch (err) {
+    console.error(JSON.stringify({ level: "warn", event: "postausgang_merken_fehlgeschlagen", message: safeText(err?.message || "", 120) }));
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Versand
 // ---------------------------------------------------------------------------
 
@@ -1032,6 +1086,21 @@ export async function sendMail(env, message = {}) {
     .filter(a => a && a.b64 && /^[A-Za-z0-9+/=]+$/.test(a.b64) && a.b64.length < 8_000_000)
     .map(a => ({ name: safeText(a.name || "Anhang.pdf", 100), content: a.b64 }));
   if (anhaenge.length) payload.attachment = anhaenge;
+  // Antwort auf eine Kundenmail: im Postfach der Kundin im selben Verlauf.
+  if (message.headers && typeof message.headers === "object") {
+    const kopfzeilen = {};
+    for (const [name, wert] of Object.entries(message.headers)) {
+      if (/^(In-Reply-To|References)$/.test(name) && /^<[^<>\s]{3,300}>$/.test(String(wert))) kopfzeilen[name] = String(wert);
+    }
+    if (Object.keys(kopfzeilen).length) payload.headers = kopfzeilen;
+  }
+  const protokoll = {
+    an: to, anName: message.toName ? safeText(message.toName, 120) : null, betreff: subject,
+    html: payload.htmlContent, text: payload.textContent, tag: message.tag ? safeText(message.tag, 40) : null,
+    art: message.art === "MANUELL" ? "MANUELL" : "AUTO", anhaenge: anhaenge.map(a => a.name),
+    antwortAuf: message.antwortAuf ? safeText(message.antwortAuf, 60) : null,
+    vertraulich: Boolean(message.vertraulich) || VERTRAULICHE_TAGS.has(String(message.tag || "")),
+  };
 
   let response;
   try {
@@ -1045,6 +1114,7 @@ export async function sendMail(env, message = {}) {
       body: JSON.stringify(payload),
     });
   } catch (err) {
+    await postausgangMerken(env, { ...protokoll, status: "FEHLER", fehler: safeText(err?.message || "Netzwerkfehler", 120) });
     throw new Error(`mail_network_error:${safeText(err?.message || "unknown", 80)}`);
   }
   const body = await response.json().catch(() => null);
@@ -1052,9 +1122,12 @@ export async function sendMail(env, message = {}) {
     // Der Anbieter spiegelt Teile der Anfrage zurueck. Nur Code und Meldung
     // uebernehmen, damit keine Kundenadresse in die Logs laeuft.
     const detail = safeText(body?.message || body?.code || `HTTP ${response.status}`, 120);
+    await postausgangMerken(env, { ...protokoll, status: "FEHLER", fehler: detail });
     throw new Error(`mail_api_error:${detail}`);
   }
-  return { sent: true, messageId: safeText(body?.messageId || "", 200) || null };
+  const messageId = safeText(body?.messageId || "", 200) || null;
+  const protokollId = await postausgangMerken(env, { ...protokoll, status: "GESENDET", messageId });
+  return { sent: true, messageId, protokollId };
 }
 
 export function formatMailTestMessage(now = new Date()) {
