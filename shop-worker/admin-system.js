@@ -132,6 +132,8 @@ export function connectionSnapshot(env = {}) {
       dhl: { state: state(env.DHL_PRIVAT_API_KEY), environment: env.DHL_PRIVAT_ENVIRONMENT === "live" ? "live" : "sandbox" },
       turnstile: { state: state(env.TURNSTILE_SECRET) },
       rateLimiter: { state: state(env.RATE_LIMITER) },
+      ebay: { state: state(env.EBAY_CLIENT_ID, env.EBAY_CLIENT_SECRET, env.EBAY_VERIFICATION_TOKEN) },
+      besucher: { state: state(env.BESUCHER_WECKER) },
     },
   };
 }
