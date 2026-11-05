@@ -41,11 +41,15 @@
 <title>Cart | Disorder119</title>
 
 <link rel="stylesheet" href="/assets/app.css?v=7d75946f99">
-<link rel="stylesheet" href="/assets/theme.css?v=d320763616">
-<script src="/assets/ansicht.js" defer></script>
-<script src="/assets/zurueck.js" defer></script>
+<!-- theme.css traegt fast nur die weisse Ansicht: am Handy nach dem ersten Bild, bei weisser Ansicht sofort (spaet-lader.js). -->
+<link rel="d119-spaet" href="/assets/theme.css?v=d320763616" data-sofort-bei-hell>
+<link rel="stylesheet" href="/assets/theme.css?v=d320763616" media="(min-width: 861px)">
+<noscript><link rel="stylesheet" href="/assets/theme.css?v=d320763616"></noscript>
+<script src="/assets/ansicht.js" type="text/d119-spaet" defer></script>
+<script src="/assets/zurueck.js" type="text/d119-spaet" defer></script>
 <script>try{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}catch(e){}</script>
-<script src="/assets/catalog-number-links.js" defer></script>
+<script src="/assets/catalog-number-links.js" type="text/d119-spaet" defer></script>
+<script src="/assets/spaet-lader.js" defer></script>
 <style>
 /* Archiv-Kopf (d119-ui): Suche als Linie, kleine Zahlenzeile - inline, damit nichts springt. */
 html.ui-kopf .masthead__meta { display: none; }
@@ -474,7 +478,7 @@ html.ui-kopf .masthead__index { margin-top: 8px; }
 </div>
 
 <script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "paypalClientId": "BAAcvD8X1aHIk42UUDAMZkYZ2i5gKLPCXZDBzbWjsh-axJ_6551l-FXgDdboqGtmZSidZbGWon2cQ_SuaI", "shopWorkerUrl": "https://api.disorder119.com", "turnstileSiteKey": "0x4AAAAAAFHqI2j_AitAYIKF", "environment": "live", "features": {"paypalCheckout": true, "customerAccounts": true}};</script>
-<script src="/assets/pwa.js?v=b32fa09366"></script>
+<script src="/assets/pwa.js?v=188add6d6a"></script>
 <script src="/assets/app.js?v=708ba3f3dd"></script>
 <script src="/assets/catalog-filter-simplify.js"></script>
 <script src="/assets/archiv-navigation.js?v=e52f257ecc"></script>
@@ -482,6 +486,6 @@ html.ui-kopf .masthead__index { margin-top: 8px; }
 <script src="/assets/rental-v2-ui.js"></script>
 <script src="/assets/rental-v2-picker.js"></script>
 
-<script src="/assets/newsletter.js?v=2d3e72755d" defer></script>
+<script src="/assets/newsletter.js?v=2d3e72755d" type="text/d119-spaet" defer></script>
 </body>
 </html>
