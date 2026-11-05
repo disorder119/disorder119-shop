@@ -10,10 +10,16 @@
 // Anhänge werden nur mit Namen vermerkt, nicht gespeichert.
 
 import { sendTelegramMessage, telegramTransportReady, telegramZeile } from "./notifications.js";
-import { warenkorbZuordnen } from "./dhl-qr.js";
+import { warenkorbAusMail, warenkorbZuordnen } from "./dhl-qr.js";
 
 const ADMIN_ORIGINS = Object.freeze(["https://admin.disorder119.com"]);
-const MAX_ROH_BYTES = 2 * 1024 * 1024;
+// Rohmail bis 15 MB lesen (Cloudflare liefert bis 25 MB); Anhaenge kommen in D1,
+// je Anhang hoechstens ANHANG_MAX_BYTES (D1: 2 MB je Zeile), je Mail ANHAENGE_MAX_SUMME.
+const MAX_ROH_BYTES = 15 * 1024 * 1024;
+export const ANHANG_MAX_BYTES = 1_900_000;
+const ANHAENGE_MAX_SUMME = 12 * 1024 * 1024;
+const ANHAENGE_MAX_ZAHL = 40;
+const HTML_MAX = 600_000;
 const MAX_TEXT = 60_000;
 export const STANDARD_WEITERLEITUNG = "disorder119shop@gmail.com";
 
@@ -160,11 +166,16 @@ function teilDurchgehen(roh, sammlung, tiefe = 0) {
     }
     return;
   }
-  if (dateiname || /^attachment/i.test(disposition)) {
-    sammlung.anhaenge.push(dateiname || "Anhang");
+  const cid = String(kopf["content-id"] || "").trim().replace(/^<|>$/g, "");
+  const istBild = typ.startsWith("image/");
+  const bytes = kodierung === "base64" ? base64Bytes(koerper) : kodierung === "quoted-printable" ? qpBytes(koerper) : latin1Bytes(koerper);
+  if (dateiname || /^attachment/i.test(disposition) || (istBild && (cid || /^inline/i.test(disposition)))) {
+    // Eingebettet = Bild im HTML (cid:) ohne ausdrueckliches "attachment".
+    const inline = !/^attachment/i.test(disposition) && istBild && Boolean(cid || /^inline/i.test(disposition)) && !/\.pdf$/i.test(dateiname);
+    if (!inline) sammlung.anhaenge.push(dateiname || "Anhang");
+    sammlung.dateien.push({ name: dateiname || (inline ? cid || "Bild" : "Anhang"), typ: typ.split(";")[0].trim() || "application/octet-stream", cid, inline, bytes });
     return;
   }
-  const bytes = kodierung === "base64" ? base64Bytes(koerper) : kodierung === "quoted-printable" ? qpBytes(koerper) : latin1Bytes(koerper);
   const text = dekodieren(bytes, parameter(kopf["content-type"], "charset") || "utf-8");
   if (typ.startsWith("text/plain") && !sammlung.text) sammlung.text = text;
   else if (typ.startsWith("text/html") && !sammlung.html) sammlung.html = text;
@@ -181,7 +192,7 @@ function adresse(wert) {
 export function mailLesen(roh) {
   const text = typeof roh === "string" ? roh : new TextDecoder("latin1").decode(roh);
   const { kopf } = teilLesen(text);
-  const sammlung = { text: "", html: "", anhaenge: [] };
+  const sammlung = { text: "", html: "", anhaenge: [], dateien: [] };
   teilDurchgehen(text, sammlung);
   const von = adresse(kopf.from || "");
   const antwortAn = kopf["reply-to"] ? adresse(kopf["reply-to"]) : null;
@@ -198,6 +209,8 @@ export function mailLesen(roh) {
     inReplyTo: String(kopf["in-reply-to"] || "").trim(),
     text: koerper,
     anhaenge: sammlung.anhaenge.slice(0, 20),
+    html: sammlung.html ? String(sammlung.html).slice(0, HTML_MAX) : "",
+    dateien: sammlung.dateien.slice(0, ANHAENGE_MAX_ZAHL),
   };
 }
 
@@ -220,13 +233,31 @@ async function rohLesen(stream) {
 
 export async function mailSpeichern(env, mail, groesse, empfaenger) {
   const id = crypto.randomUUID();
+  const jetzt = new Date().toISOString();
   await env.DB.prepare(`INSERT INTO postfach
-    (id, received_at, from_email, from_name, reply_to, to_email, subject, body_text, message_id, in_reply_to, attachments_json, size_bytes)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .bind(id, new Date().toISOString(), mail.vonEmail.slice(0, 200), mail.vonName.slice(0, 200), mail.antwortAn.slice(0, 200),
+    (id, received_at, from_email, from_name, reply_to, to_email, subject, body_text, message_id, in_reply_to, attachments_json, size_bytes, body_html)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(id, jetzt, mail.vonEmail.slice(0, 200), mail.vonName.slice(0, 200), mail.antwortAn.slice(0, 200),
       String(empfaenger || mail.an).slice(0, 200), mail.betreff.slice(0, 300), mail.text, mail.messageId.slice(0, 300),
-      mail.inReplyTo.slice(0, 300), JSON.stringify(mail.anhaenge), groesse)
+      mail.inReplyTo.slice(0, 300), JSON.stringify(mail.anhaenge), groesse, mail.html || null)
     .run();
+  // Anhaenge einzeln speichern: ein zu grosser Anhang bleibt nur mit Namen und Groesse stehen.
+  let summe = 0;
+  const zeilen = [];
+  (mail.dateien || []).forEach((d, pos) => {
+    const bytes = d.bytes instanceof Uint8Array ? d.bytes : new Uint8Array(0);
+    const passt = bytes.length > 0 && bytes.length <= ANHANG_MAX_BYTES && summe + bytes.length <= ANHAENGE_MAX_SUMME;
+    if (passt) summe += bytes.length;
+    zeilen.push(env.DB.prepare(`INSERT INTO postfach_anhaenge (id, mail_id, pos, name, typ, cid, inline, groesse, daten, created_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), id, pos, String(d.name || "Anhang").slice(0, 200),
+      String(d.typ || "application/octet-stream").slice(0, 100), d.cid ? String(d.cid).slice(0, 200) : null, d.inline ? 1 : 0,
+      bytes.length, passt ? bytes : null, jetzt));
+  });
+  if (zeilen.length) {
+    try { await env.DB.batch(zeilen); } catch (err) {
+      console.error(JSON.stringify({ level: "error", event: "postfach_anhaenge_fehlgeschlagen", message: String(err?.message || err).slice(0, 160) }));
+    }
+  }
   return id;
 }
 
@@ -338,7 +369,7 @@ export async function handleIncomingEmail(message, env, ctx) {
 // ----------------------------------------------------------- Admin-API
 export function isPostfachRoute(url) {
   const path = url.pathname.replace(/\/+$/, "");
-  return path === "/admin/postfach" || /^\/admin\/postfach\/[0-9a-f-]{36}$/.test(path);
+  return path === "/admin/postfach" || /^\/admin\/postfach\/[0-9a-f-]{36}(\/anhang\/[0-9a-f-]{36})?$/.test(path);
 }
 
 function kopf(origin) {
@@ -347,13 +378,41 @@ function kopf(origin) {
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Expose-Headers": "Content-Type, Content-Disposition",
     "Access-Control-Max-Age": "600",
     Vary: "Origin",
   };
   if (origin && ADMIN_ORIGINS.includes(origin)) out["Access-Control-Allow-Origin"] = origin;
   return out;
+}
+
+// Anhang ausliefern: Bilder und PDFs zum Ansehen, alles andere als Download.
+// Nie als HTML/SVG im Kontext der API ausfuehrbar (CSP sandbox, nosniff).
+const ANSEHBAR = /^(image\/(png|jpe?g|gif|webp|heic|heif|bmp)|application\/pdf|text\/plain)$/i;
+function anhangAntwort(row, origin) {
+  const typ = ANSEHBAR.test(String(row.typ || "")) ? String(row.typ).toLowerCase() : "application/octet-stream";
+  const name = String(row.name || "anhang").replace(/[^\w.\- ()äöüÄÖÜß]/g, "_").slice(0, 120) || "anhang";
+  const headers = {
+    ...kopf(origin),
+    "Content-Type": typ,
+    "Content-Disposition": `${typ === "application/octet-stream" ? "attachment" : "inline"}; filename="${name.replace(/"/g, "")}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+    "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox",
+    "Cache-Control": "private, max-age=3600",
+  };
+  // D1 liefert BLOBs je nach Laufzeit als ArrayBuffer oder Zahlen-Array.
+  const roh = row.daten;
+  const daten = roh instanceof Uint8Array ? roh : roh instanceof ArrayBuffer ? new Uint8Array(roh) : Array.isArray(roh) ? Uint8Array.from(roh) : new Uint8Array(0);
+  return new Response(daten, { status: 200, headers });
+}
+
+function dhlLinks(text) {
+  const links = [];
+  for (const m of String(text || "").matchAll(/https:\/\/(?:www\.)?dhl\.de\/[^\s<>"')]+/g)) {
+    if (!links.includes(m[0])) links.push(m[0]);
+  }
+  return links.slice(0, 5);
 }
 
 async function tokenEquals(left, right) {
@@ -372,6 +431,8 @@ function zeileAusgeben(row, mitText) {
     read: Boolean(row.read_at), archived: Boolean(row.archived_at),
     attachments: (() => { try { return JSON.parse(row.attachments_json || "[]"); } catch { return []; } })(),
   };
+  out.attachmentCount = Number(row.anhang_zahl ?? out.attachments.length ?? 0);
+  out.dhl = /@(?:[a-z0-9-]+\.)*(dhl\.(?:com|de)|deutschepost\.de)$/i.test(String(row.from_email || ""));
   if (mitText) out.text = row.body_text || "";
   else out.preview = String(row.body_text || "").replace(/\s+/g, " ").slice(0, 140);
   return out;
@@ -392,12 +453,30 @@ export async function handlePostfach(request, env, url, reqId = crypto.randomUUI
     if (path === "/admin/postfach" && request.method === "GET") {
       const archiv = url.searchParams.get("ordner") === "archiv";
       const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit") || 100)));
-      const { results } = await env.DB.prepare(`SELECT * FROM postfach WHERE ${archiv ? "archived_at IS NOT NULL" : "archived_at IS NULL"}
+      const { results } = await env.DB.prepare(`SELECT id, received_at, from_email, from_name, reply_to, to_email, subject,
+          substr(body_text, 1, 400) AS body_text, attachments_json, read_at, archived_at,
+          (SELECT COUNT(*) FROM postfach_anhaenge a WHERE a.mail_id=postfach.id AND a.inline=0) AS anhang_zahl
+        FROM postfach WHERE ${archiv ? "archived_at IS NOT NULL" : "archived_at IS NULL"}
         ORDER BY received_at DESC LIMIT ?`).bind(limit).all();
       const zahl = await env.DB.prepare("SELECT COUNT(*) AS n FROM postfach WHERE read_at IS NULL AND archived_at IS NULL").first();
       return new Response(JSON.stringify({ mails: (results || []).map(r => zeileAusgeben(r, false)), unread: Number(zahl?.n || 0) }), { status: 200, headers: kopf(origin) });
     }
-    const id = path.split("/").pop();
+    const teile = /^\/admin\/postfach\/([0-9a-f-]{36})(?:\/anhang\/([0-9a-f-]{36}))?$/.exec(path);
+    if (!teile) throw new PostfachError("NOT_FOUND", 404);
+    const id = teile[1];
+    if (teile[2]) {
+      if (request.method !== "GET") throw new PostfachError("NOT_FOUND", 404);
+      const anhang = await env.DB.prepare("SELECT name, typ, daten FROM postfach_anhaenge WHERE id=? AND mail_id=?").bind(teile[2], id).first();
+      if (!anhang || anhang.daten == null) throw new PostfachError("ANHANG_NICHT_GESPEICHERT", 404);
+      return anhangAntwort(anhang, origin);
+    }
+    if (request.method === "DELETE") {
+      await env.DB.batch([
+        env.DB.prepare("DELETE FROM postfach_anhaenge WHERE mail_id=?").bind(id),
+        env.DB.prepare("DELETE FROM postfach WHERE id=?").bind(id),
+      ]);
+      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: kopf(origin) });
+    }
     if (request.method === "GET") {
       const row = await env.DB.prepare("SELECT * FROM postfach WHERE id=?").bind(id).first();
       if (!row) throw new PostfachError("NICHT_GEFUNDEN", 404);
@@ -405,7 +484,28 @@ export async function handlePostfach(request, env, url, reqId = crypto.randomUUI
         row.read_at = new Date().toISOString();
         await env.DB.prepare("UPDATE postfach SET read_at=? WHERE id=?").bind(row.read_at, id).run();
       }
-      return new Response(JSON.stringify({ mail: zeileAusgeben(row, true) }), { status: 200, headers: kopf(origin) });
+      const dateien = (await env.DB.prepare(`SELECT id, pos, name, typ, cid, inline, groesse, (daten IS NOT NULL) AS gespeichert
+        FROM postfach_anhaenge WHERE mail_id=? ORDER BY pos`).bind(id).all()).results || [];
+      const mail = zeileAusgeben(row, true);
+      mail.html = row.body_html || "";
+      mail.files = dateien.map(d => ({ id: d.id, name: d.name, type: d.typ, cid: d.cid || "", inline: Boolean(d.inline),
+        size: Number(d.groesse || 0), stored: Boolean(d.gespeichert) }));
+      mail.attachmentCount = mail.files.filter(f => !f.inline).length || mail.attachments.length;
+      mail.links = mail.dhl ? dhlLinks(row.body_text) : [];
+      // DHL-Auftragsbestaetigung: die gekaufte Marke (QR-Code / PDF) direkt in der Mail zeigen.
+      const kennung = mail.dhl ? warenkorbAusMail({ vonEmail: row.from_email, betreff: row.subject, text: row.body_text }) : null;
+      if (kennung) {
+        const marke = await env.DB.prepare(`SELECT m.order_id, m.state, m.shipment_number, m.qr_png_b64, m.label_pdf_b64, o.order_number
+          FROM dhl_qr_marken m LEFT JOIN commerce_orders o ON o.id=m.order_id WHERE m.cart_id=? ORDER BY m.created_at DESC LIMIT 1`)
+          .bind(kennung.cartId).first().catch(() => null);
+        mail.marke = marke ? {
+          warenkorb: kennung.cartId, orderId: marke.order_id, bestellnummer: marke.order_number || "", state: marke.state,
+          sendungsnummer: marke.shipment_number || "",
+          qrPng: marke.qr_png_b64 ? `data:image/png;base64,${marke.qr_png_b64}` : null,
+          labelPdf: marke.label_pdf_b64 ? `data:application/pdf;base64,${marke.label_pdf_b64}` : null,
+        } : { warenkorb: kennung.cartId, state: "UNBEKANNT" };
+      }
+      return new Response(JSON.stringify({ mail }), { status: 200, headers: kopf(origin) });
     }
     if (request.method === "POST") {
       let body;

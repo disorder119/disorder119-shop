@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { handleIncomingEmail, kopfDekodieren, mailLesen, postfachMeldungNachholen, postfachText } from "./postfach.js";
+import { handleIncomingEmail, handlePostfach, kopfDekodieren, mailLesen, postfachMeldungNachholen, postfachText } from "./postfach.js";
 import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 
 const einfach = [
@@ -220,4 +220,129 @@ test("Riesige HTML-Mail (180 KB, boesartig verschachtelt) kostet kaum Rechenzeit
   const normal = mailLesen(["From: a@example.org", "Subject: x", "Content-Type: text/html; charset=utf-8", "",
     "<html><head><style>p{color:red}</style><script>alert(1)</script></head><body><p>Hallo   </p><p>Welt</p></body></html>"].join("\r\n"));
   assert.equal(normal.text, "Hallo\nWelt");
+});
+
+
+// ------------------------------------------------ Anhaenge, HTML, Loeschen, DHL-Marke
+const ADMIN_ORIGIN = "https://admin.disorder119.com";
+
+function eingang(roh) {
+  const bytes = new TextEncoder().encode(roh);
+  return {
+    from: "noreply@dhl.com", to: "kontakt@disorder119.com",
+    raw: new ReadableStream({ start(c) { c.enqueue(bytes); c.close(); } }),
+    forward: async () => {},
+    setReject: () => { throw new Error("darf nicht abweisen"); },
+  };
+}
+
+async function adminApi(env, pfad, method = "GET") {
+  const req = new Request(`https://api.disorder119.com${pfad}`, { method, headers: { Origin: ADMIN_ORIGIN, Authorization: "Bearer test-token" } });
+  return handlePostfach(req, env, new URL(req.url), "req-test", ADMIN_ORIGIN);
+}
+
+const mitAnhang = [
+  "From: DHL <noreply@dhl.com>",
+  "To: kontakt@disorder119.com",
+  "Subject: Ihre Paketmarke",
+  "Content-Type: multipart/mixed; boundary=\"aussen\"",
+  "",
+  "--aussen",
+  "Content-Type: multipart/related; boundary=\"rel\"",
+  "",
+  "--rel",
+  "Content-Type: text/html; charset=utf-8",
+  "",
+  "<p>Hallo <img src=\"cid:logo1\" alt=\"DHL\"></p>",
+  "--rel",
+  "Content-Type: image/png",
+  "Content-ID: <logo1>",
+  "Content-Disposition: inline",
+  "Content-Transfer-Encoding: base64",
+  "",
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]).toString("base64"),
+  "--rel--",
+  "--aussen",
+  "Content-Type: application/pdf; name=\"Paketmarke.pdf\"",
+  "Content-Disposition: attachment; filename=\"Paketmarke.pdf\"",
+  "Content-Transfer-Encoding: base64",
+  "",
+  Buffer.from("%PDF-1.4 marke").toString("base64"),
+  "--aussen--",
+].join("\r\n");
+
+test("Anhaenge und HTML: gespeichert, angezeigt, ausgeliefert und mit der Mail geloescht", async () => {
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, ADMIN_TOKEN: "test-token" };
+  await handleIncomingEmail(eingang(mitAnhang), env, null);
+
+  const liste = await (await adminApi(env, "/admin/postfach")).json();
+  assert.equal(liste.mails.length, 1);
+  assert.equal(liste.mails[0].attachmentCount, 1, "eingebettetes Logo zaehlt nicht als Anhang");
+  assert.equal(liste.mails[0].dhl, true);
+  const id = liste.mails[0].id;
+
+  const { mail } = await (await adminApi(env, `/admin/postfach/${id}`)).json();
+  assert.match(mail.html, /cid:logo1/);
+  const pdf = mail.files.find(f => !f.inline);
+  const bild = mail.files.find(f => f.inline);
+  assert.equal(pdf.name, "Paketmarke.pdf");
+  assert.equal(pdf.stored, true);
+  assert.equal(bild.cid, "logo1");
+  assert.equal(bild.type, "image/png");
+
+  const r = await adminApi(env, `/admin/postfach/${id}/anhang/${pdf.id}`);
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get("Content-Type"), "application/pdf");
+  assert.match(r.headers.get("Content-Security-Policy"), /sandbox/);
+  assert.equal(Buffer.from(await r.arrayBuffer()).toString(), "%PDF-1.4 marke");
+
+  assert.equal((await adminApi(env, `/admin/postfach/${id}`, "DELETE")).status, 200);
+  assert.equal((await (await adminApi(env, "/admin/postfach")).json()).mails.length, 0);
+  assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM postfach_anhaenge").get().n, 0);
+});
+
+test("Anhang als HTML wird nie im API-Kontext angezeigt, sondern heruntergeladen", async () => {
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, ADMIN_TOKEN: "test-token" };
+  const roh = [
+    "From: Kunde <kunde@example.com>", "To: kontakt@disorder119.com", "Subject: Datei",
+    "Content-Type: multipart/mixed; boundary=\"x\"", "",
+    "--x", "Content-Type: text/plain; charset=utf-8", "", "Siehe Anhang",
+    "--x", "Content-Type: text/html; name=\"boese.html\"", "Content-Disposition: attachment; filename=\"boese.html\"", "",
+    "<script>alert(1)</script>",
+    "--x--",
+  ].join("\r\n");
+  await handleIncomingEmail(eingang(roh), env, null);
+  const id = DB.raw.prepare("SELECT id FROM postfach").get().id;
+  const { mail } = await (await adminApi(env, `/admin/postfach/${id}`)).json();
+  const datei = mail.files[0];
+  const r = await adminApi(env, `/admin/postfach/${id}/anhang/${datei.id}`);
+  assert.equal(r.headers.get("Content-Type"), "application/octet-stream");
+  assert.match(r.headers.get("Content-Disposition"), /^attachment;/);
+});
+
+test("DHL-Auftragsbestaetigung zeigt die gekaufte Marke (QR-Code) direkt in der Mail", async () => {
+  const DB = sqliteD1(allMigrations());
+  DB.raw.exec("PRAGMA foreign_keys=OFF");
+  DB.raw.prepare(`INSERT INTO dhl_qr_marken (id,order_id,cart_id,product_id,entry_url,state,price_cents,shipment_number,pak_id,qr_png_b64,created_at,updated_at)
+    VALUES ('m1','o1','QM73WSTKZNES','PAK02','https://www.dhl.de/x','PAYED',619,'358088742443','HW6C643NL','iVBORw0KGgo','2026-11-04T12:00:00Z','2026-11-04T12:00:00Z')`).run();
+  const env = { DB, ADMIN_TOKEN: "test-token" };
+  const roh = [
+    "From: DHL <noreply@dhl.com>", "To: kontakt@disorder119.com",
+    "Subject: =?UTF-8?Q?Auftragsbest=C3=A4tigung_Ihrer_Online_Frankierung_QM73WSTKZNES?=",
+    "Content-Type: text/plain; charset=utf-8", "",
+    "1. 2 kg - Paket / 6,19 €",
+    "Warenkorb-Nr.: QM73WSTKZNES",
+    "Zum Warenkorb: https://www.dhl.de/int-versenden/gw/rest/init?token=abc",
+  ].join("\r\n");
+  const warten = [];
+  await handleIncomingEmail(eingang(roh), env, { waitUntil: q => warten.push(q) });
+  await Promise.all(warten);
+  const id = DB.raw.prepare("SELECT id FROM postfach").get().id;
+  const { mail } = await (await adminApi(env, `/admin/postfach/${id}`)).json();
+  assert.equal(mail.marke.warenkorb, "QM73WSTKZNES");
+  assert.equal(mail.marke.sendungsnummer, "358088742443");
+  assert.match(mail.marke.qrPng, /^data:image\/png;base64,/);
+  assert.deepEqual(mail.links, ["https://www.dhl.de/int-versenden/gw/rest/init?token=abc"]);
 });

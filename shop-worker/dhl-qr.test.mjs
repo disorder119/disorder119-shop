@@ -306,6 +306,63 @@ test("QR-Abruf scheitert (WRONG_FORMAT): Marke bleibt bezahlt mit Sendungsnummer
   }
 });
 
+test("QR-Code kommt ueber die PAKID, wenn die Sendungsnummer WRONG_FORMAT liefert", async () => {
+  const DB = seed();
+  const env = envWith(DB);
+  const dhl = fakeDhl({ payAfter: 0 });
+  const inner = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    const pfad = new URL(String(url)).pathname;
+    if (pfad.endsWith(`/labels/${TRACKING}/qr-code`)) return Response.json({ detail: "WRONG_FORMAT" }, { status: 400 });
+    if (pfad.endsWith("/labels/123456789/qr-code")) return new Response(PNG, { status: 200, headers: { "Content-Type": "image/png" } });
+    return inner(url, init);
+  };
+  try {
+    await call(env, "/admin/versand/o1/qr", { method: "POST", body: { produkt: "PAK02" } });
+    const r = await call(env, "/admin/versand/o1/qr");
+    assert.equal(r.data.marke.state, "PAYED");
+    assert.match(r.data.marke.qrPng, /^data:image\/png;base64,/);
+    // Gespeichert: der naechste Abruf fragt DHL nicht mehr.
+    const vorher = dhl.calls.length;
+    const r2 = await call(env, "/admin/versand/o1/qr");
+    assert.match(r2.data.marke.qrPng, /^data:image\/png;base64,/);
+    assert.equal(dhl.calls.length, vorher);
+  } finally {
+    globalThis.fetch = inner;
+    dhl.restore();
+  }
+});
+
+test("ohne QR-Code: Marke als PDF, und erneute Abrufe sind gebremst", async () => {
+  const DB = seed();
+  const env = envWith(DB);
+  const dhl = fakeDhl({ payAfter: 0 });
+  const inner = globalThis.fetch;
+  const PDF = new TextEncoder().encode("%PDF-1.4\n" + "x".repeat(400));
+  globalThis.fetch = async (url, init) => {
+    const pfad = new URL(String(url)).pathname;
+    if (pfad.includes("/qr-code")) return Response.json({ detail: "WRONG_FORMAT" }, { status: 400 });
+    if (pfad.endsWith("/labels/123456789")) {
+      assert.equal(init.headers.Accept, "application/pdf");
+      return new Response(PDF, { status: 200, headers: { "Content-Type": "application/pdf" } });
+    }
+    return inner(url, init);
+  };
+  try {
+    await call(env, "/admin/versand/o1/qr", { method: "POST", body: { produkt: "PAK02" } });
+    const r = await call(env, "/admin/versand/o1/qr");
+    assert.equal(r.data.marke.qrPng, null);
+    assert.match(r.data.marke.labelPdf, /^data:application\/pdf;base64,/);
+    const vorher = dhl.calls.length;
+    await call(env, "/admin/versand/o1/qr");
+    assert.equal(dhl.calls.length, vorher, "innerhalb von 10 Minuten kein neuer DHL-Abruf");
+    assert.equal(DB.raw.prepare("SELECT qr_versuche FROM dhl_qr_marken").get().qr_versuche, 1);
+  } finally {
+    globalThis.fetch = inner;
+    dhl.restore();
+  }
+});
+
 test("incomplete or foreign addresses are stopped before anything is bought", async () => {
   const dhl = fakeDhl();
   try {
