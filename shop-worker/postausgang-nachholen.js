@@ -34,7 +34,10 @@ async function spalte(env, sql) {
 
 async function empfaenger(env) {
   const alle = [
+    ...(await spalte(env, "SELECT DISTINCT email AS e FROM order_contact_snapshots WHERE email IS NOT NULL")),
+    ...(await spalte(env, "SELECT DISTINCT empfaenger_email AS e FROM rechnungen WHERE empfaenger_email IS NOT NULL")),
     ...(await spalte(env, "SELECT DISTINCT guest_email AS e FROM commerce_orders WHERE guest_email IS NOT NULL")),
+    ...(await spalte(env, "SELECT DISTINCT guest_email AS e FROM rental_reservations WHERE guest_email IS NOT NULL")),
     ...(await spalte(env, "SELECT DISTINCT email_normalized AS e FROM newsletter_subscribers")),
     ...(await spalte(env, "SELECT DISTINCT email AS e FROM widerrufe")),
     ...(await spalte(env, "SELECT DISTINCT email AS e FROM customers")),
@@ -52,13 +55,21 @@ export async function postausgangNachholen(env, scheduledTime = Date.now(), { fe
   let abrufe = 0;
   let neu = 0;
   let unvollstaendig = false;
+  const codes = {};
+  let ersterFehler = null;
+  const merke = async (res) => {
+    codes[res.status] = (codes[res.status] || 0) + 1;
+    if (!res.ok && !ersterFehler) ersterFehler = String(await res.clone().text().catch(() => "")).slice(0, 200);
+  };
+  const liste = await empfaenger(env);
   const heute = new Date(scheduledTime);
-  outer: for (const email of await empfaenger(env)) {
+  outer: for (const email of liste) {
     for (const [von, bis] of monatsFenster(heute)) {
       if (abrufe >= MAX_ABRUFE) { unvollstaendig = true; break outer; }
       abrufe += 1;
       const q = new URLSearchParams({ email, startDate: von, endDate: bis, limit: "500", sort: "desc" });
       const res = await fetchImpl(`${BREVO}?${q}`, { headers: kopf });
+      await merke(res);
       if (!res.ok) { if (res.status === 429 || res.status >= 500) unvollstaendig = true; continue; }
       const daten = await res.json().catch(() => ({}));
       for (const m of daten.transactionalEmails || []) {
@@ -76,6 +87,7 @@ export async function postausgangNachholen(env, scheduledTime = Date.now(), { fe
           if (abrufe >= MAX_ABRUFE) { unvollstaendig = true; break outer; }
           abrufe += 1;
           const d = await fetchImpl(`${BREVO}/${encodeURIComponent(m.uuid)}`, { headers: kopf });
+          await merke(d);
           if (d.ok) {
             const info = await d.json().catch(() => ({}));
             html = info.body ? String(info.body).slice(0, 400_000) : null;
@@ -97,9 +109,12 @@ export async function postausgangNachholen(env, scheduledTime = Date.now(), { fe
       }
     }
   }
+  const info = JSON.stringify({ am: new Date(scheduledTime).toISOString(), empfaenger: liste.length, abrufe, neu, codes, fehler: ersterFehler });
+  await env.DB.prepare("INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES (?, ?, ?)")
+    .bind(`${FLAG}_info`, info, new Date(scheduledTime).toISOString()).run().catch(() => null);
   if (!unvollstaendig) {
     await env.DB.prepare("INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES (?, ?, ?)")
       .bind(FLAG, String(neu), new Date(scheduledTime).toISOString()).run();
   }
-  return { neu, abrufe, fertig: !unvollstaendig };
+  return { neu, abrufe, fertig: !unvollstaendig, codes, empfaenger: liste.length };
 }
