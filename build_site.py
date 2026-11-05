@@ -38,6 +38,9 @@ from seo_text import compose_description, seo_title  # noqa: E402
 # sonst Marke + Produktart + Bereich + Farbe) - geteilt mit
 # scripts/repair_public_article_integrity.py.
 from english_titles import english_description, english_title, farbe_en  # noqa: E402
+# Strukturierte Produktbeschreibung (Schlagzeilen, Hook, Fakten, Klappleisten,
+# Puppenmasse) aus dem vorhandenen Beschreibungstext - beschreibung.py.
+import beschreibung  # noqa: E402
 # Beschriftungen aus der I18N-Tabelle von assets/app.js (Startseite /en/, /fr/).
 from app_i18n import app_text  # noqa: E402
 from aehnliche_teile import aehnliche_teile  # noqa: E402
@@ -890,6 +893,21 @@ def build_page(it, shop_config, lang):
     body_desc = raw_body_desc.strip() or auto_description(it, lang)
     # Hinweis-Punkte (" · ") als eigene Elemente: am Handy je Punkt eine Zeile (article.css).
     desc_html = esc(body_desc).replace(" · ", '<span class="info__desc-trenner"> · </span>')
+    # Inhaber 05.11.2026: statt der Textwand rechts drei Schlagzeilen aus den
+    # Daten, ein Hook-Absatz, Kaufknoepfe sofort, Fakten als Tabelle, der lange
+    # Text in Klappleisten; die Puppenmasse als Leiste unter dem Foto.
+    teile = beschreibung.teile(raw_body_desc, lang)
+    caption_html = beschreibung.caption_html(beschreibung.caption_zeilen(
+        it, teile, lang, title=item_title(it, lang), color=item_color(it, lang),
+        size_label=size_tr(it["size"], lang) if it.get("size") else "",
+        kategorie_label=cat_tr(it["category"], lang) if it.get("category") else ""))
+    hook_html = beschreibung.hook_html(beschreibung.hook_text(teile, body_desc))
+    frei_ab_cents = versandkostenfrei_ab_cents()
+    akkordeon_html = beschreibung.akkordeon_html(
+        it, teile, lang, beschreibung_text=body_desc, gebraucht_hinweis=GEBRAUCHT_HINWEIS[lang],
+        frei_ab_text=euro_text(frei_ab_cents, lang) if frei_ab_cents else "")
+    spec_rows_html = beschreibung.spec_rows_html(it, teile, lang, archiv_nr=str(it.get("url_slug") or ""))
+    trust_html = beschreibung.trust_html(lang)
     gallery = it.get("gallery") or []
     hero = gallery[0] if gallery else "assets/favicon.png"
     hero_display_candidate = display_path(hero)
@@ -1049,10 +1067,12 @@ def build_page(it, shop_config, lang):
     <a class="info__brand" href="{home}?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or ui(lang, "noBrand"))}</a>
     <h1>{esc(item_title(it, lang))}</h1>
     <div id="priceBlock">{price_block_html(it, lang)}</div>
-    <div class="info__facts">{facts_html(it, lang)}</div>
-    <p class="info__desc" id="itemDesc">{desc_html}</p>
-    <p class="info__gebraucht" data-zustand-hinweis>{esc(GEBRAUCHT_HINWEIS[lang])}</p>
+    {caption_html}
+    {hook_html}
     {cta_html(it, shop_config, home, lang)}
+    <div class="info__facts">{facts_html(it, lang)}{spec_rows_html}</div>
+    {akkordeon_html}
+    {trust_html}
   </div>
 </div>
 {related_sections_html(it, lang)}

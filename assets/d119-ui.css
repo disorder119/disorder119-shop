@@ -58,6 +58,8 @@ html.ui-zieht .product { transition: none; }
 .ui-teilen:hover { background: rgba(242,239,231,.1); }
 .ui-teilen:active { transform: scale(.97); }
 [data-theme="hell"] .ui-teilen { border-color: rgba(0,0,0,.4); }
+/* Neben den Zahlungslogos: gleiche Hoehe (44 px), ohne Aussenabstand. */
+.ui-teilen.ui-teilen--zahlart { margin: 0; height: 44px; padding: 0 14px 0 12px; border-radius: 6px; font-size: 11px; }
 .ui-sheet { position: fixed; inset: 0; z-index: 95; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
 .ui-sheet.is-sichtbar { opacity: 1; pointer-events: auto; }
 .ui-sheet__box { width: min(420px, 100%); background: #161616; color: #f2efe7; border-radius: 18px 18px 0 0; padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); transform: translateY(20px); transition: transform .25s cubic-bezier(.2,.8,.2,1); }

@@ -321,7 +321,15 @@
           }).catch(function () { return navigator.share(daten).catch(function () {}); });
         } else sheetZeigen();
       });
-      info.appendChild(teilen);
+      // Inhaber 05.11.2026: Teilen neben PayPal/Apple Pay unter "Jetzt kaufen".
+      // article.js baut die Zeile (.d119-zahlart) - je nach Ladereihenfolge
+      // kurz darauf warten; ohne Zeile (verkauft, Preis auf Anfrage) wie bisher in die Infospalte.
+      (function platzieren(versuch) {
+        var logos = info.querySelector(".d119-zahlart .d119-zahlarten");
+        if (logos) { teilen.classList.add("ui-teilen--zahlart"); logos.appendChild(teilen); return; }
+        if (versuch < 20) { setTimeout(function () { platzieren(versuch + 1); }, 100); return; }
+        info.appendChild(teilen);
+      })(0);
     }
   }
 
