@@ -8,17 +8,19 @@ import { VERTRAULICHE_TAGS, normalizeEmail } from "./customer-mail.js";
 const BREVO = "https://api.brevo.com/v3/smtp/emails";
 const FLAG = "postausgang_nachgeholt";
 const START = "2026-09-01";
-const MAX_ABRUFE = 40;
+const MAX_ABRUFE = 45;
 const MAX_EMPFAENGER = 60;
 const FEHLER_EREIGNISSE = new Set(["hardBounce", "softBounce", "blocked", "invalid", "error", "spam"]);
 
+// Brevo erlaubt hoechstens 30 Tage zwischen startDate und endDate.
 function monatsFenster(heute) {
   const fenster = [];
+  const tag = 86_400_000;
   let von = new Date(`${START}T00:00:00Z`);
   while (von <= heute) {
-    const bis = new Date(Date.UTC(von.getUTCFullYear(), von.getUTCMonth() + 1, 0));
-    fenster.push([von.toISOString().slice(0, 10), (bis < heute ? bis : heute).toISOString().slice(0, 10)]);
-    von = new Date(Date.UTC(von.getUTCFullYear(), von.getUTCMonth() + 1, 1));
+    const bis = new Date(Math.min(von.getTime() + 27 * tag, heute.getTime()));
+    fenster.push([von.toISOString().slice(0, 10), bis.toISOString().slice(0, 10)]);
+    von = new Date(bis.getTime() + tag);
   }
   return fenster;
 }
@@ -57,6 +59,7 @@ export async function postausgangNachholen(env, scheduledTime = Date.now(), { fe
   let unvollstaendig = false;
   const codes = {};
   let ersterFehler = null;
+  const pause = (ms) => (fetchImpl === fetch ? new Promise((r) => setTimeout(r, ms)) : Promise.resolve());
   const merke = async (res) => {
     codes[res.status] = (codes[res.status] || 0) + 1;
     if (!res.ok && !ersterFehler) ersterFehler = String(await res.clone().text().catch(() => "")).slice(0, 200);
@@ -67,6 +70,7 @@ export async function postausgangNachholen(env, scheduledTime = Date.now(), { fe
     for (const [von, bis] of monatsFenster(heute)) {
       if (abrufe >= MAX_ABRUFE) { unvollstaendig = true; break outer; }
       abrufe += 1;
+      await pause(700);
       const q = new URLSearchParams({ email, startDate: von, endDate: bis, limit: "500", sort: "desc" });
       const res = await fetchImpl(`${BREVO}?${q}`, { headers: kopf });
       await merke(res);
@@ -86,6 +90,7 @@ export async function postausgangNachholen(env, scheduledTime = Date.now(), { fe
         if (!vertraulich && m.uuid) {
           if (abrufe >= MAX_ABRUFE) { unvollstaendig = true; break outer; }
           abrufe += 1;
+          await pause(700);
           const d = await fetchImpl(`${BREVO}/${encodeURIComponent(m.uuid)}`, { headers: kopf });
           await merke(d);
           if (d.ok) {

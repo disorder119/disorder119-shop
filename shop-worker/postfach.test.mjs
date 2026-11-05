@@ -441,7 +441,7 @@ test("fruehere Shop-Mails kommen einmalig aus dem Brevo-Protokoll in Gesendet", 
   const fake = async (url) => {
     const u = String(url); aufrufe.push(u);
     if (u.includes("/smtp/emails?")) {
-      if (!u.includes("startDate=2026-10-01")) return Response.json({});
+      if (!u.includes("startDate=2026-09-29")) return Response.json({});
       return Response.json({ transactionalEmails: [
         { email: "kundin@example.com", subject: "Willkommen", messageId: "<a@relay>", uuid: "u-1", date: "2026-10-03T10:00:00+02:00", tags: ["newsletter-willkommen"] },
         { email: "kundin@example.com", subject: "Bitte bestaetigen", messageId: "<b@relay>", uuid: "u-2", date: "2026-10-03T09:00:00+02:00", tags: ["newsletter-bestaetigung"] },
