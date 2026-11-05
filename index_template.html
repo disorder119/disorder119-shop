@@ -37,8 +37,8 @@ __ITEMLIST_JSONLD_BLOCK__
 <title>__META_TITLE__</title>
 __CRITICAL_IMAGE_PRELOADS__
 <link rel="stylesheet" href="/assets/app.css?v=__APP_CSS_VERSION__">
-<!-- theme.css traegt fast nur die weisse Ansicht: am Handy nicht blockierend (wie auf den Produktseiten). -->
-<link rel="preload" as="style" href="/assets/theme.css?v=__THEME_VERSION__" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
+<!-- theme.css traegt fast nur die weisse Ansicht: am Handy nach dem ersten Bild, bei weisser Ansicht sofort (spaet-lader.js). -->
+<link rel="d119-spaet" href="/assets/theme.css?v=__THEME_VERSION__" data-sofort-bei-hell>
 <link rel="stylesheet" href="/assets/theme.css?v=__THEME_VERSION__" media="(min-width: 861px)">
 <noscript><link rel="stylesheet" href="/assets/theme.css?v=__THEME_VERSION__"></noscript>
 <script src="/assets/ansicht.js" type="text/d119-spaet" defer></script>
