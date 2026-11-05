@@ -25,6 +25,7 @@ on:
       - "data/catalog-taxonomy-report.json"
       - "index_template.html"
       - "build_site.py"
+      - "beschreibung.py"
       - "robots.txt"
       - "admin/index.html"
       - "config/shop-config.json"
