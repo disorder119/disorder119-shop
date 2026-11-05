@@ -37,11 +37,15 @@ __ITEMLIST_JSONLD_BLOCK__
 <title>__META_TITLE__</title>
 __CRITICAL_IMAGE_PRELOADS__
 <link rel="stylesheet" href="/assets/app.css?v=__APP_CSS_VERSION__">
-<link rel="stylesheet" href="/assets/theme.css?v=__THEME_VERSION__">
-<script src="/assets/ansicht.js" defer></script>
-<script src="/assets/zurueck.js" defer></script>
+<!-- theme.css traegt fast nur die weisse Ansicht: am Handy nicht blockierend (wie auf den Produktseiten). -->
+<link rel="preload" as="style" href="/assets/theme.css?v=__THEME_VERSION__" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="stylesheet" href="/assets/theme.css?v=__THEME_VERSION__" media="(min-width: 861px)">
+<noscript><link rel="stylesheet" href="/assets/theme.css?v=__THEME_VERSION__"></noscript>
+<script src="/assets/ansicht.js" type="text/d119-spaet" defer></script>
+<script src="/assets/zurueck.js" type="text/d119-spaet" defer></script>
 <script>try{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}catch(e){}</script>
-<script src="/assets/catalog-number-links.js" defer></script>
+<script src="/assets/catalog-number-links.js" type="text/d119-spaet" defer></script>
+<script src="/assets/spaet-lader.js" defer></script>
 <style>
 /* Archiv-Kopf (d119-ui): Suche als Linie, kleine Zahlenzeile - inline, damit nichts springt. */
 html.ui-kopf .masthead__meta { display: none; }
@@ -478,6 +482,6 @@ __STATIC_PAGE_CONTENT__
 <script src="/assets/rental-v2-ui.js"></script>
 <script src="/assets/rental-v2-picker.js"></script>
 
-<script src="/assets/newsletter.js?v=__NEWSLETTER_VERSION__" defer></script>
+<script src="/assets/newsletter.js?v=__NEWSLETTER_VERSION__" type="text/d119-spaet" defer></script>
 </body>
 </html>
