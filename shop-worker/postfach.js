@@ -11,6 +11,7 @@
 
 import { sendTelegramMessage, telegramTransportReady, telegramZeile } from "./notifications.js";
 import { warenkorbAusMail, warenkorbZuordnen } from "./dhl-qr.js";
+import { freieMail, normalizeEmail, sendMail } from "./customer-mail.js";
 
 const ADMIN_ORIGINS = Object.freeze(["https://admin.disorder119.com"]);
 // Rohmail bis 15 MB lesen (Cloudflare liefert bis 25 MB); Anhaenge kommen in D1,
@@ -369,7 +370,9 @@ export async function handleIncomingEmail(message, env, ctx) {
 // ----------------------------------------------------------- Admin-API
 export function isPostfachRoute(url) {
   const path = url.pathname.replace(/\/+$/, "");
-  return path === "/admin/postfach" || /^\/admin\/postfach\/[0-9a-f-]{36}(\/anhang\/[0-9a-f-]{36})?$/.test(path);
+  return path === "/admin/postfach" || path === "/admin/postfach/senden" || path === "/admin/postfach/vorschau"
+    || /^\/admin\/postfach\/gesendet\/[0-9a-f-]{36}$/.test(path)
+    || /^\/admin\/postfach\/[0-9a-f-]{36}(\/anhang\/[0-9a-f-]{36})?$/.test(path);
 }
 
 function kopf(origin) {
@@ -405,6 +408,29 @@ function anhangAntwort(row, origin) {
   const roh = row.daten;
   const daten = roh instanceof Uint8Array ? roh : roh instanceof ArrayBuffer ? new Uint8Array(roh) : Array.isArray(roh) ? Uint8Array.from(roh) : new Uint8Array(0);
   return new Response(daten, { status: 200, headers });
+}
+
+// Eintrag aus dem Postausgang fuer die Admin-App.
+const TAG_NAMEN = {
+  "order-confirmation": "Bestellung", "shipping-confirmation": "Versand", "shipping-preview": "Test", manuell: "Selbst geschrieben",
+  invoice: "Rechnung", "refund-confirmation": "Erstattung", "return-instructions": "Rücksendung", "withdrawal-receipt": "Widerruf", test: "Test",
+  antwort: "Antwort", "login-link": "Anmeldelink", "newsletter-bestaetigung": "Newsletter", "newsletter-willkommen": "Newsletter",
+};
+function gesendetZeile(row, mitInhalt) {
+  const out = {
+    id: row.id, sentAt: row.gesendet_am, toEmail: row.an_email, toName: row.an_name || "", subject: row.betreff,
+    tag: row.tag || "", tagName: TAG_NAMEN[row.tag] || (row.art === "MANUELL" ? "Selbst geschrieben" : "Automatisch"),
+    manual: row.art === "MANUELL", status: row.status, error: row.fehler || "", confidential: Boolean(row.vertraulich),
+    attachments: (() => { try { return JSON.parse(row.anhaenge_json || "[]"); } catch { return []; } })(),
+  };
+  if (mitInhalt) {
+    out.html = row.html || "";
+    out.text = row.text || "";
+    out.antwortAuf = row.antwort_auf || "";
+  } else {
+    out.preview = String(row.text || "").replace(/\s+/g, " ").slice(0, 140);
+  }
+  return out;
 }
 
 function dhlLinks(text) {
@@ -450,6 +476,54 @@ export async function handlePostfach(request, env, url, reqId = crypto.randomUUI
     if (!env.DB) throw new PostfachError("DB_FEHLT", 503);
 
     const path = url.pathname.replace(/\/+$/, "");
+    // ---------------- Gesendet (Postausgang)
+    if (path === "/admin/postfach" && request.method === "GET" && url.searchParams.get("ordner") === "gesendet") {
+      const limit = Math.min(300, Math.max(1, Number(url.searchParams.get("limit") || 150)));
+      const { results } = await env.DB.prepare(`SELECT id, gesendet_am, an_email, an_name, betreff, substr(COALESCE(text,''),1,400) AS text,
+          tag, art, status, fehler, vertraulich, anhaenge_json FROM postausgang ORDER BY gesendet_am DESC LIMIT ?`).bind(limit).all();
+      const zahl = await env.DB.prepare("SELECT COUNT(*) AS n FROM postfach WHERE read_at IS NULL AND archived_at IS NULL").first();
+      return new Response(JSON.stringify({ unread: Number(zahl?.n || 0), mails: (results || []).map(r => gesendetZeile(r, false)) }), { status: 200, headers: kopf(origin) });
+    }
+    const gesendet = /^\/admin\/postfach\/gesendet\/([0-9a-f-]{36})$/.exec(path);
+    if (gesendet && request.method === "GET") {
+      const row = await env.DB.prepare("SELECT * FROM postausgang WHERE id=?").bind(gesendet[1]).first();
+      if (!row) throw new PostfachError("NICHT_GEFUNDEN", 404);
+      return new Response(JSON.stringify({ mail: gesendetZeile(row, true) }), { status: 200, headers: kopf(origin) });
+    }
+    // ---------------- Selbst schreiben (und Vorschau)
+    if ((path === "/admin/postfach/senden" || path === "/admin/postfach/vorschau") && request.method === "POST") {
+      let body;
+      try { body = await request.json(); } catch { throw new PostfachError("INVALID_JSON", 400); }
+      const betreff = String(body?.subject || "").trim().slice(0, 200);
+      const text = String(body?.text || "").slice(0, 20_000);
+      const mail = freieMail({ betreff, text, sprache: body?.sprache === "en" ? "en" : body?.sprache === "fr" ? "fr" : "de" });
+      if (path === "/admin/postfach/vorschau") {
+        return new Response(JSON.stringify({ html: mail.html }), { status: 200, headers: kopf(origin) });
+      }
+      const an = normalizeEmail(body?.to);
+      if (!an) throw new PostfachError("EMPFAENGER_UNGUELTIG", 400);
+      if (!betreff) throw new PostfachError("BETREFF_FEHLT", 400);
+      if (!text.trim()) throw new PostfachError("TEXT_FEHLT", 400);
+      const seit = new Date(Date.now() - 86_400_000).toISOString();
+      const heute = await env.DB.prepare("SELECT COUNT(*) AS n FROM postausgang WHERE art='MANUELL' AND gesendet_am>=?").bind(seit).first();
+      if (Number(heute?.n || 0) >= 100) throw new PostfachError("TAGESGRENZE", 429);
+      let headers = null;
+      let antwortAuf = null;
+      if (body?.antwortAuf) {
+        const original = await env.DB.prepare("SELECT id, message_id FROM postfach WHERE id=?").bind(String(body.antwortAuf).slice(0, 60)).first();
+        if (original) {
+          antwortAuf = original.id;
+          const mid = String(original.message_id || "").trim();
+          if (/^<[^<>\s]{3,300}>$/.test(mid)) headers = { "In-Reply-To": mid, References: mid };
+        }
+      }
+      const ergebnis = await sendMail(env, {
+        to: an, subject: mail.subject, text: mail.text, html: mail.html, tag: antwortAuf ? "antwort" : "manuell",
+        art: "MANUELL", replyTo: env.MAIL_KONTAKT || "kontakt@disorder119.com", headers, antwortAuf,
+      });
+      if (!ergebnis?.sent) throw new PostfachError(ergebnis?.reason || "NICHT_GESENDET", 502);
+      return new Response(JSON.stringify({ ok: true, id: ergebnis.protokollId || null }), { status: 200, headers: kopf(origin) });
+    }
     if (path === "/admin/postfach" && request.method === "GET") {
       const archiv = url.searchParams.get("ordner") === "archiv";
       const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit") || 100)));

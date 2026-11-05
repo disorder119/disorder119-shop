@@ -346,3 +346,85 @@ test("DHL-Auftragsbestaetigung zeigt die gekaufte Marke (QR-Code) direkt in der 
   assert.match(mail.marke.qrPng, /^data:image\/png;base64,/);
   assert.deepEqual(mail.links, ["https://www.dhl.de/int-versenden/gw/rest/init?token=abc"]);
 });
+
+
+// ------------------------------------------------ Postausgang und selbst schreiben
+import { sendMail } from "./customer-mail.js";
+
+function brevoFake() {
+  const anfragen = [];
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    anfragen.push({ url: String(url), body: init.body ? JSON.parse(init.body) : null });
+    return Response.json({ messageId: "<brevo-1@smtp-relay.mailin.fr>" }, { status: 201 });
+  };
+  return { anfragen, restore() { globalThis.fetch = original; } };
+}
+
+async function adminPost(env, pfad, body) {
+  const req = new Request(`https://api.disorder119.com${pfad}`, {
+    method: "POST", headers: { Origin: ADMIN_ORIGIN, Authorization: "Bearer test-token", "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  return handlePostfach(req, env, new URL(req.url), "req-test", ADMIN_ORIGIN);
+}
+
+const MAIL_ENV = { MAIL_API_KEY: "brevo-test", MAIL_FROM: "bestellung@disorder119.com", ADMIN_TOKEN: "test-token" };
+
+test("jede verschickte Mail steht mit Inhalt im Postausgang, Anmeldelinks nur ohne Inhalt", async () => {
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, ...MAIL_ENV };
+  const brevo = brevoFake();
+  try {
+    await sendMail(env, { to: "kundin@example.com", subject: "Dein Paket ist unterwegs", html: "<p>Sendungsnummer 123</p>", text: "Sendungsnummer 123", tag: "shipping-confirmation" });
+    await sendMail(env, { to: "kundin@example.com", subject: "Dein Anmeldelink", html: "<a href='https://x/?anmeldung=GEHEIM'>Login</a>", text: "GEHEIM", tag: "login-link" });
+  } finally { brevo.restore(); }
+  const zeilen = DB.raw.prepare("SELECT tag, html, text, vertraulich, status FROM postausgang ORDER BY gesendet_am, rowid").all();
+  assert.equal(zeilen.length, 2);
+  const versand = zeilen.find(z => z.tag === "shipping-confirmation");
+  assert.equal(versand.status, "GESENDET");
+  assert.match(versand.html, /Sendungsnummer 123/);
+  const login = zeilen.find(z => z.tag === "login-link");
+  assert.equal(login.vertraulich, 1);
+  assert.equal(login.html, null);
+  assert.equal(login.text, null);
+
+  const liste = await (await adminApi(env, "/admin/postfach?ordner=gesendet")).json();
+  assert.equal(liste.mails.length, 2);
+  const eintrag = liste.mails.find(m => m.tag === "shipping-confirmation");
+  assert.equal(eintrag.tagName, "Versand");
+  const { mail } = await (await adminApi(env, `/admin/postfach/gesendet/${eintrag.id}`)).json();
+  assert.match(mail.html, /Sendungsnummer 123/);
+});
+
+test("Mail selbst schreiben: Shop-Design, Antwort im selben Verlauf, steht unter Gesendet", async () => {
+  const DB = sqliteD1(allMigrations());
+  const env = { DB, ...MAIL_ENV };
+  await handleIncomingEmail(eingang([
+    "From: Anna <anna@example.org>", "To: kontakt@disorder119.com", "Subject: Frage zur Jacke", "Message-ID: <frage-1@example.org>",
+    "Content-Type: text/plain; charset=utf-8", "", "Ist die Jacke noch da?",
+  ].join("\r\n")), env, null);
+  const original = DB.raw.prepare("SELECT id FROM postfach").get().id;
+
+  const vorschau = await (await adminPost(env, "/admin/postfach/vorschau", { subject: "Re: Frage zur Jacke", text: "Hallo Anna,\n\nja, sie ist noch da: https://disorder119.com/artikel/12/" })).json();
+  assert.match(vorschau.html, /Hallo Anna,/);
+  assert.match(vorschau.html, /<a href="https:\/\/disorder119\.com\/artikel\/12\/"/);
+
+  const brevo = brevoFake();
+  let antwort;
+  try {
+    antwort = await adminPost(env, "/admin/postfach/senden", { to: "anna@example.org", subject: "Re: Frage zur Jacke", text: "Hallo Anna,\n\nja, sie ist noch da.", antwortAuf: original });
+  } finally { brevo.restore(); }
+  assert.equal(antwort.status, 200, await antwort.clone().text());
+  const gesendet = brevo.anfragen[0].body;
+  assert.equal(gesendet.to[0].email, "anna@example.org");
+  assert.equal(gesendet.replyTo.email, "kontakt@disorder119.com");
+  assert.equal(gesendet.headers["In-Reply-To"], "<frage-1@example.org>");
+  assert.match(gesendet.htmlContent, /DISORDER119/);
+  const zeile = DB.raw.prepare("SELECT art, tag, antwort_auf FROM postausgang").get();
+  assert.equal(zeile.art, "MANUELL");
+  assert.equal(zeile.tag, "antwort");
+  assert.equal(zeile.antwort_auf, original);
+
+  const fehler = await adminPost(env, "/admin/postfach/senden", { to: "keine-adresse", subject: "x", text: "y" });
+  assert.equal(fehler.status, 400);
+});
