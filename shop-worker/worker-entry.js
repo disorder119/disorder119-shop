@@ -38,6 +38,7 @@ import { handleAdresse, isAdresseRoute } from "./adresse.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
 import { handleIncomingEmail, handlePostfach, isPostfachRoute, postfachMeldungNachholen } from "./postfach.js";
+import { postausgangNachholen } from "./postausgang-nachholen.js";
 import { zahlungsMeldungenNachholen } from "./zahlung.js";
 import { SEITENAUFRUF_PFAD, besucherAufraeumen, entsperrtMelden, handleBesucher, istBesucherRoute } from "./besucher.js";
 import { sitzungenMelden } from "./besucher-zusammenfassung.js";
@@ -646,6 +647,8 @@ const worker = {
     // gedrosselt gesammelt wurden (Postfach), nachholen.
     await runBackground(ctx, zahlungsMeldungenNachholen(env, reqId, new Date(scheduledTime)), "payment_notice_retry_failed", reqId);
     await runBackground(ctx, postfachMeldungNachholen(env, scheduledTime), "mailbox_notice_retry_failed", reqId);
+    // Einmalig: fruehere Shop-Mails aus dem Brevo-Protokoll in "Gesendet" uebernehmen.
+    await runBackground(ctx, postausgangNachholen(env, scheduledTime), "sent_mail_backfill_failed", reqId);
     // Zaehler gegen Missbrauch (IP-Hashes) nach Ablauf ihres Fensters loeschen.
     await runBackground(ctx, kontingentAufraeumen(env.DB, new Date(scheduledTime)), "kontingent_cleanup_failed", reqId);
     // Offene Halte (Kasse, Miete) zaehlen hoechstens 30 Minuten - danach weg.

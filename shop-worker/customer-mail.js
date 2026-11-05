@@ -1023,7 +1023,7 @@ export function freieMail({ betreff = "", text = "", sprache = "de" } = {}) {
 // Bewusst fehlertolerant: das Merken darf den Versand nie verhindern.
 // ---------------------------------------------------------------------------
 
-const VERTRAULICHE_TAGS = new Set(["login-link", "newsletter-bestaetigung"]);
+export const VERTRAULICHE_TAGS = new Set(["login-link", "newsletter-bestaetigung"]);
 
 async function postausgangMerken(env, eintrag) {
   if (!env?.DB) return null;

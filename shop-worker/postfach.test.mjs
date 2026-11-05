@@ -428,3 +428,36 @@ test("Mail selbst schreiben: Shop-Design, Antwort im selben Verlauf, steht unter
   const fehler = await adminPost(env, "/admin/postfach/senden", { to: "keine-adresse", subject: "x", text: "y" });
   assert.equal(fehler.status, 400);
 });
+
+
+// ------------------------------------------------ Fruehere Mails aus Brevo nachholen
+import { postausgangNachholen } from "./postausgang-nachholen.js";
+
+test("fruehere Shop-Mails kommen einmalig aus dem Brevo-Protokoll in Gesendet", async () => {
+  const DB = sqliteD1(allMigrations());
+  DB.raw.prepare("INSERT INTO newsletter_subscribers (id, email_normalized, email_canonical, status, consent_text, consent_version, requested_at, updated_at) VALUES ('n1','kundin@example.com','kundin@example.com','CONFIRMED','ja','2026-10-03','2026-10-01T00:00:00Z','2026-10-01T00:00:00Z')").run();
+  const env = { DB, MAIL_API_KEY: "brevo-test", MAIL_BCC: "disorder119shop@gmail.com" };
+  const aufrufe = [];
+  const fake = async (url) => {
+    const u = String(url); aufrufe.push(u);
+    if (u.includes("/smtp/emails?")) {
+      if (!u.includes("startDate=2026-10-01")) return Response.json({});
+      return Response.json({ transactionalEmails: [
+        { email: "kundin@example.com", subject: "Willkommen", messageId: "<a@relay>", uuid: "u-1", date: "2026-10-03T10:00:00+02:00", tags: ["newsletter-willkommen"] },
+        { email: "kundin@example.com", subject: "Bitte bestaetigen", messageId: "<b@relay>", uuid: "u-2", date: "2026-10-03T09:00:00+02:00", tags: ["newsletter-bestaetigung"] },
+      ] });
+    }
+    if (u.endsWith("/u-1")) return Response.json({ body: "<p>Hallo im Club</p>", events: [{ name: "delivered" }] });
+    return new Response("nein", { status: 404 });
+  };
+  const r = await postausgangNachholen(env, Date.parse("2026-11-05T12:00:00Z"), { fetchImpl: fake });
+  assert.equal(r.neu, 2);
+  assert.equal(r.fertig, true);
+  assert.ok(!aufrufe.some((u) => u.endsWith("/u-2")), "Bestaetigungslink-Inhalt wird nicht abgerufen");
+  const zeilen = DB.raw.prepare("SELECT tag, html, vertraulich, status FROM postausgang ORDER BY gesendet_am").all();
+  assert.equal(zeilen.find((z) => z.tag === "newsletter-bestaetigung").html, null);
+  assert.equal(zeilen.find((z) => z.tag === "newsletter-bestaetigung").vertraulich, 1);
+  assert.match(zeilen.find((z) => z.tag === "newsletter-willkommen").html, /Hallo im Club/);
+  const zweiter = await postausgangNachholen(env, Date.parse("2026-11-05T12:15:00Z"), { fetchImpl: fake });
+  assert.equal(zweiter.skipped, "DONE");
+});
