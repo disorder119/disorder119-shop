@@ -692,7 +692,7 @@ img[data-d119-image-protected] {
 .info__caption { font-family: "Helvetica Neue Condensed", "Arial Narrow", Helvetica, Arial, sans-serif; font-weight: 800; text-transform: uppercase; font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 0.96; letter-spacing: -0.01em; margin: 8px 0 14px; }
 .info__caption span { display: block; }
 .info__caption span:nth-child(2) { color: var(--text-muted); }
-.info__hook { font-size: 0.98rem; line-height: 1.55; color: rgba(242, 239, 231, 0.9); margin: 0 0 18px; max-width: 48ch; }
+.info__hook { font-size: 0.98rem; line-height: 1.55; color: var(--paper); margin: 0 0 18px; max-width: 48ch; }
 .info__facts { display: block; border-top: 1px solid var(--rule); border-bottom: 0; padding: 0; margin: 20px 0 4px; }
 .info__facts > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--rule); }
 .info__facts .fact__label { margin: 0; flex: 0 0 auto; }
@@ -705,11 +705,20 @@ img[data-d119-image-protected] {
 .info__akk-item[open] summary::after { content: "–"; }
 .info__akk-item summary:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
 .info__akk-body { padding: 0 0 14px; }
-.info__akk .info__desc, .info__akk-text { white-space: pre-line; font-size: 0.86rem; line-height: 1.6; color: rgba(242, 239, 231, 0.8); margin: 0 0 10px; }
+.info__akk .info__desc, .info__akk-text { white-space: pre-line; font-size: 0.86rem; line-height: 1.6; color: var(--paper); margin: 0 0 10px; }
 .info__akk-text--klein { font-size: 0.74rem; color: var(--text-muted); }
 .info__akk .info__gebraucht { margin: 0 0 10px; }
 .info__trust { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0 0; }
-.info__trust div { border: 1px solid var(--rule); padding: 10px 6px; font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase; text-align: center; color: rgba(242, 239, 231, 0.72); line-height: 1.5; }
+.info__trust div { border: 1px solid var(--rule); padding: 10px 6px; font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase; text-align: center; color: var(--text-muted); line-height: 1.5; }
+/* Rechner: Fotospalte bleibt beim Scrollen stehen (Inhaber 05.11.2026: "zu viel Platz").
+   overflow-x:hidden auf html/body macht body zum Scroll-Container - dann klebt nichts;
+   clip schneidet genauso ab, ohne das Kleben zu verhindern. Die Buehne passt in den
+   Bildschirm, damit die Vorschaubilder darunter sichtbar bleiben. */
+@media (min-width: 861px) {
+  html, body { overflow-x: clip; }
+  .product > .gallery { position: sticky; top: 16px; align-self: start; }
+  .product .gallery__stage { max-height: calc(100vh - 150px); }
+}
 .info__trust b { display: block; font-size: 0.88rem; letter-spacing: 0; margin-bottom: 2px; color: var(--paper); }
 .info__masse { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 2px 0 10px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
 .info__masse div { padding: 9px 0; text-align: center; }

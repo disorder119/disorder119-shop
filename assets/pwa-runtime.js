@@ -324,13 +324,16 @@
     });
   }
 
-  window.addEventListener("load", function () {
+  // Die Runtime kommt seit 05.11.2026 erst nach "load" (pwa.js) - dann sofort planen.
+  function nachDemLaden() {
     if (standalone) {
       registerWorker();
       return;
     }
     window.setTimeout(registerWorker, 3500);
-  }, { once: true });
+  }
+  if (document.readyState === "complete") nachDemLaden();
+  else window.addEventListener("load", nachDemLaden, { once: true });
 })();
 
 /* UNIVERSE_V2_ROUTE_GUARD — the old /chaos/ runtime contained game code and

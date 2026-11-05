@@ -1025,10 +1025,11 @@ def build_page(it, shop_config, lang):
 <script type="application/ld+json">{breadcrumb_json_ld(it, lang)}</script>
 <link rel="preload" as="style" href="/assets/theme.css?v={THEME_CSS_VERSION}" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
 <link rel="stylesheet" href="/assets/theme.css?v={THEME_CSS_VERSION}" media="{DESKTOP_CSS_MEDIA}">
-<script src="/assets/ansicht.js" defer></script>
-<script src="/assets/zurueck.js" defer></script>
+<script src="/assets/ansicht.js" type="text/d119-spaet" defer></script>
+<script src="/assets/zurueck.js" type="text/d119-spaet" defer></script>
 <script>try{{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}}catch(e){{}}</script>
-<script src="/assets/catalog-number-links.js" defer></script>{ui_tags()}
+<script src="/assets/catalog-number-links.js" type="text/d119-spaet" defer></script>{ui_tags()}
+<script src="/assets/spaet-lader.js" defer></script>
 </head>
 <body>
 <div class="page-head">
@@ -1091,7 +1092,7 @@ def build_page(it, shop_config, lang):
   window.ARTICLE_SHOP_CONFIG = {json.dumps(shop_config, ensure_ascii=False)};
   window.ARTICLE_LANG = "{lang}";
 </script>
-<script src="/assets/newsletter.js?v={NEWSLETTER_ASSET_VERSION}" fetchpriority="low" defer></script>
+<script src="/assets/newsletter.js?v={NEWSLETTER_ASSET_VERSION}" type="text/d119-spaet" fetchpriority="low" defer></script>
 <script src="/assets/pwa.js?v={PWA_JS_VERSION}" defer></script>
 <script src="/assets/article.js?v={ARTICLE_JS_VERSION}" fetchpriority="low" defer></script>
 </body>
@@ -2206,9 +2207,20 @@ def ui_tags():
     # Stylesheet nicht blockierend und beides mit niedriger Prioritaet (Muster wie theme.css/newsletter.js:
     # sonst verdraengen die beiden Dateien auf dem Handy die erste Darstellung um rund eine Sekunde): die Kopf-Regeln der Startseite stehen inline in
     # index_template.html, alles andere (Slideshow, Teilen, Zuletzt angesehen ...) braucht es erst nach dem Laden.
-    return (f'\n<link rel="preload" as="style" href="/assets/d119-ui.css?v={v}" fetchpriority="low" onload="this.onload=null;this.rel=\'stylesheet\'">'
+    # Seit 05.11.2026 (Handy-Ladezeit) kommt d119-ui.css wie d119-ui.js erst nach dem ersten Bild
+    # (rel="d119-spaet", assets/spaet-lader.js). Was schon beim ersten Bild gelten muss, steht inline:
+    # Seitenuebergang, keine Scrollleiste unter den Vorschaubildern, Markenlink als 24-px-Tippziel (axe).
+    sofort = ('<style>/* d119-ui: sofort gueltig, der Rest kommt mit assets/d119-ui.css nach dem Laden */'
+              '@view-transition{navigation:auto}'
+              '::view-transition-old(root){animation:ui-raus .22s ease-in both}'
+              '::view-transition-new(root){animation:ui-rein .32s ease-out both}'
+              '@keyframes ui-raus{to{opacity:0}}@keyframes ui-rein{from{opacity:0}}'
+              '@media (prefers-reduced-motion:reduce){::view-transition-old(root),::view-transition-new(root){animation:none}}'
+              '.gallery__thumbs{scrollbar-width:none}'
+              '.info__brand{display:inline-flex;align-items:center;min-height:24px}</style>')
+    return (f'\n{sofort}<link rel="d119-spaet" href="/assets/d119-ui.css?v={v}">'
             f'<noscript><link rel="stylesheet" href="/assets/d119-ui.css?v={v}"></noscript>'
-            f'\n<script src="/assets/d119-ui.js?v={v}" fetchpriority="low" defer></script>')
+            f'\n<script src="/assets/d119-ui.js?v={v}" type="text/d119-spaet" fetchpriority="low" defer></script>')
 
 
 def og_bild_url(it, hero):
