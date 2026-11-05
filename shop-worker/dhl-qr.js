@@ -446,6 +446,8 @@ function view(mark) {
     bezahlLink: mark.state === "PAYED" ? null : mark.entry_url,
     sendungsnummer: mark.shipment_number || null,
     qrPng: mark.qr_png_b64 ? `data:image/png;base64,${mark.qr_png_b64}` : null,
+    // Marke als PDF (falls DHL sie liefert) - die Admin-App oeffnet sie als Datei.
+    labelPdf: mark.label_pdf_b64 ? `data:application/pdf;base64,${mark.label_pdf_b64}` : null,
     // true: DHL meldet den Bezahlstatus nicht zurueck (keine Warenkorb-Kennung) - Sendungsnummer von Hand eintragen.
     ohneAbgleich: String(mark.cart_id).startsWith("ohne-"),
     erstelltAm: mark.created_at,
@@ -555,23 +557,70 @@ export async function refreshMark(env, orderId) {
     await attachTracking(env, mark.order_id, shipmentNumber, now);
     mark.state = "PAYED";
     mark.shipment_number = shipmentNumber;
+    mark.pak_id = safeText(item.pakId, 9) || null;
     mark.paid_at = now;
   }
 
-  // QR einmal holen und aufheben - er aendert sich nicht mehr. Seit DHLs
-  // Umstellung (04.11.2026) antwortet der QR-Abruf fuer Marken aus der
-  // Online-Frankierung mit WRONG_FORMAT: dann bleibt die Marke trotzdem
-  // bezahlt mit Sendungsnummer (die Kundschaft druckt die Marke bei dhl.de).
-  try {
-    const png = await (await dhl(env, `/labels/${encodeURIComponent(mark.shipment_number)}/qr-code`, { accept: "image/png" })).arrayBuffer();
-    if (png.byteLength < 100 || png.byteLength > 200_000) throw new DhlQrError("DHL_ANTWORT_UNGUELTIG", 502);
-    const b64 = toBase64(png);
-    await db.prepare("UPDATE dhl_qr_marken SET qr_png_b64=?,updated_at=? WHERE id=?").bind(b64, now, mark.id).run();
-    return view({ ...mark, qr_png_b64: b64 });
-  } catch (err) {
-    console.error(JSON.stringify({ level: "warn", event: "dhl_qr_png_unavailable", orderId: String(mark.order_id), code: safeText(err?.code || err?.message || "", 80), detail: safeText(err?.detail || "", 120) }));
-    return view(mark);
+  return markeHolen(env, mark, now);
+}
+
+// QR einmal holen und aufheben - er aendert sich nicht mehr. Laut DHL-Doku
+// laufen QR-Code und Marke ueber die PAKID aus dem bezahlten Warenkorb; mit
+// der Sendungsnummer antwortet DHL seit dem 04.11.2026 mit WRONG_FORMAT.
+// Reihenfolge: PAKID, dann Sendungsnummer. Zusaetzlich die Marke als PDF.
+// Gebremst: hoechstens alle 10 Minuten, insgesamt QR_MAX_VERSUCHE Mal.
+export const QR_MAX_VERSUCHE = 30;
+const QR_PAUSE_MS = 10 * 60_000;
+
+function markenKennungen(mark) {
+  return [...new Set([mark.pak_id, mark.shipment_number]
+    .map(v => safeText(v, 40)).filter(v => /^[A-Za-z0-9]{6,40}$/.test(v)))];
+}
+
+function istPdf(buffer) {
+  const kopf = new Uint8Array(buffer.slice(0, 5));
+  return String.fromCharCode(...kopf) === "%PDF-";
+}
+
+async function markeHolen(env, mark, now) {
+  if (mark.qr_png_b64) return view(mark);
+  const db = requireDb(env);
+  const versuche = Number(mark.qr_versuche || 0);
+  const zuletzt = Date.parse(mark.qr_versucht_am || "") || 0;
+  if (versuche >= QR_MAX_VERSUCHE || (zuletzt && Date.parse(now) - zuletzt < QR_PAUSE_MS)) return view(mark);
+  await db.prepare("UPDATE dhl_qr_marken SET qr_versuche=COALESCE(qr_versuche,0)+1,qr_versucht_am=?,updated_at=? WHERE id=?")
+    .bind(now, now, mark.id).run();
+  let qr = null;
+  let pdf = mark.label_pdf_b64 || null;
+  const fehler = [];
+  for (const kennung of markenKennungen(mark)) {
+    if (!qr) {
+      try {
+        const png = await (await dhl(env, `/labels/${encodeURIComponent(kennung)}/qr-code`, { accept: "image/png" })).arrayBuffer();
+        if (png.byteLength >= 100 && png.byteLength <= 200_000) qr = toBase64(png);
+      } catch (err) {
+        fehler.push(`qr(${kennung.length}): ${safeText(err?.detail || err?.code || err?.message || "", 60)}`);
+      }
+    }
+    if (!pdf) {
+      try {
+        const buf = await (await dhl(env, `/labels/${encodeURIComponent(kennung)}`, { accept: "application/pdf" })).arrayBuffer();
+        if (buf.byteLength > 200 && buf.byteLength <= 1_400_000 && istPdf(buf)) pdf = toBase64(buf);
+      } catch (err) {
+        fehler.push(`pdf(${kennung.length}): ${safeText(err?.detail || err?.code || err?.message || "", 60)}`);
+      }
+    }
+    if (qr) break;
   }
+  if (qr || (pdf && pdf !== mark.label_pdf_b64)) {
+    await db.prepare("UPDATE dhl_qr_marken SET qr_png_b64=COALESCE(?,qr_png_b64),label_pdf_b64=COALESCE(?,label_pdf_b64),updated_at=? WHERE id=?")
+      .bind(qr, pdf, now, mark.id).run();
+  }
+  if (!qr) {
+    console.error(JSON.stringify({ level: "warn", event: "dhl_qr_png_unavailable", orderId: String(mark.order_id),
+      pdf: Boolean(pdf), detail: safeText(fehler.join(" | "), 300) }));
+  }
+  return view({ ...mark, qr_png_b64: qr || mark.qr_png_b64, label_pdf_b64: pdf });
 }
 
 // --------------------------------------------- Warenkorb-Nummer aus der DHL-Mail
@@ -630,15 +679,17 @@ export async function warenkorbZuordnen(env, mail = {}, now = new Date().toISOSt
 export async function dhlMarkenAbgleichen(env, now = Date.now()) {
   if (!env?.DB || !dhlQrReady(env)) return { uebersprungen: true };
   const seit = new Date(now - 14 * 86_400_000).toISOString();
-  const offene = (await env.DB.prepare(`SELECT order_id FROM dhl_qr_marken
-    WHERE cart_id NOT LIKE 'ohne-%' AND state IN ('PREPAID','INPAYMENT') AND created_at>=?
-    ORDER BY created_at ASC LIMIT 10`).bind(seit).all()).results || [];
+  // Offene Warenkoerbe, dazu bezahlte Marken ohne QR-Code (Abruf erneut versuchen).
+  const offene = (await env.DB.prepare(`SELECT order_id,state FROM dhl_qr_marken
+    WHERE cart_id NOT LIKE 'ohne-%' AND created_at>=?
+      AND (state IN ('PREPAID','INPAYMENT') OR (state='PAYED' AND qr_png_b64 IS NULL AND COALESCE(qr_versuche,0)<?))
+    ORDER BY created_at ASC LIMIT 10`).bind(seit, QR_MAX_VERSUCHE).all()).results || [];
   const ergebnis = { geprueft: 0, bezahlt: [], fehler: [] };
   for (const row of offene) {
     try {
       const m = await refreshMark(env, row.order_id);
       ergebnis.geprueft += 1;
-      if (m?.state === "PAYED") ergebnis.bezahlt.push(String(row.order_id));
+      if (m?.state === "PAYED" && row.state !== "PAYED") ergebnis.bezahlt.push(String(row.order_id));
     } catch (err) {
       ergebnis.fehler.push({ orderId: String(row.order_id), code: safeText(err?.code || err?.message || "", 80) });
     }
