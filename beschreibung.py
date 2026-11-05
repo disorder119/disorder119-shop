@@ -209,7 +209,9 @@ def caption_zeilen(it: dict, t: dict, lang: str, *, title: str, color: str, size
     L = _LABEL[lang]
     teile3 = []
     if size_label:
-        teile3.append(f"{L['groesse']} {size_label}")
+        # "Einheitsgröße" / "One Size" / "Taille unique" stehen ohne "Größe" davor.
+        ohne_vorsatz = re.search(r"einheit|one ?size|unique|onesize|universal", _norm(size_label))
+        teile3.append(size_label if ohne_vorsatz else f"{L['groesse']} {size_label}")
     if d.get("passform"):
         teile3.append(_fit_label(d["passform"], lang))
     elif color:
