@@ -263,13 +263,15 @@ def audit_accessibility(product_path: str) -> list[dict[str, Any]]:
     return reports
 
 
-def run_lighthouse(case: dict[str, Any], product_path: str) -> dict[str, Any]:
-    if not LIGHTHOUSE_BIN.exists():
-        fail(f"Lighthouse CLI nicht gefunden: {LIGHTHOUSE_BIN}")
-    path = case["path"] if case["path"] is not None else product_path
-    url = urljoin(BASE_URL, path)
-    output = REPORT_DIR / f"lighthouse-{case['name']}.json"
-    log_path = REPORT_DIR / f"lighthouse-{case['name']}.log"
+# Am simulierten Handy schwankt Lighthouse je nach Runner stark (Lantern rechnet
+# den beobachteten Ablauf hoch): derselbe Stand lag zwischen 86 und 98 Punkten,
+# die Startseite war mal gruen, mal rot (06.11.2026). Google empfiehlt dafuer
+# den Median mehrerer Laeufe. Gewertet wird der mittlere Lauf nach Performance;
+# alle Grenzen und Floors bleiben unveraendert. Desktop ist stabil: ein Lauf.
+LIGHTHOUSE_RUNS = max(1, int(os.environ.get("D119_LIGHTHOUSE_RUNS", "3")))
+
+
+def _lighthouse_once(case: dict[str, Any], url: str, output: Path, log_path: Path) -> dict[str, Any]:
     cmd = [
         str(LIGHTHOUSE_BIN),
         url,
@@ -285,8 +287,30 @@ def run_lighthouse(case: dict[str, Any], product_path: str) -> dict[str, Any]:
     log_path.write_text(proc.stdout or "", encoding="utf-8")
     if proc.returncode != 0 or not output.exists():
         fail(f"Lighthouse {case['name']} fehlgeschlagen (Exit {proc.returncode}); siehe {log_path}")
+    return json.loads(output.read_text(encoding="utf-8"))
 
-    report = json.loads(output.read_text(encoding="utf-8"))
+
+def run_lighthouse(case: dict[str, Any], product_path: str) -> dict[str, Any]:
+    if not LIGHTHOUSE_BIN.exists():
+        fail(f"Lighthouse CLI nicht gefunden: {LIGHTHOUSE_BIN}")
+    path = case["path"] if case["path"] is not None else product_path
+    url = urljoin(BASE_URL, path)
+    output = REPORT_DIR / f"lighthouse-{case['name']}.json"
+    log_path = REPORT_DIR / f"lighthouse-{case['name']}.log"
+    runs = 1 if case.get("preset") == "desktop" else LIGHTHOUSE_RUNS
+    laeufe: list[tuple[float, Path, Path, dict[str, Any]]] = []
+    for nummer in range(1, runs + 1):
+        out_n = output if runs == 1 else REPORT_DIR / f"lighthouse-{case['name']}-lauf{nummer}.json"
+        log_n = log_path if runs == 1 else REPORT_DIR / f"lighthouse-{case['name']}-lauf{nummer}.log"
+        bericht = _lighthouse_once(case, url, out_n, log_n)
+        perf = float(((bericht.get("categories") or {}).get("performance") or {}).get("score") or 0.0)
+        laeufe.append((perf, out_n, log_n, bericht))
+    laeufe.sort(key=lambda lauf: lauf[0])
+    _, median_out, median_log, report = laeufe[len(laeufe) // 2]
+    if runs > 1:
+        # Der Median-Lauf liegt unter dem gewohnten Namen (Artefakt, Floors).
+        output.write_text(median_out.read_text(encoding="utf-8"), encoding="utf-8")
+        log_path.write_text(median_log.read_text(encoding="utf-8"), encoding="utf-8")
     categories = report.get("categories") or {}
     audits = report.get("audits") or {}
     scores = {
@@ -311,6 +335,8 @@ def run_lighthouse(case: dict[str, Any], product_path: str) -> dict[str, Any]:
         "metrics": metrics,
         "score_gates": case["score_gates"],
         "metric_gates": case["metric_gates"],
+        # Alle Laeufe zur Nachvollziehbarkeit (Performance-Punkte, sortiert).
+        "runs": [round(lauf[0] * 100) for lauf in laeufe],
     }
 
 
