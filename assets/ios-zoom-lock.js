@@ -43,8 +43,18 @@
   if (viewport) {
     viewport.setAttribute("content", INHALT);
   }
-  // Doppeltippen zoomt nicht mehr; Wischen und Tippen bleiben wie gehabt.
-  document.documentElement.style.touchAction = "manipulation";
+  // Nur Scrollen: pan-x pan-y schliesst Zwei-Finger-Zoom und Doppeltipp-Zoom
+  // aus - und zwar im Browser selbst, also auch mitten im Scrollen, wo iOS die
+  // Touch-Ereignisse nicht mehr abbrechen laesst (Inhaber 06.11.2026: "waehrend
+  // ich runter scrolle kann ich noch zoomen"). "manipulation" liess den
+  // Zwei-Finger-Zoom zu. Bildansicht und Universum haben touch-action:none und
+  // zoomen bzw. drehen per Skript - unberuehrt.
+  function nurScrollen() {
+    document.documentElement.style.touchAction = "pan-x pan-y";
+    if (document.body) document.body.style.touchAction = "pan-x pan-y";
+  }
+  nurScrollen();
+  if (!document.body) document.addEventListener("DOMContentLoaded", nurScrollen);
 
   function lightboxOffen() { return !!document.querySelector(".lightbox.open"); }
   function insideOpenLightbox(event) {
@@ -67,18 +77,21 @@
   // wenn sich der Viewport-Eintrag aendert. Feste Groesse, egal was passiert.
   var vv = window.visualViewport;
   var zurueck = null;
-  function aufHundert() {
+  function aufHundert(versuch) {
     if (!vv || !viewport || Math.abs(vv.scale - 1) <= 0.01 || lightboxOffen()) return;
     viewport.setAttribute("content", INHALT.replace("initial-scale=1", "initial-scale=1.0001"));
     setTimeout(function () { viewport.setAttribute("content", INHALT); }, 60);
+    // Waehrend ein Scrollen noch auslaeuft, uebernimmt iOS den Massstab nicht
+    // immer: nachpruefen, hoechstens drei Versuche.
+    if ((versuch || 0) < 2) setTimeout(function () { aufHundert((versuch || 0) + 1); }, 450);
   }
   if (vv && viewport) {
     vv.addEventListener("resize", function () {
       clearTimeout(zurueck);
-      zurueck = setTimeout(aufHundert, 250);
+      zurueck = setTimeout(function () { aufHundert(0); }, 250);
     });
     document.addEventListener("touchend", function (event) {
-      if (!event.touches || !event.touches.length) setTimeout(aufHundert, 120);
+      if (!event.touches || !event.touches.length) setTimeout(function () { aufHundert(0); }, 120);
     }, { passive: true });
   }
 })();
