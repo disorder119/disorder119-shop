@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { sqliteD1, allMigrations } from "./test-d1.mjs";
 import { handleManagerConnection } from "./manager-connection.js";
-import { baueEntwurf, kategorie, pruefeNeu, webpGroesse } from "./manager-katalog.js";
+import { baueEntwurf, pruefeNeu, webpGroesse } from "./manager-katalog.js";
 import { guardRuntimeRequest } from "./backend-runtime.js";
 
 const ORIGIN = "https://admin.disorder119.com";
@@ -147,19 +147,17 @@ test("number and id checks never reuse an existing article, route or draft", () 
   assert.throws(() => pruefeNeu(ITEMS, LINKS, "9701", "0"), /NUMMER_UNGUELTIG/);
 });
 
-test("a draft keeps the manager's id and number, maps category and known brand spelling", () => {
+test("a draft keeps the manager's id and number and known brand spelling, never a category", () => {
   const item = baueEntwurf(ITEMS, FELDER, 3);
   assert.equal(item.id, 9701);
   assert.equal(item.article, "281");
   assert.equal(item.url_slug, "281");
   assert.equal(item.public_status, "DRAFT");
   assert.equal(item.brand, "Y-3");
-  assert.equal(item.category, "Jackets");
+  assert.equal(item.category, "");  // Manager "Jacke / Blazer" koennte dem Titel widersprechen
   assert.equal(item.desc, item.desc_de);
   assert.deepEqual(item.gallery, ["assets/img/9701/0.webp", "assets/img/9701/1.webp", "assets/img/9701/2.webp"]);
   assert.equal(item.look, item.gallery[0]);
-  assert.equal(kategorie("Sonstiges"), "");
-  assert.equal(kategorie("pants"), "Pants");
   assert.equal(baueEntwurf(ITEMS, { ...FELDER, brand: "Neue Marke" }, 1).brand, "Neue Marke");
   assert.throws(() => baueEntwurf(ITEMS, { ...FELDER, title: " " }, 1), /TITEL_FEHLT/);
   assert.throws(() => baueEntwurf(ITEMS, { ...FELDER, price: -1 }, 1), /PREIS_UNGUELTIG/);

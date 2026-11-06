@@ -89,6 +89,34 @@ export const EDITABLE = Object.freeze({
   },
 });
 
+// Kategorie-Regeln, damit eine Speicherung den Rebuild auf main nie anhaelt
+// (dann bliebe jede weitere Aenderung liegen):
+//  - Oeffentliche Produktseiten brauchen die Zeile "Kategorie"
+//    (scripts/repair_public_article_integrity.py): Freischalten nur mit Kategorie.
+//  - Die Kategorie muss zur geprueften Kategorie passen, die der Build aus Titel
+//    und Beschreibung bestimmt (scripts/catalog_taxonomy.py). Abweichungen prueft
+//    validate_audit_perfection.py --section taxonomy-mismatches - auch bei
+//    Entwuerfen. Gemessen 06.11.2026: bei allen 276 oeffentlichen Stuecken haengt
+//    die gepruefte Kategorie nur am Titel, nicht an der gesetzten Kategorie.
+//  - Aendert sich der Titel in derselben Speicherung, ist die gepruefte Kategorie
+//    erst nach dem naechsten Rebuild bekannt: dann erst Titel speichern.
+// Bestehende Stuecke ohne Kategorie- oder Statusaenderung sind nicht betroffen.
+function pruefeKategorie(vorher, next, set) {
+  const kategorie = String(next.category || "").trim();
+  const kategorieNeu = Object.prototype.hasOwnProperty.call(set, "category") && kategorie !== String(vorher.category || "").trim();
+  const wirdOeffentlich = next.public_status !== "DRAFT" && String(vorher.public_status || "").toUpperCase() === "DRAFT";
+  if (!kategorieNeu && !wirdOeffentlich) return;
+  if (!kategorie) {
+    if (next.public_status !== "DRAFT") throw new KatalogError("KATEGORIE_FEHLT", 400, String(next.id));
+    return;
+  }
+  const geprueft = String(vorher.taxonomy_category || "").trim();
+  if (!geprueft) throw new KatalogError("TAXONOMIE_AUSSTEHEND", 409, String(next.id));
+  const titelNeu = Object.prototype.hasOwnProperty.call(set, "title") && String(next.title || "").trim() !== String(vorher.title || "").trim();
+  if (titelNeu) throw new KatalogError("TITEL_ERST_SPEICHERN", 409, String(next.id));
+  if (kategorie !== geprueft) throw new KatalogError("KATEGORIE_PASST_NICHT", 400, geprueft);
+}
+
 export function applyChanges(items, changes) {
   if (!Array.isArray(changes) || changes.length > 300) throw new KatalogError("AENDERUNGEN_UNGUELTIG", 400);
   const byId = new Map(items.map((it, index) => [String(it.id), index]));
@@ -108,12 +136,7 @@ export function applyChanges(items, changes) {
     }
     if (!String(next.title || "").trim()) throw new KatalogError("TITEL_FEHLT", 400, String(next.id));
     if (next.public_status !== "DRAFT" && !String(next.brand || "").trim()) throw new KatalogError("MARKE_FEHLT", 400, String(next.id));
-    // Oeffentliche Produktseiten brauchen die Zeile "Kategorie" (scripts/
-    // repair_public_article_integrity.py) - ohne sie scheitert der Rebuild auf
-    // main und haelt jede weitere Aenderung auf. Entwuerfe aus dem Manager
-    // koennen ohne Kategorie kommen; freigeschaltet wird erst mit Kategorie.
-    const wirdOeffentlich = String(items[index].public_status || "").toUpperCase() === "DRAFT" || Object.prototype.hasOwnProperty.call(set, "category");
-    if (next.public_status !== "DRAFT" && wirdOeffentlich && !String(next.category || "").trim()) throw new KatalogError("KATEGORIE_FEHLT", 400, String(next.id));
+    pruefeKategorie(items[index], next, set);
     items[index] = next;
   }
   return items;

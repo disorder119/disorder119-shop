@@ -38,24 +38,6 @@ const ID = /^[1-9]\d{0,8}$/;
 const NUMMER = /^[1-9]\d{0,6}(?:-\d{1,3})?$/;
 const SHA = /^[0-9a-f]{40}$/;
 
-// Kategorien wie in der Admin-App; Manager-Bezeichnungen werden zugeordnet,
-// alles andere bleibt leer und wird im Admin gewaehlt.
-export const KATEGORIEN = Object.freeze(["Accessories", "Coats", "Dresses", "Jackets", "Knitwear", "Objects", "Pants", "Shirts", "Shoes", "Skirts", "Tops"]);
-const MANAGER_KATEGORIEN = Object.freeze({
-  "jacke / blazer": "Jackets", jacke: "Jackets", blazer: "Jackets", mantel: "Coats",
-  "top / bluse": "Tops", top: "Tops", bluse: "Tops", hemd: "Shirts",
-  schuhe: "Shoes", kleid: "Dresses", rock: "Skirts", hose: "Pants",
-  accessoires: "Accessories", "pullover / strick": "Knitwear", pullover: "Knitwear", strick: "Knitwear",
-});
-
-export function kategorie(wert) {
-  const text = String(wert ?? "").trim();
-  if (!text) return "";
-  const genau = KATEGORIEN.find(k => k.toLowerCase() === text.toLowerCase());
-  if (genau) return genau;
-  return MANAGER_KATEGORIEN[text.toLowerCase()] || "";
-}
-
 // ------------------------------------------------------------- reine Logik
 
 /** Alle Adressen /artikel/<x>/, die es schon gibt oder die weiterleiten. */
@@ -121,7 +103,10 @@ export function baueEntwurf(items, eingabe, bildAnzahl) {
     brand,
     price: feld("price", eingabe.price ?? 0),
     status: "Entwurf",
-    category: kategorie(eingabe.category),
+    // Ohne Kategorie: die gepruefte Kategorie bestimmt der Build aus dem Titel;
+    // eine abweichende Manager-Kategorie (z. B. "Jacke / Blazer" bei einem
+    // Mantel) wuerde den Rebuild auf main anhalten. Gewaehlt wird im Admin.
+    category: "",
     size: feld("size", eingabe.size),
     color: feld("color", eingabe.color),
     condition: feld("condition", eingabe.condition),
