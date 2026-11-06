@@ -1030,6 +1030,8 @@ def build_page(it, shop_config, lang):
 <script>try{{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}}catch(e){{}}</script>
 <script src="/assets/catalog-number-links.js" type="text/d119-spaet" defer></script>{ui_tags()}
 <script src="/assets/spaet-lader.js" defer></script>
+<!-- Datenschutz-Hinweis gleich mit der Seite (06.11.2026, wie index_template.html). -->
+<script src="/assets/besucher.js" defer></script>
 </head>
 <body>
 <div class="page-head">
