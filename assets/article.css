@@ -708,7 +708,7 @@ img[data-d119-image-protected] {
 .info__akk .info__desc, .info__akk-text { white-space: pre-line; font-size: 0.86rem; line-height: 1.6; color: var(--paper); margin: 0 0 10px; }
 .info__akk-text--klein { font-size: 0.74rem; color: var(--text-muted); }
 .info__akk .info__gebraucht { margin: 0 0 10px; }
-.info__trust { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0 0; }
+.info__trust { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0 0; }
 .info__trust div { border: 1px solid var(--rule); padding: 10px 6px; font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase; text-align: center; color: var(--text-muted); line-height: 1.5; }
 /* Rechner: Fotospalte bleibt beim Scrollen stehen (Inhaber 05.11.2026: "zu viel Platz").
    overflow-x:hidden auf html/body macht body zum Scroll-Container - dann klebt nichts;
@@ -727,7 +727,7 @@ img[data-d119-image-protected] {
 .info__masse dd { margin: 2px 0 0; font-size: 0.9rem; font-weight: 700; }
 @media (max-width: 860px) {
   .info__caption { font-size: 1.5rem; }
-  .info__trust { grid-template-columns: repeat(2, 1fr); }
+  .info__trust { grid-template-columns: repeat(3, 1fr); }
   }
 
 /* Fussbereich breit (Inhaber 06.11.2026): Am Desktop nutzt der Produktseiten-
