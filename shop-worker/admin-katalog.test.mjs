@@ -216,3 +216,14 @@ test("a stalled optional commit history cannot prevent loading the catalog", asy
     assert.equal(result.data.sha, "items-sha");
   } finally { gh.restore(); }
 });
+
+test("a public item needs a category; drafts may still lack one", () => {
+  const items = [{ id: 9701, title: "Entwurf", brand: "Y-3", category: "", public_status: "DRAFT" }];
+  assert.throws(() => applyChanges(structuredClone(items), [{ id: 9701, set: { public_status: "AVAILABLE" } }]), /KATEGORIE_FEHLT/);
+  assert.throws(() => applyChanges(structuredClone(items), [{ id: 9701, set: { public_status: "SOLD" } }]), /KATEGORIE_FEHLT/);
+  assert.equal(applyChanges(structuredClone(items), [{ id: 9701, set: { price: 90 } }])[0].price, 90);
+  const ok = applyChanges(structuredClone(items), [{ id: 9701, set: { category: "Coats", public_status: "AVAILABLE" } }]);
+  assert.equal(ok[0].public_status, "AVAILABLE");
+  // Eine verfuegbare Kategorie darf nicht geleert werden.
+  assert.throws(() => applyChanges(ok, [{ id: 9701, set: { category: "" } }]), /KATEGORIE_FEHLT/);
+});

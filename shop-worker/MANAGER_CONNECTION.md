@@ -34,3 +34,33 @@ Run the synthetic real-SQLite tests:
 
 The native browser flow follows the external-browser/loopback/PKCE safeguards
 in RFC 8252 and RFC 7636. This private protocol is not a general OAuth service.
+
+## Second, separate grant: new catalog items as drafts (Migration 0056)
+
+The Manager's "An Shop senden" uses its own grant with the fixed scope
+`katalog_entwurf`. `POST /manager/authorize` accepts `scope` (`shop_dataset_read`
+remains the default); the request remembers it, the Admin approval page names
+exactly what the scope allows, and `/manager/token` issues the grant into its own
+table `manager_katalog_grants` (CHECK scope='katalog_entwurf'). The read-only table
+and its CHECK constraint are unchanged. A dataset bearer is refused on
+`/manager/katalog/*` (403) and a catalog bearer on `/manager/dataset.zip` (403).
+Grant listing and revocation in the Admin app cover both tables.
+
+Routes (manager-katalog.js), all with the catalog bearer and rate limits:
+
+- `GET /manager/katalog/pruefen?id=&article=` - is ID/number free? Existing item,
+  article number, URL slug, old shop-ID redirect or excluded ID = not free.
+- `POST /manager/katalog/bilder` - at most three WebP photos (real RIFF/WEBP,
+  longest side <= 1600 px, <= 0.45 MiB) become Git blobs; each answer carries an
+  HMAC that binds the blob to grant and item ID.
+- `POST /manager/katalog/entwurf` - fields plus signed blobs. Adds exactly one
+  NEW item (public_status DRAFT, url_slug = article number, ID = Manager ID) to
+  `data/items.json` and one link to `config/catalog-number-links.json`, as one
+  commit merged through a pull request (like the Admin catalog editor). Existing
+  items, numbers, prices and photos cannot be changed through this grant. Sending
+  the same draft again changes nothing (`vorhanden`).
+
+Test shop (`SANDBOX=1`): every check runs against the public main state, but
+nothing is written to GitHub. Rollout: `wrangler d1 migrations apply` (sandbox
+first, then production), then deploy the worker. Tests:
+`node --test shop-worker/manager-katalog.test.mjs shop-worker/manager-connection.test.mjs`.
