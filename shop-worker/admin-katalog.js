@@ -54,7 +54,8 @@ const text = max => value => {
 
 // Genau die Felder, die der Editor anbietet. Alles andere (Taxonomie,
 // Bildauswahl fuer die Kacheln, Bewertungen) rechnet der Build selbst aus.
-const EDITABLE = Object.freeze({
+// Dieselben Pruefungen gelten fuer neue Entwuerfe aus dem Manager (manager-katalog.js).
+export const EDITABLE = Object.freeze({
   title: text(200),
   brand: text(120),
   size: text(40),
@@ -112,15 +113,20 @@ export function applyChanges(items, changes) {
   return items;
 }
 
+/** Base64 eines echten WebP: "RIFF" .... "WEBP" in den ersten zwoelf Byte. */
+export function webpPruefen(b64, path = "") {
+  if (!b64 || b64.length > MAX_IMAGE_B64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(b64)) throw new KatalogError("BILD_UNGUELTIG", 400, path);
+  let kopf;
+  try { kopf = atob(b64.slice(0, 16)); } catch { throw new KatalogError("BILD_UNGUELTIG", 400, path); }
+  if (kopf.slice(0, 4) !== "RIFF" || kopf.slice(8, 12) !== "WEBP") throw new KatalogError("BILD_KEIN_WEBP", 400, path);
+  return b64;
+}
+
 function checkImage(image) {
   const path = String(image?.path || "");
   const b64 = String(image?.base64 || "");
   if (!IMAGE_PATH.test(path)) throw new KatalogError("BILDPFAD_UNGUELTIG", 400, path.slice(0, 120));
-  if (!b64 || b64.length > MAX_IMAGE_B64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(b64)) throw new KatalogError("BILD_UNGUELTIG", 400, path);
-  // Nur echte WebP-Dateien: "RIFF" .... "WEBP" in den ersten zwoelf Byte.
-  let kopf;
-  try { kopf = atob(b64.slice(0, 16)); } catch { throw new KatalogError("BILD_UNGUELTIG", 400, path); }
-  if (kopf.slice(0, 4) !== "RIFF" || kopf.slice(8, 12) !== "WEBP") throw new KatalogError("BILD_KEIN_WEBP", 400, path);
+  webpPruefen(b64, path);
   return { path, base64: b64 };
 }
 
