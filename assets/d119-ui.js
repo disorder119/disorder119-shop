@@ -536,41 +536,123 @@
     }
   }
 
-  /* 9 · Teilen: Handy = Teilen-Menü des Systems mit Foto, Titel, Preis, Link (WhatsApp, Instagram, TikTok, AirDrop …);
-     Rechner = kleine Auswahl (WhatsApp, E-Mail, Link kopieren). */
+  /* 9 · Teilen: Handy = Teilen-Menü des Systems mit Foto, Text und Link (WhatsApp, Instagram, TikTok, AirDrop …);
+     Rechner = kleine Auswahl (WhatsApp, E-Mail, Link kopieren).
+     Inhaber 06.11.2026: immer das Hauptbild (nicht das gerade gezeigte Galeriefoto), auf weissem Grund -
+     die Fotos sind freigestellt (transparent), WhatsApp zeigte das schwarz. Dazu ein einladender Text in der
+     Sprache des Landes, in dem man gerade ist (Land aus /_land, sonst die Seitensprache). */
   if (istArtikel) {
     var info = document.querySelector(".info"), h1 = info && info.querySelector("h1");
     if (h1) {
       var it = window.ARTICLE_ITEM || {};
       var titel = (h1.textContent || "").trim();
-      var text = titel + (it.price > 0 ? " · " + Number(it.price).toLocaleString("de-DE") + " €" : "") + " · Disorder119";
+      var verkauft = it.sold === true || !(Number(it.price) > 0);
+      var seitenLink = location.origin + location.pathname;
+      var TEILEN_TEXTE = {
+        de: { l: "de-DE", v: "Aus dem Disorder119-Archiv: {titel} 🖤 Schon weg – aber da warten noch mehr Einzelstücke auf dich.", t: [
+          "Schau mal, was ich bei Disorder119 gefunden hab 👀 {titel} – {preis}. Ein echtes Einzelstück.",
+          "{titel} für {preis} bei Disorder119 🖤 Archiv-Designermode, die es nur einmal gibt. Wer zuerst kommt …",
+          "Das musst du sehen: {titel} · {preis}. Einzelstück aus dem Disorder119-Archiv ✨"] },
+        en: { l: "en-GB", v: "From the Disorder119 archive: {titel} 🖤 Already gone – but more one-of-a-kind pieces are waiting for you.", t: [
+          "Look what I found at Disorder119 👀 {titel} – {preis}. A true one-of-a-kind piece.",
+          "{titel} for {preis} at Disorder119 🖤 Archive designer fashion – there's only one. First come, first served …",
+          "You have to see this: {titel} · {preis}. A one-off from the Disorder119 archive ✨"] },
+        fr: { l: "fr-FR", v: "Des archives Disorder119 : {titel} 🖤 Déjà parti – mais d'autres pièces uniques t'attendent.", t: [
+          "Regarde ce que j'ai trouvé chez Disorder119 👀 {titel} – {preis}. Une vraie pièce unique.",
+          "{titel} à {preis} chez Disorder119 🖤 Mode de créateur d'archive, en un seul exemplaire. Premier arrivé, premier servi …",
+          "Il faut que tu voies ça : {titel} · {preis}. Une pièce unique des archives Disorder119 ✨"] },
+        it: { l: "it-IT", v: "Dall'archivio Disorder119: {titel} 🖤 Già venduto – ma ti aspettano altri pezzi unici.", t: [
+          "Guarda cosa ho trovato su Disorder119 👀 {titel} – {preis}. Un vero pezzo unico.",
+          "{titel} a {preis} su Disorder119 🖤 Moda firmata d'archivio, ce n'è solo uno. Chi prima arriva …",
+          "Devi vederlo: {titel} · {preis}. Pezzo unico dall'archivio Disorder119 ✨"] },
+        es: { l: "es-ES", v: "Del archivo Disorder119: {titel} 🖤 Ya se vendió, pero te esperan más piezas únicas.", t: [
+          "Mira lo que encontré en Disorder119 👀 {titel} – {preis}. Una auténtica pieza única.",
+          "{titel} por {preis} en Disorder119 🖤 Moda de diseñador de archivo, solo hay una. El que llegue primero …",
+          "Tienes que ver esto: {titel} · {preis}. Pieza única del archivo Disorder119 ✨"] },
+        nl: { l: "nl-NL", v: "Uit het Disorder119-archief: {titel} 🖤 Al verkocht – maar er wachten nog meer unieke stukken op je.", t: [
+          "Kijk wat ik bij Disorder119 heb gevonden 👀 {titel} – {preis}. Een echt uniek stuk.",
+          "{titel} voor {preis} bij Disorder119 🖤 Archief-designermode, er is er maar één van. Wie het eerst komt …",
+          "Dit moet je zien: {titel} · {preis}. Uniek stuk uit het Disorder119-archief ✨"] },
+        pl: { l: "pl-PL", v: "Z archiwum Disorder119: {titel} 🖤 Już sprzedane – ale czekają na Ciebie kolejne unikaty.", t: [
+          "Zobacz to znalezisko z Disorder119 👀 {titel} – {preis}. Prawdziwy unikat.",
+          "{titel} za {preis} w Disorder119 🖤 Archiwalna moda projektantów, tylko jedna sztuka. Kto pierwszy, ten lepszy …",
+          "Musisz to zobaczyć: {titel} · {preis}. Unikat z archiwum Disorder119 ✨"] },
+        pt: { l: "pt-BR", v: "Do arquivo Disorder119: {titel} 🖤 Já foi vendida – mas há mais peças únicas esperando por você.", t: [
+          "Olha o que encontrei na Disorder119 👀 {titel} – {preis}. Uma verdadeira peça única.",
+          "{titel} por {preis} na Disorder119 🖤 Moda de designer de arquivo, só existe uma. Quem chegar primeiro …",
+          "Olha só: {titel} · {preis}. Peça única do arquivo Disorder119 ✨"] }
+      };
+      var LAND_SPRACHE = { DE: "de", AT: "de", CH: "de", LI: "de", LU: "de", FR: "fr", BE: "fr", MC: "fr", IT: "it", SM: "it", VA: "it",
+        ES: "es", MX: "es", AR: "es", CO: "es", CL: "es", PE: "es", VE: "es", EC: "es", UY: "es", PY: "es", BO: "es", CR: "es",
+        PA: "es", DO: "es", GT: "es", HN: "es", SV: "es", NI: "es", NL: "nl", PL: "pl", PT: "pt", BR: "pt" };
+      var landLaeuft = null, dateiLaeuft = null;
+      function mitFrist(p, ms, ersatz) { return Promise.race([p, new Promise(function (r) { setTimeout(function () { r(ersatz); }, ms); })]); }
+      function landHolen() {
+        if (!landLaeuft) landLaeuft = fetch("/_land", { cache: "no-store", credentials: "omit" })
+          .then(function (r) { return r.ok ? r.json() : {}; })
+          .then(function (d) { return /^[A-Z]{2}$/.test(String(d && d.land || "")) ? d.land : ""; })
+          .catch(function () { return ""; });
+        return landLaeuft;
+      }
+      function teilenText(land) {
+        var seite = (html.lang || "de").slice(0, 2);
+        var sprache = LAND_SPRACHE[land] || (land ? "en" : (TEILEN_TEXTE[seite] ? seite : "de"));
+        var s = TEILEN_TEXTE[sprache], preis = "";
+        if (!verkauft) {
+          var p = Number(it.price);
+          try { preis = p.toLocaleString(s.l, { style: "currency", currency: "EUR", minimumFractionDigits: p % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
+          catch (e) { preis = p + " €"; }
+        }
+        var vorlage = verkauft ? s.v : s.t[Math.floor(Math.random() * s.t.length)];
+        return vorlage.replace("{titel}", titel).replace("{preis}", preis);
+      }
+      function bildLaden(src) {
+        return new Promise(function (ok, fehler) { var im = new Image(); im.onload = function () { ok(im); }; im.onerror = fehler; im.src = src; });
+      }
+      // Hauptbild = erstes Galeriefoto (Anzeigefassung, sonst Original), auf Weiss als JPEG.
+      function hauptbildDatei() {
+        if (dateiLaeuft) return dateiLaeuft;
+        var g = String((it.gallery || [])[0] || "").replace(/^\/+/, "");
+        if (!g) return Promise.reject(new Error("ohne Bild"));
+        var i = g.lastIndexOf("/");
+        var anzeige = "/" + (i < 0 ? g : g.slice(0, i) + "/display/" + g.slice(i + 1));
+        dateiLaeuft = bildLaden(anzeige).catch(function () { return bildLaden("/" + g); }).then(function (im) {
+          var c = document.createElement("canvas"); c.width = im.naturalWidth; c.height = im.naturalHeight;
+          var z = c.getContext("2d"); z.fillStyle = "#ffffff"; z.fillRect(0, 0, c.width, c.height); z.drawImage(im, 0, 0);
+          return new Promise(function (ok, fehler) { c.toBlob(function (b) { if (b) ok(b); else fehler(new Error("kein Bild")); }, "image/jpeg", 0.9); });
+        }).then(function (b) {
+          return new File([b], "disorder119-" + (it.url_slug || it.id) + ".jpg", { type: "image/jpeg" });
+        });
+        dateiLaeuft.catch(function () { dateiLaeuft = null; });
+        return dateiLaeuft;
+      }
       var teilen = document.createElement("button"); teilen.type = "button"; teilen.className = "ui-teilen";
       teilen.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M8 7l4-4 4 4M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"/></svg><span>Teilen</span>';
       var sheet;
-      function sheetZeigen() {
-        if (!sheet) {
-          sheet = document.createElement("div"); sheet.className = "ui-sheet";
-          sheet.innerHTML = '<div class="ui-sheet__box"><p>Teilen</p>' +
-            '<a class="ui-sheet__btn" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(text + "\n" + location.href) + '"><b style="background:#25d366">W</b>WhatsApp</a>' +
-            '<a class="ui-sheet__btn" href="mailto:?subject=' + encodeURIComponent(titel) + "&body=" + encodeURIComponent(text + "\n" + location.href) + '"><b style="background:#555">@</b>E-Mail</a>' +
-            '<button type="button" class="ui-sheet__btn" data-kopieren><b style="background:#7a4bff">⧉</b>Link kopieren</button>' +
-            '<button type="button" class="ui-sheet__zu">Schließen</button></div>';
-          sheet.addEventListener("click", function (e) { if (e.target === sheet || e.target.closest(".ui-sheet__zu")) sheet.classList.remove("is-sichtbar"); });
-          sheet.querySelector("[data-kopieren]").addEventListener("click", function () { navigator.clipboard.writeText(location.href).then(function () { toast("Link kopiert"); sheet.classList.remove("is-sichtbar"); }); });
-          document.body.appendChild(sheet);
-        }
+      function sheetZeigen(text) {
+        if (sheet) sheet.remove();
+        sheet = document.createElement("div"); sheet.className = "ui-sheet";
+        sheet.innerHTML = '<div class="ui-sheet__box"><p>Teilen</p>' +
+          '<a class="ui-sheet__btn" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(text + "\n" + seitenLink) + '"><b style="background:#25d366">W</b>WhatsApp</a>' +
+          '<a class="ui-sheet__btn" href="mailto:?subject=' + encodeURIComponent(titel) + "&body=" + encodeURIComponent(text + "\n" + seitenLink) + '"><b style="background:#555">@</b>E-Mail</a>' +
+          '<button type="button" class="ui-sheet__btn" data-kopieren><b style="background:#7a4bff">⧉</b>Link kopieren</button>' +
+          '<button type="button" class="ui-sheet__zu">Schließen</button></div>';
+        sheet.addEventListener("click", function (e) { if (e.target === sheet || e.target.closest(".ui-sheet__zu")) sheet.classList.remove("is-sichtbar"); });
+        sheet.querySelector("[data-kopieren]").addEventListener("click", function () { navigator.clipboard.writeText(seitenLink).then(function () { toast("Link kopiert"); sheet.classList.remove("is-sichtbar"); }); });
+        document.body.appendChild(sheet);
         requestAnimationFrame(function () { sheet.classList.add("is-sichtbar"); });
       }
+      // Land und Bild schon beim Antippen vorbereiten - das Teilen-Menü muss kurz nach dem Tippen kommen.
+      teilen.addEventListener("pointerdown", function () { landHolen(); if (navigator.share && grob) hauptbildDatei().catch(function () {}); });
       teilen.addEventListener("click", function () {
-        var daten = { title: titel, text: text, url: location.href };
+        var landBereit = mitFrist(landHolen(), 700, "");
         if (navigator.share && grob) {
-          var bild = document.getElementById("galleryMain");
-          fetch(bild.currentSrc).then(function (r) { return r.blob(); }).then(function (b) {
-            var datei = new File([b], "disorder119-" + (it.url_slug || it.id) + ".webp", { type: b.type || "image/webp" });
-            var mit = Object.assign({ files: [datei] }, daten);
-            return (navigator.canShare && navigator.canShare(mit)) ? navigator.share(mit) : navigator.share(daten);
-          }).catch(function () { return navigator.share(daten).catch(function () {}); });
-        } else sheetZeigen();
+          Promise.all([landBereit, mitFrist(hauptbildDatei(), 2500, null).catch(function () { return null; })]).then(function (r) {
+            var daten = { title: titel, text: teilenText(r[0]), url: seitenLink };
+            var mit = r[1] ? Object.assign({ files: [r[1]] }, daten) : daten;
+            return (r[1] && navigator.canShare && navigator.canShare(mit)) ? navigator.share(mit) : navigator.share(daten);
+          }).catch(function () {});
+        } else landBereit.then(function (land) { sheetZeigen(teilenText(land)); });
       });
       // Inhaber 05.11.2026: Teilen neben PayPal/Apple Pay unter "Jetzt kaufen".
       // article.js baut die Zeile (.d119-zahlart) - je nach Ladereihenfolge

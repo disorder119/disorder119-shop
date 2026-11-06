@@ -198,3 +198,16 @@ test('bfcache/prefetch ping counts once in the same counter with the same except
   assert.equal((await edge.fetch(new Request('https://disorder119.com/_seitenaufruf'),z.env,z.ctx,nieUrsprung)).status,405);
   assert.equal(origin,0,'der Ping erreicht nie die statischen Dateien');
 });
+test('Teilen-Text: /_land nennt nur das Land, nie gecacht, ohne Herkunftsabruf',async()=>{
+  let origin=0;
+  const holen=async()=>{origin++;return new Response('x');};
+  const anfrage=(country,method='GET')=>{const r=new Request('https://disorder119.com/_land',{method,headers:{'User-Agent':IPHONE}});Object.defineProperty(r,'cf',{value:country===undefined?undefined:{country}});return r;};
+  const fr=await edge.fetch(anfrage('fr'),{},{},holen);
+  assert.equal(fr.status,200);
+  assert.deepEqual(await fr.json(),{land:'FR'});
+  assert.match(fr.headers.get('Cache-Control'),/no-store/);
+  assert.deepEqual(await (await edge.fetch(anfrage(undefined),{},{},holen)).json(),{land:''});
+  assert.deepEqual(await (await edge.fetch(anfrage('<x>'),{},{},holen)).json(),{land:''});
+  assert.equal((await edge.fetch(anfrage('DE','POST'),{},{},holen)).status,405);
+  assert.equal(origin,0,'kein Abruf beim Ursprung');
+});
