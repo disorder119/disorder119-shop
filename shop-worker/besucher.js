@@ -246,9 +246,31 @@ export function besucherLabel(schluessel, info = {}) {
   return `${besucherName(info)} · Nr. ${besucherKennung(schluessel)}`;
 }
 
-export function istBot(userAgent) {
+// Simulierte Handys sind keine Kunden (Inhaber 06.11.2026: "wirklich nur echte
+// Kunden, keine Simulationen"). Lighthouse/PageSpeed geben sich als
+// "Android 11; moto g power (2022)" aus. Echtes Chrome auf Android sendet seit
+// Version 110 immer die gekuerzte Kennung "Android 10; K" - ein Chrome ab 110
+// mit Geraetenamen (ohne WebView-/Browser-Zusatz dahinter) ist eine Emulation.
+// Samsung Internet, Edge, Opera und In-App-Browser (Instagram, wv) haben
+// eigene Zusaetze und passen nicht auf das Muster.
+// Geraetenamen duerfen selbst Klammern enthalten ("moto g power (2022)").
+const EMULIERTES_ANDROID = /\(Linux; Android [\d.]+; ((?:[^()]|\([^()]*\))*)\) AppleWebKit\/[\d.]+ \(KHTML, like Gecko\) Chrome\/(\d+)[\d.]* Mobile Safari\/[\d.]+$/;
+// Client-Hints (Sec-CH-UA) schickt nur Chromium. Ein iPhone/iPad sendet sie nie
+// (auch Chrome auf iOS laeuft mit WebKit) - iPhone-Kennung mit Chromium-Hints
+// ist die Geraeteemulation eines Rechners.
+export function chromiumHinweis(secChUa) {
+  return /Chromium|Google Chrome|HeadlessChrome|Microsoft Edge/i.test(String(secChUa || ""));
+}
+export function simuliert(userAgent, chromium = false) {
   const ua = String(userAgent || "");
-  return !ua || BOT_UA.test(ua);
+  const android = EMULIERTES_ANDROID.exec(ua);
+  if (android && Number(android[2]) >= 110 && android[1].trim() !== "K") return true;
+  return Boolean(chromium) && /iPhone|iPad|iPod/.test(ua);
+}
+
+export function istBot(userAgent, chromium = false) {
+  const ua = String(userAgent || "");
+  return !ua || BOT_UA.test(ua) || simuliert(ua, chromium);
 }
 
 // Nur der Hostname der Herkunftsseite, eigene Seiten zaehlen nicht.
@@ -494,7 +516,7 @@ export async function besuchAnnehmen(request, env, ctx, now = Date.now()) {
   if (!origin || !SHOP_ORIGINS.includes(origin)) throw new BesucherError("ORIGIN_NOT_ALLOWED", 403);
 
   const ua = request.headers.get("User-Agent") || "";
-  if (!besucherAktiv(env) || !env.DB || istBot(ua)) return leer(origin);
+  if (!besucherAktiv(env) || !env.DB || istBot(ua, chromiumHinweis(request.headers.get("Sec-CH-UA")))) return leer(origin);
 
   if (env.RATE_LIMITER && typeof env.RATE_LIMITER.limit === "function") {
     // Je Anschluss (IPv6 je /64): neue Adressen im selben Netz helfen nicht.
@@ -613,7 +635,8 @@ export async function seitenaufrufAnnehmen(request, env, ctx, now = Date.now()) 
   const ua = String(body.ua || "").slice(0, 400);
   const ip = String(body.ip || "").slice(0, 64);
   const fertig = new Response(null, { status: 204, headers: sicherheitsHeader() });
-  if (!besucherAktiv(env) || !env.DB || !ip || istBot(ua)) return fertig;
+  // ch: Seitenabruf kam mit Chromium-Client-Hints (storefront-edge.js).
+  if (!besucherAktiv(env) || !env.DB || !ip || istBot(ua, body.ch === 1)) return fertig;
   if (env.RATE_LIMITER && typeof env.RATE_LIMITER.limit === "function") {
     const result = await env.RATE_LIMITER.limit({ key: `seitenaufruf:${anschlussVonIp(ip) || ip}` });
     if (result && result.success === false) return fertig;
@@ -655,7 +678,7 @@ export async function seitenaufrufAnnehmen(request, env, ctx, now = Date.now()) 
 // eigene Nachricht mehr - die Zusammenfassung des Besuchs nennt es.
 export async function entsperrtMelden(request, env, now = Date.now(), ctx = null) {
   const ua = request.headers.get("User-Agent") || "";
-  if (!besucherAktiv(env) || !env.DB || istBot(ua)) return;
+  if (!besucherAktiv(env) || !env.DB || istBot(ua, chromiumHinweis(request.headers.get("Sec-CH-UA")))) return;
   const besucher = await besucherSchluessel(env, request, now);
   await sitzungBeruehren(env, ctx, { besucher, entsperrt: true }, now);
 }

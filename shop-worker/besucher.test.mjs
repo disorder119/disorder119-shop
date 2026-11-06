@@ -908,3 +908,26 @@ test("Automatisierte Aufrufe (Hoster, Maschinentempo, Linux-Crawler) bekommen ke
     n.zurueck();
   }
 });
+
+test("Simulationen zaehlen nicht als Besuch (Inhaber 06.11.2026: nur echte Kunden)", async () => {
+  const { simuliert, chromiumHinweis } = await import("./besucher.js");
+  const LIGHTHOUSE = "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36";
+  const CHROME_ECHT = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36";
+  const CHROME_ALT = "Mozilla/5.0 (Linux; Android 9; SM-G960F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.104 Mobile Safari/537.36";
+  const SAMSUNG = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/28.0 Chrome/130.0.0.0 Mobile Safari/537.36";
+  const INSTAGRAM = "Mozilla/5.0 (Linux; Android 14; SM-S918B Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.70 Mobile Safari/537.36 Instagram 402.0.0.0.77 Android";
+  const EDGE = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 EdgA/141.0.0.0";
+  const IPHONE_SAFARI = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1";
+  assert.equal(istBot(LIGHTHOUSE), true, "Lighthouse-Handy");
+  assert.equal(simuliert(LIGHTHOUSE), true);
+  assert.equal(istBot(CHROME_ECHT), false, "echtes Chrome (gekuerzte Kennung)");
+  assert.equal(istBot(CHROME_ALT), false, "altes Chrome vor der Kuerzung");
+  assert.equal(istBot(SAMSUNG), false);
+  assert.equal(istBot(INSTAGRAM), false, "In-App-Browser");
+  assert.equal(istBot(EDGE), false);
+  assert.equal(istBot(IPHONE_SAFARI), false, "echtes iPhone");
+  assert.equal(istBot(IPHONE_SAFARI, true), true, "iPhone-Kennung mit Chromium-Hints = Emulation am Rechner");
+  assert.equal(chromiumHinweis('"Chromium";v="141", "Google Chrome";v="141", "Not?A_Brand";v="24"'), true);
+  assert.equal(chromiumHinweis(""), false);
+  assert.equal(chromiumHinweis(null), false);
+});
