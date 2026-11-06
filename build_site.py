@@ -716,9 +716,9 @@ def cta_html(it, shop_config, home, lang):
     # 08.10.2026): Der Mietbereich /mieten/ bleibt, /mieten/?item=<id>
     # oeffnet die Anfrage weiter direkt fuer ein Stueck (assets/app.js).
     trust_notes = {
-        "de": "Einzelstück · individuell fotografiert · gesetzliches Widerrufsrecht von 14 Tagen für Verbraucher:innen · gesetzliche Gewährleistungsrechte.",
-        "en": "One-off piece · individually photographed · 14-day statutory withdrawal right for consumers · statutory warranty rights.",
-        "fr": "Pièce unique · photographiée individuellement · droit légal de rétractation de 14 jours pour les consommateurs · droits de garantie légaux.",
+        "de": "Nur 1× verfügbar · gesetzliches Widerrufsrecht von 14 Tagen für Verbraucher:innen · gesetzliche Gewährleistungsrechte.",
+        "en": "Only 1 available · 14-day statutory withdrawal right for consumers · statutory warranty rights.",
+        "fr": "Un seul exemplaire disponible · droit légal de rétractation de 14 jours pour les consommateurs · droits de garantie légaux.",
     }
     # Versandkosten gehoeren vor den Kaufknopf, nicht nur in die AGB (§ 312a
     # BGB, § 6 PAngV). Seit dem Versand ueber Packlink haengen sie an
@@ -970,10 +970,12 @@ def build_page(it, shop_config, lang):
         "color": it.get("color"),
         "condition": it.get("condition"),
         "category": it.get("category"),
-        "desc": it.get("desc") or "",
-        "desc_de": it.get("desc_de") or it.get("desc") or "",
-        "desc_en": (item_description(it, "en") if lang == "en" else it.get("desc_en")) or "",
-        "desc_fr": it.get("desc_fr") or "",
+        # Ohne Platzhalter-Angaben ("Material: Nicht eindeutig lesbar", Inhaber
+        # 06.11.2026) - article.js zeigt unstrukturierte Beschreibungen roh an.
+        "desc": beschreibung.ohne_platzhalter_zeilen(it.get("desc") or ""),
+        "desc_de": beschreibung.ohne_platzhalter_zeilen(it.get("desc_de") or it.get("desc") or ""),
+        "desc_en": beschreibung.ohne_platzhalter_zeilen((item_description(it, "en") if lang == "en" else it.get("desc_en")) or ""),
+        "desc_fr": beschreibung.ohne_platzhalter_zeilen(it.get("desc_fr") or ""),
         "gallery": gallery,
         "thumbs": [thumb_path(g) for g in gallery],
         "sold": sold,
@@ -1466,9 +1468,9 @@ def initial_archive_preloads():
 # Produktseite traegt denselben allgemeinen Hinweis, Besonderheiten stehen
 # als "Hinweis zum Zustand" in der Beschreibung (siehe AGB Abschnitt 3).
 GEBRAUCHT_HINWEIS = {
-    "de": "Gebrauchtes Einzelstück (Vintage / Second Hand) in gutem Zustand mit normalen, altersgemäßen Gebrauchsspuren. Besonderheiten stehen in der Beschreibung und sind auf den Fotos zu sehen.",
-    "en": "Pre-owned one-off piece (vintage / second hand) in good condition with normal, age-appropriate signs of wear. Any particular features are noted in the description and shown in the photos.",
-    "fr": "Pièce unique d’occasion (vintage / seconde main) en bon état, avec des traces d’usure normales liées à l’âge. Les particularités sont indiquées dans la description et visibles sur les photos.",
+    "de": "Gebrauchter Artikel (Vintage / Second Hand) mit normalen, altersgemäßen Gebrauchsspuren. Besonderheiten stehen in der Beschreibung und sind auf den Fotos zu sehen.",
+    "en": "Pre-owned item (vintage / second hand) with normal, age-appropriate signs of wear. Any particular features are noted in the description and shown in the photos.",
+    "fr": "Article d’occasion (vintage / seconde main) avec des traces d’usure normales liées à l’âge. Les particularités sont indiquées dans la description et visibles sur les photos.",
 }
 
 

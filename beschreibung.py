@@ -65,21 +65,21 @@ _LABEL = {
            "aermel": "Ärmel", "futter": "Futter", "archiv": "Archiv-Nr.",
            "beschreibung": "Beschreibung", "zustand": "Zustand", "masse": "Maße & Passform", "versand": "Versand & Rückgabe", "recht": "Rechtliches",
            "brust": "Brust", "taille": "Taille", "huefte": "Hüfte", "schulter": "Schulter", "puppe": "Schneiderpuppe (Standard) · keine Artikelmaße",
-           "groesse": "Größe", "trust": (("1/1", "Einzelstück"), ("14 Tage", "Widerruf"), ("DHL", "versicherter Versand"), ("Foto", "jedes Stück selbst")),
+           "groesse": "Größe", "trust": (("1×", "verfügbar"), ("14 Tage", "Widerruf"), ("DHL", "versicherter Versand")),
            "versand_text": "Versand innerhalb Deutschlands mit DHL; der genaue Betrag steht vor der Bestellung.{frei} In alle EU-Länder liefern wir direkt über die Kasse, ins übrige Europa und in die USA auf Anfrage. 14 Tage Widerrufsrecht für Verbraucher:innen, gesetzliche Gewährleistungsrechte.",
            "frei": " Ab {betrag} Warenwert ist der Versand innerhalb Deutschlands kostenlos."},
     "en": {"kollektion": "Collection", "passform": "Fit", "verschluss": "Closure", "material": "Material", "herkunft": "Origin",
            "aermel": "Sleeves", "futter": "Lining", "archiv": "Archive no.",
            "beschreibung": "Description", "zustand": "Condition", "masse": "Measurements & fit", "versand": "Shipping & returns", "recht": "Legal",
            "brust": "Chest", "taille": "Waist", "huefte": "Hips", "schulter": "Shoulder", "puppe": "Dress form (standard) · not garment measurements",
-           "groesse": "Size", "trust": (("1/1", "one-off piece"), ("14 days", "withdrawal"), ("DHL", "insured shipping"), ("Photo", "every piece ourselves")),
+           "groesse": "Size", "trust": (("1×", "available"), ("14 days", "withdrawal"), ("DHL", "insured shipping")),
            "versand_text": "Shipping within Germany with DHL; the exact amount is shown before you order.{frei} We deliver to every EU country straight through checkout, to the rest of Europe and the USA on request. 14-day statutory withdrawal right for consumers, statutory warranty rights.",
            "frei": " From {betrag} order value, shipping within Germany is free."},
     "fr": {"kollektion": "Collection", "passform": "Coupe", "verschluss": "Fermeture", "material": "Matière", "herkunft": "Origine",
            "aermel": "Manches", "futter": "Doublure", "archiv": "N° d’archive",
            "beschreibung": "Description", "zustand": "État", "masse": "Mesures et coupe", "versand": "Livraison et retours", "recht": "Mentions légales",
            "brust": "Poitrine", "taille": "Taille", "huefte": "Hanches", "schulter": "Épaules", "puppe": "Mannequin (standard) · pas les mesures de l’article",
-           "groesse": "Taille", "trust": (("1/1", "pièce unique"), ("14 jours", "rétractation"), ("DHL", "envoi assuré"), ("Photo", "chaque pièce par nous")),
+           "groesse": "Taille", "trust": (("1×", "disponible"), ("14 jours", "rétractation"), ("DHL", "envoi assuré")),
            "versand_text": "Livraison en Allemagne avec DHL ; le montant exact est indiqué avant la commande.{frei} Nous livrons dans tous les pays de l’UE directement via la caisse, ailleurs en Europe et aux États-Unis sur demande. Droit légal de rétractation de 14 jours pour les consommateurs, garantie légale.",
            "frei": " À partir de {betrag} d’achat, la livraison en Allemagne est gratuite."},
 }
@@ -151,14 +151,40 @@ def _detail_key(label: str):
     return "frei:" + label.strip()
 
 
+# Platzhalter aus der Erfassung (Etikett nicht lesbar u. ae.) sind keine Angabe
+# und erscheinen nie auf der Seite (Inhaber 06.11.2026: "Material: Nicht
+# eindeutig lesbar" stand als Schlagzeile - "das soll niemals dastehen").
+_UNLESBAR = re.compile(
+    r"\b(nicht|kaum)\s+(eindeutig\s+|klar\s+|gut\s+)?(lesbar|erkennbar|bekannt|feststellbar|zu erkennen)\b"
+    r"|unleserlich|unlesbar|keine angaben?\b|^unklar$|^n\s*/?\s*a$|^\?+$"
+    r"|\bnot\s+(clearly\s+)?(legible|readable|visible|known)\b|\billegible\b|\bunreadable\b|^unclear$"
+    r"|\bnon\s+lisible\b|\billisible\b|\bincon+ue?\b|\bnon\s+(connu|precise|indique)e?\b")
+
+
+def ist_platzhalter(wert) -> bool:
+    n = _norm(wert)
+    return not n or n in _DETAIL_LEER or bool(_UNLESBAR.search(n))
+
+
+def ohne_platzhalter_zeilen(text) -> str:
+    """Rohbeschreibung ohne Angaben-Zeilen mit Platzhalterwert ("Material: Nicht eindeutig lesbar")."""
+    zeilen = []
+    for zeile in str(text or "").split("\n"):
+        label, trenner, wert = zeile.partition(":")
+        if trenner and len(zeile) < 200 and len(label.strip()) <= 40 and wert.strip() and ist_platzhalter(wert):
+            continue
+        zeilen.append(zeile)
+    return "\n".join(zeilen)
+
+
 def details_kanonisch(t: dict) -> dict:
-    """Details-Zeilen -> {schluessel: wert}; Leerwerte und doppelte Fakten entfallen."""
+    """Details-Zeilen -> {schluessel: wert}; Leerwerte, Platzhalter und doppelte Fakten entfallen."""
     out = {}
     for label, wert in t.get("details", []):
         key = _detail_key(label)
         if key is None:
             continue
-        if _norm(wert) in _DETAIL_LEER or not wert.strip():
+        if ist_platzhalter(wert):
             continue
         out.setdefault(key, wert.strip())
     return out
@@ -315,6 +341,10 @@ def akkordeon_html(it: dict, t: dict, lang: str, *, beschreibung_text: str, gebr
         f'<p class="info__gebraucht info__akk-text--klein" data-zustand-hinweis>{esc(gebraucht_hinweis)}</p>'
     out.append(leiste("zustand", zustand_html, offen=True))
     masse_leiste = masse_html(t, lang)
+    # Puppenmasse nur, wo sie etwas sagen (Oberteile, Kleider, Jacken, Roecke):
+    # bei Hosen, Schuhen und Accessoires keine Leiste (Inhaber 06.11.2026).
+    if not puppenmasse_sinnvoll(it):
+        masse, masse_leiste = "", ""
     if masse or masse_leiste:
         out.append(leiste("masse", masse_leiste + (f'<p class="info__akk-text info__akk-text--klein">{esc(masse)}</p>' if masse else "")))
     out.append(leiste("versand", f'<p class="info__akk-text">{esc(versand)}</p>'))
@@ -322,6 +352,18 @@ def akkordeon_html(it: dict, t: dict, lang: str, *, beschreibung_text: str, gebr
         out.append(leiste("recht", f'<p class="info__akk-text info__akk-text--klein">{esc(recht)}</p>'))
     out.append("</div>")
     return "".join(out)
+
+
+_OHNE_PUPPE = re.compile(
+    r"\b(pants?|trousers?|jeans|shorts|leggings|hosen?|shoes?|sneakers?|boots?|sandals?|heels|loafers?|pumps|"
+    r"mules|schuhe?|stiefel\w*|accessor\w*|bags?|taschen?|jewel\w*|schmuck|belts?|guertel|hats?|caps?|muetzen?|"
+    r"scarf|scarves|schals?|tuecher|sunglasses|sonnenbrillen?|socks|socken|wallets?|geldboersen?)\b")
+
+
+def puppenmasse_sinnvoll(it: dict) -> bool:
+    """Puppenmasse passen zu Teilen, die an der Puppe oben sitzen; nicht zu Hosen, Schuhen, Accessoires."""
+    felder = " ".join(_norm(it.get(k) or "") for k in ("category", "taxonomy_category", "product_type"))
+    return not _OHNE_PUPPE.search(felder)
 
 
 def trust_html(lang: str) -> str:
