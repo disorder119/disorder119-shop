@@ -30,9 +30,11 @@ import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
 import { dhlAutoMarken, handleVersand, istVersandRoute } from "./dhl.js";
 import { dhlMarkenAbgleichen, handleDhlQr, isDhlQrRoute, katalogAbgleich } from "./dhl-qr.js";
 import { sendungenVerfolgen } from "./dhl-tracking.js";
+import { handleRuecksendungAdmin, handleRuecksendungOeffentlich, isRuecksendungAdmin, isRuecksendungOeffentlich, ruecksendungenAbgleichen } from "./ruecksendung.js";
 import { handlePacklink, handlePacklinkWebhook, isPacklinkRoute, isPacklinkWebhookRoute } from "./packlink.js";
 import { handleVersandOptionen, isVersandOptionenRoute } from "./versand.js";
 import { handleAbholorte, isAbholorteRoute } from "./abholorte.js";
+import { abholorteOsmPflegen, handleAbholorteOsmAdmin, isAbholorteOsmAdminRoute, istAbholorteOsmCron } from "./abholorte-osm.js";
 import { handleKarte, isKarteRoute } from "./karte.js";
 import { handleAdresse, isAdresseRoute } from "./adresse.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
@@ -339,6 +341,11 @@ const worker = {
       if (isAbholorteRoute(url)) {
         return finish(await handleAbholorte(request, runtimeEnv, url, reqId, origin));
       }
+      // Ruecksendeetikett aus der Kundenmail: QR-Code, PDF und Seite fuer den
+      // Schalter - oeffentlich, nur mit dem langen Zugang (ruecksendung.js).
+      if (isRuecksendungOeffentlich(url)) {
+        return finish(await handleRuecksendungOeffentlich(request, runtimeEnv, url));
+      }
       // Luftbild-Kacheln fuer die Abholort-Karte (amtliche Luftbilder der Laender).
       if (isKarteRoute(url)) {
         return finish(await handleKarte(request, runtimeEnv, url));
@@ -392,6 +399,11 @@ const worker = {
 
       if (url.pathname === "/admin/alerts/sync") {
         return finish(await handleAdminAlerts(request, runtimeEnv, url, reqId, origin));
+      }
+
+      // Abholorte aus OpenStreetMap: Stand (GET) und einen Schritt einlesen (POST).
+      if (isAbholorteOsmAdminRoute(url)) {
+        return finish(await handleAbholorteOsmAdmin(request, runtimeEnv, url, reqId, origin));
       }
 
       // Das Kundenkonto laeuft vor den Shop-Routen, weil worker.js /account/
@@ -462,6 +474,11 @@ const worker = {
       // beide liegen unter /admin/versand/.
       if (isDhlQrRoute(url)) {
         return finish(await handleDhlQr(request, runtimeEnv, url, reqId, origin));
+      }
+
+      // Ruecksendeetikett anlegen, nachsehen, Mail senden (Admin-App).
+      if (isRuecksendungAdmin(url)) {
+        return finish(await handleRuecksendungAdmin(request, runtimeEnv, url, reqId, origin));
       }
 
       if (istVersandRoute(url)) {
@@ -608,6 +625,13 @@ const worker = {
   async scheduled(event, env, ctx) {
     const scheduledTime = Number(event?.scheduledTime || Date.now());
     const reqId = `cron-${scheduledTime}`;
+    // Eigener stuendlicher Cron (abholorte-osm.js): Packstationen und Filialen
+    // aus OpenStreetMap, ein Gebiet je Lauf - ohne die Viertelstunden-Jobs,
+    // damit beide ihre eigene Rechenzeit und ihre eigenen Abfragen haben.
+    if (istAbholorteOsmCron(event?.cron)) {
+      await runBackground(ctx, abholorteOsmPflegen(env, scheduledTime), "abholorte_osm_import_failed", reqId);
+      return;
+    }
     await runBackground(ctx, reconcilePurchasePayments(env, reqId), "purchase_reconciliation_failed", reqId);
     await runBackground(ctx, offeneBestellungenNachbereiten(env, reqId, new Date(scheduledTime)), "order_followup_failed", reqId);
     // Reservierte Zahlungen spaetestens am Ende der PayPal-Garantiezeit
@@ -618,6 +642,8 @@ const worker = {
     // Online-Frankierung: offene Marken mit Warenkorb-Nummer (aus der DHL-Mail)
     // bei DHL nachsehen - bezahlt? Sendungsnummer? (dhl-qr.js)
     await runBackground(ctx, dhlMarkenAbgleichen(env, scheduledTime), "dhl_cart_refresh_failed", reqId);
+    // Ruecksendeetiketten: bezahlt? QR-Code holen, Mail an die Kundin (ruecksendung.js).
+    await runBackground(ctx, ruecksendungenAbgleichen(env, scheduledTime), "ruecksendung_refresh_failed", reqId);
     // Sendungsverfolgung: unterwegs -> Versendet (Kundenmail), zugestellt -> Zugestellt (ohne Mail).
     await runBackground(ctx, sendungenVerfolgen(env, reqId, scheduledTime, {
       statusSetzen: (orderId, status) => orderStatusAutomatisch(env, orderId, status, reqId),

@@ -261,7 +261,10 @@ def repair_page(item: dict, public_items: list[dict], lang: str) -> None:
         legacy=article_dir(lang,int(item['id']))/'index.html'
         if legacy.exists():
             prefix='/' if lang=='de' else '/'+lang+'/'
-            redirected=text.replace('<head>','<head><meta name="robots" content="noindex,follow"><meta http-equiv="refresh" content="0;url='+prefix+'artikel/'+str(item['url_slug'])+'/">',1)
+            # Das robots-Meta der Zielseite (index,follow) ersetzen statt ein zweites
+            # davorzusetzen - sonst widersprechen sich zwei Angaben auf derselben Seite.
+            ohne_robots=re.sub(r'<meta name="robots"[^>]*>\s*','',text)
+            redirected=ohne_robots.replace('<head>','<head><meta name="robots" content="noindex,follow"><meta http-equiv="refresh" content="0;url='+prefix+'artikel/'+str(item['url_slug'])+'/">',1)
             legacy.write_text(redirected,encoding='utf-8')
 
 

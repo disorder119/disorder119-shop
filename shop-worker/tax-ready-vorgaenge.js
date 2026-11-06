@@ -23,7 +23,8 @@ export const VORGANG_QUERIES = Object.freeze({
   shipments: 'SELECT id,order_id,carrier,service,tracking_number,status,shipped_at,delivered_at,created_at,updated_at FROM shipments ORDER BY id',
   // Ersetzte Entwuerfe und abgelehnte Kaeufe haben nie etwas gekostet.
   packlink_labels: "SELECT id,order_id,reference,service_id,carrier,service_name,paket,price_cents,state,tracking_number,created_at,updated_at FROM packlink_sendungen WHERE state NOT IN ('ERSETZT','KAUF_ABGELEHNT') ORDER BY id",
-  dhl_labels: "SELECT id,order_id,product_id,state,price_cents,shipment_number,created_at,updated_at,paid_at FROM dhl_qr_marken WHERE state<>'ERSETZT' ORDER BY id",
+  // Ruecksendeetiketten (ruecksendung.js) sind ebenfalls Etikettenaufwand der Bestellung.
+  dhl_labels: "SELECT id,order_id,product_id,state,price_cents,shipment_number,created_at,updated_at,paid_at FROM dhl_qr_marken WHERE state<>'ERSETZT' UNION ALL SELECT id,order_id,product_id,state,price_cents,shipment_number,created_at,updated_at,paid_at FROM ruecksende_marken WHERE state<>'ERSETZT' ORDER BY id",
   // Nur Betrags- und Zeitangaben, keine Personendaten.
   order_audit: "SELECT id,entity_id AS order_id,event_type,metadata_json,created_at FROM audit_events WHERE entity_type='order' AND event_type IN ('COUPON_RESERVED','COUPON_REDEEMED','ORDER_CANCELLED','ORDER_REFUNDED') ORDER BY created_at,id",
   invoice_meta: 'SELECT id,order_id,rechnungsnummer,ausgestellt_am,gesamt_cents,document_type,html_sha256,pruefsumme FROM rechnungen ORDER BY id',

@@ -106,6 +106,9 @@ export function versandKonfigurationPruefen(roh) {
         // Packstation und Filiale gibt es nur in Deutschland.
         abholstation: t.abholstation === true && zone === "DE",
         versichertBisCents: ganzzahl(t.versichertBisCents, 0, 10000000) ? t.versichertBisCents : null,
+        // true: echte Hoeherversicherung (DHL Transportversicherung); sonst ist
+        // versichertBisCents nur die gesetzliche/vertragliche Haftung von DHL.
+        hoeherversicherung: t.hoeherversicherung === true,
         // Erst ab / nur bis zu diesem Warenwert anbieten (Stufen der Hoeherversicherung).
         abWarenwertCents: ganzzahl(t.abWarenwertCents, 1, 100000000) ? t.abWarenwertCents : null,
         bisWarenwertCents: ganzzahl(t.bisWarenwertCents, 1, 100000000) ? t.bisWarenwertCents : null,
@@ -203,6 +206,17 @@ export function dienstErlaubt(carrier, konfig = VERSAND) {
 
 export const VERSAND = versandKonfigurationPruefen(shopConfig);
 export const PAKETE = VERSAND.pakete;
+
+// Gebuchte Hoeherversicherung einer Bestellung aus ihrer Versandoption
+// ("fest-dhl-versichert-M" -> 250000 Cent), sonst 0 (nur die DHL-Haftung).
+// Damit Versandmarken nie ohne die bezahlte Versicherung entstehen
+// (dhl-qr.js, dhl.js; Inhaber 05.11.2026: "der Wahrheit entsprechend").
+export function hoeherversicherungCents(optionId, konfig = VERSAND) {
+  const m = /^fest-([a-z0-9-]+)-(S|M|L|XL|XXL)$/.exec(String(optionId || ""));
+  if (!m) return 0;
+  const tarif = (konfig?.tarife || []).find(t => t.id === m[1]);
+  return tarif?.hoeherversicherung === true && Number.isSafeInteger(tarif.versichertBisCents) ? tarif.versichertBisCents : 0;
+}
 
 export function paketFuer(key) {
   const k = String(key || "").toUpperCase();

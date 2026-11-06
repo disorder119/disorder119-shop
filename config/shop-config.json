@@ -2,6 +2,7 @@
   "_comment": "Einzige Quelle fuer nicht-geheime, oeffentliche Shop-Konfiguration. Wird von build_site.py gelesen und identisch in Startseite (SHOP_CONFIG) und jede Produktseite (ARTICLE_SHOP_CONFIG) eingebaut - keine zwei Stellen mehr, die auseinanderlaufen koennen. NIEMALS Secrets (PayPal Client Secret, DHL/DPD/Hermes Zugangsdaten, DB-Keys, Admin-Keys) hier eintragen - die gehoeren ausschliesslich in Server-/Worker-Umgebungsvariablen, siehe .env.example.",
   "whatsappNumber": "",
   "email": "disorder119shop@gmail.com",
+  "instagram": "https://www.instagram.com/disorder119_/",
   "versand": {
     "_comment": "Einzige Quelle fuer Versand. Seit 08.10.2026 nur DHL zu Privatpreisen (Wunsch des Inhabers). Paketklassen nach DHL-Gewicht: S bis 2 kg (60x30x15 cm), M bis 5 kg, L bis 10 kg, XL bis 20 kg, XXL bis 31,5 kg. Welche Klasse eine Bestellung braucht, schaetzt der Worker aus Gewicht und Volumen der Stuecke (versand.schaetzung, shop-worker/versand-config.js). build_site.py liest denselben Block. ersatzCents gilt nur, falls quelle wieder \"packlink\" ist und Packlink nicht antwortet.",
     "zielLand": "DE",
@@ -42,6 +43,7 @@
           "laufzeitTage": 2,
           "abholstation": false,
           "versichertBisCents": 250000,
+          "hoeherversicherung": true,
           "abWarenwertCents": 50001
         },
         {
@@ -77,6 +79,7 @@
           "laufzeitTage": 3,
           "abholstation": false,
           "versichertBisCents": 100000,
+          "hoeherversicherung": true,
           "abWarenwertCents": 50001,
           "bisWarenwertCents": 100000
         },
@@ -96,6 +99,7 @@
           "laufzeitTage": 3,
           "abholstation": false,
           "versichertBisCents": 200000,
+          "hoeherversicherung": true,
           "abWarenwertCents": 100001,
           "bisWarenwertCents": 200000
         },
@@ -115,6 +119,7 @@
           "laufzeitTage": 3,
           "abholstation": false,
           "versichertBisCents": 300000,
+          "hoeherversicherung": true,
           "abWarenwertCents": 200001,
           "bisWarenwertCents": 300000
         },
@@ -134,6 +139,7 @@
           "laufzeitTage": 3,
           "abholstation": false,
           "versichertBisCents": 400000,
+          "hoeherversicherung": true,
           "abWarenwertCents": 300001,
           "bisWarenwertCents": 400000
         },
@@ -153,6 +159,7 @@
           "laufzeitTage": 3,
           "abholstation": false,
           "versichertBisCents": 500000,
+          "hoeherversicherung": true,
           "abWarenwertCents": 400001
         }
       ]

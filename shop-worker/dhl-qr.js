@@ -20,7 +20,7 @@ import { safeText } from "./commerce-core.js";
 import { versandSperre } from "./erstattung-auftrag.js";
 import { ZahlungFehler, zahlungSicherstellen } from "./zahlung.js";
 import { iso3, plzNormalisieren, plzSondergebiet } from "./laender.js";
-import { GROESSEN, VERSAND, zoneFuerLand } from "./versand-config.js";
+import { GROESSEN, VERSAND, hoeherversicherungCents, zoneFuerLand } from "./versand-config.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -201,6 +201,9 @@ export function assertReceiver(receiver, countryCode = "DE") {
 }
 
 // ------------------------------------------------------------------- DHL-API
+
+// Auch fuer Ruecksendeetiketten (ruecksendung.js): derselbe Zugang, dieselbe Fehlerbehandlung.
+export function dhlAnfrage(env, path, optionen = {}) { return dhl(env, path, optionen); }
 
 async function dhl(env, path, { method = "GET", body, accept = "application/json" } = {}) {
   if (!dhlQrReady(env)) throw new DhlQrError("DHL_QR_NICHT_EINGERICHTET", 503);
@@ -455,6 +458,22 @@ function view(mark) {
   };
 }
 
+// Versicherungshoehe eines Produkts der Online-Frankierung in Cent:
+// "PAK05.HVERSI2000.EU" -> 200000, ohne ".HVERSI" -> 0.
+export function produktVersichertCents(produktId) {
+  const m = /\.HVERSI(\d{3,5})(?:\.|$)/i.exec(String(produktId || ""));
+  return m ? Number(m[1]) * 100 : 0;
+}
+
+export async function versicherungPruefen(db, orderId, produkt) {
+  const versand = await db.prepare("SELECT option_id FROM order_versand WHERE order_id=? LIMIT 1").bind(orderId).first().catch(() => null);
+  const noetig = hoeherversicherungCents(versand?.option_id);
+  if (!noetig) return 0;
+  if (produktVersichertCents(produkt) >= noetig) return noetig;
+  throw new DhlQrError("VERSICHERUNG_FEHLT", 409,
+    `Die Kundin hat die Höherversicherung bis ${Math.round(noetig / 100).toLocaleString("de-DE")} € bezahlt – diese Marke wäre nicht versichert.`);
+}
+
 export async function createMark(env, orderId, body = {}) {
   const db = requireDb(env);
   const order = await loadOrder(env, orderId);
@@ -478,6 +497,11 @@ export async function createMark(env, orderId, body = {}) {
   if (!(await listProducts(env, land)).some(p => p.id === produkt)) {
     throw new DhlQrError("PRODUKT_NICHT_FUER_LAND", 409, `${produkt} → ${land}`);
   }
+  // Bezahlte Hoeherversicherung: Die Schnittstelle bucht keine
+  // Transportversicherung dazu (DHL-Doku nennt keine) - nur ein Produkt mit
+  // eingebauter Hoeherversicherung (".HVERSI<Euro>") in passender Hoehe ist
+  // erlaubt. Sonst Marke auf dhl.de mit Versicherung kaufen (Admin-App).
+  await versicherungPruefen(db, order.id, produkt);
   try {
     await zahlungSicherstellen(env, order.id, crypto.randomUUID(), { anlass: "VERSAND" });
   } catch (err) {
@@ -643,17 +667,31 @@ export function warenkorbAusMail(mail = {}) {
   return { cartId: m[1].toUpperCase(), preisCents: preis ? Number(preis[1]) * 100 + Number(preis[2]) : null };
 }
 
+// Abfrage, die vor der Migration der Ruecksende-Tabelle scheitern darf.
+async function ohneFehler(abfrage, ersatz) {
+  try { return await abfrage(); } catch { return ersatz; }
+}
+
 export async function warenkorbZuordnen(env, mail = {}, now = new Date().toISOString()) {
   if (!env?.DB) return { zugeordnet: false, grund: "DATENBANK_FEHLT" };
   const kennung = warenkorbAusMail(mail);
   if (!kennung) return { zugeordnet: false, grund: "KEINE_DHL_MAIL" };
   const db = env.DB;
-  const bekannt = await db.prepare("SELECT id,order_id,state FROM dhl_qr_marken WHERE cart_id=?").bind(kennung.cartId).first();
+  const bekannt = await db.prepare("SELECT id,order_id,state FROM dhl_qr_marken WHERE cart_id=?").bind(kennung.cartId).first()
+    || await ohneFehler(() => db.prepare("SELECT id,order_id,state FROM ruecksende_marken WHERE cart_id=?").bind(kennung.cartId).first(), null);
   if (bekannt) return { zugeordnet: false, grund: "SCHON_ZUGEORDNET", orderId: bekannt.order_id, cartId: kennung.cartId };
   const seit = new Date(Date.parse(now) - 14 * 86_400_000).toISOString();
-  const offene = (await db.prepare(`SELECT id,order_id,price_cents,created_at FROM dhl_qr_marken
-    WHERE cart_id LIKE 'ohne-%' AND state IN ('PREPAID','INPAYMENT') AND created_at>=?
-    ORDER BY created_at ASC`).bind(seit).all()).results || [];
+  // Versandmarken und Ruecksendeetiketten (ruecksendung.js) kommen ueber dieselbe
+  // DHL-Mail - beide sind Kandidaten. Fehlt die Ruecksende-Tabelle noch, nur Versand.
+  const offene = await ohneFehler(async () => (await db.prepare(`SELECT 'versand' AS art,id,order_id,price_cents,created_at FROM dhl_qr_marken
+      WHERE cart_id LIKE 'ohne-%' AND state IN ('PREPAID','INPAYMENT') AND created_at>=?
+    UNION ALL
+    SELECT 'ruecksendung' AS art,id,order_id,price_cents,created_at FROM ruecksende_marken
+      WHERE cart_id LIKE 'ohne-%' AND state IN ('PREPAID','INPAYMENT') AND created_at>=?
+    ORDER BY created_at ASC`).bind(seit, seit).all()).results || [], null)
+    || (await db.prepare(`SELECT 'versand' AS art,id,order_id,price_cents,created_at FROM dhl_qr_marken
+      WHERE cart_id LIKE 'ohne-%' AND state IN ('PREPAID','INPAYMENT') AND created_at>=?
+      ORDER BY created_at ASC`).bind(seit).all()).results || [];
   if (!offene.length) return { zugeordnet: false, grund: "KEINE_OFFENE_MARKE", cartId: kennung.cartId };
   let wahl = offene;
   if (offene.length > 1 && kennung.preisCents) {
@@ -661,11 +699,23 @@ export async function warenkorbZuordnen(env, mail = {}, now = new Date().toISOSt
     if (passend.length) wahl = passend;
   }
   const marke = wahl[0];
-  const r = await db.prepare("UPDATE dhl_qr_marken SET cart_id=?,updated_at=? WHERE id=? AND cart_id LIKE 'ohne-%'").bind(kennung.cartId, now, marke.id).run();
+  const tabelle = marke.art === "ruecksendung" ? "ruecksende_marken" : "dhl_qr_marken";
+  const r = await db.prepare(`UPDATE ${tabelle} SET cart_id=?,updated_at=? WHERE id=? AND cart_id LIKE 'ohne-%'`).bind(kennung.cartId, now, marke.id).run();
   if (!r?.meta?.changes) return { zugeordnet: false, grund: "MARKE_GEAENDERT", cartId: kennung.cartId };
   await db.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
     VALUES (?,'SYSTEM','order',?,'DHL_WARENKORB_AUS_MAIL',NULL,?,?)`)
-    .bind(crypto.randomUUID(), String(marke.order_id), JSON.stringify({ cartId: kennung.cartId, kandidaten: offene.length }), now).run().catch(() => {});
+    .bind(crypto.randomUUID(), String(marke.order_id), JSON.stringify({ cartId: kennung.cartId, kandidaten: offene.length, art: marke.art }), now).run().catch(() => {});
+  if (marke.art === "ruecksendung") {
+    // Ruecksendung: bezahlt? QR holen, Mail an die Kundin (ruecksendung.js).
+    let stand = null;
+    try {
+      const { ruecksendungAktualisieren } = await import("./ruecksendung.js");
+      stand = await ruecksendungAktualisieren(env, marke.id, now);
+    } catch (err) {
+      console.error(JSON.stringify({ level: "warn", event: "ruecksendung_refresh_after_mail_failed", orderId: String(marke.order_id), code: safeText(err?.code || err?.message || "", 80) }));
+    }
+    return { zugeordnet: true, art: "ruecksendung", orderId: marke.order_id, cartId: kennung.cartId, state: stand?.state || null };
+  }
   // Direkt nachsehen: meist ist die Marke in dem Moment schon bezahlt.
   let marke2 = null;
   try { marke2 = await refreshMark(env, marke.order_id); } catch (err) {
@@ -742,6 +792,10 @@ function headers(origin) {
   if (origin && ADMIN_ORIGINS.includes(origin)) out["Access-Control-Allow-Origin"] = origin;
   return out;
 }
+
+export function adminKopf(origin) { return headers(origin); }
+export function adminHerkunftErlaubt(origin) { return !origin || ADMIN_ORIGINS.includes(origin); }
+export async function adminTokenGleich(left, right) { return tokenEquals(left, right); }
 
 async function tokenEquals(left, right) {
   if (!left || !right) return false;

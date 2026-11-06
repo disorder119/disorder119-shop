@@ -13,14 +13,51 @@
 // setzt die Bestellung auf SHIPPED (Versandmail mit Sendungsnummer geht wie
 // beim Klick im Admin), "zugestellt" auf DELIVERED - ohne Mail, die Kundschaft
 // weiss das selbst (Inhaber). Status im Kundenkonto zeigt beides.
+//
+// Sendungsverlauf im Kundenkonto (Inhaber 05.11.2026): die Stationen der
+// letzten Abfrage stehen in sendungs_abfragen.ereignisse_json. DHL-Bedingungen
+// (developer.dhl.com/api-reference/shipment-tracking): nur fuer die eigene
+// Kundschaft, mit dem Vermerk "Delivered by Deutsche Post DHL Group", ohne
+// Werbung daneben, und 30 Tage nach Zustellung loeschen (verlaufAufraeumen).
+// Der kostenlose Zugang ist laut DHL fuer die Entwicklung gedacht; mit
+// hoeherem Kontingent ("Request Upgrade") laesst sich der Abstand ueber
+// DHL_TRACKING_ABSTAND_MIN verkuerzen.
 
 import { safeText } from "./commerce-core.js";
 
 export const TRACKING_URL = "https://api-eu.dhl.com/track/shipments";
 export const ABFRAGE_ABSTAND_MS = 3 * 3_600_000;
 export const ABFRAGEN_JE_LAUF = 6;
+export const VERLAUF_LOESCHEN_NACH_ZUSTELLUNG_MS = 30 * 86_400_000;
+// Nie zugestellt (Ruecksendung, verloren): 60 Tage nach der letzten Abfrage.
+export const VERLAUF_LOESCHEN_OHNE_ZUSTELLUNG_MS = 60 * 86_400_000;
+export const VERLAUF_MAX = 25;
 const HOECHSTALTER_MS = 45 * 86_400_000;
 const PAUSE_ZWISCHEN_ABFRAGEN_MS = 5_200;
+
+// Abstand je Sendung zwischen zwei Abfragen: Standard 3 Stunden, per
+// DHL_TRACKING_ABSTAND_MIN zwischen 15 Minuten und einem Tag.
+export function abfrageAbstandMs(env = {}) {
+  const min = Number.parseInt(String(env?.DHL_TRACKING_ABSTAND_MIN ?? ""), 10);
+  if (!Number.isFinite(min)) return ABFRAGE_ABSTAND_MS;
+  return Math.min(1440, Math.max(15, min)) * 60_000;
+}
+
+// Stationen der Sendung, neueste zuerst: { zeit, text, ort }.
+export function verlaufAus(antwort = {}) {
+  const sendung = Array.isArray(antwort?.shipments) ? antwort.shipments[0] : null;
+  const ereignisse = Array.isArray(sendung?.events) ? sendung.events : [];
+  const out = [];
+  for (const e of ereignisse) {
+    const t = Date.parse(String(e?.timestamp || ""));
+    const text = safeText(e?.description || e?.status || "", 200).replace(/\s+/g, " ").trim();
+    if (!Number.isFinite(t) || !text) continue;
+    const adresse = e?.location?.address || {};
+    const ort = safeText(adresse.addressLocality || "", 80).replace(/\s+/g, " ").trim();
+    out.push({ zeit: new Date(t).toISOString(), text, ...(ort ? { ort } : {}) });
+  }
+  return out.sort((a, b) => b.zeit.localeCompare(a.zeit)).slice(0, VERLAUF_MAX);
+}
 
 export function trackingReady(env = {}) {
   return Boolean(trackingKey(env));
@@ -67,15 +104,28 @@ export async function sendungAbfragen(env, trackingNumber, { plz = "", fetchImpl
     signal: AbortSignal.timeout(12_000),
     headers: { "DHL-API-Key": trackingKey(env), Accept: "application/json" },
   });
-  if (res.status === 404) return { zustand: "OFFEN", code: "404", text: "DHL kennt die Sendung noch nicht" };
+  if (res.status === 404) return { zustand: "OFFEN", code: "404", text: "DHL kennt die Sendung noch nicht", ereignisse: [] };
   if (res.status === 429) { const e = new Error("DHL_TRACKING_LIMIT"); e.code = "LIMIT"; throw e; }
   if (!res.ok) { const e = new Error(`DHL_TRACKING_HTTP_${res.status}`); e.code = `HTTP_${res.status}`; throw e; }
-  return zustandAusAntwort(await res.json());
+  const antwort = await res.json();
+  return { ...zustandAusAntwort(antwort), ereignisse: verlaufAus(antwort) };
 }
 
-async function offeneSendungen(db, now) {
+// DHL-Bedingungen: Tracking-Daten 30 Tage nach Zustellung loeschen. Uebrig
+// bleibt nur der eigene Stand (zustand, Zeitpunkte) fuer den Cron.
+export async function verlaufAufraeumen(db, now = Date.now()) {
+  const nachZustellung = new Date(now - VERLAUF_LOESCHEN_NACH_ZUSTELLUNG_MS).toISOString();
+  const ohneZustellung = new Date(now - VERLAUF_LOESCHEN_OHNE_ZUSTELLUNG_MS).toISOString();
+  const r = await db.prepare(`UPDATE sendungs_abfragen SET ereignisse_json=NULL,status_text=NULL,status_code=NULL
+    WHERE (ereignisse_json IS NOT NULL OR status_text IS NOT NULL OR status_code IS NOT NULL)
+      AND ((zustand='ZUGESTELLT' AND COALESCE(zugestellt_am,geaendert_am,zuletzt_am)<?)
+        OR (zustand<>'ZUGESTELLT' AND zuletzt_am<?))`).bind(nachZustellung, ohneZustellung).run();
+  return Number(r?.meta?.changes || 0);
+}
+
+async function offeneSendungen(db, now, abstandMs = ABFRAGE_ABSTAND_MS) {
   const seit = new Date(now - HOECHSTALTER_MS).toISOString();
-  const frist = new Date(now - ABFRAGE_ABSTAND_MS).toISOString();
+  const frist = new Date(now - abstandMs).toISOString();
   return (await db.prepare(`SELECT s.id AS shipment_id,s.order_id,s.tracking_number,s.status AS shipment_status,o.status AS order_status,
       c.postal_code,a.zustand AS letzter_zustand,a.zuletzt_am
     FROM shipments s
@@ -92,24 +142,36 @@ async function offeneSendungen(db, now) {
 async function standMerken(db, sendung, ergebnis, now, fehler = null) {
   const stamp = new Date(now).toISOString();
   const geaendert = ergebnis && ergebnis.zustand !== sendung.letzter_zustand;
-  await db.prepare(`INSERT INTO sendungs_abfragen (shipment_id,tracking_number,zustand,status_code,status_text,abfragen,zuletzt_am,geaendert_am,fehler)
-    VALUES (?,?,?,?,?,1,?,?,?)
+  const verlauf = Array.isArray(ergebnis?.ereignisse) && ergebnis.ereignisse.length ? ergebnis.ereignisse.slice(0, VERLAUF_MAX) : null;
+  // Zugestellt am: Zeit des juengsten DHL-Ereignisses, sonst jetzt.
+  const zugestellt = ergebnis?.zustand === "ZUGESTELLT" ? (verlauf?.[0]?.zeit || stamp) : null;
+  await db.prepare(`INSERT INTO sendungs_abfragen (shipment_id,tracking_number,zustand,status_code,status_text,abfragen,zuletzt_am,geaendert_am,fehler,ereignisse_json,zugestellt_am)
+    VALUES (?,?,?,?,?,1,?,?,?,?,?)
     ON CONFLICT(shipment_id) DO UPDATE SET zustand=excluded.zustand,status_code=excluded.status_code,status_text=excluded.status_text,
       abfragen=sendungs_abfragen.abfragen+1,zuletzt_am=excluded.zuletzt_am,
       geaendert_am=CASE WHEN sendungs_abfragen.zustand<>excluded.zustand THEN excluded.zuletzt_am ELSE sendungs_abfragen.geaendert_am END,
-      fehler=excluded.fehler`)
+      fehler=excluded.fehler,
+      ereignisse_json=COALESCE(excluded.ereignisse_json,sendungs_abfragen.ereignisse_json),
+      zugestellt_am=COALESCE(sendungs_abfragen.zugestellt_am,excluded.zugestellt_am)`)
     .bind(sendung.shipment_id, sendung.tracking_number, ergebnis?.zustand || sendung.letzter_zustand || "UNBEKANNT",
-      ergebnis?.code || null, ergebnis?.text || null, stamp, geaendert ? stamp : null, fehler ? safeText(fehler, 160) : null).run();
+      ergebnis?.code || null, ergebnis?.text || null, stamp, geaendert ? stamp : null, fehler ? safeText(fehler, 160) : null,
+      verlauf ? JSON.stringify(verlauf) : null, zugestellt).run();
 }
 
 // Cron: offene Sendungen bei DHL nachsehen und Bestellstatus nachziehen.
 // `statusSetzen(orderId, status)` ist admin-api.orderStatusAutomatisch; so
 // bleibt dieses Modul frei von Mail- und Zahlungslogik.
 export async function sendungenVerfolgen(env, reqId = crypto.randomUUID(), now = Date.now(), { statusSetzen, fetchImpl = fetch, warten = null } = {}) {
-  if (!env?.DB || !trackingReady(env) || typeof statusSetzen !== "function") return { uebersprungen: true };
+  if (!env?.DB) return { uebersprungen: true };
+  // Loeschpflicht gilt auch, wenn die Abfrage gerade nicht eingerichtet ist.
+  const geloescht = await verlaufAufraeumen(env.DB, now).catch(err => {
+    console.error(JSON.stringify({ level: "error", event: "dhl_tracking_cleanup_failed", requestId: reqId, message: safeText(err?.message || "", 160) }));
+    return 0;
+  });
+  if (!trackingReady(env) || typeof statusSetzen !== "function") return { uebersprungen: true, geloescht };
   const db = env.DB;
-  const ergebnis = { abgefragt: 0, versendet: [], zugestellt: [], fehler: [] };
-  const sendungen = await offeneSendungen(db, now);
+  const ergebnis = { abgefragt: 0, versendet: [], zugestellt: [], fehler: [], geloescht };
+  const sendungen = await offeneSendungen(db, now, abfrageAbstandMs(env));
   for (const [i, sendung] of sendungen.entries()) {
     if (i > 0) await (warten || (ms => new Promise(r => setTimeout(r, ms))))(PAUSE_ZWISCHEN_ABFRAGEN_MS);
     let stand;

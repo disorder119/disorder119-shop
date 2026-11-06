@@ -1254,7 +1254,7 @@
 
   .cart-note {
     font-size: 0.7rem;
-    color: var(--text-faint);
+    color: var(--text-muted); /* --text-faint hatte nur 2,9:1 Kontrast */
     line-height: 1.5;
   }
 
@@ -3796,4 +3796,12 @@ img[data-d119-image-protected] {
 @media (max-width: 759px) {
   .footer__nav button, .footer__nav a, .footer__cart,
   .footer__legal button, .footer__legal a { min-height: 32px; display: inline-flex; align-items: center; }
+}
+
+/* Bis app.js die ersten 12 Kacheln gezeichnet hat, zeigt das Server-Raster nur
+   wenige. Platz fuer eine Bildschirmhoehe reservieren, damit "Weitere laden"
+   und der Fussbereich nicht sichtbar nach unten springen - vor allem, wenn der
+   Shop beim Zurueckkommen die Scrollposition wiederherstellt (CLS 0,73 -> 0,01). */
+.grid[data-ssr-initial="1"] {
+  min-height: 100vh;
 }

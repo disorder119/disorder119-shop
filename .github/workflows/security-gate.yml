@@ -79,7 +79,7 @@ jobs:
           node --check assets/kasse.js
           node --check shop-worker/abholorte.js
           node --check shop-worker/karte.js
-          node --test shop-worker/packlink.test.mjs shop-worker/versand.test.mjs shop-worker/kasse.test.mjs shop-worker/versand-privat.test.mjs shop-worker/karte.test.mjs
+          node --test shop-worker/packlink.test.mjs shop-worker/versand.test.mjs shop-worker/kasse.test.mjs shop-worker/versand-privat.test.mjs shop-worker/karte.test.mjs shop-worker/versicherung.test.mjs shop-worker/dhl-tracking.test.mjs shop-worker/ruecksendung.test.mjs shop-worker/abholorte-osm.test.mjs
 
       - name: Live-Besucher (Statistik und Telegram) pruefen
         run: |

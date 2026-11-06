@@ -163,7 +163,7 @@ const MAIL_SCHRIFT = "'Helvetica Neue',Helvetica,Arial,sans-serif";
 // Rahmen der Kundenmails: Tabellen und Inline-Styles, weil Outlook und Gmail
 // kein modernes CSS koennen. `vorschau` ist die Zeile, die das Postfach neben
 // dem Betreff zeigt.
-function kundenmailRahmen({ titel, eyebrow, kopf, inhalt, vorschau, sprache = "de", fussVerkaeufer = true }) {
+export function kundenmailRahmen({ titel, eyebrow, kopf, inhalt, vorschau, sprache = "de", fussVerkaeufer = true }) {
   const F = MAIL_FARBE;
   const l = mailSprache(sprache);
   return `<!DOCTYPE html>
@@ -216,7 +216,7 @@ function mailAbschnitt(ueberschrift, inhalt, rand = true) {
   </td></tr>`;
 }
 
-function mailKnopf(href, label) {
+export function mailKnopf(href, label) {
   const F = MAIL_FARBE;
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr><td style="background:${F.text};">` +
     `<a href="${escapeHtml(href)}" style="display:inline-block;padding:15px 28px;font-family:${MAIL_SCHRIFT};font-size:13px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${F.grund};text-decoration:none;">${escapeHtml(label)}</a>` +

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ABFRAGE_ABSTAND_MS, sendungenVerfolgen, zustandAusAntwort } from "./dhl-tracking.js";
+import { ABFRAGE_ABSTAND_MS, abfrageAbstandMs, sendungenVerfolgen, verlaufAufraeumen, zustandAusAntwort } from "./dhl-tracking.js";
+import { listOrders } from "./customer-account.js";
 import { orderStatusAutomatisch } from "./admin-api.js";
 import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 
@@ -130,4 +131,55 @@ test("Unbekannte Sendung (404), Limit (429) und fehlender Schluessel", async () 
 
   const ohne = await sendungenVerfolgen({ DB }, "req", Date.now(), { statusSetzen: () => assert.fail("kein Status") });
   assert.equal(ohne.uebersprungen, true);
+});
+
+test("Sendungsverlauf: Stationen gespeichert, im Kundenkonto sichtbar, 30 Tage nach Zustellung geloescht", async () => {
+  const DB = seed();
+  const env = { DB, DHL_PRIVAT_API_KEY: "k" };
+  const t0 = Date.parse("2026-11-05T08:00:00Z");
+  const stationen = [
+    { timestamp: "2026-11-04T18:02:00+01:00", statusCode: "transit", description: "Die Sendung wurde im Start-Paketzentrum bearbeitet.", location: { address: { addressLocality: "Aschaffenburg" } } },
+    { timestamp: "2026-11-04T09:15:00+01:00", statusCode: "pre-transit", description: "Die Sendung wurde elektronisch angekündigt." },
+    { timestamp: "kaputt", description: "ohne Zeit" },
+  ];
+  const dhl = fakeTracking([antwort("transit", "Die Sendung wurde im Start-Paketzentrum bearbeitet.", stationen)]);
+  await sendungenVerfolgen(env, "req", t0, { statusSetzen: async () => {}, fetchImpl: dhl.fetchImpl, warten: async () => {} });
+  const zeile = DB.raw.prepare("SELECT ereignisse_json,zugestellt_am FROM sendungs_abfragen WHERE shipment_id='s1'").get();
+  const verlauf = JSON.parse(zeile.ereignisse_json);
+  assert.equal(verlauf.length, 2, "ohne gueltige Zeit kein Eintrag");
+  assert.deepEqual(verlauf[0], { zeit: "2026-11-04T17:02:00.000Z", text: "Die Sendung wurde im Start-Paketzentrum bearbeitet.", ort: "Aschaffenburg" });
+  assert.equal(zeile.zugestellt_am, null);
+
+  // Kundenkonto der Bestellung: Verlauf neben dem DHL-Link.
+  DB.raw.prepare("INSERT INTO customers (id,email_normalized,status,created_at) VALUES ('c1','kundin@example.com','ACTIVE',?)").run(new Date(t0).toISOString());
+  DB.raw.prepare("UPDATE commerce_orders SET customer_id='c1' WHERE id='o1'").run();
+  const [bestellung] = await listOrders(env, "c1");
+  assert.equal(bestellung.shipment.verlauf.length, 2);
+  assert.equal(bestellung.shipment.verlauf[0].ort, "Aschaffenburg");
+  assert.equal(bestellung.shipment.verlaufStand, new Date(t0).toISOString());
+  assert.equal((await listOrders(env, "andere-kundin")).length, 0, "nur fuer die eigene Kundin");
+
+  // Zugestellt: Zeitpunkt aus dem juengsten Ereignis.
+  const t1 = t0 + ABFRAGE_ABSTAND_MS + 1000;
+  const zu = fakeTracking([antwort("delivered", "Die Sendung wurde erfolgreich zugestellt.", [{ timestamp: "2026-11-05T12:30:00Z", statusCode: "delivered", description: "Die Sendung wurde erfolgreich zugestellt." }, ...stationen])]);
+  await sendungenVerfolgen(env, "req", t1, { statusSetzen: async () => {}, fetchImpl: zu.fetchImpl, warten: async () => {} });
+  assert.equal(DB.raw.prepare("SELECT zugestellt_am FROM sendungs_abfragen WHERE shipment_id='s1'").get().zugestellt_am, "2026-11-05T12:30:00.000Z");
+
+  // 29 Tage spaeter bleibt alles, nach 30 Tagen ist der DHL-Verlauf weg - der eigene Stand bleibt.
+  assert.equal(await verlaufAufraeumen(DB, Date.parse("2026-12-04T12:00:00Z")), 0);
+  assert.equal(await verlaufAufraeumen(DB, Date.parse("2026-12-05T12:31:00Z")), 1);
+  const danach = DB.raw.prepare("SELECT zustand,ereignisse_json,status_text,status_code,zugestellt_am FROM sendungs_abfragen WHERE shipment_id='s1'").get();
+  assert.equal(danach.zustand, "ZUGESTELLT");
+  assert.equal(danach.ereignisse_json, null);
+  assert.equal(danach.status_text, null);
+  assert.equal(danach.status_code, null);
+  assert.equal((await listOrders(env, "c1"))[0].shipment.verlauf, undefined, "im Konto nur noch der Link");
+});
+
+test("Abfrageabstand: Standard 3 Stunden, per DHL_TRACKING_ABSTAND_MIN 15 Minuten bis 1 Tag", () => {
+  assert.equal(abfrageAbstandMs({}), ABFRAGE_ABSTAND_MS);
+  assert.equal(abfrageAbstandMs({ DHL_TRACKING_ABSTAND_MIN: "60" }), 3_600_000);
+  assert.equal(abfrageAbstandMs({ DHL_TRACKING_ABSTAND_MIN: "1" }), 15 * 60_000);
+  assert.equal(abfrageAbstandMs({ DHL_TRACKING_ABSTAND_MIN: "99999" }), 1440 * 60_000);
+  assert.equal(abfrageAbstandMs({ DHL_TRACKING_ABSTAND_MIN: "viel" }), ABFRAGE_ABSTAND_MS);
 });

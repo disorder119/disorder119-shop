@@ -33,6 +33,8 @@
       versand: "Versand",
       gesamt: "Gesamt",
       sendung: "Sendung verfolgen",
+      verlauf: "Sendungsverlauf",
+      verlaufStand: "Stand",
       adresse: "Lieferadresse",
       adresseSpeichern: "Adresse speichern",
       adresseGespeichert: "Adresse gespeichert.",
@@ -81,6 +83,8 @@
       versand: "Shipping",
       gesamt: "Total",
       sendung: "Track parcel",
+      verlauf: "Tracking history",
+      verlaufStand: "As of",
       adresse: "Delivery address",
       adresseSpeichern: "Save address",
       adresseGespeichert: "Address saved.",
@@ -128,6 +132,8 @@
       versand: "Livraison",
       gesamt: "Total",
       sendung: "Suivre le colis",
+      verlauf: "Suivi du colis",
+      verlaufStand: "Mis à jour",
       adresse: "Adresse de livraison",
       adresseSpeichern: "Enregistrer l'adresse",
       adresseGespeichert: "Adresse enregistrée.",
@@ -223,6 +229,42 @@
     if (isNaN(d.getTime())) return "";
     return d.toLocaleDateString(LANG === "de" ? "de-DE" : LANG === "fr" ? "fr-FR" : "en-GB",
       { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+
+  function zeitpunkt(iso) {
+    var d = new Date(String(iso || ""));
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleString(LANG === "de" ? "de-DE" : LANG === "fr" ? "fr-FR" : "en-GB",
+      { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  }
+
+  // Sendungsverlauf von DHL (neueste Station oben). DHL-Bedingungen: der
+  // Vermerk "Delivered by Deutsche Post DHL Group" steht dabei, und in diesem
+  // Bereich steht keine Werbung.
+  function verlaufBauen(sendung) {
+    var box = document.createElement("details");
+    box.className = "bestellung__verlauf";
+    var kopf = document.createElement("summary");
+    kopf.textContent = t.verlauf + (sendung.verlaufStand ? " · " + t.verlaufStand + " " + zeitpunkt(sendung.verlaufStand) : "");
+    box.appendChild(kopf);
+    var liste = document.createElement("ol");
+    sendung.verlauf.forEach(function (e) {
+      var zeile = document.createElement("li");
+      var wann = document.createElement("time");
+      wann.dateTime = e.zeit;
+      wann.textContent = zeitpunkt(e.zeit);
+      var was = document.createElement("span");
+      was.textContent = e.text + (e.ort ? " – " + e.ort : "");
+      zeile.appendChild(wann);
+      zeile.appendChild(was);
+      liste.appendChild(zeile);
+    });
+    box.appendChild(liste);
+    var vermerk = document.createElement("p");
+    vermerk.className = "bestellung__dhl";
+    vermerk.textContent = "Delivered by Deutsche Post DHL Group";
+    box.appendChild(vermerk);
+    return box;
   }
 
   function meldung(art, inhalt) {
@@ -399,6 +441,10 @@
       summe.appendChild(dd);
     });
     karte.appendChild(summe);
+
+    if (bestellung.shipment && Array.isArray(bestellung.shipment.verlauf) && bestellung.shipment.verlauf.length) {
+      karte.appendChild(verlaufBauen(bestellung.shipment));
+    }
 
     var fuss = document.createElement("div");
     fuss.className = "bestellung__fuss";

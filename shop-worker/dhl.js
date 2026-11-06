@@ -29,7 +29,7 @@ import { safeText } from "./commerce-core.js";
 import { versandSperre } from "./erstattung-auftrag.js";
 import { ZahlungFehler, zahlungSicherstellen } from "./zahlung.js";
 import { iso3, plzNormalisieren } from "./laender.js";
-import { zoneFuerLand } from "./versand-config.js";
+import { hoeherversicherungCents, zoneFuerLand } from "./versand-config.js";
 import { dhlText, splitStreet } from "./dhl-qr.js";
 
 const SANDBOX_BASE = "https://api-sandbox.dhl.com/parcel/de/shipping/v2";
@@ -196,6 +196,12 @@ export function buildShipmentRequest(env, bestellung = {}, kontakt = {}, optione
   const consignee = empfaengerAus(kontakt);
   const gewicht = weightGrams(optionen.weightG, optionen.fallbackWeightG || env.DHL_DEFAULT_WEIGHT_G);
   const produkt = produktFuer(land, { produkt: optionen.produkt, gewichtG: gewicht });
+  // Bezahlte Hoeherversicherung geht als Zusatzleistung mit (Parcel DE
+  // Shipping v2: services.additionalInsurance, DHL Paket und Paket
+  // International, hoechstens 25.000 EUR). Das Kleinpaket kennt keine.
+  const versichertCents = Number.isSafeInteger(optionen.versichertCents) && optionen.versichertCents > 0 ? optionen.versichertCents : 0;
+  if (versichertCents && produkt === "V62KP") throw new DhlError("VERSICHERUNG_NICHT_MIT_KLEINPAKET", 409);
+  if (versichertCents > 2_500_000) throw new DhlError("VERSICHERUNG_ZU_HOCH", 409);
   return {
     profile: safeText(env.DHL_PROFILE || "STANDARD_GRUPPENPROFIL", 40),
     shipments: [{
@@ -207,6 +213,7 @@ export function buildShipmentRequest(env, bestellung = {}, kontakt = {}, optione
       details: {
         weight: { uom: "g", value: gewicht },
       },
+      ...(versichertCents ? { services: { additionalInsurance: { currency: "EUR", value: versichertCents / 100 } } } : {}),
     }],
   };
 }
@@ -303,7 +310,7 @@ export async function cancelLabel(env, shipmentNo) {
 async function bestellungLesen(env, orderId) {
   const bestellung = await env.DB.prepare(`SELECT o.id,o.order_number,o.status,
       c.recipient_name,c.given_name,c.surname,c.address_line1,c.address_line2,c.postal_code,c.city,c.country_code,
-      v.paket AS versand_paket,v.zustellart AS versand_zustellart
+      v.paket AS versand_paket,v.zustellart AS versand_zustellart,v.option_id AS versand_option
     FROM commerce_orders o
     LEFT JOIN order_contact_snapshots c ON c.order_id=o.id
     LEFT JOIN order_versand v ON v.order_id=o.id
@@ -382,7 +389,8 @@ export async function createLabelForOrder(env, orderId, optionen = {}) {
   // Anfrage zuerst bauen: Adresse, Produkt und Abrechnungsnummer muessen
   // stimmen, bevor irgendetwas eingezogen wird.
   const fallbackWeightG = KLASSEN_GEWICHT_G[String(bestellung.versand_paket || "")] || env.DHL_DEFAULT_WEIGHT_G;
-  const anfrage = buildShipmentRequest(env, bestellung, bestellung, { ...optionen, fallbackWeightG });
+  const versichertCents = hoeherversicherungCents(bestellung.versand_option);
+  const anfrage = buildShipmentRequest(env, bestellung, bestellung, { ...optionen, fallbackWeightG, versichertCents });
   const sendung = anfrage.shipments[0];
 
   // Keine Marke, solange ein Storno oder Widerruf vor dem Versand laeuft - und
