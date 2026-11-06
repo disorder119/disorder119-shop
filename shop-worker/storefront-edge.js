@@ -85,7 +85,10 @@ export function seitenaufruf(request,url,status) {
 // Shop-Workers (Rechenzentrum oder Privatanschluss); dort nicht gespeichert.
 function netzFelder(request) {
   const {asn,name}=netzVon(request);
-  return {asn:asn||0,netz:name};
+  // ch: Chromium-Client-Hints dabei - daran erkennt besucher.js (simuliert)
+  // iPhone-Emulationen am Rechner. Nur gesetzt, wenn vorhanden.
+  const ch=/Chromium|Google Chrome|HeadlessChrome|Microsoft Edge/i.test(request.headers.get('Sec-CH-UA')||'');
+  return {asn:asn||0,netz:name,...(ch?{ch:1}:{})};
 }
 
 // Seitenaufrufe ohne Abruf der Seite beim Server (assets/zurueck.js):
