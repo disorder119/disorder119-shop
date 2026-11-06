@@ -146,6 +146,8 @@
         var img = plate.querySelector(".plate__frame img");
         var fotos = it && (it.gallery || []).filter(Boolean);
         if (!it || !img || !fotos || fotos.length < 2) return;
+        if (kwGeste && kwGeste.phase) return; // Finger wischt schon (4) - keine Slideshow dazwischen
+        kwZurueck(plate);
         ssAktiv = true; ssPlate = plate; ssOrig = { src: img.src, srcset: img.getAttribute("srcset") };
         plate.classList.add("ui-slideshow"); vibrieren(10);
         var zaehler = document.createElement("span"); zaehler.className = "ui-slideshow__zaehler"; plate.querySelector(".plate__frame").appendChild(zaehler);
@@ -185,9 +187,239 @@
     });
     ["pointerup", "pointercancel"].forEach(function (ev) { grid.addEventListener(ev, function (e) { if (e.pointerType === "mouse") return; clearTimeout(ssTimer); setTimeout(ssEnde, 120); }); });
     grid.addEventListener("pointermove", function (e) { if (!ssPlate && e.pointerType === "touch") clearTimeout(ssTimer); });
-    grid.addEventListener("click", function (e) { if (ssAktiv && e.pointerType === "touch") { e.preventDefault(); } ssAktiv = false; }, true);
+    // Klick nach Slideshow (hier) bzw. nach Wischen (4) schlucken. Auf window in der Capture-Phase:
+    // pwa-runtime.js faengt Kachel-Klicks schon auf document ab und navigiert selbst (location.href),
+    // ein preventDefault erst am #grid kam zu spaet - Loslassen nach der Slideshow oeffnete das Teil.
+    window.addEventListener("click", function (e) {
+      var t = e.target;
+      if (!t || !t.closest || !grid.contains(t)) return;
+      if ((ssAktiv && e.pointerType === "touch") || (Date.now() - kwZuletzt < 400 && t.closest(".plate__frame"))) {
+        e.preventDefault(); e.stopPropagation();
+      }
+      ssAktiv = false;
+    }, true);
     grid.addEventListener("contextmenu", function (e) { if (ssPlate) e.preventDefault(); });
     grid.addEventListener("dragstart", function (e) { if (ssPlate) e.preventDefault(); });
+
+    /* 4 · Fotos wischen auf der Kachel (Inhaber 06.11.2026): Finger nach links/rechts = nächstes/voriges
+       Foto des Teils, ohne die Seite zu öffnen. Unten steht kurz „3 / 8“. Nach dem letzten Foto kommt
+       wieder das erste (rückwärts genauso). Tippen öffnet das Teil wie bisher, senkrecht scrollt die Seite.
+       Am Handy die Vorschaubilder (thumbs/, wie das Titelbild der Kachel), auf breiteren Touch-Geräten
+       danach das Original. Maus/PC unverändert (Hover-Foto, Slideshow nach 3 s). */
+    var kwStil = document.createElement("style");
+    kwStil.textContent =
+      "#grid .plate__frame{touch-action:pan-y}" +
+      ".kw{position:absolute;inset:0;overflow:hidden;background:inherit;display:none;pointer-events:none}" +
+      ".kw.is-an{display:block}" +
+      ".kw__bahn{position:absolute;inset:0;will-change:transform;transform:translate3d(0,0,0)}" +
+      ".kw__platz{position:absolute;top:0;bottom:0;width:100%}" +
+      ".plate__frame .kw__platz img{transform:none!important;transition:none!important;-webkit-user-drag:none;-webkit-user-select:none;user-select:none}" +
+      ".kw__zahl{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);background:rgba(0,0,0,.62);color:#fff;" +
+      "font:700 11px/1 system-ui,sans-serif;letter-spacing:.04em;padding:5px 9px;border-radius:999px;pointer-events:none;" +
+      "opacity:0;transition:opacity .25s;white-space:nowrap}" +
+      ".kw__zahl.is-an{opacity:1}";
+    document.head.appendChild(kwStil);
+    var kwGeste = null, kwZuletzt = 0;
+    var kwKlein = window.matchMedia("(max-width: 600px)");
+    var kwRuhig = window.matchMedia("(prefers-reduced-motion: reduce)");
+    function kwMod(i, n) { return ((i % n) + n) % n; }
+    function kwPfad(p) { return "/" + String(p).replace(/^\/+/, ""); }
+    function kwVorschau(p) {
+      var roh = kwPfad(p), i = roh.lastIndexOf("/");
+      return roh.slice(0, i) + "/thumbs/" + roh.slice(i + 1);
+    }
+    function kwFotos(plate) {
+      var s = plate._kw || (plate._kw = { i: 0 });
+      if (!s.laden) {
+        s.laden = katalog(true).then(function (k) {
+          var it = teilZu(k, slugAus(plate.getAttribute("href")));
+          s.fotos = it ? (it.gallery || []).filter(Boolean) : [];
+          return s.fotos;
+        });
+      }
+      return s.laden;
+    }
+    function kwVorladen(s, i) {
+      var n = s.fotos ? s.fotos.length : 0;
+      if (n < 2 || kwMod(i, n) === 0) return;
+      var v = new Image(); v.decoding = "async"; v.src = kwVorschau(s.fotos[kwMod(i, n)]);
+    }
+    function kwBild(img, s, i) {
+      img._i = i; img.onerror = null;
+      if (i === 0 || !s.fotos || !s.fotos.length) {
+        // Erstes Foto = das Kachelbild. Noch nicht geladen (currentSrc leer): am Handy dessen Vorschaubild.
+        var o = s.orig;
+        img.src = o && o.currentSrc ? o.currentSrc : (kwKlein.matches && s.fotos && s.fotos[0] ? kwVorschau(s.fotos[0]) : (o ? o.src : ""));
+        return;
+      }
+      var gross = kwPfad(s.fotos[i]);
+      img.onerror = function () { img.onerror = null; if (img._i === i) img.src = gross; };
+      img.src = kwVorschau(s.fotos[i]);
+      if (!kwKlein.matches) {
+        var v = new Image();
+        v.onload = function () { if (img._i === i) { img.onerror = null; img.src = gross; } };
+        v.src = gross;
+      }
+    }
+    function kwPlaetze(s) { s.reihe[0].style.left = "-100%"; s.reihe[1].style.left = "0"; s.reihe[2].style.left = "100%"; }
+    function kwFuellen(s) {
+      var n = s.fotos ? s.fotos.length : 0;
+      kwBild(s.reihe[1].firstChild, s, s.i);
+      if (n > 1) {
+        kwBild(s.reihe[0].firstChild, s, kwMod(s.i - 1, n));
+        kwBild(s.reihe[2].firstChild, s, kwMod(s.i + 1, n));
+        s.gefuellt = true;
+      }
+    }
+    function kwZahl(s, halten) {
+      var n = s.fotos ? s.fotos.length : 0;
+      clearTimeout(s.zahlT);
+      if (n < 2) { s.zahl.classList.remove("is-an"); return; }
+      s.zahl.textContent = (s.i + 1) + " / " + n;
+      s.zahl.classList.add("is-an");
+      if (!halten) s.zahlT = setTimeout(function () { s.zahl.classList.remove("is-an"); }, 1500);
+    }
+    // Overlay direkt hinter <picture> (ohne z-index): Verkauft-Balken o. Ä. bleiben darüber.
+    function kwAn(plate, frame, still) {
+      var s = plate._kw || (plate._kw = { i: 0 });
+      if (!s.el || !frame.contains(s.el)) {
+        s.orig = frame.querySelector("img");
+        s.el = document.createElement("div"); s.el.className = "kw"; s.el.setAttribute("aria-hidden", "true");
+        s.bahn = document.createElement("div"); s.bahn.className = "kw__bahn"; s.el.appendChild(s.bahn);
+        s.reihe = [0, 1, 2].map(function () {
+          var platz = document.createElement("div"); platz.className = "kw__platz";
+          var im = document.createElement("img"); im.alt = ""; im.decoding = "async"; im.draggable = false;
+          platz.appendChild(im); s.bahn.appendChild(platz); return platz;
+        });
+        s.zahl = document.createElement("span"); s.zahl.className = "kw__zahl"; s.zahl.setAttribute("aria-hidden", "true");
+        var bild = frame.querySelector("picture") || s.orig;
+        if (bild && bild.parentNode === frame) frame.insertBefore(s.el, bild.nextSibling); else frame.insertBefore(s.el, frame.firstChild);
+        frame.insertBefore(s.zahl, s.el.nextSibling);
+        s.gefuellt = false;
+        kwPlaetze(s);
+        kwFuellen(s);
+      } else if (!s.gefuellt) {
+        kwFuellen(s);
+      }
+      s.w = frame.clientWidth || 1;
+      s.bahn.style.transition = "none";
+      s.el.classList.add("is-an");
+      if (!still) kwZahl(s, true);
+      return s;
+    }
+    // Beim Nachladen (alle 12 Teile) baut app.js die ganze Liste neu auf. Damit eine gewischte Kachel
+    // dabei nicht auf Foto 1 zurückspringt, merkt sich kwMerk das Foto je Teil und setzt es wieder.
+    var kwMerk = {}, kwMerkAnzahl = 0;
+    function kwMerken(plate) {
+      var href = plate.getAttribute("href"), s = plate._kw;
+      if (!href || !s) return;
+      var war = Boolean(kwMerk[href]);
+      if (s.i && s.fotos) { kwMerk[href] = { i: s.i, fotos: s.fotos }; if (!war) kwMerkAnzahl++; }
+      else if (war) { delete kwMerk[href]; kwMerkAnzahl--; }
+    }
+    if (window.MutationObserver) {
+      new MutationObserver(function () {
+        if (!kwMerkAnzahl) return;
+        Array.prototype.forEach.call(grid.querySelectorAll(".plate"), function (plate) {
+          var m = kwMerk[plate.getAttribute("href")], frame = plate.querySelector(".plate__frame");
+          if (!m || plate._kw || !frame) return;
+          plate._kw = { i: m.i, fotos: m.fotos, laden: Promise.resolve(m.fotos) };
+          kwAn(plate, frame, true);
+        });
+      }).observe(grid, { childList: true });
+    }
+    function kwFertig(plate) {
+      var s = plate._kw;
+      if (!s || !s.lauf) return;
+      clearTimeout(s.ende);
+      var r = s.lauf.richtung; s.lauf = null;
+      s.bahn.style.transition = "none";
+      if (r && s.fotos && s.fotos.length > 1) {
+        var n = s.fotos.length;
+        s.i = kwMod(s.i + r, n);
+        // Plätze weiterreichen statt Bilder neu setzen: das sichtbare Foto bleibt dasselbe Element (kein Flackern).
+        if (r > 0) { s.reihe = [s.reihe[1], s.reihe[2], s.reihe[0]]; kwBild(s.reihe[2].firstChild, s, kwMod(s.i + 1, n)); }
+        else { s.reihe = [s.reihe[2], s.reihe[0], s.reihe[1]]; kwBild(s.reihe[0].firstChild, s, kwMod(s.i - 1, n)); }
+        kwPlaetze(s);
+        kwVorladen(s, s.i + 2 * r);
+      }
+      s.bahn.style.transform = "translate3d(0,0,0)";
+      kwZahl(s, false);
+      // Erstes Foto: wieder das echte Kachelbild zeigen (Hover/Slideshow arbeiten darauf).
+      if (s.i === 0) s.el.classList.remove("is-an");
+      kwMerken(plate);
+    }
+    function kwLoslassen(g, abbruch) {
+      var s = g.plate._kw, n = s.fotos ? s.fotos.length : 0, dx = g.dx, r = 0;
+      if (!abbruch && n > 1) {
+        var schnell = Math.abs(g.vx) > 0.3 && (g.vx < 0) === (dx < 0) && Math.abs(dx) > 14;
+        if (Math.abs(dx) > s.w * 0.2 || schnell) r = dx < 0 ? 1 : -1;
+      }
+      var ziel = -r * s.w;
+      var dauer = kwRuhig.matches ? 1 : Math.round(Math.max(150, Math.min(280, Math.abs(ziel - dx) * 0.9)));
+      s.lauf = { richtung: r };
+      s.bahn.style.transition = "transform " + dauer + "ms cubic-bezier(.2,.75,.25,1)";
+      s.bahn.style.transform = "translate3d(" + ziel + "px,0,0)";
+      clearTimeout(s.ende);
+      s.ende = setTimeout(function () { kwFertig(g.plate); }, dauer + 20);
+    }
+    function kwZurueck(plate) {
+      var s = plate._kw;
+      if (!s || !s.el) return;
+      if (s.lauf) kwFertig(plate);
+      if (s.i !== 0) { s.i = 0; s.gefuellt = false; }
+      s.el.classList.remove("is-an"); s.zahl.classList.remove("is-an");
+      kwMerken(plate);
+    }
+    grid.addEventListener("pointerdown", function (e) {
+      kwGeste = null;
+      if (e.pointerType === "mouse" || !e.isPrimary || e.button) return;
+      var frame = e.target.closest(".plate__frame"), plate = frame && frame.closest(".plate");
+      if (!plate || ssPlate) return;
+      if (plate._kw && plate._kw.lauf) kwFertig(plate);
+      kwGeste = { plate: plate, frame: frame, id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: 0, phase: 0, lx: e.clientX, lt: e.timeStamp, vx: 0 };
+      kwFotos(plate).then(function (f) {
+        var s = plate._kw;
+        if (f.length < 2) return;
+        kwVorladen(s, s.i + 1); kwVorladen(s, s.i - 1);
+        if (s.el && s.el.classList.contains("is-an") && !s.gefuellt) { kwFuellen(s); kwZahl(s, Boolean(kwGeste && kwGeste.plate === plate && kwGeste.phase)); }
+      });
+    }, { passive: true });
+    grid.addEventListener("pointermove", function (e) {
+      var g = kwGeste;
+      if (!g || e.pointerId !== g.id) return;
+      var dx = e.clientX - g.x0, dy = e.clientY - g.y0;
+      if (!g.phase) {
+        if (ssPlate) { kwGeste = null; return; }
+        if (Math.abs(dy) > 10 && Math.abs(dy) >= Math.abs(dx)) { kwGeste = null; return; }
+        if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+        var bekannt = g.plate._kw && g.plate._kw.fotos;
+        if (bekannt && bekannt.length < 2) { kwGeste = null; return; }
+        g.phase = 1; clearTimeout(ssTimer);
+        try { g.frame.setPointerCapture(g.id); } catch (x) {}
+        kwAn(g.plate, g.frame);
+      }
+      var dt = e.timeStamp - g.lt;
+      if (dt > 0) { g.vx = 0.7 * ((e.clientX - g.lx) / dt) + 0.3 * g.vx; g.lx = e.clientX; g.lt = e.timeStamp; }
+      g.dx = dx;
+      var s = g.plate._kw, n = s.fotos ? s.fotos.length : 0;
+      // Fotos noch unbekannt oder nur eins: gebremst ziehen, beim Loslassen zurück.
+      s.bahn.style.transform = "translate3d(" + (n > 1 ? dx : dx * 0.25) + "px,0,0)";
+    }, { passive: true });
+    function kwEnde(e) {
+      var g = kwGeste;
+      if (!g || e.pointerId !== g.id) return;
+      kwGeste = null;
+      if (!g.phase) return;
+      kwZuletzt = Date.now();
+      // Kurz vor dem Loslassen stillgehalten: kein Schwung mehr.
+      if (e.timeStamp - g.lt > 90) g.vx = 0;
+      kwLoslassen(g, e.type === "pointercancel");
+    }
+    grid.addEventListener("pointerup", kwEnde);
+    grid.addEventListener("pointercancel", kwEnde);
+    // Den Klick direkt nach einem Wischen schluckt der window-Klickfänger in Abschnitt 3 (kwZuletzt).
+    grid.addEventListener("dragstart", function (e) { if (kwGeste && kwGeste.phase) e.preventDefault(); });
   }
 
   /* 6 · „Zum Home-Bildschirm“: nur iPhone/iPad, nicht in der installierten App, ab dem zweiten Besuch,
