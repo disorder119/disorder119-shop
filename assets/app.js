@@ -30,8 +30,12 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     });
   }
   focus3CatalogGate.then(function () {
-    return fetch("/data/catalog.json");
-  }).then(function (r) { return r.json(); }).then(function (ITEMS) {
+    // Ein Abruf fuer die ganze Seite (06.11.2026): d119-ui.js nutzt dieselbe
+    // Antwort, statt catalog.json (no-store, ~200 KB) ein zweites Mal zu laden
+    // und zu parsen.
+    window.D119KatalogJson = fetch("/data/catalog.json").then(function (r) { return r.json(); });
+    return window.D119KatalogJson;
+  }).then(function (ITEMS) {
 
   var canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 

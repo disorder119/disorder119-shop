@@ -33,7 +33,19 @@
   function katalogStarten() {
     if (katalogGestartet) return;
     katalogGestartet = true;
-    fetch(location.origin + "/data/catalog.json").then(function (r) { return r.json(); }).catch(function () { return []; }).then(katalogAufloesen);
+    // Startseite: app.js hat den Katalog schon geholt (window.D119KatalogJson) -
+    // dieselbe Antwort nehmen, nicht ein zweites Mal laden (06.11.2026). Kommt
+    // app.js erst noch, kurz darauf warten; sonst (Artikelseiten) selbst laden.
+    var versuche = 0;
+    (function holen() {
+      var geteilt = window.D119KatalogJson;
+      if (geteilt && typeof geteilt.then === "function") {
+        geteilt.then(function (k) { return Array.isArray(k) ? k : []; }, function () { return []; }).then(katalogAufloesen);
+        return;
+      }
+      if (istArchiv && versuche++ < 30) { setTimeout(holen, 100); return; }
+      fetch(location.origin + "/data/catalog.json").then(function (r) { return r.json(); }).catch(function () { return []; }).then(katalogAufloesen);
+    })();
   }
   function katalog(sofort) {
     if (sofort) katalogStarten(); else ruhe.then(katalogStarten);
