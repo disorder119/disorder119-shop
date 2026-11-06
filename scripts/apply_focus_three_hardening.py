@@ -26,12 +26,15 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 
 def patch_template(text: str) -> str:
-    text = replace_once(
-        text,
-        '<title>__META_TITLE__</title>\n<link rel="stylesheet" href="/assets/app.css?v=__APP_CSS_VERSION__">',
-        '<title>__META_TITLE__</title>\n__CRITICAL_IMAGE_PRELOADS__\n<link rel="stylesheet" href="/assets/app.css?v=__APP_CSS_VERSION__">',
-        "Critical-image preload token",
-    )
+    # Seit 06.11.2026 steht der Token mit app.css direkt hinter dem Viewport
+    # (index_template.html) - dann nichts mehr einfuegen.
+    if "__CRITICAL_IMAGE_PRELOADS__" not in text:
+        text = replace_once(
+            text,
+            '<title>__META_TITLE__</title>\n<link rel="stylesheet" href="/assets/app.css?v=__APP_CSS_VERSION__">',
+            '<title>__META_TITLE__</title>\n__CRITICAL_IMAGE_PRELOADS__\n<link rel="stylesheet" href="/assets/app.css?v=__APP_CSS_VERSION__">',
+            "Critical-image preload token",
+        )
     text = replace_once(
         text,
         '<div class="app-shell hidden" id="appShell">',
