@@ -297,7 +297,7 @@ __STATIC_PAGE_CONTENT__
       </div>
     </div>
     <div class="ui-kopf__suche">
-      <input id="searchInput" type="text" data-i18n-placeholder="searchPlaceholder" placeholder="Suche nach Marke, Titel" autocomplete="off" />
+      <input id="searchInput" type="text" data-i18n-placeholder="searchPlaceholder" placeholder="Suche nach Marke, Titel" data-i18n-aria="searchPlaceholder" aria-label="Suche nach Marke, Artikel, Größe" autocomplete="off" />
     </div>
     <p class="ui-kopf__zahlen" id="uiZahlen">&nbsp;</p>
     <div class="masthead__index">Prada · Dior · Saint Laurent<br />Jean Paul Gaultier · Y-3 · <span id="brandLineMore">u.v.m.</span></div>
@@ -352,11 +352,11 @@ __STATIC_PAGE_CONTENT__
       <select id="filterCondition"><option value="" data-i18n="filterAllConditions">Alle Zustände</option></select>
     </div>
     <div class="filter-field filter-field--price">
-      <label data-i18n="filterPriceLabel">Preis (€)</label>
+      <label for="filterPriceMin" data-i18n="filterPriceLabel">Preis (€)</label>
       <div class="filter-price-inputs">
-        <input type="number" id="filterPriceMin" min="0" data-i18n-placeholder="filterPriceFrom" placeholder="von">
+        <input type="number" id="filterPriceMin" min="0" data-i18n-placeholder="filterPriceFrom" placeholder="von" data-i18n-aria="filterPriceMinAria" aria-label="Preis von (€)">
         <span>–</span>
-        <input type="number" id="filterPriceMax" min="0" data-i18n-placeholder="filterPriceTo" placeholder="bis">
+        <input type="number" id="filterPriceMax" min="0" data-i18n-placeholder="filterPriceTo" placeholder="bis" data-i18n-aria="filterPriceMaxAria" aria-label="Preis bis (€)">
       </div>
     </div>
     <button type="button" class="filter-reset" id="filterReset" data-i18n="filterResetLabel">Filter zurücksetzen</button>
@@ -383,6 +383,7 @@ __STATIC_PAGE_CONTENT__
     <a href="/faq/" data-info="faq" data-i18n="footerFaq">FAQ</a>
     <a href="/konto/" data-i18n="footerAccount">Konto</a>
     <a href="mailto:disorder119shop@gmail.com" data-i18n="footerContact">Kontakt</a>
+    <a href="https://www.instagram.com/disorder119_/" target="_blank" rel="noopener">Instagram</a>
   </nav>
   <span id="footerStamp" class="footer__stamp"></span>
   <a class="footer__widerruf" href="/widerruf/" data-widerruf data-i18n="legalWiderruf">Vertrag widerrufen</a>

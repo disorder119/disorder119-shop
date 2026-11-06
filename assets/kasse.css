@@ -373,6 +373,9 @@
 .kasse-abholort__klein { font-size: 0.74rem; }
 .kasse-abholort__werkzeug { display: flex; flex-wrap: wrap; gap: 6px 18px; }
 .kasse-abholort__werkzeug [hidden] { display: none; }
+.kasse-abholort__dhl { display: inline-block; align-self: flex-start; }
+.kasse-abholort__dhl[hidden], .kasse-abholort__suche [hidden] { display: none; }
+.kasse-abholort__osm a { color: inherit; text-decoration: underline; }
 
 .kasse-link {
   font: inherit;

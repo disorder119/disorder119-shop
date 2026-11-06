@@ -1081,6 +1081,7 @@ def build_page(it, shop_config, lang):
   <div data-d119-newsletter data-quelle="artikel"></div>
   <p data-i18n="footerNote">{esc(ui(lang, 'footerNote'))}</p>
   <p><a href="{home}" data-i18n="footerFullArchive">{esc(ui(lang, 'footerFullArchive'))}</a></p>
+  {instagram_link_html(lang)}
   {artikel_recht_nav(home, lang)}
 </div>
 <div class="lightbox" id="lightbox">
@@ -1138,6 +1139,8 @@ def get_shop_config():
         # das Token, das der Worker im Livebetrieb fuer Kauf, Miete und
         # Konto-Anmeldung verlangt.
         "turnstileSiteKey": raw.get("turnstileSiteKey") or "",
+        # Instagram-Profil (Fussbereich, Artikelseiten, Google "sameAs").
+        "instagram": raw.get("instagram") if str(raw.get("instagram") or "").startswith("https://www.instagram.com/") else "",
         "environment": environment,
         "features": {
             "paypalCheckout": bool(features_raw.get("paypalCheckout")),
@@ -1202,6 +1205,9 @@ def site_entities_jsonld(shop_config):
     }
     if shop_config.get("email"):
         store["email"] = shop_config["email"]
+    # Instagram (Inhaber 06.11.2026): Google verknuepft Shop und Profil.
+    if str(shop_config.get("instagram", "")).startswith("https://www.instagram.com/"):
+        store["sameAs"] = [shop_config["instagram"]]
     data = {
         "@context": "https://schema.org",
         "@graph": [
@@ -1850,6 +1856,26 @@ ARTIKEL_RECHT_LINKS = {
 
 
 ANSICHT_KNOPF_TEXT = {"de": "Weiße Ansicht", "en": "White view", "fr": "Affichage blanc"}
+
+
+INSTAGRAM_TEXT = {"de": "Mehr Looks auf Instagram", "en": "More looks on Instagram", "fr": "Plus de looks sur Instagram"}
+
+
+_INSTAGRAM_URL = None
+
+
+def instagram_link_html(lang):
+    # Instagram (Inhaber 06.11.2026) - Adresse aus config/shop-config.json,
+    # einmal je Build gelesen (die Funktion laeuft fuer jede Artikelseite).
+    global _INSTAGRAM_URL
+    if _INSTAGRAM_URL is None:
+        _INSTAGRAM_URL = str(get_shop_config().get("instagram", ""))
+    url = _INSTAGRAM_URL
+    if not url.startswith("https://www.instagram.com/"):
+        return ""
+    handle = "@" + url.rstrip("/").rsplit("/", 1)[-1]
+    return (f'<p class="page-foot__instagram"><a href="{esc(url)}" target="_blank" rel="noopener">'
+            f'{esc(INSTAGRAM_TEXT.get(lang, INSTAGRAM_TEXT["de"]))} · {esc(handle)}</a></p>')
 
 
 def artikel_recht_nav(home, lang):

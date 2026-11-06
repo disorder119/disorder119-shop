@@ -428,9 +428,25 @@ export async function revokeAllSessions(env, customerId) {
 
 // ----------------------------------------------------------------- Bestellungen
 
-function shipmentView(row) {
+// Sendungsverlauf aus der letzten DHL-Abfrage (dhl-tracking.js). Nur fuer die
+// Kundin dieser Bestellung; der Cron loescht ihn 30 Tage nach Zustellung.
+function verlaufView(json) {
+  let roh;
+  try { roh = JSON.parse(json || "[]"); } catch { return []; }
+  if (!Array.isArray(roh)) return [];
+  return roh.map(e => {
+    const zeit = Date.parse(String(e?.zeit || ""));
+    const text = safeText(e?.text || "", 200);
+    if (!Number.isFinite(zeit) || !text) return null;
+    const ort = safeText(e?.ort || "", 80);
+    return { zeit: new Date(zeit).toISOString(), text, ...(ort ? { ort } : {}) };
+  }).filter(Boolean).slice(0, 25);
+}
+
+function shipmentView(row, stand = null) {
   if (!row?.tracking_number && !row?.status) return null;
   const tracking = safeText(row.tracking_number || "", 60);
+  const verlauf = stand ? verlaufView(stand.ereignisse_json) : [];
   return {
     carrier: safeText(row.carrier || "", 40) || null,
     status: safeText(row.status || "", 30) || null,
@@ -439,6 +455,7 @@ function shipmentView(row) {
     trackingUrl: trackingUrlFor(row.carrier || "DHL", tracking) || null,
     shippedAt: row.shipped_at || null,
     deliveredAt: row.delivered_at || null,
+    ...(verlauf.length ? { verlauf, verlaufStand: stand.zuletzt_am || null } : {}),
   };
 }
 
@@ -453,7 +470,7 @@ export async function listOrders(env, customerId) {
   // Ein Zug fuer alle Positionen statt einer Abfrage je Bestellung.
   const ids = rows.map(row => String(row.id));
   const platzhalter = ids.map(() => "?").join(",");
-  const [items, shipments, payments] = await Promise.all([
+  const [items, shipments, payments, verlaeufe] = await Promise.all([
     env.DB.prepare(`SELECT order_id,item_id,article_no,title_snapshot,unit_price_cents
       FROM order_items WHERE order_id IN (${platzhalter}) ORDER BY id`).bind(...ids).all(),
     env.DB.prepare(`SELECT order_id,carrier,status,tracking_number,shipped_at,delivered_at
@@ -462,7 +479,16 @@ export async function listOrders(env, customerId) {
     env.DB.prepare(`SELECT order_id,status,voided_at FROM payments
       WHERE order_id IN (${platzhalter}) AND provider='PAYPAL' ORDER BY created_at DESC`).bind(...ids).all()
       .catch(() => ({ results: [] })),
+    // Sendungsverlauf (nur DHL); fehlt die Tabelle noch, bleibt es beim Link.
+    Promise.resolve().then(() => env.DB.prepare(`SELECT s.order_id,s.tracking_number,a.ereignisse_json,a.zuletzt_am
+      FROM sendungs_abfragen a JOIN shipments s ON s.id=a.shipment_id
+      WHERE s.order_id IN (${platzhalter}) AND a.ereignisse_json IS NOT NULL`).bind(...ids).all())
+      .catch(() => ({ results: [] })),
   ]);
+  const verlaufNach = new Map();
+  for (const row of verlaeufe?.results || []) {
+    verlaufNach.set(`${row.order_id}|${row.tracking_number}`, row);
+  }
 
   const itemsByOrder = new Map();
   for (const item of items?.results || []) {
@@ -490,7 +516,9 @@ export async function listOrders(env, customerId) {
   const shipmentByOrder = new Map();
   for (const row of shipments?.results || []) {
     if (!shipmentByOrder.has(String(row.order_id))) {
-      shipmentByOrder.set(String(row.order_id), shipmentView(row));
+      const dhl = /^dhl$/i.test(String(row.carrier || "").trim());
+      const stand = dhl ? verlaufNach.get(`${row.order_id}|${row.tracking_number}`) || null : null;
+      shipmentByOrder.set(String(row.order_id), shipmentView(row, stand));
     }
   }
 

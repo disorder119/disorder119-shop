@@ -222,6 +222,9 @@ jobs:
       - name: Katalog-Taxonomie auf Quelldaten anwenden
         run: python scripts/apply_catalog_taxonomy.py
 
+      - name: Weiterleitungen alter Shop-IDs aus der Konfiguration erzeugen
+        run: python scripts/sync_catalog_number_routes.py
+
       - name: Seite bauen
         run: python build_site.py
 

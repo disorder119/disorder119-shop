@@ -245,6 +245,27 @@
   gap: 10px;
 }
 
+/* Sendungsverlauf von DHL: nur Stationen und der DHL-Vermerk, keine Werbung. */
+.bestellung__verlauf {
+  margin: 0 0 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-size: 0.86rem;
+}
+.bestellung__verlauf summary { cursor: pointer; color: var(--text); font-weight: 600; }
+.bestellung__verlauf ol { list-style: none; margin: 10px 0 0; padding: 0; }
+.bestellung__verlauf li {
+  display: grid;
+  grid-template-columns: 7.5em 1fr;
+  gap: 2px 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
+  color: var(--text-muted);
+}
+.bestellung__verlauf li:first-child { color: var(--text); }
+.bestellung__verlauf time { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bestellung__dhl { margin: 8px 0 0; font-size: 0.78rem; color: var(--text-muted); }
+
 /* --------------------------------------------------------------------- Fuss */
 
 .konto-fuss {

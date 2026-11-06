@@ -170,6 +170,7 @@ export function festeOptionen(paket, konfig = VERSAND, land = "DE") {
       zone: zone.key,
       abholstation: t.abholstation,
       versichertBisCents: t.versichertBisCents,
+      hoeherversicherung: t.hoeherversicherung === true,
       abWarenwertCents: t.abWarenwertCents,
       bisWarenwertCents: t.bisWarenwertCents,
     };
@@ -275,8 +276,10 @@ export function oeffentlicheOptionen(ergebnis, jetzt = new Date()) {
         carrier: o.carrier,
         // Nur DHL liefert an Packstation und Filiale - und nur in Deutschland.
         abholstation: o.abholstation === true,
-        // Feste Tarife: bis zu welchem Warenwert der Paketdienst haftet.
+        // Feste Tarife: bis zu welchem Warenwert der Paketdienst haftet -
+        // hoeherversicherung: true heisst echte Transportversicherung.
         ...(Number.isSafeInteger(o.versichertBisCents) && o.versichertBisCents > 0 ? { versichertBisCents: o.versichertBisCents } : {}),
+        ...(o.hoeherversicherung === true ? { hoeherversicherung: true } : {}),
         // Voraussichtlich bei der Kundschaft: { von, bis } als Datum.
         lieferung: lieferfenster(tage, jetzt, tageBis),
       };

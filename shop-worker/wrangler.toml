@@ -46,8 +46,11 @@ GEO_SPERRE_LAENDER = "RU,BY,IN,KP,IR"
 # Besucherstatistik und die einmalige Apple-Pay-Domain bei PayPal. Sie laufen
 # zusaetzlich beim Oeffnen der Admin-App; der Cron sorgt dafuer, dass sie auch
 # ohne Admin-Besuch passieren.
+# "7 * * * *": eigener stuendlicher Lauf nur fuer die Abholorte aus
+# OpenStreetMap (abholorte-osm.js, ein PLZ-Gebiet je Lauf, je Gebiet hoechstens
+# einmal die Woche) - getrennt von den Viertelstunden-Jobs.
 [triggers]
-crons = ["*/15 * * * *"]
+crons = ["*/15 * * * *", "7 * * * *"]
 
 [observability]
 enabled = true
@@ -130,8 +133,9 @@ DHL_AUTO_MARKE = "an"
 SANDBOX = "1"
 GEO_SPERRE_LAENDER = "RU,BY,IN,KP,IR"
 
+# Abholorte aus OpenStreetMap zur Minute 37 - nie gleichzeitig mit dem Shop bei Overpass.
 [env.sandbox.triggers]
-crons = ["*/15 * * * *"]
+crons = ["*/15 * * * *", "37 * * * *"]
 
 [[env.sandbox.ratelimits]]
 name = "RATE_LIMITER"

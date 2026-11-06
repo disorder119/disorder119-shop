@@ -72,15 +72,18 @@
       mailAdresse: "Lieferadresse", mailVersand: "Versand", mailGesamt: "Gesamt", mailGruss: "Hallo! Ich möchte folgende Stücke bestellen:",
       mailFrage: "Bitte bestätigt mir Verfügbarkeit und Zahlungsweg. Danke!",
       angaben: "Deine Angaben", zustWohin: "Wohin soll das Paket?", zustHaustuer: "An meine Adresse", zustAbholort: "An Packstation oder Filiale",
-      zustNurDhl: "mit DHL", nurHaustuer: "nur an die Haustür", versichert: "versichert bis {betrag}", abholSuche: "PLZ für die Suche",
+      zustNurDhl: "mit DHL", nurHaustuer: "nur an die Haustür", versichert: "versichert bis {betrag}", haftung: "DHL haftet bis {betrag}", abholSuche: "PLZ für die Suche",
       abholSuchen: "Suchen", abholLaedt: "Suche Packstationen und Filialen …", abholKeine: "Hier haben wir keine Packstation oder Filiale gefunden. Probier eine andere PLZ oder gib die Nummer selbst ein.",
-      abholFehler: "Die Suche bei DHL klappt gerade nicht. Gib die Nummer der Packstation oder Filiale selbst ein oder lass an deine Adresse liefern.",
+      abholFehler: "Die Suche klappt gerade nicht. Gib die Nummer der Packstation oder Filiale selbst ein oder lass an deine Adresse liefern.",
       abholPlzFehlt: "Gib eine fünfstellige PLZ ein, dann zeigen wir dir Packstationen und Filialen in der Nähe.", abholOhneSuche: "Gib die Nummer deiner Packstation oder Filiale ein – du findest sie in der DHL-App oder auf dhl.de.", abholGefunden: "{n} Abholorte in der Nähe – wähle einen aus der Liste oder auf der Karte.",
       abholWaehlen: "Bitte wähle eine Packstation oder Filiale.", abholPackstation: "Packstation", abholFiliale: "Filiale",
       abholKarte: "Auf der Karte zeigen", abholKarteZu: "Karte ausblenden", abholKarteHinweis: "Die Karte lädt Kartenbilder von OpenStreetMap – dabei sieht der Kartendienst deine IP-Adresse.",
       kartePlus: "Karte vergrößern", karteMinus: "Karte verkleinern", karteLuftbild: "Luftbild", karteStrassen: "Karte",
       abholKarteHinweisLuftbild: "Die amtlichen Luftbilder holt unser Server beim Vermessungsamt deines Bundeslands – ohne deine IP-Adresse. Die Straßenkarte kommt direkt von OpenStreetMap, das dabei deine IP-Adresse sieht.", abholManuell: "Nummer selbst eingeben", abholArt: "Art",
       abholNummer: "Nummer", abholUebernehmen: "Übernehmen", abholNummerFehlt: "Bitte gib die Nummer ein (bis zu 4 Ziffern).",
+      abholPlzOrt: "PLZ der Packstation oder Filiale", abholDhlFinder: "Nummer nicht zur Hand? In der DHL-Standortsuche nachsehen ↗",
+      abholOsmVor: "Abholorte:", abholOsmLink: "© OpenStreetMap-Mitwirkende",
+      abholOsmHinweis: "(ODbL). Die Liste kann unvollständig sein – fehlt deine Packstation oder Filiale, gib die Nummer selbst ein. Entfernung ab der Mitte des PLZ-Gebiets.",
       postnummer: "DHL-Postnummer", optional: "optional", postnummerHinweisP: "Pflicht an der Packstation: deine 6- bis 10-stellige Postnummer aus der DHL-App. Vor- und Nachname müssen zu deinem DHL-Konto passen.",
       postnummerHinweisF: "Pflicht auch an der Filiale: deine 6- bis 10-stellige Postnummer aus der DHL-App. Abholen kannst du mit Ausweis.", fehltPostnummer: "Bitte gib deine DHL-Postnummer an (6 bis 10 Ziffern).",
       postnummerUngueltig: "Die Postnummer hat 6 bis 10 Ziffern.", abholNurDhl: "An Packstation und Filiale liefert nur DHL. Bitte wähle DHL oder die Lieferung an deine Adresse.",
@@ -141,15 +144,18 @@
       mailAdresse: "Delivery address", mailVersand: "Shipping", mailGesamt: "Total", mailGruss: "Hello! I would like to order these pieces:",
       mailFrage: "Please confirm availability and payment. Thank you!",
       angaben: "Your details", zustWohin: "Where should the parcel go?", zustHaustuer: "To my address", zustAbholort: "To a Packstation or post office",
-      zustNurDhl: "with DHL", nurHaustuer: "home delivery only", versichert: "insured up to {betrag}", abholSuche: "Postcode to search",
+      zustNurDhl: "with DHL", nurHaustuer: "home delivery only", versichert: "insured up to {betrag}", haftung: "DHL liability up to {betrag}", abholSuche: "Postcode to search",
       abholSuchen: "Search", abholLaedt: "Searching for Packstations and post offices …", abholKeine: "We found no Packstation or post office here. Try another postcode or enter the number yourself.",
-      abholFehler: "The DHL search is not working right now. Enter the Packstation or post office number yourself, or have the parcel delivered to your address.",
+      abholFehler: "The search is not working right now. Enter the Packstation or post office number yourself, or have the parcel delivered to your address.",
       abholPlzFehlt: "Enter a five-digit postcode and we will show you Packstations and post offices nearby.", abholOhneSuche: "Enter the number of your Packstation or post office – you can find it in the DHL app or on dhl.de.", abholGefunden: "{n} pickup points nearby – choose one from the list or on the map.",
       abholWaehlen: "Please choose a Packstation or post office.", abholPackstation: "Packstation", abholFiliale: "Post office",
       abholKarte: "Show on map", abholKarteZu: "Hide map", abholKarteHinweis: "The map loads tiles from OpenStreetMap – the map service sees your IP address.",
       kartePlus: "Zoom in", karteMinus: "Zoom out", karteLuftbild: "Aerial", karteStrassen: "Map",
       abholKarteHinweisLuftbild: "Our server fetches the official aerial images from your state's survey office – without your IP address. The street map comes directly from OpenStreetMap, which sees your IP address.", abholManuell: "Enter the number yourself", abholArt: "Type", abholNummer: "Number",
       abholUebernehmen: "Use this", abholNummerFehlt: "Please enter the number (up to 4 digits).", postnummer: "DHL Postnummer",
+      abholPlzOrt: "Postcode of the Packstation or post office", abholDhlFinder: "Don’t know the number? Look it up in the DHL location finder ↗",
+      abholOsmVor: "Pickup points:", abholOsmLink: "© OpenStreetMap contributors",
+      abholOsmHinweis: "(ODbL). The list may be incomplete – if your Packstation or post office is missing, enter the number yourself. Distance from the centre of the postcode area.",
       optional: "optional", postnummerHinweisP: "Required for a Packstation: your 6 to 10 digit Postnummer from the DHL app. First and last name must match your DHL account.",
       postnummerHinweisF: "Required for a post office too: your 6 to 10 digit Postnummer from the DHL app. Bring your ID to collect.", fehltPostnummer: "Please enter your DHL Postnummer (6 to 10 digits).",
       postnummerUngueltig: "The Postnummer has 6 to 10 digits.", abholNurDhl: "Only DHL delivers to Packstations and post offices. Please choose DHL or delivery to your address.",
@@ -210,9 +216,9 @@
       mailAdresse: "Adresse de livraison", mailVersand: "Livraison", mailGesamt: "Total", mailGruss: "Bonjour ! Je souhaite commander ces pièces :",
       mailFrage: "Merci de me confirmer disponibilité et paiement !",
       angaben: "Tes coordonnées", zustWohin: "Où livrer le colis ?", zustHaustuer: "À mon adresse", zustAbholort: "En Packstation ou bureau de poste",
-      zustNurDhl: "avec DHL", nurHaustuer: "à domicile uniquement", versichert: "assuré jusqu’à {betrag}", abholSuche: "Code postal pour la recherche",
+      zustNurDhl: "avec DHL", nurHaustuer: "à domicile uniquement", versichert: "assuré jusqu’à {betrag}", haftung: "responsabilité DHL jusqu’à {betrag}", abholSuche: "Code postal pour la recherche",
       abholSuchen: "Rechercher", abholLaedt: "Recherche des Packstations et bureaux de poste …", abholKeine: "Aucune Packstation ni bureau de poste trouvé ici. Essaie un autre code postal ou saisis le numéro toi-même.",
-      abholFehler: "La recherche DHL ne fonctionne pas pour le moment. Saisis toi-même le numéro de la Packstation ou du bureau de poste, ou fais livrer à ton adresse.",
+      abholFehler: "La recherche ne fonctionne pas pour le moment. Saisis toi-même le numéro de la Packstation ou du bureau de poste, ou fais livrer à ton adresse.",
       abholPlzFehlt: "Saisis un code postal à cinq chiffres pour voir les Packstations et bureaux de poste à proximité.", abholOhneSuche: "Saisis le numéro de ta Packstation ou de ton bureau de poste – tu le trouves dans l’app DHL ou sur dhl.de.",
       abholGefunden: "{n} points de retrait à proximité – choisis-en un dans la liste ou sur la carte.", abholWaehlen: "Choisis une Packstation ou un bureau de poste.",
       abholPackstation: "Packstation", abholFiliale: "Bureau de poste", abholKarte: "Afficher sur la carte", abholKarteZu: "Masquer la carte",
@@ -220,6 +226,9 @@
       karteMinus: "Zoom arrière", karteLuftbild: "Vue aérienne", karteStrassen: "Plan",
       abholKarteHinweisLuftbild: "Notre serveur charge les vues aériennes officielles auprès du service cadastral de ton Land – sans ton adresse IP. Le plan vient directement d’OpenStreetMap, qui voit ton adresse IP.", abholManuell: "Saisir le numéro toi-même", abholArt: "Type", abholNummer: "Numéro", abholUebernehmen: "Valider",
       abholNummerFehlt: "Saisis le numéro (jusqu’à 4 chiffres).", postnummer: "Postnummer DHL", optional: "facultatif",
+      abholPlzOrt: "Code postal de la Packstation ou du bureau de poste", abholDhlFinder: "Numéro inconnu ? Cherche-le dans la recherche de points DHL ↗",
+      abholOsmVor: "Points de retrait :", abholOsmLink: "© les contributeurs d’OpenStreetMap",
+      abholOsmHinweis: "(ODbL). La liste peut être incomplète – si ta Packstation ou ton bureau de poste manque, saisis le numéro toi-même. Distance depuis le centre du code postal.",
       postnummerHinweisP: "Obligatoire pour une Packstation : ta Postnummer de 6 à 10 chiffres de l’app DHL. Prénom et nom doivent correspondre à ton compte DHL.",
       postnummerHinweisF: "Obligatoire aussi au bureau de poste : ta Postnummer de 6 à 10 chiffres de l’app DHL. Retrait avec une pièce d’identité.", fehltPostnummer: "Saisis ta Postnummer DHL (6 à 10 chiffres).",
       postnummerUngueltig: "La Postnummer compte 6 à 10 chiffres.", abholNurDhl: "Seul DHL livre en Packstation et en bureau de poste. Choisis DHL ou la livraison à ton adresse.",
@@ -546,7 +555,8 @@
       radio.addEventListener("change", function () { zustand.wahl = o; versandZeichnen(); });
       var name = el("span", "kasse-option__name", versandTitel(o));
       var dienst = o.carrier && versandTitel(o).indexOf(o.carrier) !== 0 ? o.carrier : "";
-      var meta = [dienst, tage(o), o.versichertBisCents ? tf("versichert", { betrag: geldRund(o.versichertBisCents) }) : "",
+      // Nur die echte Transportversicherung heisst "versichert"; sonst ist es die Haftung von DHL.
+      var meta = [dienst, tage(o), o.versichertBisCents ? tf(o.hoeherversicherung ? "versichert" : "haftung", { betrag: geldRund(o.versichertBisCents) }) : "",
         nurHaustuer ? t("nurHaustuer") : ""].filter(Boolean).join(" · ");
       if (meta) name.appendChild(el("small", "", meta));
       label.appendChild(radio);
@@ -767,13 +777,14 @@
   Object.keys(f).forEach(function (k) { f[k].addEventListener("input", function () { if (k !== "plz") feldFehler(f[k], ""); }); });
 
   // ---- Zustellung: DHL liefert auch an Packstation oder Filiale. Die Orte
-  // sucht der Shop-Server bei DHL (shop-worker/abholorte.js) - an DHL gehen
-  // nur PLZ und Strasse. Die Karte laedt OpenStreetMap-Kacheln erst nach
+  // kommen vom Shop-Server (shop-worker/abholorte.js): im Normalfall aus den
+  // dort eingelesenen OpenStreetMap-Daten (abholorte-osm.js, quelle "osm" -
+  // dann steht der Quellenvermerk unter Liste und Karte), die Suche verlaesst
+  // den Server nicht. Die Karte laedt OpenStreetMap-Kacheln erst nach
   // einem Klick (Datenschutz) und kommt ohne Bibliothek aus.
   // luftbild: { land, quelle } - amtliche Luftbilder des Bundeslands (shop-worker/karte.js) oder null;
-  // ebene: "luftbild" oder "karte" (Strassenkarte von OpenStreetMap).
-  var abhol = { art: "haustuer", ort: null, orte: null, laedt: false, fehler: "", gesucht: "", karte: false, zoom: 0, luftbild: false, ebene: "" };
-  var abholCache = {};
+  // ebene: "luftbild" oder "karte" (Strassenkarte von OpenStreetMap); quelle: "osm" oder "".
+  var abhol = { art: "haustuer", ort: null, orte: null, laedt: false, fehler: "", gesucht: "", karte: false, zoom: 0, luftbild: false, ebene: "", quelle: "" };
   var abholAnfrage = 0;
   function kannAbholen(o) { return !!(o && o.abholstation); }
   function abholung() { return abhol.art === "abholort" && kannAbholen(zustand.wahl); }
@@ -845,7 +856,26 @@
   var aWerkzeug = el("div", "kasse-abholort__werkzeug");
   aWerkzeug.appendChild(aKarteKnopf);
   aWerkzeug.appendChild(aManuellKnopf);
-  [aSuche, aStatus, aWerkzeug, aKarteHinweis, aKarte, aManuell, aListe, aPostFeld].forEach(function (e) { aPanel.appendChild(e); });
+  // Ohne Standortsuche am Server (DHL-Bedingungen, shop-worker/abholorte.js):
+  // die offizielle DHL-Standortsuche zum Nachsehen der Nummer.
+  var aDhlFinder = el("a", "kasse-link kasse-abholort__dhl", t("abholDhlFinder"));
+  aDhlFinder.href = LANG === "de" ? "https://www.dhl.de/de/privatkunden/dhl-standorte-finden.html" : "https://www.dhl.de/en/privatkunden/dhl-standorte-finden.html";
+  aDhlFinder.target = "_blank";
+  aDhlFinder.rel = "noopener noreferrer";
+  aDhlFinder.hidden = true;
+  var abholOhneSuche = false;
+  // Quellenvermerk der OpenStreetMap-Daten (ODbL) unter Liste und Karte, mit dem
+  // Hinweis, dass die Liste unvollstaendig sein kann.
+  var aOsm = el("p", "kasse-hinweis kasse-abholort__klein kasse-abholort__osm");
+  var aOsmLink = el("a", "", t("abholOsmLink"));
+  aOsmLink.href = "https://www.openstreetmap.org/copyright";
+  aOsmLink.target = "_blank";
+  aOsmLink.rel = "noopener noreferrer";
+  aOsm.appendChild(document.createTextNode(t("abholOsmVor") + " "));
+  aOsm.appendChild(aOsmLink);
+  aOsm.appendChild(document.createTextNode(" " + t("abholOsmHinweis")));
+  aOsm.hidden = true;
+  [aSuche, aStatus, aDhlFinder, aWerkzeug, aKarteHinweis, aKarte, aManuell, aListe, aOsm, aPostFeld].forEach(function (e) { aPanel.appendChild(e); });
 
   // Hinweis im Adressblock: Bei der Abholung reichen Name und E-Mail.
   var aAdressHinweis = el("p", "kasse-hinweis kasse-feld--breit kasse-abholhinweis", t("adresseAbhol"));
@@ -1053,6 +1083,7 @@
     karteZeichnen();
     postZeichnen();
     sperrZeichnen();
+    aOsm.hidden = abhol.quelle !== "osm";
   }
 
   function ortWaehlen(o, vonKarte) {
@@ -1084,7 +1115,20 @@
     summeZeichnen();
   }
 
+  // Server ohne Standortsuche: Nummer, PLZ und Ort von Hand, Suche und Karte weg.
+  function ohneSucheZeigen() {
+    abholOhneSuche = true;
+    aSuchKnopf.hidden = true;
+    aManuellKnopf.hidden = true;
+    aDhlFinder.hidden = false;
+    var titel = aSuche.querySelector("span");
+    if (titel) titel.textContent = t("abholPlzOrt");
+    abhol.laedt = false; abhol.orte = null; abhol.fehler = "abholOhneSuche"; abhol.quelle = "";
+    manuellZeigen(true);
+  }
+
   function abholSuchen(automatisch) {
+    if (abholOhneSuche) { ohneSucheZeigen(); abholZeichnen(); return; }
     var plz = aPlz.value.replace(/\D/g, "").slice(0, 5);
     aPlz.value = plz;
     if (!/^\d{5}$/.test(plz)) {
@@ -1100,10 +1144,7 @@
     if (abhol.gesucht === schluessel && (abhol.laedt || abhol.orte)) return;
     abhol.gesucht = schluessel;
     abhol.zoom = 0;
-    if (abholCache[schluessel]) {
-      abhol.orte = abholCache[schluessel].orte; abhol.luftbild = abholCache[schluessel].luftbild;
-      abhol.fehler = ""; abhol.laedt = false; abholZeichnen(); return;
-    }
+    // Kein Zwischenspeicher fuer DHL-Standorte (Location-Finder-Bedingungen).
     var nr = ++abholAnfrage;
     abhol.laedt = true; abhol.fehler = "";
     statusZeichnen();
@@ -1116,16 +1157,17 @@
         abhol.orte = Array.isArray(daten.orte) ? daten.orte : [];
         // { land, quelle } - amtliche Luftbilder des Bundeslands der PLZ, sonst nur Strassenkarte.
         abhol.luftbild = WORKER && daten.luftbild && /^[A-Z]{2}$/.test(daten.luftbild.land) && daten.luftbild.quelle ? daten.luftbild : null;
-        abholCache[schluessel] = { orte: abhol.orte, luftbild: abhol.luftbild };
+        abhol.quelle = daten.quelle === "osm" ? "osm" : "";
         abholZeichnen();
       }, function (e) {
         if (nr !== abholAnfrage) return;
         var code = (e && e.code) || "";
-        abhol.laedt = false; abhol.orte = null; abhol.gesucht = "";
+        abhol.laedt = false; abhol.orte = null; abhol.gesucht = ""; abhol.quelle = "";
         // Ohne DHL-Zugang am Server: gleich die Nummer eingeben lassen, ohne Stoerungsmeldung.
         abhol.fehler = code === "RATE_LIMITED" ? "zuSchnell" : code === "PLZ_UNGUELTIG" ? "fehltPlz"
           : code === "ABHOLORTE_NICHT_EINGERICHTET" ? "abholOhneSuche" : "abholFehler";
-        if (abhol.fehler === "abholFehler" || abhol.fehler === "abholOhneSuche") manuellZeigen(true);
+        if (abhol.fehler === "abholOhneSuche") ohneSucheZeigen();
+        else if (abhol.fehler === "abholFehler") manuellZeigen(true);
         abholZeichnen();
       });
   }
@@ -1133,6 +1175,8 @@
   function manuellZeigen(an) {
     aManuell.hidden = !an;
     aManuellKnopf.setAttribute("aria-expanded", String(an));
+    // Wer die Nummer selbst eingibt, findet sie in der DHL-Standortsuche.
+    aDhlFinder.hidden = !(abholOhneSuche || an);
     if (an && !mOrt.value && aPlz.value === f.plz.value.trim()) mOrt.value = f.ort.value.trim();
   }
   function manuellUebernehmen() {

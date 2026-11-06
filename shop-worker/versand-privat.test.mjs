@@ -88,7 +88,7 @@ test("GET /versand/abholorte: Schluessel bleibt am Server, nur PLZ und Strasse g
   };
   // OpenPLZ nachgebaut: 63739 liegt in Bayern (Landesschluessel 09).
   const OPENPLZ_LADEN = async url => (String(url).includes("postalCode=63739") ? [{ postalCode: "63739", federalState: { key: "09", name: "Bayern" } }] : []);
-  const abfrage = async (query, env = { DHL_PRIVAT_API_KEY: "dhl-test", OPENPLZ_LADEN }, origin = SHOP) => {
+  const abfrage = async (query, env = { DHL_PRIVAT_API_KEY: "dhl-test", DHL_STANDORTSUCHE: "an", OPENPLZ_LADEN }, origin = SHOP) => {
     const req = new Request(`https://api.disorder119.com/versand/abholorte${query}`, { headers: origin ? { Origin: origin } : {} });
     const res = await handleAbholorte(req, env, new URL(req.url), "req", origin);
     return { status: res.status, cors: res.headers.get("Access-Control-Allow-Origin"), daten: await res.json() };
@@ -101,7 +101,7 @@ test("GET /versand/abholorte: Schluessel bleibt am Server, nur PLZ und Strasse g
     // Amtliche Luftbilder des Bundeslands der PLZ, mit Quellenvermerk.
     assert.deepEqual(ok.daten.luftbild, { land: "BY", quelle: "© Bayerische Vermessungsverwaltung, CC BY 4.0" });
     adresseCacheLeeren();
-    const ohneLand = await abfrage("?plz=63739", { DHL_PRIVAT_API_KEY: "dhl-test", OPENPLZ_LADEN: async () => { throw new Error("weg"); } });
+    const ohneLand = await abfrage("?plz=63739", { DHL_PRIVAT_API_KEY: "dhl-test", DHL_STANDORTSUCHE: "an", OPENPLZ_LADEN: async () => { throw new Error("weg"); } });
     assert.equal(ohneLand.daten.luftbild, false, "OpenPLZ weg: nur Strassenkarte, Abholorte trotzdem");
     assert.equal(ohneLand.daten.orte.length, 3);
     assert.equal(aufrufe[0].key, "dhl-test");
@@ -117,6 +117,41 @@ test("GET /versand/abholorte: Schluessel bleibt am Server, nur PLZ und Strasse g
     assert.equal((await abfrage("?plz=63739", undefined, "https://evil.example")).status, 403);
   } finally {
     globalThis.fetch = original;
+  }
+});
+
+test("Standortsuche: ohne DHL-Freigabe aus, und keine DHL-Antwort wird zwischengespeichert", async () => {
+  adresseCacheLeeren();
+  const original = globalThis.fetch;
+  const originalCaches = globalThis.caches;
+  const dhlAufrufe = [];
+  const gespeichert = [];
+  globalThis.fetch = async url => {
+    if (String(url).includes("location-finder")) dhlAufrufe.push(String(url));
+    return Response.json(DHL_ANTWORT);
+  };
+  // Ein Cloudflare-Cache waere da - er darf trotzdem nicht benutzt werden.
+  globalThis.caches = { default: { match: async () => null, put: async key => { gespeichert.push(String(key)); } } };
+  const abfrage = async env => {
+    const req = new Request("https://api.disorder119.com/versand/abholorte?plz=63739", { headers: { Origin: SHOP } });
+    const res = await handleAbholorte(req, { OPENPLZ_LADEN: async () => [], ...env }, new URL(req.url), "req", SHOP);
+    return { status: res.status, daten: await res.json() };
+  };
+  try {
+    // Schluessel vorhanden, aber keine Freigabe: kein Aufruf bei DHL, Kasse zeigt die Eingabe von Hand.
+    const aus = await abfrage({ DHL_PRIVAT_API_KEY: "dhl-test" });
+    assert.equal(aus.status, 503);
+    assert.equal(aus.daten.error, "ABHOLORTE_NICHT_EINGERICHTET");
+    assert.equal(dhlAufrufe.length, 0, "ohne DHL_STANDORTSUCHE=an keine Anfrage bei DHL");
+    // Freigegeben: zwei gleiche Suchen fragen DHL zweimal - nichts wird gespeichert.
+    const an = { DHL_PRIVAT_API_KEY: "dhl-test", DHL_STANDORTSUCHE: "an" };
+    assert.equal((await abfrage(an)).daten.orte.length, 3);
+    assert.equal((await abfrage(an)).daten.orte.length, 3);
+    assert.equal(dhlAufrufe.length, 2, "jede Suche fragt DHL neu");
+    assert.deepEqual(gespeichert, [], "keine Standortdaten im Cache");
+  } finally {
+    globalThis.fetch = original;
+    globalThis.caches = originalCaches;
   }
 });
 
