@@ -46,6 +46,8 @@ __CRITICAL_IMAGE_PRELOADS__
 <script>try{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}catch(e){}</script>
 <script src="/assets/catalog-number-links.js" type="text/d119-spaet" defer></script>
 <script src="/assets/spaet-lader.js" defer></script>
+<!-- Datenschutz-Hinweis gleich mit der Seite (06.11.2026): besucher.js kam vorher erst nach app.js und catalog.json, der Hinweis erschien am Handy nach rund 4,5 s und galt fuer Lighthouse als groesster Inhalt (Startseite 82-84 statt 100). Statistik sendet besucher.js weiter erst nach dem Laden. -->
+<script src="/assets/besucher.js" defer></script>
 <style>
 /* Archiv-Kopf (d119-ui): Suche als Linie, kleine Zahlenzeile - inline, damit nichts springt. */
 html.ui-kopf .masthead__meta { display: none; }

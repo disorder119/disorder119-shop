@@ -767,7 +767,8 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   };
 
   // Live-Besucher (assets/besucher.js): nur mit eingerichtetem Shop-Worker.
-  if (/^https:\/\//.test(String(SHOP_CONFIG.shopWorkerUrl || ""))) {
+  // Seit 06.11.2026 steht es meist schon im Seitenkopf - dann nicht doppelt laden.
+  if (/^https:\/\//.test(String(SHOP_CONFIG.shopWorkerUrl || "")) && !document.querySelector('script[src*="/assets/besucher.js"]')) {
     try {
       var besucherScript = document.createElement("script");
       besucherScript.src = "/assets/besucher.js?v=zusammenfassung-20261028";
