@@ -111,18 +111,24 @@ html.ui-zieht .product { transition: none; }
 [data-theme="hell"] .ui-toast { background: #151514; color: #fff; }
 [data-theme="hell"] .ui-zuletzt__liste b, [data-theme="hell"] .ui-zuletzt__liste span, [data-theme="hell"] .ui-zuletzt__liste em { color: #151514; }
 
-/* 9 · Teilen-Menü (Inhaber 06.11.2026): Foto mit Infos / Story / Video / Link. */
+/* 9 · Teilen-Menü (Inhaber 06.11.2026): Foto mit Infos / Story / Link. Ruhiger, leicht verschwommener
+   Hintergrund statt Abdunkeln - in der weißen Ansicht hell. */
+.ui-teilmenue { background: rgba(10,10,10,.42); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.ui-teilmenue .ui-sheet__box { box-shadow: 0 -10px 40px rgba(0,0,0,.5); }
+[data-theme="hell"] .ui-teilmenue { background: rgba(255,255,255,.55); }
+[data-theme="hell"] .ui-teilmenue .ui-sheet__box { box-shadow: 0 -10px 40px rgba(0,0,0,.14); border-top: 1px solid rgba(0,0,0,.08); }
 .ui-teilmenue .ui-teil__opt { align-items: center; text-align: left; padding: 12px 10px; border-radius: 12px; border-top: 0; margin-top: 4px; }
-.ui-teilmenue .ui-teil__opt.is-erst { background: rgba(242,239,231,.08); outline: 1px solid rgba(242,239,231,.35); }
+.ui-teilmenue .ui-teil__opt.is-erst { background: rgba(242,239,231,.07); }
+.ui-teilmenue .ui-teil__opt:active { background: rgba(242,239,231,.12); }
 .ui-teilmenue .ui-teil__opt span { display: block; }
 .ui-teilmenue .ui-teil__opt strong { display: block; font: 600 15px/1.2 system-ui, sans-serif; color: inherit; }
-.ui-teilmenue .ui-teil__opt small { display: block; font: 400 12px/1.35 system-ui, sans-serif; opacity: .65; margin-top: 3px; }
-.ui-teil__ico { flex: none; width: 30px; height: 38px; border-radius: 4px; background: currentColor; opacity: .9; position: relative; }
-.ui-teil__ico--story { width: 22px; height: 40px; margin: 0 4px; }
-.ui-teil__ico--video::after { content: ""; position: absolute; left: 11px; top: 12px; border: 7px solid transparent; border-left: 11px solid #161616; border-right: 0; }
-.ui-teil__ico--link { height: 12px; border-radius: 6px; margin: 13px 0; }
+.ui-teilmenue .ui-teil__opt small { display: block; font: 400 12px/1.35 system-ui, sans-serif; opacity: .62; margin-top: 3px; }
+.ui-teil__ico { flex: none; width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: rgba(242,239,231,.1); }
+.ui-teil__ico svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .ui-teil__status { margin: 10px 4px 0; font: 500 13px/1.4 system-ui, sans-serif; opacity: .8; }
-.ui-teil__los { width: 100%; margin-top: 10px; background: #f2efe7; color: #111; border: 0; border-radius: 12px; padding: 14px; font: 700 15px/1 system-ui, sans-serif; cursor: pointer; }
-[data-theme="hell"] .ui-teilmenue .ui-teil__opt.is-erst { background: rgba(0,0,0,.04); outline-color: rgba(0,0,0,.35); }
-[data-theme="hell"] .ui-teil__ico--video::after { border-left-color: #fff; }
-[data-theme="hell"] .ui-teil__los { background: #111; color: #fff; }
+[data-theme="hell"] .ui-teilmenue .ui-teil__opt.is-erst { background: rgba(0,0,0,.04); }
+[data-theme="hell"] .ui-teilmenue .ui-teil__opt:active { background: rgba(0,0,0,.07); }
+[data-theme="hell"] .ui-teil__ico { background: rgba(0,0,0,.06); }
+/* Teilen neben PayPal und Apple Pay: gleiche Form wie die Zahlungszeichen (weiß, schwarzer Rahmen, 6 px). */
+.ui-teilen.ui-teilen--zahlart, [data-theme="hell"] .ui-teilen.ui-teilen--zahlart { background: #fff; color: #111; border: 1px solid #000; border-radius: 6px; }
+.ui-teilen.ui-teilen--zahlart:hover { background: #f3f3f3; }

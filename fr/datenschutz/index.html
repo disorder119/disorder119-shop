@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Erste Produktbilder und app.css ganz vorn (06.11.2026): standen hinter ~27 KB Meta-Angaben und
+     Google-Daten (ItemList). Je nachdem, ob der Browser das Bild vor oder nach dem ersten Parse-Schritt
+     anforderte, rechnete Lighthouse am Handy bis zu 1,1 s Wartezeit dazu (Startseite 86-98 Punkte). -->
+
+<link rel="stylesheet" href="/assets/app.css?v=73d11812f9">
 <meta name="theme-color" content="#000000">
 <meta name="application-name" content="Disorder119">
 <meta name="mobile-web-app-capable" content="yes">
@@ -39,8 +44,6 @@
 <meta name="twitter:image:alt" content="Disorder119 — Politique de confidentialité">
 
 <title>Disorder119 — Politique de confidentialité</title>
-
-<link rel="stylesheet" href="/assets/app.css?v=73d11812f9">
 <!-- theme.css traegt fast nur die weisse Ansicht: am Handy nach dem ersten Bild, bei weisser Ansicht sofort (spaet-lader.js). -->
 <link rel="d119-spaet" href="/assets/theme.css?v=bdbcc20f17" data-sofort-bei-hell>
 <link rel="stylesheet" href="/assets/theme.css?v=bdbcc20f17" media="(min-width: 861px)">

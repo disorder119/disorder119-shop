@@ -537,12 +537,13 @@
   }
 
   /* 9 · Teilen (Inhaber 06.11.2026): Antippen öffnet erst eine kleine Auswahl, danach das Teilen-Menü des
-     Handys. Foto mit Infos (Archiv-Karte 4:5 + Steckbrief, vorausgewählt), Instagram-Story (9:16), Video aus
-     allen Fotos (entsteht auf dem Handy), Link kopieren. Die Bilder entstehen per Canvas für jeden Artikel,
-     Hintergrund nach Ansicht: hell = weiß, dunkel = schwarz mit leichtem Lichtschein (dunkle Teile bleiben
-     sichtbar). Text als Steckbrief ohne Emojis in der Sprache des Landes, in dem man gerade ist (/_land).
+     Handys. Foto mit Infos (Archiv-Karte 4:5, vorausgewählt), Instagram-Story (9:16), Link kopieren. Die Bilder
+     entstehen per Canvas für jeden Artikel, Hintergrund nach Ansicht: hell = weiß, dunkel = schwarz mit leichtem
+     Lichtschein (dunkle Teile bleiben sichtbar). Die Nachricht klingt wie unter Freunden: Disorder119 als
+     Archive Store für Designer-Mode aus zweiter Hand, das Teil mit den Fakten, ein schöner Satz aus der
+     Beschreibung - ohne Emojis, in der Sprache des Landes, in dem man gerade ist (/_land).
      Geteilte Links tragen utm_source=teilen - so zeigt der Shop, wer über einen geteilten Link kam.
-     Am Rechner ohne Teilen-Menü: Bild wird gespeichert, Text und Link kommen in die Zwischenablage. */
+     Am Rechner ohne Teilen-Menü: Bild wird gespeichert, Nachricht und Link kommen in die Zwischenablage. */
   if (istArtikel) {
     var info = document.querySelector(".info"), h1 = info && info.querySelector("h1");
     if (h1) {
@@ -553,39 +554,81 @@
       var seitenSprache = (html.lang || "de").slice(0, 2);
       var kannTeilen = Boolean(navigator.share);
       var TXT = {
-        de: { l: "de-DE", gr: "Größe", zu: "Zustand", ein: "Einzelstück – nur 1× verfügbar", kurz: "Einzelstück", sehen: "Hier ansehen:", weg: "Schon verkauft", mehr: "Mehr Einzelstücke im Archiv", archiv: "Archiv ansehen:", ca: "ca.", vk: "VERKAUFT",
-          z: { "Sehr gut": "sehr gut", "Gut": "gut", "Zufriedenstellend": "zufriedenstellend", "Repariert": "repariert", "Mit Defekt": "mit Defekt" } },
-        en: { l: "en-GB", gr: "Size", zu: "Condition", ein: "One of a kind – only 1 available", kurz: "One of a kind", sehen: "Take a look:", weg: "Already sold", mehr: "More one-of-a-kind pieces in the archive", archiv: "See the archive:", ca: "approx.", vk: "SOLD",
-          z: { "Sehr gut": "very good", "Gut": "good", "Zufriedenstellend": "fair", "Repariert": "repaired", "Mit Defekt": "with defect" } },
-        fr: { l: "fr-FR", gr: "Taille", zu: "État", ein: "Pièce unique – un seul exemplaire", kurz: "Pièce unique", sehen: "À découvrir ici :", weg: "Déjà vendu", mehr: "D'autres pièces uniques dans l'archive", archiv: "Voir l'archive :", ca: "env.", vk: "VENDU",
-          z: { "Sehr gut": "très bon", "Gut": "bon", "Zufriedenstellend": "satisfaisant", "Repariert": "réparé", "Mit Defekt": "avec défaut" } },
-        it: { l: "it-IT", gr: "Taglia", zu: "Condizioni", ein: "Pezzo unico – solo 1 disponibile", kurz: "Pezzo unico", sehen: "Guardalo qui:", weg: "Già venduto", mehr: "Altri pezzi unici nell'archivio", archiv: "Vedi l'archivio:", ca: "ca.", vk: "VENDUTO",
-          z: { "Sehr gut": "ottime", "Gut": "buone", "Zufriedenstellend": "discrete", "Repariert": "riparato", "Mit Defekt": "con difetto" } },
-        es: { l: "es-ES", gr: "Talla", zu: "Estado", ein: "Pieza única – solo 1 disponible", kurz: "Pieza única", sehen: "Míralo aquí:", weg: "Ya vendido", mehr: "Más piezas únicas en el archivo", archiv: "Ver el archivo:", ca: "aprox.", vk: "VENDIDO",
-          z: { "Sehr gut": "muy bueno", "Gut": "bueno", "Zufriedenstellend": "aceptable", "Repariert": "reparado", "Mit Defekt": "con defecto" } },
-        nl: { l: "nl-NL", gr: "Maat", zu: "Staat", ein: "Uniek stuk – maar 1 beschikbaar", kurz: "Uniek stuk", sehen: "Bekijk het hier:", weg: "Al verkocht", mehr: "Meer unieke stukken in het archief", archiv: "Bekijk het archief:", ca: "ca.", vk: "VERKOCHT",
-          z: { "Sehr gut": "zeer goed", "Gut": "goed", "Zufriedenstellend": "redelijk", "Repariert": "gerepareerd", "Mit Defekt": "met defect" } },
-        pl: { l: "pl-PL", gr: "Rozmiar", zu: "Stan", ein: "Unikat – tylko 1 sztuka", kurz: "Unikat", sehen: "Zobacz tutaj:", weg: "Już sprzedane", mehr: "Więcej unikatów w archiwum", archiv: "Zobacz archiwum:", ca: "ok.", vk: "SPRZEDANE",
-          z: { "Sehr gut": "bardzo dobry", "Gut": "dobry", "Zufriedenstellend": "zadowalający", "Repariert": "naprawiony", "Mit Defekt": "z wadą" } },
-        pt: { l: "pt-BR", gr: "Tamanho", zu: "Estado", ein: "Peça única – só 1 disponível", kurz: "Peça única", sehen: "Veja aqui:", weg: "Já vendida", mehr: "Mais peças únicas no arquivo", archiv: "Ver o arquivo:", ca: "aprox.", vk: "VENDIDA",
-          z: { "Sehr gut": "muito bom", "Gut": "bom", "Zufriedenstellend": "satisfatório", "Repariert": "reparado", "Mit Defekt": "com defeito" } }
+        de: { l: "de-DE", gr: "Größe", ca: "ca.", vk: "VERKAUFT", kurz: "Einzelstück",
+          intro: "Schau mal, was ich gerade bei Disorder119 gefunden habe – ein Archive Store für Designer-Mode aus zweiter Hand:",
+          introWeg: "Schau mal, das gab's bei Disorder119 – einem Archive Store für Designer-Mode aus zweiter Hand:",
+          schluss: "Gibt's nur ein einziges Mal. Hier ansehen:",
+          weg: "Schon verkauft – aber im Archiv warten noch viele andere Einzelstücke. Hier entlang:",
+          lob: "Ein echtes Archiv-Teil von {m} – handverlesen und bereit für ein zweites Leben.", lob0: "Ein echtes Archiv-Teil – handverlesen und bereit für ein zweites Leben.",
+          z: { "Sehr gut": "sehr guter Zustand", "Gut": "guter Zustand", "Zufriedenstellend": "getragen, mit Gebrauchsspuren", "Repariert": "repariert", "Mit Defekt": "mit Defekt (siehe Beschreibung)" } },
+        en: { l: "en-GB", gr: "size", ca: "approx.", vk: "SOLD", kurz: "One of a kind",
+          intro: "Look what I just found at Disorder119 – an archive store for pre-owned designer fashion:",
+          introWeg: "Look what was at Disorder119 – an archive store for pre-owned designer fashion:",
+          schluss: "There's only one. Take a look:",
+          weg: "Already sold – but the archive has plenty more one-of-a-kind pieces. Have a look:",
+          lob: "A true archive piece by {m} – hand-picked and ready for its next chapter.", lob0: "A true archive piece – hand-picked and ready for its next chapter.",
+          z: { "Sehr gut": "very good condition", "Gut": "good condition", "Zufriedenstellend": "worn, with signs of use", "Repariert": "repaired", "Mit Defekt": "with a defect (see description)" } },
+        fr: { l: "fr-FR", gr: "taille", ca: "env.", vk: "VENDU", kurz: "Pièce unique",
+          intro: "Regarde ce que je viens de trouver chez Disorder119 – un archive store de mode de créateur de seconde main :",
+          introWeg: "Regarde ce qu'il y avait chez Disorder119 – un archive store de mode de créateur de seconde main :",
+          schluss: "Il n'y en a qu'une. À découvrir ici :",
+          weg: "Déjà vendu – mais l'archive regorge d'autres pièces uniques. À découvrir ici :",
+          lob: "Une vraie pièce d'archive {m} – choisie à la main et prête pour une nouvelle vie.", lob0: "Une vraie pièce d'archive – choisie à la main et prête pour une nouvelle vie.",
+          z: { "Sehr gut": "très bon état", "Gut": "bon état", "Zufriedenstellend": "porté, avec traces d'usage", "Repariert": "réparé", "Mit Defekt": "avec un défaut (voir description)" } },
+        it: { l: "it-IT", gr: "taglia", ca: "ca.", vk: "VENDUTO", kurz: "Pezzo unico",
+          intro: "Guarda cosa ho appena trovato su Disorder119 – un archive store di moda firmata second hand:",
+          introWeg: "Guarda cosa c'era su Disorder119 – un archive store di moda firmata second hand:",
+          schluss: "Ce n'è uno solo. Guardalo qui:",
+          weg: "Già venduto – ma nell'archivio ci sono tanti altri pezzi unici. Dai un'occhiata:",
+          lob: "Un vero pezzo d'archivio di {m} – scelto a mano e pronto per una nuova vita.", lob0: "Un vero pezzo d'archivio – scelto a mano e pronto per una nuova vita.",
+          z: { "Sehr gut": "ottime condizioni", "Gut": "buone condizioni", "Zufriedenstellend": "usato, con segni d'uso", "Repariert": "riparato", "Mit Defekt": "con un difetto (vedi descrizione)" } },
+        es: { l: "es-ES", gr: "talla", ca: "aprox.", vk: "VENDIDO", kurz: "Pieza única",
+          intro: "Mira lo que acabo de encontrar en Disorder119, una archive store de moda de diseñador de segunda mano:",
+          introWeg: "Mira lo que había en Disorder119, una archive store de moda de diseñador de segunda mano:",
+          schluss: "Solo hay una. Míralo aquí:",
+          weg: "Ya se vendió, pero en el archivo hay muchas más piezas únicas. Échales un vistazo:",
+          lob: "Una auténtica pieza de archivo de {m}: elegida a mano y lista para una segunda vida.", lob0: "Una auténtica pieza de archivo: elegida a mano y lista para una segunda vida.",
+          z: { "Sehr gut": "muy buen estado", "Gut": "buen estado", "Zufriedenstellend": "usado, con señales de uso", "Repariert": "reparado", "Mit Defekt": "con un defecto (ver descripción)" } },
+        nl: { l: "nl-NL", gr: "maat", ca: "ca.", vk: "VERKOCHT", kurz: "Uniek stuk",
+          intro: "Kijk wat ik net bij Disorder119 heb gevonden – een archive store voor tweedehands designermode:",
+          introWeg: "Kijk wat er bij Disorder119 was – een archive store voor tweedehands designermode:",
+          schluss: "Er is er maar één. Bekijk het hier:",
+          weg: "Al verkocht – maar in het archief vind je nog veel meer unieke stukken. Kijk hier:",
+          lob: "Een echt archiefstuk van {m} – met de hand uitgekozen en klaar voor een tweede leven.", lob0: "Een echt archiefstuk – met de hand uitgekozen en klaar voor een tweede leven.",
+          z: { "Sehr gut": "zeer goede staat", "Gut": "goede staat", "Zufriedenstellend": "gedragen, met gebruikssporen", "Repariert": "gerepareerd", "Mit Defekt": "met een defect (zie beschrijving)" } },
+        pl: { l: "pl-PL", gr: "rozmiar", ca: "ok.", vk: "SPRZEDANE", kurz: "Unikat",
+          intro: "Zobacz, co jest teraz w Disorder119 – to archive store z designerską modą z drugiej ręki:",
+          introWeg: "Zobacz, co było w Disorder119 – to archive store z designerską modą z drugiej ręki:",
+          schluss: "Jest tylko jedna sztuka. Zobacz tutaj:",
+          weg: "Już sprzedane – ale w archiwum czeka wiele innych unikatów. Zobacz tutaj:",
+          lob: "Prawdziwy archiwalny egzemplarz {m} – wybrany ręcznie i gotowy na drugie życie.", lob0: "Prawdziwy archiwalny egzemplarz – wybrany ręcznie i gotowy na drugie życie.",
+          z: { "Sehr gut": "stan bardzo dobry", "Gut": "stan dobry", "Zufriedenstellend": "noszone, ze śladami użytkowania", "Repariert": "naprawione", "Mit Defekt": "z wadą (patrz opis)" } },
+        pt: { l: "pt-BR", gr: "tamanho", ca: "aprox.", vk: "VENDIDA", kurz: "Peça única",
+          intro: "Olha o que acabei de encontrar na Disorder119 – uma archive store de moda de grife em segunda mão:",
+          introWeg: "Olha o que havia na Disorder119 – uma archive store de moda de grife em segunda mão:",
+          schluss: "Só existe uma. Veja aqui:",
+          weg: "Já foi vendida – mas o arquivo tem muitas outras peças únicas. Veja aqui:",
+          lob: "Uma verdadeira peça de arquivo da {m} – escolhida a dedo e pronta para uma nova vida.", lob0: "Uma verdadeira peça de arquivo – escolhida a dedo e pronta para uma nova vida.",
+          z: { "Sehr gut": "muito bom estado", "Gut": "bom estado", "Zufriedenstellend": "usado, com sinais de uso", "Repariert": "reparado", "Mit Defekt": "com um defeito (ver descrição)" } }
       };
       var LAND_SPRACHE = { DE: "de", AT: "de", CH: "de", LI: "de", LU: "de", FR: "fr", BE: "fr", MC: "fr", IT: "it", SM: "it", VA: "it",
         ES: "es", MX: "es", AR: "es", CO: "es", CL: "es", PE: "es", VE: "es", EC: "es", UY: "es", PY: "es", BO: "es", CR: "es",
         PA: "es", DO: "es", GT: "es", HN: "es", SV: "es", NI: "es", NL: "nl", PL: "pl", PT: "pt", BR: "pt" };
       // Menü in der Sprache der Seite (de/en/fr).
       var UI = ({
-        de: { titel: "Wie möchtest du teilen?", foto: ["Foto mit Infos", "Bild + Steckbrief · WhatsApp, Instagram, Nachrichten"], story: ["Instagram-Story", "Hochformat mit Logo, Marke und Preis"],
-          video: ["Video – alle Fotos", "Läuft durch alle Bilder · WhatsApp, Story, Reel"], link: ["Link kopieren", "Zum Einfügen, wo du willst"], zu: "Abbrechen",
-          macht: "Video wird erstellt …", fertig: "Video teilen", kopiert: "Link kopiert", gespeichert: "Bild gespeichert – Text und Link sind in der Zwischenablage", fehler: "Das hat nicht geklappt. Bitte noch einmal." },
-        en: { titel: "How do you want to share?", foto: ["Photo with details", "Image + key facts · WhatsApp, Instagram, messages"], story: ["Instagram Story", "Portrait format with logo, brand and price"],
-          video: ["Video – all photos", "Runs through every photo · WhatsApp, Story, Reel"], link: ["Copy link", "Paste it wherever you like"], zu: "Cancel",
-          macht: "Creating video …", fertig: "Share video", kopiert: "Link copied", gespeichert: "Image saved – text and link are on your clipboard", fehler: "That didn't work. Please try again." },
-        fr: { titel: "Comment veux-tu partager ?", foto: ["Photo avec infos", "Image + fiche · WhatsApp, Instagram, messages"], story: ["Story Instagram", "Format portrait avec logo, marque et prix"],
-          video: ["Vidéo – toutes les photos", "Fait défiler toutes les photos · WhatsApp, Story, Reel"], link: ["Copier le lien", "À coller où tu veux"], zu: "Annuler",
-          macht: "Création de la vidéo …", fertig: "Partager la vidéo", kopiert: "Lien copié", gespeichert: "Image enregistrée – texte et lien copiés", fehler: "Ça n'a pas marché. Réessaie." }
+        de: { titel: "Wie möchtest du teilen?", foto: ["Foto mit Infos", "Bild + Nachricht · WhatsApp, Instagram, Nachrichten"], story: ["Instagram-Story", "Hochformat mit Logo, Marke und Preis"],
+          link: ["Link kopieren", "Zum Einfügen, wo du willst"], zu: "Abbrechen", kopiert: "Link kopiert", gespeichert: "Bild gespeichert – Nachricht und Link sind in der Zwischenablage", fehler: "Das hat nicht geklappt. Bitte noch einmal." },
+        en: { titel: "How do you want to share?", foto: ["Photo with details", "Image + message · WhatsApp, Instagram, messages"], story: ["Instagram Story", "Portrait format with logo, brand and price"],
+          link: ["Copy link", "Paste it wherever you like"], zu: "Cancel", kopiert: "Link copied", gespeichert: "Image saved – message and link are on your clipboard", fehler: "That didn't work. Please try again." },
+        fr: { titel: "Comment veux-tu partager ?", foto: ["Photo avec infos", "Image + message · WhatsApp, Instagram, messages"], story: ["Story Instagram", "Format portrait avec logo, marque et prix"],
+          link: ["Copier le lien", "À coller où tu veux"], zu: "Annuler", kopiert: "Lien copié", gespeichert: "Image enregistrée – message et lien copiés", fehler: "Ça n'a pas marché. Réessaie." }
       })[seitenSprache] || null;
       if (!UI) UI = { titel: "Wie möchtest du teilen?" };
+      var ICON = {
+        foto: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.7"/><path d="M4 18l5-5 4 4 3-3 4 4"/></svg>',
+        story: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.6"/><path d="M10.5 18.5h3"/></svg>',
+        link: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>'
+      };
 
       // ---- Land und Sprache
       var landLaeuft = null;
@@ -599,32 +642,51 @@
       }
       function spracheFuer(land) { return LAND_SPRACHE[land] || (land ? "en" : (TXT[seitenSprache] ? seitenSprache : "de")); }
 
-      // ---- Text (Steckbrief)
+      // ---- Nachricht
       var marke = String(it.brand || "").trim();
       function ohneMarke(t) {
         t = String(t || "").trim();
         return marke && t.toLowerCase().indexOf(marke.toLowerCase()) === 0 ? t.slice(marke.length).trim() : t;
       }
-      function nameFuer(sprache) {
-        var titel = sprache === "de" && seitenSprache === "de" ? it.title : (it.title_en || it.title);
-        return ohneMarke(titel || (h1.textContent || ""));
+      function titelFuer(sprache) {
+        var t = sprache === "de" && seitenSprache === "de" ? it.title : (it.title_en || it.title);
+        return String(t || h1.textContent || "").trim();
       }
+      function nameFuer(sprache) { return ohneMarke(titelFuer(sprache)); }
       function preisFuer(sprache) {
         var p = Number(it.price), s = TXT[sprache], text;
         try { text = p.toLocaleString(s.l, { style: "currency", currency: "EUR", minimumFractionDigits: p % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
         catch (e) { text = p + " €"; }
         return (it.priceEstimated ? s.ca + " " : "") + text;
       }
-      function steckbrief(sprache) {
-        var s = TXT[sprache], name = nameFuer(sprache), z = [];
-        z.push(marke ? marke.toUpperCase() : name);
-        if (marke && name) z.push(name);
-        z.push("");
-        if (verkauft) { z.push("• " + s.weg, "• " + s.mehr, "", s.archiv); return z.join("\n"); }
-        if (it.size) z.push("• " + s.gr + " " + it.size);
-        if (s.z[it.condition]) z.push("• " + s.zu + (sprache === "fr" ? " : " : ": ") + s.z[it.condition]);
-        z.push("• " + preisFuer(sprache), "• " + s.ein, "", s.sehen);
-        return z.join("\n");
+      // Ein schöner Satz aus der Beschreibung (de/en/fr): erster echter Satz nach der Archiv-Zeile;
+      // Hinweise wie "Kategorie:", "Fehlende Angaben", "Hinweis:" zählen nicht.
+      var FLOSKEL = /kuratierten Archiv|curated (Disorder119 )?archive|archives sélectionnées|Kategorie:|Category:|Catégorie|Fehlende Angaben|missing details|informations manquantes|^Hinweis|^Note|^Remarque/i;
+      function satzAus(text) {
+        var absaetze = String(text || "").split(/\n\s*\n/);
+        for (var i = 0; i < absaetze.length; i++) {
+          var a = absaetze[i].replace(/\s+/g, " ").trim();
+          if (!a || FLOSKEL.test(a)) continue;
+          var m = /^(.{40,230}?[.!?])(\s|$)/.exec(a);
+          return m ? m[1] : "";
+        }
+        return "";
+      }
+      function lobFuer(sprache) {
+        var quelle = { de: it.desc_de || it.desc, en: it.desc_en, fr: it.desc_fr }[sprache];
+        var satz = quelle ? satzAus(quelle) : "";
+        if (satz) return satz;
+        var s = TXT[sprache];
+        return marke ? s.lob.replace("{m}", marke) : s.lob0;
+      }
+      function nachricht(sprache) {
+        var s = TXT[sprache], titel = titelFuer(sprache);
+        if (verkauft) return [s.introWeg, "", titel, "", s.weg].join("\n");
+        var fakten = [titel];
+        if (it.size) fakten.push(s.gr + " " + it.size);
+        if (s.z[it.condition]) fakten.push(s.z[it.condition]);
+        fakten.push(preisFuer(sprache));
+        return [s.intro, "", fakten.join(" · "), "", lobFuer(sprache), "", s.schluss].join("\n");
       }
 
       // ---- Bilder per Canvas
@@ -647,7 +709,7 @@
       function istDunkel() { return html.getAttribute("data-theme") !== "hell"; }
       var SCHRIFT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
       function gesperrt(z, text, x, y, abstand, ausrichtung) {
-        // Buchstabenabstand ohne ctx.letterSpacing (aeltere Safari).
+        // Buchstabenabstand ohne ctx.letterSpacing (ältere Safari).
         var breite = 0, i;
         for (i = 0; i < text.length; i++) breite += z.measureText(text[i]).width + (i < text.length - 1 ? abstand : 0);
         var start = ausrichtung === "mitte" ? x - breite / 2 : ausrichtung === "rechts" ? x - breite : x;
@@ -656,7 +718,7 @@
         return breite;
       }
       function passend(z, text, gewicht, groesse, minimal, maxBreite) {
-        // Schrift verkleinern, bis der Text passt; sonst mit … kuerzen.
+        // Schrift verkleinern, bis der Text passt; sonst mit … kürzen.
         var g = groesse;
         z.font = gewicht + " " + g + "px " + SCHRIFT;
         while (z.measureText(text).width > maxBreite && g > minimal) { g -= 2; z.font = gewicht + " " + g + "px " + SCHRIFT; }
@@ -680,7 +742,7 @@
       }
       function untertitel(sprache) {
         var s = TXT[sprache], teile = [nameFuer(sprache)];
-        if (it.size) teile.push(s.gr + " " + it.size);
+        if (it.size) teile.push(s.gr.charAt(0).toUpperCase() + s.gr.slice(1) + " " + it.size);
         return teile.filter(Boolean).join(" · ");
       }
       // Archiv-Karte 1080x1350: Logo oben links, Teil, Band mit Marke, Name/Größe und Preis.
@@ -705,18 +767,17 @@
         z.globalAlpha = 0.72; z.fillText(unter, 64, H - band / 2 + 46); z.globalAlpha = 1;
       }
       // Story 1080x1920: Logo, Karte mit Teil, Marke, Name/Größe, Preis, Einzelstück.
-      function storyZeichnen(z, im, sprache, dunkel, deckkraft, nurFoto) {
+      function storyZeichnen(z, im, sprache, dunkel) {
         var s = TXT[sprache], B = 1080, H = 1920;
-        if (!nurFoto) { z.fillStyle = dunkel ? "#0b0b0b" : "#ffffff"; z.fillRect(0, 0, B, H); }
+        z.fillStyle = dunkel ? "#0b0b0b" : "#ffffff"; z.fillRect(0, 0, B, H);
         z.fillStyle = dunkel ? "#f2efe7" : "#111111";
-        if (!nurFoto) { z.font = "800 46px " + SCHRIFT; gesperrt(z, "DISORDER119", B / 2, 150, 5, "mitte"); }
+        z.font = "800 46px " + SCHRIFT; gesperrt(z, "DISORDER119", B / 2, 150, 5, "mitte");
         var kx = 86, ky = 220, kb = B - 172, kh = 1110, r = 40;
         z.save(); z.beginPath();
         z.moveTo(kx + r, ky); z.arcTo(kx + kb, ky, kx + kb, ky + kh, r); z.arcTo(kx + kb, ky + kh, kx, ky + kh, r); z.arcTo(kx, ky + kh, kx, ky, r); z.arcTo(kx, ky, kx + kb, ky, r); z.closePath(); z.clip();
-        if (!nurFoto) { if (dunkel) lichtschein(z, kx, ky, kb, kh); else { z.fillStyle = "#f3f2ef"; z.fillRect(kx, ky, kb, kh); } }
-        if (im) { z.globalAlpha = deckkraft == null ? 1 : deckkraft; enthalten(z, im, kx + 50, ky + 50, kb - 100, kh - 100); z.globalAlpha = 1; }
+        if (dunkel) lichtschein(z, kx, ky, kb, kh); else { z.fillStyle = "#f3f2ef"; z.fillRect(kx, ky, kb, kh); }
+        if (im) enthalten(z, im, kx + 50, ky + 50, kb - 100, kh - 100);
         z.restore();
-        if (nurFoto) return;
         z.fillStyle = dunkel ? "#f2efe7" : "#111111";
         z.font = "800 64px " + SCHRIFT;
         gesperrt(z, passend(z, (marke || nameFuer(sprache)).toUpperCase(), "800", 64, 40, kb), kx, 1450, 4);
@@ -739,55 +800,6 @@
         });
       }
 
-      // ---- Video: Story-Format, läuft durch alle Fotos (MediaRecorder, nur wo MP4 geht).
-      var VIDEO_TYP = (function () {
-        try {
-          if (!window.MediaRecorder || !MediaRecorder.isTypeSupported || !HTMLCanvasElement.prototype.captureStream) return "";
-          var t = ["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1", "video/mp4"];
-          for (var i = 0; i < t.length; i++) if (MediaRecorder.isTypeSupported(t[i])) return t[i];
-        } catch (e) {}
-        return "";
-      })();
-      function videoErstellen(sprache, fortschritt) {
-        var liste = fotos.slice(0, 6);
-        var geladen = 0;
-        return Promise.all(liste.map(function (p, i) {
-          var laden = i === 0 ? hauptbild() : bildLaden(variante(p));
-          return laden.then(function (im) { geladen++; fortschritt(geladen / (liste.length + 2)); return im; }, function () { return null; });
-        })).then(function (bilder) {
-          bilder = bilder.filter(Boolean);
-          if (!bilder.length) throw new Error("ohne Bilder");
-          var c = document.createElement("canvas"); c.width = 720; c.height = 1280;
-          var z = c.getContext("2d"); z.scale(720 / 1080, 1280 / 1920);
-          var dunkel = istDunkel(), STANDZEIT = 1300, BLENDE = 300, dauer = bilder.length * STANDZEIT + 200;
-          var strom = c.captureStream(30), stuecke = [];
-          var rec = new MediaRecorder(strom, { mimeType: VIDEO_TYP, videoBitsPerSecond: 3000000 });
-          rec.ondataavailable = function (e) { if (e.data && e.data.size) stuecke.push(e.data); };
-          return new Promise(function (ok, fehler) {
-            rec.onerror = function (e) { fehler(e.error || new Error("Aufnahme")); };
-            rec.onstop = function () {
-              strom.getTracks().forEach(function (t) { t.stop(); });
-              if (!stuecke.length) { fehler(new Error("leer")); return; }
-              ok(new File([new Blob(stuecke, { type: "video/mp4" })], "disorder119-" + slug + ".mp4", { type: "video/mp4" }));
-            };
-            var beginn = 0;
-            function bild(zeit) {
-              if (!beginn) beginn = zeit;
-              var t = zeit - beginn, n = Math.min(bilder.length - 1, Math.floor(t / STANDZEIT)), rest = t - n * STANDZEIT;
-              storyZeichnen(z, bilder[n], sprache, dunkel, 1);
-              if (n + 1 < bilder.length && rest > STANDZEIT - BLENDE) {
-                // Weiche Überblendung zum nächsten Foto (nur im Kartenbereich).
-                storyZeichnen(z, bilder[n + 1], sprache, dunkel, (rest - (STANDZEIT - BLENDE)) / BLENDE, true);
-              }
-              fortschritt((liste.length + Math.min(1, t / dauer)) / (liste.length + 2));
-              if (t < dauer) requestAnimationFrame(bild); else rec.stop();
-            }
-            rec.start(250);
-            requestAnimationFrame(bild);
-          });
-        });
-      }
-
       // ---- Teilen selbst
       function linkKopieren(text) {
         var wert = text || teilenLink;
@@ -798,19 +810,19 @@
         document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
       }
       function teilenMit(f, sprache) {
-        var text = steckbrief(sprache);
-        var daten = { title: (marke ? marke + " – " : "") + nameFuer(sprache), text: text, url: teilenLink };
+        var text = nachricht(sprache);
+        var daten = { title: titelFuer(sprache) + " – Disorder119", text: text, url: teilenLink };
         if (kannTeilen && grob) {
           var mit = f ? Object.assign({ files: [f] }, daten) : daten;
           return (f && navigator.canShare && navigator.canShare(mit)) ? navigator.share(mit) : navigator.share(daten);
         }
-        // Rechner: Bild speichern, Text + Link in die Zwischenablage.
+        // Rechner: Bild speichern, Nachricht + Link in die Zwischenablage.
         if (f) speichern(f);
         return linkKopieren(text + "\n" + teilenLink).then(function () { toast(UI.gespeichert); });
       }
 
       // ---- Auswahlmenü
-      var menue = null, karteBereit = null, storyBereit = null, videoBereit = null, videoFertig = false, menueSprache = "de";
+      var menue = null, karteBereit = null, storyBereit = null, menueSprache = "de";
       function vorbereiten() {
         landHolen().then(function (land) {
           menueSprache = spracheFuer(land);
@@ -824,40 +836,28 @@
       }
       function menueZu() { if (menue) menue.classList.remove("is-sichtbar"); }
       function option(art, beschr, extra) {
-        return '<button type="button" class="ui-sheet__btn ui-teil__opt' + (extra || "") + '" data-art="' + art + '"><i class="ui-teil__ico ui-teil__ico--' + art + '"></i><span><strong>' +
+        return '<button type="button" class="ui-sheet__btn ui-teil__opt' + (extra || "") + '" data-art="' + art + '"><i class="ui-teil__ico">' + ICON[art] + "</i><span><strong>" +
           beschr[0] + "</strong><small>" + beschr[1] + "</small></span></button>";
       }
       function menueZeigen() {
         if (!menue) {
           menue = document.createElement("div"); menue.className = "ui-sheet ui-teilmenue";
           menue.innerHTML = '<div class="ui-sheet__box" role="dialog" aria-label="' + UI.titel + '"><p>' + UI.titel + "</p>" +
-            option("foto", UI.foto, " is-erst") + option("story", UI.story) + (VIDEO_TYP ? option("video", UI.video) : "") + option("link", UI.link) +
+            option("foto", UI.foto, " is-erst") + option("story", UI.story) + option("link", UI.link) +
             '<div class="ui-teil__status" role="status" hidden></div>' +
-            '<button type="button" class="ui-teil__los" hidden>' + UI.fertig + "</button>" +
             '<button type="button" class="ui-sheet__zu">' + UI.zu + "</button></div>";
           menue.addEventListener("click", function (e) {
             if (e.target === menue || e.target.closest(".ui-sheet__zu")) { menueZu(); return; }
-            var los = e.target.closest(".ui-teil__los");
-            if (los && videoBereit && videoFertig) {
-              videoBereit.then(function (f) { return teilenMit(f, menueSprache); }).then(menueZu).catch(function (err) { if (!err || err.name !== "AbortError") status(UI.fehler); });
-              return;
-            }
             var opt = e.target.closest(".ui-teil__opt"); if (!opt) return;
             var art = opt.getAttribute("data-art");
             if (art === "link") { linkKopieren().then(function () { toast(UI.kopiert); menueZu(); }, function () { status(UI.fehler); }); return; }
-            if (art === "video") {
-              status(UI.macht + " 0 %"); menue.querySelector(".ui-teil__los").hidden = true; videoFertig = false;
-              videoBereit = videoErstellen(menueSprache, function (anteil) { status(UI.macht + " " + Math.round(anteil * 100) + " %"); });
-              videoBereit.then(function () { videoFertig = true; status(""); menue.querySelector(".ui-teil__los").hidden = false; }, function () { videoBereit = null; status(UI.fehler); });
-              return;
-            }
             var bereit = art === "foto" ? (karteBereit || (karteBereit = karteDatei(menueSprache))) : (storyBereit || (storyBereit = storyDatei(menueSprache)));
             mitFrist(bereit, 2500, null).catch(function () { return null; }).then(function (f) { return teilenMit(f, menueSprache); })
               .then(menueZu).catch(function (err) { if (!err || err.name !== "AbortError") status(UI.fehler); });
           });
           document.body.appendChild(menue);
         }
-        status(""); menue.querySelector(".ui-teil__los").hidden = !videoFertig;
+        status("");
         requestAnimationFrame(function () { menue.classList.add("is-sichtbar"); });
         // Story im Hintergrund schon vorbereiten - das Teilen-Menü des Handys muss direkt nach dem Tippen kommen.
         landHolen().then(function () { if (!storyBereit) { storyBereit = storyDatei(menueSprache); storyBereit.catch(function () { storyBereit = null; }); } });
@@ -867,9 +867,9 @@
       teilen.addEventListener("pointerdown", vorbereiten);
       teilen.addEventListener("click", function () { vorbereiten(); menueZeigen(); });
       // Ansicht gewechselt: vorbereitete Bilder passen nicht mehr.
-      new MutationObserver(function () { karteBereit = null; storyBereit = null; videoBereit = null; videoFertig = false; }).observe(html, { attributes: true, attributeFilter: ["data-theme"] });
-      // Für Tests und die Admin-Vorschau: Text und Bilder ohne Menü erzeugen.
-      window.D119Teilen = { steckbrief: steckbrief, karte: karteDatei, story: storyDatei, sprache: spracheFuer, video: VIDEO_TYP ? videoErstellen : null };
+      new MutationObserver(function () { karteBereit = null; storyBereit = null; }).observe(html, { attributes: true, attributeFilter: ["data-theme"] });
+      // Für Tests: Nachricht und Bilder ohne Menü erzeugen.
+      window.D119Teilen = { nachricht: nachricht, karte: karteDatei, story: storyDatei, sprache: spracheFuer };
       // Inhaber 05.11.2026: Teilen neben PayPal/Apple Pay unter "Jetzt kaufen".
       // article.js baut die Zeile (.d119-zahlart) - je nach Ladereihenfolge
       // kurz darauf warten; ohne Zeile (verkauft, Preis auf Anfrage) wie bisher in die Infospalte.
