@@ -100,6 +100,7 @@ function netzFelder(request) {
 // Seite, hoechstens 1 KB, dieselbe Seite je Anschluss hoechstens alle 3 s;
 // die Flut-Grenze des Waechters gilt wie fuer jede Seite.
 export const SEITENAUFRUF_PING='/_seitenaufruf';
+export const LAND_PFAD='/_land';
 const pingMerker=new Map();
 export function pingSeitenaufruf(request,body) {
   const h=request.headers;
@@ -467,6 +468,14 @@ export default {
       }
     }
     if (url.pathname===SEITENAUFRUF_PING) return request.method==='POST'?seitenaufrufPing(request,env,ctx,bot):fail(405,'Methode nicht erlaubt.');
+    // Land des Besuchers fuer den Teilen-Text (Inhaber 06.11.2026: einladender
+    // Text in der Sprache des Landes, in dem man gerade ist). Nur das
+    // zweistellige Land von Cloudflare - nichts gespeichert, nie gecacht.
+    if (url.pathname===LAND_PFAD) {
+      if (request.method!=='GET') return fail(405,'Methode nicht erlaubt.');
+      const land=String(request.cf?.country||'').toUpperCase();
+      return new Response(JSON.stringify({land:/^[A-Z]{2}$/.test(land)?land:''}),{status:200,headers:storefrontHeaders(new Response(null,{headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store, private'}}))});
+    }
     if (!['GET','HEAD'].includes(request.method)) return fail(405,'Methode nicht erlaubt.');
     const legacy=url.pathname.match(/^(\/(?:en\/|fr\/)?artikel\/)(\d+)(?:\/index\.html|\/|\.html)?$/);
     if(legacy && ARTICLE_NUMBER_ROUTES[legacy[2]]) {

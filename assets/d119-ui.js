@@ -536,42 +536,340 @@
     }
   }
 
-  /* 9 · Teilen: Handy = Teilen-Menü des Systems mit Foto, Titel, Preis, Link (WhatsApp, Instagram, TikTok, AirDrop …);
-     Rechner = kleine Auswahl (WhatsApp, E-Mail, Link kopieren). */
+  /* 9 · Teilen (Inhaber 06.11.2026): Antippen öffnet erst eine kleine Auswahl, danach das Teilen-Menü des
+     Handys. Foto mit Infos (Archiv-Karte 4:5 + Steckbrief, vorausgewählt), Instagram-Story (9:16), Video aus
+     allen Fotos (entsteht auf dem Handy), Link kopieren. Die Bilder entstehen per Canvas für jeden Artikel,
+     Hintergrund nach Ansicht: hell = weiß, dunkel = schwarz mit leichtem Lichtschein (dunkle Teile bleiben
+     sichtbar). Text als Steckbrief ohne Emojis in der Sprache des Landes, in dem man gerade ist (/_land).
+     Geteilte Links tragen utm_source=teilen - so zeigt der Shop, wer über einen geteilten Link kam.
+     Am Rechner ohne Teilen-Menü: Bild wird gespeichert, Text und Link kommen in die Zwischenablage. */
   if (istArtikel) {
     var info = document.querySelector(".info"), h1 = info && info.querySelector("h1");
     if (h1) {
       var it = window.ARTICLE_ITEM || {};
-      var titel = (h1.textContent || "").trim();
-      var text = titel + (it.price > 0 ? " · " + Number(it.price).toLocaleString("de-DE") + " €" : "") + " · Disorder119";
+      var verkauft = it.sold === true || !(Number(it.price) > 0);
+      var slug = String(it.url_slug || it.id || "artikel");
+      var teilenLink = location.origin + location.pathname + "?utm_source=teilen";
+      var seitenSprache = (html.lang || "de").slice(0, 2);
+      var kannTeilen = Boolean(navigator.share);
+      var TXT = {
+        de: { l: "de-DE", gr: "Größe", zu: "Zustand", ein: "Einzelstück – nur 1× verfügbar", kurz: "Einzelstück", sehen: "Hier ansehen:", weg: "Schon verkauft", mehr: "Mehr Einzelstücke im Archiv", archiv: "Archiv ansehen:", ca: "ca.", vk: "VERKAUFT",
+          z: { "Sehr gut": "sehr gut", "Gut": "gut", "Zufriedenstellend": "zufriedenstellend", "Repariert": "repariert", "Mit Defekt": "mit Defekt" } },
+        en: { l: "en-GB", gr: "Size", zu: "Condition", ein: "One of a kind – only 1 available", kurz: "One of a kind", sehen: "Take a look:", weg: "Already sold", mehr: "More one-of-a-kind pieces in the archive", archiv: "See the archive:", ca: "approx.", vk: "SOLD",
+          z: { "Sehr gut": "very good", "Gut": "good", "Zufriedenstellend": "fair", "Repariert": "repaired", "Mit Defekt": "with defect" } },
+        fr: { l: "fr-FR", gr: "Taille", zu: "État", ein: "Pièce unique – un seul exemplaire", kurz: "Pièce unique", sehen: "À découvrir ici :", weg: "Déjà vendu", mehr: "D'autres pièces uniques dans l'archive", archiv: "Voir l'archive :", ca: "env.", vk: "VENDU",
+          z: { "Sehr gut": "très bon", "Gut": "bon", "Zufriedenstellend": "satisfaisant", "Repariert": "réparé", "Mit Defekt": "avec défaut" } },
+        it: { l: "it-IT", gr: "Taglia", zu: "Condizioni", ein: "Pezzo unico – solo 1 disponibile", kurz: "Pezzo unico", sehen: "Guardalo qui:", weg: "Già venduto", mehr: "Altri pezzi unici nell'archivio", archiv: "Vedi l'archivio:", ca: "ca.", vk: "VENDUTO",
+          z: { "Sehr gut": "ottime", "Gut": "buone", "Zufriedenstellend": "discrete", "Repariert": "riparato", "Mit Defekt": "con difetto" } },
+        es: { l: "es-ES", gr: "Talla", zu: "Estado", ein: "Pieza única – solo 1 disponible", kurz: "Pieza única", sehen: "Míralo aquí:", weg: "Ya vendido", mehr: "Más piezas únicas en el archivo", archiv: "Ver el archivo:", ca: "aprox.", vk: "VENDIDO",
+          z: { "Sehr gut": "muy bueno", "Gut": "bueno", "Zufriedenstellend": "aceptable", "Repariert": "reparado", "Mit Defekt": "con defecto" } },
+        nl: { l: "nl-NL", gr: "Maat", zu: "Staat", ein: "Uniek stuk – maar 1 beschikbaar", kurz: "Uniek stuk", sehen: "Bekijk het hier:", weg: "Al verkocht", mehr: "Meer unieke stukken in het archief", archiv: "Bekijk het archief:", ca: "ca.", vk: "VERKOCHT",
+          z: { "Sehr gut": "zeer goed", "Gut": "goed", "Zufriedenstellend": "redelijk", "Repariert": "gerepareerd", "Mit Defekt": "met defect" } },
+        pl: { l: "pl-PL", gr: "Rozmiar", zu: "Stan", ein: "Unikat – tylko 1 sztuka", kurz: "Unikat", sehen: "Zobacz tutaj:", weg: "Już sprzedane", mehr: "Więcej unikatów w archiwum", archiv: "Zobacz archiwum:", ca: "ok.", vk: "SPRZEDANE",
+          z: { "Sehr gut": "bardzo dobry", "Gut": "dobry", "Zufriedenstellend": "zadowalający", "Repariert": "naprawiony", "Mit Defekt": "z wadą" } },
+        pt: { l: "pt-BR", gr: "Tamanho", zu: "Estado", ein: "Peça única – só 1 disponível", kurz: "Peça única", sehen: "Veja aqui:", weg: "Já vendida", mehr: "Mais peças únicas no arquivo", archiv: "Ver o arquivo:", ca: "aprox.", vk: "VENDIDA",
+          z: { "Sehr gut": "muito bom", "Gut": "bom", "Zufriedenstellend": "satisfatório", "Repariert": "reparado", "Mit Defekt": "com defeito" } }
+      };
+      var LAND_SPRACHE = { DE: "de", AT: "de", CH: "de", LI: "de", LU: "de", FR: "fr", BE: "fr", MC: "fr", IT: "it", SM: "it", VA: "it",
+        ES: "es", MX: "es", AR: "es", CO: "es", CL: "es", PE: "es", VE: "es", EC: "es", UY: "es", PY: "es", BO: "es", CR: "es",
+        PA: "es", DO: "es", GT: "es", HN: "es", SV: "es", NI: "es", NL: "nl", PL: "pl", PT: "pt", BR: "pt" };
+      // Menü in der Sprache der Seite (de/en/fr).
+      var UI = ({
+        de: { titel: "Wie möchtest du teilen?", foto: ["Foto mit Infos", "Bild + Steckbrief · WhatsApp, Instagram, Nachrichten"], story: ["Instagram-Story", "Hochformat mit Logo, Marke und Preis"],
+          video: ["Video – alle Fotos", "Läuft durch alle Bilder · WhatsApp, Story, Reel"], link: ["Link kopieren", "Zum Einfügen, wo du willst"], zu: "Abbrechen",
+          macht: "Video wird erstellt …", fertig: "Video teilen", kopiert: "Link kopiert", gespeichert: "Bild gespeichert – Text und Link sind in der Zwischenablage", fehler: "Das hat nicht geklappt. Bitte noch einmal." },
+        en: { titel: "How do you want to share?", foto: ["Photo with details", "Image + key facts · WhatsApp, Instagram, messages"], story: ["Instagram Story", "Portrait format with logo, brand and price"],
+          video: ["Video – all photos", "Runs through every photo · WhatsApp, Story, Reel"], link: ["Copy link", "Paste it wherever you like"], zu: "Cancel",
+          macht: "Creating video …", fertig: "Share video", kopiert: "Link copied", gespeichert: "Image saved – text and link are on your clipboard", fehler: "That didn't work. Please try again." },
+        fr: { titel: "Comment veux-tu partager ?", foto: ["Photo avec infos", "Image + fiche · WhatsApp, Instagram, messages"], story: ["Story Instagram", "Format portrait avec logo, marque et prix"],
+          video: ["Vidéo – toutes les photos", "Fait défiler toutes les photos · WhatsApp, Story, Reel"], link: ["Copier le lien", "À coller où tu veux"], zu: "Annuler",
+          macht: "Création de la vidéo …", fertig: "Partager la vidéo", kopiert: "Lien copié", gespeichert: "Image enregistrée – texte et lien copiés", fehler: "Ça n'a pas marché. Réessaie." }
+      })[seitenSprache] || null;
+      if (!UI) UI = { titel: "Wie möchtest du teilen?" };
+
+      // ---- Land und Sprache
+      var landLaeuft = null;
+      function mitFrist(p, ms, ersatz) { return Promise.race([p, new Promise(function (r) { setTimeout(function () { r(ersatz); }, ms); })]); }
+      function landHolen() {
+        if (!landLaeuft) landLaeuft = fetch("/_land", { cache: "no-store", credentials: "omit" })
+          .then(function (r) { return r.ok ? r.json() : {}; })
+          .then(function (d) { return /^[A-Z]{2}$/.test(String(d && d.land || "")) ? d.land : ""; })
+          .catch(function () { return ""; });
+        return landLaeuft;
+      }
+      function spracheFuer(land) { return LAND_SPRACHE[land] || (land ? "en" : (TXT[seitenSprache] ? seitenSprache : "de")); }
+
+      // ---- Text (Steckbrief)
+      var marke = String(it.brand || "").trim();
+      function ohneMarke(t) {
+        t = String(t || "").trim();
+        return marke && t.toLowerCase().indexOf(marke.toLowerCase()) === 0 ? t.slice(marke.length).trim() : t;
+      }
+      function nameFuer(sprache) {
+        var titel = sprache === "de" && seitenSprache === "de" ? it.title : (it.title_en || it.title);
+        return ohneMarke(titel || (h1.textContent || ""));
+      }
+      function preisFuer(sprache) {
+        var p = Number(it.price), s = TXT[sprache], text;
+        try { text = p.toLocaleString(s.l, { style: "currency", currency: "EUR", minimumFractionDigits: p % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
+        catch (e) { text = p + " €"; }
+        return (it.priceEstimated ? s.ca + " " : "") + text;
+      }
+      function steckbrief(sprache) {
+        var s = TXT[sprache], name = nameFuer(sprache), z = [];
+        z.push(marke ? marke.toUpperCase() : name);
+        if (marke && name) z.push(name);
+        z.push("");
+        if (verkauft) { z.push("• " + s.weg, "• " + s.mehr, "", s.archiv); return z.join("\n"); }
+        if (it.size) z.push("• " + s.gr + " " + it.size);
+        if (s.z[it.condition]) z.push("• " + s.zu + (sprache === "fr" ? " : " : ": ") + s.z[it.condition]);
+        z.push("• " + preisFuer(sprache), "• " + s.ein, "", s.sehen);
+        return z.join("\n");
+      }
+
+      // ---- Bilder per Canvas
+      function bildLaden(src) {
+        return new Promise(function (ok, fehler) { var im = new Image(); im.decoding = "async"; im.onload = function () { ok(im); }; im.onerror = fehler; im.src = src; });
+      }
+      function variante(pfad, ordner) {
+        var g = String(pfad || "").replace(/^\/+/, ""), i = g.lastIndexOf("/");
+        return "/" + (ordner && i >= 0 ? g.slice(0, i) + "/" + ordner + "/" + g.slice(i + 1) : g);
+      }
+      var fotos = (it.gallery || []).filter(Boolean);
+      var hauptLaeuft = null;
+      function hauptbild() {
+        if (!hauptLaeuft) {
+          hauptLaeuft = bildLaden(variante(fotos[0])).catch(function () { return bildLaden(variante(fotos[0], "display")); });
+          hauptLaeuft.catch(function () { hauptLaeuft = null; });
+        }
+        return hauptLaeuft;
+      }
+      function istDunkel() { return html.getAttribute("data-theme") !== "hell"; }
+      var SCHRIFT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+      function gesperrt(z, text, x, y, abstand, ausrichtung) {
+        // Buchstabenabstand ohne ctx.letterSpacing (aeltere Safari).
+        var breite = 0, i;
+        for (i = 0; i < text.length; i++) breite += z.measureText(text[i]).width + (i < text.length - 1 ? abstand : 0);
+        var start = ausrichtung === "mitte" ? x - breite / 2 : ausrichtung === "rechts" ? x - breite : x;
+        z.textAlign = "left";
+        for (i = 0; i < text.length; i++) { z.fillText(text[i], start, y); start += z.measureText(text[i]).width + abstand; }
+        return breite;
+      }
+      function passend(z, text, gewicht, groesse, minimal, maxBreite) {
+        // Schrift verkleinern, bis der Text passt; sonst mit … kuerzen.
+        var g = groesse;
+        z.font = gewicht + " " + g + "px " + SCHRIFT;
+        while (z.measureText(text).width > maxBreite && g > minimal) { g -= 2; z.font = gewicht + " " + g + "px " + SCHRIFT; }
+        if (z.measureText(text).width <= maxBreite) return text;
+        while (text.length > 3 && z.measureText(text + "…").width > maxBreite) text = text.slice(0, -1);
+        return text.trim() + "…";
+      }
+      function enthalten(z, im, x, y, b, h) {
+        var f = Math.min(b / im.naturalWidth, h / im.naturalHeight), w = im.naturalWidth * f, hh = im.naturalHeight * f;
+        z.drawImage(im, x + (b - w) / 2, y + (h - hh) / 2, w, hh);
+      }
+      function lichtschein(z, x, y, b, h) {
+        var g = z.createRadialGradient(x + b / 2, y + h * 0.45, 10, x + b / 2, y + h * 0.45, Math.max(b, h) * 0.62);
+        g.addColorStop(0, "#2e2e2e"); g.addColorStop(1, "#0b0b0b");
+        z.fillStyle = g; z.fillRect(x, y, b, h);
+      }
+      function datei(canvas, name, typ) {
+        return new Promise(function (ok, fehler) {
+          canvas.toBlob(function (b) { if (b) ok(new File([b], name, { type: typ })); else fehler(new Error("kein Bild")); }, typ, 0.92);
+        });
+      }
+      function untertitel(sprache) {
+        var s = TXT[sprache], teile = [nameFuer(sprache)];
+        if (it.size) teile.push(s.gr + " " + it.size);
+        return teile.filter(Boolean).join(" · ");
+      }
+      // Archiv-Karte 1080x1350: Logo oben links, Teil, Band mit Marke, Name/Größe und Preis.
+      function karteZeichnen(z, im, sprache, dunkel) {
+        var s = TXT[sprache], B = 1080, H = 1350, band = 250;
+        if (dunkel) lichtschein(z, 0, 0, B, H - band); else { z.fillStyle = "#ffffff"; z.fillRect(0, 0, B, H - band); }
+        z.fillStyle = dunkel ? "#f2efe7" : "#111111";
+        z.font = "800 30px " + SCHRIFT; z.textBaseline = "alphabetic";
+        gesperrt(z, "DISORDER119", 64, 82, 3);
+        if (im) enthalten(z, im, 90, 120, B - 180, H - band - 160);
+        z.fillStyle = dunkel ? "#f2efe7" : "#111111"; z.fillRect(0, H - band, B, band);
+        var schrift = dunkel ? "#111111" : "#ffffff";
+        var preis = verkauft ? s.vk : preisFuer(sprache);
+        z.fillStyle = schrift; z.font = "800 70px " + SCHRIFT;
+        var preisBreite = z.measureText(preis).width;
+        z.textAlign = "right"; z.fillText(preis, B - 64, H - band / 2 + 24); z.textAlign = "left";
+        var frei = B - 64 - preisBreite - 60 - 64;
+        z.font = "800 50px " + SCHRIFT;
+        var markeText = passend(z, (marke || nameFuer(sprache)).toUpperCase(), "800", 50, 32, frei);
+        gesperrt(z, markeText, 64, H - band / 2 - 6, 3);
+        var unter = passend(z, untertitel(sprache), "400", 31, 22, frei);
+        z.globalAlpha = 0.72; z.fillText(unter, 64, H - band / 2 + 46); z.globalAlpha = 1;
+      }
+      // Story 1080x1920: Logo, Karte mit Teil, Marke, Name/Größe, Preis, Einzelstück.
+      function storyZeichnen(z, im, sprache, dunkel, deckkraft, nurFoto) {
+        var s = TXT[sprache], B = 1080, H = 1920;
+        if (!nurFoto) { z.fillStyle = dunkel ? "#0b0b0b" : "#ffffff"; z.fillRect(0, 0, B, H); }
+        z.fillStyle = dunkel ? "#f2efe7" : "#111111";
+        if (!nurFoto) { z.font = "800 46px " + SCHRIFT; gesperrt(z, "DISORDER119", B / 2, 150, 5, "mitte"); }
+        var kx = 86, ky = 220, kb = B - 172, kh = 1110, r = 40;
+        z.save(); z.beginPath();
+        z.moveTo(kx + r, ky); z.arcTo(kx + kb, ky, kx + kb, ky + kh, r); z.arcTo(kx + kb, ky + kh, kx, ky + kh, r); z.arcTo(kx, ky + kh, kx, ky, r); z.arcTo(kx, ky, kx + kb, ky, r); z.closePath(); z.clip();
+        if (!nurFoto) { if (dunkel) lichtschein(z, kx, ky, kb, kh); else { z.fillStyle = "#f3f2ef"; z.fillRect(kx, ky, kb, kh); } }
+        if (im) { z.globalAlpha = deckkraft == null ? 1 : deckkraft; enthalten(z, im, kx + 50, ky + 50, kb - 100, kh - 100); z.globalAlpha = 1; }
+        z.restore();
+        if (nurFoto) return;
+        z.fillStyle = dunkel ? "#f2efe7" : "#111111";
+        z.font = "800 64px " + SCHRIFT;
+        gesperrt(z, passend(z, (marke || nameFuer(sprache)).toUpperCase(), "800", 64, 40, kb), kx, 1450, 4);
+        z.globalAlpha = 0.78; z.fillText(passend(z, untertitel(sprache), "400", 40, 28, kb), kx, 1515); z.globalAlpha = 1;
+        z.font = "800 96px " + SCHRIFT; z.fillText(verkauft ? s.vk : preisFuer(sprache), kx, 1640);
+        z.globalAlpha = 0.6; z.font = "400 34px " + SCHRIFT; z.fillText(s.kurz + " · disorder119.com", kx, 1730); z.globalAlpha = 1;
+      }
+      function karteDatei(sprache) {
+        return hauptbild().catch(function () { return null; }).then(function (im) {
+          var c = document.createElement("canvas"); c.width = 1080; c.height = 1350;
+          karteZeichnen(c.getContext("2d"), im, sprache, istDunkel());
+          return datei(c, "disorder119-" + slug + ".jpg", "image/jpeg");
+        });
+      }
+      function storyDatei(sprache) {
+        return hauptbild().catch(function () { return null; }).then(function (im) {
+          var c = document.createElement("canvas"); c.width = 1080; c.height = 1920;
+          storyZeichnen(c.getContext("2d"), im, sprache, istDunkel());
+          return datei(c, "disorder119-" + slug + "-story.jpg", "image/jpeg");
+        });
+      }
+
+      // ---- Video: Story-Format, läuft durch alle Fotos (MediaRecorder, nur wo MP4 geht).
+      var VIDEO_TYP = (function () {
+        try {
+          if (!window.MediaRecorder || !MediaRecorder.isTypeSupported || !HTMLCanvasElement.prototype.captureStream) return "";
+          var t = ["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1", "video/mp4"];
+          for (var i = 0; i < t.length; i++) if (MediaRecorder.isTypeSupported(t[i])) return t[i];
+        } catch (e) {}
+        return "";
+      })();
+      function videoErstellen(sprache, fortschritt) {
+        var liste = fotos.slice(0, 6);
+        var geladen = 0;
+        return Promise.all(liste.map(function (p, i) {
+          var laden = i === 0 ? hauptbild() : bildLaden(variante(p));
+          return laden.then(function (im) { geladen++; fortschritt(geladen / (liste.length + 2)); return im; }, function () { return null; });
+        })).then(function (bilder) {
+          bilder = bilder.filter(Boolean);
+          if (!bilder.length) throw new Error("ohne Bilder");
+          var c = document.createElement("canvas"); c.width = 720; c.height = 1280;
+          var z = c.getContext("2d"); z.scale(720 / 1080, 1280 / 1920);
+          var dunkel = istDunkel(), STANDZEIT = 1300, BLENDE = 300, dauer = bilder.length * STANDZEIT + 200;
+          var strom = c.captureStream(30), stuecke = [];
+          var rec = new MediaRecorder(strom, { mimeType: VIDEO_TYP, videoBitsPerSecond: 3000000 });
+          rec.ondataavailable = function (e) { if (e.data && e.data.size) stuecke.push(e.data); };
+          return new Promise(function (ok, fehler) {
+            rec.onerror = function (e) { fehler(e.error || new Error("Aufnahme")); };
+            rec.onstop = function () {
+              strom.getTracks().forEach(function (t) { t.stop(); });
+              if (!stuecke.length) { fehler(new Error("leer")); return; }
+              ok(new File([new Blob(stuecke, { type: "video/mp4" })], "disorder119-" + slug + ".mp4", { type: "video/mp4" }));
+            };
+            var beginn = 0;
+            function bild(zeit) {
+              if (!beginn) beginn = zeit;
+              var t = zeit - beginn, n = Math.min(bilder.length - 1, Math.floor(t / STANDZEIT)), rest = t - n * STANDZEIT;
+              storyZeichnen(z, bilder[n], sprache, dunkel, 1);
+              if (n + 1 < bilder.length && rest > STANDZEIT - BLENDE) {
+                // Weiche Überblendung zum nächsten Foto (nur im Kartenbereich).
+                storyZeichnen(z, bilder[n + 1], sprache, dunkel, (rest - (STANDZEIT - BLENDE)) / BLENDE, true);
+              }
+              fortschritt((liste.length + Math.min(1, t / dauer)) / (liste.length + 2));
+              if (t < dauer) requestAnimationFrame(bild); else rec.stop();
+            }
+            rec.start(250);
+            requestAnimationFrame(bild);
+          });
+        });
+      }
+
+      // ---- Teilen selbst
+      function linkKopieren(text) {
+        var wert = text || teilenLink;
+        return (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(wert) : Promise.reject(new Error("ohne Zwischenablage")));
+      }
+      function speichern(f) {
+        var a = document.createElement("a"); a.href = URL.createObjectURL(f); a.download = f.name;
+        document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+      }
+      function teilenMit(f, sprache) {
+        var text = steckbrief(sprache);
+        var daten = { title: (marke ? marke + " – " : "") + nameFuer(sprache), text: text, url: teilenLink };
+        if (kannTeilen && grob) {
+          var mit = f ? Object.assign({ files: [f] }, daten) : daten;
+          return (f && navigator.canShare && navigator.canShare(mit)) ? navigator.share(mit) : navigator.share(daten);
+        }
+        // Rechner: Bild speichern, Text + Link in die Zwischenablage.
+        if (f) speichern(f);
+        return linkKopieren(text + "\n" + teilenLink).then(function () { toast(UI.gespeichert); });
+      }
+
+      // ---- Auswahlmenü
+      var menue = null, karteBereit = null, storyBereit = null, videoBereit = null, videoFertig = false, menueSprache = "de";
+      function vorbereiten() {
+        landHolen().then(function (land) {
+          menueSprache = spracheFuer(land);
+          if (!karteBereit) { karteBereit = karteDatei(menueSprache); karteBereit.catch(function () { karteBereit = null; }); }
+        });
+        hauptbild().catch(function () {});
+      }
+      function status(text) {
+        var s = menue.querySelector(".ui-teil__status");
+        s.hidden = !text; s.textContent = text || "";
+      }
+      function menueZu() { if (menue) menue.classList.remove("is-sichtbar"); }
+      function option(art, beschr, extra) {
+        return '<button type="button" class="ui-sheet__btn ui-teil__opt' + (extra || "") + '" data-art="' + art + '"><i class="ui-teil__ico ui-teil__ico--' + art + '"></i><span><strong>' +
+          beschr[0] + "</strong><small>" + beschr[1] + "</small></span></button>";
+      }
+      function menueZeigen() {
+        if (!menue) {
+          menue = document.createElement("div"); menue.className = "ui-sheet ui-teilmenue";
+          menue.innerHTML = '<div class="ui-sheet__box" role="dialog" aria-label="' + UI.titel + '"><p>' + UI.titel + "</p>" +
+            option("foto", UI.foto, " is-erst") + option("story", UI.story) + (VIDEO_TYP ? option("video", UI.video) : "") + option("link", UI.link) +
+            '<div class="ui-teil__status" role="status" hidden></div>' +
+            '<button type="button" class="ui-teil__los" hidden>' + UI.fertig + "</button>" +
+            '<button type="button" class="ui-sheet__zu">' + UI.zu + "</button></div>";
+          menue.addEventListener("click", function (e) {
+            if (e.target === menue || e.target.closest(".ui-sheet__zu")) { menueZu(); return; }
+            var los = e.target.closest(".ui-teil__los");
+            if (los && videoBereit && videoFertig) {
+              videoBereit.then(function (f) { return teilenMit(f, menueSprache); }).then(menueZu).catch(function (err) { if (!err || err.name !== "AbortError") status(UI.fehler); });
+              return;
+            }
+            var opt = e.target.closest(".ui-teil__opt"); if (!opt) return;
+            var art = opt.getAttribute("data-art");
+            if (art === "link") { linkKopieren().then(function () { toast(UI.kopiert); menueZu(); }, function () { status(UI.fehler); }); return; }
+            if (art === "video") {
+              status(UI.macht + " 0 %"); menue.querySelector(".ui-teil__los").hidden = true; videoFertig = false;
+              videoBereit = videoErstellen(menueSprache, function (anteil) { status(UI.macht + " " + Math.round(anteil * 100) + " %"); });
+              videoBereit.then(function () { videoFertig = true; status(""); menue.querySelector(".ui-teil__los").hidden = false; }, function () { videoBereit = null; status(UI.fehler); });
+              return;
+            }
+            var bereit = art === "foto" ? (karteBereit || (karteBereit = karteDatei(menueSprache))) : (storyBereit || (storyBereit = storyDatei(menueSprache)));
+            mitFrist(bereit, 2500, null).catch(function () { return null; }).then(function (f) { return teilenMit(f, menueSprache); })
+              .then(menueZu).catch(function (err) { if (!err || err.name !== "AbortError") status(UI.fehler); });
+          });
+          document.body.appendChild(menue);
+        }
+        status(""); menue.querySelector(".ui-teil__los").hidden = !videoFertig;
+        requestAnimationFrame(function () { menue.classList.add("is-sichtbar"); });
+        // Story im Hintergrund schon vorbereiten - das Teilen-Menü des Handys muss direkt nach dem Tippen kommen.
+        landHolen().then(function () { if (!storyBereit) { storyBereit = storyDatei(menueSprache); storyBereit.catch(function () { storyBereit = null; }); } });
+      }
       var teilen = document.createElement("button"); teilen.type = "button"; teilen.className = "ui-teilen";
       teilen.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M8 7l4-4 4 4M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"/></svg><span>Teilen</span>';
-      var sheet;
-      function sheetZeigen() {
-        if (!sheet) {
-          sheet = document.createElement("div"); sheet.className = "ui-sheet";
-          sheet.innerHTML = '<div class="ui-sheet__box"><p>Teilen</p>' +
-            '<a class="ui-sheet__btn" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(text + "\n" + location.href) + '"><b style="background:#25d366">W</b>WhatsApp</a>' +
-            '<a class="ui-sheet__btn" href="mailto:?subject=' + encodeURIComponent(titel) + "&body=" + encodeURIComponent(text + "\n" + location.href) + '"><b style="background:#555">@</b>E-Mail</a>' +
-            '<button type="button" class="ui-sheet__btn" data-kopieren><b style="background:#7a4bff">⧉</b>Link kopieren</button>' +
-            '<button type="button" class="ui-sheet__zu">Schließen</button></div>';
-          sheet.addEventListener("click", function (e) { if (e.target === sheet || e.target.closest(".ui-sheet__zu")) sheet.classList.remove("is-sichtbar"); });
-          sheet.querySelector("[data-kopieren]").addEventListener("click", function () { navigator.clipboard.writeText(location.href).then(function () { toast("Link kopiert"); sheet.classList.remove("is-sichtbar"); }); });
-          document.body.appendChild(sheet);
-        }
-        requestAnimationFrame(function () { sheet.classList.add("is-sichtbar"); });
-      }
-      teilen.addEventListener("click", function () {
-        var daten = { title: titel, text: text, url: location.href };
-        if (navigator.share && grob) {
-          var bild = document.getElementById("galleryMain");
-          fetch(bild.currentSrc).then(function (r) { return r.blob(); }).then(function (b) {
-            var datei = new File([b], "disorder119-" + (it.url_slug || it.id) + ".webp", { type: b.type || "image/webp" });
-            var mit = Object.assign({ files: [datei] }, daten);
-            return (navigator.canShare && navigator.canShare(mit)) ? navigator.share(mit) : navigator.share(daten);
-          }).catch(function () { return navigator.share(daten).catch(function () {}); });
-        } else sheetZeigen();
-      });
+      teilen.addEventListener("pointerdown", vorbereiten);
+      teilen.addEventListener("click", function () { vorbereiten(); menueZeigen(); });
+      // Ansicht gewechselt: vorbereitete Bilder passen nicht mehr.
+      new MutationObserver(function () { karteBereit = null; storyBereit = null; videoBereit = null; videoFertig = false; }).observe(html, { attributes: true, attributeFilter: ["data-theme"] });
+      // Für Tests und die Admin-Vorschau: Text und Bilder ohne Menü erzeugen.
+      window.D119Teilen = { steckbrief: steckbrief, karte: karteDatei, story: storyDatei, sprache: spracheFuer, video: VIDEO_TYP ? videoErstellen : null };
       // Inhaber 05.11.2026: Teilen neben PayPal/Apple Pay unter "Jetzt kaufen".
       // article.js baut die Zeile (.d119-zahlart) - je nach Ladereihenfolge
       // kurz darauf warten; ohne Zeile (verkauft, Preis auf Anfrage) wie bisher in die Infospalte.

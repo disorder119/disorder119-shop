@@ -963,6 +963,8 @@ def build_page(it, shop_config, lang):
         "article": it.get("article"),
         "url_slug": it.get("url_slug", str(it["id"])),
         "title": item_title(it, lang),
+        # Teilen-Text im Ausland (d119-ui.js, Inhaber 06.11.2026): englischer Name.
+        "title_en": item_title(it, "en") or "",
         "brand": it.get("brand"),
         "size": it.get("size"),
         "color": it.get("color"),
