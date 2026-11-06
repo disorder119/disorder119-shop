@@ -211,13 +211,15 @@
       "}",
       "@media (prefers-reduced-motion:reduce){.d119-kat__knopf,.d119-chip{transition:none}}",
       /* Band "Bereits verkauft" im Raster (verkauftBandSetzen) */
-      ".d119-verkauft{grid-column:1/-1;min-width:0;margin:clamp(4px,1.5vw,14px) 0;padding:16px 0 14px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}",
+      ".d119-verkauft{grid-column:1/-1;min-width:0;overflow-x:clip;margin:clamp(4px,1.5vw,14px) 0;padding:16px 0 14px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}",
       ".d119-verkauft__kopf{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 16px;margin:0 0 10px}",
       ".d119-verkauft__titel{margin:0;font-size:.72rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text)}",
       ".d119-verkauft__link{min-height:44px;padding:0;border:0;background:none;color:var(--text-muted);font:inherit;font-size:.72rem;letter-spacing:.06em;",
       "text-decoration:underline;text-underline-offset:3px;cursor:pointer}",
       ".d119-verkauft__link:hover{color:var(--text)}",
-      ".d119-verkauft__fenster{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}",
+      // position+contain: iOS-WebKit schneidet das laufende Band (rund 4000 px breit) sonst nicht
+      // sicher ab - die Seite liess sich dann bis auf Viertelgroesse herauszoomen (06.11.2026).
+      ".d119-verkauft__fenster{position:relative;contain:paint;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}",
       ".d119-verkauft__spur{display:flex;width:max-content;animation:d119-verkauft-lauf 80s linear infinite}",
       ".d119-verkauft:not(.d119-verkauft--sichtbar) .d119-verkauft__spur,.d119-verkauft:hover .d119-verkauft__spur,.d119-verkauft:focus-within .d119-verkauft__spur{animation-play-state:paused}",
       ".d119-verkauft__liste{display:flex;gap:18px;margin:0;padding:0 18px 0 0;list-style:none}",
