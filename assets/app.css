@@ -3805,3 +3805,44 @@ img[data-d119-image-protected] {
 .grid[data-ssr-initial="1"] {
   min-height: 100vh;
 }
+/* Fussbereich breit (Inhaber 06.11.2026): Der Shop ist breit aufgebaut, also
+   auch der Fuss. Am Desktop stehen die Links in einer Zeile ueber die ganze
+   Breite, darunter eine Schlusszeile: Widerruf und Rechtliches links, Stand
+   und Warenkorb rechts. Nur Anordnung - Markup, Texte und Links bleiben. */
+@media (min-width: 900px) {
+  #appShell .footer {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "nl nl nl nl"
+      "nav nav nav nav"
+      "wid legal stamp cart";
+    column-gap: clamp(20px, 2.6vw, 40px);
+    align-items: center;
+  }
+  #appShell .footer__newsletter { grid-area: nl; }
+  #appShell .footer__nav {
+    grid-area: nav;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px 32px;
+    margin-bottom: 30px;
+    padding: 30px 0;
+  }
+  #appShell .footer a.footer__widerruf { grid-area: wid; margin-top: 0; }
+  #appShell .footer__legal { grid-area: legal; margin-top: 0; gap: 8px 22px; }
+  #appShell .footer__stamp { grid-area: stamp; margin-top: 0; }
+  #appShell .footer__cart { grid-area: cart; margin-top: 0; }
+}
+
+/* Handy und Tablet: die sechs Links zweispaltig statt einer langen Liste. */
+@media (max-width: 899px) {
+  #appShell .footer__nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 24px;
+  }
+  #appShell .footer__cart { margin-top: 44px; }
+}

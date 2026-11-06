@@ -729,3 +729,34 @@ img[data-d119-image-protected] {
   .info__caption { font-size: 1.5rem; }
   .info__trust { grid-template-columns: repeat(2, 1fr); }
   }
+
+/* Fussbereich breit (Inhaber 06.11.2026): Am Desktop nutzt der Produktseiten-
+   Fuss die volle Seitenbreite - Newsletter zweispaltig (newsletter.css), darunter
+   links der Satz ueber Disorder119, rechts Archiv- und Instagram-Link, zuletzt
+   die Rechtszeile ueber die ganze Breite. Nur Anordnung, Markup bleibt. */
+@media (min-width: 900px) {
+  .page-foot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: clamp(48px, 7vw, 128px);
+    align-items: start;
+    padding-top: clamp(40px, 5vw, 64px);
+  }
+  .page-foot > * { grid-column: 1 / -1; }
+  .page-foot > [data-d119-newsletter]:not(:empty) {
+    grid-row: 1;
+    margin: 0 0 30px;
+    padding-bottom: clamp(36px, 5vw, 56px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .page-foot > p[data-i18n="footerNote"] { grid-column: 1; grid-row: 2 / span 2; max-width: none; margin: 0; }
+  .page-foot > p:has(> a[data-i18n="footerFullArchive"]) { grid-column: 2; grid-row: 2; justify-self: end; margin: 0; }
+  .page-foot > p.page-foot__instagram { grid-column: 2; grid-row: 3; justify-self: end; margin: 6px 0 0; }
+  .page-foot > .page-foot__recht {
+    grid-row: 4;
+    margin-top: 30px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+  }
+  .page-foot__recht .fuss-ansicht { margin-left: auto; }
+}
