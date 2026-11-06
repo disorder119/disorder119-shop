@@ -108,6 +108,12 @@ export function applyChanges(items, changes) {
     }
     if (!String(next.title || "").trim()) throw new KatalogError("TITEL_FEHLT", 400, String(next.id));
     if (next.public_status !== "DRAFT" && !String(next.brand || "").trim()) throw new KatalogError("MARKE_FEHLT", 400, String(next.id));
+    // Oeffentliche Produktseiten brauchen die Zeile "Kategorie" (scripts/
+    // repair_public_article_integrity.py) - ohne sie scheitert der Rebuild auf
+    // main und haelt jede weitere Aenderung auf. Entwuerfe aus dem Manager
+    // koennen ohne Kategorie kommen; freigeschaltet wird erst mit Kategorie.
+    const wirdOeffentlich = String(items[index].public_status || "").toUpperCase() === "DRAFT" || Object.prototype.hasOwnProperty.call(set, "category");
+    if (next.public_status !== "DRAFT" && wirdOeffentlich && !String(next.category || "").trim()) throw new KatalogError("KATEGORIE_FEHLT", 400, String(next.id));
     items[index] = next;
   }
   return items;
