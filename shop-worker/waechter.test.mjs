@@ -184,7 +184,7 @@ test("Kampagne: dieselbe SQL-Injection von 4 Anschluessen -> eine Meldung, danac
     const k = db.raw.prepare("SELECT * FROM waechter_kampagnen").get();
     assert.equal(k.signatur, "sql-injection|/mieten/?item");
     assert.equal(k.anschluesse, 4);
-    assert.equal(Date.parse(k.streng_bis), T0 + 3 * 4000 + 2 * STD, "Standard: 2 Stunden strenger");
+    assert.equal(Date.parse(k.streng_bis), T0 + 3 * 4000 + 6 * STD, "Standard: 6 Stunden strenger");
     assert.equal(db.raw.prepare("SELECT COUNT(*) n FROM waechter_sperren WHERE kampagne=?").get(k.id).n, 4, "alle vier gehoeren zur Kampagne");
     // Eine einzige Telegram-Nachricht fuer alle vier.
     assert.equal(await waechterFaelligkeit(env, T0 + 20_000), T0 + MIN);
@@ -195,13 +195,14 @@ test("Kampagne: dieselbe SQL-Injection von 4 Anschluessen -> eine Meldung, danac
     assert.match(tg.nachrichten[0], /4 Anschlüsse · Frankreich 4/);
     assert.match(tg.nachrichten[0], /OVH SAS \(AS16276\) 2/);
     assert.match(tg.nachrichten[0], /4 Anschlüsse gesperrt \(davon 4 aus Kampagnen\)/);
+    assert.match(tg.nachrichten[0], /✅ abgewehrt: jede dieser Anfragen wurde abgewiesen/);
     assert.equal((await waechterBuendeln(env, T0 + 2 * MIN)).gesendet, 0, "nicht doppelt");
     // Strenger Modus: neuer Anschluss aus OVH -> erster Scanner-Pfad sperrt;
     // aus einem unbeteiligten Netz erst ab der normalen Schwelle.
     const probe = (ip, asn, netz, t) => waechterVorfall(env, null, { ip, ua: CHROME, land: "FR", pfad: "/.env", art: "probe", grund: "scanner-pfad", asn, netz }, t);
     assert.equal((await probe("192.0.2.150", 16276, "OVH SAS", T0 + 30 * MIN)).gesperrt, true);
     assert.equal((await probe("192.0.2.151", 3320, "Deutsche Telekom AG", T0 + 30 * MIN)).gesperrt, false);
-    assert.equal((await probe("192.0.2.152", 12322, "Free SAS", T0 + 3 * STD)).gesperrt, false, "nach dem strengen Fenster wieder normal");
+    assert.equal((await probe("192.0.2.152", 12322, "Free SAS", T0 + 7 * STD)).gesperrt, false, "nach dem strengen Fenster wieder normal");
     // Neue Sperren in derselben Kampagne kommen gesammelt, fruehestens 10 Minuten nach der letzten Meldung.
     assert.equal((await waechterBuendeln(env, T0 + 31 * MIN + 1000)).gesendet, 1);
     assert.equal(tg.nachrichten.length, 2);

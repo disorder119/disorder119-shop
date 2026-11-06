@@ -15,7 +15,7 @@
 //   Ende der letzten dauert 7 Tage (Wiederholungstaeter).
 // - Kampagne: dieselbe Angriffssignatur (Grund + normalisierter Pfad) von
 //   mindestens drei Anschluessen in zehn Minuten = verteilter Angriff. Dann
-//   fuer WAECHTER_KAMPAGNE_STUNDEN (Standard 2, 1-6) strenger: Anschluesse
+//   fuer WAECHTER_KAMPAGNE_STUNDEN (Standard 6, 1-24) strenger: Anschluesse
 //   aus beteiligten Netzen (cf.asn) sperrt schon der erste Scanner-Pfad.
 // - Rechenzentren/Hoster (istHosting) gelten immer als streng: erster
 //   Scanner-Pfad sperrt, 404-Flut ab 10.
@@ -107,7 +107,9 @@ function ganzzahl(value, fallback, min, max) {
 
 const iso = ms => new Date(ms).toISOString();
 const fehlendeTabelle = err => /no such (table|column)|has no column/i.test(String(err?.message || err));
-const kampagneStunden = env => ganzzahl(env?.WAECHTER_KAMPAGNE_STUNDEN, 2, 1, 6);
+// Standard 6 statt 2 Stunden (06.11.2026): Dieselbe XSS-Welle auf /?q kam um
+// 13:27 und 17:43 wieder - nach Ablauf der damals zwei strengen Stunden.
+const kampagneStunden = env => ganzzahl(env?.WAECHTER_KAMPAGNE_STUNDEN, 6, 1, 24);
 
 export async function anschlussHash(env, ip) {
   const netz = anschlussVonIp(ip);
@@ -423,6 +425,10 @@ export function kampagneText(k) {
     `🌐 ${Number(k.anschluesse || 0)} Anschlüsse${laender ? ` · ${laender}` : ""}`,
     ...(netze ? [`🏢 Netze: ${netze}`] : []),
     `🔒 strenger Modus bis ${berlinKurz(k.streng_bis)}: gleiches Netz schon beim 1. Scanner-Pfad gesperrt`,
+    // Angriffsmuster und Scanner-Pfade beantwortet der Waechter selbst (403/404),
+    // bevor Shop oder Datenbank sie sehen - das soll die Meldung auch sagen.
+    ...(HARTE_GRUENDE.includes(k.grund) || k.grund === "scanner-pfad"
+      ? ["✅ abgewehrt: jede dieser Anfragen wurde abgewiesen, bevor sie etwas auslösen konnte"] : []),
   ].join("\n");
 }
 
