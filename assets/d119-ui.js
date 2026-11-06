@@ -148,6 +148,7 @@
         if (!it || !img || !fotos || fotos.length < 2) return;
         if (kwGeste && kwGeste.phase) return; // Finger wischt schon (4) - keine Slideshow dazwischen
         kwZurueck(plate);
+        kwZahlWeg(kwZahlJetzt); // Slideshow-Zähler ist dann der einzige
         ssAktiv = true; ssPlate = plate; ssOrig = { src: img.src, srcset: img.getAttribute("srcset") };
         plate.classList.add("ui-slideshow"); vibrieren(10);
         var zaehler = document.createElement("span"); zaehler.className = "ui-slideshow__zaehler"; plate.querySelector(".plate__frame").appendChild(zaehler);
@@ -271,9 +272,23 @@
         s.gefuellt = true;
       }
     }
+    // Höchstens ein Zähler im ganzen Raster (Inhaber 06.11.2026): Erscheint einer, verschwinden alle
+    // anderen sofort. Die Fotos der anderen Kacheln bleiben wie gewischt. kwZahlJetzt = die Kachel,
+    // deren Zähler zuletzt dran war - nur sie darf ihn (wieder) zeigen.
+    var kwZahlJetzt = null;
+    function kwZahlWeg(s) {
+      if (!s || !s.zahl) return;
+      clearTimeout(s.zahlT);
+      s.zahl.style.transition = "none";
+      s.zahl.classList.remove("is-an");
+      void s.zahl.offsetWidth; // sofort weg, ohne Ausblenden
+      s.zahl.style.transition = "";
+    }
     function kwZahl(s, halten) {
       var n = s.fotos ? s.fotos.length : 0;
       clearTimeout(s.zahlT);
+      if (kwZahlJetzt && kwZahlJetzt !== s) kwZahlWeg(kwZahlJetzt);
+      kwZahlJetzt = s;
       if (n < 2) { s.zahl.classList.remove("is-an"); return; }
       s.zahl.textContent = (s.i + 1) + " / " + n;
       s.zahl.classList.add("is-an");
@@ -344,7 +359,8 @@
         kwVorladen(s, s.i + 2 * r);
       }
       s.bahn.style.transform = "translate3d(0,0,0)";
-      kwZahl(s, false);
+      // Wird inzwischen auf einer anderen Kachel gewischt, bleibt deren Zähler der einzige.
+      if (kwZahlJetzt === s) kwZahl(s, false);
       // Erstes Foto: wieder das echte Kachelbild zeigen (Hover/Slideshow arbeiten darauf).
       if (s.i === 0) s.el.classList.remove("is-an");
       kwMerken(plate);
@@ -382,7 +398,10 @@
         var s = plate._kw;
         if (f.length < 2) return;
         kwVorladen(s, s.i + 1); kwVorladen(s, s.i - 1);
-        if (s.el && s.el.classList.contains("is-an") && !s.gefuellt) { kwFuellen(s); kwZahl(s, Boolean(kwGeste && kwGeste.plate === plate && kwGeste.phase)); }
+        if (s.el && s.el.classList.contains("is-an") && !s.gefuellt) {
+          kwFuellen(s);
+          if (kwGeste && kwGeste.plate === plate && kwGeste.phase) kwZahl(s, true);
+        }
       });
     }, { passive: true });
     grid.addEventListener("pointermove", function (e) {
