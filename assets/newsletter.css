@@ -300,3 +300,28 @@ html.d119-nlpop-offen { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .d119-nlpop, .d119-nlpop__karte { transition: none; }
 }
+
+/* Fussbereich breit (Inhaber 06.11.2026): Im Fuss der Startseite und der
+   Produktseiten steht die Anmeldung am Desktop zweispaltig ueber die ganze
+   Breite - links Angebot und Bedingungen, rechts Feld, Knopf und Haken.
+   Die Spuren 1fr oben und unten zentrieren die rechte Spalte neben dem Text. */
+@media (min-width: 900px) {
+  .footer__newsletter .d119-nl__form,
+  .page-foot .d119-nl__form {
+    max-width: none;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: 1fr auto auto auto 1fr;
+    column-gap: clamp(48px, 7vw, 128px);
+    row-gap: 16px;
+  }
+  .footer__newsletter .d119-nl__head,
+  .page-foot .d119-nl__head { grid-column: 1; grid-row: 1 / 6; align-self: center; }
+  .footer__newsletter .d119-nl__row,
+  .page-foot .d119-nl__row { grid-column: 2; grid-row: 2; }
+  .footer__newsletter .d119-nl__consent,
+  .page-foot .d119-nl__consent { grid-column: 2; grid-row: 3; }
+  .footer__newsletter .d119-nl__msg,
+  .page-foot .d119-nl__msg { grid-column: 2; grid-row: 4; }
+  .footer__newsletter .d119-nl__title,
+  .page-foot .d119-nl__title { font-size: clamp(1.9rem, 2.6vw, 2.5rem); }
+}
