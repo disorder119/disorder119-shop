@@ -134,6 +134,14 @@ export function applyChanges(items, changes) {
       }
       next[field] = EDITABLE[field](value);
     }
+    // Statuszeile folgt dem sichtbaren Status (wie artikelWiederVerfuegbar):
+    // Match/Swipe (assets/app.js buildSwipeQueue) liest "status" - ein im
+    // Admin auf SOLD gestelltes Stueck blieb dort sonst im Stapel, und ein
+    // Manager-Entwurf behielt nach dem Freischalten "Entwurf".
+    if (Object.prototype.hasOwnProperty.call(set, "public_status") && next.public_status !== String(items[index].public_status || "").toUpperCase()) {
+      if (next.public_status === "AVAILABLE") next.status = "Verfügbar";
+      else if (next.public_status === "SOLD") next.status = "Verkauft";
+    }
     if (!String(next.title || "").trim()) throw new KatalogError("TITEL_FEHLT", 400, String(next.id));
     if (next.public_status !== "DRAFT" && !String(next.brand || "").trim()) throw new KatalogError("MARKE_FEHLT", 400, String(next.id));
     pruefeKategorie(items[index], next, set);

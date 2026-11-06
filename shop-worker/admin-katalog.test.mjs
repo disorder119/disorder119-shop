@@ -243,3 +243,15 @@ test("publishing needs a category that matches the build's checked category", ()
   const alt = { id: 9365, title: "Prada Strickjacke", brand: "Prada", category: "Jackets", public_status: "AVAILABLE", taxonomy_category: "Knitwear" };
   assert.equal(run(alt, { price: 150, public_status: "SOLD" }).public_status, "SOLD");
 });
+
+test("the status line follows the visible status, so Match never shows a sold piece", () => {
+  const draft = { id: 9701, title: "Y-3 Wollmantel", brand: "Y-3", category: "Coats", taxonomy_category: "Coats", status: "Entwurf", public_status: "DRAFT" };
+  const live = applyChanges([structuredClone(draft)], [{ id: 9701, set: { public_status: "AVAILABLE" } }])[0];
+  assert.equal(live.status, "Verfügbar");
+  const sold = applyChanges([structuredClone(live)], [{ id: 9701, set: { public_status: "SOLD" } }])[0];
+  assert.equal(sold.status, "Verkauft");
+  // Ohne Statuswechsel bleibt die Zeile, wie sie ist (z. B. "Online auf Vinted").
+  const vinted = { ...live, status: "Online auf Vinted" };
+  assert.equal(applyChanges([structuredClone(vinted)], [{ id: 9701, set: { price: 99, public_status: "AVAILABLE" } }])[0].status, "Online auf Vinted");
+  assert.equal(applyChanges([structuredClone(live)], [{ id: 9701, set: { public_status: "DRAFT" } }])[0].status, "Verfügbar");
+});
