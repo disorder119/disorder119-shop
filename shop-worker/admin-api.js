@@ -203,6 +203,26 @@ function loadCatalogMap(env) {
   return katalogNachId({ env });
 }
 
+// Fuer Bestellbilder und "Artikel online" nie lange warten: was nach
+// KATALOG_WARTEN_MS nicht da ist, fehlt diesmal - der Abruf laeuft weiter und
+// landet im 5-Minuten-Speicher von oeffentlicher-katalog.js (Inhaber 06.11.2026:
+// in der Admin-App fehlte das Artikelbild, weil der Browser catalog.json von
+// disorder119.com nicht lesen darf - jetzt liefert der Server den Pfad mit).
+const KATALOG_WARTEN_MS = 700;
+function katalogKurz(env) {
+  let timer;
+  return Promise.race([
+    loadCatalogMap(env).catch(() => null),
+    new Promise(resolve => { timer = setTimeout(() => resolve(null), KATALOG_WARTEN_MS); }),
+  ]).finally(() => clearTimeout(timer));
+}
+
+// Vorschaubild (thumbs, 220x293) wie im Shop am Handy, sonst das erste Foto.
+function katalogBild(item) {
+  const pfad = item?.grid_image || (Array.isArray(item?.gallery) ? item.gallery[0] : "") || "";
+  return pfad ? `/${String(pfad).replace(/^\/+/, "")}` : null;
+}
+
 function catalogView(item) {
   if (!item) return null;
   return {
@@ -304,11 +324,42 @@ async function getOverview(env, url) {
     COUNT(*) AS requests, COALESCE(SUM(rr.total_price_cents),0) AS quotedRentalCents
     FROM rental_reservations rr JOIN inventory i ON i.id=rr.inventory_id
     WHERE rr.status NOT IN ('CANCELLED') GROUP BY i.item_id,i.article_no ORDER BY requests DESC, quotedRentalCents DESC LIMIT 8`);
+  // Kacheln der Uebersicht fuer den gewaehlten Zeitraum (Inhaber 06.11.2026:
+  // "Bestellungen 2" zaehlte alle Bestellungen seit Start, "Umsatz" auch eine
+  // voll erstattete Testzahlung). Ausgeblendete Testbestellungen zaehlen nie.
+  const sichtbar = col => `(${col} IS NULL OR ${col} NOT IN (SELECT id FROM commerce_orders WHERE versteckt=1))`;
+  const zeitraumStmt = db.prepare(`SELECT
+    (SELECT COUNT(*) FROM commerce_orders WHERE versteckt=0 AND created_at>=?) AS bestellungen,
+    (SELECT COUNT(*) FROM payments WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED')
+      AND provider_payment_id IS NOT NULL AND ${sichtbar("payments.order_id")} AND ${CAPTURE_TIME_SQL}>=?) AS zahlungen,
+    (SELECT COALESCE(SUM(amount_cents),0) FROM payments WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED')
+      AND provider_payment_id IS NOT NULL AND ${sichtbar("payments.order_id")} AND ${CAPTURE_TIME_SQL}>=?) AS eingenommenCents,
+    (SELECT COALESCE(SUM(amount_cents),0) FROM refunds WHERE status='COMPLETED'
+      AND ${sichtbar("refunds.order_id")} AND COALESCE(updated_at,created_at)>=?) AS erstattetCents`)
+    .bind(cutoffIso, cutoffIso, cutoffIso, cutoffIso);
+  const katalogLaeuft = katalogKurz(env);
   // Alles in einer Rundreise zu D1: jede Abfrage einzeln kostete live rund
   // 50 ms (Worker in Frankfurt, Datenbank in Madrid).
-  const ergebnisse = await db.batch([...summaryStmts, ordersDailyStmt, paymentsDailyStmt, rentalsDailyStmt, topPurchasedStmt, topRentedStmt]);
+  const ergebnisse = await db.batch([...summaryStmts, ordersDailyStmt, paymentsDailyStmt, rentalsDailyStmt, topPurchasedStmt, topRentedStmt, zeitraumStmt]);
   const summary = ergebnisse.slice(0, summaryStmts.length);
-  const [ordersDaily, paymentsDaily, rentalsDaily, topPurchased, topRentedRows] = ergebnisse.slice(summaryStmts.length);
+  const [ordersDaily, paymentsDaily, rentalsDaily, topPurchased, topRentedRows, zeitraumRows] = ergebnisse.slice(summaryStmts.length);
+  const zr = (zeitraumRows?.results && zeitraumRows.results[0]) || {};
+  const eingenommen = Number(zr.eingenommenCents || 0), erstattet = Number(zr.erstattetCents || 0);
+  const zeitraum = {
+    bestellungen: Number(zr.bestellungen || 0),
+    zahlungen: Number(zr.zahlungen || 0),
+    eingenommenCents: eingenommen,
+    erstattetCents: erstattet,
+    umsatzCents: Math.max(0, eingenommen - erstattet),
+  };
+  // "Artikel online" wie im Shop: oeffentlich, verfuegbar, mit Preis. Die
+  // Tabelle inventory kennt nur Stuecke, die schon einmal im Checkout waren.
+  const katalogMap = await katalogLaeuft;
+  const katalogListe = katalogMap ? [...katalogMap.values()] : [];
+  const katalog = katalogListe.length ? {
+    online: katalogListe.filter(it => it.public_status === "AVAILABLE" && Number(it.price) > 0).length,
+    verkauft: katalogListe.filter(it => it.public_status === "SOLD").length,
+  } : null;
   const byDay = new Map();
   const touch = day => {
     if (!byDay.has(day)) byDay.set(day, { day, orders: 0, orderValueCents: 0, capturedCents: 0, rentals: 0, quotedRentalCents: 0 });
@@ -318,7 +369,7 @@ async function getOverview(env, url) {
   for (const row of paymentsDaily.results || []) Object.assign(touch(row.day), { capturedCents: row.capturedCents || 0 });
   for (const row of rentalsDaily.results || []) Object.assign(touch(row.day), { rentals: row.rentals || 0, quotedRentalCents: row.quotedRentalCents || 0 });
 
-  const catalog = (topRentedRows.results || []).length ? await loadCatalogMap(env) : new Map();
+  const catalog = (topRentedRows.results || []).length ? (katalogMap || await loadCatalogMap(env)) : new Map();
   const topRented = (topRentedRows.results || []).map(row => ({ ...row, catalog: catalogView(catalog.get(Number(row.itemId))) }));
 
   const first = result => (result?.results && result.results[0]) || {};
@@ -331,6 +382,8 @@ async function getOverview(env, url) {
     inventory: first(summary[3]),
     customers: first(summary[4]),
     operations: first(summary[5]),
+    zeitraum,
+    katalog,
     daily: Array.from(byDay.values()).sort((a, b) => a.day.localeCompare(b.day)),
     topPurchased: topPurchased.results || [],
     topRented,
@@ -378,9 +431,14 @@ async function getOrders(env, url) {
     .bind(...binds, limit, offset),
   ]);
   const count = countResult?.results?.[0];
+  const liste = rows.results || [];
+  const katalog = liste.length ? await katalogKurz(env) : null;
   return {
     total: Number(count?.total || 0), limit, offset,
-    orders: (rows.results || []).map(row => ({ ...row, nextStatuses: orderNextStatuses(row.status) })),
+    orders: liste.map(row => {
+      const ersteId = Number(String(row.itemIds || "").split(",")[0]);
+      return { ...row, itemImage: katalog && ersteId ? katalogBild(katalog.get(ersteId)) : null, nextStatuses: orderNextStatuses(row.status) };
+    }),
   };
 }
 
@@ -406,17 +464,47 @@ async function getOrderMails(env, id) {
   return { orderId: order.id, orderNumber: order.order_number, mails };
 }
 
-async function getOrderDetail(env, id) {
+const DHL_VERFOLGEN = "https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=";
+
+// Sendung + Stand der DHL-Abfrage (sendungs_abfragen) fuer die Admin-App:
+// Zustand, juengste Stationen, letzte Abfrage, Fehler und der Link zur
+// Sendungsverfolgung bei DHL (geht immer, auch wenn die Abfrage scheitert).
+function sendungMitVerfolgung(s) {
+  const {
+    verfolgung_zustand: zustand, verfolgung_text: text, verfolgung_abfragen: abfragen, verfolgung_zuletzt_am: zuletztAm,
+    verfolgung_geaendert_am: geaendertAm, verfolgung_fehler: fehler, verfolgung_ereignisse_json: ereignisseJson,
+    verfolgung_zugestellt_am: zugestelltAm, ...sendung
+  } = s;
+  let stationen = [];
+  try { const roh = JSON.parse(ereignisseJson || "[]"); if (Array.isArray(roh)) stationen = roh.slice(0, 25); } catch { stationen = []; }
+  const nummer = String(sendung.tracking_number || "").trim();
+  const istDhl = /dhl|deutsche post/i.test(String(sendung.carrier || ""));
+  return {
+    ...sendung,
+    dhlLink: istDhl && /^[A-Za-z0-9]{8,40}$/.test(nummer) ? DHL_VERFOLGEN + encodeURIComponent(nummer) : null,
+    verfolgung: zuletztAm ? {
+      zustand: zustand || "UNBEKANNT", text: text || "", abfragen: Number(abfragen || 0), zuletztAm,
+      geaendertAm: geaendertAm || null, zugestelltAm: zugestelltAm || null, fehler: fehler || null, stationen,
+    } : null,
+  };
+}
+
+async function getOrderDetail(env, id, { bilder = true } = {}) {
   const db = requireDb(env);
   const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
   if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
+  const katalogLaeuft = bilder ? katalogKurz(env) : Promise.resolve(null);
   const [items, payments, shipments, returns, refunds, events, notes, contact, versand] = await db.batch([
     db.prepare(`SELECT oi.*,i.status AS inventory_status FROM order_items oi
       LEFT JOIN inventory i ON i.id=oi.inventory_id WHERE oi.order_id=? ORDER BY oi.rowid`).bind(order.id),
     db.prepare(`SELECT p.*,
       (SELECT e.amount_cents FROM tax_cash_events e WHERE e.payment_id=p.id AND e.kind='fee' LIMIT 1) AS paypal_fee_cents
       FROM payments p WHERE p.order_id=? ORDER BY p.created_at DESC`).bind(order.id),
-    db.prepare("SELECT * FROM shipments WHERE order_id=? ORDER BY created_at DESC").bind(order.id),
+    // Stand der DHL-Sendungsverfolgung (dhl-tracking.js, Cron) gleich mit.
+    db.prepare(`SELECT s.*, a.zustand AS verfolgung_zustand, a.status_text AS verfolgung_text, a.abfragen AS verfolgung_abfragen,
+      a.zuletzt_am AS verfolgung_zuletzt_am, a.geaendert_am AS verfolgung_geaendert_am, a.fehler AS verfolgung_fehler,
+      a.ereignisse_json AS verfolgung_ereignisse_json, a.zugestellt_am AS verfolgung_zugestellt_am
+      FROM shipments s LEFT JOIN sendungs_abfragen a ON a.shipment_id=s.id WHERE s.order_id=? ORDER BY s.created_at DESC`).bind(order.id),
     db.prepare("SELECT * FROM returns WHERE order_id=? ORDER BY created_at DESC").bind(order.id),
     db.prepare("SELECT * FROM refunds WHERE order_id=? ORDER BY created_at DESC").bind(order.id),
     db.prepare("SELECT * FROM audit_events WHERE entity_id=? OR (entity_type='order' AND entity_id=?) ORDER BY created_at DESC LIMIT 200").bind(order.id, order.id),
@@ -432,14 +520,15 @@ async function getOrderDetail(env, id) {
     addresses = addr.results || [];
   }
   const activity = (events.results || []).map(row => ({ ...row, metadata: parseMetadata(row.metadata_json) }));
-  const itemRows = items.results || [];
+  const katalog = await katalogLaeuft;
+  const itemRows = (items.results || []).map(i => ({ ...i, image: katalog ? katalogBild(katalog.get(Number(i.item_id))) : null }));
   const [erstattungsauftraege, widerrufe, sperre] = await Promise.all([
     auftraegeFuerBestellung(db, order.id),
     widerrufeFuerBestellung(db, order.id),
     versandSperre(db, order.id),
   ]);
   const laufend = erstattungsauftraege.find(a => a.laufend) || null;
-  const shipmentRows = shipments.results || [];
+  const shipmentRows = (shipments.results || []).map(sendungMitVerfolgung);
   const paymentRows = payments.results || [];
   // Juengste PayPal-Zahlung: reserviert, eingezogen, freigegeben, gescheitert.
   const zahlung = zahlungView(paymentRows.find(p => p.provider === "PAYPAL") || null);
@@ -738,7 +827,9 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN", optionen =
     }
   }
 
-  return getOrderDetail(env, order.id);
+  // Automatische Statuswechsel (PayPal-Abgleich, DHL-Cron) brauchen keine
+  // Artikelbilder - dort keinen Katalog-Abruf anstossen.
+  return getOrderDetail(env, order.id, { bilder: actorType === "ADMIN" });
 }
 
 // ----------------------------------------------------------------- Stornieren
