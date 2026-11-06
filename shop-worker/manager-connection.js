@@ -58,7 +58,20 @@ async function grant(request,env,now,scope){
  return row;
 }
 
+// Die Admin-App ruft /admin/manager/* von admin.disorder119.com aus mit ihrem
+// Sitzungs-Cookie auf (credentials: "include"). Ohne Allow-Origin/-Credentials
+// verwirft der Browser jede Antwort ("Verbindung konnte nicht abgeschlossen
+// werden") - Freigaben waren so aus dem Browser nie moeglich. Nur fuer genau die
+// erlaubten Admin-Herkuenfte; native Manager-Routen bekommen nie CORS.
 export async function handleManagerConnection(request,env,url){
+ const response=await antworten(request,env,url);
+ const origin=request.headers.get('Origin');
+ if(!url.pathname.startsWith('/admin/manager/')||!ORIGINS.has(origin))return response;
+ const headers=new Headers(response.headers);
+ headers.set('Access-Control-Allow-Origin',origin);headers.set('Access-Control-Allow-Credentials','true');headers.append('Vary','Origin');
+ return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+}
+async function antworten(request,env,url){
  try{
   if(!env.DB)fail('MANAGER_UNAVAILABLE',503);
   const path=url.pathname,now=new Date(),stamp=now.toISOString();

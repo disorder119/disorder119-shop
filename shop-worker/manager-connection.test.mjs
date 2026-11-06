@@ -120,3 +120,20 @@ test('owner list exposes metadata only, no tokens/codes/challenges',async()=>{
  assert.equal(JSON.stringify(r.data).includes(g.access_token),false);
  assert.equal(Object.keys(r.data.grants[0]).some(k=>/hash|code|token|state|challenge/.test(k)),false);
 });
+test('admin app can read approval answers: CORS only for the admin origins, never for native routes',async()=>{
+ const e=env(),s=await start(e);
+ const pre=await handleManagerConnection(new Request('https://api.disorder119.com/admin/manager/approve',{method:'OPTIONS',headers:{Origin:ORIGIN,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type'}}),e,new URL('https://api.disorder119.com/admin/manager/approve'));
+ assert.equal(pre.status,204);assert.equal(pre.headers.get('Access-Control-Allow-Origin'),ORIGIN);assert.equal(pre.headers.get('Access-Control-Allow-Credentials'),'true');
+ assert.match(pre.headers.get('Access-Control-Allow-Headers'),/Content-Type/);assert.match(pre.headers.get('Access-Control-Allow-Methods'),/POST/);
+ const view=await call(e,'/admin/manager/request?id='+s.data.request_id,undefined,{owner:true});
+ assert.equal(view.response.status,200);assert.equal(view.response.headers.get('Access-Control-Allow-Origin'),ORIGIN);assert.equal(view.response.headers.get('Access-Control-Allow-Credentials'),'true');
+ // Auch Fehler sind lesbar (z. B. Passkey fehlt), damit die App den Grund zeigen kann.
+ const ohne=await call(e,'/admin/manager/grants',undefined,{origin:ORIGIN});
+ assert.equal(ohne.response.status,401);assert.equal(ohne.response.headers.get('Access-Control-Allow-Origin'),ORIGIN);
+ // Fremde Herkunft: abgewiesen und ohne Freigabe-Header.
+ const fremd=await call(e,'/admin/manager/grants',undefined,{origin:'https://evil.example'});
+ assert.equal(fremd.response.status,403);assert.equal(fremd.response.headers.get('Access-Control-Allow-Origin'),null);
+ // Native Routen nie mit CORS (sie lehnen Origin ohnehin ab).
+ const nativ=await call(e,'/manager/status',undefined,{origin:ORIGIN});
+ assert.equal(nativ.response.status,403);assert.equal(nativ.response.headers.get('Access-Control-Allow-Origin'),null);
+});
