@@ -1,3 +1,4 @@
+import { CACHE_BILD } from './storefront-cache.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from './storefront-assets.js';
@@ -147,12 +148,12 @@ test('images are cached briefly, the catalog keeps no-store', async () => {
     return new Response('img', { headers: { 'Content-Type': 'image/webp', 'Cache-Control': 'public, max-age=0, must-revalidate' } });
   });
   let r = await worker.fetch(request('/assets/img/9479/thumbs/0.webp'), env, {});
-  assert.equal(r.headers.get('Cache-Control'), 'public, max-age=600');
+  assert.equal(r.headers.get('Cache-Control'), CACHE_BILD);
   r = await worker.fetch(request('/assets/img/9479/thumbs/0.webp'), assetEnv(async () => new Response(null, { status: 304 })), {});
   assert.equal(r.status, 304);
-  assert.equal(r.headers.get('Cache-Control'), 'public, max-age=600');
+  assert.equal(r.headers.get('Cache-Control'), CACHE_BILD);
   r = await worker.fetch(request('/assets/img/missing.webp'), assetEnv(async () => new Response('x', { status: 404 })), {});
-  assert.notEqual(r.headers.get('Cache-Control'), 'public, max-age=600');
+  assert.notEqual(r.headers.get('Cache-Control'), CACHE_BILD);
   r = await worker.fetch(request('/data/catalog.json'), env, {});
   assert.equal(r.headers.get('Cache-Control'), 'no-store');
 });
