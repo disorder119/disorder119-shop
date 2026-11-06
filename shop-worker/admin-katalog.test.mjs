@@ -217,13 +217,29 @@ test("a stalled optional commit history cannot prevent loading the catalog", asy
   } finally { gh.restore(); }
 });
 
-test("a public item needs a category; drafts may still lack one", () => {
-  const items = [{ id: 9701, title: "Entwurf", brand: "Y-3", category: "", public_status: "DRAFT" }];
-  assert.throws(() => applyChanges(structuredClone(items), [{ id: 9701, set: { public_status: "AVAILABLE" } }]), /KATEGORIE_FEHLT/);
-  assert.throws(() => applyChanges(structuredClone(items), [{ id: 9701, set: { public_status: "SOLD" } }]), /KATEGORIE_FEHLT/);
-  assert.equal(applyChanges(structuredClone(items), [{ id: 9701, set: { price: 90 } }])[0].price, 90);
-  const ok = applyChanges(structuredClone(items), [{ id: 9701, set: { category: "Coats", public_status: "AVAILABLE" } }]);
-  assert.equal(ok[0].public_status, "AVAILABLE");
-  // Eine verfuegbare Kategorie darf nicht geleert werden.
-  assert.throws(() => applyChanges(ok, [{ id: 9701, set: { category: "" } }]), /KATEGORIE_FEHLT/);
+test("publishing needs a category that matches the build's checked category", () => {
+  const draft = { id: 9701, title: "Y-3 Wollmantel Schwarz", brand: "Y-3", category: "", public_status: "DRAFT", taxonomy_category: "Coats" };
+  const run = (item, set) => applyChanges([structuredClone(item)], [{ id: item.id, set }])[0];
+  // Ohne Kategorie nicht freischalten (Produktseite braucht die Zeile "Kategorie").
+  assert.throws(() => run(draft, { public_status: "AVAILABLE" }), /KATEGORIE_FEHLT/);
+  assert.throws(() => run(draft, { public_status: "SOLD" }), /KATEGORIE_FEHLT/);
+  // Kategorie muss zur geprueften Kategorie aus dem Titel passen - auch im Entwurf.
+  assert.throws(() => run(draft, { category: "Jackets", public_status: "AVAILABLE" }), /KATEGORIE_PASST_NICHT/);
+  assert.throws(() => run(draft, { category: "Jackets" }), /KATEGORIE_PASST_NICHT/);
+  // Neuer Titel und Kategorie in einem Zug: gepruefte Kategorie erst nach dem Rebuild bekannt.
+  assert.throws(() => run(draft, { title: "Y-3 Jacke Schwarz", category: "Coats", public_status: "AVAILABLE" }), /TITEL_ERST_SPEICHERN/);
+  // Noch nicht vom Build geprueft: warten.
+  assert.throws(() => run({ ...draft, taxonomy_category: undefined }, { category: "Coats" }), /TAXONOMIE_AUSSTEHEND/);
+  // Passend: frei.
+  const ok = run(draft, { category: "Coats", public_status: "AVAILABLE" });
+  assert.equal(ok.public_status, "AVAILABLE");
+  assert.equal(ok.category, "Coats");
+  // Texte, Preis und Titel des Entwurfs bleiben frei aenderbar.
+  assert.equal(run(draft, { title: "Y-3 Wollmantel Herren Schwarz", price: 240 }).price, 240);
+  // Eine oeffentliche Kategorie darf nicht geleert werden.
+  assert.throws(() => run(ok, { category: "" }), /KATEGORIE_FEHLT/);
+  // Bestehende Stuecke: Preis- und Statusaenderungen ohne Kategorieaenderung wie bisher,
+  // auch bei bewusst abweichender Altkategorie (z. B. 9365 Strickjacke unter Jackets).
+  const alt = { id: 9365, title: "Prada Strickjacke", brand: "Prada", category: "Jackets", public_status: "AVAILABLE", taxonomy_category: "Knitwear" };
+  assert.equal(run(alt, { price: 150, public_status: "SOLD" }).public_status, "SOLD");
 });
