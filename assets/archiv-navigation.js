@@ -139,6 +139,12 @@
       ".d119-kat--zweizeilig .d119-kat__links{grid-area:links}",
       ".d119-kat--zweizeilig .d119-kat__aktionen{grid-area:rechts}",
       ".d119-kat--zweizeilig .d119-kat__liste{grid-area:liste;justify-content:center}}",
+      /* PC: "Ansicht" und "Filter" buendig mit der Artikelreihe darunter
+         (gleiche Kanten wie .grid-wrap: max. 1400px breit, Innenabstand
+         clamp(18px,3vw,36px)); ab 1280px die Kategorien etwas groesser
+         (Inhaber 07.11.2026). */
+      "@media (min-width:721px){.d119-kat{padding-left:calc(max(0px,(100% - 1400px) / 2) + clamp(18px,3vw,36px));padding-right:calc(max(0px,(100% - 1400px) / 2) + clamp(18px,3vw,36px))}}",
+      "@media (min-width:1280px){.d119-kat__knopf{font-size:.84rem}}",
       ".d119-kat #moreFiltersToggle::after{content:\"+\";display:inline-block;margin-left:8px;font-weight:400}",
       ".d119-kat #moreFiltersToggle[aria-expanded=\"true\"]::after{content:\"\\2013\"}",
       ".rail .rail__sort{display:none}",

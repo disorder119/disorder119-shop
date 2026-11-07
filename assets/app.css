@@ -3440,6 +3440,20 @@
     .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   }
 
+  /* PC: "Verfügbar" und der Zähler stehen genau über der Artikelreihe -
+     Anfang über dem ersten, Ende über dem letzten Teil (Inhaber 07.11.2026) -
+     und sind etwas größer. Gleiche Breite und Innenabstand wie .grid-wrap;
+     die Kategorie-Leiste (archiv-navigation.js) nutzt dieselben Kanten. */
+  @media (min-width: 721px) {
+    .rail {
+      width: min(100%, 1400px);
+      padding-left: clamp(18px, 3vw, 36px);
+      padding-right: clamp(18px, 3vw, 36px);
+    }
+    .catalog-heading { font-size: 0.86rem; }
+    .catalog-heading .rail__count { font-size: 0.74rem; }
+  }
+
   .plate {
     position: relative;
     cursor: pointer;
