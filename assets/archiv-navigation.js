@@ -252,6 +252,52 @@
       "}",
       "@media (min-width:1180px){#filterPanel.d119-chips-an .d119-chips{grid-template-columns:repeat(4,minmax(0,1fr))}",
       "#filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chips__reihe{columns:4}}",
+      /* Handy: Filter als App-Blatt von unten (Inhaber 07.11.2026) - Griff,
+         runde Ecken, Seite dahinter abgedunkelt; Groessen gross wie am PC,
+         "Fuer" als Umschalter, der Rest als wischbare Reihen. */
+      "@keyframes d119BlattHoch{from{transform:translateY(100%)}to{transform:none}}",
+      "@keyframes d119BlattHinter{from{opacity:0}to{opacity:1}}",
+      "@media (max-width:720px){",
+      ".d119-filter-backdrop{background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:d119BlattHinter .25s ease}",
+      "#filterPanel.d119-chips-an.d119-filter-drawer{inset:auto 0 0 0;height:auto;max-height:calc(100dvh - 44px);overflow:hidden;border:1px solid var(--rule-strong);border-bottom:0;",
+      "border-radius:20px 20px 0 0;box-shadow:0 -24px 60px rgba(0,0,0,.45);animation:d119BlattHoch .34s cubic-bezier(.2,.8,.2,1);transition:transform .22s ease}",
+      "#filterPanel.d119-chips-an .d119-filter-drawer__head{position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;",
+      "min-height:60px;margin:0;padding:20px 10px 4px 22px;border-bottom:0;background:transparent;touch-action:none}",
+      "#filterPanel.d119-chips-an .d119-filter-drawer__head::before{content:\"\";position:absolute;top:8px;left:50%;width:38px;height:5px;margin-left:-19px;border-radius:3px;background:currentColor;opacity:.28}",
+      "#filterPanel.d119-chips-an .d119-filter-drawer__title{font-size:.86rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--text)}",
+      "#filterPanel.d119-chips-an .d119-filter-drawer__close{position:relative;width:44px;height:44px;min-width:44px;min-height:44px;padding:0;font-size:0;text-decoration:none;color:var(--text)}",
+      "#filterPanel.d119-chips-an .d119-filter-drawer__close::before{content:\"\";position:absolute;inset:6px;border-radius:50%;background:currentColor;opacity:.13}",
+      "#filterPanel.d119-chips-an .d119-filter-drawer__close::after{content:\"\\00d7\";position:relative;font-size:22px;line-height:44px;font-weight:300}",
+      "#filterPanel.d119-chips-an .d119-chips{display:block;flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 0 16px}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe{display:block;padding:16px 22px 18px;border-top:1px solid var(--rule)}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe:first-child{border-top:0;padding-top:8px}",
+      "#filterPanel.d119-chips-an .d119-chips__titel{margin:0 0 10px;font-size:.6rem;letter-spacing:.2em;opacity:.7}",
+      "#filterPanel.d119-chips-an .d119-chips__reihe{gap:8px}",
+      "#filterPanel.d119-chips-an .d119-chips__links{margin-top:4px}",
+      /* Groessen gross, wie im Vollbild am PC */
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--groesse .d119-chips__reihe{gap:0 22px}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--groesse .d119-chip{min-height:44px;min-width:0;padding:0;border:0;background:none;color:var(--text);",
+      "font-size:1.75rem;font-weight:800;letter-spacing:-.01em;line-height:1.1;opacity:.45}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--groesse .d119-chip[aria-pressed=\"true\"]{opacity:1;background:none;color:var(--text)}",
+      /* "Fuer" als Umschalter wie in einer App */
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--fuer .d119-chips__reihe{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;padding:3px;border-radius:12px;box-shadow:inset 0 0 0 1px var(--rule-strong)}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--fuer .d119-chip{min-height:40px;min-width:0;padding:0 6px;border:0;border-radius:9px;background:none;",
+      "font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--fuer .d119-chip[aria-pressed=\"true\"]{background:var(--text);color:var(--bg)}",
+      /* Sortieren, Preis, Marke, Farbe: wischbare Reihen mit runden Knoepfen */
+      "#filterPanel.d119-chips-an :is(.d119-chips__gruppe--sortieren,.d119-chips__gruppe--preis,.d119-chips__gruppe--marke,.d119-chips__gruppe--farbe) .d119-chips__reihe{",
+      "flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -22px;padding:0 22px;scroll-padding:0 22px;",
+      "-webkit-mask-image:linear-gradient(to right,transparent 0,#000 18px,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to right,transparent 0,#000 18px,#000 calc(100% - 26px),transparent)}",
+      "#filterPanel.d119-chips-an .d119-chips__reihe::-webkit-scrollbar{display:none}",
+      "#filterPanel.d119-chips-an :is(.d119-chips__gruppe--sortieren,.d119-chips__gruppe--preis,.d119-chips__gruppe--marke,.d119-chips__gruppe--farbe) .d119-chip{",
+      "flex:0 0 auto;min-height:42px;padding:0 16px;border:1px solid var(--rule-strong);border-radius:999px;background:none;white-space:nowrap;",
+      "font-size:.7rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase}",
+      "#filterPanel.d119-chips-an :is(.d119-chips__gruppe--sortieren,.d119-chips__gruppe--preis,.d119-chips__gruppe--marke,.d119-chips__gruppe--farbe) .d119-chip[aria-pressed=\"true\"]{background:var(--text);color:var(--bg);border-color:var(--text)}",
+      "#filterPanel.d119-chips-an .d119-filter-drawer__foot{flex:0 0 auto;position:relative;display:flex;align-items:center;gap:14px;margin:0;",
+      "padding:12px 14px max(14px,env(safe-area-inset-bottom)) 20px;border-top:1px solid var(--rule);background:var(--bg)}",
+      "#filterPanel.d119-chips-an .d119-filter-drawer__apply{flex:1 1 auto;width:auto;min-height:52px;padding:0 12px;border:0;border-radius:14px;white-space:nowrap;font-size:.72rem;font-weight:800;letter-spacing:.1em}",
+      "}",
+      "@media (prefers-reduced-motion:reduce){#filterPanel.d119-filter-drawer,.d119-filter-backdrop{animation:none;transition:none}}",
       "@media (prefers-reduced-motion:reduce){.d119-kat__knopf,.d119-chip{transition:none}}",
       /* Band "Bereits verkauft" im Raster (verkauftBandSetzen) */
       ".d119-verkauft{grid-column:1/-1;min-width:0;overflow-x:clip;margin:clamp(4px,1.5vw,14px) 0;padding:16px 0 14px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}",
@@ -381,6 +427,39 @@
   function leisteOffset() {
     var wert = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--rail-h")) || 0;
     return wert;
+  }
+
+  // Handy: Das Filter-Blatt laesst sich am Griff nach unten wegwischen.
+  function blattWischen(panel) {
+    var kopf = panel && panel.querySelector(".d119-filter-drawer__head");
+    if (!kopf || kopf.getAttribute("data-d119-wischen")) return;
+    kopf.setAttribute("data-d119-wischen", "1");
+    var start = null, weg = 0;
+    var zurueck = function () { panel.style.transition = ""; panel.style.transform = ""; };
+    kopf.addEventListener("touchstart", function (e) {
+      if (!istMobil() || e.touches.length !== 1 || e.target.closest(".d119-filter-drawer__close")) return;
+      start = e.touches[0].clientY; weg = 0;
+      panel.style.transition = "none";
+    }, { passive: true });
+    kopf.addEventListener("touchmove", function (e) {
+      if (start === null) return;
+      weg = Math.max(0, e.touches[0].clientY - start);
+      panel.style.transform = weg ? "translateY(" + weg + "px)" : "";
+    }, { passive: true });
+    var ende = function () {
+      if (start === null) return;
+      start = null;
+      if (weg < 90) { zurueck(); return; }
+      panel.style.transition = "";
+      panel.style.transform = "translateY(100%)";
+      window.setTimeout(function () {
+        var zu = panel.querySelector(".d119-filter-drawer__close");
+        if (zu) zu.click();
+        zurueck();
+      }, 200);
+    };
+    kopf.addEventListener("touchend", ende);
+    kopf.addEventListener("touchcancel", function () { start = null; zurueck(); });
   }
 
   // Anfang der Ergebnisse: wie beim Klick auf eine Kategorie klebt die
@@ -876,13 +955,12 @@
     chipsBox.textContent = "";
     chipsBox.appendChild(groessenGruppe(z));
     [bereichGruppe(z), sortierGruppe(z)].forEach(function (g) { if (g) chipsBox.appendChild(g); });
-    // Am Handy bleiben Preis, Marke und Farbe hinter "Preis, Marke, Farbe";
-    // im Vollbild am PC ist Platz - dort stehen sie direkt im Raster.
+    // Preis, Marke und Farbe stehen direkt im Filter: am PC im Raster des
+    // Vollbilds, am Handy als wischbare Reihen im App-Blatt (07.11.2026).
     var mehr = mehrGruppe(z);
-    if (mehr && !istMobil()) {
-      var mehrInhalt = mehr.querySelector(".d119-chips__mehrinhalt");
-      while (mehrInhalt && mehrInhalt.firstChild) chipsBox.appendChild(mehrInhalt.firstChild);
-    } else if (mehr) chipsBox.appendChild(mehr);
+    var mehrInhalt = mehr && mehr.querySelector(".d119-chips__mehrinhalt");
+    while (mehrInhalt && mehrInhalt.firstChild) chipsBox.appendChild(mehrInhalt.firstChild);
+    blattWischen(panel);
     var fuss = el("div", "d119-chips__fuss");
     fuss.appendChild(zuruecksetzenKnopf());
     chipsBox.appendChild(fuss);
@@ -997,14 +1075,6 @@
       if (!offen && warOffen && zustandBeimOeffnen !== null && JSON.stringify(api.zustand()) !== zustandBeimOeffnen) naechsterFrame(zuDenErgebnissen);
       warOffen = offen;
     }).observe(panel, { attributes: true, attributeFilter: ["class"] });
-    // Wechsel zwischen Handy (Drawer mit "Preis, Marke, Farbe") und PC
-    // (alles im Raster): Chips passend neu bauen.
-    var warMobil = istMobil();
-    window.addEventListener("resize", function () {
-      if (istMobil() === warMobil) return;
-      warMobil = istMobil();
-      if (panelOffen()) chipsBauen(); else chipsVeraltet = true;
-    }, { passive: true });
     // Der einmalige Hinweis auf Match/Universum/Baukasten liegt direkt unter
     // dem Kopf. Dockt die Leiste dort an, wuerde er ihre Knoepfe verdecken -
     // dann schliesst er wie nach seinen 7 Sekunden.
