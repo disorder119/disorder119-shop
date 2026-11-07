@@ -139,16 +139,9 @@
       ".d119-kat--zweizeilig .d119-kat__links{grid-area:links}",
       ".d119-kat--zweizeilig .d119-kat__aktionen{grid-area:rechts}",
       ".d119-kat--zweizeilig .d119-kat__liste{grid-area:liste;justify-content:center}}",
-      /* Ab 1280px die Kategorien etwas groesser. Auf breiten Bildschirmen
-         stehen sie genau ueber den Fotos: "Alle" beginnt ueber dem ersten,
-         "Archiv" endet ueber dem letzten Foto (Inhaber 07.11.2026).
-         "Ansicht" und "Filter" bleiben am Rand. Die Mitte ist so breit wie
-         die Artikelreihe (.grid-wrap 1400px minus 2x36px Innenabstand = 1328px);
-         erst ab 1860px passen die Knoepfe links und rechts daneben. */
+      /* Ab 1280px die Kategorien etwas groesser, aber eng beieinander wie
+         zuvor - das laesst mehr Platz (Inhaber 07.11.2026). */
       "@media (min-width:1280px){.d119-kat__knopf{font-size:.84rem}}",
-      "@media (min-width:1860px){.d119-kat:not(.d119-kat--zweizeilig){grid-template-columns:minmax(max-content,1fr) minmax(0,1328px) minmax(max-content,1fr)}",
-      ".d119-kat:not(.d119-kat--zweizeilig) .d119-kat__liste{justify-content:space-between;column-gap:0}",
-      ".d119-kat__knopf{font-size:.9rem}}",
       ".d119-kat #moreFiltersToggle::after{content:\"+\";display:inline-block;margin-left:8px;font-weight:400}",
       ".d119-kat #moreFiltersToggle[aria-expanded=\"true\"]::after{content:\"\\2013\"}",
       ".rail .rail__sort{display:none}",
@@ -219,6 +212,46 @@
       ".d119-chips__link{min-height:44px}",
       ".d119-chips__mehrinhalt{grid-template-columns:1fr;gap:22px}",
       "}",
+      /* PC und Tablet: Filter als Archiv-Index im Vollbild (Konzept C, Inhaber
+         07.11.2026). Grosse Schrift wie der Schriftzug, auf die Fotokanten
+         ausgerichtet; die Seite dahinter bleibt stehen. Gewaehlt = volle
+         Farbe, sonst gedaempft (gross mind. 3:1, klein mind. 4.5:1). */
+      "@media (min-width:721px){",
+      "body.d119-filter-open{overflow:hidden}",
+      "#filterPanel.d119-chips-an.d119-filter-drawer{position:fixed;inset:0;z-index:400;display:flex;flex-direction:column;align-items:stretch;",
+      "margin:0;padding:0;border:0;background:var(--bg);overflow-y:auto;overscroll-behavior:contain}",
+      "#filterPanel.d119-chips-an.d119-filter-drawer.hidden{display:none}",
+      "#filterPanel.d119-chips-an .d119-filter-drawer__head{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:2;",
+      "flex:0 0 auto;min-height:64px;padding:0 clamp(20px,5vw,64px);background:var(--bg);border-bottom:1px solid var(--rule)}",
+      "#filterPanel.d119-chips-an .d119-filter-drawer__title{font-size:.8rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--text)}",
+      "#filterPanel.d119-chips-an .d119-filter-drawer__close{appearance:none;background:none;border:0;min-height:44px;padding:0;cursor:pointer;font:inherit;",
+      "font-size:.7rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase}",
+      "#filterPanel.d119-chips-an .d119-filter-drawer__close::after{content:\"\\00a0\\00a0\\00d7\";font-size:1.1rem;font-weight:400}",
+      "#filterPanel.d119-chips-an .d119-chips{width:calc(100% - 2 * clamp(18px,3vw,36px));max-width:1328px;margin:0 auto;padding:clamp(32px,6vh,64px) 0 32px;",
+      "flex:1 0 auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(36px,6vh,60px) clamp(18px,2.5vw,34px);align-content:start}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe{gap:12px}",
+      "#filterPanel.d119-chips-an .d119-chips__titel{font-size:.62rem;letter-spacing:.2em;opacity:.75}",
+      "#filterPanel.d119-chips-an .d119-chips__reihe{gap:4px clamp(16px,1.6vw,28px);align-items:baseline}",
+      "#filterPanel.d119-chips-an .d119-chip{min-height:0;min-width:0;padding:0;border:0;border-radius:0;background:none;color:var(--text);gap:.3em;",
+      "font-size:clamp(1.5rem,2.4vw,2.6rem);font-weight:800;letter-spacing:-.01em;line-height:1.1;text-transform:uppercase;opacity:.5;transition:opacity .15s ease}",
+      "#filterPanel.d119-chips-an .d119-chip:hover,#filterPanel.d119-chips-an .d119-chip[aria-pressed=\"true\"]{opacity:1;background:none;color:var(--text)}",
+      "#filterPanel.d119-chips-an .d119-chip__punkt{width:.32em;height:.32em}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--sortieren .d119-chips__reihe,#filterPanel.d119-chips-an .d119-chips__gruppe--preis .d119-chips__reihe{flex-direction:column;align-items:flex-start;gap:6px}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--sortieren .d119-chip{font-size:clamp(1rem,1.3vw,1.3rem)}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--preis .d119-chip{font-size:clamp(1.2rem,1.7vw,1.9rem)}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--marke,#filterPanel.d119-chips-an .d119-chips__gruppe--farbe{grid-column:1/-1}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chips__reihe{display:block;columns:2;column-gap:clamp(18px,2.5vw,34px)}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip{display:flex;break-inside:avoid;font-size:.86rem;font-weight:700;letter-spacing:.08em;line-height:2;opacity:.62}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--farbe .d119-chip{font-size:clamp(1.1rem,1.5vw,1.6rem)}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--farbe .d119-chips__reihe{gap:6px clamp(18px,2vw,30px)}",
+      "#filterPanel.d119-chips-an .d119-chips__fuss{display:none}",
+      "#filterPanel.d119-chips-an .d119-filter-drawer__foot{display:flex;position:sticky;bottom:0;z-index:2;flex:0 0 auto;justify-content:center;align-items:center;gap:24px;",
+      "padding:24px 20px 28px;background:linear-gradient(to top,var(--bg) 72%,transparent)}",
+      "#filterPanel.d119-chips-an .d119-filter-drawer__apply{min-height:54px;padding:0 42px;border:0;background:var(--text);color:var(--bg);cursor:pointer;",
+      "font:inherit;font-size:.74rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase}",
+      "}",
+      "@media (min-width:1180px){#filterPanel.d119-chips-an .d119-chips{grid-template-columns:repeat(4,minmax(0,1fr))}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chips__reihe{columns:4}}",
       "@media (prefers-reduced-motion:reduce){.d119-kat__knopf,.d119-chip{transition:none}}",
       /* Band "Bereits verkauft" im Raster (verkauftBandSetzen) */
       ".d119-verkauft{grid-column:1/-1;min-width:0;overflow-x:clip;margin:clamp(4px,1.5vw,14px) 0;padding:16px 0 14px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}",
@@ -350,6 +383,15 @@
     return wert;
   }
 
+  // Anfang der Ergebnisse: wie beim Klick auf eine Kategorie klebt die
+  // Leiste direkt unter dem Kopf, der Schriftzug darueber ist weggescrollt.
+  function zuDenErgebnissen() {
+    var rail = document.querySelector(".rail");
+    if (!rail) return;
+    var oben = Math.max(0, rail.getBoundingClientRect().bottom + window.scrollY - leisteOffset());
+    if (Math.abs(window.scrollY - oben) > 4) window.scrollTo({ top: oben, behavior: "auto" });
+  }
+
   function leisteZeigen() {
     if (!leiste) return;
     var aktiv = api.ansichtJetzt();
@@ -473,7 +515,7 @@
   var weitereAnsicht = null;
 
   function groessenGruppe(z) {
-    var g = gruppe(tx("groesse"));
+    var g = gruppe(tx("groesse"), "d119-chips__gruppe--groesse");
     var ansicht = api.ansichtJetzt();
     if (ansicht !== weitereAnsicht) { weitereOffen = false; weitereAnsicht = ansicht; }
     var gruppiert = ansicht === "alle" || ansicht === "neu" || ansicht === "archiv" || ansicht === "";
@@ -542,13 +584,13 @@
     var n = zaehlen(api.treffer("department"), function (it) { return [it.department]; });
     var werte = ["Women", "Men", "Unisex"].filter(function (w) { return n[w] || z.department === w; });
     if (werte.length < 2 && !z.department) return null;
-    return einfacheGruppe(tx("fuer"), "department", "filterDepartment", werte, n, z.department, api.bereich).gruppe;
+    return einfacheGruppe(tx("fuer"), "department", "filterDepartment", werte, n, z.department, api.bereich, { klasse: "d119-chips__gruppe--fuer" }).gruppe;
   }
 
   function sortierGruppe(z) {
     var sel = document.getElementById("sortSelect");
     if (!sel) return null;
-    var g = gruppe(tx("sortieren"));
+    var g = gruppe(tx("sortieren"), "d119-chips__gruppe--sortieren");
     var r = reihe(g, "");
     // Reihenfolge fuer Kundschaft: Neu, Preis, dann der Rest.
     var reihenfolge = ["new", "price-asc", "price-desc", "brightness", "brand"];
@@ -565,7 +607,7 @@
 
   function preisGruppe(z) {
     var preise = api.treffer("price").map(function (it) { return Number(it.price) || 0; }).filter(function (p) { return p > 0; });
-    var g = gruppe(tx("preis"));
+    var g = gruppe(tx("preis"), "d119-chips__gruppe--preis");
     var r = reihe(g, "");
     PREISE.forEach(function (stufe) {
       var a = stufe[0], b = stufe[1];
@@ -601,7 +643,7 @@
       var kurz = !markenOffen && marken.length > MARKEN_KURZ + 2;
       var sichtbar = kurz ? marken.slice(0, MARKEN_KURZ) : marken;
       if (kurz && z.brand && sichtbar.indexOf(z.brand) < 0) sichtbar.push(z.brand);
-      var m = einfacheGruppe(tx("marke"), "brand", "filterBrand", sichtbar, mn, z.brand);
+      var m = einfacheGruppe(tx("marke"), "brand", "filterBrand", sichtbar, mn, z.brand, null, { klasse: "d119-chips__gruppe--marke" });
       if (marken.length > MARKEN_KURZ + 2) {
         var mehr = chip(kurz ? tx("alleMarken", { n: marken.length }) : tx("weniger"), false, function () {
           markenOffen = !markenOffen;
@@ -621,6 +663,7 @@
     var farben = Object.keys(fn).sort(function (a, b) { return fn[b] - fn[a] || a.localeCompare(b, "de"); });
     if (farben.length) {
       innen.appendChild(einfacheGruppe(tx("farbe"), "color", "filterColor", farben, fn, z.color, api.farbe || null, {
+        klasse: "d119-chips__gruppe--farbe",
         punkt: function (f) { return FARBEN[f] || "linear-gradient(135deg,#e04b4b,#e8c33a,#3aa35b,#3a6fd6)"; }
       }).gruppe);
     }
@@ -832,7 +875,14 @@
     var z = api.zustand();
     chipsBox.textContent = "";
     chipsBox.appendChild(groessenGruppe(z));
-    [bereichGruppe(z), sortierGruppe(z), mehrGruppe(z)].forEach(function (g) { if (g) chipsBox.appendChild(g); });
+    [bereichGruppe(z), sortierGruppe(z)].forEach(function (g) { if (g) chipsBox.appendChild(g); });
+    // Am Handy bleiben Preis, Marke und Farbe hinter "Preis, Marke, Farbe";
+    // im Vollbild am PC ist Platz - dort stehen sie direkt im Raster.
+    var mehr = mehrGruppe(z);
+    if (mehr && !istMobil()) {
+      var mehrInhalt = mehr.querySelector(".d119-chips__mehrinhalt");
+      while (mehrInhalt && mehrInhalt.firstChild) chipsBox.appendChild(mehrInhalt.firstChild);
+    } else if (mehr) chipsBox.appendChild(mehr);
     var fuss = el("div", "d119-chips__fuss");
     fuss.appendChild(zuruecksetzenKnopf());
     chipsBox.appendChild(fuss);
@@ -935,9 +985,26 @@
     // Filter geht auf (Knopf, Drawer, Tastatur): Chips sofort nachbauen,
     // noch bevor der Browser das offene Panel zeichnet.
     var panel = document.getElementById("filterPanel");
+    // Hat sich beim Filtern etwas geaendert, zeigt die Seite nach dem
+    // Schliessen den Anfang der Ergebnisse: Kategorie-Leiste direkt unter dem
+    // Kopf - nicht den grossen Schriftzug mit der Suche (Inhaber 07.11.2026).
+    var warOffen = panelOffen();
+    var zustandBeimOeffnen = null;
     if (panel) new MutationObserver(function () {
-      if (chipsVeraltet && panelOffen()) chipsBauen();
+      var offen = panelOffen();
+      if (chipsVeraltet && offen) chipsBauen();
+      if (offen && !warOffen) zustandBeimOeffnen = JSON.stringify(api.zustand());
+      if (!offen && warOffen && zustandBeimOeffnen !== null && JSON.stringify(api.zustand()) !== zustandBeimOeffnen) naechsterFrame(zuDenErgebnissen);
+      warOffen = offen;
     }).observe(panel, { attributes: true, attributeFilter: ["class"] });
+    // Wechsel zwischen Handy (Drawer mit "Preis, Marke, Farbe") und PC
+    // (alles im Raster): Chips passend neu bauen.
+    var warMobil = istMobil();
+    window.addEventListener("resize", function () {
+      if (istMobil() === warMobil) return;
+      warMobil = istMobil();
+      if (panelOffen()) chipsBauen(); else chipsVeraltet = true;
+    }, { passive: true });
     // Der einmalige Hinweis auf Match/Universum/Baukasten liegt direkt unter
     // dem Kopf. Dockt die Leiste dort an, wuerde er ihre Knoepfe verdecken -
     // dann schliesst er wie nach seinen 7 Sekunden.
