@@ -177,6 +177,29 @@ def ohne_platzhalter_zeilen(text) -> str:
     return "\n".join(zeilen)
 
 
+# Inhaber 07.11.2026: "es ist kein Einzelstück" - die Teile sind gebraucht und
+# im Shop nur 1x verfuegbar, aber keine Unikate. Saetze, die ein Teil als
+# Einzelstueck/Unikat bezeichnen, erscheinen darum nirgends im Shop (auch wenn
+# sie in einer Beschreibung aus dem Katalog stehen; die Daten bleiben unberuehrt).
+_UNIKAT = re.compile(
+    r"einzelst(ü|ue|u)ck|unikat|one[- ]of[- ]a[- ]kind|\bone[- ]offs?\b|\bpi[eè]ces?\s+uniques?\b",
+    re.I)
+
+
+def ohne_unikat_saetze(text) -> str:
+    """Beschreibung ohne Saetze, die das Teil ein Einzelstueck/Unikat nennen."""
+    s = str(text or "")
+    if not _UNIKAT.search(s):
+        return s
+    zeilen = []
+    for zeile in s.split("\n"):
+        if _UNIKAT.search(zeile):
+            saetze = re.split(r"(?<=[.!?])\s+", zeile.strip())
+            zeile = " ".join(x for x in saetze if not _UNIKAT.search(x))
+        zeilen.append(zeile)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(zeilen)).strip("\n")
+
+
 def details_kanonisch(t: dict) -> dict:
     """Details-Zeilen -> {schluessel: wert}; Leerwerte, Platzhalter und doppelte Fakten entfallen."""
     out = {}
