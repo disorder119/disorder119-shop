@@ -117,6 +117,9 @@
       ".d119-kat__knopf{appearance:none;flex:0 0 auto;background:none;border:0;padding:15px 0 13px;margin:0;cursor:pointer;",
       "font:inherit;font-size:.74rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;",
       "color:var(--text);opacity:.62;border-bottom:2px solid transparent;scroll-snap-align:start;transition:opacity .15s ease,border-color .15s ease}",
+      /* Schwarze Ansicht: nicht gewaehlte Kategorien heller (Inhaber 07.11.2026),
+         die gewaehlte bleibt voll weiss mit Unterstrich. */
+      ":root:not([data-theme=\"hell\"]) .d119-kat__knopf{opacity:.85}",
       ".d119-kat__knopf:hover{opacity:1}",
       ".d119-kat__knopf[aria-pressed=\"true\"]{opacity:1;border-bottom-color:var(--text)}",
       ".d119-kat__knopf:focus-visible{outline:2px solid var(--accent-text,#8f897c);outline-offset:3px}",
@@ -363,10 +366,12 @@
         api.ansicht(a.key, a.labelKey || "");
         if (a.key === "neu") selectSetzen("sortSelect", "new");
         b.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
-        // Nach oben an den Anfang der Liste, wenn man schon tief unten war.
+        // Leiste direkt unter das Logo, Schriftzug und Suche weg - von oben wie
+        // von weiter unten (Inhaber 07.11.2026: bisher blieb man oben stehen).
         var rail = document.querySelector(".rail");
-        var oben = rail ? rail.getBoundingClientRect().bottom + window.scrollY - leisteOffset() : 0;
-        if (rail && window.scrollY > oben + 4) window.scrollTo({ top: oben, behavior: "smooth" });
+        var oben = rail ? Math.max(0, rail.getBoundingClientRect().bottom + window.scrollY - leisteOffset()) : 0;
+        var ruhig = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (rail && Math.abs(window.scrollY - oben) > 4) window.scrollTo({ top: oben, behavior: ruhig ? "auto" : "smooth" });
       });
       liste.appendChild(b);
     });
