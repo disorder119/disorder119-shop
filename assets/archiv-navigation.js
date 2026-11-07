@@ -233,16 +233,14 @@
       "#filterPanel.d119-chips-an .d119-chips__titel{font-size:.62rem;letter-spacing:.2em;opacity:.75}",
       "#filterPanel.d119-chips-an .d119-chips__reihe{gap:4px clamp(16px,1.6vw,28px);align-items:baseline}",
       "#filterPanel.d119-chips-an .d119-chip{min-height:0;min-width:0;padding:0;border:0;border-radius:0;background:none;color:var(--text);gap:.3em;",
-      "font-size:clamp(1.5rem,2.4vw,2.6rem);font-weight:800;letter-spacing:-.01em;line-height:1.1;text-transform:uppercase;opacity:.5;transition:opacity .15s ease}",
+      "font-size:clamp(.95rem,1.1vw,1.15rem);font-weight:800;letter-spacing:.03em;line-height:1.3;text-transform:uppercase;opacity:.6;transition:opacity .15s ease}",
       "#filterPanel.d119-chips-an .d119-chip:hover,#filterPanel.d119-chips-an .d119-chip[aria-pressed=\"true\"]{opacity:1;background:none;color:var(--text)}",
       "#filterPanel.d119-chips-an .d119-chip__punkt{width:.32em;height:.32em}",
       "#filterPanel.d119-chips-an .d119-chips__gruppe--sortieren .d119-chips__reihe,#filterPanel.d119-chips-an .d119-chips__gruppe--preis .d119-chips__reihe{flex-direction:column;align-items:flex-start;gap:6px}",
-      "#filterPanel.d119-chips-an .d119-chips__gruppe--sortieren .d119-chip{font-size:clamp(1rem,1.3vw,1.3rem)}",
-      "#filterPanel.d119-chips-an .d119-chips__gruppe--preis .d119-chip{font-size:clamp(1.2rem,1.7vw,1.9rem)}",
       "#filterPanel.d119-chips-an .d119-chips__gruppe--marke,#filterPanel.d119-chips-an .d119-chips__gruppe--farbe{grid-column:1/-1}",
       "#filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chips__reihe{display:block;columns:2;column-gap:clamp(18px,2.5vw,34px)}",
-      "#filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip{display:flex;break-inside:avoid;font-size:.86rem;font-weight:700;letter-spacing:.08em;line-height:2;opacity:.62}",
-      "#filterPanel.d119-chips-an .d119-chips__gruppe--farbe .d119-chip{font-size:clamp(1.1rem,1.5vw,1.6rem)}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip{display:flex;justify-content:flex-start;text-align:left;break-inside:avoid;font-size:clamp(1.05rem,1.55vw,1.6rem);letter-spacing:.01em;line-height:1.25;padding:.12em 0}",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--farbe .d119-chip{font-size:clamp(1.05rem,1.4vw,1.45rem)}",
       "#filterPanel.d119-chips-an .d119-chips__gruppe--farbe .d119-chips__reihe{gap:6px clamp(18px,2vw,30px)}",
       "#filterPanel.d119-chips-an .d119-chips__fuss{display:none}",
       "#filterPanel.d119-chips-an .d119-filter-drawer__foot{display:flex;position:sticky;bottom:0;z-index:2;flex:0 0 auto;justify-content:center;align-items:center;gap:24px;",
@@ -253,7 +251,7 @@
       "@media (min-width:1180px){#filterPanel.d119-chips-an .d119-chips{grid-template-columns:repeat(4,minmax(0,1fr))}",
       "#filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chips__reihe{columns:4}}",
       /* Handy: Filter als App-Blatt von unten (Inhaber 07.11.2026) - Griff,
-         runde Ecken, Seite dahinter abgedunkelt; Groessen gross wie am PC,
+         runde Ecken, Seite dahinter abgedunkelt; Marken zweireihig vorne,
          "Fuer" als Umschalter, der Rest als wischbare Reihen. */
       "@keyframes d119BlattHoch{from{transform:translateY(100%)}to{transform:none}}",
       "@keyframes d119BlattHinter{from{opacity:0}to{opacity:1}}",
@@ -274,25 +272,21 @@
       "#filterPanel.d119-chips-an .d119-chips__titel{margin:0 0 10px;font-size:.6rem;letter-spacing:.2em;opacity:.7}",
       "#filterPanel.d119-chips-an .d119-chips__reihe{gap:8px}",
       "#filterPanel.d119-chips-an .d119-chips__links{margin-top:4px}",
-      /* Groessen gross, wie im Vollbild am PC */
-      "#filterPanel.d119-chips-an .d119-chips__gruppe--groesse .d119-chips__reihe{gap:0 22px}",
-      "#filterPanel.d119-chips-an .d119-chips__gruppe--groesse .d119-chip{min-height:44px;min-width:0;padding:0;border:0;background:none;color:var(--text);",
-      "font-size:1.75rem;font-weight:800;letter-spacing:-.01em;line-height:1.1;opacity:.45}",
-      "#filterPanel.d119-chips-an .d119-chips__gruppe--groesse .d119-chip[aria-pressed=\"true\"]{opacity:1;background:none;color:var(--text)}",
       /* "Fuer" als Umschalter wie in einer App */
       "#filterPanel.d119-chips-an .d119-chips__gruppe--fuer .d119-chips__reihe{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;padding:3px;border-radius:12px;box-shadow:inset 0 0 0 1px var(--rule-strong)}",
       "#filterPanel.d119-chips-an .d119-chips__gruppe--fuer .d119-chip{min-height:40px;min-width:0;padding:0 6px;border:0;border-radius:9px;background:none;",
       "font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}",
       "#filterPanel.d119-chips-an .d119-chips__gruppe--fuer .d119-chip[aria-pressed=\"true\"]{background:var(--text);color:var(--bg)}",
       /* Sortieren, Preis, Marke, Farbe: wischbare Reihen mit runden Knoepfen */
-      "#filterPanel.d119-chips-an :is(.d119-chips__gruppe--sortieren,.d119-chips__gruppe--preis,.d119-chips__gruppe--marke,.d119-chips__gruppe--farbe) .d119-chips__reihe{",
+      "#filterPanel.d119-chips-an :is(.d119-chips__gruppe--groesse,.d119-chips__gruppe--sortieren,.d119-chips__gruppe--preis,.d119-chips__gruppe--marke,.d119-chips__gruppe--farbe) .d119-chips__reihe{",
       "flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -22px;padding:0 22px;scroll-padding:0 22px;",
       "-webkit-mask-image:linear-gradient(to right,transparent 0,#000 18px,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to right,transparent 0,#000 18px,#000 calc(100% - 26px),transparent)}",
       "#filterPanel.d119-chips-an .d119-chips__reihe::-webkit-scrollbar{display:none}",
-      "#filterPanel.d119-chips-an :is(.d119-chips__gruppe--sortieren,.d119-chips__gruppe--preis,.d119-chips__gruppe--marke,.d119-chips__gruppe--farbe) .d119-chip{",
+      "#filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chips__reihe{flex-wrap:wrap;overflow:visible;margin:0;padding:0;-webkit-mask-image:none;mask-image:none;gap:8px}",
+      "#filterPanel.d119-chips-an :is(.d119-chips__gruppe--groesse,.d119-chips__gruppe--sortieren,.d119-chips__gruppe--preis,.d119-chips__gruppe--marke,.d119-chips__gruppe--farbe) .d119-chip{",
       "flex:0 0 auto;min-height:42px;padding:0 16px;border:1px solid var(--rule-strong);border-radius:999px;background:none;white-space:nowrap;",
       "font-size:.7rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase}",
-      "#filterPanel.d119-chips-an :is(.d119-chips__gruppe--sortieren,.d119-chips__gruppe--preis,.d119-chips__gruppe--marke,.d119-chips__gruppe--farbe) .d119-chip[aria-pressed=\"true\"]{background:var(--text);color:var(--bg);border-color:var(--text)}",
+      "#filterPanel.d119-chips-an :is(.d119-chips__gruppe--groesse,.d119-chips__gruppe--sortieren,.d119-chips__gruppe--preis,.d119-chips__gruppe--marke,.d119-chips__gruppe--farbe) .d119-chip[aria-pressed=\"true\"]{background:var(--text);color:var(--bg);border-color:var(--text)}",
       "#filterPanel.d119-chips-an .d119-filter-drawer__foot{flex:0 0 auto;position:relative;display:flex;align-items:center;gap:14px;margin:0;",
       "padding:12px 14px max(14px,env(safe-area-inset-bottom)) 20px;border-top:1px solid var(--rule);background:var(--bg)}",
       "#filterPanel.d119-chips-an .d119-filter-drawer__apply{flex:1 1 auto;width:auto;min-height:52px;padding:0 12px;border:0;border-radius:14px;white-space:nowrap;font-size:.72rem;font-weight:800;letter-spacing:.1em}",
@@ -953,13 +947,13 @@
       : null;
     var z = api.zustand();
     chipsBox.textContent = "";
-    chipsBox.appendChild(groessenGruppe(z));
-    [bereichGruppe(z), sortierGruppe(z)].forEach(function (g) { if (g) chipsBox.appendChild(g); });
-    // Preis, Marke und Farbe stehen direkt im Filter: am PC im Raster des
-    // Vollbilds, am Handy als wischbare Reihen im App-Blatt (07.11.2026).
+    // Reihenfolge (Inhaber 07.11.2026): zuerst Marke und Farbe - danach
+    // suchen die Leute; Groesse sichtbar, aber nicht im Vordergrund. Preis,
+    // Marke und Farbe stehen direkt im Filter (kein "Preis, Marke, Farbe +").
+    var groesse = groessenGruppe(z), fuer = bereichGruppe(z), sortierung = sortierGruppe(z);
     var mehr = mehrGruppe(z);
-    var mehrInhalt = mehr && mehr.querySelector(".d119-chips__mehrinhalt");
-    while (mehrInhalt && mehrInhalt.firstChild) chipsBox.appendChild(mehrInhalt.firstChild);
+    var teil = function (k) { return mehr ? mehr.querySelector(".d119-chips__gruppe--" + k) : null; };
+    [teil("marke"), teil("farbe"), fuer, groesse, teil("preis"), sortierung].forEach(function (g) { if (g) chipsBox.appendChild(g); });
     blattWischen(panel);
     var fuss = el("div", "d119-chips__fuss");
     fuss.appendChild(zuruecksetzenKnopf());
