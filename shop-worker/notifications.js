@@ -356,3 +356,32 @@ export async function notifyPaidOrderByProviderOrder(env, providerOrderId, reqId
   if (!payment?.order_id) return { sent: false, reason: "ORDER_NOT_FOUND" };
   return notifyPaidOrder(env, payment.order_id, reqId);
 }
+
+// DHL meldet "abholbereit" (Packstation/Filiale, dhl-tracking.js): Nachricht
+// an den Inhaber mit Foto und Knopf zur Abholmail in der Admin-App. Die Mail an
+// die Kundschaft geht nur, wenn der Inhaber sie dort abschickt (07.11.2026).
+// Einmal je Sendung - dhl-tracking ruft das nur beim Wechsel auf ABHOLBEREIT.
+export function formatPickupReadyMessage(order = {}, abholort = {}) {
+  const o = abholort && typeof abholort === "object" ? abholort : {};
+  const ort = o.typ === "filiale" ? `Postfiliale${o.ort ? ` · ${o.ort}` : ""}`
+    : o.nummer ? `Packstation ${o.nummer}${o.ort ? ` · ${o.ort}` : ""}` : "Packstation / Filiale";
+  return [
+    `📦 ABHOLBEREIT · ${telegramZeile(order.order_number || "", 60)}`,
+    ...(order.titel ? [telegramZeile(order.titel, 120)] : []),
+    telegramZeile(ort, 120),
+    "",
+    "Die Abholmail an die Kundschaft geht erst, wenn du sie in der Admin-App abschickst.",
+  ].join("\n");
+}
+
+export async function notifyPickupReady(env, sendung = {}, stand = {}, reqId = crypto.randomUUID()) {
+  if (!telegramNotificationReady(env) || !env?.DB) return { sent: false, reason: "NOT_CONFIGURED" };
+  const orderId = safeText(sendung.order_id || "", 80);
+  if (!orderId) return { sent: false, reason: "ORDER_NOT_FOUND" };
+  const order = await env.DB.prepare("SELECT id,order_number FROM commerce_orders WHERE id=?").bind(orderId).first();
+  if (!order) return { sent: false, reason: "ORDER_NOT_FOUND" };
+  const teil = await env.DB.prepare("SELECT item_id,title_snapshot FROM order_items WHERE order_id=? ORDER BY rowid LIMIT 1").bind(orderId).first();
+  const text = formatPickupReadyMessage({ order_number: order.order_number, titel: teil?.title_snapshot || "" }, stand?.abholort || {});
+  const knopf = { text: "✉️ Abholmail ansehen", url: `${adminBestellungLink(order)}&abholmail=1` };
+  return sendTelegramPhoto(env, verkaufsBild({ items: teil ? [teil] : [] }), text, reqId, knopf);
+}
