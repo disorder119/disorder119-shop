@@ -1232,7 +1232,7 @@
       /* Blatt von unten wie bei Apple */
       "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer{inset:auto 0 0 0;height:calc(100dvh - 26px);max-height:none;gap:0;padding-top:0;border:0;border-top:1px solid color-mix(in srgb,var(--text) 16%,transparent);",
       "border-radius:22px 22px 0 0;box-shadow:0 -20px 60px rgba(0,0,0,.5);background:color-mix(in srgb,var(--bg) 58%,transparent);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:nebelBlatt .5s cubic-bezier(.32,.72,0,1)}",
-      "html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)){overflow:hidden}html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) :is(.rail,.d119-kat,#activeFilters,#modeRail,#modeRailHint,#grid .plate__body){visibility:hidden}",
+      "html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)){overflow:hidden}html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) .rail>:not(#filterPanel):not(#d119CompactFilterDrawerBackdrop),html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) :is(#modeRail,#modeRailHint,#grid .plate__body){visibility:hidden}",
       "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer,html.nebel #filterPanel.d119-chips-an .d119-chips{scrollbar-width:none!important;-ms-overflow-style:none}",
       "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer::-webkit-scrollbar,html.nebel #filterPanel.d119-chips-an .d119-chips::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}",
       "html.nebel .d119-filter-backdrop{background:rgba(0,0,0,.14);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:nebelHinter .3s ease}",
