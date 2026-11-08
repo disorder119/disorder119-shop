@@ -1955,7 +1955,7 @@ export async function sendPickupReady(env, orderId, { reqId = crypto.randomUUID(
 
 // Abholmail-Vorschau an eine Adresse des Inhabers (wie die Versandmail-Vorschau):
 // ein verfuegbares Teil aus dem Katalog, Beispiel-Packstation, keine Buchung.
-export async function sendPickupPreview(env, recipient, { itemId = null, sprache = "de", reqId = crypto.randomUUID(), now = new Date(), nurBauen = false } = {}) {
+export async function sendPickupPreview(env, recipient, { itemId = null, sprache = "de", reqId = crypto.randomUUID(), now = new Date(), nurBauen = false, orderNumber = "", trackingNumber = "" } = {}) {
   if (!nurBauen && !mailTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
   const to = normalizeEmail(recipient);
   if (!nurBauen && !to) return { sent: false, reason: "INVALID_RECIPIENT" };
@@ -1964,9 +1964,12 @@ export async function sendPickupPreview(env, recipient, { itemId = null, sprache
   const teile = [...katalog.values()].filter(k => k && Array.isArray(k.gallery) && k.gallery.length && String(k.public_status || k.status || "AVAILABLE").toUpperCase() === "AVAILABLE");
   const teil = (itemId && katalog.get(Number(itemId))) || (teile.length ? teile[Math.floor(Math.random() * teile.length)] : null);
   if (!teil) return { sent: false, reason: "NO_ITEM" };
+  if ((orderNumber || trackingNumber) && (!/^D119-[A-Z0-9-]{8,60}$/i.test(orderNumber) || !/^\d{10,35}$/.test(trackingNumber))) {
+    return { sent: false, reason: "INVALID_PREVIEW_REFERENCE" };
+  }
   const nummer = `D119-${now.toISOString().slice(0, 10).replace(/-/g, "")}-TEST${String(teil.id).slice(-4).padStart(4, "0")}`;
   const order = {
-    order_number: nummer, carrier: "DHL", tracking_number: "00340434161094042557",
+    order_number: orderNumber || nummer, carrier: "DHL", tracking_number: trackingNumber || "00340434161094042557",
     items: [{ item_id: Number(teil.id), article_no: safeText(teil.article || teil.article_no || teil.url_slug || "", 40),
       title_snapshot: safeText(teil.title || "", 180), title_en: safeText(teil.title_en || "", 180),
       bild: safeText(teil.gallery[0] || "", 200), brand: safeText(teil.brand || "", 60), size: safeText(teil.size || "", 40) }],
@@ -1975,8 +1978,11 @@ export async function sendPickupPreview(env, recipient, { itemId = null, sprache
     contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200), sprache,
     abholort: { typ: "packstation", nummer: "119", plz: "63739", ort: "Aschaffenburg" },
   });
-  if (nurBauen) return { sent: false, ...message, itemId: Number(teil.id) };
-  const result = await sendMail(env, { to, subject: `[TEST] ${message.subject}`, html: message.html, text: message.text, tag: "pickup-preview" });
+  const hinweis = "TESTVORSCHAU: Die Ankunft an einer Packstation ist nicht bestätigt. Es wurde keine Abholmail an den Kunden gesendet.";
+  const html = message.html.replace(/(<body[^>]*>)/i, `$1<div style="background:#f6e8a5;color:#111;padding:12px;text-align:center;font:700 13px Arial,sans-serif">${hinweis}</div>`);
+  const text = `${hinweis}\n\n${message.text}`;
+  if (nurBauen) return { sent: false, ...message, html, text, itemId: Number(teil.id) };
+  const result = await sendMail(env, { to, subject: `[TEST] ${message.subject}`, html, text, tag: "pickup-preview" });
   return { ...result, itemId: Number(teil.id), titel: order.items[0].title_snapshot, requestId: safeText(reqId, 120) };
 }
 
