@@ -227,7 +227,9 @@
     if (close) close.textContent = t("close");
     if (apply) apply.textContent = t("apply", resultCount());
     if (toggle) toggle.textContent = t("filter") + (activeCount() ? " · " + activeCount() : "");
-    var open = isMobile() && !panel.classList.contains("hidden");
+    // Handy: Drawer; PC/Tablet: Vollbild-Index (archiv-navigation.js) -
+    // beides ein modaler Dialog mit Fokusfalle und gesperrter Seite.
+    var open = !panel.classList.contains("hidden");
     document.body.classList.toggle("d119-filter-open", open);
     if (backdrop) backdrop.hidden = !open;
     if (open) {
@@ -277,7 +279,7 @@
     foot.querySelector("button").addEventListener("click", closeDrawer);
     backdrop.addEventListener("click", closeDrawer);
     document.addEventListener("keydown", function (event) {
-      if (!isMobile() || panel.classList.contains("hidden")) return;
+      if (panel.classList.contains("hidden")) return;
       if (event.key === "Escape") { event.preventDefault(); closeDrawer(); return; }
       if (event.key !== "Tab") return;
       var list = focusables(panel);
