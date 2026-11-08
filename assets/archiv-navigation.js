@@ -1260,8 +1260,9 @@
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--groesse .d119-chips__titel{flex:0 0 100%}",
       "html.nebel #filterPanel.d119-chips-an :is(.d119-chips__gruppe--groesse,.d119-chips__gruppe--preis) .d119-chips__reihe{display:flex;flex-wrap:wrap;gap:5px}",
       "html.nebel #filterPanel.d119-chips-an :is(.d119-chips__gruppe--groesse,.d119-chips__gruppe--preis) .d119-chip{min-height:28px;min-width:32px;padding:0 8px;border:1px solid var(--rule-strong);border-radius:0;font-size:.62rem}",
-      "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--groesse .d119-chips__links{flex-direction:column;align-items:flex-start;gap:2px;margin:0}",
-      "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--groesse .d119-chips__link{min-height:16px;font-size:.54rem;padding:1px 0}",
+      "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--groesse .d119-chips__links{flex-direction:column;align-items:flex-start;gap:0;margin:-10px 0}",
+      /* WCAG-Tippflaeche: je 24px hoch; die Spalte ragt per -10px in die Abstaende zu den Titeln, die Zeile bleibt 28px */
+      "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--groesse .d119-chips__link{display:inline-flex;align-items:center;min-height:24px;font-size:.54rem;padding:0}",
       "html.nebel.nebel #filterPanel.d119-chips-an .d119-chips__gruppe.d119-chips__gruppe--sortieren .d119-chips__reihe{gap:5px;padding:0 0 4px}",
       "html.nebel.nebel #filterPanel.d119-chips-an .d119-chips__gruppe.d119-chips__gruppe--sortieren .d119-chip{min-height:28px;padding:0 10px;font-size:.7rem}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__foot{padding:7px 14px max(12px,env(safe-area-inset-bottom)) 20px;border-top:1px solid var(--rule);background:var(--bg)}",
