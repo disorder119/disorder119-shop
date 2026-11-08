@@ -5,7 +5,7 @@ import {
   canTransitionRental,
   safeText,
 } from "./commerce-core.js";
-import { sendShippingConfirmation } from "./customer-mail.js";
+import { sendPickupReady, sendShippingConfirmation } from "./customer-mail.js";
 import {
   ErstattungsFehler,
   erstattungAusWebhook,
@@ -489,6 +489,18 @@ function sendungMitVerfolgung(s) {
   };
 }
 
+// Stand der Abholmail aus den Ereignissen der Bestellung (customer-mail.sendPickupReady).
+function abholmailStand(ereignisse = []) {
+  const gesendet = (Array.isArray(ereignisse) ? ereignisse : []).filter(e => e && e.event_type === "PICKUP_NOTICE_SENT");
+  if (!gesendet.length) return { gesendet: false, anzahl: 0, zuletztAm: null };
+  const zuletzt = gesendet.map(e => String(e.created_at || "")).sort().pop() || null;
+  return { gesendet: true, anzahl: gesendet.length, zuletztAm: zuletzt };
+}
+
+function abholmailKurz(r = {}) {
+  return { sent: Boolean(r.sent), duplicate: Boolean(r.duplicate), an: r.an || null, sprache: r.sprache || null, gesendetAm: r.gesendetAm || null };
+}
+
 async function getOrderDetail(env, id, { bilder = true } = {}) {
   const db = requireDb(env);
   const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
@@ -546,6 +558,8 @@ async function getOrderDetail(env, id, { bilder = true } = {}) {
     laufenderAuftrag: laufend,
     widerrufe,
     versandSperre: sperre,
+    // Abholmail (Paket liegt in Packstation/Filiale) - nur aus der Admin-App.
+    abholmail: abholmailStand(activity),
     ruecklauf: ruecklaufAngebot(order, itemRows, shipmentRows, refunds.results || [], widerrufe, laufend, zahlung),
     wiederVerfuegbar: wiederVerfuegbarStand(order, itemRows, activity, { warVerkauft }),
     items: itemRows,
@@ -1540,6 +1554,18 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
 
     // Ruecksendung: anlegen (Kundin hat per Mail/Brief widerrufen) und
     // "Ware eingegangen" (Stuecke waehlen, pruefen, erstatten).
+    // Abholmail: {vorschau:true} baut sie nur (fuer die Vorschau in der App),
+    // sonst geht sie an die Kundschaft - einmal je Sendung, {erneut:true} nochmal.
+    const abholMatch = /^\/admin\/orders\/([^/]+)\/abholmail$/.exec(path);
+    if (abholMatch && request.method === "POST") {
+      const id = decodeURIComponent(abholMatch[1]);
+      const body = await readJson(request);
+      const r = await sendPickupReady(env, id, { reqId, vorschau: body?.vorschau === true, erneut: body?.erneut === true });
+      if (r.vorschau) return adminJson({ abholmail: r }, 200, origin);
+      if (!r.sent && !r.duplicate) throw new AdminError(r.reason || "PICKUP_MAIL_FAILED", r.reason === "ORDER_NOT_FOUND" ? 404 : 409);
+      return adminJson({ ...(await getOrderDetail(env, id)), abholmailErgebnis: abholmailKurz(r) }, 200, origin);
+    }
+
     const ruecksendungMatch = /^\/admin\/orders\/([^/]+)\/ruecksendung(\/eingegangen)?$/.exec(path);
     if (ruecksendungMatch && request.method === "POST") {
       const id = decodeURIComponent(ruecksendungMatch[1]);

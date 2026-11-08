@@ -23,7 +23,7 @@ import { handleAdminAlerts } from "./admin-alerts.js";
 import { handleAdminNotifications } from "./admin-notifications.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
-import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications.js";
+import { notifyPaidOrder, notifyPaidOrderByProviderOrder, notifyPickupReady } from "./notifications.js";
 import { sendInvoiceAfterCaptureByProviderOrder, sendOrderConfirmation, sendOrderConfirmationByProviderOrder } from "./customer-mail.js";
 import { handleAccountRequest, isAccountRoute, sendRequestedAccountLink, sendRequestedAccountLinkByProviderOrder } from "./customer-account.js";
 import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
@@ -489,7 +489,7 @@ const worker = {
         return finish(await handleBuchhaltung(request, runtimeEnv, url, reqId, origin));
       }
 
-      if (url.pathname === "/admin/notifications/telegram/test" || url.pathname === "/admin/notifications/mail/test" || url.pathname === "/admin/notifications/mail/versand-test") {
+      if (url.pathname === "/admin/notifications/telegram/test" || url.pathname === "/admin/notifications/mail/test" || url.pathname === "/admin/notifications/mail/versand-test" || url.pathname === "/admin/notifications/mail/abholbereit-test") {
         return finish(await handleAdminNotifications(request, runtimeEnv, url, reqId, origin));
       }
 
@@ -647,6 +647,8 @@ const worker = {
     // Sendungsverfolgung: unterwegs -> Versendet (Kundenmail), zugestellt -> Zugestellt (ohne Mail).
     await runBackground(ctx, sendungenVerfolgen(env, reqId, scheduledTime, {
       statusSetzen: (orderId, status) => orderStatusAutomatisch(env, orderId, status, reqId),
+      // Paket liegt in Packstation/Filiale: Telegram an den Inhaber, keine Kundenmail.
+      abholbereitMelden: (sendung, stand) => notifyPickupReady(env, sendung, stand, reqId),
     }), "dhl_tracking_failed", reqId);
     await runBackground(ctx, paypalErstattungenAbgleichen(env, reqId, true), "paypal_refund_reconciliation_failed", reqId);
     // Nach dem Abgleich: wartende Erstattungen erneut versuchen, erledigte

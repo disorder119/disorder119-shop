@@ -18,6 +18,7 @@ import { TAG_MS, kontingentBelegen } from "./kontingent.js";
 import { linksEntschaerfen } from "./oeffentliche-mails.js";
 import { landName } from "./laender.js";
 import { katalogNachId } from "./oeffentlicher-katalog.js";
+import { abholortAusText } from "./dhl-tracking.js";
 
 const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
 
@@ -993,6 +994,207 @@ export function formatShippingConfirmation(order = {}, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Abholmail (Inhaber 07.11.2026): "Dein Paket ist abholbereit" - mit dem
+// gekauften Teil im offenen Fach einer Packstation (eigenes schwarzes Motiv im
+// Stil des Shops, kein DHL-Logo, kein DHL-Gelb). Geht NIE automatisch, nur wenn
+// der Inhaber sie in der Admin-App abschickt. Ehrlich: Abholcode und
+// Aufbewahrungsfrist kommen von DHL, die Mail verspricht dazu nichts Eigenes.
+// Der Status stammt aus der DHL-Sendungsverfolgung - daher der Vermerk
+// "Delivered by Deutsche Post DHL Group" (DHL-Bedingungen).
+// ---------------------------------------------------------------------------
+
+const ABHOLMAIL_TEXT = Object.freeze({
+  de: {
+    subject: n => `Fach auf: Deine Bestellung ${n} ist abholbereit`,
+    eyebrow: "Abholbereit",
+    titel: "Dein Teil wartet auf dich",
+    ort: o => o.typ === "filiale" ? `der Postfiliale${o.ort ? ` in ${o.ort}` : ""}` : o.nummer ? `der Packstation ${o.nummer}${o.ort ? ` in ${o.ort}` : ""}` : "einer Packstation",
+    kopf: (teil, ort) => `${teil} sitzt gerade in ${ort} und wartet auf dich.`,
+    teilOhne: "Deine Bestellung",
+    witze: [
+      "Es ist ein bisschen eng da drin. Hol es raus, bevor es sich zu sehr an die Nachbarfächer gewöhnt.",
+      "Tür zu, Licht aus, Spannung an: Es ist bereit für seinen großen Auftritt bei dir.",
+      "Ein Archivteil in einem Metallfach ist die kürzeste Ausstellung der Welt. Beende sie bald.",
+    ],
+    code: "Den Abholcode bekommst du direkt von DHL – in der Post & DHL App oder in der Benachrichtigung von DHL. Dort steht auch, wie lange das Paket auf dich wartet.",
+    nummer: (nr, c) => `Sendungsnummer: ${nr} (${c})`,
+    verfolgen: url => `Bei DHL ansehen: ${url}`,
+    knopf: "Sendung bei DHL ansehen",
+    imPaket: "Im Paket",
+    band: "Abholbereit",
+    display: "Abholbereit",
+    fach: "Fach",
+    schild: o => o.typ === "filiale" ? "Postfiliale" : `Packstation${o.nummer ? ` ${o.nummer}` : ""}`,
+    vermerk: "Sendungsstatus: Delivered by Deutsche Post DHL Group",
+    vorschau: n => `Abholbereit · Bestellung ${n}`,
+  },
+  en: {
+    subject: n => `Locker open: your order ${n} is ready for pickup`,
+    eyebrow: "Ready for pickup",
+    titel: "Your piece is waiting for you",
+    ort: o => o.typ === "filiale" ? `the post office${o.ort ? ` in ${o.ort}` : ""}` : o.nummer ? `Packstation ${o.nummer}${o.ort ? ` in ${o.ort}` : ""}` : "a Packstation",
+    kopf: (teil, ort) => `${teil} is chilling in ${ort} and waiting for you.`,
+    teilOhne: "Your order",
+    witze: [
+      "It’s a bit cramped in there. Come and get it before it gets too attached to the neighbouring lockers.",
+      "Door shut, lights off, tension rising: it’s ready for its big entrance at your place.",
+      "An archive piece in a metal locker is the world’s shortest exhibition. End it soon.",
+    ],
+    code: "Your pickup code comes straight from DHL – in the Post & DHL app or in DHL’s notification, which also tells you how long the parcel will wait for you.",
+    nummer: (nr, c) => `Tracking number: ${nr} (${c})`,
+    verfolgen: url => `View at DHL: ${url}`,
+    knopf: "View shipment at DHL",
+    imPaket: "In the parcel",
+    band: "Ready for pickup",
+    display: "Ready",
+    fach: "Locker",
+    schild: o => o.typ === "filiale" ? "Post office" : `Packstation${o.nummer ? ` ${o.nummer}` : ""}`,
+    vermerk: "Shipment status: Delivered by Deutsche Post DHL Group",
+    vorschau: n => `Ready for pickup · order ${n}`,
+  },
+  fr: {
+    subject: n => `Casier ouvert : ta commande ${n} est prête à être retirée`,
+    eyebrow: "Prête à être retirée",
+    titel: "Ta pièce t’attend",
+    ort: o => o.typ === "filiale" ? `le bureau de poste${o.ort ? ` à ${o.ort}` : ""}` : o.nummer ? `la Packstation ${o.nummer}${o.ort ? ` à ${o.ort}` : ""}` : "une Packstation",
+    kopf: (teil, ort) => `${teil} se repose dans ${ort} et t’attend.`,
+    teilOhne: "Ta commande",
+    witze: [
+      "C’est un peu étroit là-dedans. Viens la chercher avant qu’elle ne s’attache trop aux casiers voisins.",
+      "Porte fermée, lumière éteinte, suspense total : elle est prête pour sa grande entrée chez toi.",
+      "Une pièce d’archive dans un casier en métal, c’est la plus courte exposition du monde. Mets-y fin vite.",
+    ],
+    code: "Ton code de retrait arrive directement de DHL – dans l’app Post & DHL ou dans la notification de DHL, qui indique aussi combien de temps le colis t’attend.",
+    nummer: (nr, c) => `Numéro de suivi : ${nr} (${c})`,
+    verfolgen: url => `Voir chez DHL : ${url}`,
+    knopf: "Voir l’envoi chez DHL",
+    imPaket: "Dans le colis",
+    band: "Prête à être retirée",
+    display: "Prête",
+    fach: "Casier",
+    schild: o => o.typ === "filiale" ? "Bureau de poste" : `Packstation${o.nummer ? ` ${o.nummer}` : ""}`,
+    vermerk: "Statut de l’envoi : Delivered by Deutsche Post DHL Group",
+    vorschau: n => `Prête à être retirée · commande ${n}`,
+  },
+});
+
+// Abholort fuer die Mail: Packstation/Filiale aus der Lieferanschrift der
+// Bestellung ("Packstation 123", PLZ, Ort - abholorte.js), sonst was die
+// Sendungsverfolgung meldet.
+export function abholortFuerMail(contact = {}, ausVerfolgung = null) {
+  const zeile = safeText(contact.address_line1 || "", 120);
+  const treffer = /^(packstation|postfiliale|filiale)\s*(\d{1,4})?/i.exec(zeile.trim());
+  if (treffer) {
+    return { typ: /packstation/i.test(treffer[1]) ? "packstation" : "filiale", nummer: treffer[2] || "",
+      plz: safeText(contact.postal_code || "", 10), ort: safeText(contact.city || "", 60) };
+  }
+  const v = ausVerfolgung && typeof ausVerfolgung === "object" ? ausVerfolgung : {};
+  return { typ: v.typ === "filiale" ? "filiale" : "packstation", nummer: safeText(v.nummer || "", 4),
+    plz: safeText(v.plz || "", 10), ort: safeText(v.ort || contact.city || "", 60) };
+}
+
+// Gleicher Witz in Vorschau und echter Mail: aus der Bestellnummer gewaehlt.
+function abholWitz(liste, schluessel) {
+  let h = 0;
+  for (const z of String(schluessel || "")) h = (h * 31 + z.charCodeAt(0)) >>> 0;
+  return liste[h % liste.length];
+}
+
+// Packstation-Motiv: eine schwarze Fachwand, ein Fach steht offen - darin das
+// Foto des Teils. Oben das Schild, darunter das Display "● Abholbereit".
+// Nur Tabellen und Inline-Styles (Outlook zeigt Ecken statt Rundungen).
+function packstationMotiv(item, bild, { sprache = "de", abholort = {} } = {}) {
+  const t = ABHOLMAIL_TEXT[mailSprache(sprache)];
+  const titel = escapeHtml(stueckTitel(item, sprache));
+  const nr = safeText(item.article_no || item.articleNo || "", 40);
+  const mono = "'Courier New',Courier,monospace";
+  const fach = (n, hoehe) => `<td width="78" height="${hoehe}" valign="top" style="width:78px;height:${hoehe}px;background:#191919;border:1px solid #2c2c2c;border-radius:5px;padding:6px 7px;">
+      <div style="font-family:${mono};font-size:8px;letter-spacing:0.1em;color:#5a5a5a;">${String(n).padStart(2, "0")}</div>
+      <div style="width:16px;height:3px;background:#3c3c3c;border-radius:2px;margin:${Math.max(6, Math.round(hoehe / 2) - 14)}px 0 0 auto;font-size:0;line-height:0;">&nbsp;</div></td>`;
+  const offen = `<td rowspan="2" width="132" valign="top" style="width:132px;background:#000000;border:1px solid #4a4a4a;border-radius:5px;padding:8px 8px 10px;">
+      <div style="font-family:${mono};font-size:8px;letter-spacing:0.14em;color:#8a8a8a;text-transform:uppercase;">${escapeHtml(t.fach)} 05</div>
+      <img class="mail-fach-foto" src="${escapeHtml(bild)}" width="114" alt="${titel}" style="display:block;width:114px;max-width:114px;height:auto;margin:8px auto 6px;border:0;">
+      <div style="height:2px;background:#2a2a2a;border-radius:1px;font-size:0;line-height:0;">&nbsp;</div></td>`;
+  const schild = escapeHtml(t.schild(abholort));
+  return `<table role="presentation" class="mail-station" cellpadding="0" cellspacing="0" style="width:328px;font-family:${MAIL_SCHRIFT};">
+    <tr><td align="center" style="padding:0 0 8px;">
+      <div style="display:inline-block;background:#ffffff;color:#000000;font-size:13px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;padding:7px 14px;">${schild}</div></td></tr>
+    <tr><td style="background:#0b0b0b;border:2px solid #2a2a2a;border-radius:14px;padding:10px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0e0e0e;border:1px solid #2c2c2c;border-radius:6px;">
+        <tr><td style="padding:8px 10px;font-family:${mono};font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#ffffff;white-space:nowrap;"><span style="color:#39ff88;">&#9679;</span>&nbsp; ${escapeHtml(t.display)}</td>
+            <td align="right" style="padding:8px 10px;font-family:${mono};font-size:9px;letter-spacing:0.12em;color:#6a6a6a;white-space:nowrap;">DISORDER119</td></tr>
+      </table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="6" style="margin-top:4px;">
+        <tr>${fach(1, 40)}${fach(2, 40)}${fach(3, 40)}</tr>
+        <tr>${fach(4, 96)}${offen}${fach(6, 96)}</tr>
+        <tr>${fach(7, 96)}${fach(8, 96)}</tr>
+        <tr>${fach(9, 40)}${fach(10, 40)}${fach(11, 40)}</tr>
+      </table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:2px;">
+        <tr><td align="center" style="padding:8px 0 2px;font-family:${mono};font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:#6a6a6a;">${escapeHtml(t.band)} &nbsp;·&nbsp; ${nr ? `Archive No. ${escapeHtml(nr)}` : "Archive"}</td></tr>
+      </table>
+    </td></tr>
+    <tr><td align="center" style="padding:0;"><div style="width:300px;height:6px;background:#1c1c1c;border-radius:0 0 4px 4px;font-size:0;line-height:0;">&nbsp;</div></td></tr>
+  </table>`;
+}
+
+export function formatPickupReady(order = {}, options = {}) {
+  const sprache = mailSprache(options.sprache || order.sprache);
+  const t = ABHOLMAIL_TEXT[sprache];
+  const a = allgemein(sprache);
+  const number = safeText(order.order_number || order.orderNumber || "", 80) || "—";
+  const carrier = safeText(order.carrier || "DHL", 40) || "DHL";
+  const tracking = safeText(order.tracking_number || order.trackingNumber || "", 60);
+  const url = trackingUrlFor(carrier, tracking, sprache);
+  const contactEmail = safeText(options.contactEmail || "", 200);
+  const items = Array.isArray(order.items) ? order.items : [];
+  const abholort = options.abholort || abholortFuerMail(order.contact || {}, null);
+  const ortText = t.ort(abholort);
+  const teil = items.length === 1 ? stueckTitel(items[0], sprache) : "";
+  const witz = abholWitz(t.witze, number);
+  const subject = t.subject(number);
+
+  const text = [
+    "DISORDER119",
+    "",
+    t.kopf(teil || t.teilOhne, ortText),
+    witz,
+    "",
+    ...(items.length > 1 ? [t.imPaket.toUpperCase(), ...items.map(item => `· ${stueckTitel(item, sprache)}`), ""] : []),
+    t.code,
+    "",
+    ...(tracking ? [t.nummer(tracking, carrier)] : []),
+    ...(url ? [t.verfolgen(url)] : []),
+    "",
+    ...(contactEmail ? [fragenText(contactEmail, sprache), ""] : []),
+    t.vermerk,
+  ].join("\n");
+
+  const F = MAIL_FARBE;
+  const bild = items.length ? stueckBild(items[0]) : "";
+  const motiv = bild ? packstationMotiv(items[0], bild, { sprache, abholort }) : "";
+  const kopf = `<p class="mail-kopf" style="margin:0 auto;max-width:440px;color:${F.leise};">${escapeHtml(t.kopf("§TEIL§", ortText)).replace("§TEIL§", `<strong style="color:${F.text};">${escapeHtml(teil || t.teilOhne)}</strong>`)}</p>
+    <p style="margin:12px auto 0;max-width:420px;font-size:14px;color:${F.text};">${escapeHtml(witz)}</p>`;
+  const nummerBox = tracking
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:6px 0 18px;">
+        <div class="mail-nummer" style="display:inline-block;border:1px solid ${F.text};padding:12px 18px;font-family:'Courier New',Courier,monospace;font-size:17px;font-weight:700;letter-spacing:0.08em;color:${F.text};">${escapeHtml(tracking)}</div>
+      </td></tr></table>${url ? mailKnopf(url, t.knopf) : ""}`
+    : "";
+  const inhalt = [
+    motiv ? `<tr><td align="center" style="padding:26px 0 0;">${motiv}</td></tr>` : "",
+    `<tr><td style="padding:22px 4px 0;"><p style="margin:0 auto;max-width:440px;text-align:center;font-size:13px;color:${F.leise};">${escapeHtml(t.code)}</p></td></tr>`,
+    nummerBox ? `<tr><td style="padding:18px 4px 0;">${nummerBox}</td></tr>` : "",
+    (items.length > 1 || (items.length && !motiv)) ? mailAbschnitt(t.imPaket, `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">${items.map(item => stueckZeile(item, null, sprache)).join("")}</table>`) : "",
+    `<tr><td style="padding:24px 4px 30px;">
+      ${contactEmail ? `<p style="margin:0;font-size:13px;color:${F.leise};">${escapeHtml(a.fragenMit[0])}<a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a>${escapeHtml(a.fragenMit[1])}</p>` : ""}
+      <p style="margin:12px 0 0;font-size:11px;color:${F.leise};">${escapeHtml(t.vermerk)}</p>
+    </td></tr>`,
+  ].join("");
+  const html = kundenmailRahmen({ titel: t.titel, eyebrow: t.eyebrow, kopf, inhalt, vorschau: t.vorschau(number), sprache });
+  return { subject, text, html, sprache, abholort };
+}
+
+// ---------------------------------------------------------------------------
 // Freie Mail aus der Admin-App: eigener Text im Shop-Design (Absatz-Umbrueche,
 // Links klickbar, alles escaped). Ohne grosse Ueberschrift - wie ein Brief.
 // ---------------------------------------------------------------------------
@@ -1672,6 +1874,110 @@ export async function sendShippingConfirmation(env, orderId, reqId = crypto.rand
   } catch {
     return { sent: true, recorded: false };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Abholmail ausloesen - nur aus der Admin-App (Inhaber 07.11.2026: "nur wenn
+// ich es dir sage"). vorschau=true baut die Mail, ohne sie zu senden. Je
+// Sendungsnummer genau einmal; erneut=true schickt sie bewusst noch einmal.
+// ---------------------------------------------------------------------------
+
+async function loadPickupOrder(env, orderId) {
+  const order = await env.DB.prepare(`SELECT o.id,o.order_number,o.status,s.id AS shipment_id,s.carrier,s.tracking_number,s.shipped_at,
+      a.zustand AS verfolgung_zustand,a.status_text AS verfolgung_text
+    FROM commerce_orders o
+    LEFT JOIN shipments s ON s.order_id=o.id
+    LEFT JOIN sendungs_abfragen a ON a.shipment_id=s.id
+    WHERE o.id=? OR o.order_number=? ORDER BY s.created_at DESC LIMIT 1`).bind(String(orderId), String(orderId)).first();
+  if (!order) return null;
+  const items = await env.DB.prepare(`SELECT item_id,title_snapshot,article_no,bild,unit_price_cents FROM order_items
+    WHERE order_id=? ORDER BY id`).bind(String(order.id)).all();
+  const contact = await env.DB.prepare(`SELECT email,recipient_name,address_line1,postal_code,city FROM order_contact_snapshots
+    WHERE order_id=? LIMIT 1`).bind(String(order.id)).first();
+  return { ...order, items: items?.results || [], contact: contact || {} };
+}
+
+export async function sendPickupReady(env, orderId, { reqId = crypto.randomUUID(), vorschau = false, erneut = false, verfolgungsOrt = null } = {}) {
+  if (!env?.DB) return { sent: false, reason: "NOT_CONFIGURED" };
+  if (!vorschau && !mailTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
+  const order = await loadPickupOrder(env, orderId);
+  if (!order) return { sent: false, reason: "ORDER_NOT_FOUND" };
+  if (String(order.status || "").toUpperCase() !== "SHIPPED") return { sent: false, reason: "ORDER_NOT_SHIPPED" };
+  const recipient = normalizeEmail(order.contact?.email);
+  if (!recipient) return { sent: false, reason: "NO_CUSTOMER_EMAIL" };
+
+  const sprache = await bestellSprache(env, order.id);
+  const mitTiteln = await titelFuerSprache(env, order, sprache);
+  // Ort der Abholung: Lieferanschrift (Packstation/Filiale), sonst DHL-Status.
+  const ausVerfolgung = verfolgungsOrt || (order.verfolgung_text ? abholortAusText(order.verfolgung_text) : null);
+  const abholort = abholortFuerMail(order.contact, ausVerfolgung);
+  const message = formatPickupReady({ ...mitTiteln, items: await katalogAngaben(env, mitTiteln.items) }, {
+    contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200),
+    sprache,
+    abholort,
+  });
+  const tracking = safeText(order.tracking_number || "", 60) || "ohne-nummer";
+  const basisId = `notify:email:pickup:${order.id}:${tracking}`;
+  const bisher = await env.DB.prepare("SELECT id,created_at,metadata_json FROM audit_events WHERE id LIKE ? AND event_type='PICKUP_NOTICE_SENT' ORDER BY created_at DESC LIMIT 1")
+    .bind(`${basisId}%`).first().catch(() => null);
+  const info = { an: recipient, sprache, abholort, verfolgung: order.verfolgung_zustand || null, gesendetAm: bisher?.created_at || null };
+  if (vorschau) return { sent: false, vorschau: true, ...info, subject: message.subject, html: message.html, text: message.text };
+  if (bisher && !erneut) return { sent: false, duplicate: true, ...info };
+
+  const claimId = bisher ? `${basisId}:${Date.now()}` : basisId;
+  const claim = await env.DB.prepare(`INSERT OR IGNORE INTO audit_events
+    (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'ADMIN','order',?,'PICKUP_NOTICE_CLAIMED',?,?,?)`)
+    .bind(claimId, String(order.id), safeText(reqId, 120), JSON.stringify({ channel: "email" }), new Date().toISOString())
+    .run();
+  if (!claim?.meta?.changes) return { sent: false, duplicate: true, ...info };
+  try {
+    const delivery = await sendMail(env, {
+      to: recipient,
+      toName: safeText(order.contact?.recipient_name || "", 120),
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      tag: "pickup-ready",
+      art: "MANUELL",
+      kopieAnShop: true,
+    });
+    if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
+  } catch (err) {
+    await env.DB.prepare("DELETE FROM audit_events WHERE id=? AND event_type='PICKUP_NOTICE_CLAIMED'").bind(claimId).run().catch(() => {});
+    throw new Error(`pickup_notice_failed:${safeText(err?.message || "unknown", 120)}`);
+  }
+  const jetzt = new Date().toISOString();
+  await env.DB.prepare("UPDATE audit_events SET event_type='PICKUP_NOTICE_SENT',metadata_json=? WHERE id=?")
+    .bind(JSON.stringify({ channel: "email", sentAt: jetzt, sprache }), claimId).run().catch(() => {});
+  return { sent: true, ...info, gesendetAm: jetzt };
+}
+
+// Abholmail-Vorschau an eine Adresse des Inhabers (wie die Versandmail-Vorschau):
+// ein verfuegbares Teil aus dem Katalog, Beispiel-Packstation, keine Buchung.
+export async function sendPickupPreview(env, recipient, { itemId = null, sprache = "de", reqId = crypto.randomUUID(), now = new Date(), nurBauen = false } = {}) {
+  if (!nurBauen && !mailTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
+  const to = normalizeEmail(recipient);
+  if (!nurBauen && !to) return { sent: false, reason: "INVALID_RECIPIENT" };
+  let katalog;
+  try { katalog = await katalogNachId({ env, fetcher: env?.KATALOG_FETCH || null }); } catch { katalog = new Map(); }
+  const teile = [...katalog.values()].filter(k => k && Array.isArray(k.gallery) && k.gallery.length && String(k.public_status || k.status || "AVAILABLE").toUpperCase() === "AVAILABLE");
+  const teil = (itemId && katalog.get(Number(itemId))) || (teile.length ? teile[Math.floor(Math.random() * teile.length)] : null);
+  if (!teil) return { sent: false, reason: "NO_ITEM" };
+  const nummer = `D119-${now.toISOString().slice(0, 10).replace(/-/g, "")}-TEST${String(teil.id).slice(-4).padStart(4, "0")}`;
+  const order = {
+    order_number: nummer, carrier: "DHL", tracking_number: "00340434161094042557",
+    items: [{ item_id: Number(teil.id), article_no: safeText(teil.article || teil.article_no || teil.url_slug || "", 40),
+      title_snapshot: safeText(teil.title || "", 180), title_en: safeText(teil.title_en || "", 180),
+      bild: safeText(teil.gallery[0] || "", 200), brand: safeText(teil.brand || "", 60), size: safeText(teil.size || "", 40) }],
+  };
+  const message = formatPickupReady(order, {
+    contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200), sprache,
+    abholort: { typ: "packstation", nummer: "119", plz: "63739", ort: "Aschaffenburg" },
+  });
+  if (nurBauen) return { sent: false, ...message, itemId: Number(teil.id) };
+  const result = await sendMail(env, { to, subject: `[TEST] ${message.subject}`, html: message.html, text: message.text, tag: "pickup-preview" });
+  return { ...result, itemId: Number(teil.id), titel: order.items[0].title_snapshot, requestId: safeText(reqId, 120) };
 }
 
 export async function sendOrderConfirmationByProviderOrder(env, providerOrderId, reqId = crypto.randomUUID()) {

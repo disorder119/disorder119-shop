@@ -67,6 +67,21 @@ function trackingKey(env = {}) {
   return String(env.DHL_TRACKING_API_KEY || env.DHL_PRIVAT_API_KEY || "").trim();
 }
 
+// Zwischenschritt "abholbereit" (Inhaber 07.11.2026): Das Paket liegt in einer
+// Packstation oder Filiale. Entscheidend ist nur der AKTUELLE Status - ist es
+// danach abgeholt, gilt es als zugestellt.
+const ABGEHOLT_RE = /(aus der|aus dem|in der|in einer) (packstation|postfiliale|filiale|paketshop|paketbox)[^.|]*abgeholt|vom empf[aä]nger abgeholt|picked up by (the )?(recipient|consignee)|collected by (the )?(recipient|consignee)|retir[ée] par le destinataire/i;
+const ABHOLBEREIT_RE = /zur abholung bereit|bereit zur abholung|abholbereit|zur abholung (in|im)|ready for (pick-?up|collection)|available for (pick-?up|collection)|disponible (au|pour le) retrait|in die packstation eingelegt|in der packstation eingelegt/i;
+
+// Abholort aus dem Statustext: "PACKSTATION 123 in 63739 Aschaffenburg" o. ae.
+export function abholortAusText(text = "") {
+  const t = String(text || "");
+  const typ = /packstation/i.test(t) ? "packstation" : /filiale|paketshop|retail outlet|post office/i.test(t) ? "filiale" : "";
+  const nummer = (/packstation\s*(?:nr\.?\s*)?(\d{1,4})\b/i.exec(t) || [])[1] || "";
+  const ort = (/\b(?:in|at)\s+(\d{5})\s+([A-Za-zÄÖÜäöüß .'-]{2,40})/.exec(t) || []);
+  return { typ, nummer, plz: ort[1] || "", ort: (ort[2] || "").replace(/\s+(zur|for|ready|bereit).*$/i, "").trim() };
+}
+
 // DHL-Antwort auf einen Zustand abbilden. "statusCode" ist das vereinheitlichte
 // Feld (pre-transit, transit, delivered, failure, unknown); parcel-de liefert
 // daneben Kuerzel wie "ZU" (zugestellt) und deutsche Texte - beides zaehlt.
@@ -77,6 +92,8 @@ export function zustandAusAntwort(antwort = {}) {
   const code = safeText(status.statusCode || "", 40).toLowerCase();
   const text = safeText([status.status, status.description, status.remark].filter(Boolean).join(" · "), 300);
   const ereignisse = Array.isArray(sendung.events) ? sendung.events : [];
+  if (ABGEHOLT_RE.test(text)) return { zustand: "ZUGESTELLT", code: code || "abgeholt", text };
+  if (code !== "delivered" && ABHOLBEREIT_RE.test(text)) return { zustand: "ABHOLBEREIT", code: code || "abholbereit", text, abholort: abholortAusText(text) };
   const alleTexte = [text, ...ereignisse.map(e => safeText([e?.statusCode, e?.status, e?.description].filter(Boolean).join(" "), 200))].join(" | ");
   const zugestellt = /\bdelivered\b|zugestellt|livr[ée]/i.test(alleTexte) || code === "delivered" || /^zu$/i.test(String(status.statusCode || ""));
   if (zugestellt) return { zustand: "ZUGESTELLT", code: code || "zu", text };
@@ -161,7 +178,10 @@ async function standMerken(db, sendung, ergebnis, now, fehler = null) {
 // Cron: offene Sendungen bei DHL nachsehen und Bestellstatus nachziehen.
 // `statusSetzen(orderId, status)` ist admin-api.orderStatusAutomatisch; so
 // bleibt dieses Modul frei von Mail- und Zahlungslogik.
-export async function sendungenVerfolgen(env, reqId = crypto.randomUUID(), now = Date.now(), { statusSetzen, fetchImpl = fetch, warten = null } = {}) {
+// `abholbereitMelden(sendung, stand)` (optional): einmal, wenn eine Sendung
+// neu "abholbereit" ist - der Cron meldet es per Telegram. Die Abholmail an
+// die Kundschaft geht NIE von selbst, nur ueber die Admin-App (Inhaber).
+export async function sendungenVerfolgen(env, reqId = crypto.randomUUID(), now = Date.now(), { statusSetzen, abholbereitMelden = null, fetchImpl = fetch, warten = null } = {}) {
   if (!env?.DB) return { uebersprungen: true };
   // Loeschpflicht gilt auch, wenn die Abfrage gerade nicht eingerichtet ist.
   const geloescht = await verlaufAufraeumen(env.DB, now).catch(err => {
@@ -170,7 +190,7 @@ export async function sendungenVerfolgen(env, reqId = crypto.randomUUID(), now =
   });
   if (!trackingReady(env) || typeof statusSetzen !== "function") return { uebersprungen: true, geloescht };
   const db = env.DB;
-  const ergebnis = { abgefragt: 0, versendet: [], zugestellt: [], fehler: [], geloescht };
+  const ergebnis = { abgefragt: 0, versendet: [], abholbereit: [], zugestellt: [], fehler: [], geloescht };
   const sendungen = await offeneSendungen(db, now, abfrageAbstandMs(env));
   for (const [i, sendung] of sendungen.entries()) {
     if (i > 0) await (warten || (ms => new Promise(r => setTimeout(r, ms))))(PAUSE_ZWISCHEN_ABFRAGEN_MS);
@@ -187,11 +207,19 @@ export async function sendungenVerfolgen(env, reqId = crypto.randomUUID(), now =
     }
     await standMerken(db, sendung, stand, now);
     try {
-      if (stand.zustand === "UNTERWEGS" || stand.zustand === "ZUGESTELLT") {
+      if (stand.zustand === "UNTERWEGS" || stand.zustand === "ABHOLBEREIT" || stand.zustand === "ZUGESTELLT") {
         if (sendung.order_status === "PAID") await statusSetzen(sendung.order_id, "PREPARING");
         if (sendung.order_status !== "SHIPPED") {
           await statusSetzen(sendung.order_id, "SHIPPED");
           ergebnis.versendet.push(sendung.order_id);
+        }
+      }
+      if (stand.zustand === "ABHOLBEREIT" && sendung.letzter_zustand !== "ABHOLBEREIT") {
+        ergebnis.abholbereit.push(sendung.order_id);
+        if (typeof abholbereitMelden === "function") {
+          await Promise.resolve(abholbereitMelden(sendung, stand)).catch(err => {
+            console.error(JSON.stringify({ level: "warn", event: "dhl_abholbereit_meldung_failed", requestId: reqId, orderId: String(sendung.order_id), message: safeText(err?.message || "", 120) }));
+          });
         }
       }
       if (stand.zustand === "ZUGESTELLT") {
