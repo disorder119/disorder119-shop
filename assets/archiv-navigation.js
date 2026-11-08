@@ -1139,6 +1139,9 @@
     s.textContent = [
       /* ---------- Laptop */
       "@media (min-width:721px){",
+      /* Das Filterblatt sperrt auch den Wurzel-Scroller. Sonst zeigt Edge
+         neben dem Blatt noch die Scrollleiste der darunterliegenden Seite. */
+      "html.nebel:has(body.d119-filter-open){overflow:hidden}",
       /* Die Leiste und die Zeile "Verfuegbar · Anzahl" stehen schon vor dem Start so (Inline-Stil in
          index_template.html, "Archiv-Zeile vor dem Start"), sonst springt das Layout (CLS). Hier kommen nur die neuen
          Knoepfe dazu: absolut an den Fotokanten, auf Hoehe der Zeile (--nebel-rail-* aus kanten()). */
@@ -1165,26 +1168,40 @@
       ".nebel-pille i{font-style:normal;font-weight:400}",
       ".nebel-pille b{font-weight:800}",
       /* Filter im Nebel: links Register, rechts alle Werte */
-      "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer{gap:0;padding-top:0;background:color-mix(in srgb,var(--bg) 84%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);animation:nebelRein .22s ease}",
-      "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__head{padding:0 var(--nebel-links,56px);background:color-mix(in srgb,var(--bg) 94%,transparent);border-bottom:0}",
+      "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer{gap:0;padding-top:0;background:color-mix(in srgb,var(--bg) 76%,transparent);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);animation:nebelRein .22s ease;scrollbar-width:none}",
+      "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer::-webkit-scrollbar{display:none}",
+      "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__head{padding:0 var(--nebel-links,56px);background:color-mix(in srgb,var(--bg) 80%,transparent);border-bottom:0}",
       ".nebel-register{position:sticky;top:104px;height:0;overflow:visible;margin-left:var(--nebel-links,56px);width:calc(var(--nebel-breite,1328px) * .34);display:flex;flex-direction:column;align-items:flex-start;z-index:3;flex:0 0 0}",
       ".nebel-register button{appearance:none;border:0;background:none;color:var(--text);font:inherit;cursor:pointer;padding:2px 0;text-align:left;font-size:clamp(30px,3.6vw,56px);font-weight:800;letter-spacing:-.025em;line-height:1.02;text-transform:uppercase;opacity:.28;transition:opacity .18s ease}",
       ".nebel-register button:hover{opacity:.6}",
       ".nebel-register button.an{opacity:1}",
       ".nebel-register sup{font-size:.32em;letter-spacing:.06em;margin-left:.35em;vertical-align:super}",
-      "html.nebel #filterPanel.d119-chips-an .d119-chips{display:block;width:calc(var(--nebel-breite,1328px) * .62);max-width:none;margin:0 0 0 calc(var(--nebel-links,56px) + var(--nebel-breite,1328px) * .38);padding:44px 0 40vh}",
-      "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe{display:block;margin:0 0 54px;padding:0}",
+      "html.nebel #filterPanel.d119-chips-an .d119-chips{display:block;width:calc(var(--nebel-breite,1328px) * .62);max-width:none;margin:0 0 0 calc(var(--nebel-links,56px) + var(--nebel-breite,1328px) * .38);padding:30px 0 18px}",
+      "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe{display:block;margin:0 0 28px;padding:0}",
       "html.nebel #filterPanel.d119-chips-an .d119-chips__titel{font-size:.62rem;font-weight:800;letter-spacing:.22em;opacity:.6;margin:0 0 14px;cursor:default}",
       "html.nebel #filterPanel.d119-chips-an .d119-chips__titel::after{content:\" \" attr(data-zahl)}",
       "html.nebel #filterPanel.d119-chips-an .d119-chips__reihe{display:flex;flex-wrap:wrap;flex-direction:row;gap:6px 30px;align-items:baseline}",
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chips__reihe{display:block;columns:3;column-gap:28px}",
       "html.nebel #filterPanel.d119-chips-an .d119-chip,html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip,html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--farbe .d119-chip{",
-      "font-size:clamp(1rem,1.35vw,1.4rem);font-weight:800;letter-spacing:.01em;line-height:1.3;opacity:.5;padding:.1em 0}",
+      "font-size:clamp(1rem,1.35vw,1.4rem);font-weight:800;letter-spacing:.01em;line-height:1.3;opacity:.7;padding:.1em 0}",
+      "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"1\"]{font-size:clamp(.78rem,.85vw,.9rem)}",
+      "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"2\"]{font-size:clamp(.9rem,1vw,1.05rem)}",
+      "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"3\"]{font-size:clamp(1rem,1.2vw,1.25rem)}",
+      "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"4\"]{font-size:clamp(1.1rem,1.4vw,1.45rem)}",
+      "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"5\"]{font-size:clamp(1.25rem,1.6vw,1.65rem)}",
       "html.nebel #filterPanel.d119-chips-an .d119-chip[aria-pressed=\"true\"]{opacity:1;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:5px}",
       "html.nebel #filterPanel.d119-chips-an .d119-chip:hover{opacity:.85}",
-      "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__foot{justify-content:flex-start;gap:28px;padding:18px 0 26px calc(var(--nebel-links,56px) + var(--nebel-breite,1328px) * .38);background:var(--bg);border-top:1px solid color-mix(in srgb,var(--text) 12%,transparent)}",
+      "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__foot{justify-content:flex-start;gap:28px;padding:18px 0 26px calc(var(--nebel-links,56px) + var(--nebel-breite,1328px) * .38);background:color-mix(in srgb,var(--bg) 88%,transparent);border-top:1px solid color-mix(in srgb,var(--text) 12%,transparent)}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__apply{font-size:0;padding:0 40px}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__apply::after{content:attr(data-nebel-text) \" [ \" attr(data-treffer) \" ]\";font-size:.74rem;font-weight:800;letter-spacing:.18em}",
+      "}",
+      /* Auch auf einem flacheren Laptop bleibt die Standardauswahl voll
+         sichtbar. Erst aufgeklappte Zusatzwerte brauchen internes Scrollen. */
+      "@media (min-width:721px) and (max-height:800px){",
+      "html.nebel #filterPanel.d119-chips-an .d119-chips{padding-top:16px;padding-bottom:8px}",
+      "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe{margin-bottom:8px}",
+      "html.nebel #filterPanel.d119-chips-an .d119-chips__titel{margin-bottom:7px}",
+      "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__foot{padding-top:12px;padding-bottom:12px}",
       "}",
       "@keyframes nebelRein{from{opacity:0}to{opacity:1}}",
       /* ---------- ueberall: Filterzeilen nie wischen, Sortieren als Kaestchen */
