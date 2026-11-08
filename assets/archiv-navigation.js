@@ -1139,12 +1139,14 @@
     s.textContent = [
       /* ---------- Laptop */
       "@media (min-width:721px){",
-      "html.nebel .rail.nebel-rail{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;width:var(--nebel-breite,calc(100% - 112px));margin-left:var(--nebel-links,56px);padding:22px 0 14px;border-bottom:0;position:static}",
+      /* Die Leiste und die Zeile "Verfuegbar · Anzahl" stehen schon vor dem Start so (app.css, Block
+         "Archiv-Zeile vor dem Start"), sonst springt das Layout (CLS). Hier kommen nur die neuen
+         Knoepfe dazu: absolut an den Fotokanten, auf Hoehe der Zeile (--nebel-rail-* aus kanten()). */
+      "html.nebel .rail.nebel-rail{position:relative;border-bottom:0}",
       "html.nebel .rail.nebel-rail>:not(.nebel-rail__links):not(.catalog-heading):not(.nebel-rail__rechts){display:none}",
-      "html.nebel .nebel-rail__links{justify-self:start;display:flex}",
-      "html.nebel .nebel-rail__rechts{justify-self:end;display:flex}",
-      "html.nebel .rail.nebel-rail .catalog-heading{justify-content:center;gap:14px}",
-      "html.nebel .rail.nebel-rail .catalog-heading .rail__count::before{content:\"\\00b7\";margin-right:14px;color:var(--text-faint)}",
+      "html.nebel .nebel-rail__links,html.nebel .nebel-rail__rechts{position:absolute;top:var(--nebel-rail-mitte,38px);transform:translateY(-50%);display:flex;align-items:center}",
+      "html.nebel .nebel-rail__links{left:var(--nebel-rail-l,0px)}",
+      "html.nebel .nebel-rail__rechts{right:var(--nebel-rail-r,0px)}",
       "html.nebel .nebel-rail #mountToggle,html.nebel .nebel-rail #moreFiltersToggle{margin:0;white-space:nowrap}",
       "html.nebel .nebel-rail #moreFiltersToggle::after{content:\"+\";display:inline-block;margin-left:8px;font-weight:400}",
       "html.nebel .nebel-rail #moreFiltersToggle[aria-expanded=\"true\"]::after{content:\"\\2013\"}",
@@ -1155,10 +1157,7 @@
       "html.nebel.nebel-seitlich .d119-kat__links,html.nebel.nebel-seitlich .d119-kat__aktionen{display:flex;position:absolute;top:50%;transform:translateY(-50%);margin:0}",
       "html.nebel.nebel-seitlich .d119-kat__links{left:clamp(20px,2.5vw,48px)}",
       "html.nebel.nebel-seitlich .d119-kat__aktionen{right:clamp(20px,2.5vw,48px)}",
-      "html.nebel.nebel-seitlich .rail.nebel-rail{display:block}",
       "html.nebel.nebel-seitlich .nebel-rail__links,html.nebel.nebel-seitlich .nebel-rail__rechts{display:none}",
-      "html.nebel.nebel-seitlich .rail.nebel-rail .catalog-heading{justify-content:space-between}",
-      "html.nebel.nebel-seitlich .rail.nebel-rail .catalog-heading .rail__count::before{content:none}",
       ".nebel-pille{position:fixed;left:50%;bottom:24px;z-index:120;transform:translate(-50%,16px);opacity:0;pointer-events:none;display:inline-flex;align-items:center;gap:10px;height:46px;padding:0 26px;",
       "border:1px solid color-mix(in srgb,var(--text) 22%,transparent);background:color-mix(in srgb,var(--bg) 62%,transparent);-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2);",
       "color:var(--text);font:inherit;font-size:.7rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;transition:opacity .2s ease,transform .2s ease}",
@@ -1200,6 +1199,8 @@
       "@keyframes nebelHinter{from{opacity:0}to{opacity:1}}",
       "@media (max-width:720px){",
       ".nebel-pille,.nebel-register{display:none}",
+      /* Handy: Ansicht/Filter sitzen in der Kategorie-Leiste; die leeren Huellen wuerden sonst je 30px Abstand in die Leiste schieben */
+      "html.nebel .nebel-rail__links,html.nebel .nebel-rail__rechts{display:none}",
       "html.nebel .d119-kat__liste{flex-wrap:wrap;overflow:visible;justify-content:space-between;column-gap:10px;row-gap:0;scroll-snap-type:none;padding:2px 0 4px}",
       "html.nebel .d119-kat__knopf{font-size:.68rem;letter-spacing:.06em;padding:11px 0 9px}",
       "html.nebel .nebel-zeilenbruch{display:block;flex-basis:100%;height:0}",
@@ -1354,6 +1355,14 @@
     var r = grid.getBoundingClientRect(); if (!r.width) return;
     html.style.setProperty("--nebel-links", Math.round(r.left) + "px");
     html.style.setProperty("--nebel-breite", Math.round(r.width) + "px");
+    var rail = document.querySelector(".rail");
+    if (rail) {
+      var q = rail.getBoundingClientRect();
+      html.style.setProperty("--nebel-rail-l", Math.round(r.left - q.left) + "px");
+      html.style.setProperty("--nebel-rail-r", Math.round(q.right - r.right) + "px");
+      var kopf = rail.querySelector(".catalog-heading"), k = kopf && kopf.getBoundingClientRect();
+      if (k && k.height) html.style.setProperty("--nebel-rail-mitte", Math.round(k.top - q.top + k.height / 2) + "px");
+    }
     var liste = document.querySelector(".d119-kat__liste"); if (!liste) return;
     var knoepfe = liste.querySelectorAll("[data-d119-ansicht]"), bruch = liste.querySelector(".nebel-zeilenbruch");
     var ziel = knoepfe[Math.ceil(knoepfe.length / 2)];
@@ -1371,13 +1380,9 @@
       rail.insertBefore(links, rail.firstChild); rail.appendChild(rechts); rail.classList.add("nebel-rail");
     }
     kanten();
-    var kl = kat.querySelector(".d119-kat__links"), ka = kat.querySelector(".d119-kat__aktionen"), seitlich = false;
-    if (!istMobil()) {
-      var grid = document.getElementById("grid");
-      var rand = Math.min(48, Math.max(20, window.innerWidth * 0.025));
-      var breit = Math.max(ansicht ? ansicht.offsetWidth : 0, filter ? filter.offsetWidth : 0, 150);
-      seitlich = !!grid && grid.getBoundingClientRect().left >= rand + breit + 40;
-    }
+    var kl = kat.querySelector(".d119-kat__links"), ka = kat.querySelector(".d119-kat__aktionen");
+    // Ab 1820px ist neben den Fotos Platz - dieselbe Grenze wie in app.css (Block "Archiv-Zeile vor dem Start")
+    var seitlich = !istMobil() && !!(window.matchMedia && window.matchMedia("(min-width:1820px)").matches);
     html.classList.toggle("nebel-seitlich", seitlich);
     if (istMobil() || seitlich) {
       if (ansicht && kl && ansicht.parentNode !== kl) kl.appendChild(ansicht);
@@ -1430,7 +1435,14 @@
   function start() {
     if (!document.getElementById("grid")) return;
     if (los()) return;
-    var n = 0, warten = setInterval(function () { if (los() || ++n > 150) clearInterval(warten); }, 100);
+    // Die Kategorie-Leiste entsteht spaeter: gleich nach ihrem Einfuegen umbauen, noch vor dem naechsten
+    // Bild - sonst sieht man kurz die alte Leiste und das Layout springt zweimal.
+    var fertig = false, mo = null, warten = null;
+    var aus = function () { fertig = true; if (mo) mo.disconnect(); if (warten) clearInterval(warten); };
+    var pruefen = function () { if (!fertig && los()) aus(); };
+    if ("MutationObserver" in window) { mo = new MutationObserver(pruefen); mo.observe(document.body || html, { childList: true, subtree: true }); }
+    warten = setInterval(pruefen, 100);
+    setTimeout(function () { if (!fertig) aus(); }, 15000);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true }); else start();
 })();
