@@ -1223,8 +1223,9 @@
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe .d119-chips__reihe{margin:0;padding:0;gap:6px}",
       /* Marken: Wortwolke A-Z, je mehr Stuecke, desto groesser */
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chips__reihe{display:flex;flex-wrap:wrap;gap:0 10px;align-items:baseline}",
-      "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip{min-height:0;padding:2px 0;border:0;border-radius:0;background:none;color:var(--text);",
-      "font-size:.9rem;font-weight:800;letter-spacing:-.015em;line-height:1.05;text-transform:uppercase;opacity:.45;transition:opacity .18s ease}",
+      /* WCAG: jede Marke mind. 24px hoch (Tippflaeche) und nicht gewaehlt mit .62 Deckkraft (>= 4,5:1 hell und dunkel) */
+      "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip{display:inline-flex;align-items:center;min-height:24px;padding:0;border:0;border-radius:0;background:none;color:var(--text);",
+      "font-size:.9rem;font-weight:800;letter-spacing:-.015em;line-height:1.05;text-transform:uppercase;opacity:.62;transition:opacity .18s ease}",
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"1\"]{font-size:.66rem}",
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"2\"]{font-size:.8rem}",
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"3\"]{font-size:1rem}",
