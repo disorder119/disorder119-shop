@@ -71,6 +71,16 @@ html.ui-kopf .rail__search { display: none; }
 html.ui-kopf .masthead__bottom { display: flex; flex-direction: column; align-items: center; gap: 0; }
 html.ui-kopf .masthead__index { margin-top: 8px; }
 .ui-kopf__suche { flex: 0 0 auto; }
+/* Archiv-Zeile vor dem Start schon wie danach (Filter 08.11.2026, archiv-navigation.js): Kanten der Fotos,
+   "Verfuegbar · Anzahl" um die Mitte, ab 1820px von Fotokante zu Fotokante - inline, damit nichts springt (CLS). */
+@media (min-width: 721px) {
+.rail { width: min(100%, 1400px); padding-left: clamp(18px, 3vw, 36px); padding-right: clamp(18px, 3vw, 36px); }
+.catalog-heading { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 34px; }
+.catalog-heading #catalogTitle { justify-self: end; }
+.catalog-heading .rail__count { justify-self: start; }
+.catalog-heading::after { content: "\00b7"; position: absolute; left: 50%; top: 0; transform: translateX(-50%); color: var(--text-faint); }
+}
+@media (min-width: 1820px) { .catalog-heading { display: flex; justify-content: space-between; } .catalog-heading::after { content: none; } }
 </style>
 </head>
 <body>
@@ -485,9 +495,9 @@ html.ui-kopf .masthead__index { margin-top: 8px; }
 
 <script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "paypalClientId": "BAAcvD8X1aHIk42UUDAMZkYZ2i5gKLPCXZDBzbWjsh-axJ_6551l-FXgDdboqGtmZSidZbGWon2cQ_SuaI", "shopWorkerUrl": "https://api.disorder119.com", "turnstileSiteKey": "0x4AAAAAAFHqI2j_AitAYIKF", "instagram": "https://www.instagram.com/disorder119_/", "environment": "live", "features": {"paypalCheckout": true, "customerAccounts": true}};</script>
 <script src="/assets/pwa.js?v=188add6d6a"></script>
-<script src="/assets/app.js?v=9c04275055"></script>
+<script src="/assets/app.js?v=81aa8859f6"></script>
 <script src="/assets/catalog-filter-simplify.js"></script>
-<script src="/assets/archiv-navigation.js?v=fc2cdb8778"></script>
+<script src="/assets/archiv-navigation.js?v=36683f49b9"></script>
 <script src="/assets/rental-v2.js"></script>
 <script src="/assets/rental-v2-ui.js"></script>
 <script src="/assets/rental-v2-picker.js"></script>
