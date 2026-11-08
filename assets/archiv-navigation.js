@@ -1231,9 +1231,12 @@
       "html.nebel.nebel .d119-kat #moreFiltersToggle::before{content:\"\";width:14px;height:10px;flex:0 0 auto;background:linear-gradient(currentColor,currentColor) 0 0/14px 1.5px no-repeat,linear-gradient(currentColor,currentColor) 0 50%/14px 1.5px no-repeat,linear-gradient(currentColor,currentColor) 0 100%/14px 1.5px no-repeat}",
       /* Blatt von unten wie bei Apple */
       "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer{inset:auto 0 0 0;height:calc(100dvh - 26px);max-height:none;gap:0;padding-top:0;border:0;border-top:1px solid color-mix(in srgb,var(--text) 16%,transparent);",
-      "border-radius:22px 22px 0 0;box-shadow:0 -20px 60px rgba(0,0,0,.5);background:var(--bg);animation:nebelBlatt .5s cubic-bezier(.32,.72,0,1)}",
+      "border-radius:22px 22px 0 0;box-shadow:0 -20px 60px rgba(0,0,0,.5);background:color-mix(in srgb,var(--bg) 58%,transparent);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:nebelBlatt .5s cubic-bezier(.32,.72,0,1)}",
+      "html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)){overflow:hidden}html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) .rail>:not(#filterPanel):not(#d119CompactFilterDrawerBackdrop),html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) :is(#modeRail,#modeRailHint,#grid .plate__body){visibility:hidden}",
+      "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer,html.nebel #filterPanel.d119-chips-an .d119-chips{scrollbar-width:none!important;-ms-overflow-style:none}",
+      "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer::-webkit-scrollbar,html.nebel #filterPanel.d119-chips-an .d119-chips::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}",
       "html.nebel .d119-filter-backdrop{background:rgba(0,0,0,.14);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:nebelHinter .3s ease}",
-      "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__head{position:relative;min-height:40px;margin:0;padding:14px 8px 0 20px;border-bottom:0;border-radius:22px 22px 0 0;touch-action:none;background:var(--bg)}",
+      "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__head{position:relative;min-height:40px;margin:0;padding:14px 8px 0 20px;border-bottom:0;border-radius:22px 22px 0 0;touch-action:none;background:color-mix(in srgb,var(--bg) 80%,transparent)}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__head::before{display:block;content:\"\";position:absolute;top:7px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:currentColor;opacity:.3}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__title{font-size:.8rem;letter-spacing:.2em}",
       "html.nebel #filterPanel.d119-chips-an .d119-chips{padding:0 0 6px;scrollbar-width:none}",
@@ -1285,7 +1288,7 @@
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--groesse .d119-chips__link{display:inline-flex;align-items:center;min-height:24px;font-size:.54rem;padding:0}",
       "html.nebel.nebel #filterPanel.d119-chips-an .d119-chips__gruppe.d119-chips__gruppe--sortieren .d119-chips__reihe{gap:5px;padding:0 0 4px}",
       "html.nebel.nebel #filterPanel.d119-chips-an .d119-chips__gruppe.d119-chips__gruppe--sortieren .d119-chip{min-height:28px;padding:0 10px;font-size:.7rem}",
-      "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__foot{padding:7px 14px max(12px,env(safe-area-inset-bottom)) 20px;border-top:1px solid var(--rule);background:var(--bg)}",
+      "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__foot{padding:7px 14px max(12px,env(safe-area-inset-bottom)) 20px;border-top:1px solid var(--rule);background:color-mix(in srgb,var(--bg) 80%,transparent)}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__apply{min-height:44px;background:var(--bg);color:var(--text);border:1px solid var(--text);border-radius:0}",
       "}",
       "@media (prefers-reduced-motion:reduce){html.nebel #filterPanel.d119-filter-drawer,html.nebel .d119-filter-backdrop,.nebel-pille{animation:none!important;transition:none!important}}"
@@ -1455,7 +1458,7 @@
     if (rc) new MutationObserver(knoepfeBeschriften).observe(rc, { childList: true, characterData: true, subtree: true });
     var t = document.getElementById("moreFiltersToggle");
     if (t) t.addEventListener("click", function () {
-      if (!istMobil() && panel.classList.contains("hidden")) {
+      if (panel.classList.contains("hidden")) {
         var grid = document.getElementById("grid");
         if (grid) window.scrollTo(0, Math.max(0, window.scrollY + grid.getBoundingClientRect().top));
       }
