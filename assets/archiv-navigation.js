@@ -1171,6 +1171,7 @@
       /* Filter im Nebel: links Register, rechts alle Werte */
       "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer{gap:0;padding-top:0;background:color-mix(in srgb,var(--bg) 58%,transparent);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:nebelRein .22s ease;scrollbar-width:none}",
       "@media (min-width:721px){html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)){overflow:hidden}}",
+      "html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) .rail,html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) .d119-kat,html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) #activeFilters,html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) #modeRail,html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) #modeRailHint,html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) #grid .plate__body{visibility:hidden}",
       "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer::-webkit-scrollbar{display:none}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__head{padding:0 var(--nebel-links,56px);background:color-mix(in srgb,var(--bg) 80%,transparent);border-bottom:0}",
       ".nebel-register{position:sticky;top:104px;height:0;overflow:visible;margin-left:var(--nebel-links,56px);width:calc(var(--nebel-breite,1328px) * .34);display:flex;flex-direction:column;align-items:flex-start;z-index:3;flex:0 0 0}",
@@ -1424,8 +1425,6 @@
     pille = el("button", "nebel-pille"); pille.type = "button";
     pille.appendChild(el("i", "", "\u2261")); pille.appendChild(el("span", "", tx("filter"))); pille.appendChild(el("b"));
     pille.addEventListener("click", function () {
-      var grid = document.getElementById("grid");
-      if (grid) window.scrollTo(0, Math.max(0, window.scrollY + grid.getBoundingClientRect().top - 170));
       var t = document.getElementById("moreFiltersToggle"); if (t) t.click();
     });
     document.body.appendChild(pille);
@@ -1455,6 +1454,12 @@
     var rc = document.getElementById("railCount");
     if (rc) new MutationObserver(knoepfeBeschriften).observe(rc, { childList: true, characterData: true, subtree: true });
     var t = document.getElementById("moreFiltersToggle");
+    if (t) t.addEventListener("click", function () {
+      if (!istMobil() && panel.classList.contains("hidden")) {
+        var grid = document.getElementById("grid");
+        if (grid) window.scrollTo(0, Math.max(0, window.scrollY + grid.getBoundingClientRect().top));
+      }
+    }, true);
     if (t) new MutationObserver(knoepfeBeschriften).observe(t, { childList: true, characterData: true, subtree: true });
     boxSuchen(); knoepfeBeschriften();
     window.addEventListener("resize", function () { railUmbauen(); dekorieren(); }, { passive: true });
