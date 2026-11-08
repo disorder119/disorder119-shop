@@ -1237,10 +1237,11 @@
       "@keyframes nebelHinter{from{opacity:0}to{opacity:1}}",
       "@media (max-width:720px){",
       ".nebel-pille,.nebel-register{display:none}",
+      "html.nebel,html.nebel body{scrollbar-width:none}html.nebel::-webkit-scrollbar,html.nebel body::-webkit-scrollbar{display:none;width:0}",
       /* Handy: Ansicht/Filter sitzen in der Kategorie-Leiste; die leeren Huellen wuerden sonst je 30px Abstand in die Leiste schieben */
       "html.nebel .nebel-rail__links,html.nebel .nebel-rail__rechts{display:none}",
       "html.nebel .d119-kat__liste{flex-wrap:wrap;overflow:visible;justify-content:space-between;column-gap:10px;row-gap:0;scroll-snap-type:none;padding:2px 0 4px}",
-      "html.nebel .d119-kat{transition:transform .22s ease,opacity .22s ease}html.nebel.d119-kat-versteckt .d119-kat{transform:translateY(calc(-100% - var(--rail-h,64px)));opacity:0;pointer-events:none}",
+      "html.nebel.d119-kat-versteckt .d119-kat{height:0;min-height:0;padding-top:0;padding-bottom:0;border:0}html.nebel.d119-kat-versteckt .d119-kat__liste{visibility:hidden;pointer-events:none}",
       "html.nebel .d119-kat__knopf{font-size:.68rem;letter-spacing:.06em;padding:11px 0 9px}",
       "html.nebel .nebel-zeilenbruch{display:block;flex-basis:100%;height:0}",
       /* Filter-Knopf: Text mit drei Strichen unten mittig, ohne Kasten (schwarz bzw. weiss wie die Seite) */
@@ -1250,11 +1251,11 @@
       "html.nebel.nebel .d119-kat #moreFiltersToggle::before{content:\"\";width:14px;height:10px;flex:0 0 auto;background:linear-gradient(currentColor,currentColor) 0 0/14px 1.5px no-repeat,linear-gradient(currentColor,currentColor) 0 50%/14px 1.5px no-repeat,linear-gradient(currentColor,currentColor) 0 100%/14px 1.5px no-repeat}",
       /* Blatt von unten wie bei Apple */
       "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer{inset:auto 0 0 0;height:calc(100dvh - 26px);max-height:none;gap:0;padding-top:0;border:0;border-top:1px solid color-mix(in srgb,var(--text) 16%,transparent);",
-      "border-radius:22px 22px 0 0;box-shadow:0 -20px 60px rgba(0,0,0,.5);background:color-mix(in srgb,var(--bg) 58%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:nebelBlatt .5s cubic-bezier(.32,.72,0,1)}",
+      "border-radius:22px 22px 0 0;box-shadow:0 -20px 60px rgba(0,0,0,.5);background:color-mix(in srgb,var(--bg) 52%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);animation:nebelBlatt .5s cubic-bezier(.32,.72,0,1)}",
       "html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)){overflow:hidden}html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) .rail>:not(#filterPanel):not(#d119CompactFilterDrawerBackdrop),html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) :is(#modeRail,#modeRailHint,#grid .plate__body){visibility:hidden}",
       "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer,html.nebel #filterPanel.d119-chips-an .d119-chips{scrollbar-width:none!important;-ms-overflow-style:none}",
       "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer::-webkit-scrollbar,html.nebel #filterPanel.d119-chips-an .d119-chips::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}",
-      "html.nebel .d119-filter-backdrop{background:rgba(0,0,0,.14);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:nebelHinter .3s ease}",
+      "html.nebel .d119-filter-backdrop{background:rgba(0,0,0,.08);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);animation:nebelHinter .3s ease}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__head{position:relative;min-height:40px;margin:0;padding:14px 8px 0 20px;border-bottom:0;border-radius:22px 22px 0 0;touch-action:none;background:color-mix(in srgb,var(--bg) 80%,transparent)}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__head::before{display:block;content:\"\";position:absolute;top:7px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:currentColor;opacity:.3}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__title{font-size:.8rem;letter-spacing:.2em}",
@@ -1277,15 +1278,15 @@
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip--leise{font-size:.6rem;font-weight:800;letter-spacing:.12em;opacity:.85;text-decoration:underline;text-underline-offset:3px;align-self:center}",
       /* "Alle Marken": ebenfalls Wortwolke, die anderen Gruppen solange aus (kein Scrollen) */
       "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe:not(.d119-chips__gruppe--marke){display:none}",
-      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chips__reihe{gap:0 11px}",
-      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip{line-height:1.08;font-size:.74rem}",
-      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"1\"]{font-size:.72rem}",
-      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"2\"]{font-size:.92rem}",
-      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"3\"]{font-size:1.14rem}",
-      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"4\"]{font-size:1.4rem}",
-      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"5\"]{font-size:1.7rem}",
+      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chips__reihe{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px 6px;align-items:stretch}",
+      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip{display:flex;min-width:0;min-height:28px;white-space:normal;overflow-wrap:break-word;text-align:left;line-height:1.05;font-size:.7rem}",
+      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"1\"]{font-size:.68rem}",
+      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"2\"]{font-size:.73rem}",
+      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"3\"]{font-size:.79rem}",
+      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"4\"]{font-size:.85rem}",
+      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"5\"]{font-size:.94rem}",
       "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[aria-pressed=\"true\"]{opacity:1;text-decoration:underline;text-underline-offset:4px}",
-      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip--leise{flex:0 0 100%;margin:12px 0 0;font-size:.6rem;opacity:.9}",
+      "html.nebel.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip--leise{grid-column:1/-1;margin:4px 0 0;font-size:.6rem;opacity:.9}",
       /* Farben: grosse Kreise mit Namen, sieben pro Reihe */
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--farbe .d119-chips__reihe{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px 0}",
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--farbe .d119-chip{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:0;min-width:0;padding:0;border:0;border-radius:0;background:none;color:var(--text);",
@@ -1503,18 +1504,35 @@
     if (!panel || !document.getElementById("d119Kategorien") || !document.getElementById("grid")) return false;
     html.classList.add("nebel");
     stil(); railUmbauen(); pilleBauen();
-    var richtungY = window.scrollY;
+    var richtungY = window.scrollY, beiFilterRueckkehr = false;
     window.addEventListener("scroll", function () {
       var y = window.scrollY;
       if (!istMobil()) { html.classList.remove("d119-kat-versteckt"); richtungY = y; return; }
+      if (beiFilterRueckkehr) { richtungY = y; return; }
       if (!panel.classList.contains("hidden")) { richtungY = y; return; }
       if (y < 80) { html.classList.remove("d119-kat-versteckt"); richtungY = y; return; }
       if (Math.abs(y - richtungY) < 12) return;
       html.classList.toggle("d119-kat-versteckt", y > richtungY);
       richtungY = y;
     }, { passive: true });
+    var filterWarOffen = !panel.classList.contains("hidden");
     new MutationObserver(function (changes) {
-      if (changes.some(function (change) { return change.type === "attributes"; }) && !panel.classList.contains("hidden")) {
+      var filterIstOffen = !panel.classList.contains("hidden");
+      if (filterWarOffen && !filterIstOffen && istMobil() && window.scrollY >= 80) {
+        beiFilterRueckkehr = true;
+        html.classList.add("d119-kat-versteckt");
+        (window.requestAnimationFrame || setTimeout)(function () {
+          var grid = document.getElementById("grid");
+          if (!grid) return;
+          var kopfHoehe = parseFloat(getComputedStyle(html).getPropertyValue("--rail-h")) || 54;
+          var ziel = window.scrollY + grid.getBoundingClientRect().top + fotoOberkante(grid) - kopfHoehe;
+          window.scrollTo(0, Math.max(0, ziel));
+          richtungY = window.scrollY;
+          setTimeout(function () { richtungY = window.scrollY; beiFilterRueckkehr = false; }, 120);
+        });
+      }
+      filterWarOffen = filterIstOffen;
+      if (changes.some(function (change) { return change.type === "attributes"; }) && filterIstOffen) {
         panel.scrollTop = 0;
         var chips = panel.querySelector(".d119-chips"); if (chips) chips.scrollTop = 0;
       }
