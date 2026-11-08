@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ABFRAGE_ABSTAND_MS, abholortAusText, sendungenVerfolgen, zustandAusAntwort } from "./dhl-tracking.js";
-import { abholortFuerMail, formatPickupReady, sendPickupReady } from "./customer-mail.js";
+import { abholortFuerMail, formatPickupReady, sendPickupReady, sendPickupPreview } from "./customer-mail.js";
 import { formatPickupReadyMessage } from "./notifications.js";
 import { orderStatusAutomatisch } from "./admin-api.js";
 import { allMigrations, sqliteD1 } from "./test-d1.mjs";
@@ -162,6 +162,21 @@ test("Abholmail: nur fuer versendete Bestellungen", async () => {
   } finally {
     f.zurueck();
   }
+});
+
+test("Abholmail-Test: echte Referenz bleibt sichtbar als unbestätigte Simulation markiert", async () => {
+  const catalogFetch = async () => Response.json([{ id: 6216, article: "213", title: "Y-3 Grafik-Beanie", gallery: ["assets/img/b2-216/0.webp"], public_status: "SOLD" }]);
+  const env = { KATALOG_FETCH: catalogFetch };
+  const result = await sendPickupPreview(env, "joelb119@gmail.com", {
+    itemId: 6216, orderNumber: "D119-20261104-E1BBBE11", trackingNumber: "358088742443", nurBauen: true,
+  });
+  assert.equal(result.sent, false);
+  assert.match(result.html, /TESTVORSCHAU: Die Ankunft an einer Packstation ist nicht bestätigt/);
+  assert.match(result.html, /Y-3 Grafik-Beanie/);
+  assert.match(result.text, /358088742443/);
+  assert.match(result.subject, /D119-20261104-E1BBBE11/);
+  const invalid = await sendPickupPreview(env, "joelb119@gmail.com", { itemId: 6216, trackingNumber: "abc", nurBauen: true });
+  assert.equal(invalid.reason, "INVALID_PREVIEW_REFERENCE");
 });
 
 test("Telegram-Meldung: Bestellung, Teil, Packstation und der Hinweis, dass die Mail erst auf Knopfdruck geht", () => {

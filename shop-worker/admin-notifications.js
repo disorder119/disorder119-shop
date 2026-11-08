@@ -108,8 +108,8 @@ export async function handleAdminNotifications(request, env, url, reqId, origin 
       try { body = await request.json(); } catch { body = {}; }
       const target = normalizeEmail(body?.to || "") || normalizeEmail(env.MAIL_REPLY_TO || env.MAIL_FROM || "");
       if (!target) throw new AdminNotificationsError("MAIL_RECIPIENT_INVALID", 400);
-      const r = await sendPickupPreview(env, target, { itemId: Number(body?.itemId) || null, sprache: safeText(body?.sprache || "de", 2), reqId });
-      if (!r.sent) throw new AdminNotificationsError(r.reason === "NO_ITEM" ? "NO_ITEM" : "MAIL_DELIVERY_FAILED", r.reason === "NO_ITEM" ? 404 : 502);
+      const r = await sendPickupPreview(env, target, { itemId: Number(body?.itemId) || null, sprache: safeText(body?.sprache || "de", 2), orderNumber: safeText(body?.orderNumber || "", 80), trackingNumber: safeText(body?.trackingNumber || "", 40), reqId });
+      if (!r.sent) throw new AdminNotificationsError(r.reason === "NO_ITEM" ? "NO_ITEM" : r.reason === "INVALID_PREVIEW_REFERENCE" ? "INVALID_PREVIEW_REFERENCE" : "MAIL_DELIVERY_FAILED", r.reason === "NO_ITEM" ? 404 : r.reason === "INVALID_PREVIEW_REFERENCE" ? 400 : 502);
       return json({ ok: true, channel: "email", sent: true, itemId: r.itemId, titel: r.titel, messageId: r.messageId || null, requestId: reqId }, 200, origin);
     }
     if (url.pathname === "/admin/notifications/mail/test") {
