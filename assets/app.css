@@ -3846,20 +3846,3 @@ img[data-d119-image-protected] {
   }
   #appShell .footer__cart { margin-top: 44px; }
 }
-
-/* Archiv-Zeile vor dem Start (Filter "Register"/"Wortwolke", 08.11.2026): schon so wie nach dem
-   Start von archiv-navigation.js - gleiche Kanten wie die Fotos (.grid-wrap), "Verfuegbar · Anzahl"
-   um die Mitte (der Titel endet links vom Punkt, die Anzahl beginnt rechts davon). So bewegt sich
-   nichts, wenn die Anzahl erscheint oder die Knoepfe dazukommen (Lighthouse CLS). Ab 1820px stehen
-   "Ansicht"/"Filter" neben den Kategorien und die Zeile reicht von Fotokante zu Fotokante. */
-@media (min-width: 721px) {
-  .rail { width: min(100%, 1400px); padding-left: clamp(18px, 3vw, 36px); padding-right: clamp(18px, 3vw, 36px); }
-  .catalog-heading { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 34px; }
-  .catalog-heading #catalogTitle { justify-self: end; }
-  .catalog-heading .rail__count { justify-self: start; }
-  .catalog-heading::after { content: "\00b7"; position: absolute; left: 50%; top: 0; transform: translateX(-50%); color: var(--text-faint); }
-}
-@media (min-width: 1820px) {
-  .catalog-heading { display: flex; justify-content: space-between; }
-  .catalog-heading::after { content: none; }
-}

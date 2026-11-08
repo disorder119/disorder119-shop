@@ -1139,8 +1139,8 @@
     s.textContent = [
       /* ---------- Laptop */
       "@media (min-width:721px){",
-      /* Die Leiste und die Zeile "Verfuegbar · Anzahl" stehen schon vor dem Start so (app.css, Block
-         "Archiv-Zeile vor dem Start"), sonst springt das Layout (CLS). Hier kommen nur die neuen
+      /* Die Leiste und die Zeile "Verfuegbar · Anzahl" stehen schon vor dem Start so (Inline-Stil in
+         index_template.html, "Archiv-Zeile vor dem Start"), sonst springt das Layout (CLS). Hier kommen nur die neuen
          Knoepfe dazu: absolut an den Fotokanten, auf Hoehe der Zeile (--nebel-rail-* aus kanten()). */
       "html.nebel .rail.nebel-rail{position:relative;border-bottom:0}",
       "html.nebel .rail.nebel-rail>:not(.nebel-rail__links):not(.catalog-heading):not(.nebel-rail__rechts){display:none}",
@@ -1381,7 +1381,7 @@
     }
     kanten();
     var kl = kat.querySelector(".d119-kat__links"), ka = kat.querySelector(".d119-kat__aktionen");
-    // Ab 1820px ist neben den Fotos Platz - dieselbe Grenze wie in app.css (Block "Archiv-Zeile vor dem Start")
+    // Ab 1820px ist neben den Fotos Platz - dieselbe Grenze wie im Inline-Stil von index_template.html ("Archiv-Zeile vor dem Start")
     var seitlich = !istMobil() && !!(window.matchMedia && window.matchMedia("(min-width:1820px)").matches);
     html.classList.toggle("nebel-seitlich", seitlich);
     if (istMobil() || seitlich) {
