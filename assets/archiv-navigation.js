@@ -1156,6 +1156,7 @@
       "html.nebel .d119-kat,html.nebel .d119-kat.d119-kat--zweizeilig{display:block;padding:0;grid-template-columns:none}",
       "html.nebel .d119-kat__links,html.nebel .d119-kat__aktionen{display:none}",
       "html.nebel .d119-kat__liste{width:var(--nebel-breite,calc(100% - 112px));margin-left:var(--nebel-links,56px);padding:0;justify-content:space-between;flex-wrap:wrap;column-gap:18px;row-gap:0;overflow:visible}",
+      "html.nebel .d119-kat__liste>[data-d119-ansicht]:last-of-type{margin-right:-.09em}",
       "html.nebel .nebel-zeilenbruch{display:none}",
       "html.nebel.nebel-seitlich .d119-kat__links,html.nebel.nebel-seitlich .d119-kat__aktionen{display:flex;position:absolute;top:50%;transform:translateY(-50%);margin:0}",
       "html.nebel.nebel-seitlich .d119-kat__links{left:clamp(20px,2.5vw,48px)}",
@@ -1168,7 +1169,8 @@
       ".nebel-pille i{font-style:normal;font-weight:400}",
       ".nebel-pille b{font-weight:800}",
       /* Filter im Nebel: links Register, rechts alle Werte */
-      "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer{gap:0;padding-top:0;background:color-mix(in srgb,var(--bg) 76%,transparent);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);animation:nebelRein .22s ease;scrollbar-width:none}",
+      "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer{gap:0;padding-top:0;background:color-mix(in srgb,var(--bg) 58%,transparent);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:nebelRein .22s ease;scrollbar-width:none}",
+      "@media (min-width:721px){html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)){overflow:hidden}}",
       "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer::-webkit-scrollbar{display:none}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__head{padding:0 var(--nebel-links,56px);background:color-mix(in srgb,var(--bg) 80%,transparent);border-bottom:0}",
       ".nebel-register{position:sticky;top:104px;height:0;overflow:visible;margin-left:var(--nebel-links,56px);width:calc(var(--nebel-breite,1328px) * .34);display:flex;flex-direction:column;align-items:flex-start;z-index:3;flex:0 0 0}",
@@ -1229,7 +1231,7 @@
       /* Blatt von unten wie bei Apple */
       "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer{inset:auto 0 0 0;height:calc(100dvh - 26px);max-height:none;gap:0;padding-top:0;border:0;border-top:1px solid color-mix(in srgb,var(--text) 16%,transparent);",
       "border-radius:22px 22px 0 0;box-shadow:0 -20px 60px rgba(0,0,0,.5);background:var(--bg);animation:nebelBlatt .5s cubic-bezier(.32,.72,0,1)}",
-      "html.nebel .d119-filter-backdrop{background:rgba(0,0,0,.42);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);animation:nebelHinter .3s ease}",
+      "html.nebel .d119-filter-backdrop{background:rgba(0,0,0,.14);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:nebelHinter .3s ease}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__head{position:relative;min-height:40px;margin:0;padding:14px 8px 0 20px;border-bottom:0;border-radius:22px 22px 0 0;touch-action:none;background:var(--bg)}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__head::before{display:block;content:\"\";position:absolute;top:7px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:currentColor;opacity:.3}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__title{font-size:.8rem;letter-spacing:.2em}",
@@ -1421,7 +1423,11 @@
   function pilleBauen() {
     pille = el("button", "nebel-pille"); pille.type = "button";
     pille.appendChild(el("i", "", "\u2261")); pille.appendChild(el("span", "", tx("filter"))); pille.appendChild(el("b"));
-    pille.addEventListener("click", function () { var t = document.getElementById("moreFiltersToggle"); if (t) t.click(); });
+    pille.addEventListener("click", function () {
+      var grid = document.getElementById("grid");
+      if (grid) window.scrollTo(0, Math.max(0, window.scrollY + grid.getBoundingClientRect().top - 170));
+      var t = document.getElementById("moreFiltersToggle"); if (t) t.click();
+    });
     document.body.appendChild(pille);
     var geplant = false;
     window.addEventListener("scroll", function () { if (geplant) return; geplant = true; (window.requestAnimationFrame || setTimeout)(function () { geplant = false; pillePruefen(); }); }, { passive: true });
@@ -1439,7 +1445,13 @@
     if (!panel || !document.getElementById("d119Kategorien") || !document.getElementById("grid")) return false;
     html.classList.add("nebel");
     stil(); railUmbauen(); pilleBauen();
-    new MutationObserver(function () { boxSuchen(); knoepfeBeschriften(); pillePruefen(); }).observe(panel, { childList: true, attributes: true, attributeFilter: ["class"] });
+    new MutationObserver(function (changes) {
+      if (changes.some(function (change) { return change.type === "attributes"; }) && !panel.classList.contains("hidden")) {
+        panel.scrollTop = 0;
+        var chips = panel.querySelector(".d119-chips"); if (chips) chips.scrollTop = 0;
+      }
+      boxSuchen(); knoepfeBeschriften(); pillePruefen();
+    }).observe(panel, { childList: true, attributes: true, attributeFilter: ["class"] });
     var rc = document.getElementById("railCount");
     if (rc) new MutationObserver(knoepfeBeschriften).observe(rc, { childList: true, characterData: true, subtree: true });
     var t = document.getElementById("moreFiltersToggle");
