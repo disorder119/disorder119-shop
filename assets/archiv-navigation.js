@@ -1169,7 +1169,7 @@
       ".nebel-pille i{font-style:normal;font-weight:400}",
       ".nebel-pille b{font-weight:800}",
       /* Filter im Nebel: links Register, rechts alle Werte */
-      "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer{gap:0;padding-top:0;background:color-mix(in srgb,var(--bg) 58%,transparent);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:nebelRein .22s ease;scrollbar-width:none}",
+      "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer{gap:0;padding-top:0;background:color-mix(in srgb,var(--bg) 52%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);animation:nebelRein .22s ease;scrollbar-width:none}",
       "@media (min-width:721px){html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)){overflow:hidden}}",
       "html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) .rail,html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) .d119-kat,html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) #activeFilters,html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) #modeRail,html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) #modeRailHint,html.nebel:has(#filterPanel.d119-filter-drawer:not(.hidden)) #grid .plate__body{visibility:hidden}",
       "html.nebel #filterPanel.d119-chips-an.d119-filter-drawer::-webkit-scrollbar{display:none}",
@@ -1192,10 +1192,12 @@
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"3\"]{font-size:clamp(1rem,1.2vw,1.25rem)}",
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"4\"]{font-size:clamp(1.1rem,1.4vw,1.45rem)}",
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"5\"]{font-size:clamp(1.25rem,1.6vw,1.65rem)}",
-      /* Alle Marken erhalten den rechten Bereich allein. Drei kompakte Spalten
-         lassen auch bei Laptop-Hoehe die Schaltflaechen unten im Bild. */
-      "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe:not(.d119-chips__gruppe--marke){display:none}",
-      "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chips__reihe{columns:3;column-gap:22px}",
+      /* Die geoeffnete Markenliste nutzt die Breite; die uebrigen Gruppen
+         bleiben darunter erreichbar und die Fussleiste bleibt sichtbar. */
+      "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken{padding-top:12px;padding-bottom:0}",
+      "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe{margin-bottom:10px}",
+      "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__titel{margin-bottom:5px}",
+      "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chips__reihe{columns:5;column-gap:12px}",
       "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip{line-height:1.1;padding:.04em 0}",
       "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"1\"]{font-size:clamp(.72rem,.82vw,.84rem)}",
       "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"2\"]{font-size:clamp(.82rem,.94vw,.98rem)}",
@@ -1203,6 +1205,11 @@
       "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"4\"]{font-size:clamp(1.04rem,1.22vw,1.25rem)}",
       "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht=\"5\"]{font-size:clamp(1.16rem,1.38vw,1.4rem)}",
       "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip--leise{margin-top:8px;font-size:.7rem;text-decoration:underline}",
+      "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe.d119-chips__gruppe--sortieren .d119-chips__reihe{padding-bottom:0;gap:5px}",
+      "html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe.d119-chips__gruppe--sortieren .d119-chip{min-height:28px;padding:4px 9px;font-size:.68rem}",
+      "@media (min-width:721px) and (max-width:1200px){html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chips__reihe{columns:4}}",
+      "@media (min-width:721px) and (max-height:750px){html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe{margin-bottom:5px}html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip{font-size:.72rem;line-height:1}html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht]{font-size:.72rem}}",
+      "@media (min-width:721px) and (max-height:650px){html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken{padding-top:5px}html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe{margin-bottom:2px}html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__titel{margin-bottom:2px}html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chips__reihe{columns:5;column-gap:7px}html.nebel #filterPanel.d119-chips-an #d119Chips.nebel-alle-marken .d119-chips__gruppe--marke .d119-chip[data-gewicht]{font-size:.65rem;line-height:.98}html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__foot{padding-top:7px;padding-bottom:7px}}",
       "html.nebel #filterPanel.d119-chips-an .d119-chip[aria-pressed=\"true\"]{opacity:1;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:5px}",
       "html.nebel #filterPanel.d119-chips-an .d119-chip:hover{opacity:.85}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__foot{justify-content:flex-start;gap:28px;padding:18px 0 26px calc(var(--nebel-links,56px) + var(--nebel-breite,1328px) * .38);background:color-mix(in srgb,var(--bg) 88%,transparent);border-top:1px solid color-mix(in srgb,var(--text) 12%,transparent)}",
