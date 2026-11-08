@@ -174,6 +174,7 @@ test("Abholmail-Test: echte Referenz bleibt sichtbar als unbestätigte Simulatio
   assert.match(result.html, /TESTVORSCHAU: Die Ankunft an einer Packstation ist nicht bestätigt/);
   assert.match(result.html, /Y-3 Grafik-Beanie/);
   assert.match(result.text, /358088742443/);
+  assert.doesNotMatch(result.html + result.text, /Packstation 119|in Aschaffenburg und wartet/);
   assert.match(result.subject, /D119-20261104-E1BBBE11/);
   const invalid = await sendPickupPreview(env, "joelb119@gmail.com", { itemId: 6216, trackingNumber: "abc", nurBauen: true });
   assert.equal(invalid.reason, "INVALID_PREVIEW_REFERENCE");

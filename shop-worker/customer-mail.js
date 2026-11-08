@@ -1976,7 +1976,9 @@ export async function sendPickupPreview(env, recipient, { itemId = null, sprache
   };
   const message = formatPickupReady(order, {
     contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200), sprache,
-    abholort: { typ: "packstation", nummer: "119", plz: "63739", ort: "Aschaffenburg" },
+    // Eine Testmail kennt den tatsaechlichen DHL-Abholort nicht. Keine
+    // Beispielnummer als echte Packstation der Bestellung ausgeben.
+    abholort: { typ: "packstation", nummer: "", plz: "", ort: "" },
   });
   const hinweis = "TESTVORSCHAU: Die Ankunft an einer Packstation ist nicht bestätigt. Es wurde keine Abholmail an den Kunden gesendet.";
   const html = message.html.replace(/(<body[^>]*>)/i, `$1<div style="background:#f6e8a5;color:#111;padding:12px;text-align:center;font:700 13px Arial,sans-serif">${hinweis}</div>`);
