@@ -1442,6 +1442,33 @@
     new MutationObserver(function () { dekorieren(); knoepfeBeschriften(); }).observe(box, { childList: true });
     dekorieren(); knoepfeBeschriften();
   }
+  function fotoOberkante(grid) {
+    var bilder = grid.querySelectorAll('.plate__frame img'), kanten = [];
+    for (var i = 0; i < Math.min(2, bilder.length); i++) {
+      var bild = bilder[i];
+      if (!bild.complete || !bild.naturalWidth || !bild.naturalHeight) continue;
+      try {
+        var canvas = document.createElement('canvas');
+        canvas.width = bild.naturalWidth; canvas.height = bild.naturalHeight;
+        var ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(bild, 0, 0);
+        var pixel = ctx.getImageData(0, 0, canvas.width, canvas.height).data, ersteZeile = 0;
+        for (; ersteZeile < canvas.height; ersteZeile++) {
+          var treffer = 0;
+          for (var x = 0; x < canvas.width; x++) {
+            if (pixel[(ersteZeile * canvas.width + x) * 4 + 3] > 48 && ++treffer >= 3) break;
+          }
+          if (treffer >= 3) break;
+        }
+        var css = getComputedStyle(bild), oben = parseFloat(css.paddingTop) || 0;
+        var innenBreite = bild.clientWidth - (parseFloat(css.paddingLeft) || 0) - (parseFloat(css.paddingRight) || 0);
+        var innenHoehe = bild.clientHeight - oben - (parseFloat(css.paddingBottom) || 0);
+        var faktor = Math.min(innenBreite / canvas.width, innenHoehe / canvas.height);
+        kanten.push(oben + Math.max(0, innenHoehe - canvas.height * faktor) + ersteZeile * faktor);
+      } catch (_) { /* Ein fremdes Bild darf das Oeffnen des Filters nicht stoeren. */ }
+    }
+    return kanten.length ? Math.min(140, Math.max(0, Math.min.apply(null, kanten) - 12)) : 0;
+  }
   function los() {
     var panel = document.getElementById("filterPanel");
     if (!panel || !document.getElementById("d119Kategorien") || !document.getElementById("grid")) return false;
@@ -1460,7 +1487,7 @@
     if (t) t.addEventListener("click", function () {
       if (panel.classList.contains("hidden")) {
         var grid = document.getElementById("grid");
-        if (grid) window.scrollTo(0, Math.max(0, window.scrollY + grid.getBoundingClientRect().top));
+        if (grid) window.scrollTo(0, Math.max(0, window.scrollY + grid.getBoundingClientRect().top + (istMobil() ? fotoOberkante(grid) : 0)));
       }
     }, true);
     if (t) new MutationObserver(knoepfeBeschriften).observe(t, { childList: true, characterData: true, subtree: true });
