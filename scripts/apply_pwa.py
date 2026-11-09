@@ -80,7 +80,7 @@ def patch_build(text: str) -> str:
             '<meta name="apple-mobile-web-app-status-bar-style" content="black">\n'
             '<meta name="apple-mobile-web-app-title" content="Disorder119">\n'
             '<link rel="manifest" href="/manifest.webmanifest"> <!-- D119_PWA_V1_ARTICLE -->\n'
-            '<link rel="apple-touch-icon" href="/assets/favicon-large.png">\n'
+            '<link rel="apple-touch-icon" href="/assets/favicon-centered.png">\n'
             '<title>{esc(title_tag)}</title>',
             "article head metadata",
         )
