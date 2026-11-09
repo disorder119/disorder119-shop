@@ -881,7 +881,7 @@ def card_image(it):
     """Kleinste vorhandene Fassung des Titelbilds fuer Karten und Kacheln."""
     gallery = it.get("gallery") or []
     if not gallery:
-        return "assets/favicon.png"
+        return "assets/favicon-compact.png"
     for kandidat in (thumb_path(gallery[0]), display_path(gallery[0])):
         if (BASE / kandidat).is_file():
             return kandidat
@@ -913,7 +913,7 @@ def build_page(it, shop_config, lang):
     spec_rows_html = beschreibung.spec_rows_html(it, teile, lang, archiv_nr=str(it.get("url_slug") or ""))
     trust_html = beschreibung.trust_html(lang)
     gallery = it.get("gallery") or []
-    hero = gallery[0] if gallery else "assets/favicon.png"
+    hero = gallery[0] if gallery else "assets/favicon-compact.png"
     hero_display_candidate = display_path(hero)
     hero_display = hero_display_candidate if (BASE / hero_display_candidate).is_file() else hero
     mobile_candidate = mobile_hero_path(hero)
@@ -999,13 +999,13 @@ def build_page(it, shop_config, lang):
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Disorder119">
 <link rel="manifest" href="/manifest.webmanifest"> <!-- D119_PWA_V1_ARTICLE -->
-<link rel="apple-touch-icon" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/favicon-compact.png">
 <title>{esc(title_tag)}</title>
 <meta name="description" content="{esc(desc)}">
 {'<meta name="robots" content="noindex,nofollow">' if it.get("public_status") == "DRAFT" else '<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">'}
 <link rel="canonical" href="{canonical}">
 {hreflang_links}
-<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="icon" type="image/png" href="/assets/favicon-compact.png">
 <link rel="preload" as="image" href="/{esc(hero_mobile)}" media="(max-width: 600px)" fetchpriority="high">
 <link rel="preload" as="image" href="/{esc(hero_display)}" media="(min-width: 601px)" fetchpriority="high">
 <style>{PRODUCT_CRITICAL_CSS}</style>
@@ -1206,7 +1206,7 @@ def site_entities_jsonld(shop_config):
         "@id": SITE_URL + "#store",
         "name": "Disorder119",
         "url": SITE_URL,
-        "logo": SITE_URL + "assets/favicon.png",
+        "logo": SITE_URL + "assets/favicon-compact.png",
         "image": SITE_URL + "assets/og-image.png",
         "currenciesAccepted": "EUR",
         # Nur das Land: die Anschrift steht im Impressum, aber nicht in den
