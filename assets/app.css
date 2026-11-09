@@ -3846,3 +3846,14 @@ img[data-d119-image-protected] {
   }
   #appShell .footer__cart { margin-top: 44px; }
 }
+
+/* FAQ: kurze Fragen auf einen Blick, Antworten bei Bedarf. */
+.faq-list { margin-top: 28px; border-top: 1px solid var(--rule-strong, #555); }
+.faq-item { border-bottom: 1px solid var(--rule-strong, #555); }
+.faq-item summary { display: block; position: relative; padding: 18px 38px 18px 0; cursor: pointer; font-weight: 600; list-style: none; }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: '+'; position: absolute; right: 4px; top: 15px; font-size: 1.4em; font-weight: 400; }
+.faq-item[open] summary::after { content: '−'; }
+.faq-item summary:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.faq-answer { padding: 0 0 20px; max-width: 72ch; }
+.faq-answer p { margin: 0; line-height: 1.65; }
