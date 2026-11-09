@@ -321,6 +321,21 @@ def run_lighthouse(case: dict[str, Any], product_path: str) -> dict[str, Any]:
         log_path.write_text(median_log.read_text(encoding="utf-8"), encoding="utf-8")
     categories = report.get("categories") or {}
     audits = report.get("audits") or {}
+    # Keep first-paint evidence in the job log as well as the downloadable JSON.
+    # This does not change sampling, scoring or any release budget.
+    diagnostics = {}
+    for audit_id, audit in audits.items():
+        if audit_id in ("largest-contentful-paint-element", "render-blocking-resources") or "lcp-" in audit_id:
+            diagnostics[audit_id] = {
+                "displayValue": audit.get("displayValue"),
+                "details": audit.get("details"),
+            }
+    requests = (audits.get("network-requests") or {}).get("details", {}).get("items", [])
+    diagnostics["initial_requests"] = [
+        {key: request.get(key) for key in ("url", "resourceType", "startTime", "endTime", "transferSize")}
+        for request in requests[:20]
+    ]
+    print(f"Lighthouse diagnostics {case['name']}: " + json.dumps(diagnostics, ensure_ascii=False), flush=True)
     scores = {
         category: float((categories.get(category) or {}).get("score") or 0.0)
         for category in ("performance", "accessibility", "best-practices", "seo")

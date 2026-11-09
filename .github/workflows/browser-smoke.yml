@@ -171,7 +171,7 @@ jobs:
         id: quality_budget
         continue-on-error: true
         run: |
-          rm -rf .quality-reports
+          mkdir -p .quality-reports
           python -m http.server 4174 --bind 127.0.0.1 > /tmp/d119-quality-http.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
