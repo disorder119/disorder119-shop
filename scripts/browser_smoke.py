@@ -9,8 +9,10 @@ language routes, product -> cart, and product -> Rental V2 deep links.
 from __future__ import annotations
 
 import os
+import json
 import re
 from datetime import date
+from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
 from selenium import webdriver
@@ -351,6 +353,43 @@ def test_product_cart_and_rental(driver) -> None:
     assert_no_js_exceptions(driver, "Produkt/Warenkorb/Rental")
 
 
+def test_faq_and_brand(driver) -> None:
+    reports = Path('.quality-reports')
+    reports.mkdir(exist_ok=True)
+    for lang, width in [('de', 1280), ('de', 320), ('en', 390), ('fr', 390)]:
+        driver.set_window_size(width, 900)
+        prefix = '' if lang == 'de' else lang + '/'
+        driver.get(urljoin(BASE_URL, prefix + 'faq/'))
+        wait(driver, lambda d: d.find_element(By.CSS_SELECTOR, '.static-page .faq-guide').is_displayed(), 'FAQ sichtbar')
+        dismiss_cookie_note(driver)
+        logo = driver.find_element(By.CSS_SELECTOR, '.site-header__brand img')
+        wait(driver, lambda d: d.execute_script('return arguments[0].complete && arguments[0].naturalWidth > 0', logo), 'Logo geladen')
+        summary = driver.find_element(By.CSS_SELECTOR, '.static-page .faq-guide__item summary')
+        summary.click()
+        detail = driver.find_element(By.CSS_SELECTOR, '.static-page .faq-guide__item')
+        wait(driver, lambda d: detail.get_attribute('open') is not None, 'FAQ-Antwort offen')
+        summary.send_keys(Keys.SPACE)
+        wait(driver, lambda d: detail.get_attribute('open') is None, 'FAQ per Tastatur geschlossen')
+        driver.find_element(By.CSS_SELECTOR, '.static-page .faq-guide__nav a[href="#faq-shipping"]').click()
+        if driver.find_element(By.ID, 'legalBackdrop').is_displayed():
+            fail('FAQ-Themensprung oeffnet unbeabsichtigt ein zweites Panel')
+        assert_no_horizontal_overflow(driver, f'FAQ {lang} {width}')
+        driver.execute_script('window.scrollTo(0,0)')
+        driver.save_screenshot(str(reports / f'faq-{lang}-{width}.png'))
+        assert_no_js_exceptions(driver, f'FAQ {lang}')
+
+    subject = next(item for item in json.loads(Path('data/items.json').read_text())
+                   if item.get('public_status') == 'AVAILABLE')
+    product_path = 'artikel/' + str(subject.get('url_slug', subject['id'])) + '/'
+    for width in (320, 390, 1280):
+        driver.set_window_size(width, 900)
+        driver.get(urljoin(BASE_URL, product_path))
+        wait(driver, lambda d: d.find_element(By.CSS_SELECTOR, '.page-head__brand img').is_displayed(), 'Produktlogo')
+        if driver.execute_script("const b=document.querySelector('.page-head__brand').getBoundingClientRect(), r=document.querySelector('.page-head__right').getBoundingClientRect();return b.right>r.left+1"):
+            fail(f'Produktlogo ueberlappt Sprachauswahl bei {width}px')
+        assert_no_horizontal_overflow(driver, f'Produktlogo {width}')
+
+
 def run_case(test_fn) -> None:
     # Each major customer journey gets a fresh browser process. The archive has
     # hundreds of high-resolution product images; isolating cases prevents
@@ -369,6 +408,7 @@ def main() -> None:
         test_search_and_mobile_filter,
         test_category_bar_and_sizes,
         test_language_routes,
+        test_faq_and_brand,
         test_product_cart_and_rental,
     ):
         run_case(test_fn)

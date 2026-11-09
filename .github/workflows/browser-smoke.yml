@@ -30,6 +30,13 @@ on:
       - "scripts/**"
       - ".github/**"
   workflow_dispatch: {}
+  workflow_call:
+    inputs:
+      rebuild_patch_artifact:
+        description: Exact prepared candidate from this caller run; no secrets are required.
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -41,6 +48,23 @@ jobs:
     steps:
       - name: Repo auschecken
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Vorbereiteten Kandidaten aus demselben Lauf laden
+        if: inputs.rebuild_patch_artifact != ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: ${{ inputs.rebuild_patch_artifact }}
+          path: .
+
+      - name: Exakten Kandidaten anwenden
+        if: inputs.rebuild_patch_artifact != ''
+        run: |
+          set -euo pipefail
+          test -f rebuild.patch
+          if [ -s rebuild.patch ]; then
+            git apply --index --binary rebuild.patch
+          fi
+          echo "REVIEWED_TREE=$(git write-tree)" >> "$GITHUB_ENV"
 
       - name: Python einrichten
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
@@ -58,6 +82,7 @@ jobs:
           npm install --no-save --package-lock=false lighthouse@12 axe-core@4
 
       - name: Quellen wie im Produktions-Rebuild vorbereiten
+        if: inputs.rebuild_patch_artifact == ''
         run: |
           python scripts/repair_catalog_source_integrity.py
           python scripts/repair_product_metadata_conservative.py
@@ -100,6 +125,7 @@ jobs:
           python scripts/apply_pwa.py
 
       - name: Browser-Build erzeugen
+        if: inputs.rebuild_patch_artifact == ''
         run: |
           python scripts/apply_catalog_taxonomy.py
           python build_site.py
@@ -110,7 +136,9 @@ jobs:
           python scripts/repair_public_article_integrity.py
 
       - name: Performance-/A11y-Invarianten pruefen
-        run: python scripts/validate_perf_a11y_quality.py
+        run: |
+          python scripts/validate_perf_a11y_quality.py
+          python scripts/test_mobile_product_hero.py
 
       - name: Focus-3 Mobile und Produktdaten >9 pruefen
         run: python scripts/validate_focus_three.py
@@ -184,3 +212,9 @@ jobs:
         run: |
           echo "Lighthouse-/WCAG- oder strenger Quality-Regression-Floor wurde verletzt. Details stehen im Audit-Summary und Artefakt."
           exit 1
+      - name: Geprueften Kandidaten unveraendert halten
+        if: ${{ !cancelled() && inputs.rebuild_patch_artifact != '' }}
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          test "$(git write-tree)" = "$REVIEWED_TREE"

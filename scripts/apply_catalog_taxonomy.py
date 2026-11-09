@@ -13,6 +13,7 @@ import argparse
 import json
 import re
 from pathlib import Path
+from seo_text import is_internal_product
 
 from catalog_taxonomy import (
     apply_taxonomy,
@@ -184,6 +185,8 @@ def enrich_product_pages(items: list[dict]) -> tuple[int, list[str]]:
     changed = 0
     missing = []
     for item in items:
+        if is_internal_product(item):
+            continue
         item_id = int(item["id"])
         for lang in LANGS:
             path = article_path(lang, int(item.get('url_slug',item_id)))

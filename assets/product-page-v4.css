@@ -288,3 +288,14 @@
   .product { padding-left: 12px; padding-right: 12px; }
   .gallery-thumb { width: 68px; height: 91px; }
 }
+
+
+/* Shared mark uses the existing app icon; crop its outer padding in the layout. */
+.brand-mark{position:relative;display:block;width:64px;height:64px;overflow:hidden;flex:none;background:#000}
+.brand-mark img{position:absolute;display:block;width:128px;height:128px;max-width:none;left:50%;top:50%;transform:translate(-50%,-50%)}
+.site-header__brand{padding:0;line-height:1}
+.page-head{min-height:88px}
+.page-head__brand{display:block;flex:none;line-height:1}
+.site-header__brand:focus-visible,.page-head__brand:focus-visible,.catalogue__brand:focus-visible{outline:2px solid currentColor;outline-offset:4px}
+@media(max-width:860px){.brand-mark{width:52px;height:52px}.brand-mark img{width:104px;height:104px}.page-head{min-height:76px;padding-top:12px;padding-bottom:12px}}
+@media(max-width:380px){.page-head__brand{left:44%}.page-head .brand-mark{width:48px;height:48px}.page-head .brand-mark img{width:96px;height:96px}}

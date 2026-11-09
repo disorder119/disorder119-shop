@@ -258,6 +258,14 @@ def audit_accessibility(product_path: str) -> list[dict[str, Any]]:
             wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#grid .plate")) >= 3, f"/{lang}/ Archivkarten")
             dismiss_cookie_note(driver)
             reports.append(run_axe(driver, source, f"archive-{lang}"))
+        # Read the complete FAQ content, including expanded native disclosures.
+        for lang in ('de', 'en', 'fr'):
+            driver.set_window_size(390, 844)
+            prefix = '' if lang == 'de' else lang + '/'
+            driver.get(urljoin(BASE_URL, prefix + 'faq/'))
+            wait(driver, lambda d: bool(d.find_elements(By.CSS_SELECTOR, '.static-page .faq-guide')), 'FAQ')
+            driver.execute_script("document.querySelectorAll('.faq-guide details').forEach(item => item.open = true)")
+            reports.append(run_axe(driver, source, f'faq-{lang}'))
     finally:
         driver.quit()
     return reports

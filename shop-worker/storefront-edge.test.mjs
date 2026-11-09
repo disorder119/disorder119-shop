@@ -22,6 +22,19 @@ test('publication allows real shop, language, image, PWA and Apple Pay paths',()
 test('publication rejects backend sources, drafts metadata, configuration and traversal',()=>{
   for(const path of ['/shop-worker/worker.js','/shop-worker/wrangler.toml','/.git/config','/config/shop-config.json','/data/catalog-taxonomy-report.json','/admin/index.html','/scripts/example.py','/assets/a.test.js','/assets/%252e%252e/secret.js','/assets/a\\b.js']) assert.equal(publicPath(path),false,path);
 });
+test('crawlable catalog routes stay inside the fixed public category and pagination schema',()=>{
+  for(const path of ['/katalog/','/en/katalog/index.html','/fr/katalog/seite/10/','/katalog/kategorie/objects/','/en/katalog/kategorie/jackets/seite/2/index.html']) assert.equal(publicPath(path),true,path);
+  for(const path of ['/katalog/private.json','/katalog/kategorie/internal/','/katalog/seite/1/','/katalog/seite/0/','/katalog/seite/-2/','/katalog/seite/02/','/katalog/seite/2/private','/katalog/kategorie/jackets/test.js','/katalog/kategorie/../config/']) assert.equal(publicPath(path),false,path);
+});
+test('internal checkout fixture is absent from public routes and raw-catalog projections',async()=>{
+  for(const path of ['/artikel/9999/','/artikel/9999.html','/en/artikel/9999/index.html','/fr/artikel/9999/']) {
+    assert.equal(publicPath(path),false,path);
+    let calls=0;
+    const response=await edge.fetch(new Request('https://disorder119.com'+path),{},{},async()=>{calls++;return new Response('fixture');});
+    assert.equal(response.status,404);assert.equal(calls,0);
+  }
+  assert.deepEqual(publicCatalog([{id:9999,public_status:'SOLD',title:'internal'},{id:'9999',public_status:'AVAILABLE'},{id:7,public_status:'AVAILABLE',title_fr:'Veste bleue',color_fr:'Bleu'}]),[{id:7,public_status:'AVAILABLE',title_fr:'Veste bleue',color_fr:'Bleu'}]);
+});
 test('only public records and approved simple fields leave the origin',()=>{
   assert.deepEqual(publicCatalog([{id:1,public_status:'AVAILABLE',title:'A',purchase_price:20,nested:{private:1},gallery:['assets/a.webp']},{id:2,public_status:'DRAFT',title:'Hidden'},{id:3,public_status:'SOLD',title:{private:1}}]),[{id:1,public_status:'AVAILABLE',title:'A',gallery:['assets/a.webp']},{id:3,public_status:'SOLD'}]);
 });
