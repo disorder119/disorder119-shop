@@ -23,7 +23,7 @@ def require_pwa_head(html: str, label: str) -> None:
         '<meta name="apple-mobile-web-app-capable" content="yes">',
         '<meta name="apple-mobile-web-app-status-bar-style" content="black">',
         '<meta name="apple-mobile-web-app-title" content="Disorder119">',
-        '<link rel="apple-touch-icon" href="/assets/favicon-large.png">',
+        '<link rel="apple-touch-icon" href="/assets/favicon-centered.png">',
     ]
     for needle in required:
         require(needle in html, f"{label}: {needle} fehlt")
