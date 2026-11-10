@@ -1,11 +1,11 @@
 {
   "schema": "catalog-taxonomy-v1",
-  "totalItems": 280,
-  "reviewedItems": 280,
+  "totalItems": 279,
+  "reviewedItems": 279,
   "departmentCounts": {
     "Men": 75,
     "Objects": 1,
-    "Unisex": 29,
+    "Unisex": 28,
     "Women": 175
   },
   "productTypeCounts": {
@@ -44,7 +44,7 @@
     "Sweater": 4,
     "Sweatshirt": 7,
     "Swim Shorts": 1,
-    "T-Shirt": 10,
+    "T-Shirt": 9,
     "Tank Top": 3,
     "Toaster": 1,
     "Top": 23,
@@ -54,7 +54,7 @@
     "Vest": 8,
     "Wallet": 1
   },
-  "missingSizeCount": 36,
+  "missingSizeCount": 35,
   "missingSize": [
     {
       "id": 9610,
@@ -220,11 +220,6 @@
       "id": 9370,
       "article": "15",
       "title": "MM6 Maison Margiela Top Damen"
-    },
-    {
-      "id": 9373,
-      "article": "14",
-      "title": "Ravani T-Shirt Unisex"
     },
     {
       "id": 9376,
