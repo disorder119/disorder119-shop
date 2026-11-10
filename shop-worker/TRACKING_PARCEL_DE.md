@@ -8,17 +8,20 @@ keine weiteren Statusabfragen gemacht. Der Cron setzt die Bestellung auf
 ## Einrichtung
 
 Die App `disorder119_paket_tracking` ist im DHL Developer Portal fuer
-„Parcel DE Tracking (Post & Parcel Germany)“ freigeschaltet. Fuer den
-produktiven XML-Aufruf von `get-status-for-public-user` dokumentiert DHL
-zusaetzlich zur App-Kennung und ihrem Secret die Tracking-Benutzerkennung
-(`appname`) und das zugehoerige Passwort. Ob der oeffentliche Zugang fuer
-Disorder119 ohne Geschaeftskunden-Trackingvertrag diese Kennung erhaelt,
-ist bei DHL unter Ticket 328276 angefragt. Keine Zugangsdaten raten oder
+„Parcel DE Tracking (Post & Parcel Germany)“ freigeschaltet. DHLs
+Authentifizierungsabschnitt sagt, dass fuer die oeffentliche Abfrage
+API-Key und API-Secret der App genuegen. XML-Beispiele und die
+Parameterreferenz nennen dennoch `appname` und `password`. Welche
+Kombination die freigegebene Produktions-App fuer
+`get-status-for-public-user` tatsaechlich akzeptiert, ist unter
+Ticket 328276 bei DHL angefragt. Keine Zugangsdaten raten oder
 aus der Versandmarken-API uebernehmen.
 
-Vier Worker-Secrets werden benoetigt: `DHL_PAKET_TRACKING_API_KEY`,
-`DHL_PAKET_TRACKING_API_SECRET`, `DHL_PAKET_TRACKING_USER` und
-`DHL_PAKET_TRACKING_PASSWORD`. Ohne alle vier bleibt der Cron inaktiv.
+Der Worker erwartet `DHL_PAKET_TRACKING_API_KEY` und
+`DHL_PAKET_TRACKING_API_SECRET`. Falls DHL fuer die oeffentliche
+Abfrage auch einen XML-Login bestaetigt, koennen zusaetzlich
+`DHL_PAKET_TRACKING_USER` und `DHL_PAKET_TRACKING_PASSWORD`
+eingerichtet werden. Ohne App-Key und -Secret bleibt der Cron inaktiv.
 Die Werte gehoeren nur in Cloudflare Worker Secrets, nie ins Repository.
 Vor Produktivschaltung: DHL-Sandbox-Aufruf mit der separaten Test-App und
 DHL-Testnummer durchfuehren; danach eine eigene offene Sendung mit

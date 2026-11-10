@@ -55,7 +55,7 @@ export function verlaufAus(antwort = {}) {
 }
 
 export function trackingReady(env = {}) {
-  return Boolean(trackingKey(env) && env.DHL_PAKET_TRACKING_API_SECRET && env.DHL_PAKET_TRACKING_USER && env.DHL_PAKET_TRACKING_PASSWORD);
+  return Boolean(trackingKey(env) && env.DHL_PAKET_TRACKING_API_SECRET);
 }
 
 function trackingKey(env = {}) {
@@ -166,7 +166,11 @@ export function zustandAusAntwort(antwort = {}) {
 export async function sendungAbfragen(env, trackingNumber, { plz = "", fetchImpl = fetch } = {}) {
   if (!trackingReady(env)) throw new Error("DHL_TRACKING_CONFIG");
   if (!/^[A-Za-z0-9]{8,40}$/.test(String(trackingNumber))) throw new Error("DHL_TRACKING_NUMMER");
-  const root = `<data request="get-status-for-public-user" appname="${xmlEscape(env.DHL_PAKET_TRACKING_USER)}" password="${xmlEscape(env.DHL_PAKET_TRACKING_PASSWORD)}" language-code="de"><data piece-code="${xmlEscape(trackingNumber)}"${/^\d{5}$/.test(plz) ? ` zip-code="${plz}"` : ""}/></data>`;
+  const user = String(env.DHL_PAKET_TRACKING_USER || "");
+  const password = String(env.DHL_PAKET_TRACKING_PASSWORD || "");
+  if (Boolean(user) !== Boolean(password)) throw new Error("DHL_TRACKING_CONFIG");
+  const login = user ? ` appname="${xmlEscape(user)}" password="${xmlEscape(password)}"` : "";
+  const root = `<data request="get-status-for-public-user"${login} language-code="de"><data piece-code="${xmlEscape(trackingNumber)}"${/^\d{5}$/.test(plz) ? ` zip-code="${plz}"` : ""}/></data>`;
   const url = new URL(TRACKING_URL);
   url.searchParams.set("xml", root);
   const basic = btoa(`${trackingKey(env)}:${String(env.DHL_PAKET_TRACKING_API_SECRET)}`);

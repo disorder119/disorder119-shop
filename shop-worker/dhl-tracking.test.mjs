@@ -10,6 +10,7 @@ const TRACKING = "358088742443";
 test("Frankierungs-Schluessel wird nicht als Tracking-Freigabe behandelt", () => {
   assert.equal(trackingReady({ DHL_PRIVAT_API_KEY: "shipping-only" }), false);
   assert.equal(trackingReady({ DHL_TRACKING_API_KEY: "tracking" }), false);
+  assert.equal(trackingReady({ DHL_PAKET_TRACKING_API_KEY: "key", DHL_PAKET_TRACKING_API_SECRET: "secret" }), true);
   assert.equal(trackingReady({ DHL_PAKET_TRACKING_API_KEY: "key", DHL_PAKET_TRACKING_API_SECRET: "secret", DHL_PAKET_TRACKING_USER: "user", DHL_PAKET_TRACKING_PASSWORD: "pass" }), true);
 });
 
@@ -82,6 +83,16 @@ test("Parcel DE Request nutzt XML, Postleitzahl und beide API-Zugangsstufen", as
     return new Response('<data name="piece-status-public-list" code="0"><data name="piece-status-public" status="Die Sendung ist unterwegs." delivery-event-flag="0"/></data>');
   } });
   assert.equal(result.zustand, "UNTERWEGS");
+});
+
+test("oeffentliche Abfrage kann nur App-Zugang nutzen; halber XML-Login wird abgelehnt", async () => {
+  const env = { DHL_PAKET_TRACKING_API_KEY: "key", DHL_PAKET_TRACKING_API_SECRET: "secret" };
+  await sendungAbfragen(env, TRACKING, { fetchImpl: async url => {
+    const xml = new URL(url).searchParams.get("xml");
+    assert.doesNotMatch(xml, /appname=|password=/);
+    return new Response('<data name="piece-status-public-list" code="100"/>');
+  } });
+  await assert.rejects(sendungAbfragen({ ...env, DHL_PAKET_TRACKING_USER: "user" }, TRACKING, { fetchImpl: () => assert.fail("kein Request") }), /DHL_TRACKING_CONFIG/);
 });
 
 test("unterwegs -> Versendet mit Versandmail, zugestellt -> Zugestellt ohne Mail", async () => {
