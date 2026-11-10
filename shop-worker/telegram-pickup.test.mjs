@@ -3,7 +3,7 @@ import test from "node:test";
 import { createHash } from "node:crypto";
 import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 import { notifyPickupReady, formatPickupReadyMessage } from "./notifications.js";
-import { handleTelegramPickupPreview, handleTelegramPickupWebhook, ensureTelegramPickupWebhook } from "./telegram-pickup.js";
+import { handleTelegramPickupPreview, handleTelegramPickupWebhook, ensureTelegramPickupWebhook, sendTelegramPickupTest } from "./telegram-pickup.js";
 import { abholortFuerMail } from "./customer-mail.js";
 
 const BOT = "test-bot-token";
@@ -37,11 +37,18 @@ function transport() {
   return { calls, restore: () => { globalThis.fetch = original; } };
 }
 
-function request(token, { chat = CHAT, from = CHAT, header = secret } = {}) {
+function request(token, { chat = CHAT, from = CHAT, header = secret, kind = "pickup" } = {}) {
   return new Request("https://api.disorder119.com/telegram/pickup-webhook", {
     method: "POST", headers: { "X-Telegram-Bot-Api-Secret-Token": header },
-    body: JSON.stringify({ callback_query: { id: "cb1", data: `pickup:${token}`, from: { id: Number(from) }, message: { chat: { id: Number(chat), type: "private" } } } }),
+    body: JSON.stringify({ callback_query: { id: "cb1", data: `${kind}:${token}`, from: { id: Number(from) }, message: { chat: { id: Number(chat), type: "private" } } } }),
   });
+}
+
+function catalogFetch() {
+  return async () => Response.json({ items: [{
+    id: 6232, article: "213", title: "Y-3 Grafik-Beanie", brand: "Y-3", size: "ONESIZE",
+    gallery: ["assets/img/6232/0.webp"], public_status: "AVAILABLE",
+  }] });
 }
 
 test("five simulated pickup cases and Telegram approval", async t => {
@@ -100,6 +107,28 @@ test("five simulated pickup cases and Telegram approval", async t => {
       assert.equal((await ensureTelegramPickupWebhook(env)).installed, true);
       assert.equal(io.calls.filter(c => c.url.endsWith("setWebhook")).at(-1).body.secret_token, secret);
       assert.equal((await ensureTelegramPickupWebhook(env)).ready, true);
+    });
+    await t.test("admin test sends the real pickup layout but its approval never mails a customer", async () => {
+      const DB = seed();
+      const env = { DB, TELEGRAM_BOT_TOKEN: BOT, KATALOG_FETCH: catalogFetch(), MAIL_REPLY_TO: "kontakt@disorder119.com" };
+      const sentBefore = io.calls.length;
+      const result = await sendTelegramPickupTest(env, "pickup-test-request");
+      assert.equal(result.sent, true);
+      const photo = io.calls.slice(sentBefore).find(c => c.url.endsWith("sendPhoto"));
+      assert.match(photo.body.caption, /so erscheint eine echte Abholmeldung/);
+      assert.match(photo.body.caption, /Packstation 119/);
+      const previewUrl = photo.body.reply_markup.inline_keyboard[0][0].url;
+      const token = photo.body.reply_markup.inline_keyboard[1][0].callback_data.slice("pickup-test:".length);
+      const preview = await handleTelegramPickupPreview(new URL(previewUrl), env);
+      assert.equal(preview.status, 200);
+      const html = await preview.text();
+      assert.match(html, /TESTVORSCHAU/);
+      assert.match(html, /Packstation 119/);
+      const mailsBefore = io.calls.filter(c => c.url.includes("brevo")).length;
+      await handleTelegramPickupWebhook(request(token, { kind: "pickup-test" }), env);
+      assert.equal(io.calls.filter(c => c.url.includes("brevo")).length, mailsBefore);
+      const answer = io.calls.filter(c => c.url.endsWith("answerCallbackQuery")).at(-1);
+      assert.match(answer.body.text, /Keine Kundenmail/);
     });
   } finally { io.restore(); }
 });
