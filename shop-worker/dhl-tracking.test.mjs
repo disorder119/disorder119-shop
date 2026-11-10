@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ABFRAGE_ABSTAND_MS, abfrageAbstandMs, sendungenVerfolgen, verlaufAufraeumen, zustandAusAntwort } from "./dhl-tracking.js";
+import { ABFRAGE_ABSTAND_MS, abfrageAbstandMs, sendungenVerfolgen, verlaufAufraeumen, zustandAusAntwort, trackingReady } from "./dhl-tracking.js";
 import { listOrders } from "./customer-account.js";
 import { orderStatusAutomatisch } from "./admin-api.js";
 import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 
 const TRACKING = "358088742443";
+
+test("Frankierungs-Schluessel wird nicht als Tracking-Freigabe behandelt", () => {
+  assert.equal(trackingReady({ DHL_PRIVAT_API_KEY: "shipping-only" }), false);
+  assert.equal(trackingReady({ DHL_TRACKING_API_KEY: "tracking" }), true);
+});
 
 function seed({ orderStatus = "PREPARING", shipmentStatus = "LABEL_CREATED" } = {}) {
   const DB = sqliteD1(allMigrations());
@@ -56,7 +61,7 @@ test("DHL-Antworten werden auf unterwegs / zugestellt / offen abgebildet", () =>
 test("unterwegs -> Versendet mit Versandmail, zugestellt -> Zugestellt ohne Mail", async () => {
   const DB = seed();
   const mails = [];
-  const env = { DB, DHL_PRIVAT_API_KEY: "privat-key", MAIL_API_KEY: "k", MAIL_FROM: "shop@disorder119.com", MAIL_FROM_NAME: "D119" };
+  const env = { DB, DHL_TRACKING_API_KEY: "tracking-key", MAIL_API_KEY: "k", MAIL_FROM: "shop@disorder119.com", MAIL_FROM_NAME: "D119" };
   const original = globalThis.fetch;
   globalThis.fetch = async (url, init) => { mails.push({ url: String(url), body: JSON.parse(init.body) }); return Response.json({ messageId: "m1" }); };
   try {
@@ -65,7 +70,7 @@ test("unterwegs -> Versendet mit Versandmail, zugestellt -> Zugestellt ohne Mail
     const r = await sendungenVerfolgen(env, "req-1", t0, { statusSetzen: (id, s) => orderStatusAutomatisch(env, id, s, "req-1"), fetchImpl: dhl.fetchImpl, warten: async () => {} });
     assert.deepEqual(r.versendet, ["o1"]);
     assert.equal(dhl.calls[0].plz, "28201");
-    assert.equal(dhl.calls[0].key, "privat-key");
+    assert.equal(dhl.calls[0].key, "tracking-key");
     assert.equal(DB.raw.prepare("SELECT status FROM commerce_orders WHERE id='o1'").get().status, "SHIPPED");
     assert.equal(DB.raw.prepare("SELECT status FROM shipments WHERE id='s1'").get().status, "SHIPPED");
     const versandMails = mails.filter(m => /unterwegs|geht jetzt zu dir/i.test(m.body.subject || ""));
@@ -118,7 +123,7 @@ test("Zugestellt direkt aus 'Bezahlt': erst Versendet (Mail), dann Zugestellt", 
 
 test("Unbekannte Sendung (404), Limit (429) und fehlender Schluessel", async () => {
   const DB = seed();
-  const env = { DB, DHL_PRIVAT_API_KEY: "k" };
+  const env = { DB, DHL_TRACKING_API_KEY: "k" };
   const dhl = fakeTracking([new Response("", { status: 404 })]);
   const r = await sendungenVerfolgen(env, "req", Date.now(), { statusSetzen: () => assert.fail("kein Status"), fetchImpl: dhl.fetchImpl });
   assert.equal(r.abgefragt, 1);
@@ -135,7 +140,7 @@ test("Unbekannte Sendung (404), Limit (429) und fehlender Schluessel", async () 
 
 test("Sendungsverlauf: Stationen gespeichert, im Kundenkonto sichtbar, 30 Tage nach Zustellung geloescht", async () => {
   const DB = seed();
-  const env = { DB, DHL_PRIVAT_API_KEY: "k" };
+  const env = { DB, DHL_TRACKING_API_KEY: "k" };
   const t0 = Date.parse("2026-11-05T08:00:00Z");
   const stationen = [
     { timestamp: "2026-11-04T18:02:00+01:00", statusCode: "transit", description: "Die Sendung wurde im Start-Paketzentrum bearbeitet.", location: { address: { addressLocality: "Aschaffenburg" } } },

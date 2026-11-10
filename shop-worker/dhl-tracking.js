@@ -64,7 +64,9 @@ export function trackingReady(env = {}) {
 }
 
 function trackingKey(env = {}) {
-  return String(env.DHL_TRACKING_API_KEY || env.DHL_PRIVAT_API_KEY || "").trim();
+  // Die Frankierungs-API kann einen anderen Freigabestand haben. Ihr
+  // Schluessel hat in Produktion wiederholt HTTP 401 beim Tracking geliefert.
+  return String(env.DHL_TRACKING_API_KEY || "").trim();
 }
 
 // Zwischenschritt "abholbereit" (Inhaber 07.11.2026): Das Paket liegt in einer

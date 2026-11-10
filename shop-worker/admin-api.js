@@ -390,6 +390,17 @@ async function getOverview(env, url) {
   };
 }
 
+// Verwaltungsansicht: nach der vollen 14-Tage-Frist plus Tagespuffer.
+// Der echte Bestellstatus bleibt DELIVERED, damit Zahlungs-/Retourenlogik
+// unveraendert bleibt. Offene Kundenfaelle verhindern den Abschluss.
+export const ORDER_COMPLETED_SQL = `o.status='DELIVERED'
+  AND (SELECT s.delivered_at FROM shipments s WHERE s.order_id=o.id ORDER BY s.created_at DESC LIMIT 1)
+    <= strftime('%Y-%m-%dT%H:%M:%fZ','now','-15 days')
+  AND NOT EXISTS (SELECT 1 FROM widerrufe w WHERE w.order_id=o.id AND w.status<>'ERLEDIGT')
+  AND NOT EXISTS (SELECT 1 FROM returns r WHERE r.order_id=o.id AND r.status NOT IN ('CLOSED','REJECTED'))
+  AND NOT EXISTS (SELECT 1 FROM refunds r WHERE r.order_id=o.id AND r.status IN ('PENDING','FAILED'))
+  AND NOT EXISTS (SELECT 1 FROM erstattungsauftraege e WHERE e.order_id=o.id AND e.status NOT IN ('ERLEDIGT','ABGEBROCHEN'))`;
+
 async function getOrders(env, url) {
   const db = requireDb(env);
   const limit = clampAdminLimit(url.searchParams.get("limit"));
@@ -398,12 +409,19 @@ async function getOrders(env, url) {
   // PAID,PREPARING, "Retouren" RETURN_REQUESTED,RETURNED.
   const statuses = safeText(url.searchParams.get("status"), 200).toUpperCase().split(",").map(s => s.trim()).filter(Boolean);
   const q = safeText(url.searchParams.get("q"), 120);
-  if (statuses.length > 6 || statuses.some(s => !ORDER_STATUSES.includes(s))) throw new AdminError("INVALID_ORDER_STATUS", 400);
+  if (statuses.length > 6 || statuses.some(s => s !== "COMPLETED" && !ORDER_STATUSES.includes(s))) throw new AdminError("INVALID_ORDER_STATUS", 400);
 
   // Versteckte Testbestellungen (commerce_orders.versteckt, Migration 0048) nie in der Liste.
   const where = ["o.versteckt=0"];
   const binds = [];
-  if (statuses.length) { where.push(`o.status IN (${statuses.map(() => "?").join(",")})`); binds.push(...statuses); }
+  if (statuses.length) {
+    const normal = statuses.filter(s => s !== "COMPLETED" && s !== "DELIVERED");
+    const choices = [];
+    if (normal.length) { choices.push(`o.status IN (${normal.map(() => "?").join(",")})`); binds.push(...normal); }
+    if (statuses.includes("DELIVERED")) choices.push(`(o.status='DELIVERED' AND NOT (${ORDER_COMPLETED_SQL}))`);
+    if (statuses.includes("COMPLETED")) choices.push(`(${ORDER_COMPLETED_SQL})`);
+    where.push(`(${choices.join(" OR ")})`);
+  }
   if (q) {
     where.push(`(o.order_number LIKE ? OR o.guest_email LIKE ? OR EXISTS (
       SELECT 1 FROM order_items qi WHERE qi.order_id=o.id AND (qi.article_no LIKE ? OR qi.title_snapshot LIKE ?)
@@ -415,7 +433,7 @@ async function getOrders(env, url) {
   // Zahl und Seite in einer Rundreise (db.batch) statt nacheinander.
   const [countResult, rows] = await db.batch([
     db.prepare(`SELECT COUNT(*) AS total FROM commerce_orders o ${clause}`).bind(...binds),
-    db.prepare(`SELECT o.*,
+    db.prepare(`SELECT o.*,CASE WHEN ${ORDER_COMPLETED_SQL} THEN 'COMPLETED' ELSE o.status END AS displayStatus,
       (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=o.id) AS itemCount,
       (SELECT GROUP_CONCAT(oi.title_snapshot,' · ') FROM order_items oi WHERE oi.order_id=o.id) AS itemTitles,
       (SELECT GROUP_CONCAT(oi.item_id) FROM order_items oi WHERE oi.order_id=o.id) AS itemIds,
@@ -503,7 +521,8 @@ function abholmailKurz(r = {}) {
 
 async function getOrderDetail(env, id, { bilder = true } = {}) {
   const db = requireDb(env);
-  const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
+  const order = await db.prepare(`SELECT o.*,CASE WHEN ${ORDER_COMPLETED_SQL} THEN 'COMPLETED' ELSE o.status END AS displayStatus
+    FROM commerce_orders o WHERE o.id=? OR o.order_number=?`).bind(id, id).first();
   if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
   const katalogLaeuft = bilder ? katalogKurz(env) : Promise.resolve(null);
   const [items, payments, shipments, returns, refunds, events, notes, contact, versand] = await db.batch([
