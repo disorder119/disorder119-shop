@@ -70,7 +70,7 @@ test("DHL: abholbereit in Packstation/Filiale ist ein eigener Zwischenschritt, a
 
 test("Cron: abholbereit -> Telegram-Meldung genau einmal, aber KEINE Mail an die Kundschaft", async () => {
   const DB = seed();
-  const env = { DB, DHL_PRIVAT_API_KEY: "privat-key", ...MAIL_ENV };
+  const env = { DB, DHL_TRACKING_API_KEY: "tracking-key", ...MAIL_ENV };
   const f = mailFetch();
   const meldungen = [];
   try {
