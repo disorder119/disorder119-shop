@@ -121,7 +121,7 @@ async function saveTelegramChatId(env, username, chatId, reqId) {
     ).run();
 }
 
-async function telegramApi(env, method, body = {}) {
+export async function telegramApi(env, method, body = {}) {
   let response;
   try {
     response = await fetch(`${TELEGRAM_API}/bot${String(env.TELEGRAM_BOT_TOKEN)}/${method}`, {
@@ -206,31 +206,38 @@ export function telegramFremd(value, max = 120) {
 
 // Foto mit Bildunterschrift und Knopf "Bestellung öffnen". Klappt das Foto
 // nicht (Bild fehlt, Telegram lehnt ab), kommt dieselbe Meldung als Text.
+function telegramButtons(knopf) {
+  return (Array.isArray(knopf) ? knopf : knopf ? [knopf] : []).slice(0, 4).flatMap(k => {
+    if (!k) return [];
+    const text = safeText(k.text || "Öffnen", 40);
+    if (/^https:\/\/admin\.disorder119\.com\//.test(String(k.url || ""))) return [[{ text, url: String(k.url) }]];
+    if (/^pickup:[a-f0-9]{32}$/.test(String(k.callback_data || ""))) return [[{ text, callback_data: String(k.callback_data) }]];
+    return [];
+  });
+}
+
 export async function sendTelegramPhoto(env, photoUrl, caption, reqId = crypto.randomUUID(), knopf = null) {
   if (!telegramTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
   const text = istSandbox(env) ? sandboxTelegramText(String(caption ?? "")) : String(caption ?? "");
   const cleanCaption = wohlgeformt(text.replace(/\r\n?/g, "\n").trim().slice(0, 1024));
   const url = safeText(photoUrl || "", 400);
-  if (!/^https:\/\/disorder119\.com\/assets\/og\/\d+\.jpg$/.test(url) || !cleanCaption) return sendTelegramMessage(env, caption, reqId);
+  if (!/^https:\/\/disorder119\.com\/assets\/og\/\d+\.jpg$/.test(url) || !cleanCaption) return sendTelegramMessage(env, caption, reqId, knopf);
   const chatId = await resolveTelegramChatId(env, reqId);
   if (!chatId) return { sent: false, reason: "TARGET_NOT_CONNECTED" };
   const body = { chat_id: chatId, photo: url, caption: cleanCaption };
   // Ein Knopf oder eine Liste (je Knopf eine Zeile); nur Links in die Admin-App.
-  const knoepfe = (Array.isArray(knopf) ? knopf : knopf ? [knopf] : [])
-    .filter(k => k && /^https:\/\/admin\.disorder119\.com\//.test(String(k.url || "")))
-    .slice(0, 4)
-    .map(k => [{ text: safeText(k.text || "Öffnen", 40), url: String(k.url) }]);
+  const knoepfe = telegramButtons(knopf);
   if (knoepfe.length) body.reply_markup = { inline_keyboard: knoepfe };
   try {
     const payload = await telegramApi(env, "sendPhoto", body);
     return { sent: true, messageId: payload?.result?.message_id ?? null, foto: true };
   } catch (err) {
     console.warn(JSON.stringify({ level: "warn", event: "telegram_photo_fallback", requestId: reqId, message: safeText(err?.message || "unknown", 120) }));
-    return sendTelegramMessage(env, caption, reqId);
+    return sendTelegramMessage(env, caption, reqId, knopf);
   }
 }
 
-export async function sendTelegramMessage(env, text, reqId = crypto.randomUUID()) {
+export async function sendTelegramMessage(env, text, reqId = crypto.randomUUID(), knopf = null) {
   if (!telegramTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
   if (istSandbox(env)) text = sandboxTelegramText(text);
   // Zeilenumbrueche bleiben erhalten, sonst klebt jede Meldung in einer Zeile.
@@ -249,11 +256,14 @@ export async function sendTelegramMessage(env, text, reqId = crypto.randomUUID()
   const chatId = await resolveTelegramChatId(env, reqId);
   if (!chatId) return { sent: false, reason: "TARGET_NOT_CONNECTED" };
 
-  const payload = await telegramApi(env, "sendMessage", {
+  const body = {
     chat_id: chatId,
     text: cleanText,
     disable_web_page_preview: true,
-  });
+  };
+  const knoepfe = telegramButtons(knopf);
+  if (knoepfe.length) body.reply_markup = { inline_keyboard: knoepfe };
+  const payload = await telegramApi(env, "sendMessage", body);
 
   return {
     sent: true,
@@ -363,14 +373,15 @@ export async function notifyPaidOrderByProviderOrder(env, providerOrderId, reqId
 // Einmal je Sendung - dhl-tracking ruft das nur beim Wechsel auf ABHOLBEREIT.
 export function formatPickupReadyMessage(order = {}, abholort = {}) {
   const o = abholort && typeof abholort === "object" ? abholort : {};
-  const ort = o.typ === "filiale" ? `Postfiliale${o.ort ? ` · ${o.ort}` : ""}`
+  const ort = o.typ === "filiale" ? `Postfiliale${o.nummer ? ` ${o.nummer}` : ""}${o.ort ? ` · ${o.ort}` : ""}`
     : o.nummer ? `Packstation ${o.nummer}${o.ort ? ` · ${o.ort}` : ""}` : "Packstation / Filiale";
   return [
     `📦 ABHOLBEREIT · ${telegramZeile(order.order_number || "", 60)}`,
+    ...(order.kunde ? [`Für ${telegramZeile(order.kunde, 80)}`] : []),
     ...(order.titel ? [telegramZeile(order.titel, 120)] : []),
     telegramZeile(ort, 120),
     "",
-    "Die Abholmail an die Kundschaft geht erst, wenn du sie in der Admin-App abschickst.",
+    "Die Kundenmail geht erst nach deiner Freigabe raus.",
   ].join("\n");
 }
 
@@ -378,10 +389,24 @@ export async function notifyPickupReady(env, sendung = {}, stand = {}, reqId = c
   if (!telegramNotificationReady(env) || !env?.DB) return { sent: false, reason: "NOT_CONFIGURED" };
   const orderId = safeText(sendung.order_id || "", 80);
   if (!orderId) return { sent: false, reason: "ORDER_NOT_FOUND" };
-  const order = await env.DB.prepare("SELECT id,order_number FROM commerce_orders WHERE id=?").bind(orderId).first();
+  const order = await env.DB.prepare(`SELECT o.id,o.order_number,c.recipient_name
+    FROM commerce_orders o LEFT JOIN order_contact_snapshots c ON c.order_id=o.id WHERE o.id=?`).bind(orderId).first();
   if (!order) return { sent: false, reason: "ORDER_NOT_FOUND" };
   const teil = await env.DB.prepare("SELECT item_id,title_snapshot FROM order_items WHERE order_id=? ORDER BY rowid LIMIT 1").bind(orderId).first();
-  const text = formatPickupReadyMessage({ order_number: order.order_number, titel: teil?.title_snapshot || "" }, stand?.abholort || {});
-  const knopf = { text: "✉️ Abholmail ansehen", url: `${adminBestellungLink(order)}&abholmail=1` };
-  return sendTelegramPhoto(env, verkaufsBild({ items: teil ? [teil] : [] }), text, reqId, knopf);
+  const text = formatPickupReadyMessage({ order_number: order.order_number, kunde: order.recipient_name, titel: teil?.title_snapshot || "" }, stand?.abholort || {});
+  const chatId = await resolveTelegramChatId(env, reqId);
+  if (!chatId) return { sent: false, reason: "TARGET_NOT_CONNECTED" };
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(16)), x => x.toString(16).padStart(2, "0")).join("");
+  const claimId = `notify:telegram:pickup:${token}`;
+  const now = new Date().toISOString();
+  await env.DB.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'SYSTEM','order',?,'PICKUP_APPROVAL_PENDING',?,?,?)`)
+    .bind(claimId, orderId, safeText(reqId, 120), JSON.stringify({ shipmentId: String(sendung.shipment_id), chatId: String(chatId) }), now).run();
+  const knoepfe = [
+    { text: "✉️ Mail ansehen", url: `${adminBestellungLink(order)}&abholmail=1` },
+    { text: "✅ Kundenmail senden", callback_data: `pickup:${token}` },
+  ];
+  const result = await sendTelegramPhoto(env, verkaufsBild({ items: teil ? [teil] : [] }), text, reqId, knoepfe);
+  if (!result.sent) await env.DB.prepare("DELETE FROM audit_events WHERE id=? AND event_type='PICKUP_APPROVAL_PENDING'").bind(claimId).run().catch(() => {});
+  return result;
 }
