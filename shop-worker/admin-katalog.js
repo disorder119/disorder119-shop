@@ -84,6 +84,10 @@ export const EDITABLE = Object.freeze({
     if (!["", "Vinted", "eBay"].includes(platform)) throw new KatalogError("VERKAUFSPLATTFORM_UNGUELTIG", 400);
     return platform;
   },
+  hidden_from_shop(value) {
+    if (typeof value !== "boolean") throw new KatalogError("FELD_UNGUELTIG", 400);
+    return value;
+  },
   gallery(value) {
     if (!Array.isArray(value) || value.length > 40) throw new KatalogError("GALERIE_UNGUELTIG", 400);
     return value.map(pfad => {
@@ -139,6 +143,13 @@ export function applyChanges(items, changes) {
       }
       next[field] = EDITABLE[field](value);
     }
+    if (next.hidden_from_shop && Object.prototype.hasOwnProperty.call(set, "public_status") && next.public_status !== "DRAFT") next.hidden_from_shop = false;
+    if (Object.prototype.hasOwnProperty.call(set, "hidden_from_shop") && next.hidden_from_shop) {
+      next.hidden_previous_status = ["AVAILABLE", "SOLD"].includes(String(items[index].public_status))
+        ? items[index].public_status : "AVAILABLE";
+      next.public_status = "DRAFT";
+      next.status = "Verborgen";
+    }
     // Statuszeile folgt dem sichtbaren Status (wie artikelWiederVerfuegbar):
     // Match/Swipe (assets/app.js buildSwipeQueue) liest "status" - ein im
     // Admin auf SOLD gestelltes Stueck blieb dort sonst im Stapel, und ein
@@ -147,7 +158,7 @@ export function applyChanges(items, changes) {
       if (next.public_status === "AVAILABLE") next.status = "Verfügbar";
       else if (next.public_status === "SOLD") next.status = "Verkauft";
     }
-    if (next.public_status !== "SOLD") next.sold_platform = "";
+    if (next.public_status !== "SOLD" && !next.hidden_from_shop) next.sold_platform = "";
     if (!String(next.title || "").trim()) throw new KatalogError("TITEL_FEHLT", 400, String(next.id));
     if (next.public_status !== "DRAFT" && !String(next.brand || "").trim()) throw new KatalogError("MARKE_FEHLT", 400, String(next.id));
     pruefeKategorie(items[index], next, set);

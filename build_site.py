@@ -2183,6 +2183,14 @@ def build_articles():
     count = 0
     de_pages_by_id = {}
     for it in ITEMS:
+        if it.get("hidden_from_shop"):
+            # Ein vorher öffentliches Stück kann jederzeit im Admin verborgen
+            # werden. Bereits eingecheckte Seiten müssen beim Rebuild weg.
+            for lang in LANGS:
+                for identifier in {str(it.get("url_slug", it["id"])), str(it["id"])}:
+                    old_page = article_dir(lang, identifier) / "index.html"
+                    old_page.unlink(missing_ok=True)
+            continue
         for lang in LANGS:
             page = build_page(it, shop_config, lang)
             item_dir = article_dir(lang, it.get("url_slug", it["id"]))
