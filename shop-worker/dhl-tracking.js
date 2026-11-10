@@ -93,6 +93,11 @@ export function paketAntwort(xml) {
   const piece = /<data\b([^>]*\bname="piece-status-public"[^>]*)\/?\s*>/i.exec(xml);
   if (!piece) return { zustand: "OFFEN", code: rootCode || "", text: "DHL kennt die Sendung noch nicht", ereignisse: [] };
   const attrs = piece[1];
+  const pieceError = xmlAttribut(attrs, "error-status");
+  if (pieceError && pieceError !== "0") {
+    if (pieceError === "100" || pieceError === "200") return { zustand: "OFFEN", code: pieceError, text: "DHL kennt die Sendung noch nicht", ereignisse: [] };
+    const err = new Error("DHL_TRACKING_PIECE_ERROR"); err.code = `DHL_${pieceError}`; throw err;
+  }
   const code = xmlAttribut(attrs, "standard-event-code") || xmlAttribut(attrs, "ice");
   const text = safeText(xmlAttribut(attrs, "status"), 300);
   const delivered = xmlAttribut(attrs, "delivery-event-flag") === "1";
