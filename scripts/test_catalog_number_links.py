@@ -18,5 +18,11 @@ class CatalogNumbersTest(unittest.TestCase):
         self.manifest['links'].append(self.manifest['links'][0]); self.assertTrue(validate(self.items,self.manifest))
     def test_excluded_product_cannot_be_mapped(self):
         self.manifest['links'].append(dict(shop_id=9427,article='72')); self.assertTrue(validate(self.items,self.manifest))
+    def test_retired_number_stays_reserved(self):
+        self.manifest['retired_links']=[dict(shop_id=9373,article='14')]
+        self.manifest['excluded_shop_ids'].append(9373)
+        self.assertEqual(validate(self.items,self.manifest),[])
+        self.manifest['links'].append(dict(shop_id=9500,article='14'))
+        self.assertTrue(validate(self.items,self.manifest))
 
 if __name__=='__main__': unittest.main()

@@ -1806,6 +1806,14 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   var searchInputEl = document.getElementById("searchInput");
   searchInputEl.addEventListener("input", function (e) {
     state.query = normalizeText(e.target.value.trim());
+    // Die Suche umfasst auch bereits verkaufte Archivstücke. Sonst kann
+    // ein vorgeschlagener Markenname im Standardfilter ohne Treffer enden.
+    if (state.query && state.status === "Verfügbar") {
+      state.status = "all";
+      Array.prototype.forEach.call(statusChipsEl.children, function (chip) {
+        chip.setAttribute("aria-pressed", chip.getAttribute("data-i18n") === "statusAll" ? "true" : "false");
+      });
+    }
     render();
   });
   document.getElementById("sortSelect").addEventListener("change", function (e) {

@@ -79,6 +79,11 @@ export const EDITABLE = Object.freeze({
     if (!["AVAILABLE", "SOLD", "DRAFT"].includes(status)) throw new KatalogError("STATUS_UNGUELTIG", 400);
     return status;
   },
+  sold_platform(value) {
+    const platform = String(value || "");
+    if (!["", "Vinted", "eBay"].includes(platform)) throw new KatalogError("VERKAUFSPLATTFORM_UNGUELTIG", 400);
+    return platform;
+  },
   gallery(value) {
     if (!Array.isArray(value) || value.length > 40) throw new KatalogError("GALERIE_UNGUELTIG", 400);
     return value.map(pfad => {
@@ -142,6 +147,7 @@ export function applyChanges(items, changes) {
       if (next.public_status === "AVAILABLE") next.status = "Verfügbar";
       else if (next.public_status === "SOLD") next.status = "Verkauft";
     }
+    if (next.public_status !== "SOLD") next.sold_platform = "";
     if (!String(next.title || "").trim()) throw new KatalogError("TITEL_FEHLT", 400, String(next.id));
     if (next.public_status !== "DRAFT" && !String(next.brand || "").trim()) throw new KatalogError("MARKE_FEHLT", 400, String(next.id));
     pruefeKategorie(items[index], next, set);

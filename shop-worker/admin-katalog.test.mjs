@@ -15,6 +15,14 @@ const ITEMS = [
 ];
 const ITEMS_TEXT = JSON.stringify(ITEMS, null, 2) + "\n";
 
+test("external sale reaches SOLD and records its platform", () => {
+  const sold = applyChanges(structuredClone(ITEMS), [{ id: 6241, set: { public_status: "SOLD", sold_platform: "Vinted" } }]);
+  assert.equal(sold[0].public_status, "SOLD");
+  assert.equal(sold[0].status, "Verkauft");
+  assert.equal(sold[0].sold_platform, "Vinted");
+  assert.throws(() => applyChanges(structuredClone(ITEMS), [{ id: 6241, set: { sold_platform: "unknown" } }]));
+});
+
 // Nachbau der GitHub-Schnittstelle: Git-Daten, Pull Requests, Merge.
 function fakeGithub({ conflicts = 0, stalledHistory = false } = {}) {
   const calls = [];
