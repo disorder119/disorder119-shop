@@ -4594,56 +4594,6 @@
    "abweichung": 0.27
   },
   {
-   "shop_id": 9373,
-   "gallery": "assets/img/9373/0.webp",
-   "article": "14",
-   "n": 1,
-   "freigestellt": "Shooting 1 (8.12)/bereits hochgeladen/sold/ravani tshirt (1) #14 freigestellt.png",
-   "freigestellt_sha256": "55639ec28fe79b7c9481e4ffed7822c5630cdf0c98553a017b06a67c0cee1ac8",
-   "webp_sha256": "ad4f5ef5d872f0aee0a0f5ac6b9e085a8d4cab9ce382a4f6952f4fdacba5e5fd",
-   "abweichung": 0.31
-  },
-  {
-   "shop_id": 9373,
-   "gallery": "assets/img/9373/1.webp",
-   "article": "14",
-   "n": 2,
-   "freigestellt": "Shooting 1 (8.12)/bereits hochgeladen/sold/ravani tshirt (2) #14 freigestellt.png",
-   "freigestellt_sha256": "bb24884c47ef363385477d2a0512aca985ef25648c96a962233d1f96d970a5b9",
-   "webp_sha256": "5fa51f52f217ea8a84f3f4e5115483a5b993552df70815e27bda210b4be543dc",
-   "abweichung": 0.28
-  },
-  {
-   "shop_id": 9373,
-   "gallery": "assets/img/9373/2.webp",
-   "article": "14",
-   "n": 3,
-   "freigestellt": "Shooting 1 (8.12)/bereits hochgeladen/sold/ravani tshirt (3) #14 freigestellt.png",
-   "freigestellt_sha256": "885747ccda5fa953a7ef1b642087ff3bc3aceed039bdf1547b37bb1f32d211a4",
-   "webp_sha256": "3fd5b48f8f32ccdc41c0d1bf8f435b2eb3f677592ef9a343c8706559483fd060",
-   "abweichung": 0.26
-  },
-  {
-   "shop_id": 9373,
-   "gallery": "assets/img/9373/3.webp",
-   "article": "14",
-   "n": 4,
-   "freigestellt": "Shooting 1 (8.12)/bereits hochgeladen/sold/ravani tshirt (4) #14 freigestellt.png",
-   "freigestellt_sha256": "80a7b9f4616bfdf66c273209660a4b5b5f6850e6c1ba364233e57da4e0ae0323",
-   "webp_sha256": "5b57feaa23c5d46a97acb518e1b932163e5e44bd41663eec7bc9e57ed009de0c",
-   "abweichung": 0.28
-  },
-  {
-   "shop_id": 9373,
-   "gallery": "assets/img/9373/4.webp",
-   "article": "14",
-   "n": 5,
-   "freigestellt": "Shooting 1 (8.12)/bereits hochgeladen/sold/ravani tshirt (5) #14 freigestellt.png",
-   "freigestellt_sha256": "b9bd7e6434525ffa2f08d324a4ba5f67b99a1ecb942a4cc965c9b1535ded0e8f",
-   "webp_sha256": "c2c762e2394aea9d0f91d3aba6451f08d4efb1b757b9869b8e88fc26cd38d1e3",
-   "abweichung": 0.28
-  },
-  {
    "shop_id": 9375,
    "gallery": "assets/img/9375/0.webp",
    "article": "20",
