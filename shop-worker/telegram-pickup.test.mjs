@@ -3,7 +3,7 @@ import test from "node:test";
 import { createHash } from "node:crypto";
 import { allMigrations, sqliteD1 } from "./test-d1.mjs";
 import { notifyPickupReady, formatPickupReadyMessage } from "./notifications.js";
-import { handleTelegramPickupWebhook, ensureTelegramPickupWebhook } from "./telegram-pickup.js";
+import { handleTelegramPickupPreview, handleTelegramPickupWebhook, ensureTelegramPickupWebhook } from "./telegram-pickup.js";
 import { abholortFuerMail } from "./customer-mail.js";
 
 const BOT = "test-bot-token";
@@ -57,6 +57,13 @@ test("five simulated pickup cases and Telegram approval", async t => {
       assert.match(photo.body.caption, /Packstation 234/);
       const token = photo.body.reply_markup.inline_keyboard[1][0].callback_data.slice(7);
       assert.match(token, /^[a-f0-9]{32}$/);
+      const previewUrl = photo.body.reply_markup.inline_keyboard[0][0].url;
+      assert.equal(previewUrl, `https://api.disorder119.com/telegram/pickup-preview/${token}`);
+      const preview = await handleTelegramPickupPreview(new URL(previewUrl), env);
+      assert.equal(preview.status, 200);
+      assert.equal(preview.headers.get("Cache-Control"), "no-store, private");
+      assert.match(await preview.text(), /mail-station/);
+      assert.match(await (await handleTelegramPickupPreview(new URL("https://api.disorder119.com/telegram/pickup-preview/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), env)).text(), /Not found/);
       assert.equal((await handleTelegramPickupWebhook(request(token, { header: "wrong" }), env)).status, 403);
       assert.equal((await handleTelegramPickupWebhook(request(token, { from: "9" }), env)).status, 403);
       assert.equal(io.calls.filter(c => c.url.includes("brevo")).length, 0);

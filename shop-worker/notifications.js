@@ -210,7 +210,7 @@ function telegramButtons(knopf) {
   return (Array.isArray(knopf) ? knopf : knopf ? [knopf] : []).slice(0, 4).flatMap(k => {
     if (!k) return [];
     const text = safeText(k.text || "Öffnen", 40);
-    if (/^https:\/\/admin\.disorder119\.com\//.test(String(k.url || ""))) return [[{ text, url: String(k.url) }]];
+    if (/^https:\/\/admin\.disorder119\.com\//.test(String(k.url || "")) || /^https:\/\/api\.disorder119\.com\/telegram\/pickup-preview\/[a-f0-9]{32}$/.test(String(k.url || ""))) return [[{ text, url: String(k.url) }]];
     if (/^pickup:[a-f0-9]{32}$/.test(String(k.callback_data || ""))) return [[{ text, callback_data: String(k.callback_data) }]];
     return [];
   });
@@ -403,7 +403,7 @@ export async function notifyPickupReady(env, sendung = {}, stand = {}, reqId = c
     VALUES (?,'SYSTEM','order',?,'PICKUP_APPROVAL_PENDING',?,?,?)`)
     .bind(claimId, orderId, safeText(reqId, 120), JSON.stringify({ shipmentId: String(sendung.shipment_id), chatId: String(chatId) }), now).run();
   const knoepfe = [
-    { text: "✉️ Mail ansehen", url: `${adminBestellungLink(order)}&abholmail=1` },
+    { text: "✉️ E-Mail-Vorschau ansehen", url: `https://api.disorder119.com/telegram/pickup-preview/${token}` },
     { text: "✅ Kundenmail senden", callback_data: `pickup:${token}` },
   ];
   const result = await sendTelegramPhoto(env, verkaufsBild({ items: teil ? [teil] : [] }), text, reqId, knoepfe);

@@ -30,7 +30,11 @@ Die Werte gehoeren nur in Cloudflare Worker Secrets, nie ins Repository.
 
 Meldet DHL eine Sendung als abholbereit, bekommt der verbundene private
 Inhaber-Chat ein Artikelfoto, den von DHL gemeldeten Abholort und zwei Knoepfe:
-Mail in der Admin-App ansehen oder Kundenmail direkt freigeben. Eine Nummer
+die **E-Mail-Vorschau ansehen** oder die Kundenmail direkt freigeben. Die
+Vorschau zeigt dieselbe HTML-Mail wie die Kundschaft sie erhaelt, einschliesslich
+Packstation-Motiv und Artikelfoto. Der Link enthaelt eine zufaellige Kennung,
+ist hoechstens 48 Stunden gueltig und zeigt nur bei weiterhin aktuellem
+Abholbereit-Status etwas an. Eine Nummer
 wird nur angezeigt, wenn sie im aktuellen DHL-Status oder (ohne konkreten
 DHL-Abholort) in der Lieferanschrift steht. Bei abweichenden Nummern hat DHL
 Vorrang. Die Mail wird nicht automatisch ohne Freigabe gesendet.

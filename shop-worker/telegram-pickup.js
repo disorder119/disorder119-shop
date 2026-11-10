@@ -9,6 +9,45 @@ export function isTelegramPickupWebhook(url) {
   return url.pathname === "/telegram/pickup-webhook";
 }
 
+export function isTelegramPickupPreview(url) {
+  return /^\/telegram\/pickup-preview\/[a-f0-9]{32}$/.test(url.pathname);
+}
+
+function previewToken(url) {
+  return /^\/telegram\/pickup-preview\/([a-f0-9]{32})$/.exec(url.pathname)?.[1] || "";
+}
+
+function previewHeaders() {
+  return {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-store, private",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Content-Security-Policy": "default-src 'none'; img-src https://disorder119.com data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  };
+}
+
+// Der Link in Telegram ist eine zufaellige, einmalige Kennung. Er zeigt die
+// fertige Kundenmail nur, solange DHL die zugehoerige Sendung noch aktuell als
+// abholbereit meldet. Die Vorschau fuehrt keinen Versand aus.
+export async function handleTelegramPickupPreview(url, env, reqId = crypto.randomUUID()) {
+  const token = previewToken(url);
+  if (!token || !env?.DB) return new Response("Not found", { status: 404 });
+  const id = `notify:telegram:pickup:${token}`;
+  const row = await env.DB.prepare("SELECT entity_id,event_type,metadata_json,created_at FROM audit_events WHERE id=? LIMIT 1").bind(id).first();
+  if (!row || row.event_type !== "PICKUP_APPROVAL_PENDING" || !Number.isFinite(Date.parse(row.created_at)) || Date.now() - Date.parse(row.created_at) > 48 * 3_600_000) {
+    return new Response("Not found", { status: 404 });
+  }
+  let meta = {};
+  try { meta = JSON.parse(row.metadata_json || "{}"); } catch { return new Response("Not found", { status: 404 }); }
+  if (!meta.shipmentId) return new Response("Not found", { status: 404 });
+  const draft = await sendPickupReady(env, row.entity_id, { reqId, vorschau: true, requireReady: true, expectedShipmentId: meta.shipmentId });
+  if (!draft.vorschau) return new Response("Not found", { status: 404 });
+  return new Response(draft.html, { status: 200, headers: previewHeaders() });
+}
+
 async function webhookSecret(token) {
   const bytes = new TextEncoder().encode(`disorder119-pickup-webhook:${token}`);
   const hash = await crypto.subtle.digest("SHA-256", bytes);
