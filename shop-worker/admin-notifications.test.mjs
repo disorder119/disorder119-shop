@@ -30,6 +30,17 @@ function emptyLinkDb() {
   };
 }
 
+function catalogFetch() {
+  return async () => Response.json({ items: [{
+    id: 6232,
+    article: "213",
+    title: "Y-3 Grafik-Beanie",
+    brand: "Y-3",
+    size: "ONESIZE",
+    gallery: ["assets/img/6232/0.webp"],
+  }] });
+}
+
 test("Telegram admin test endpoint sends through configured transport", async () => {
   const originalFetch = globalThis.fetch;
   let body = null;
@@ -45,6 +56,8 @@ test("Telegram admin test endpoint sends through configured transport", async ()
       ADMIN_TOKEN: "owner-test-token",
       TELEGRAM_BOT_TOKEN: "fake-bot-token",
       TELEGRAM_CHAT_ID: "99887766",
+      DB: emptyLinkDb(),
+      KATALOG_FETCH: catalogFetch(),
     }, TEST_URL, "req-admin-test", ORIGIN);
     assert.equal(response.status, 200);
     const payload = await response.json();
@@ -52,7 +65,10 @@ test("Telegram admin test endpoint sends through configured transport", async ()
     assert.equal(payload.sent, true);
     assert.equal(payload.messageId, 42);
     assert.equal(body.chat_id, "99887766");
-    assert.match(body.text, /DISORDER119 — TELEGRAM TEST/);
+    assert.equal(body.photo, "https://disorder119.com/assets/og/6232.jpg");
+    assert.match(body.caption, /TEST · so erscheint eine echte Abholmeldung/);
+    assert.match(body.caption, /Packstation 119/);
+    assert.equal(body.reply_markup.inline_keyboard.length, 2);
   } finally {
     globalThis.fetch = originalFetch;
   }

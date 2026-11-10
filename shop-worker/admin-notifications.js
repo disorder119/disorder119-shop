@@ -1,5 +1,6 @@
 import { safeText } from "./commerce-core.js";
-import { sendTelegramTest, telegramTransportReady } from "./notifications.js";
+import { telegramTransportReady } from "./notifications.js";
+import { sendTelegramPickupTest } from "./telegram-pickup.js";
 import { mailTransportReady, normalizeEmail, sendMailTest, sendPickupPreview, sendShippingPreview } from "./customer-mail.js";
 
 const ADMIN_ORIGINS = Object.freeze([
@@ -159,7 +160,7 @@ export async function handleAdminNotifications(request, env, url, reqId, origin 
       throw new AdminNotificationsError("TELEGRAM_NOT_CONFIGURED", 503);
     }
 
-    const result = await sendTelegramTest(env, reqId);
+    const result = await sendTelegramPickupTest(env, reqId);
     if (!result.sent) {
       if (result.reason === "TARGET_NOT_CONNECTED") {
         throw new AdminNotificationsError("TELEGRAM_TARGET_NOT_CONNECTED", 409);

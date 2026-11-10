@@ -211,7 +211,10 @@ function telegramButtons(knopf) {
     if (!k) return [];
     const text = safeText(k.text || "Öffnen", 40);
     if (/^https:\/\/admin\.disorder119\.com\//.test(String(k.url || "")) || /^https:\/\/api\.disorder119\.com\/telegram\/pickup-preview\/[a-f0-9]{32}$/.test(String(k.url || ""))) return [[{ text, url: String(k.url) }]];
-    if (/^pickup:[a-f0-9]{32}$/.test(String(k.callback_data || ""))) return [[{ text, callback_data: String(k.callback_data) }]];
+    // Der Admin-Test bildet die echte Abholmeldung pixelgleich nach. Sein
+    // Callback ist absichtlich ein anderer Namensraum: Er kann nie eine
+    // Kundenmail ausloesen.
+    if (/^pickup(?:-test)?:[a-f0-9]{32}$/.test(String(k.callback_data || ""))) return [[{ text, callback_data: String(k.callback_data) }]];
     return [];
   });
 }
