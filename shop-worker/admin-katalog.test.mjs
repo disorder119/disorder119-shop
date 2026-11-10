@@ -23,6 +23,26 @@ test("external sale reaches SOLD and records its platform", () => {
   assert.throws(() => applyChanges(structuredClone(ITEMS), [{ id: 6241, set: { sold_platform: "unknown" } }]));
 });
 
+test("hiding keeps an item editable and returning it to the shop restores availability", () => {
+  const sample = structuredClone(ITEMS);
+  sample[0].category = "Pants";
+  sample[0].taxonomy_category = "Pants";
+  const hidden = applyChanges(sample, [{ id: 6241, set: { hidden_from_shop: true } }]);
+  assert.equal(hidden[0].public_status, "DRAFT");
+  assert.equal(hidden[0].status, "Verborgen");
+  const back = applyChanges(hidden, [{ id: 6241, set: { public_status: "AVAILABLE", hidden_from_shop: false } }]);
+  assert.equal(back[0].public_status, "AVAILABLE");
+  assert.equal(back[0].hidden_from_shop, false);
+  assert.equal(back[0].status, "Verfügbar");
+  const sold = applyChanges(structuredClone(sample), [{ id: 6241, set: { public_status: "SOLD", sold_platform: "eBay" } }]);
+  const hiddenSold = applyChanges(sold, [{ id: 6241, set: { hidden_from_shop: true, public_status: "DRAFT" } }]);
+  assert.equal(hiddenSold[0].hidden_previous_status, "SOLD");
+  assert.equal(hiddenSold[0].sold_platform, "eBay");
+  const archived = applyChanges(hiddenSold, [{ id: 6241, set: { public_status: "SOLD", hidden_from_shop: false } }]);
+  assert.equal(archived[0].status, "Verkauft");
+  assert.equal(archived[0].sold_platform, "eBay");
+});
+
 // Nachbau der GitHub-Schnittstelle: Git-Daten, Pull Requests, Merge.
 function fakeGithub({ conflicts = 0, stalledHistory = false } = {}) {
   const calls = [];
