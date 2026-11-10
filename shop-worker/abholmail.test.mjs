@@ -189,5 +189,5 @@ test("Telegram-Meldung: Bestellung, Teil, Packstation und der Hinweis, dass die 
   const text = formatPickupReadyMessage({ order_number: "D119-20261107-4821", titel: "Prada America's Cup Sneaker" }, { typ: "packstation", nummer: "119", ort: "Aschaffenburg" });
   assert.match(text, /ABHOLBEREIT · D119-20261107-4821/);
   assert.match(text, /Packstation 119 · Aschaffenburg/);
-  assert.match(text, /erst, wenn du sie in der Admin-App abschickst/);
+  assert.match(text, /erst nach deiner Freigabe/);
 });

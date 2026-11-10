@@ -24,6 +24,7 @@ import { handleAdminNotifications } from "./admin-notifications.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
 import { notifyPaidOrder, notifyPaidOrderByProviderOrder, notifyPickupReady } from "./notifications.js";
+import { ensureTelegramPickupWebhook, handleTelegramPickupWebhook, isTelegramPickupWebhook } from "./telegram-pickup.js";
 import { sendInvoiceAfterCaptureByProviderOrder, sendOrderConfirmation, sendOrderConfirmationByProviderOrder } from "./customer-mail.js";
 import { handleAccountRequest, isAccountRoute, sendRequestedAccountLink, sendRequestedAccountLinkByProviderOrder } from "./customer-account.js";
 import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
@@ -315,6 +316,10 @@ const worker = {
       // Waechter (waechter.js): Angriffsproben, gesperrte Anschluesse, Fluten.
       const abgewiesen = await waechterVorab(request, env, ctx, url);
       if (abgewiesen) return finish(abgewiesen);
+
+      // Telegram sendet Callback-Daten ohne Browser-Origin. Der Handler prueft
+      // den geheimen Header sowie den verbundenen privaten Inhaber-Chat.
+      if (isTelegramPickupWebhook(url)) return finish(await handleTelegramPickupWebhook(request, env, reqId));
 
       if (isEbayRoute(url)) {
         await guardRuntimeRequest(request, env, url);
@@ -642,6 +647,7 @@ const worker = {
     // Online-Frankierung: offene Marken mit Warenkorb-Nummer (aus der DHL-Mail)
     // bei DHL nachsehen - bezahlt? Sendungsnummer? (dhl-qr.js)
     await runBackground(ctx, dhlMarkenAbgleichen(env, scheduledTime), "dhl_cart_refresh_failed", reqId);
+    await runBackground(ctx, ensureTelegramPickupWebhook(env, reqId), "telegram_pickup_webhook_failed", reqId);
     // Ruecksendeetiketten: bezahlt? QR-Code holen, Mail an die Kundin (ruecksendung.js).
     await runBackground(ctx, ruecksendungenAbgleichen(env, scheduledTime), "ruecksendung_refresh_failed", reqId);
     // Sendungsverfolgung: unterwegs -> Versendet (Kundenmail), zugestellt -> Zugestellt (ohne Mail).

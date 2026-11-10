@@ -25,6 +25,22 @@ Abfrage auch einen XML-Login bestaetigt, koennen zusaetzlich
 `DHL_PAKET_TRACKING_USER` und `DHL_PAKET_TRACKING_PASSWORD`
 eingerichtet werden. Ohne App-Key und -Secret bleibt der Cron inaktiv.
 Die Werte gehoeren nur in Cloudflare Worker Secrets, nie ins Repository.
+
+## Abholmail per Telegram freigeben
+
+Meldet DHL eine Sendung als abholbereit, bekommt der verbundene private
+Inhaber-Chat ein Artikelfoto, den von DHL gemeldeten Abholort und zwei Knoepfe:
+Mail in der Admin-App ansehen oder Kundenmail direkt freigeben. Eine Nummer
+wird nur angezeigt, wenn sie im aktuellen DHL-Status oder (ohne konkreten
+DHL-Abholort) in der Lieferanschrift steht. Bei abweichenden Nummern hat DHL
+Vorrang. Die Mail wird nicht automatisch ohne Freigabe gesendet.
+
+Der Worker registriert den Telegram-Webhook beim naechsten Cron-Lauf selbst,
+falls der Bot noch keinen anderen Webhook hat und der private Chat verbunden
+ist. Die Freigabe prueft den Telegram-Secret-Header und den gespeicherten Chat,
+gilt nur fuer genau eine Sendung und maximal 48 Stunden. Vor dem Senden muss
+DHLs letzter Abholbereit-Stand hoechstens acht Stunden alt sein und die
+Bestellung noch `SHIPPED` sein. Doppelte Klicks senden nicht doppelt.
 Vor Produktivschaltung: Worker-Secrets einrichten, PR mit gruenen Checks
 mergen, Worker deployen und den naechsten Cron sowie den Bestellstatus
 pruefen. Die produktive Probe war nur lesend und hat keine Bestellung

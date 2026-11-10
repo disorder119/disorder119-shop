@@ -1082,13 +1082,19 @@ const ABHOLMAIL_TEXT = Object.freeze({
 // Bestellung ("Packstation 123", PLZ, Ort - abholorte.js), sonst was die
 // Sendungsverfolgung meldet.
 export function abholortFuerMail(contact = {}, ausVerfolgung = null) {
+  const v = ausVerfolgung && typeof ausVerfolgung === "object" ? ausVerfolgung : {};
+  // Der aktuelle DHL-Scan hat Vorrang, wenn er einen konkreten Abholort nennt.
+  // Die Lieferadresse kann von einer Umleitung oder Ersatz-Packstation abweichen.
+  if (v.typ) return {
+    typ: v.typ === "filiale" ? "filiale" : "packstation", nummer: safeText(v.nummer || "", 4),
+    plz: safeText(v.plz || contact.postal_code || "", 10), ort: safeText(v.ort || contact.city || "", 60),
+  };
   const zeile = safeText(contact.address_line1 || "", 120);
   const treffer = /^(packstation|postfiliale|filiale)\s*(\d{1,4})?/i.exec(zeile.trim());
   if (treffer) {
     return { typ: /packstation/i.test(treffer[1]) ? "packstation" : "filiale", nummer: treffer[2] || "",
       plz: safeText(contact.postal_code || "", 10), ort: safeText(contact.city || "", 60) };
   }
-  const v = ausVerfolgung && typeof ausVerfolgung === "object" ? ausVerfolgung : {};
   return { typ: v.typ === "filiale" ? "filiale" : "packstation", nummer: safeText(v.nummer || "", 4),
     plz: safeText(v.plz || "", 10), ort: safeText(v.ort || contact.city || "", 60) };
 }
@@ -1884,7 +1890,7 @@ export async function sendShippingConfirmation(env, orderId, reqId = crypto.rand
 
 async function loadPickupOrder(env, orderId) {
   const order = await env.DB.prepare(`SELECT o.id,o.order_number,o.status,s.id AS shipment_id,s.carrier,s.tracking_number,s.shipped_at,
-      a.zustand AS verfolgung_zustand,a.status_text AS verfolgung_text
+      a.zustand AS verfolgung_zustand,a.status_text AS verfolgung_text,a.zuletzt_am AS verfolgung_zeit
     FROM commerce_orders o
     LEFT JOIN shipments s ON s.order_id=o.id
     LEFT JOIN sendungs_abfragen a ON a.shipment_id=s.id
@@ -1897,12 +1903,16 @@ async function loadPickupOrder(env, orderId) {
   return { ...order, items: items?.results || [], contact: contact || {} };
 }
 
-export async function sendPickupReady(env, orderId, { reqId = crypto.randomUUID(), vorschau = false, erneut = false, verfolgungsOrt = null } = {}) {
+export async function sendPickupReady(env, orderId, { reqId = crypto.randomUUID(), vorschau = false, erneut = false, verfolgungsOrt = null, requireReady = false, expectedShipmentId = null } = {}) {
   if (!env?.DB) return { sent: false, reason: "NOT_CONFIGURED" };
   if (!vorschau && !mailTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
   const order = await loadPickupOrder(env, orderId);
   if (!order) return { sent: false, reason: "ORDER_NOT_FOUND" };
   if (String(order.status || "").toUpperCase() !== "SHIPPED") return { sent: false, reason: "ORDER_NOT_SHIPPED" };
+  if (expectedShipmentId && String(order.shipment_id) !== String(expectedShipmentId)) return { sent: false, reason: "SHIPMENT_CHANGED" };
+  if (requireReady && (order.verfolgung_zustand !== "ABHOLBEREIT" || !order.verfolgung_zeit || !Number.isFinite(Date.parse(order.verfolgung_zeit)) || Math.abs(Date.now() - Date.parse(order.verfolgung_zeit)) > 8 * 3_600_000)) {
+    return { sent: false, reason: "PICKUP_NOT_CURRENT" };
+  }
   const recipient = normalizeEmail(order.contact?.email);
   if (!recipient) return { sent: false, reason: "NO_CUSTOMER_EMAIL" };
 
