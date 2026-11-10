@@ -153,7 +153,8 @@ export function zustandAusAntwort(antwort = {}) {
   if (ABGEHOLT_RE.test(text)) return { zustand: "ZUGESTELLT", code: code || "abgeholt", text };
   if (code !== "delivered" && ABHOLBEREIT_RE.test(text)) return { zustand: "ABHOLBEREIT", code: code || "abholbereit", text, abholort: abholortAusText(text) };
   const alleTexte = text;
-  const zugestellt = /\bdelivered\b|zugestellt|livr[ée]/i.test(text) || code === "delivered" || /^zu$/i.test(String(status.statusCode || ""));
+  const nichtZugestellt = /\bnot delivered\b|nicht zugestellt|zustellung (nicht m[oö]glich|fehlgeschlagen)/i.test(text);
+  const zugestellt = (!nichtZugestellt && /\bdelivered\b|zugestellt|livr[ée]/i.test(text)) || code === "delivered" || /^zu$/i.test(String(status.statusCode || ""));
   if (zugestellt) return { zustand: "ZUGESTELLT", code: code || "zu", text };
   if (code === "transit") return { zustand: "UNTERWEGS", code, text };
   if (code === "failure") return { zustand: "PROBLEM", code, text };
