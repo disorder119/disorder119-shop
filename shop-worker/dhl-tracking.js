@@ -2,9 +2,8 @@
 // wann es zugestellt ist (Inhaber 04.11.2026).
 //
 // Quelle ist die DHL-Schnittstelle "Shipment Tracking - Unified"
-// (https://api-eu.dhl.com/track/shipments, Schluessel DHL_TRACKING_API_KEY;
-// ohne eigenen Schluessel gilt der der Online-Frankierung, wenn das Produkt im
-// Entwicklerportal derselben App zugeordnet ist). Kostenloser Zugang: 250
+// (https://api-eu.dhl.com/track/shipments, Schluessel DHL_TRACKING_API_KEY).
+// Der Frankierungs-Schluessel ist dafuer nicht freigeschaltet. Kostenloser Zugang: 250
 // Abfragen am Tag, hoechstens eine alle 5 Sekunden - der Cron (alle 15 min)
 // fragt deshalb je Sendung hoechstens alle ABFRAGE_ABSTAND_MS und je Lauf
 // hoechstens ABFRAGEN_JE_LAUF Sendungen.
@@ -26,7 +25,7 @@
 import { safeText } from "./commerce-core.js";
 
 export const TRACKING_URL = "https://api-eu.dhl.com/track/shipments";
-export const ABFRAGE_ABSTAND_MS = 3 * 3_600_000;
+export const ABFRAGE_ABSTAND_MS = 6 * 3_600_000;
 export const ABFRAGEN_JE_LAUF = 6;
 export const VERLAUF_LOESCHEN_NACH_ZUSTELLUNG_MS = 30 * 86_400_000;
 // Nie zugestellt (Ruecksendung, verloren): 60 Tage nach der letzten Abfrage.
@@ -35,7 +34,8 @@ export const VERLAUF_MAX = 25;
 const HOECHSTALTER_MS = 45 * 86_400_000;
 const PAUSE_ZWISCHEN_ABFRAGEN_MS = 5_200;
 
-// Abstand je Sendung zwischen zwei Abfragen: Standard 3 Stunden, per
+// Abstand je Sendung zwischen zwei Abfragen: Standard 6 Stunden (viermal
+// taeglich), per
 // DHL_TRACKING_ABSTAND_MIN zwischen 15 Minuten und einem Tag.
 export function abfrageAbstandMs(env = {}) {
   const min = Number.parseInt(String(env?.DHL_TRACKING_ABSTAND_MIN ?? ""), 10);

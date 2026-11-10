@@ -181,7 +181,7 @@ test("Sendungsverlauf: Stationen gespeichert, im Kundenkonto sichtbar, 30 Tage n
   assert.equal((await listOrders(env, "c1"))[0].shipment.verlauf, undefined, "im Konto nur noch der Link");
 });
 
-test("Abfrageabstand: Standard 3 Stunden, per DHL_TRACKING_ABSTAND_MIN 15 Minuten bis 1 Tag", () => {
+test("Abfrageabstand: Standard 6 Stunden, per DHL_TRACKING_ABSTAND_MIN 15 Minuten bis 1 Tag", () => {
   assert.equal(abfrageAbstandMs({}), ABFRAGE_ABSTAND_MS);
   assert.equal(abfrageAbstandMs({ DHL_TRACKING_ABSTAND_MIN: "60" }), 3_600_000);
   assert.equal(abfrageAbstandMs({ DHL_TRACKING_ABSTAND_MIN: "1" }), 15 * 60_000);
