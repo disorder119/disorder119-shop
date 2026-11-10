@@ -84,7 +84,11 @@ function xmlEscape(value) {
 export function paketAntwort(xml) {
   if (typeof xml !== "string" || xml.length > 256_000 || /<!DOCTYPE|<!ENTITY/i.test(xml)) throw new Error("DHL_TRACKING_XML");
   const root = /<data\b([^>]*\bname="piece-status-public-list"[^>]*)>/i.exec(xml);
-  if (!root) throw new Error("DHL_TRACKING_XML");
+  if (!root) {
+    const noData = /<data\b([^>]*\bname="piece-shipment-list"[^>]*)>/i.exec(xml);
+    if (noData && ["100", "200"].includes(xmlAttribut(noData[1], "code"))) return { zustand: "OFFEN", code: xmlAttribut(noData[1], "code"), text: "DHL kennt die Sendung noch nicht", ereignisse: [] };
+    throw new Error("DHL_TRACKING_XML");
+  }
   const rootCode = xmlAttribut(root[1], "code");
   if (rootCode && rootCode !== "0") {
     if (rootCode === "100" || rootCode === "200") return { zustand: "OFFEN", code: rootCode, text: "DHL kennt die Sendung noch nicht", ereignisse: [] };
@@ -106,7 +110,7 @@ export function paketAntwort(xml) {
   const m = /^(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2})/.exec(rawTime);
   const date = m ? new Date(`${m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}:00+01:00`) : null;
   const ereignisse = [];
-  for (const event of xml.matchAll(/<data\b([^>]*\bname="pieceevent"[^>]*)\/?\s*>/gi)) {
+  for (const event of xml.matchAll(/<data\b([^>]*\bname="piece-?event"[^>]*)\/?\s*>/gi)) {
     const attrs = event[1];
     const raw = xmlAttribut(attrs, "event-timestamp");
     const m = /^(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2})/.exec(raw);

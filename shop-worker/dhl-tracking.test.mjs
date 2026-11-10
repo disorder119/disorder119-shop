@@ -67,6 +67,8 @@ test("DHL-Antworten werden auf unterwegs / zugestellt / offen abgebildet", () =>
   assert.equal(paketAntwort('<data name="piece-status-public-list" code="0"><data name="piece-status-public" status="Die Sendung wurde erfolgreich zugestellt." delivery-event-flag="1" last-event-timestamp="05.11.2026 12:30"/></data>').zustand, "ZUGESTELLT");
   assert.equal(paketAntwort('<data name="piece-status-public-list" code="0"><data name="piece-status-public" status="Die Sendung ist unterwegs." delivery-event-flag="0"/><data name="pieceevent" event-status="Die Sendung wurde erfolgreich zugestellt."/></data>').zustand, "UNTERWEGS");
   assert.equal(paketAntwort('<data name="piece-status-public-list" code="100"/>').zustand, "OFFEN");
+  assert.equal(paketAntwort('<data name="piece-shipment-list" code="100"><data name="piece-shipment" piece-status="100"/></data>').zustand, "OFFEN");
+  assert.deepEqual(paketAntwort('<data name="piece-status-public-list" code="0"><data name="piece-status-public" status="Die Sendung ist unterwegs." delivery-event-flag="0"/><data name="piece-event" event-timestamp="05.11.2026 12:30" event-text="Im Paketzentrum bearbeitet" event-location="Bonn"/></data>').ereignisse, [{ zeit: "2026-11-05T11:30:00.000Z", text: "Im Paketzentrum bearbeitet", ort: "Bonn" }]);
   assert.throws(() => paketAntwort('<data name="piece-status-public-list" code="0"><data name="piece-status-public" error-status="5"/></data>'), /DHL_TRACKING_PIECE_ERROR/);
   assert.throws(() => paketAntwort('<!DOCTYPE data><data name="piece-status-public-list" code="0"/>'), /DHL_TRACKING_XML/);
 });
