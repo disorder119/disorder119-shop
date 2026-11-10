@@ -24,7 +24,7 @@ import { handleAdminNotifications } from "./admin-notifications.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
 import { notifyPaidOrder, notifyPaidOrderByProviderOrder, notifyPickupReady } from "./notifications.js";
-import { ensureTelegramPickupWebhook, handleTelegramPickupWebhook, isTelegramPickupWebhook } from "./telegram-pickup.js";
+import { ensureTelegramPickupWebhook, handleTelegramPickupWebhook, handleTelegramPickupPreview, isTelegramPickupPreview, isTelegramPickupWebhook } from "./telegram-pickup.js";
 import { sendQueuedPickupSamples } from "./telegram-pickup-samples.js";
 import { sendInvoiceAfterCaptureByProviderOrder, sendOrderConfirmation, sendOrderConfirmationByProviderOrder } from "./customer-mail.js";
 import { handleAccountRequest, isAccountRoute, sendRequestedAccountLink, sendRequestedAccountLinkByProviderOrder } from "./customer-account.js";
@@ -321,6 +321,10 @@ const worker = {
       // Telegram sendet Callback-Daten ohne Browser-Origin. Der Handler prueft
       // den geheimen Header sowie den verbundenen privaten Inhaber-Chat.
       if (isTelegramPickupWebhook(url)) return finish(await handleTelegramPickupWebhook(request, env, reqId));
+
+      // Vorschau der tatsaechlichen Kundenmail aus dem Telegram-Knopf. Der
+      // Link selbst ist eine zufaellige Kennung und ist zeitlich begrenzt.
+      if (isTelegramPickupPreview(url)) return finish(await handleTelegramPickupPreview(url, env, reqId));
 
       if (isEbayRoute(url)) {
         await guardRuntimeRequest(request, env, url);
