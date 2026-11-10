@@ -37,7 +37,12 @@ function seed({ orderStatus = "SHIPPED", adresse = "Packstation 119" } = {}) {
 
 function fakeTracking(antworten) {
   const calls = [];
-  return { calls, fetchImpl: async url => { calls.push(String(url)); return Response.json(antworten.shift()); } };
+  return { calls, fetchImpl: async url => {
+    calls.push(String(url));
+    const s = antworten.shift().shipments[0].status;
+    const escape = v => String(v || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    return new Response(`<data name="piece-status-public-list" code="0"><data name="piece-status-public" status="${escape(s.status)}" standard-event-code="${escape(s.statusCode)}" delivery-event-flag="0"/></data>`);
+  } };
 }
 
 function mailFetch() {
@@ -70,7 +75,7 @@ test("DHL: abholbereit in Packstation/Filiale ist ein eigener Zwischenschritt, a
 
 test("Cron: abholbereit -> Telegram-Meldung genau einmal, aber KEINE Mail an die Kundschaft", async () => {
   const DB = seed();
-  const env = { DB, DHL_TRACKING_API_KEY: "tracking-key", ...MAIL_ENV };
+  const env = { DB, DHL_PAKET_TRACKING_API_KEY: "tracking-key", DHL_PAKET_TRACKING_API_SECRET: "secret", DHL_PAKET_TRACKING_USER: "user", DHL_PAKET_TRACKING_PASSWORD: "pass", ...MAIL_ENV };
   const f = mailFetch();
   const meldungen = [];
   try {

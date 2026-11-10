@@ -130,7 +130,7 @@ export function connectionSnapshot(env = {}) {
       telegram: { state: state(env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_CHAT_ID || env.DB) },
       packlink: { state: state(env.PACKLINK_API_KEY), webhook: Boolean(env.PACKLINK_WEBHOOK_TOKEN) },
       dhl: { state: state(env.DHL_PRIVAT_API_KEY), environment: env.DHL_PRIVAT_ENVIRONMENT === "live" ? "live" : "sandbox" },
-      dhlTracking: { state: state(env.DHL_TRACKING_API_KEY) },
+      dhlTracking: { state: state(env.DHL_PAKET_TRACKING_API_KEY && env.DHL_PAKET_TRACKING_API_SECRET && env.DHL_PAKET_TRACKING_USER && env.DHL_PAKET_TRACKING_PASSWORD) },
       turnstile: { state: state(env.TURNSTILE_SECRET) },
       rateLimiter: { state: state(env.RATE_LIMITER) },
       ebay: { state: state(env.EBAY_CLIENT_ID, env.EBAY_CLIENT_SECRET, env.EBAY_VERIFICATION_TOKEN) },

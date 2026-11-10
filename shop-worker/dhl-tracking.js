@@ -1,10 +1,9 @@
 // Sendungsverfolgung: der Shop erkennt selbst, wann ein Paket unterwegs und
 // wann es zugestellt ist (Inhaber 04.11.2026).
 //
-// Quelle ist die DHL-Schnittstelle "Shipment Tracking - Unified"
-// (https://api-eu.dhl.com/track/shipments, Schluessel DHL_TRACKING_API_KEY).
-// Der Frankierungs-Schluessel ist dafuer nicht freigeschaltet. Kostenloser Zugang: 250
-// Abfragen am Tag, hoechstens eine alle 5 Sekunden - der Cron (alle 15 min)
+// Quelle ist DHL Parcel DE Tracking (oeffentliche Abfrage). API-Key/Secret
+// und Tracking-Benutzer/Passwort sind getrennte Zugangsdaten.
+// Der Frankierungs-Schluessel ist dafuer nicht freigeschaltet. Der Cron (alle 15 min)
 // fragt deshalb je Sendung hoechstens alle ABFRAGE_ABSTAND_MS und je Lauf
 // hoechstens ABFRAGEN_JE_LAUF Sendungen.
 //
@@ -15,16 +14,12 @@
 //
 // Sendungsverlauf im Kundenkonto (Inhaber 05.11.2026): die Stationen der
 // letzten Abfrage stehen in sendungs_abfragen.ereignisse_json. DHL-Bedingungen
-// (developer.dhl.com/api-reference/shipment-tracking): nur fuer die eigene
 // Kundschaft, mit dem Vermerk "Delivered by Deutsche Post DHL Group", ohne
 // Werbung daneben, und 30 Tage nach Zustellung loeschen (verlaufAufraeumen).
-// Der kostenlose Zugang ist laut DHL fuer die Entwicklung gedacht; mit
-// hoeherem Kontingent ("Request Upgrade") laesst sich der Abstand ueber
-// DHL_TRACKING_ABSTAND_MIN verkuerzen.
 
 import { safeText } from "./commerce-core.js";
 
-export const TRACKING_URL = "https://api-eu.dhl.com/track/shipments";
+export const TRACKING_URL = "https://api-eu.dhl.com/parcel/de/tracking/v0/shipments";
 export const ABFRAGE_ABSTAND_MS = 6 * 3_600_000;
 export const ABFRAGEN_JE_LAUF = 6;
 export const VERLAUF_LOESCHEN_NACH_ZUSTELLUNG_MS = 30 * 86_400_000;
@@ -60,13 +55,65 @@ export function verlaufAus(antwort = {}) {
 }
 
 export function trackingReady(env = {}) {
-  return Boolean(trackingKey(env));
+  return Boolean(trackingKey(env) && env.DHL_PAKET_TRACKING_API_SECRET && env.DHL_PAKET_TRACKING_USER && env.DHL_PAKET_TRACKING_PASSWORD);
 }
 
 function trackingKey(env = {}) {
   // Die Frankierungs-API kann einen anderen Freigabestand haben. Ihr
   // Schluessel hat in Produktion wiederholt HTTP 401 beim Tracking geliefert.
-  return String(env.DHL_TRACKING_API_KEY || "").trim();
+  return String(env.DHL_PAKET_TRACKING_API_KEY || "").trim();
+}
+
+function xmlAttribut(text, name) {
+  const match = new RegExp(`(?:^|\\s)${name}="([^"]*)"`).exec(text);
+  return match ? match[1].replace(/&(?:amp|lt|gt|quot|apos|#\d+|#x[\da-f]+);/gi, entity => {
+    const named = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&apos;": "'" };
+    if (named[entity]) return named[entity];
+    const hex = entity.slice(0, 3).toLowerCase() === "&#x";
+    const cp = Number.parseInt(entity.slice(hex ? 3 : 2, -1), hex ? 16 : 10);
+    return Number.isInteger(cp) && cp >= 0 && cp <= 0x10ffff && !(cp >= 0xd800 && cp <= 0xdfff) ? String.fromCodePoint(cp) : "";
+  }) : "";
+}
+
+function xmlEscape(value) {
+  return String(value).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]);
+}
+
+// Nur aktuelle "piece-status-public"-Attribute auswerten, keine historischen
+// Ereignisse: Ein alter Zustellscan darf eine heutige Retoure nicht zustellen.
+export function paketAntwort(xml) {
+  if (typeof xml !== "string" || xml.length > 256_000 || /<!DOCTYPE|<!ENTITY/i.test(xml)) throw new Error("DHL_TRACKING_XML");
+  const root = /<data\b([^>]*\bname="piece-status-public-list"[^>]*)>/i.exec(xml);
+  if (!root) throw new Error("DHL_TRACKING_XML");
+  const rootCode = xmlAttribut(root[1], "code");
+  if (rootCode && rootCode !== "0") {
+    if (rootCode === "100" || rootCode === "200") return { zustand: "OFFEN", code: rootCode, text: "DHL kennt die Sendung noch nicht", ereignisse: [] };
+    const err = new Error("DHL_TRACKING_RESPONSE"); err.code = `DHL_${rootCode}`; throw err;
+  }
+  const piece = /<data\b([^>]*\bname="piece-status-public"[^>]*)\/?\s*>/i.exec(xml);
+  if (!piece) return { zustand: "OFFEN", code: rootCode || "", text: "DHL kennt die Sendung noch nicht", ereignisse: [] };
+  const attrs = piece[1];
+  const code = xmlAttribut(attrs, "standard-event-code") || xmlAttribut(attrs, "ice");
+  const text = safeText(xmlAttribut(attrs, "status"), 300);
+  const delivered = xmlAttribut(attrs, "delivery-event-flag") === "1";
+  const stand = zustandAusAntwort({ shipments: [{ status: { statusCode: delivered ? "delivered" : code, status: text } }] });
+  const rawTime = xmlAttribut(attrs, "last-event-timestamp");
+  const m = /^(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2})/.exec(rawTime);
+  const date = m ? new Date(`${m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}:00+01:00`) : null;
+  const ereignisse = [];
+  for (const event of xml.matchAll(/<data\b([^>]*\bname="pieceevent"[^>]*)\/?\s*>/gi)) {
+    const attrs = event[1];
+    const raw = xmlAttribut(attrs, "event-timestamp");
+    const m = /^(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2})/.exec(raw);
+    const iso = m ? `${m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}:00+01:00` : raw;
+    const time = Date.parse(iso);
+    const description = safeText(xmlAttribut(attrs, "event-text") || xmlAttribut(attrs, "event-status"), 200).trim();
+    const ort = safeText(xmlAttribut(attrs, "event-location"), 80).trim();
+    if (Number.isFinite(time) && description) ereignisse.push({ zeit: new Date(time).toISOString(), text: description, ...(ort ? { ort } : {}) });
+  }
+  if (!ereignisse.length && date && Number.isFinite(date.getTime()) && text) ereignisse.push({ zeit: date.toISOString(), text });
+  ereignisse.sort((a, b) => b.zeit.localeCompare(a.zeit));
+  return { ...stand, ereignisse: ereignisse.slice(0, VERLAUF_MAX) };
 }
 
 // Zwischenschritt "abholbereit" (Inhaber 07.11.2026): Das Paket liegt in einer
@@ -96,8 +143,8 @@ export function zustandAusAntwort(antwort = {}) {
   const ereignisse = Array.isArray(sendung.events) ? sendung.events : [];
   if (ABGEHOLT_RE.test(text)) return { zustand: "ZUGESTELLT", code: code || "abgeholt", text };
   if (code !== "delivered" && ABHOLBEREIT_RE.test(text)) return { zustand: "ABHOLBEREIT", code: code || "abholbereit", text, abholort: abholortAusText(text) };
-  const alleTexte = [text, ...ereignisse.map(e => safeText([e?.statusCode, e?.status, e?.description].filter(Boolean).join(" "), 200))].join(" | ");
-  const zugestellt = /\bdelivered\b|zugestellt|livr[ée]/i.test(alleTexte) || code === "delivered" || /^zu$/i.test(String(status.statusCode || ""));
+  const alleTexte = text;
+  const zugestellt = /\bdelivered\b|zugestellt|livr[ée]/i.test(text) || code === "delivered" || /^zu$/i.test(String(status.statusCode || ""));
   if (zugestellt) return { zustand: "ZUGESTELLT", code: code || "zu", text };
   if (code === "transit") return { zustand: "UNTERWEGS", code, text };
   if (code === "failure") return { zustand: "PROBLEM", code, text };
@@ -112,25 +159,25 @@ export function zustandAusAntwort(antwort = {}) {
 }
 
 export async function sendungAbfragen(env, trackingNumber, { plz = "", fetchImpl = fetch } = {}) {
+  if (!trackingReady(env)) throw new Error("DHL_TRACKING_CONFIG");
+  if (!/^[A-Za-z0-9]{8,40}$/.test(String(trackingNumber))) throw new Error("DHL_TRACKING_NUMMER");
+  const root = `<data request="get-status-for-public-user" appname="${xmlEscape(env.DHL_PAKET_TRACKING_USER)}" password="${xmlEscape(env.DHL_PAKET_TRACKING_PASSWORD)}" language-code="de"><data piece-code="${xmlEscape(trackingNumber)}"${/^\d{5}$/.test(plz) ? ` zip-code="${plz}"` : ""}/></data>`;
   const url = new URL(TRACKING_URL);
-  url.searchParams.set("trackingNumber", trackingNumber);
-  url.searchParams.set("service", "parcel-de");
-  url.searchParams.set("language", "de");
-  if (plz) url.searchParams.set("recipientPostalCode", plz);
+  url.searchParams.set("xml", root);
+  const basic = btoa(`${trackingKey(env)}:${String(env.DHL_PAKET_TRACKING_API_SECRET)}`);
   const res = await fetchImpl(url.toString(), {
     method: "GET",
     redirect: "manual",
     signal: AbortSignal.timeout(12_000),
-    headers: { "DHL-API-Key": trackingKey(env), Accept: "application/json" },
+    headers: { "DHL-API-Key": trackingKey(env), Authorization: `Basic ${basic}`, Accept: "application/xml" },
   });
   if (res.status === 404) return { zustand: "OFFEN", code: "404", text: "DHL kennt die Sendung noch nicht", ereignisse: [] };
   if (res.status === 429) { const e = new Error("DHL_TRACKING_LIMIT"); e.code = "LIMIT"; throw e; }
   if (!res.ok) { const e = new Error(`DHL_TRACKING_HTTP_${res.status}`); e.code = `HTTP_${res.status}`; throw e; }
-  const antwort = await res.json();
-  return { ...zustandAusAntwort(antwort), ereignisse: verlaufAus(antwort) };
+  return paketAntwort(await res.text());
 }
 
-// DHL-Bedingungen: Tracking-Daten 30 Tage nach Zustellung loeschen. Uebrig
+// Tracking-Daten 30 Tage nach Zustellung loeschen. Uebrig
 // bleibt nur der eigene Stand (zustand, Zeitpunkte) fuer den Cron.
 export async function verlaufAufraeumen(db, now = Date.now()) {
   const nachZustellung = new Date(now - VERLAUF_LOESCHEN_NACH_ZUSTELLUNG_MS).toISOString();
