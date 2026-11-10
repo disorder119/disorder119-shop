@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "wrangler": "4.151.1"
+    "wrangler": "^4.159.0"
   },
   "name": "disorder119-storefront-publish",
   "private": true
