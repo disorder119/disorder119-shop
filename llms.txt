@@ -1,6 +1,6 @@
 # Disorder119
 
-> Kuratiertes Archiv für Second-Hand-Designermode aus Deutschland: ausgewählte Teile von A.F. Vandevorst, Adidas, Alexander McQueen, Ann Demeulemeester, Arc’teryx, Armani, Balenciaga, Balmain, Burberry, Calvin Klein Collection, Celine, Comme des Garçons und weiteren. Jedes Teil ist im Shop nur 1× verfügbar, Zustand gebraucht, Fotos vom tatsächlichen Stück. Sprachen: Deutsch (/), Englisch (/en/), Französisch (/fr/).
+> Kuratiertes Archiv für Second-Hand-Designermode aus Deutschland: ausgewählte Teile von A.F. Vandevorst, Adidas, Alexander McQueen, Ann Demeulemeester, Arc’teryx, Armani, Balenciaga, Balmain, Burberry, Celine, Comme des Garçons, Diesel und weiteren. Jedes Teil ist im Shop nur 1× verfügbar, Zustand gebraucht, Fotos vom tatsächlichen Stück. Sprachen: Deutsch (/), Englisch (/en/), Französisch (/fr/).
 
 ## Kaufen
 - Preise in EUR, Endpreise (Kleinunternehmer, keine Umsatzsteuer ausgewiesen).
@@ -18,7 +18,7 @@
 - Artikelnummer = Pfad: https://disorder119.com/artikel/<nummer>/ (Englisch /en/artikel/<nummer>/, Französisch /fr/artikel/<nummer>/).
 - Impressum und Rechtstexte sind für Menschen auf der Seite erreichbar und werden bewusst nicht indexiert.
 
-## Verfügbare Teile (193)
+## Verfügbare Teile (192)
 - [A.F. Vandevorst Cardigan mit Muster Damen](https://disorder119.com/artikel/191/): 190 € · Größe S · Grau
 - [A.F. Vandevorst Bluse Damen Blau](https://disorder119.com/artikel/192/): 175 € · Größe 42 · Blau
 - [Adidas Originals Sample-Parka Unisex Schwarz](https://disorder119.com/artikel/108/): 280 € · Größe M · Schwarz
@@ -39,7 +39,6 @@
 - [Pierre Balmain Sweatshirt Herren Grau](https://disorder119.com/artikel/75/): 70 € · Größe 48 · Grau
 - [Pierre Balmain Steppjacke Damen Grau](https://disorder119.com/artikel/2/): 35 € · Größe M / 38 / 10 · Grau
 - [Burberry Nova Check Shorts Damen](https://disorder119.com/artikel/68/): 80 € · Größe 42 · Beige
-- [Calvin Klein Collection Jacke mit Kapuze Herren Schwarz](https://disorder119.com/artikel/244/): 120 € · Größe IT 52 · Schwarz
 - [Celine Cardigan Damen Orange](https://disorder119.com/artikel/127/): 80 € · Größe S / 36 / 8 · Orange
 - [Comme des Garçons Union-Jack-Top Damen](https://disorder119.com/artikel/59/): 400 € · Größe S / 36 / 8 · Rot, Weiß
 - [Comme des Garçons Junya Watanabe Kleid mit Wax-Print Damen Bunt](https://disorder119.com/artikel/258/): 310 € · Größe M · Mehrfarbig
@@ -213,4 +212,4 @@
 - [Yves Saint Laurent Leder-Winterjacke Unisex Schwarz](https://disorder119.com/artikel/204/): 490 € · Größe L (geschätzt) · Schwarz
 - [Yves Saint Laurent Rive Gauche Seidentop Damen Bunt](https://disorder119.com/artikel/142/): 120 € · Größe S / 36 / 8 · Orange, Bunt
 
-Weitere 82 Teile im Archiv sind verkauft und bleiben als Referenz sichtbar.
+Weitere 83 Teile im Archiv sind verkauft und bleiben als Referenz sichtbar.
