@@ -86,3 +86,16 @@ test("Lager: Teil liegt in der Wohnung und kommt zurueck in die Kiste", async ()
   d = await (await api(env, "/admin/lager/artikel", "POST", { artikel: "270", kiste: 8 })).json();
   assert.equal(d.kisten[7].artikel[0].ort, "");
 });
+
+test("Lager: Bilder fuers PDF nur aus dem Bildordner, hoechstens zwoelf", async () => {
+  const geholt = [];
+  const env = { DB: sqliteD1(allMigrations()), ADMIN_TOKEN: "test-token",
+    BILD_FETCH: async url => { geholt.push(url); return new Response(new Uint8Array([82, 73, 70, 70]), { status: 200 }); } };
+  assert.equal(isLagerRoute(new URL("https://api.disorder119.com/admin/lager/bilder")), true);
+  const d = await (await api(env, "/admin/lager/bilder", "POST", { pfade: ["assets/img/9408/thumbs/0.webp", "../wrangler.toml", "https://boese.example/x.webp", "assets/img/b2-241/0.webp"] })).json();
+  assert.deepEqual(Object.keys(d.bilder).sort(), ["assets/img/9408/thumbs/0.webp", "assets/img/b2-241/0.webp"]);
+  assert.equal(d.bilder["assets/img/9408/thumbs/0.webp"], "data:image/webp;base64,UklGRg==");
+  assert.ok(geholt.every(u => u.startsWith("https://disorder119.com/assets/img/")));
+  assert.equal((await api(env, "/admin/lager/bilder", "POST", { pfade: ["x"] })).status, 400);
+  assert.equal((await api(env, "/admin/lager/bilder", "POST", { pfade: ["assets/img/9408/0.webp"] }, "falsch")).status, 401);
+});
