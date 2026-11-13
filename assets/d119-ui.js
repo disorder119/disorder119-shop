@@ -628,12 +628,12 @@
         PA: "es", DO: "es", GT: "es", HN: "es", SV: "es", NI: "es", NL: "nl", PL: "pl", PT: "pt", BR: "pt" };
       // Menü in der Sprache der Seite (de/en/fr).
       var UI = ({
-        de: { titel: "Wie möchtest du teilen?", foto: ["Foto mit Infos", "Bild + Nachricht · WhatsApp, Instagram, Nachrichten"], story: ["Instagram-Story", "Hochformat mit Logo, Marke und Preis"],
-          link: ["Link kopieren", "Zum Einfügen, wo du willst"], zu: "Abbrechen", kopiert: "Link kopiert", gespeichert: "Bild gespeichert – Nachricht und Link sind in der Zwischenablage", fehler: "Das hat nicht geklappt. Bitte noch einmal." },
-        en: { titel: "How do you want to share?", foto: ["Photo with details", "Image + message · WhatsApp, Instagram, messages"], story: ["Instagram Story", "Portrait format with logo, brand and price"],
-          link: ["Copy link", "Paste it wherever you like"], zu: "Cancel", kopiert: "Link copied", gespeichert: "Image saved – message and link are on your clipboard", fehler: "That didn't work. Please try again." },
-        fr: { titel: "Comment veux-tu partager ?", foto: ["Photo avec infos", "Image + message · WhatsApp, Instagram, messages"], story: ["Story Instagram", "Format portrait avec logo, marque et prix"],
-          link: ["Copier le lien", "À coller où tu veux"], zu: "Annuler", kopiert: "Lien copié", gespeichert: "Image enregistrée – message et lien copiés", fehler: "Ça n'a pas marché. Réessaie." }
+        de: { titel: "Wie möchtest du teilen?", foto: ["Foto mit Infos", "Bild + Nachricht · WhatsApp, Nachrichten"], story: ["Instagram", "Nur das Bild im Hochformat · Story, Beitrag oder Nachricht"],
+          link: ["Link kopieren", "Zum Einfügen, wo du willst"], zu: "Abbrechen", kopiert: "Link kopiert", storyLink: "Link kopiert – in der Story als Link-Sticker einfügen", gespeichert: "Bild gespeichert – Nachricht und Link sind in der Zwischenablage", fehler: "Das hat nicht geklappt. Bitte noch einmal." },
+        en: { titel: "How do you want to share?", foto: ["Photo with details", "Image + message · WhatsApp, messages"], story: ["Instagram", "Portrait image only · story, post or message"],
+          link: ["Copy link", "Paste it wherever you like"], zu: "Cancel", kopiert: "Link copied", storyLink: "Link copied – add it to your story as a link sticker", gespeichert: "Image saved – message and link are on your clipboard", fehler: "That didn't work. Please try again." },
+        fr: { titel: "Comment veux-tu partager ?", foto: ["Photo avec infos", "Image + message · WhatsApp, messages"], story: ["Instagram", "Image seule en portrait · story, publication ou message"],
+          link: ["Copier le lien", "À coller où tu veux"], zu: "Annuler", kopiert: "Lien copié", storyLink: "Lien copié – ajoute-le à ta story comme sticker lien", gespeichert: "Image enregistrée – message et lien copiés", fehler: "Ça n'a pas marché. Réessaie." }
       })[seitenSprache] || null;
       if (!UI) UI = { titel: "Wie möchtest du teilen?" };
       var ICON = {
@@ -821,6 +821,19 @@
         var a = document.createElement("a"); a.href = URL.createObjectURL(f); a.download = f.name;
         document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
       }
+      // Instagram nimmt am Handy nur ein Bild allein an - mit Text/Link im selben Paket taucht Instagram im
+      // Teilen-Menue nicht auf oder verwirft das Bild (Rueckmeldung 13.11.2026). Deshalb: nur die Datei teilen,
+      // der Link liegt in der Zwischenablage (in der Story als Link-Sticker einfuegen).
+      function storyTeilen(f) {
+        if (!f) return Promise.reject(new Error("Bild noch nicht fertig"));
+        var nur = { files: [f] };
+        if (kannTeilen && grob && navigator.canShare && navigator.canShare(nur)) {
+          linkKopieren().then(function () { toast(UI.storyLink, 5000); }, function () {});
+          return navigator.share(nur);
+        }
+        speichern(f);
+        return linkKopieren().then(function () { toast(UI.gespeichert); }, function () { toast(UI.gespeichert); });
+      }
       function teilenMit(f, sprache) {
         var text = nachricht(sprache);
         var daten = { title: titelFuer(sprache) + " – Disorder119", text: text, url: teilenLink };
@@ -864,7 +877,7 @@
             var art = opt.getAttribute("data-art");
             if (art === "link") { linkKopieren().then(function () { toast(UI.kopiert); menueZu(); }, function () { status(UI.fehler); }); return; }
             var bereit = art === "foto" ? (karteBereit || (karteBereit = karteDatei(menueSprache))) : (storyBereit || (storyBereit = storyDatei(menueSprache)));
-            mitFrist(bereit, 2500, null).catch(function () { return null; }).then(function (f) { return teilenMit(f, menueSprache); })
+            mitFrist(bereit, 2500, null).catch(function () { return null; }).then(function (f) { return art === "story" ? storyTeilen(f) : teilenMit(f, menueSprache); })
               .then(menueZu).catch(function (err) { if (!err || err.name !== "AbortError") status(UI.fehler); });
           });
           document.body.appendChild(menue);
@@ -928,7 +941,8 @@
     speicher("ui_besuche", besuche);
     // Auch beim Zurueck aus einem Teil (iPhone: Kopf soll oben liegen, nicht sichtbar sein) - nur wenn
     // der Browser die alte Position nicht ohnehin wiederhergestellt hat (scrollY < 40).
-    if (rail && besuche >= 2 && !location.hash && window.scrollY < 40) {
+    // 13.11.2026 (Inhaber): kein Sprung mehr - am Handy war der grosse Schriftzug dadurch nie zu sehen.
+    if (false && rail && besuche >= 2 && !location.hash && window.scrollY < 40) {
       var kopf = document.querySelector(".page-head");
       var versatz = (kopf ? kopf.getBoundingClientRect().height : 0) + 6;
       var ziel = function () { return rail.getBoundingClientRect().top + window.scrollY - versatz; };
