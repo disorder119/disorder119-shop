@@ -57,12 +57,12 @@ const artikelNr = wert => { const s = String(wert ?? "").trim().replace(/^#/, ""
 async function uebersicht(db) {
   const [kisten, plaetze] = await Promise.all([
     db.prepare("SELECT id, name, notiz, pos FROM lager_kisten ORDER BY pos, id").all(),
-    db.prepare("SELECT artikel, kiste_id, geprueft FROM lager_plaetze ORDER BY CAST(artikel AS INTEGER)").all(),
+    db.prepare("SELECT artikel, kiste_id, geprueft, ort FROM lager_plaetze ORDER BY CAST(artikel AS INTEGER)").all(),
   ]);
   const je = new Map();
   for (const p of plaetze.results || []) {
     if (!je.has(p.kiste_id)) je.set(p.kiste_id, []);
-    je.get(p.kiste_id).push({ artikel: String(p.artikel), geprueft: Boolean(p.geprueft) });
+    je.get(p.kiste_id).push({ artikel: String(p.artikel), geprueft: Boolean(p.geprueft), ort: p.ort || "" });
   }
   return {
     schema: "lager-v1",
@@ -136,7 +136,14 @@ export async function handleLager(request, env, url, reqId = crypto.randomUUID()
         const geprueft = body?.geprueft === false ? 0 : 1;   // von Hand einsortiert = nachgesehen
         for (const nr of nummern) {
           befehle.push(env.DB.prepare(`INSERT INTO lager_plaetze (artikel, kiste_id, geprueft, updated_at) VALUES (?,?,?,?)
-            ON CONFLICT(artikel) DO UPDATE SET kiste_id=excluded.kiste_id, geprueft=excluded.geprueft, updated_at=excluded.updated_at`).bind(nr, id, geprueft, jetzt));
+            ON CONFLICT(artikel) DO UPDATE SET kiste_id=excluded.kiste_id, geprueft=excluded.geprueft, ort='', updated_at=excluded.updated_at`).bind(nr, id, geprueft, jetzt));
+        }
+      } else if (body?.ort !== undefined) {
+        // Teil liegt gerade woanders ("wohnung") oder wieder in der Kiste ("") - zurueckgelegt heisst auch: nachgesehen.
+        const ort = body.ort === "wohnung" ? "wohnung" : "";
+        for (const nr of nummern) {
+          befehle.push(ort ? env.DB.prepare("UPDATE lager_plaetze SET ort=?, updated_at=? WHERE artikel=?").bind(ort, jetzt, nr)
+            : env.DB.prepare("UPDATE lager_plaetze SET ort='', geprueft=1, updated_at=? WHERE artikel=?").bind(jetzt, nr));
         }
       } else if (typeof body?.geprueft === "boolean") {
         for (const nr of nummern) befehle.push(env.DB.prepare("UPDATE lager_plaetze SET geprueft=?, updated_at=? WHERE artikel=?").bind(body.geprueft ? 1 : 0, jetzt, nr));
