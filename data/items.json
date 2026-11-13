@@ -7955,7 +7955,7 @@
     "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
-    "size_normalized": "M",
+    "size_normalized": "IT 46",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
@@ -8183,11 +8183,11 @@
     "department": "Women",
     "product_type": "Skirt",
     "taxonomy_category": "Skirts",
-    "size_normalized": "M",
+    "size_normalized": "IT 44",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "IT 44"
+    "label_size": "S"
   },
   {
     "id": 9430,
@@ -9678,7 +9678,7 @@
     "department": "Women",
     "product_type": "Trousers",
     "taxonomy_category": "Pants",
-    "size_normalized": "Other",
+    "size_normalized": "30",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
@@ -10459,11 +10459,11 @@
     "department": "Women",
     "product_type": "Cardigan",
     "taxonomy_category": "Knitwear",
-    "size_normalized": "M",
+    "size_normalized": "XL",
     "size_source": "structured",
     "taxonomy_confidence": "explicit",
     "taxonomy_reviewed": true,
-    "label_size": "42"
+    "label_size": "M"
   },
   {
     "id": 9368,
