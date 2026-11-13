@@ -3883,3 +3883,7 @@ img[data-d119-image-protected] {
 .faq-item summary:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .faq-answer { padding: 0 0 20px; max-width: 72ch; }
 .faq-answer p { margin: 0; line-height: 1.65; }
+
+/* Match: Info-Knopf oben rechts auf der Karte -> Artikelseite (13.11.2026) */
+.swipe-card__info { position: absolute; top: 12px; right: 12px; z-index: 4; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(10,10,10,.72); color: #f2efe7; border: 1px solid rgba(242,239,231,.55); font: italic 700 19px/1 Georgia, 'Times New Roman', serif; text-decoration: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.swipe-card__info:hover, .swipe-card__info:focus-visible { background: #f2efe7; color: #0a0a0a; outline: none; }

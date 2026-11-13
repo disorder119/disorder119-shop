@@ -260,7 +260,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       toArchive: "Zum Archiv →",
       swipeHint: "Ziehen oder klicken — ✕ überspringen, ♥ merken",
       swipeRoundDone: "Runde beendet", swipeSavedInCart: "Teile gemerkt &amp; im Warenkorb",
-      swipeViewCart: "Warenkorb ansehen", swipePlayAgain: "Nochmal spielen", swipeNopeTag: "Nope",
+      swipeViewCart: "Warenkorb ansehen", swipePlayAgain: "Nochmal spielen", swipeNopeTag: "Nope", swipeInfoAria: "Details zum Teil ansehen",
       swipeNopeAria: "Nicht mein Stil", swipeLikeAria: "Merken",
       chaosShuffle: "Mischen",
       chaosSkyLabel: "Universum: Artikel im Raum. Am Desktop Maus bewegen zum Umsehen, Trackpad oder Mausrad zum Zoomen, Doppelklick öffnet ein Teil. Pfeil hoch und runter zoomt.",
@@ -404,7 +404,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       toArchive: "To the archive →",
       swipeHint: "Drag or click — ✕ skip, ♥ save",
       swipeRoundDone: "Round finished", swipeSavedInCart: "Pieces saved &amp; in cart",
-      swipeViewCart: "View cart", swipePlayAgain: "Play again", swipeNopeTag: "Nope",
+      swipeViewCart: "View cart", swipePlayAgain: "Play again", swipeNopeTag: "Nope", swipeInfoAria: "View item details",
       swipeNopeAria: "Not my style", swipeLikeAria: "Save",
       chaosShuffle: "Shuffle",
       chaosSkyLabel: "Universe: pieces floating in space. On desktop move the mouse to look around, use the trackpad or wheel to zoom, double-click to open a piece. Arrow up and down zoom.",
@@ -548,7 +548,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       toArchive: "Vers l'archive →",
       swipeHint: "Glisse ou clique — ✕ passer, ♥ garder",
       swipeRoundDone: "Manche terminée", swipeSavedInCart: "Pièces enregistrées &amp; dans le panier",
-      swipeViewCart: "Voir le panier", swipePlayAgain: "Rejouer", swipeNopeTag: "Non",
+      swipeViewCart: "Voir le panier", swipePlayAgain: "Rejouer", swipeNopeTag: "Non", swipeInfoAria: "Voir les détails de la pièce",
       swipeNopeAria: "Pas mon style", swipeLikeAria: "Garder",
       chaosShuffle: "Mélanger",
       chaosSkyLabel: "Univers : les pièces flottent dans l'espace. Sur ordinateur, déplacez la souris pour explorer, utilisez le pavé tactile ou la molette pour zoomer et double-cliquez pour ouvrir une pièce.",
@@ -2878,6 +2878,8 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
         '<img src="' + photos[0] + '" alt="' + escapeHtml(productAltText(it)) + '" />' +
         '<div class="swipe-card__zones"><span class="swipe-card__zone"></span><span class="swipe-card__zone"></span></div>' +
         dotsHtml +
+        // Info-Knopf (13.11.2026): im Match-Modus kam man bisher nicht zur Artikelseite.
+        '<a class="swipe-card__info" href="' + langHome(LANG) + "artikel/" + (it.url_slug || it.id) + '/" aria-label="' + t("swipeInfoAria") + '">i</a>' +
         '<span class="swipe-card__tag swipe-card__tag--like" data-tag="like">' + t("swipeLikeAria") + '</span>' +
         '<span class="swipe-card__tag swipe-card__tag--nope" data-tag="nope">' + t("swipeNopeTag") + '</span>' +
       "</div>" +
@@ -2901,6 +2903,12 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
         d.classList.toggle("swipe-card__dot--active", i2 === photoIdx);
       });
     }
+
+    // Der Info-Knopf darf weder ziehen noch das Foto weiterschalten.
+    var infoEl = card.querySelector(".swipe-card__info");
+    ["pointerdown", "pointerup", "click"].forEach(function (typ) {
+      infoEl.addEventListener(typ, function (e) { e.stopPropagation(); });
+    });
 
     wireSwipeCard(card, it, setPhoto, function () { return photoIdx; }, photos.length);
   }
