@@ -36,7 +36,7 @@ test("Lager: Startbestand mit neun Kisten, alles ungeprueft, nur mit Anmeldung",
 test("Lager: einsortieren, umlegen, bestaetigen, herausnehmen", async () => {
   const env = { DB: sqliteD1(allMigrations()), ADMIN_TOKEN: "test-token" };
   let d = await (await api(env, "/admin/lager/artikel", "POST", { artikel: ["#270", "271", "abc"], kiste: 7 })).json();
-  assert.deepEqual(d.kisten[6].artikel, [{ artikel: "270", geprueft: true }, { artikel: "271", geprueft: true }]);
+  assert.deepEqual(d.kisten[6].artikel, [{ artikel: "270", geprueft: true, ort: "" }, { artikel: "271", geprueft: true, ort: "" }]);
 
   // umlegen: 270 liegt danach nur noch in Kiste 8
   d = await (await api(env, "/admin/lager/artikel", "POST", { artikel: "270", kiste: 8 })).json();
@@ -70,4 +70,19 @@ test("Lager: Kiste anlegen, umbenennen, nur leer entfernen", async () => {
   d = await (await api(env, `/admin/lager/kisten/${neu.id}`, "DELETE")).json();
   assert.equal(d.kisten.length, 9);
   assert.equal((await api(env, "/admin/lager/kisten/4711", "DELETE")).status, 404);
+});
+
+test("Lager: Teil liegt in der Wohnung und kommt zurueck in die Kiste", async () => {
+  const env = { DB: sqliteD1(allMigrations()), ADMIN_TOKEN: "test-token" };
+  let d = await (await api(env, "/admin/lager")).json();
+  const p13 = d.kisten.flatMap(k => k.artikel).find(a => a.artikel === "13");
+  if (p13) assert.equal(p13.ort, "wohnung");
+  await api(env, "/admin/lager/artikel", "POST", { artikel: "270", kiste: 7, geprueft: false });
+  d = await (await api(env, "/admin/lager/artikel", "POST", { artikel: "270", ort: "wohnung" })).json();
+  assert.deepEqual(d.kisten[6].artikel, [{ artikel: "270", geprueft: false, ort: "wohnung" }]);
+  d = await (await api(env, "/admin/lager/artikel", "POST", { artikel: "270", ort: "" })).json();
+  assert.deepEqual(d.kisten[6].artikel, [{ artikel: "270", geprueft: true, ort: "" }]);
+  await api(env, "/admin/lager/artikel", "POST", { artikel: "270", ort: "wohnung" });
+  d = await (await api(env, "/admin/lager/artikel", "POST", { artikel: "270", kiste: 8 })).json();
+  assert.equal(d.kisten[7].artikel[0].ort, "");
 });
