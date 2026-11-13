@@ -25,7 +25,7 @@ class CatalogUrlTest(unittest.TestCase):
             self.assertIn(f'content="0;url=/artikel/{self.by[id]["url_slug"]}/"',text)
     def test_only_confirmed_grey_trousers_published(self):
         self.assertEqual(self.by[9429]['public_status'],'AVAILABLE');self.assertEqual(self.by[9429]['article'],'69')
-        self.assertEqual(self.by[9427]['public_status'],'DRAFT')
+        self.assertNotIn(9427,self.by)
     def test_catalog_keeps_product_id_and_route_number(self):
         public={i['id']:i for i in json.loads((BASE/'data/catalog.json').read_text(encoding='utf-8'))}
         for r in self.links:
