@@ -3885,5 +3885,8 @@ img[data-d119-image-protected] {
 .faq-answer p { margin: 0; line-height: 1.65; }
 
 /* Match: Info-Knopf oben rechts auf der Karte -> Artikelseite (13.11.2026) */
-.swipe-card__info { position: absolute; top: 12px; right: 12px; z-index: 4; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(10,10,10,.72); color: #f2efe7; border: 1px solid rgba(242,239,231,.55); font: italic 700 19px/1 Georgia, 'Times New Roman', serif; text-decoration: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-.swipe-card__info:hover, .swipe-card__info:focus-visible { background: #f2efe7; color: #0a0a0a; outline: none; }
+.swipe-card__info { position: absolute; top: 8px; right: 8px; z-index: 4; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: none; border: 0; color: rgba(242,239,231,.6); font: italic 600 13px/1 Georgia, 'Times New Roman', serif; text-decoration: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.swipe-card__info::before { content: ""; position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%; border: 1px solid rgba(242,239,231,.32); background: rgba(10,10,10,.35); }
+.swipe-card__info span { position: relative; }
+.swipe-card__info:hover, .swipe-card__info:focus-visible { color: #f2efe7; outline: none; }
+.swipe-card__info:hover::before, .swipe-card__info:focus-visible::before { border-color: #f2efe7; }
