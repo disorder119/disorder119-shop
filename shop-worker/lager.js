@@ -8,6 +8,7 @@
 
 const ADMIN_ORIGINS = Object.freeze(["https://admin.disorder119.com"]);
 const MAX_KISTEN = 60;
+const BILD_PFAD = /^assets\/img\/[A-Za-z0-9_-]{1,40}\/(?:thumbs\/)?\d{1,3}\.webp$/;
 
 export class LagerError extends Error {
   constructor(code, status = 400) {
@@ -46,7 +47,7 @@ function kopf(origin) {
 
 export function isLagerRoute(url) {
   const path = url.pathname.replace(/\/+$/, "");
-  return path === "/admin/lager" || path === "/admin/lager/kisten" || path === "/admin/lager/artikel"
+  return path === "/admin/lager" || path === "/admin/lager/kisten" || path === "/admin/lager/artikel" || path === "/admin/lager/bilder"
     || /^\/admin\/lager\/kisten\/\d{1,6}$/.test(path);
 }
 
@@ -119,6 +120,27 @@ export async function handleLager(request, env, url, reqId = crypto.randomUUID()
         await env.DB.prepare("DELETE FROM lager_kisten WHERE id=?").bind(id).run();
         return antwort();
       }
+    }
+
+    // Vorschaubilder fuer das Lager-PDF: die App baut das PDF selbst und braucht dafuer die Bilddaten.
+    if (path === "/admin/lager/bilder" && request.method === "POST") {
+      const body = await lesen();
+      const pfade = [...new Set((Array.isArray(body?.pfade) ? body.pfade : []).map(String))]
+        .filter(x => BILD_PFAD.test(x)).slice(0, 12);
+      if (!pfade.length) throw new LagerError("BILD_FEHLT", 400);
+      const bilder = {};
+      await Promise.all(pfade.map(async pfad => {
+        try {
+          const res = await (env.BILD_FETCH || fetch)(`https://disorder119.com/${pfad}`, { headers: { Accept: "image/webp" } });
+          if (!res.ok) return;
+          const bytes = new Uint8Array(await res.arrayBuffer());
+          if (!bytes.length || bytes.length > 600_000) return;
+          let bin = "";
+          for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+          bilder[pfad] = `data:image/webp;base64,${btoa(bin)}`;
+        } catch { /* Bild fehlt im PDF, der Rest bleibt */ }
+      }));
+      return new Response(JSON.stringify({ bilder }), { status: 200, headers: kopf(origin) });
     }
 
     // Artikel in eine Kiste legen, herausnehmen (kiste: null) oder als geprueft markieren
