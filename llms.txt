@@ -18,7 +18,7 @@
 - Artikelnummer = Pfad: https://disorder119.com/artikel/<nummer>/ (Englisch /en/artikel/<nummer>/, Französisch /fr/artikel/<nummer>/).
 - Impressum und Rechtstexte sind für Menschen auf der Seite erreichbar und werden bewusst nicht indexiert.
 
-## Verfügbare Teile (192)
+## Verfügbare Teile (191)
 - [A.F. Vandevorst Cardigan mit Muster Damen](https://disorder119.com/artikel/191/): 190 € · Größe S · Grau
 - [A.F. Vandevorst Bluse Damen Blau](https://disorder119.com/artikel/192/): 175 € · Größe 42 · Blau
 - [Adidas Originals Sample-Parka Unisex Schwarz](https://disorder119.com/artikel/108/): 280 € · Größe M · Schwarz
@@ -175,7 +175,6 @@
 - [Walter Van Beirendonck Jeans-Shorts Damen Blau](https://disorder119.com/artikel/36/): 90 € · Größe 32 · Blau
 - [Walter Van Beirendonck Jeansrock Damen Blau](https://disorder119.com/artikel/37/): 85 € · Größe M / 38 / 10 · Blau
 - [Y's High-Top-Schuhe mit Riemen Damen Braun](https://disorder119.com/artikel/231/): 240 € · Größe 3 / EU 41 / 26 cm · Braun
-- [Y-3 Oversized Cargohose Herren](https://disorder119.com/artikel/217/): 315 € · Größe M · Schwarz
 - [Y-3 x Palace Coach-Jacke mit Karo-Einsätzen Herren Schwarz](https://disorder119.com/artikel/245/): 260 € · Größe M · Schwarz, Blau
 - [Y-3 Nylonjacke Herren Schwarz](https://disorder119.com/artikel/7/): 200 € · Größe M · Schwarz
 - [Y-3 Trainingsjacke Damen Grau](https://disorder119.com/artikel/189/): 175 € · Größe S · Grau
@@ -212,4 +211,4 @@
 - [Yves Saint Laurent Leder-Winterjacke Unisex Schwarz](https://disorder119.com/artikel/204/): 490 € · Größe L (geschätzt) · Schwarz
 - [Yves Saint Laurent Rive Gauche Seidentop Damen Bunt](https://disorder119.com/artikel/142/): 120 € · Größe S / 36 / 8 · Orange, Bunt
 
-Weitere 83 Teile im Archiv sind verkauft und bleiben als Referenz sichtbar.
+Weitere 84 Teile im Archiv sind verkauft und bleiben als Referenz sichtbar.
