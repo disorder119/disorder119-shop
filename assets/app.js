@@ -2879,7 +2879,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
         '<div class="swipe-card__zones"><span class="swipe-card__zone"></span><span class="swipe-card__zone"></span></div>' +
         dotsHtml +
         // Info-Knopf (13.11.2026): im Match-Modus kam man bisher nicht zur Artikelseite.
-        '<a class="swipe-card__info" href="' + langHome(LANG) + "artikel/" + (it.url_slug || it.id) + '/" aria-label="' + t("swipeInfoAria") + '">i</a>' +
+        '<a class="swipe-card__info" href="' + langHome(LANG) + "artikel/" + (it.url_slug || it.id) + '/" aria-label="' + t("swipeInfoAria") + '"><span>i</span></a>' +
         '<span class="swipe-card__tag swipe-card__tag--like" data-tag="like">' + t("swipeLikeAria") + '</span>' +
         '<span class="swipe-card__tag swipe-card__tag--nope" data-tag="nope">' + t("swipeNopeTag") + '</span>' +
       "</div>" +
