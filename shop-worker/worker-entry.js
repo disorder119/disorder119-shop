@@ -42,6 +42,7 @@ import { handleAdresse, isAdresseRoute } from "./adresse.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
 import { handleIncomingEmail, handlePostfach, isPostfachRoute, postfachMeldungNachholen } from "./postfach.js";
+import { handleLager, isLagerRoute } from "./lager.js";
 import { postausgangNachholen } from "./postausgang-nachholen.js";
 import { zahlungsMeldungenNachholen } from "./zahlung.js";
 import { SEITENAUFRUF_PFAD, besucherAufraeumen, entsperrtMelden, handleBesucher, istBesucherRoute } from "./besucher.js";
@@ -464,6 +465,11 @@ const worker = {
       // Postfach der Admin-App (Mails an kontakt@disorder119.com).
       if (isPostfachRoute(url)) {
         return finish(await handlePostfach(request, runtimeEnv, url, reqId, origin));
+      }
+
+      // Lager der Admin-App: welche Artikelnummer liegt in welcher Kiste.
+      if (isLagerRoute(url)) {
+        return finish(await handleLager(request, runtimeEnv, url, reqId, origin));
       }
 
       // Newsletter: Anmeldung, Bestaetigung und Abmeldung von der Website,
