@@ -1,11 +1,11 @@
 {
   "summary": {
-    "items_total": 279,
+    "items_total": 278,
     "catalog_public": 275,
     "available": 191,
     "reserved": 0,
     "sold": 84,
-    "draft": 4
+    "draft": 3
   },
   "quality": {
     "missing_size": {
@@ -134,10 +134,9 @@
       "item_ids": []
     },
     "duplicate_article_number": {
-      "count": 2,
+      "count": 1,
       "item_ids": [
-        "45",
-        "72"
+        "45"
       ]
     }
   }

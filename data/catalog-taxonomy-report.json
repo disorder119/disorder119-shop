@@ -1,12 +1,12 @@
 {
   "schema": "catalog-taxonomy-v1",
-  "totalItems": 279,
-  "reviewedItems": 279,
+  "totalItems": 278,
+  "reviewedItems": 278,
   "departmentCounts": {
     "Men": 75,
     "Objects": 1,
     "Unisex": 28,
-    "Women": 175
+    "Women": 174
   },
   "productTypeCounts": {
     "Backpack": 1,
@@ -49,7 +49,7 @@
     "Toaster": 1,
     "Top": 23,
     "Trench Coat": 1,
-    "Trousers": 17,
+    "Trousers": 16,
     "Tunic": 1,
     "Vest": 8,
     "Wallet": 1
@@ -232,7 +232,7 @@
       "title": "Balmain Kunstfelljacke Damen"
     }
   ],
-  "sizeConflictCount": 54,
+  "sizeConflictCount": 53,
   "sizeConflicts": [
     {
       "id": 9640,
@@ -434,13 +434,6 @@
       "id": 9429,
       "article": "69",
       "title": "Jean Paul Gaultier Hose Grau",
-      "structuredSize": "M / 38 / 10",
-      "descriptionLabelSize": "38"
-    },
-    {
-      "id": 9427,
-      "article": "72",
-      "title": "Jean Paul Gaultier Jeans Damen Marineblau",
       "structuredSize": "M / 38 / 10",
       "descriptionLabelSize": "38"
     },

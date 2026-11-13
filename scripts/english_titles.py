@@ -75,7 +75,7 @@ WORTE = {
     "kapuze": "Hood", "fell": "Fur", "kunstfell": "Faux Fur", "felloptik": "Fur-Look",
     "streifen": "Stripes", "nadelstreifen": "Pinstripe", "barockmuster": "Baroque Pattern",
     "bügeln": "Temples", "bügel": "Temples", "logo": "Logo", "patch": "Patch",
-    "strand": "Beach", "flügel": "Wing", "bienen": "Bee", "grafik": "Graphic",
+    "strand": "Beach", "flügel": "Wing", "bienen": "Bee", "grafik": "Graphic", "graphic": "Graphic", "chito": "Chito",
     "cord": "Corduroy", "wildleder": "Suede", "langarm": "Long-Sleeve",
     "kurzarm": "Short-Sleeve", "klett": "Velcro", "plateau": "Platform",
     "wende": "Reversible", "denim": "Denim", "jeans": "Jeans", "zip": "Zip",
