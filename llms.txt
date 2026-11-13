@@ -18,7 +18,7 @@
 - Artikelnummer = Pfad: https://disorder119.com/artikel/<nummer>/ (Englisch /en/artikel/<nummer>/, Französisch /fr/artikel/<nummer>/).
 - Impressum und Rechtstexte sind für Menschen auf der Seite erreichbar und werden bewusst nicht indexiert.
 
-## Verfügbare Teile (194)
+## Verfügbare Teile (193)
 - [A.F. Vandevorst Cardigan mit Muster Damen](https://disorder119.com/artikel/191/): 190 € · Größe S · Grau
 - [A.F. Vandevorst Bluse Damen Blau](https://disorder119.com/artikel/192/): 175 € · Größe 42 · Blau
 - [Adidas Originals Sample-Parka Unisex Schwarz](https://disorder119.com/artikel/108/): 280 € · Größe M · Schwarz
@@ -135,7 +135,6 @@
 - [Prada Jacke Damen](https://disorder119.com/artikel/46/): 190 € · Größe M · Schwarz
 - [Prada Jacke Damen Hellblau](https://disorder119.com/artikel/152/): 190 € · Größe S / IT 42 · Hellblau
 - [Prada America's Cup Sneaker Damen Dunkelblau](https://disorder119.com/artikel/229/): 180 € · Größe 37.5 · Dunkelblau
-- [Prada Fellstola Damen](https://disorder119.com/artikel/95/): 180 € · Braun
 - [Prada Langarm-Poloshirt mit Felloptik-Kragen Damen Schwarz](https://disorder119.com/artikel/83/): 170 € · Größe L · Schwarz
 - [Prada Sneaker mit Schnalle Damen Grün](https://disorder119.com/artikel/227/): 160 € · Größe 38.5 · Grün
 - [Prada Strickjacke Damen Lila](https://disorder119.com/artikel/11/): 160 € · Größe M · Violett
@@ -214,4 +213,4 @@
 - [Yves Saint Laurent Leder-Winterjacke Unisex Schwarz](https://disorder119.com/artikel/204/): 490 € · Größe L (geschätzt) · Schwarz
 - [Yves Saint Laurent Rive Gauche Seidentop Damen Bunt](https://disorder119.com/artikel/142/): 120 € · Größe S / 36 / 8 · Orange, Bunt
 
-Weitere 81 Teile im Archiv sind verkauft und bleiben als Referenz sichtbar.
+Weitere 82 Teile im Archiv sind verkauft und bleiben als Referenz sichtbar.
