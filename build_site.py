@@ -44,6 +44,8 @@ import beschreibung  # noqa: E402
 # Beschriftungen aus der I18N-Tabelle von assets/app.js (Startseite /en/, /fr/).
 from app_i18n import app_text  # noqa: E402
 from aehnliche_teile import aehnliche_teile  # noqa: E402
+# Markenseiten /marke/<slug>/ und /marken/ (scripts/markenseiten.py).
+import markenseiten  # noqa: E402
 SITE_URL = "https://disorder119.com/"
 DATA_PATH = BASE / "data" / "items.json"
 
@@ -844,16 +846,33 @@ def product_json_ld_tag(it, lang):
     return '<script type="application/ld+json">' + json_ld(it, lang) + "</script>"
 
 
+def _dieses_modul():
+    return sys.modules[__name__]
+
+
+def marken_link(it, lang):
+    """Adresse der Markenseite des Artikels (/marke/<slug>/) - gibt es keine
+    (weniger als markenseiten.MIN_TEILE verfuegbare Teile), wie bisher der
+    Markenfilter des Archivs."""
+    return markenseiten.marken_pfad(_dieses_modul(), it, lang) or (lang_home(lang) + "?brand=" + (it.get("brand") or ""))
+
+
 def breadcrumb_json_ld(it, lang):
     home_url = SITE_URL.rstrip("/") + lang_home(lang)
     product_url = home_url + "artikel/" + str(it.get("url_slug", it["id"])) + "/"
     labels = {"de": "Archiv", "en": "Archive", "fr": "Archive"}
+    eintraege = [(labels.get(lang, "Archiv"), home_url)]
+    # Markenebene nur, wenn die Marke eine eigene Seite hat.
+    marken_pfad = markenseiten.marken_pfad(_dieses_modul(), it, lang)
+    if marken_pfad:
+        eintraege.append((it.get("brand"), SITE_URL.rstrip("/") + marken_pfad))
+    eintraege.append((display_name(it, lang), product_url))
     data = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
         "itemListElement": [
-            {"@type": "ListItem", "position": 1, "name": labels.get(lang, "Archiv"), "item": home_url},
-            {"@type": "ListItem", "position": 2, "name": display_name(it, lang), "item": product_url},
+            {"@type": "ListItem", "position": i + 1, "name": name, "item": url}
+            for i, (name, url) in enumerate(eintraege)
         ],
     }
     return json.dumps(data, ensure_ascii=False)
@@ -1075,7 +1094,7 @@ def build_page(it, shop_config, lang):
     <div class="gallery__thumbs{' gallery__thumbs--reserved' if len(gallery) > 1 else ''}" id="galleryThumbs"></div>
   </div>
   <div class="info">
-    <a class="info__brand" href="{home}?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or ui(lang, "noBrand"))}</a>
+    <a class="info__brand" href="{esc(marken_link(it, lang))}">{esc(it.get("brand") or ui(lang, "noBrand"))}</a>
     <h1>{esc(item_title(it, lang))}</h1>
     <div id="priceBlock">{price_block_html(it, lang)}</div>
     {caption_html}
@@ -1497,6 +1516,20 @@ def product_data_gap_html(it, lang):
     return '<p class="info__note info__note--data-gap" data-product-data-gap>' + esc(copy.format(fields=", ".join(missing))) + '</p>'
 
 
+MARKEN_FUSSLINK_TEXT = {"de": "Marken", "en": "Brands", "fr": "Marques"}
+
+
+def marken_fusslink(lang):
+    """Fusszeilen-Link der Bundle-Seiten zur Markenuebersicht (/marken/)."""
+    if not markenseiten.marken(_dieses_modul()):
+        return ""
+    return f'<a href="{lang_home(lang)}{markenseiten.UEBERSICHT_SEGMENT}">{MARKEN_FUSSLINK_TEXT[lang]}</a>'
+
+
+def build_markenseiten():
+    markenseiten.build(_dieses_modul())
+
+
 def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
                         include_item_list=False, robots=None, static_content="",
                         canonical_path_segment=None, slug=""):
@@ -1537,6 +1570,7 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     # als zusammenhaengenden Block.
     out = out.replace("__NEWSLETTER_VERSION__", NEWSLETTER_ASSET_VERSION)
     out = out.replace("__STATIC_PAGE_CONTENT__", static_content)
+    out = out.replace("__MARKEN_FUSSLINK__", marken_fusslink(lang))
     initial_ssr_home = (lang == "de" and path_segment == "" and slug == "")
     out = out.replace("__CRITICAL_IMAGE_PRELOADS__", initial_archive_preloads() if initial_ssr_home else "")
     out = out.replace("__APP_SHELL_HIDDEN_CLASS__", "" if initial_ssr_home else " hidden")
@@ -2397,6 +2431,7 @@ def build_llms_txt():
         if it.get("color"):
             fakten.append(str(it["color"]))
         zeilen.append(f"- [{item_title(it, 'de')}]({url}): " + " · ".join(fakten))
+    zeilen += markenseiten.llms_zeilen(_dieses_modul())
     verkauft = len(public_items) - len(verfuegbar)
     if verkauft:
         zeilen += ["", f"Weitere {verkauft} Teile im Archiv sind verkauft und bleiben als Referenz sichtbar."]
@@ -2419,6 +2454,7 @@ def build_sitemap():
         [("", None)]
         + [("artikel/" + str(it.get("url_slug", it["id"])) + "/", it) for it in public_items]
         + [(slug + "/", None) for slug in indexable_specials]
+        + [(seg, None) for seg in markenseiten.sitemap_segmente(_dieses_modul())]
     )
 
     def url_entry(lang, segment, item=None):
@@ -2994,6 +3030,7 @@ def main():
     build_widerruf_pages()
     build_mobile_heroes()
     build_articles()
+    build_markenseiten()
     build_catalog_json()
     build_merchant_feed()
     build_sitemap()

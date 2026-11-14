@@ -10,7 +10,7 @@ import { anschlussVonIp } from './privacy-security.js';
 // Page views and Waechter incidents are handed to the shop Worker through the
 // BESUCH service binding (no public address); this Worker stores nothing itself.
 // Order: host -> Geo-Sperre -> HTTPS -> Waechter -> paths -> origin.
-const PAGES = new Set(['agb','baukasten','cart','chaos','datenschutz','faq','impressum','kasse','konto','match','mieten','newsletter','ueber-uns','universe','widerruf']);
+const PAGES = new Set(['agb','baukasten','cart','chaos','datenschutz','faq','impressum','kasse','konto','marken','match','mieten','newsletter','ueber-uns','universe','widerruf']);
 // google7945c4dc594a9a9c.html: Inhaberschaft fuer die Google Search Console (Konto disorder119shop), muss dauerhaft erreichbar bleiben.
 const ROOT_FILES = new Set(['index.html','404.html','offline.html','robots.txt','sitemap.xml','llms.txt','manifest.webmanifest','sw.js','favicon.ico','google7945c4dc594a9a9c.html']);
 const FIELDS = new Set(['id','article','url_slug','title','title_en','color_en','brand','price','price_estimated','public_status','status','category','size','color','condition','brightness','gallery','look','department','product_type','taxonomy_category','size_normalized','rental_price','grid_image','hover_image','foto_hell']);
@@ -36,6 +36,8 @@ export function publicPath(pathname) {
   if (parts[0] === 'en' || parts[0] === 'fr') parts.shift();
   if (!parts.length || (parts.length===1 && ROOT_FILES.has(parts[0]))) return true;
   if (parts[0]==='artikel') return /^\d+(?:\.html)?$/.test(parts[1]||'') && (parts.length===2 || (parts.length===3 && parts[2]==='index.html'));
+  // Markenseiten (scripts/markenseiten.py): /marke/<slug>/ je Marke und die Uebersicht /marken/.
+  if (parts[0]==='marke') return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(parts[1]||'') && parts[1].length<=60 && (parts.length===2 || (parts.length===3 && parts[2]==='index.html'));
   // Produkt-Feed fuer Google Merchant Center (build_site.py: feed/google-merchant.xml)
   if (parts[0]==='feed') return parts.length===2 && /^[a-z0-9-]+\.xml$/.test(parts[1]);
   return PAGES.has(parts[0]) && (parts.length===1 || (parts.length===2 && parts[1]==='index.html'));
