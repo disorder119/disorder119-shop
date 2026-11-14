@@ -219,7 +219,9 @@ class MarkenseitenTests(unittest.TestCase):
         ])
         self.assertEqual(krumen[1]["name"], "Jean Paul Gaultier")
         self.assertEqual(len(json.loads(build_site.breadcrumb_json_ld(ohne, "de"))["itemListElement"]), 2)
-        self.assertEqual(build_site.marken_fusslink("en"), '<a href="/en/marken/">Brands</a>')
+        # Dazu die Bereichsseiten aus scripts/kategorieseiten.py.
+        self.assertEqual(build_site.marken_fusslink("en"),
+                         '<a href="/en/marken/">Brands</a><a href="/en/damen/">Women</a><a href="/en/herren/">Men</a>')
 
     def test_gepflegte_texte_gehoeren_zu_echten_marken(self):
         """config/marken-texte.json: je Marke alle drei Sprachen, Slug in gueltiger Form."""

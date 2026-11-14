@@ -433,6 +433,9 @@ def _seite(b, lang, seg, titel, beschreibung, og_bild, jsonld, inhalt, shop_conf
     recht_label, recht_links = b.ARTIKEL_RECHT_LINKS[lang]
     recht = "".join(f'<a href="{home}{pfad}">{b.esc(text)}</a>' for pfad, text in recht_links)
     css = b._asset_version("assets/marken.css")
+    # Bereichsseiten (/damen/, /herren/) aus scripts/kategorieseiten.py.
+    import kategorieseiten
+    bereiche = "".join(f' · <a href="{b.esc(pfad)}">{b.esc(text)}</a>' for text, pfad in kategorieseiten.fusslinks(b, lang))
     return f"""<!DOCTYPE html>
 <html lang="{lang}">
 <head>
@@ -479,7 +482,7 @@ def _seite(b, lang, seg, titel, beschreibung, og_bild, jsonld, inhalt, shop_conf
 </main>
 <footer class="mk-foot">
   <p>{b.esc(t['fuss'])}</p>
-  <p><a href="{home}">{b.esc(t['fuss_archiv'])}</a> · <a href="{home}{UEBERSICHT_SEGMENT}">{b.esc(t['alle_marken'])}</a></p>
+  <p><a href="{home}">{b.esc(t['fuss_archiv'])}</a> · <a href="{home}{UEBERSICHT_SEGMENT}">{b.esc(t['alle_marken'])}</a>{bereiche}</p>
   <nav class="mk-foot__nav" aria-label="{b.esc(recht_label)}"><a href="{home}widerruf/">{b.esc(b.WIDERRUF_LINK_TEXT[lang])}</a>{recht}</nav>
 </footer>
 </body>

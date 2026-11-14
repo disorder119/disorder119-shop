@@ -80,6 +80,7 @@ jobs:
         run: |
           python -m unittest discover -s scripts -p test_storefront_publishing.py -v
           python -m unittest discover -s scripts -p test_markenseiten.py
+          python -m unittest discover -s scripts -p test_kategorieseiten.py
           node --test shop-worker/storefront-assets.test.mjs shop-worker/storefront-edge.test.mjs shop-worker/storefront-csp.test.mjs
 
       - name: Bestaetigte Artikelnummern gegen feste Produkt-IDs pruefen

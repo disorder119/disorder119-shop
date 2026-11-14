@@ -47,6 +47,8 @@ from app_i18n import app_text  # noqa: E402
 from aehnliche_teile import aehnliche_teile  # noqa: E402
 # Markenseiten /marke/<slug>/ und /marken/ (scripts/markenseiten.py).
 import markenseiten  # noqa: E402
+# Kategorieseiten /damen/, /herren/ und /damen/<kategorie>/ (scripts/kategorieseiten.py).
+import kategorieseiten  # noqa: E402
 SITE_URL = "https://disorder119.com/"
 DATA_PATH = BASE / "data" / "items.json"
 
@@ -220,8 +222,8 @@ META_PHRASES = {
         "price_on_request": "Preis auf Anfrage",
         "tail_suffix": ". Aus dem kuratierten Second-Hand-Archiv von Disorder119.",
         "auto_suffix": ". Aus dem kuratierten Archiv von Disorder119.",
-        "home_title": "Designer Second Hand & Vintage Mode | Disorder119",
-        "home_desc": "Kuratiertes Designer-Second-Hand-Archiv mit Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 und mehr. Jedes Teil nur 1× verfügbar, individuell fotografiert.",
+        "home_title": "Vintage Archive Shop – Designer Second Hand | Disorder119",
+        "home_desc": "Vintage Archive Shop für Designer-Mode aus zweiter Hand: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 und mehr. Jedes Teil nur 1× verfügbar, individuell fotografiert.",
     },
     "en": {
         "sold": "{name} – already sold, part of the curated Disorder119 archive for designer and vintage fashion.",
@@ -229,8 +231,8 @@ META_PHRASES = {
         "price_on_request": "Price on request",
         "tail_suffix": ". From the curated second-hand archive of Disorder119.",
         "auto_suffix": ". From the curated archive of Disorder119.",
-        "home_title": "Pre-Owned Designer & Vintage Fashion | Disorder119",
-        "home_desc": "Curated archive of pre-owned designer fashion including Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 and more. Each piece available only once, individually photographed.",
+        "home_title": "Vintage Archive Shop – Pre-Owned Designer | Disorder119",
+        "home_desc": "Vintage archive shop for pre-owned designer fashion: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 and more. Each piece available only once, individually photographed.",
     },
     "fr": {
         "sold": "{name} – déjà vendu, fait partie de l'archive sélectionnée Disorder119 pour la mode de créateurs et vintage.",
@@ -238,8 +240,8 @@ META_PHRASES = {
         "price_on_request": "Prix sur demande",
         "tail_suffix": ". Issu de l'archive seconde main sélectionnée de Disorder119.",
         "auto_suffix": ". Issu de l'archive sélectionnée de Disorder119.",
-        "home_title": "Mode Designer Seconde Main & Vintage | Disorder119",
-        "home_desc": "Archive sélectionnée de mode de créateurs de seconde main avec Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 et plus. Chaque pièce disponible une seule fois, photographiée individuellement.",
+        "home_title": "Vintage Archive Shop – Mode de créateurs | Disorder119",
+        "home_desc": "Vintage archive shop de mode de créateurs de seconde main : Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 et plus. Chaque pièce disponible une seule fois, photographiée individuellement.",
     },
 }
 
@@ -872,15 +874,25 @@ def marken_link(it, lang):
 MARKEN_FUSSLINK_TEXT = {"de": "Marken", "en": "Brands", "fr": "Marques"}
 
 
+def kategorie_fusslinks(lang):
+    """Fusszeilen-Links zu den Bereichsseiten (/damen/, /herren/)."""
+    return "".join(f'<a href="{esc(pfad)}">{esc(text)}</a>' for text, pfad in kategorieseiten.fusslinks(_dieses_modul(), lang))
+
+
 def marken_fusslink(lang):
-    """Fusszeilen-Link der Bundle-Seiten zur Markenuebersicht (/marken/)."""
-    if not markenseiten.marken(_dieses_modul()):
-        return ""
-    return f'<a href="{lang_home(lang)}{markenseiten.UEBERSICHT_SEGMENT}">{MARKEN_FUSSLINK_TEXT[lang]}</a>'
+    """Fusszeilen-Links der Bundle-Seiten: Markenuebersicht (/marken/) und Bereichsseiten."""
+    marken = ""
+    if markenseiten.marken(_dieses_modul()):
+        marken = f'<a href="{lang_home(lang)}{markenseiten.UEBERSICHT_SEGMENT}">{MARKEN_FUSSLINK_TEXT[lang]}</a>'
+    return marken + kategorie_fusslinks(lang)
 
 
 def build_markenseiten():
     markenseiten.build(_dieses_modul())
+
+
+def build_kategorieseiten():
+    kategorieseiten.build(_dieses_modul())
 
 
 def breadcrumb_json_ld(it, lang):
@@ -2453,6 +2465,7 @@ def build_llms_txt():
             fakten.append(str(it["color"]))
         zeilen.append(f"- [{item_title(it, 'de')}]({url}): " + " · ".join(fakten))
     zeilen += markenseiten.llms_zeilen(_dieses_modul())
+    zeilen += kategorieseiten.llms_zeilen(_dieses_modul())
     verkauft = len(public_items) - len(verfuegbar)
     if verkauft:
         zeilen += ["", f"Weitere {verkauft} Teile im Archiv sind verkauft und bleiben als Referenz sichtbar."]
@@ -2476,6 +2489,7 @@ def build_sitemap():
         + [("artikel/" + str(it.get("url_slug", it["id"])) + "/", it) for it in public_items]
         + [(slug + "/", None) for slug in indexable_specials]
         + [(seg, None) for seg in markenseiten.sitemap_segmente(_dieses_modul())]
+        + [(seg, None) for seg in kategorieseiten.sitemap_segmente(_dieses_modul())]
     )
 
     def url_entry(lang, segment, item=None):
@@ -3052,6 +3066,7 @@ def main():
     build_mobile_heroes()
     build_articles()
     build_markenseiten()
+    build_kategorieseiten()
     build_catalog_json()
     build_merchant_feed()
     build_sitemap()

@@ -24,6 +24,8 @@ const SEITE_404='<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><met
 +'<body><a class="marke" href="/">DISORDER119</a><div class="code" aria-hidden="true">404</div><h1>Seite nicht gefunden</h1><p>Diese Adresse gibt es nicht – vielleicht ist der Link unvollständig oder das Stück ist nicht mehr im Archiv.</p>'
 +'<div class="knoepfe"><a href="/">Zum Archiv</a><a class="leise" href="/en/">English</a><a class="leise" href="/fr/">Français</a></div></body></html>';
 
+const KATEGORIE_SEITEN = new Set(['jacken','tops','hosen','roecke','kleider','schuhe','accessoires']);
+
 export function publicPath(pathname) {
   let decoded;
   try { decoded=decodeURIComponent(pathname); } catch { return false; }
@@ -38,6 +40,12 @@ export function publicPath(pathname) {
   if (parts[0]==='artikel') return /^\d+(?:\.html)?$/.test(parts[1]||'') && (parts.length===2 || (parts.length===3 && parts[2]==='index.html'));
   // Markenseiten (scripts/markenseiten.py): /marke/<slug>/ je Marke und die Uebersicht /marken/.
   if (parts[0]==='marke') return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(parts[1]||'') && parts[1].length<=60 && (parts.length===2 || (parts.length===3 && parts[2]==='index.html'));
+  // Kategorieseiten (scripts/kategorieseiten.py): /damen/, /herren/ und /damen/<kategorie>/.
+  if (parts[0]==='damen' || parts[0]==='herren') {
+    const rest=parts.slice(1);
+    if (rest.length && rest[rest.length-1]==='index.html') rest.pop();
+    return rest.length===0 || (rest.length===1 && KATEGORIE_SEITEN.has(rest[0]));
+  }
   // Produkt-Feed fuer Google Merchant Center (build_site.py: feed/google-merchant.xml)
   if (parts[0]==='feed') return parts.length===2 && /^[a-z0-9-]+\.xml$/.test(parts[1]);
   return PAGES.has(parts[0]) && (parts.length===1 || (parts.length===2 && parts[1]==='index.html'));
