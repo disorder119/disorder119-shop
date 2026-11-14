@@ -857,6 +857,20 @@ def marken_link(it, lang):
     return markenseiten.marken_pfad(_dieses_modul(), it, lang) or (lang_home(lang) + "?brand=" + (it.get("brand") or ""))
 
 
+MARKEN_FUSSLINK_TEXT = {"de": "Marken", "en": "Brands", "fr": "Marques"}
+
+
+def marken_fusslink(lang):
+    """Fusszeilen-Link der Bundle-Seiten zur Markenuebersicht (/marken/)."""
+    if not markenseiten.marken(_dieses_modul()):
+        return ""
+    return f'<a href="{lang_home(lang)}{markenseiten.UEBERSICHT_SEGMENT}">{MARKEN_FUSSLINK_TEXT[lang]}</a>'
+
+
+def build_markenseiten():
+    markenseiten.build(_dieses_modul())
+
+
 def breadcrumb_json_ld(it, lang):
     home_url = SITE_URL.rstrip("/") + lang_home(lang)
     product_url = home_url + "artikel/" + str(it.get("url_slug", it["id"])) + "/"
@@ -1516,20 +1530,6 @@ def product_data_gap_html(it, lang):
     return '<p class="info__note info__note--data-gap" data-product-data-gap>' + esc(copy.format(fields=", ".join(missing))) + '</p>'
 
 
-MARKEN_FUSSLINK_TEXT = {"de": "Marken", "en": "Brands", "fr": "Marques"}
-
-
-def marken_fusslink(lang):
-    """Fusszeilen-Link der Bundle-Seiten zur Markenuebersicht (/marken/)."""
-    if not markenseiten.marken(_dieses_modul()):
-        return ""
-    return f'<a href="{lang_home(lang)}{markenseiten.UEBERSICHT_SEGMENT}">{MARKEN_FUSSLINK_TEXT[lang]}</a>'
-
-
-def build_markenseiten():
-    markenseiten.build(_dieses_modul())
-
-
 def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
                         include_item_list=False, robots=None, static_content="",
                         canonical_path_segment=None, slug=""):
@@ -1557,6 +1557,9 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
 
     out = tmpl
     out = out.replace("__ITEMLIST_JSONLD_BLOCK__", structured_block)
+    # Bewusst hier oben: CI-Skripte (apply_focus_three_hardening, apply_pwa)
+    # suchen die Zeilen weiter unten als zusammenhaengenden Block.
+    out = out.replace("__MARKEN_FUSSLINK__", marken_fusslink(lang))
     out = out.replace("__HTML_LANG__", lang)
     out = out.replace("__CANONICAL_URL__", canonical)
     out = out.replace("__HREFLANG_TAGS__", hreflang_block(urls_by_lang))
@@ -1570,7 +1573,6 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     # als zusammenhaengenden Block.
     out = out.replace("__NEWSLETTER_VERSION__", NEWSLETTER_ASSET_VERSION)
     out = out.replace("__STATIC_PAGE_CONTENT__", static_content)
-    out = out.replace("__MARKEN_FUSSLINK__", marken_fusslink(lang))
     initial_ssr_home = (lang == "de" and path_segment == "" and slug == "")
     out = out.replace("__CRITICAL_IMAGE_PRELOADS__", initial_archive_preloads() if initial_ssr_home else "")
     out = out.replace("__APP_SHELL_HIDDEN_CLASS__", "" if initial_ssr_home else " hidden")
