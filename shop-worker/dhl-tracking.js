@@ -8,9 +8,13 @@
 // hoechstens ABFRAGEN_JE_LAUF Sendungen.
 //
 // Statuswechsel laufen ueber admin-api.updateOrder mit Akteur SYSTEM: "unterwegs"
-// setzt die Bestellung auf SHIPPED (Versandmail mit Sendungsnummer geht wie
-// beim Klick im Admin), "zugestellt" auf DELIVERED - ohne Mail, die Kundschaft
-// weiss das selbst (Inhaber). Status im Kundenkonto zeigt beides.
+// setzt die Bestellung auf SHIPPED, "zugestellt" auf DELIVERED. Status im
+// Kundenkonto zeigt beides.
+//
+// Kundenmails gehen dabei NIE von selbst (Inhaber 14.11.2026): Fuer
+// "unterwegs", "abholbereit" und "zugestellt" bekommt der Inhaber je Sendung
+// eine Telegram-Nachricht mit Vorschau und entscheidet per Knopf, ob die Mail
+// rausgeht (notifications.notifyStatusFreigabe, telegram-pickup.js).
 //
 // Sendungsverlauf im Kundenkonto (Inhaber 05.11.2026): die Stationen der
 // letzten Abfrage stehen in sendungs_abfragen.ereignisse_json. DHL-Bedingungen
@@ -243,8 +247,15 @@ async function standMerken(db, sendung, ergebnis, now, fehler = null) {
 // bleibt dieses Modul frei von Mail- und Zahlungslogik.
 // `abholbereitMelden(sendung, stand)` (optional): einmal, wenn eine Sendung
 // neu "abholbereit" ist - der Cron meldet es per Telegram. Die Abholmail an
-// die Kundschaft geht NIE von selbst, nur ueber die Admin-App (Inhaber).
-export async function sendungenVerfolgen(env, reqId = crypto.randomUUID(), now = Date.now(), { statusSetzen, abholbereitMelden = null, fetchImpl = fetch, warten = null } = {}) {
+// die Kundschaft geht NIE von selbst, nur nach Freigabe durch den Inhaber.
+// `versendetMelden(sendung, stand)` (optional): solange DHL "unterwegs"
+// meldet - die Freigabe der Versandmail. Der Empfaenger sorgt selbst dafuer,
+// dass je Sendung nur eine Nachricht entsteht; so holt ein spaeterer Lauf eine
+// gescheiterte Telegram-Meldung nach. Liegt das Paket schon im Fach oder ist
+// es zugestellt, wird die Versandmail nicht mehr angeboten.
+// `zugestelltMelden(sendung, stand)` (optional): einmal, nachdem die
+// Bestellung auf DELIVERED steht - die Freigabe der Zustellmail.
+export async function sendungenVerfolgen(env, reqId = crypto.randomUUID(), now = Date.now(), { statusSetzen, abholbereitMelden = null, versendetMelden = null, zugestelltMelden = null, fetchImpl = fetch, warten = null } = {}) {
   if (!env?.DB) return { uebersprungen: true };
   // Loeschpflicht gilt auch, wenn die Abfrage gerade nicht eingerichtet ist.
   const geloescht = await verlaufAufraeumen(env.DB, now).catch(err => {
@@ -269,6 +280,13 @@ export async function sendungenVerfolgen(env, reqId = crypto.randomUUID(), now =
       continue;
     }
     await standMerken(db, sendung, stand, now);
+    // Eine gescheiterte Telegram-Meldung darf den Statuswechsel nie kippen.
+    const melden = async (fn, anlass) => {
+      if (typeof fn !== "function") return;
+      try { await fn(sendung, stand); } catch (err) {
+        console.error(JSON.stringify({ level: "warn", event: "dhl_freigabe_meldung_failed", requestId: reqId, anlass, orderId: String(sendung.order_id), message: safeText(err?.message || "", 120) }));
+      }
+    };
     try {
       if (stand.zustand === "UNTERWEGS" || stand.zustand === "ABHOLBEREIT" || stand.zustand === "ZUGESTELLT") {
         if (sendung.order_status === "PAID") await statusSetzen(sendung.order_id, "PREPARING");
@@ -279,15 +297,13 @@ export async function sendungenVerfolgen(env, reqId = crypto.randomUUID(), now =
       }
       if (stand.zustand === "ABHOLBEREIT" && sendung.letzter_zustand !== "ABHOLBEREIT") {
         ergebnis.abholbereit.push(sendung.order_id);
-        if (typeof abholbereitMelden === "function") {
-          await Promise.resolve(abholbereitMelden(sendung, stand)).catch(err => {
-            console.error(JSON.stringify({ level: "warn", event: "dhl_abholbereit_meldung_failed", requestId: reqId, orderId: String(sendung.order_id), message: safeText(err?.message || "", 120) }));
-          });
-        }
+        await melden(abholbereitMelden, "ABHOLBEREIT");
       }
+      if (stand.zustand === "UNTERWEGS") await melden(versendetMelden, "VERSENDET");
       if (stand.zustand === "ZUGESTELLT") {
         await statusSetzen(sendung.order_id, "DELIVERED");
         ergebnis.zugestellt.push(sendung.order_id);
+        await melden(zugestelltMelden, "ZUGESTELLT");
       }
     } catch (err) {
       ergebnis.fehler.push({ orderId: sendung.order_id, code: safeText(err?.code || err?.message || "STATUS", 80) });

@@ -213,8 +213,8 @@ function telegramButtons(knopf) {
     if (/^https:\/\/admin\.disorder119\.com\//.test(String(k.url || "")) || /^https:\/\/api\.disorder119\.com\/telegram\/pickup-preview\/[a-f0-9]{32}$/.test(String(k.url || ""))) return [[{ text, url: String(k.url) }]];
     // Der Admin-Test bildet die echte Abholmeldung pixelgleich nach. Sein
     // Callback ist absichtlich ein anderer Namensraum: Er kann nie eine
-    // Kundenmail ausloesen.
-    if (/^pickup(?:-test)?:[a-f0-9]{32}$/.test(String(k.callback_data || ""))) return [[{ text, callback_data: String(k.callback_data) }]];
+    // Kundenmail ausloesen. "pickup-no" schliesst eine Freigabe ohne Versand.
+    if (/^pickup(?:-test|-no)?:[a-f0-9]{32}$/.test(String(k.callback_data || ""))) return [[{ text, callback_data: String(k.callback_data) }]];
     return [];
   });
 }
@@ -370,10 +370,30 @@ export async function notifyPaidOrderByProviderOrder(env, providerOrderId, reqId
   return notifyPaidOrder(env, payment.order_id, reqId);
 }
 
-// DHL meldet "abholbereit" (Packstation/Filiale, dhl-tracking.js): Nachricht
-// an den Inhaber mit Foto und Knopf zur Abholmail in der Admin-App. Die Mail an
-// die Kundschaft geht nur, wenn der Inhaber sie dort abschickt (07.11.2026).
-// Einmal je Sendung - dhl-tracking ruft das nur beim Wechsel auf ABHOLBEREIT.
+// ---------------------------------------------------------------------------
+// Status-Freigaben (Inhaber 07.11. und 14.11.2026): Meldet die DHL-
+// Sendungsverfolgung "unterwegs", "abholbereit" oder "zugestellt"
+// (dhl-tracking.js), bekommt der Inhaber eine Telegram-Nachricht mit Foto,
+// einem Knopf zur Vorschau der exakten Kundenmail, "Kundenmail senden" und
+// "Nicht senden". Die Mail an die Kundschaft geht NUR nach dem Klick auf
+// "senden" (telegram-pickup.js). Ohne Klick laeuft die Freigabe nach 48 Stunden
+// ab - dann wird nichts gesendet.
+//
+// Je Sendung und Anlass genau eine Nachricht: ein fester Merker in
+// audit_events (notify:telegram:freigabe:<ANLASS>:<Sendung>) verhindert, dass
+// ein spaeterer Cron-Lauf noch einmal fragt.
+// ---------------------------------------------------------------------------
+
+export const FREIGABE_GUELTIG_MS = 48 * 3_600_000;
+// `ereignis` ist der Vorsatz der audit_events-Zustaende der Freigabe:
+// <ereignis>_PENDING -> _CLAIMED -> _SENT bzw. _DECLINED.
+export const FREIGABE_ANLAESSE = Object.freeze({
+  VERSENDET: Object.freeze({ ereignis: "SHIPPED_APPROVAL", mail: "Versandmail" }),
+  ABHOLBEREIT: Object.freeze({ ereignis: "PICKUP_APPROVAL", mail: "Abholmail" }),
+  ZUGESTELLT: Object.freeze({ ereignis: "DELIVERED_APPROVAL", mail: "Zustellmail" }),
+});
+const FREIGABE_HINWEIS = "Ohne Klick läuft die Freigabe nach 48 Stunden ab – dann wird nichts gesendet.";
+
 export function formatPickupReadyMessage(order = {}, abholort = {}) {
   const o = abholort && typeof abholort === "object" ? abholort : {};
   const ort = o.typ === "filiale" ? `Postfiliale${o.nummer ? ` ${o.nummer}` : ""}${o.ort ? ` · ${o.ort}` : ""}`
@@ -385,31 +405,99 @@ export function formatPickupReadyMessage(order = {}, abholort = {}) {
     telegramZeile(ort, 120),
     "",
     "Die Kundenmail geht erst nach deiner Freigabe raus.",
+    FREIGABE_HINWEIS,
   ].join("\n");
 }
 
-export async function notifyPickupReady(env, sendung = {}, stand = {}, reqId = crypto.randomUUID()) {
+// Text der Telegram-Nachricht je Anlass. `stand.text` ist der Statustext von
+// DHL (Fremdtext: eine Zeile, Links entschaerft).
+export function formatStatusFreigabeMessage(anlass, order = {}, stand = {}) {
+  if (anlass === "ABHOLBEREIT") return formatPickupReadyMessage(order, stand?.abholort || {});
+  const zugestellt = anlass === "ZUGESTELLT";
+  const dhl = telegramFremd(stand?.text || "", 140);
+  const nummer = telegramZeile(order.tracking || "", 60);
+  return [
+    `${zugestellt ? "✅ ZUGESTELLT" : "🚚 UNTERWEGS"} · ${telegramZeile(order.order_number || "", 60)}`,
+    ...(order.kunde ? [`Für ${telegramZeile(order.kunde, 80)}`] : []),
+    ...(order.titel ? [telegramZeile(order.titel, 120)] : []),
+    zugestellt ? "Status: Das Paket wurde zugestellt." : "Status: Das Paket ist bei DHL unterwegs.",
+    ...(dhl ? [`DHL meldet: ${dhl}`] : []),
+    ...(nummer ? [`Sendungsnummer ${nummer}`] : []),
+    "",
+    `Die ${zugestellt ? "Zustellmail" : "Versandmail"} geht erst nach deiner Freigabe raus.`,
+    FREIGABE_HINWEIS,
+  ].join("\n");
+}
+
+function freigabeToken() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), x => x.toString(16).padStart(2, "0")).join("");
+}
+
+// Die drei Knoepfe jeder Freigabe. Die Vorschau zeigt nur; "senden" und
+// "nicht senden" laufen ueber den Webhook (telegram-pickup.js).
+export function freigabeKnoepfe(token, { test = false } = {}) {
+  return [
+    { text: "✉️ E-Mail-Vorschau ansehen", url: `https://api.disorder119.com/telegram/pickup-preview/${token}` },
+    { text: "✅ Kundenmail senden", callback_data: `${test ? "pickup-test" : "pickup"}:${token}` },
+    { text: "✖️ Nicht senden", callback_data: `pickup-no:${token}` },
+  ];
+}
+
+export async function notifyStatusFreigabe(env, anlass, sendung = {}, stand = {}, reqId = crypto.randomUUID()) {
+  const art = FREIGABE_ANLAESSE[anlass];
+  if (!art) return { sent: false, reason: "UNKNOWN_OCCASION" };
   if (!telegramNotificationReady(env) || !env?.DB) return { sent: false, reason: "NOT_CONFIGURED" };
   const orderId = safeText(sendung.order_id || "", 80);
-  if (!orderId) return { sent: false, reason: "ORDER_NOT_FOUND" };
-  const order = await env.DB.prepare(`SELECT o.id,o.order_number,c.recipient_name
+  const shipmentId = safeText(sendung.shipment_id || "", 80);
+  if (!orderId || !shipmentId) return { sent: false, reason: "ORDER_NOT_FOUND" };
+  const order = await env.DB.prepare(`SELECT o.id,o.order_number,c.recipient_name,c.email
     FROM commerce_orders o LEFT JOIN order_contact_snapshots c ON c.order_id=o.id WHERE o.id=?`).bind(orderId).first();
   if (!order) return { sent: false, reason: "ORDER_NOT_FOUND" };
-  const teil = await env.DB.prepare("SELECT item_id,title_snapshot FROM order_items WHERE order_id=? ORDER BY rowid LIMIT 1").bind(orderId).first();
-  const text = formatPickupReadyMessage({ order_number: order.order_number, kunde: order.recipient_name, titel: teil?.title_snapshot || "" }, stand?.abholort || {});
+  const tracking = safeText(sendung.tracking_number || "", 60);
+  if (anlass !== "ABHOLBEREIT") {
+    // Ohne Adresse gibt es nichts freizugeben; und was schon raus ist (Inhaber
+    // hat in der Admin-App selbst auf "Versendet" geklickt), wird nicht noch
+    // einmal angeboten.
+    if (!String(order.email || "").trim()) return { sent: false, reason: "NO_CUSTOMER_EMAIL" };
+    const art2 = anlass === "VERSENDET" ? "shipped" : "delivered";
+    const schon = await env.DB.prepare("SELECT id FROM audit_events WHERE id IN (?,?) LIMIT 1")
+      .bind(`notify:email:${art2}:${orderId}:${tracking || "ohne-nummer"}`, `notify:email:${art2}:${orderId}:ohne-nummer`).first();
+    if (schon) return { sent: false, reason: "ALREADY_MAILED" };
+  }
   const chatId = await resolveTelegramChatId(env, reqId);
   if (!chatId) return { sent: false, reason: "TARGET_NOT_CONNECTED" };
-  const token = Array.from(crypto.getRandomValues(new Uint8Array(16)), x => x.toString(16).padStart(2, "0")).join("");
-  const claimId = `notify:telegram:pickup:${token}`;
+
   const now = new Date().toISOString();
-  await env.DB.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
-    VALUES (?,'SYSTEM','order',?,'PICKUP_APPROVAL_PENDING',?,?,?)`)
-    .bind(claimId, orderId, safeText(reqId, 120), JSON.stringify({ shipmentId: String(sendung.shipment_id), chatId: String(chatId) }), now).run();
-  const knoepfe = [
-    { text: "✉️ E-Mail-Vorschau ansehen", url: `https://api.disorder119.com/telegram/pickup-preview/${token}` },
-    { text: "✅ Kundenmail senden", callback_data: `pickup:${token}` },
-  ];
-  const result = await sendTelegramPhoto(env, verkaufsBild({ items: teil ? [teil] : [] }), text, reqId, knoepfe);
-  if (!result.sent) await env.DB.prepare("DELETE FROM audit_events WHERE id=? AND event_type='PICKUP_APPROVAL_PENDING'").bind(claimId).run().catch(() => {});
+  const merkerId = `notify:telegram:freigabe:${anlass}:${shipmentId}`;
+  const token = freigabeToken();
+  const claimId = `notify:telegram:pickup:${token}`;
+  const merker = await env.DB.prepare(`INSERT OR IGNORE INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'SYSTEM','order',?,'STATUS_APPROVAL_REQUESTED',?,?,?)`)
+    .bind(merkerId, orderId, safeText(reqId, 120), JSON.stringify({ anlass, shipmentId }), now).run();
+  if (!merker?.meta?.changes) return { sent: false, duplicate: true };
+  const zuruecknehmen = async () => {
+    await env.DB.prepare(`DELETE FROM audit_events WHERE id=? AND event_type='${art.ereignis}_PENDING'`).bind(claimId).run().catch(() => {});
+    await env.DB.prepare("DELETE FROM audit_events WHERE id=? AND event_type='STATUS_APPROVAL_REQUESTED'").bind(merkerId).run().catch(() => {});
+  };
+  let result;
+  try {
+    const teil = await env.DB.prepare("SELECT item_id,title_snapshot FROM order_items WHERE order_id=? ORDER BY rowid LIMIT 1").bind(orderId).first();
+    await env.DB.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+      VALUES (?,'SYSTEM','order',?,?,?,?,?)`)
+      .bind(claimId, orderId, `${art.ereignis}_PENDING`, safeText(reqId, 120), JSON.stringify({ anlass, shipmentId, chatId: String(chatId) }), now).run();
+    const text = formatStatusFreigabeMessage(anlass, { order_number: order.order_number, kunde: order.recipient_name, titel: teil?.title_snapshot || "", tracking }, stand);
+    result = await sendTelegramPhoto(env, verkaufsBild({ items: teil ? [teil] : [] }), text, reqId, freigabeKnoepfe(token));
+  } catch (err) {
+    // Nicht angekommen: Merker weg, der naechste Lauf darf es erneut versuchen.
+    await zuruecknehmen();
+    throw err;
+  }
+  if (!result.sent) await zuruecknehmen();
   return result;
 }
+
+// Bisheriger Name des Abhol-Wegs (dhl-tracking.js, Tests).
+export async function notifyPickupReady(env, sendung = {}, stand = {}, reqId = crypto.randomUUID()) {
+  return notifyStatusFreigabe(env, "ABHOLBEREIT", sendung, stand, reqId);
+}
+

@@ -846,7 +846,12 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN", optionen =
   // beim Mailanbieter darf den Versandeintrag nicht verhindern. Die
   // Verdopplungssperre haengt an der Sendungsnummer, ein erneuter Aufruf
   // schickt also nichts zweimal.
-  if (effectiveStatus === "SHIPPED") {
+  //
+  // Ausnahme (Inhaber 14.11.2026): Meldet die DHL-Sendungsverfolgung
+  // "unterwegs", geht die Mail nicht von selbst - der Inhaber gibt sie per
+  // Telegram frei (optionen.ohneVersandmail, notifications.notifyStatusFreigabe).
+  // Der Klick in der Admin-App mailt weiter sofort.
+  if (effectiveStatus === "SHIPPED" && optionen?.ohneVersandmail !== true) {
     try {
       await sendShippingConfirmation(env, order.id, reqId);
     } catch (err) {
@@ -1067,8 +1072,11 @@ async function orderErstatten(env, id, body = {}, reqId) {
 // Fuer automatische Schritte aus der Sendungsverfolgung (packlink.js): derselbe
 // Weg wie der Statusknopf in der Admin-App - Statuspruefung, Lagerstueck,
 // Versandmail -, nur im Protokoll als SYSTEM statt ADMIN vermerkt.
-export async function orderStatusAutomatisch(env, orderId, status, reqId = crypto.randomUUID()) {
-  return updateOrder(env, orderId, { status }, reqId, "SYSTEM");
+// versandmail=false (DHL-Sendungsverfolgung): Status, Lagerstueck und
+// Zahlungseinzug wie immer, aber die Versandmail wartet auf die Telegram-
+// Freigabe des Inhabers.
+export async function orderStatusAutomatisch(env, orderId, status, reqId = crypto.randomUUID(), { versandmail = true } = {}) {
+  return updateOrder(env, orderId, { status }, reqId, "SYSTEM", { ohneVersandmail: versandmail === false });
 }
 
 // PayPal meldet eine Erstattung (auch direkt in PayPal ausgeloest).
