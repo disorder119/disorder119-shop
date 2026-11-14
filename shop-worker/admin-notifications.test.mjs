@@ -68,7 +68,10 @@ test("Telegram admin test endpoint sends through configured transport", async ()
     assert.equal(body.photo, "https://disorder119.com/assets/og/6232.jpg");
     assert.match(body.caption, /TEST · so erscheint eine echte Abholmeldung/);
     assert.match(body.caption, /Packstation 119/);
-    assert.equal(body.reply_markup.inline_keyboard.length, 2);
+    // Wie die echte Meldung: Vorschau, "Kundenmail senden", "Nicht senden".
+    assert.equal(body.reply_markup.inline_keyboard.length, 3);
+    assert.match(body.reply_markup.inline_keyboard[1][0].callback_data, /^pickup-test:[a-f0-9]{32}$/);
+    assert.match(body.reply_markup.inline_keyboard[2][0].callback_data, /^pickup-no:[a-f0-9]{32}$/);
   } finally {
     globalThis.fetch = originalFetch;
   }

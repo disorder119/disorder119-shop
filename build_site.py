@@ -20,6 +20,7 @@ import datetime
 import hashlib
 import html
 import json
+from urllib.parse import quote
 import os
 import time
 import random
@@ -826,10 +827,21 @@ def json_ld(it, lang):
         # Paketgroesse und Versandart und kommt live aus der Kasse; eine feste
         # Zahl koennte bei Google anders aussehen als dort.
         frei_ab = versandkostenfrei_ab_cents()
+        versand_cents = None
         if frei_ab and it["price"] * 100 >= frei_ab:
+            versand_cents = 0
+        else:
+            # Darunter gilt der feste DHL-Preis nach Gewichtsklasse - dieselbe
+            # Zahl wie im Merchant-Feed und in der Kasse (merchant_shipping).
+            try:
+                from merchant_shipping import merchant_shipping_cents
+                versand_cents = merchant_shipping_cents(it, get_shop_config())
+            except Exception:
+                versand_cents = None
+        if versand_cents is not None:
             data["offers"]["shippingDetails"] = {
                 "@type": "OfferShippingDetails",
-                "shippingRate": {"@type": "MonetaryAmount", "value": "0.00", "currency": "EUR"},
+                "shippingRate": {"@type": "MonetaryAmount", "value": f"{versand_cents / 100:.2f}", "currency": "EUR"},
                 "shippingDestination": {"@type": "DefinedRegion", "addressCountry": "DE"},
             }
     return json.dumps(data, ensure_ascii=False)
@@ -854,7 +866,7 @@ def marken_link(it, lang):
     """Adresse der Markenseite des Artikels (/marke/<slug>/) - gibt es keine
     (weniger als markenseiten.MIN_TEILE verfuegbare Teile), wie bisher der
     Markenfilter des Archivs."""
-    return markenseiten.marken_pfad(_dieses_modul(), it, lang) or (lang_home(lang) + "?brand=" + (it.get("brand") or ""))
+    return markenseiten.marken_pfad(_dieses_modul(), it, lang) or (lang_home(lang) + "?brand=" + quote(it.get("brand") or ""))
 
 
 MARKEN_FUSSLINK_TEXT = {"de": "Marken", "en": "Brands", "fr": "Marques"}
@@ -1709,6 +1721,13 @@ def build_index():
     print(f"index.html + {len(LANGS) - 1} Sprachvarianten geschrieben.")
 
 
+# Suchtitel der Sonderseiten: Thema vorn, Shopname hinten (vorher "Disorder119 — FAQ").
+SPECIAL_TITLES = {
+    "mieten": {"de": "Designermode mieten & ausleihen", "en": "Rent Designer Fashion", "fr": "Louer de la mode de créateur"},
+    "faq": {"de": "Häufige Fragen (FAQ)", "en": "Frequently Asked Questions (FAQ)", "fr": "Questions fréquentes (FAQ)"},
+}
+
+
 def build_special_pages():
     shop_config = get_shop_config()
     n = 0
@@ -1717,7 +1736,7 @@ def build_special_pages():
         ph = META_PHRASES[lang]
         for slug, labels in SPECIAL_PAGES.items():
             label = labels[lang]
-            title_tag = ("Disorder119 — " + label) if slug != "cart" else (label + " | Disorder119")
+            title_tag = SPECIAL_TITLES.get(slug, {}).get(lang, label) + " | Disorder119"
             desc_text = SPECIAL_META_DESCRIPTIONS.get(slug, {}).get(lang, ph["home_desc"])
             robots = "noindex,follow" if slug == "cart" or slug in duplicate_variants or slug in PRIVATE_LEGAL_PAGES else None
             canonical_segment = "" if slug in duplicate_variants else None

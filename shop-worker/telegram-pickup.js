@@ -1,6 +1,6 @@
 import { safeText } from "./commerce-core.js";
-import { resolveTelegramChatId, telegramApi, sendTelegramMessage, sendTelegramPhoto, verkaufsBild, formatPickupReadyMessage } from "./notifications.js";
-import { formatPickupReady, sendPickupReady } from "./customer-mail.js";
+import { resolveTelegramChatId, telegramApi, sendTelegramMessage, sendTelegramPhoto, verkaufsBild, formatPickupReadyMessage, telegramZeile, freigabeKnoepfe, FREIGABE_ANLAESSE, FREIGABE_GUELTIG_MS } from "./notifications.js";
+import { formatPickupReady, sendPickupReady, sendShippingConfirmation, sendDeliveryNotice } from "./customer-mail.js";
 import { katalogNachId } from "./oeffentlicher-katalog.js";
 
 const WEBHOOK_URL = "https://api.disorder119.com/telegram/pickup-webhook";
@@ -72,7 +72,7 @@ function pickupTestMail(env, meta) {
 }
 
 // Der Test aus der Admin-App ist absichtlich derselbe Telegram-Weg wie eine
-// echte Abholmeldung: Foto, Stationsinfo und zwei Knöpfe. Nur die Freigabe
+// echte Abholmeldung: Foto, Stationsinfo und dieselben Knöpfe. Nur die Freigabe
 // endet bei einem Test immer ohne Mailversand.
 export async function sendTelegramPickupTest(env, reqId = crypto.randomUUID()) {
   if (!env?.DB || !env?.TELEGRAM_BOT_TOKEN) return { sent: false, reason: "NOT_CONFIGURED" };
@@ -95,35 +95,64 @@ export async function sendTelegramPickupTest(env, reqId = crypto.randomUUID()) {
   await env.DB.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
     VALUES (?,'SYSTEM','telegram','pickup-test','PICKUP_TEST_PENDING',?,?,?)`)
     .bind(id, safeText(reqId, 120), JSON.stringify(meta), new Date().toISOString()).run();
-  const previewUrl = `https://api.disorder119.com/telegram/pickup-preview/${token}`;
   const caption = `🧪 TEST · so erscheint eine echte Abholmeldung\n\n${formatPickupReadyMessage({ order_number: meta.orderNumber, titel: item.title_snapshot }, meta.abholort)}\n\nDer Vorschau-Knopf öffnet die vollständige Kundenmail. Der Senden-Knopf bleibt im Test ohne Kundenmail.`;
-  const result = await sendTelegramPhoto(env, verkaufsBild({ items: [item] }), caption, reqId, [
-    { text: "✉️ E-Mail-Vorschau ansehen", url: previewUrl },
-    { text: "✅ Kundenmail senden", callback_data: `pickup-test:${token}` },
-  ]);
+  const result = await sendTelegramPhoto(env, verkaufsBild({ items: [item] }), caption, reqId, freigabeKnoepfe(token, { test: true }));
   if (!result.sent) await env.DB.prepare("DELETE FROM audit_events WHERE id=? AND event_type='PICKUP_TEST_PENDING'").bind(id).run().catch(() => {});
   return result;
 }
 
+// Eine Freigabe-Zeile aus audit_events lesen: Test oder einer der drei
+// Anlaesse (VERSENDET, ABHOLBEREIT, ZUGESTELLT). Aeltere Abhol-Freigaben
+// haben keinen Anlass in den Metadaten - sie sind ABHOLBEREIT. Passt der
+// Zustand nicht zum Anlass, gilt die Zeile als ungueltig.
+function freigabeLesen(row) {
+  if (!row) return null;
+  let meta = {};
+  try { meta = JSON.parse(row.metadata_json || "{}"); } catch { return null; }
+  const erstellt = Date.parse(row.created_at);
+  const frisch = Number.isFinite(erstellt) && Date.now() - erstellt <= FREIGABE_GUELTIG_MS;
+  const test = /^PICKUP_TEST_(PENDING|CLOSED)$/.exec(String(row.event_type || ""));
+  if (test) return { test: true, zustand: test[1], meta, frisch };
+  const m = /^(SHIPPED_APPROVAL|PICKUP_APPROVAL|DELIVERED_APPROVAL)_(PENDING|CLAIMED|SENT|DECLINED)$/.exec(String(row.event_type || ""));
+  if (!m) return null;
+  const anlass = meta.anlass === undefined ? "ABHOLBEREIT" : String(meta.anlass);
+  if (FREIGABE_ANLAESSE[anlass]?.ereignis !== m[1]) return null;
+  return { test: false, anlass, ereignis: m[1], zustand: m[2], meta, frisch };
+}
+
+// Die Kundenmail des Anlasses bauen (vorschau=true) oder senden. Jede der drei
+// Funktionen prueft selbst, ob der Anlass noch gilt (Bestellstatus, Stand der
+// Sendungsverfolgung, dieselbe Sendung) und sperrt Doppelversand.
+async function freigabeMail(env, anlass, orderId, shipmentId, reqId, vorschau) {
+  if (anlass === "VERSENDET") return sendShippingConfirmation(env, orderId, reqId, { vorschau, expectedShipmentId: shipmentId, nurUnterwegs: true });
+  if (anlass === "ZUGESTELLT") return sendDeliveryNotice(env, orderId, { reqId, vorschau, expectedShipmentId: shipmentId });
+  return sendPickupReady(env, orderId, { reqId, vorschau, requireReady: true, expectedShipmentId: shipmentId });
+}
+
+const NICHT_AKTUELL = Object.freeze({
+  VERSENDET: "Die Sendung ist nicht mehr unterwegs – Versandmail nicht gesendet.",
+  ABHOLBEREIT: "DHL meldet diese Sendung nicht mehr als abholbereit.",
+  ZUGESTELLT: "Die Bestellung gilt nicht mehr als zugestellt – Mail nicht gesendet.",
+});
+
 // Der Link in Telegram ist eine zufaellige, einmalige Kennung. Er zeigt die
-// fertige Kundenmail nur, solange DHL die zugehoerige Sendung noch aktuell als
-// abholbereit meldet. Die Vorschau fuehrt keinen Versand aus.
+// fertige Kundenmail nur, solange die Freigabe offen ist und der Anlass noch
+// gilt (z. B. DHL die Sendung noch als abholbereit meldet). Die Vorschau fuehrt
+// keinen Versand aus.
 export async function handleTelegramPickupPreview(url, env, reqId = crypto.randomUUID()) {
   const token = previewToken(url);
   if (!token || !env?.DB) return new Response("Not found", { status: 404 });
   const id = `notify:telegram:pickup:${token}`;
   const row = await env.DB.prepare("SELECT entity_id,event_type,metadata_json,created_at FROM audit_events WHERE id=? LIMIT 1").bind(id).first();
-  if (!row || !["PICKUP_APPROVAL_PENDING", "PICKUP_TEST_PENDING"].includes(row.event_type) || !Number.isFinite(Date.parse(row.created_at)) || Date.now() - Date.parse(row.created_at) > 48 * 3_600_000) {
-    return new Response("Not found", { status: 404 });
-  }
-  let meta = {};
-  try { meta = JSON.parse(row.metadata_json || "{}"); } catch { return new Response("Not found", { status: 404 }); }
-  if (row.event_type === "PICKUP_TEST_PENDING") {
+  const freigabe = freigabeLesen(row);
+  if (!freigabe || freigabe.zustand !== "PENDING" || !freigabe.frisch) return new Response("Not found", { status: 404 });
+  const meta = freigabe.meta;
+  if (freigabe.test) {
     if (String(meta.chatId || "") !== String(await resolveTelegramChatId(env, reqId)) || !meta.item) return new Response("Not found", { status: 404 });
     return new Response(pickupTestMail(env, meta).html, { status: 200, headers: previewHeaders() });
   }
   if (!meta.shipmentId) return new Response("Not found", { status: 404 });
-  const draft = await sendPickupReady(env, row.entity_id, { reqId, vorschau: true, requireReady: true, expectedShipmentId: meta.shipmentId });
+  const draft = await freigabeMail(env, freigabe.anlass, row.entity_id, meta.shipmentId, reqId, true);
   if (!draft.vorschau) return new Response("Not found", { status: 404 });
   return new Response(draft.html, { status: 200, headers: previewHeaders() });
 }
@@ -166,6 +195,21 @@ export async function ensureTelegramPickupWebhook(env, reqId = crypto.randomUUID
   return { ready: true, installed: true };
 }
 
+// Nach "gesendet" oder "nicht senden" verschwinden die Knoepfe unter der
+// Nachricht - so bleibt sichtbar, was noch offen ist. Klappt das nicht, aendert
+// es nichts: der Zustand in der Datenbank entscheidet.
+async function knoepfeEntfernen(env, callback) {
+  const chatId = callback?.message?.chat?.id;
+  const messageId = callback?.message?.message_id;
+  if (chatId === undefined || chatId === null || !messageId) return;
+  await telegramApi(env, "editMessageReplyMarkup", { chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: [] } }).catch(() => {});
+}
+
+// Knopfdruck des Inhabers. "pickup:<token>" sendet die Kundenmail des Anlasses
+// genau einmal (PENDING -> CLAIMED -> SENT), "pickup-no:<token>" schliesst die
+// Freigabe ohne Versand (PENDING -> DECLINED), "pickup-test:<token>" ist der
+// Test aus der Admin-App und sendet nie etwas. Nur der private Chat des
+// Inhabers zaehlt; nach 48 Stunden ist eine Freigabe abgelaufen.
 export async function handleTelegramPickupWebhook(request, env, reqId = crypto.randomUUID()) {
   if (request.method !== "POST") return new Response("Not found", { status: 404 });
   if (!env?.DB || !env?.TELEGRAM_BOT_TOKEN || !equalSecret(request.headers.get("X-Telegram-Bot-Api-Secret-Token"), await webhookSecret(env.TELEGRAM_BOT_TOKEN))) {
@@ -177,7 +221,7 @@ export async function handleTelegramPickupWebhook(request, env, reqId = crypto.r
   let update;
   try { update = JSON.parse(raw); } catch { return new Response("Bad request", { status: 400 }); }
   const callback = update?.callback_query;
-  const parsed = /^(pickup(?:-test)?):([a-f0-9]{32})$/.exec(String(callback?.data || ""));
+  const parsed = /^(pickup(?:-test|-no)?):([a-f0-9]{32})$/.exec(String(callback?.data || ""));
   if (!parsed) return new Response("OK");
   const kind = parsed[1];
   const token = parsed[2];
@@ -188,38 +232,64 @@ export async function handleTelegramPickupWebhook(request, env, reqId = crypto.r
   }
   const rowId = `notify:telegram:pickup:${token}`;
   const row = await env.DB.prepare("SELECT entity_id,event_type,metadata_json,created_at FROM audit_events WHERE id=? LIMIT 1").bind(rowId).first();
+  const freigabe = freigabeLesen(row);
+  const eigene = freigabe && String(freigabe.meta.chatId || "") === chatId;
   let answer = "Freigabe nicht mehr gültig.";
-  if (kind === "pickup-test") {
-    if (row?.event_type === "PICKUP_TEST_PENDING" && Date.now() - Date.parse(row.created_at) <= 48 * 3_600_000) {
-      let meta = {};
-      try { meta = JSON.parse(row.metadata_json || "{}"); } catch { /* ungueltiger Datensatz */ }
-      if (String(meta.chatId || "") === chatId) answer = "Test bestätigt: Keine Kundenmail wurde gesendet.";
+  let fertig = false;
+  if (!eigene) {
+    // Unbekannt, beschaedigt oder fuer einen anderen Chat ausgestellt.
+  } else if (freigabe.test) {
+    // Test aus der Admin-App: beide Knoepfe enden ohne Kundenmail.
+    if (kind !== "pickup" && freigabe.zustand === "PENDING" && freigabe.frisch) {
+      answer = kind === "pickup-no" ? "Test geschlossen: Keine Kundenmail wurde gesendet." : "Test bestätigt: Keine Kundenmail wurde gesendet.";
+      if (kind === "pickup-no") {
+        await env.DB.prepare("UPDATE audit_events SET event_type='PICKUP_TEST_CLOSED' WHERE id=? AND event_type='PICKUP_TEST_PENDING'").bind(rowId).run().catch(() => {});
+        fertig = true;
+      }
     }
-  } else if (row?.event_type === "PICKUP_APPROVAL_SENT") answer = "Mail wurde bereits gesendet.";
-  else if (row?.event_type === "PICKUP_APPROVAL_PENDING" && Date.now() - Date.parse(row.created_at) <= 48 * 3_600_000) {
-    let meta = {};
-    try { meta = JSON.parse(row.metadata_json || "{}"); } catch { /* ungueltiger Datensatz */ }
-    if (String(meta.chatId || "") === chatId && meta.shipmentId) {
-      const claimed = await env.DB.prepare("UPDATE audit_events SET event_type='PICKUP_APPROVAL_CLAIMED' WHERE id=? AND event_type='PICKUP_APPROVAL_PENDING'").bind(rowId).run();
-      if (claimed?.meta?.changes) {
-        try {
-          const result = await sendPickupReady(env, row.entity_id, { reqId, requireReady: true, expectedShipmentId: meta.shipmentId });
-          if (result.sent || result.duplicate) {
-            await env.DB.prepare("UPDATE audit_events SET event_type='PICKUP_APPROVAL_SENT' WHERE id=? AND event_type='PICKUP_APPROVAL_CLAIMED'").bind(rowId).run();
-            answer = result.sent ? "Kundenmail gesendet." : "Mail war bereits gesendet.";
-            if (result.sent) await sendTelegramMessage(env, `✅ Abholmail für Bestellung gesendet.`, reqId).catch(() => {});
-          } else {
-            answer = result.reason === "PICKUP_NOT_CURRENT" ? "DHL meldet diese Sendung nicht mehr als abholbereit." : "Kundenmail nicht gesendet. Bitte in der Admin-App prüfen.";
-            await env.DB.prepare("UPDATE audit_events SET event_type='PICKUP_APPROVAL_PENDING' WHERE id=? AND event_type='PICKUP_APPROVAL_CLAIMED'").bind(rowId).run();
+  } else if (kind === "pickup-test") {
+    // Der Test-Knopf kann nie eine echte Freigabe ausloesen.
+  } else if (freigabe.zustand === "SENT") {
+    answer = "Mail wurde bereits gesendet.";
+    fertig = true;
+  } else if (freigabe.zustand === "DECLINED") {
+    answer = "Freigabe wurde geschlossen – nicht gesendet.";
+    fertig = true;
+  } else if (kind === "pickup-no") {
+    // Schliessen geht auch nach Ablauf der 48 Stunden: gesendet wird ohnehin nichts.
+    const ev = freigabe.ereignis;
+    const geschlossen = await env.DB.prepare(`UPDATE audit_events SET event_type='${ev}_DECLINED' WHERE id=? AND event_type='${ev}_PENDING'`).bind(rowId).run();
+    if (geschlossen?.meta?.changes) { answer = "Nicht gesendet."; fertig = true; }
+    else answer = "Freigabe wird bereits verarbeitet.";
+  } else if (freigabe.zustand === "PENDING" && freigabe.frisch && freigabe.meta.shipmentId) {
+    const ev = freigabe.ereignis;
+    const zurueck = () => env.DB.prepare(`UPDATE audit_events SET event_type='${ev}_PENDING' WHERE id=? AND event_type='${ev}_CLAIMED'`).bind(rowId).run();
+    const claimed = await env.DB.prepare(`UPDATE audit_events SET event_type='${ev}_CLAIMED' WHERE id=? AND event_type='${ev}_PENDING'`).bind(rowId).run();
+    if (claimed?.meta?.changes) {
+      try {
+        const result = await freigabeMail(env, freigabe.anlass, row.entity_id, freigabe.meta.shipmentId, reqId, false);
+        if (result.sent || result.duplicate) {
+          await env.DB.prepare(`UPDATE audit_events SET event_type='${ev}_SENT' WHERE id=? AND event_type='${ev}_CLAIMED'`).bind(rowId).run();
+          answer = result.sent ? "Kundenmail gesendet." : "Mail war bereits gesendet.";
+          fertig = true;
+          if (result.sent) {
+            const bestellung = await env.DB.prepare("SELECT order_number FROM commerce_orders WHERE id=? LIMIT 1").bind(row.entity_id).first().catch(() => null);
+            await sendTelegramMessage(env, `✅ ${FREIGABE_ANLAESSE[freigabe.anlass].mail} für Bestellung ${telegramZeile(bestellung?.order_number || "", 60)} gesendet.`.replace("  ", " "), reqId).catch(() => {});
           }
-        } catch (err) {
-          await env.DB.prepare("UPDATE audit_events SET event_type='PICKUP_APPROVAL_PENDING' WHERE id=? AND event_type='PICKUP_APPROVAL_CLAIMED'").bind(rowId).run().catch(() => {});
-          console.error(JSON.stringify({ event: "pickup_approval_failed", requestId: reqId, code: safeText(err?.message || "", 80) }));
-          answer = "Versand fehlgeschlagen. Bitte in der Admin-App prüfen.";
+        } else {
+          answer = ["PICKUP_NOT_CURRENT", "SHIPPING_NOT_CURRENT", "DELIVERY_NOT_CURRENT", "ORDER_NOT_SHIPPED", "SHIPMENT_CHANGED"].includes(result.reason)
+            ? NICHT_AKTUELL[freigabe.anlass] : "Kundenmail nicht gesendet. Bitte in der Admin-App prüfen.";
+          await zurueck();
         }
-      } else answer = "Freigabe wird bereits verarbeitet.";
-    }
-  }
+      } catch (err) {
+        await zurueck().catch(() => {});
+        console.error(JSON.stringify({ event: "pickup_approval_failed", requestId: reqId, anlass: freigabe.anlass, code: safeText(err?.message || "", 80) }));
+        answer = "Versand fehlgeschlagen. Bitte in der Admin-App prüfen.";
+      }
+    } else answer = "Freigabe wird bereits verarbeitet.";
+  } else if (freigabe.zustand === "CLAIMED") answer = "Freigabe wird bereits verarbeitet.";
+  else if (freigabe.zustand === "PENDING" && !freigabe.frisch) answer = "Freigabe abgelaufen (48 Stunden) – nichts gesendet.";
   await telegramApi(env, "answerCallbackQuery", { callback_query_id: String(callback.id), text: answer, show_alert: false }).catch(() => {});
+  if (fertig) await knoepfeEntfernen(env, callback);
   return new Response("OK");
 }

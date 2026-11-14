@@ -12,7 +12,7 @@ import { anschlussVonIp } from './privacy-security.js';
 // Order: host -> Geo-Sperre -> HTTPS -> Waechter -> paths -> origin.
 const PAGES = new Set(['agb','baukasten','cart','chaos','datenschutz','faq','impressum','kasse','konto','marken','match','mieten','newsletter','ueber-uns','universe','widerruf']);
 // google7945c4dc594a9a9c.html: Inhaberschaft fuer die Google Search Console (Konto disorder119shop), muss dauerhaft erreichbar bleiben.
-const ROOT_FILES = new Set(['index.html','404.html','offline.html','robots.txt','sitemap.xml','llms.txt','manifest.webmanifest','sw.js','favicon.ico','google7945c4dc594a9a9c.html']);
+const ROOT_FILES = new Set(['index.html','404.html','offline.html','robots.txt','sitemap.xml','llms.txt','manifest.webmanifest','sw.js','favicon.ico','apple-touch-icon.png','apple-touch-icon-precomposed.png','google7945c4dc594a9a9c.html']);
 const FIELDS = new Set(['id','article','url_slug','title','title_en','color_en','brand','price','price_estimated','public_status','status','category','size','color','condition','brightness','gallery','look','department','product_type','taxonomy_category','size_normalized','rental_price','grid_image','hover_image','foto_hell']);
 // Gestaltete Fehlerseite fuer Adressen, die es im Shop nicht gibt. Steht hier
 // fertig im Worker: der Ursprung wird fuer solche Pfade nie gefragt.
