@@ -138,7 +138,7 @@ EXTRA = {
         "preis_desc": "{n} Designer-Teile aus zweiter Hand unter {grenze}{marken}. Vintage-Einzelstücke, jedes nur 1× verfügbar.",
         "vas_name": "Vintage Archive Shop", "vas_titel": "Vintage Archive Shop: Designer Second Hand | Disorder119",
         "vas_h1": "Vintage Archive Shop – Designer-Mode aus zweiter Hand",
-        "vas_text": "Disorder119 ist ein Vintage Archive Shop: ein kuratiertes Archiv für Designer-Mode aus zweiter Hand{marken}. "
+        "vas_text": "Disorder119 ist ein Vintage Archive Shop für Archive Fashion: ein kuratiertes Archiv für Designer-Mode aus zweiter Hand{marken}. "
                     "Aktuell sind {n} Teile verfügbar. {preis}Jedes Stück wird einzeln ausgewählt, fotografiert und beschrieben und "
                     "ist nur einmal vorhanden. Versand mit DHL aus Deutschland.",
         "vas_desc": "Vintage Archive Shop für Designer-Mode aus zweiter Hand{marken}. {n} Einzelstücke, {preis}jedes nur 1× verfügbar.",
@@ -162,9 +162,9 @@ EXTRA = {
         "preis_text": "{n} pre-owned designer pieces under {grenze}{marken}. {preis}All pieces are one-offs from the Disorder119 "
                       "vintage archive, photographed individually and available only once. Shipping with DHL from Germany.",
         "preis_desc": "{n} pre-owned designer pieces under {grenze}{marken}. Vintage one-offs, each available only once.",
-        "vas_name": "Vintage Archive Shop", "vas_titel": "Vintage Archive Shop: Pre-Owned Designer | Disorder119",
-        "vas_h1": "Vintage Archive Shop – Pre-Owned Designer Fashion",
-        "vas_text": "Disorder119 is a vintage archive shop: a curated archive of pre-owned designer fashion{marken}. {n} pieces are "
+        "vas_name": "Vintage Archive Shop", "vas_titel": "Archive Fashion: Vintage Archive Shop | Disorder119",
+        "vas_h1": "Archive Fashion – Vintage Archive Shop for Pre-Owned Designer Pieces",
+        "vas_text": "Disorder119 is a vintage archive shop for archive fashion: a curated archive of pre-owned designer pieces{marken}. {n} pieces are "
                     "currently available. {preis}Every piece is selected, photographed and described individually and exists only "
                     "once. Shipping with DHL from Germany.",
         "vas_desc": "Vintage archive shop for pre-owned designer fashion{marken}. {n} one-offs, {preis}each available only once.",
@@ -198,6 +198,62 @@ EXTRA = {
         "trust_versand": "Livraison gratuite dès {betrag} en Allemagne",
         "verkauft_h2": "Vendu récemment", "mehr_h2": "À découvrir",
     },
+}
+
+# Themenseiten /designer/<slug>/: Produkttyp, Farbe + Produktart, Material - nur aus gepflegten Daten.
+THEMA_WURZEL = "designer/"
+# product_type -> (slug, de, en, fr)
+TYPEN = {
+    "Sneakers": ("sneaker", "Designer Sneaker", "Designer Sneakers", "Sneakers de créateurs"),
+    "Boots": ("stiefel", "Designer Stiefel & Boots", "Designer Boots", "Bottes de créateurs"),
+    "Blazer": ("blazer", "Designer Blazer", "Designer Blazers", "Blazers de créateurs"),
+    "Vest": ("westen", "Designer Westen", "Designer Vests", "Gilets de créateurs"),
+    "Polo Shirt": ("poloshirts", "Designer Poloshirts", "Designer Polo Shirts", "Polos de créateurs"),
+    "T-Shirt": ("t-shirts", "Designer T-Shirts", "Designer T-Shirts", "T-shirts de créateurs"),
+    "Long Sleeve": ("longsleeves", "Designer Longsleeves", "Designer Long Sleeves", "Hauts à manches longues de créateurs"),
+    "Cardigan": ("cardigans", "Designer Cardigans", "Designer Cardigans", "Cardigans de créateurs"),
+    "Sweatshirt": ("sweatshirts", "Designer Sweatshirts", "Designer Sweatshirts", "Sweatshirts de créateurs"),
+    "Biker Jacket": ("bikerjacken", "Designer Bikerjacken", "Designer Biker Jackets", "Blousons motard de créateurs"),
+    "Cap": ("caps", "Designer Caps", "Designer Caps", "Casquettes de créateurs"),
+    "Bag": ("taschen", "Designer Taschen", "Designer Bags", "Sacs de créateurs"),
+    "Coat": ("maentel", "Designer Mäntel", "Designer Coats", "Manteaux de créateurs"),
+    "Shorts": ("shorts", "Designer Shorts", "Designer Shorts", "Shorts de créateurs"),
+}
+# Farbfamilie -> (Farbwerte aus dem Katalog, slug-Teil, de-Adjektiv, en, fr)
+FARBEN = (
+    (("Schwarz",), "schwarze", "Schwarze", "Black", "noir"),
+    (("Braun",), "braune", "Braune", "Brown", "marron"),
+    (("Grau",), "graue", "Graue", "Grey", "gris"),
+    (("Blau", "Dunkelblau", "Marineblau", "Hellblau"), "blaue", "Blaue", "Blue", "bleu"),
+    (("Grün",), "gruene", "Grüne", "Green", "vert"),
+    (("Beige",), "beige", "Beige", "Beige", "beige"),
+    (("Weiß",), "weisse", "Weiße", "White", "blanc"),
+    (("Rot",), "rote", "Rote", "Red", "rouge"),
+)
+# Material: Wort im (deutschen) Artikeltitel bzw. Kategorie Strick -> (slug, de, en, fr)
+MATERIAL = (
+    (r"(?<!kunst)leder", None, "leder", "Designer Mode aus Leder", "Designer Leather Pieces", "Pièces de créateurs en cuir"),
+    (r"nylon", None, "nylon", "Designer Mode aus Nylon", "Designer Nylon Pieces", "Pièces de créateurs en nylon"),
+    (r"jeans|denim", None, "denim", "Designer Denim & Jeans", "Designer Denim", "Denim de créateurs"),
+    (None, "Knitwear", "strick", "Designer Strick", "Designer Knitwear", "Maille de créateurs"),
+)
+THEMA_TEXT = {
+    "de": {"titel": "{wort} Second Hand & Vintage | Disorder119", "titel_kurz": "{wort} Second Hand | Disorder119",
+           "h1": "{wort} – Second Hand & Vintage",
+           "text": "{wort}: aktuell {n} Teile im Vintage-Archiv von Disorder119{marken}. {preis}{groessen}Alle Teile sind "
+                   "Second-Hand- und Vintage-Einzelstücke, werden einzeln fotografiert und sind jeweils nur einmal vorhanden. "
+                   "Versand mit DHL aus Deutschland.",
+           "desc": "{wort} aus zweiter Hand: {n} Teile{marken}. {preis}Vintage-Einzelstücke, jedes nur 1× verfügbar."},
+    "en": {"titel": "{wort} Pre-Owned & Vintage | Disorder119", "titel_kurz": "{wort} Pre-Owned | Disorder119",
+           "h1": "{wort} – Pre-Owned & Vintage",
+           "text": "{wort}: {n} pieces currently in the Disorder119 vintage archive{marken}. {preis}{groessen}Every piece is a "
+                   "pre-owned or vintage one-off, photographed individually and available only once. Shipping with DHL from Germany.",
+           "desc": "Pre-owned {wort}: {n} pieces{marken}. {preis}Vintage one-offs, each available only once."},
+    "fr": {"titel": "{wort} seconde main & vintage | Disorder119", "titel_kurz": "{wort} seconde main | Disorder119",
+           "h1": "{wort} – Seconde Main & Vintage",
+           "text": "{wort} : {n} pièces actuellement dans l’archive vintage Disorder119{marken}. {preis}{groessen}Chaque pièce est "
+                   "une pièce unique de seconde main ou vintage, photographiée individuellement. Expédition par DHL depuis l’Allemagne.",
+           "desc": "{wort} de seconde main : {n} pièces{marken}. {preis}Pièces vintage uniques."},
 }
 
 SEGMENTE = tuple(b["slug"] for b in BEREICHE)
@@ -305,6 +361,42 @@ def extra_seiten(b):
                     "desc": _kuerzen(e["preis_desc"], werte, _marken(seite), lang),
                     "krumen": [(e["preis_name"].format(grenze=g), seg)]}
         liste.append(_eigene_seite(b, seg, "preis", teile, preis))
+
+    # --- Themenseiten: Produkttyp, Farbe + Produktart, Material
+    def thema(slug, woerter, teile):
+        if len(teile) < MIN_TEILE:
+            return
+        seg = THEMA_WURZEL + slug + "/"
+
+        def bau(lang, seite, woerter=woerter, seg=seg):
+            tt, wort = THEMA_TEXT[lang], woerter[lang]
+            titel = tt["titel"].format(wort=wort)
+            if len(titel) > ms.TITEL_MAX:
+                titel = tt["titel_kurz"].format(wort=wort)
+            werte = {"wort": wort, "n": len(seite["teile"]), "preis": preis_kurz(seite, lang)}
+            return {"titel": titel, "h1": tt["h1"].format(wort=wort),
+                    "text": tt["text"].format(wort=wort, n=len(seite["teile"]), marken=marken_text(seite, lang),
+                                              preis=_preis_satz(seite, lang), groessen=_groessen_satz(b, seite, lang)),
+                    "desc": _kuerzen(tt["desc"], werte, _marken(seite), lang),
+                    "krumen": [(wort, seg)]}
+        liste.append(_eigene_seite(b, seg, "thema", teile, bau))
+
+    for typ, (slug, de, en, fr) in TYPEN.items():
+        thema(slug, {"de": de, "en": en, "fr": fr}, [it for it in verfuegbar if it.get("product_type") == typ])
+    for werte, slug_teil, de_adj, en_adj, fr_adj in FARBEN:
+        in_farbe = [it for it in verfuegbar if str(it.get("color") or "").split(",")[0].strip() in werte]
+        for gruppe in GRUPPEN:
+            teile = [it for it in in_farbe if _kategorie(it) in gruppe["kategorien"]]
+            thema(slug_teil + "-" + gruppe["slug"],
+                  {"de": de_adj + " Designer " + TEXTE["de"]["gruppe"][gruppe["slug"]],
+                   "en": en_adj + " Designer " + TEXTE["en"]["gruppe"][gruppe["slug"]],
+                   "fr": TEXTE["fr"]["gruppe"][gruppe["slug"]] + " de créateurs en " + fr_adj}, teile)
+    for muster, kategorie, slug, de, en, fr in MATERIAL:
+        if muster:
+            teile = [it for it in verfuegbar if re.search(muster, str(it.get("title") or "").casefold())]
+        else:
+            teile = [it for it in verfuegbar if _kategorie(it) == kategorie]
+        thema(slug, {"de": de, "en": en, "fr": fr}, teile)
 
     # --- Marke + Produktart ("Prada Jacken Second Hand")
     for marke in ms.marken(b):
@@ -466,6 +558,7 @@ def _krumen(b, seite, lang):
 
 
 VERKAUFT_MAX = 8
+MEHR_THEMEN_MAX = 18
 
 
 def vertrauen_html(b, lang):
@@ -544,6 +637,10 @@ def seite_html(b, seite, lang, alle, shop_config):
     # Neuzugaenge, Preisseiten und "Vintage Archive Shop" - untereinander verlinkt.
     mehr = [(s["eigen"][lang]["krumen"][-1][0], home + s["seg"], len(s["teile"]))
             for s in alle if s.get("eigen") and s["art"] != "marke_kat" and s["seg"] != seite["seg"]]
+    fest = [m for m, s in zip(mehr, [s for s in alle if s.get("eigen") and s["art"] != "marke_kat" and s["seg"] != seite["seg"]])
+            if s["art"] != "thema"]
+    themen = sorted((m for m in mehr if m not in fest), key=lambda m: -m[2])[:MEHR_THEMEN_MAX]
+    mehr = fest + themen
     if mehr:
         teile_html.append(f'<h2 class="mk-h2">{b.esc(EXTRA[lang]["mehr_h2"])}</h2><ul class="mk-links">{_links(b, mehr)}</ul>')
     sammlung = {
@@ -584,6 +681,11 @@ def build(b):
             ordner = ms._ordner(b, lang, name + "/")
             if name not in gueltig and ordner.is_dir():
                 shutil.rmtree(ordner)
+        thema_wurzel = ms._ordner(b, lang, THEMA_WURZEL)
+        if thema_wurzel.is_dir():
+            for alt in thema_wurzel.iterdir():
+                if alt.is_dir() and (THEMA_WURZEL + alt.name) not in gueltig:
+                    shutil.rmtree(alt)
         marken_wurzel = ms._ordner(b, lang, "marke/")
         if marken_wurzel.is_dir():
             for marke_ordner in marken_wurzel.iterdir():

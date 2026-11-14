@@ -109,6 +109,18 @@ class KategorieseitenTests(unittest.TestCase):
         # Der Shop selbst verlinkt die Einstiegsseiten nicht.
         self.assertNotIn("damen", build_site.marken_fusslink("de"))
 
+    def test_themenseiten_nur_aus_gepflegten_daten(self):
+        bestand = BESTAND + [teil(30 + n, kategorie="Shoes", product_type="Sneakers", color="Schwarz, Weiß", marke="Y-3") for n in range(3)] \
+            + [teil(40, title="Prada Kunstlederjacke"), teil(41, title="Prada Lederjacke")]
+        wurzel = self.bauen(bestand)
+        segmente = [s["seg"] for s in kategorieseiten.extra_seiten(build_site) if s["art"] == "thema"]
+        self.assertIn("designer/sneaker/", segmente)
+        self.assertIn("designer/schwarze-schuhe/", segmente)
+        self.assertNotIn("designer/leder/", segmente)  # nur 1 echtes Lederteil, Kunstleder zaehlt nicht
+        seite = (wurzel / "designer" / "sneaker" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("<title>Designer Sneaker Second Hand &amp; Vintage | Disorder119</title>", seite)
+        self.assertEqual(seite.count("<h1"), 1)
+
     def test_weitere_einstiegsseiten(self):
         wurzel = self.bauen()
         seite = (wurzel / "marke" / "prada" / "jacken" / "index.html").read_text(encoding="utf-8")

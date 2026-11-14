@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ZIEL = ROOT / ".vorschau-build"
 ORDNER = ["artikel", "en", "fr", "assets", "feed", "cart", "kasse", "konto", "match", "baukasten", "mieten", "faq",
-          "ueber-uns", "marke", "marken", "damen", "herren", "neu", "unter-100", "unter-200", "vintage-archive-shop", "newsletter", "impressum", "agb", "datenschutz", "widerruf", "universe", "chaos"]
+          "ueber-uns", "marke", "marken", "damen", "herren", "neu", "unter-100", "unter-200", "vintage-archive-shop", "designer", "newsletter", "impressum", "agb", "datenschutz", "widerruf", "universe", "chaos"]
 DATEIEN = ["index.html", "404.html", "offline.html", "manifest.webmanifest", "llms.txt", "sitemap.xml"]
 
 

@@ -406,10 +406,40 @@ def fmt_price_de(v):
     return s + " €"
 
 
+FR_TITEL_WOERTER = {
+    "Women": "Femme", "Men": "Homme", "Unisex": "Unisexe",
+    "Dark Blue": "Bleu foncé", "Light Blue": "Bleu clair", "Navy Blue": "Bleu marine", "Navy": "Bleu marine",
+    "Black": "Noir", "White": "Blanc", "Brown": "Marron", "Grey": "Gris", "Gray": "Gris", "Blue": "Bleu", "Green": "Vert",
+    "Red": "Rouge", "Beige": "Beige", "Multicolour": "Multicolore", "Multicolor": "Multicolore", "Silver": "Argent",
+    "Gold": "Doré", "Orange": "Orange", "Pink": "Rose", "Yellow": "Jaune", "Purple": "Violet", "Cream": "Crème",
+    "Olive": "Olive", "Ivory": "Ivoire", "Khaki": "Kaki", "Burgundy": "Bordeaux", "Turquoise": "Turquoise",
+}
+_FR_TITEL_RE = re.compile(r"\b(" + "|".join(sorted((re.escape(w) for w in FR_TITEL_WOERTER), key=len, reverse=True)) + r")\b")
+
+
+def french_title(it):
+    """Titel fuer /fr/: der englische Titel (Modellnamen und Produktwoerter
+    versteht man in Frankreich), Bereich und Farbe am Ende auf Franzoesisch.
+    Vorher stand dort der deutsche Titel."""
+    titel = english_title(it)
+    if not titel:
+        return it.get("title") or ""
+    woerter = titel.split(" ")
+    # Nur das Ende uebersetzen (Bereich + Farbe) - Marken wie "Rundholz Black Label" bleiben.
+    schnitt = max(1, len(woerter) - 3)
+    ende = _FR_TITEL_RE.sub(lambda m: FR_TITEL_WOERTER[m.group(1)], " ".join(woerter[schnitt:]))
+    return " ".join(woerter[:schnitt] + [ende])
+
+
 def item_title(it, lang="de"):
-    """Sichtbarer Artikeltitel: im englischen Shop englisch, sonst der
-    gepflegte (deutsche) Titel aus data/items.json."""
-    return english_title(it) if lang == "en" else (it.get("title") or "")
+    """Sichtbarer Artikeltitel: im englischen Shop englisch, im franzoesischen
+    der englische mit franzoesischem Bereich/Farbe, sonst der gepflegte
+    (deutsche) Titel aus data/items.json."""
+    if lang == "en":
+        return english_title(it)
+    if lang == "fr":
+        return french_title(it)
+    return it.get("title") or ""
 
 
 def item_description(it, lang):

@@ -46,6 +46,8 @@ export function publicPath(pathname) {
     // /marke/<slug>/<kategorie>/ : Marke + Produktart (scripts/kategorieseiten.py)
     return rest.length===0 || (rest.length===1 && KATEGORIE_SEITEN.has(rest[0]));
   }
+  // Themenseiten (scripts/kategorieseiten.py): /designer/<slug>/, z. B. /designer/sneaker/.
+  if (parts[0]==='designer') return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(parts[1]||'') && parts[1].length<=60 && (parts.length===2 || (parts.length===3 && parts[2]==='index.html'));
   // Kategorieseiten (scripts/kategorieseiten.py): /damen/, /herren/ und /damen/<kategorie>/.
   if (parts[0]==='damen' || parts[0]==='herren') {
     const rest=parts.slice(1);
@@ -417,6 +419,8 @@ export default {
     if (geoGesperrt(request,env)) return geoSperrAntwort(request,Object.fromEntries(storefrontHeaders(new Response(null,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}})).entries()));
     // Unverschluesselt aufgerufen (Cloudflare leitet nicht selbst um): sofort auf HTTPS.
     if (url.protocol==='http:') { url.protocol='https:'; return new Response(null,{status:301,headers:storefrontHeaders(new Response(null,{headers:{Location:url.toString(),'Cache-Control':'no-store'}}))}); }
+    // Eine Adresse je Seite: www leitet dauerhaft auf disorder119.com (sonst zwei gleiche Seiten fuer Suchmaschinen).
+    if (url.hostname==='www.disorder119.com' && ['GET','HEAD'].includes(request.method)) { url.hostname='disorder119.com'; return new Response(null,{status:301,headers:storefrontHeaders(new Response(null,{headers:{Location:url.toString(),'Cache-Control':'public, max-age=3600'}}))}); }
     // Waechter: Angriffsproben sofort abweisen, gesperrte Anschluesse und Fluten stoppen.
     const ip=request.headers.get('CF-Connecting-IP')||'';
     const ua=request.headers.get('User-Agent')||'';
