@@ -224,11 +224,11 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       orderGreeting: "Hallo! Ich interessiere mich für folgende Artikel aus dem Disorder119-Archiv:",
       orderAvailQuestion: "Sind diese Artikel noch verfügbar?", orderSubject: "Bestellanfrage Disorder119",
       orderSizeAbbrev: "Gr. ", orderArticleAbbrev: "Art.-Nr. ",
-      modeArchiv: "Archiv", modeMatch: "Match", modeChaos: "Universum", modeBaukasten: "Baukasten",
+      modeArchiv: "Archiv", modeMatch: "Swipe", modeChaos: "Universum", modeBaukasten: "Baukasten",
       menuRental: "Verleih",
-      pageTitleHome: "Designer Second Hand & Vintage Mode | Disorder119", pageTitleMatch: "Disorder119 — Match",
+      pageTitleHome: "Designer Second Hand & Vintage Mode | Disorder119", pageTitleMatch: "Disorder119 — Swipe",
       pageTitleChaos: "Disorder119 — Universum", pageTitleOutfit: "Disorder119 — Outfit-Baukasten",
-      modeHint: "Entdecke auch Match, Universum & Baukasten", hintCloseAria: "Hinweis schließen",
+      modeHint: "Entdecke auch Swipe, Universum & Baukasten", hintCloseAria: "Hinweis schließen",
       modeRailAria: "Ansicht wechseln",
       rentalCta: "Für Miete anfragen", rentalCloseAria: "Schließen",
       rentalPriceLabel: "Mietpreis", rentalPriceOnRequest: "Mietpreis auf Anfrage",
@@ -368,11 +368,11 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       orderGreeting: "Hello! I'm interested in the following pieces from the Disorder119 archive:",
       orderAvailQuestion: "Are these pieces still available?", orderSubject: "Order request Disorder119",
       orderSizeAbbrev: "Size ", orderArticleAbbrev: "Item no. ",
-      modeArchiv: "Archive", modeMatch: "Match", modeChaos: "Universe", modeBaukasten: "Outfit builder",
+      modeArchiv: "Archive", modeMatch: "Swipe", modeChaos: "Universe", modeBaukasten: "Outfit builder",
       menuRental: "Rental",
-      pageTitleHome: "Pre-Owned Designer & Vintage Fashion | Disorder119", pageTitleMatch: "Disorder119 — Match",
+      pageTitleHome: "Pre-Owned Designer & Vintage Fashion | Disorder119", pageTitleMatch: "Disorder119 — Swipe",
       pageTitleChaos: "Disorder119 — Universe", pageTitleOutfit: "Disorder119 — Outfit Builder",
-      modeHint: "Also discover Match, the Universe & the outfit builder", hintCloseAria: "Close hint",
+      modeHint: "Also discover Swipe, the Universe & the outfit builder", hintCloseAria: "Close hint",
       modeRailAria: "Switch view",
       rentalCta: "Request to rent", rentalCloseAria: "Close",
       rentalPriceLabel: "Rental price", rentalPriceOnRequest: "Rental price on request",
@@ -512,11 +512,11 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       orderGreeting: "Bonjour ! Je suis intéressé(e) par les pièces suivantes de l'archive Disorder119 :",
       orderAvailQuestion: "Ces pièces sont-elles toujours disponibles ?", orderSubject: "Demande de commande Disorder119",
       orderSizeAbbrev: "Taille ", orderArticleAbbrev: "N° d'article ",
-      modeArchiv: "Archive", modeMatch: "Match", modeChaos: "Univers", modeBaukasten: "Configurateur",
+      modeArchiv: "Archive", modeMatch: "Swipe", modeChaos: "Univers", modeBaukasten: "Configurateur",
       menuRental: "Location",
-      pageTitleHome: "Mode Designer Seconde Main & Vintage | Disorder119", pageTitleMatch: "Disorder119 — Match",
+      pageTitleHome: "Mode Designer Seconde Main & Vintage | Disorder119", pageTitleMatch: "Disorder119 — Swipe",
       pageTitleChaos: "Disorder119 — Univers", pageTitleOutfit: "Disorder119 — Configurateur de tenues",
-      modeHint: "Découvre aussi Match, l'Univers et le configurateur de tenues", hintCloseAria: "Fermer l'info",
+      modeHint: "Découvre aussi Swipe, l'Univers et le configurateur de tenues", hintCloseAria: "Fermer l'info",
       modeRailAria: "Changer de vue",
       rentalCta: "Demander la location", rentalCloseAria: "Fermer",
       rentalPriceLabel: "Prix de location", rentalPriceOnRequest: "Prix de location sur demande",
@@ -2500,10 +2500,18 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   var menuBrandsToggle = document.getElementById("menuBrandsToggle");
   var menuBrandList = document.getElementById("menuBrandList");
 
+  var menuDrawer = document.getElementById("menuDrawer");
+  // Markenwolke wie im Filter: je mehr verfuegbare Teile, desto groesser der Name.
+  var markenZahl = {}, markenMax = 1;
+  PUBLIC_ITEMS.forEach(function (it) { if (it.brand && it.public_status !== "SOLD") markenZahl[it.brand] = (markenZahl[it.brand] || 0) + 1; });
+  Object.keys(markenZahl).forEach(function (k) { if (markenZahl[k] > markenMax) markenMax = markenZahl[k]; });
+  function markenGewicht(brand) { return Math.max(1, Math.min(5, Math.ceil(5 * Math.sqrt((markenZahl[brand] || 0) / markenMax)))); }
+
   brandList.forEach(function (brand) {
     var btn = document.createElement("button");
     btn.type = "button";
     btn.textContent = brand;
+    btn.setAttribute("data-gewicht", String(markenGewicht(brand)));
     btn.addEventListener("click", function () {
       closeMenu();
       filterByBrand(brand);
@@ -2643,7 +2651,25 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     var willOpen = menuBrandList.classList.contains("hidden");
     menuBrandList.classList.toggle("hidden", !willOpen);
     menuBrandsToggle.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    // Offene Marken ersetzen die Kategorien, damit das Menue ohne Scrollen auf den Schirm passt.
+    menuDrawer.classList.toggle("marken-offen", willOpen);
   });
+
+  // Modi nur als Symbole (Inhaber 14.11.2026): Swipe, Universum, Build.
+  (function () {
+    var nav = menuDrawer.querySelector(".menu-drawer__nav"), archiv = nav && nav.querySelector('[data-menu-status="Verkauft"]');
+    if (!nav || !archiv) return;
+    var reihe = document.createElement("div"); reihe.className = "menu-drawer__modi";
+    [["swipe", "♥", "Swipe"], ["chaos", "✦", "Universum"], ["outfit", "⛃", "Build"]].forEach(function (m) {
+      var ziel = document.querySelector('.mode-rail__btn[data-mode-view="' + m[0] + '"]');
+      if (!ziel) return;
+      var a = document.createElement("a"); a.href = ziel.getAttribute("href"); a.textContent = m[1];
+      a.setAttribute("aria-label", m[2]); a.title = m[2];
+      a.addEventListener("click", function (e) { e.preventDefault(); closeMenu(); ziel.click(); });
+      reihe.appendChild(a);
+    });
+    if (reihe.children.length) archiv.parentNode.insertBefore(reihe, archiv.nextSibling);
+  })();
 
   Array.prototype.forEach.call(document.querySelectorAll("[data-menu-status]"), function (btn) {
     btn.addEventListener("click", function () {
