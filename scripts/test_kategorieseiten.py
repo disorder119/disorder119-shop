@@ -80,7 +80,9 @@ class KategorieseitenTests(unittest.TestCase):
         liste = next(b for b in json_ld(seite) if isinstance(b, dict) and b.get("@type") == "CollectionPage")["mainEntity"]
         self.assertEqual(liste["numberOfItems"], 4)
         # Jedes verfuegbare Teil ist ein echter Link, verkaufte und versteckte nicht.
-        self.assertEqual(len(re.findall(r'href="/artikel/\d+/"', seite)), 4)
+        # 4 verfuegbare + 1 verkauftes ("Zuletzt verkauft"); das versteckte Teil 8 nie.
+        self.assertEqual(len(re.findall(r'href="/artikel/\d+/"', seite)), 5)
+        self.assertNotIn('href="/artikel/8/"', seite)
 
     def test_titel_hoechstens_60_zeichen(self):
         self.bauen()
@@ -98,8 +100,30 @@ class KategorieseitenTests(unittest.TestCase):
 
     def test_sitemap_und_fusslinks(self):
         self.bauen()
-        self.assertEqual(kategorieseiten.sitemap_segmente(build_site), ["damen/", "damen/jacken/", "herren/", "herren/schuhe/"])
-        self.assertEqual(kategorieseiten.fusslinks(build_site, "en"), [("Women", "/en/damen/"), ("Men", "/en/herren/")])
+        self.assertEqual(kategorieseiten.sitemap_segmente(build_site),
+                         ["damen/", "damen/jacken/", "herren/", "herren/schuhe/", "vintage-archive-shop/", "neu/", "unter-200/",
+                          "marke/prada/jacken/", "marke/y-3/schuhe/"])
+        self.assertEqual(kategorieseiten.fusslinks(build_site, "en"),
+                         [("Women", "/en/damen/"), ("Men", "/en/herren/"), ("Vintage Archive Shop", "/en/vintage-archive-shop/"),
+                          ("New", "/en/neu/")])
+        # Der Shop selbst verlinkt die Einstiegsseiten nicht.
+        self.assertNotIn("damen", build_site.marken_fusslink("de"))
+
+    def test_weitere_einstiegsseiten(self):
+        wurzel = self.bauen()
+        seite = (wurzel / "marke" / "prada" / "jacken" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("<title>Prada Jacken Second Hand &amp; Vintage | Disorder119</title>", seite)
+        self.assertEqual(seite.count("<h1"), 1)
+        self.assertIn('class="mk-trust"', seite)
+        self.assertNotIn("<script src", seite)
+        for name in ("neu", "unter-200", "vintage-archive-shop"):
+            text = (wurzel / "fr" / name / "index.html").read_text(encoding="utf-8")
+            self.assertEqual(text.count("<h1"), 1, name)
+            beschreibung = re.search(r'<meta name="description" content="([^"]*)"', text).group(1)
+            self.assertLessEqual(len(beschreibung), 175, name)
+        self.assertFalse((wurzel / "unter-100").exists())  # kein Teil unter 100 im Testbestand
+        # verkaufte Teile derselben Auswahl stehen als Beleg darunter
+        self.assertIn("Zuletzt verkauft", (wurzel / "damen" / "jacken" / "index.html").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

@@ -537,8 +537,14 @@ def markenseite_html(b, marke, lang, alle, shop_config, texte=None):
         f'<h1 class="mk-title">{b.esc(ueberschrift(marke, lang))}</h1>',
         f'<p class="mk-count">{b.esc(t["zahl"].format(n=len(marke["teile"])))}</p>',
         f'<div class="mk-text">{text}</div>',
-        f'<ul class="mk-grid">{kacheln}</ul>',
     ]
+    # Produktart-Seiten der Marke (scripts/kategorieseiten.py), z. B. "Prada Jacken".
+    import kategorieseiten
+    arten = kategorieseiten.marken_kategorien(b, marke, lang)
+    if arten:
+        teile_html.append('<ul class="mk-links">' + "".join(
+            f'<li><a href="{b.esc(pfad)}">{b.esc(name)}<small>{n}</small></a></li>' for name, pfad, n in arten) + "</ul>")
+    teile_html.append(f'<ul class="mk-grid">{kacheln}</ul>')
     if marke["verkauft"]:
         teile_html.append(f'<h2 class="mk-h2">{b.esc(t["verkauft_h2"])}</h2>')
         teile_html.append('<ul class="mk-grid mk-grid--sold">'

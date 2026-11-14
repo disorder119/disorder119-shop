@@ -10,7 +10,7 @@ import { anschlussVonIp } from './privacy-security.js';
 // Page views and Waechter incidents are handed to the shop Worker through the
 // BESUCH service binding (no public address); this Worker stores nothing itself.
 // Order: host -> Geo-Sperre -> HTTPS -> Waechter -> paths -> origin.
-const PAGES = new Set(['agb','baukasten','cart','chaos','datenschutz','faq','impressum','kasse','konto','marken','match','mieten','newsletter','ueber-uns','universe','widerruf']);
+const PAGES = new Set(['agb','baukasten','cart','chaos','datenschutz','faq','impressum','kasse','konto','marken','match','mieten','neu','newsletter','ueber-uns','universe','unter-100','unter-200','vintage-archive-shop','widerruf']);
 // google7945c4dc594a9a9c.html: Inhaberschaft fuer die Google Search Console (Konto disorder119shop), muss dauerhaft erreichbar bleiben.
 const ROOT_FILES = new Set(['index.html','404.html','offline.html','robots.txt','sitemap.xml','llms.txt','manifest.webmanifest','sw.js','favicon.ico','apple-touch-icon.png','apple-touch-icon-precomposed.png','google7945c4dc594a9a9c.html']);
 const FIELDS = new Set(['id','article','url_slug','title','title_en','color_en','brand','price','price_estimated','public_status','status','category','size','color','condition','brightness','gallery','look','department','product_type','taxonomy_category','size_normalized','rental_price','grid_image','hover_image','foto_hell']);
@@ -39,7 +39,13 @@ export function publicPath(pathname) {
   if (!parts.length || (parts.length===1 && ROOT_FILES.has(parts[0]))) return true;
   if (parts[0]==='artikel') return /^\d+(?:\.html)?$/.test(parts[1]||'') && (parts.length===2 || (parts.length===3 && parts[2]==='index.html'));
   // Markenseiten (scripts/markenseiten.py): /marke/<slug>/ je Marke und die Uebersicht /marken/.
-  if (parts[0]==='marke') return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(parts[1]||'') && parts[1].length<=60 && (parts.length===2 || (parts.length===3 && parts[2]==='index.html'));
+  if (parts[0]==='marke') {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(parts[1]||'') || parts[1].length>60) return false;
+    const rest=parts.slice(2);
+    if (rest.length && rest[rest.length-1]==='index.html') rest.pop();
+    // /marke/<slug>/<kategorie>/ : Marke + Produktart (scripts/kategorieseiten.py)
+    return rest.length===0 || (rest.length===1 && KATEGORIE_SEITEN.has(rest[0]));
+  }
   // Kategorieseiten (scripts/kategorieseiten.py): /damen/, /herren/ und /damen/<kategorie>/.
   if (parts[0]==='damen' || parts[0]==='herren') {
     const rest=parts.slice(1);

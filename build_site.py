@@ -874,17 +874,13 @@ def marken_link(it, lang):
 MARKEN_FUSSLINK_TEXT = {"de": "Marken", "en": "Brands", "fr": "Marques"}
 
 
-def kategorie_fusslinks(lang):
-    """Fusszeilen-Links zu den Bereichsseiten (/damen/, /herren/)."""
-    return "".join(f'<a href="{esc(pfad)}">{esc(text)}</a>' for text, pfad in kategorieseiten.fusslinks(_dieses_modul(), lang))
-
-
 def marken_fusslink(lang):
-    """Fusszeilen-Links der Bundle-Seiten: Markenuebersicht (/marken/) und Bereichsseiten."""
-    marken = ""
-    if markenseiten.marken(_dieses_modul()):
-        marken = f'<a href="{lang_home(lang)}{markenseiten.UEBERSICHT_SEGMENT}">{MARKEN_FUSSLINK_TEXT[lang]}</a>'
-    return marken + kategorie_fusslinks(lang)
+    """Fusszeilen-Link der Bundle-Seiten zur Markenuebersicht (/marken/). Die
+    Kategorie- und Einstiegsseiten (scripts/kategorieseiten.py) verlinkt der Shop
+    bewusst nicht - sie sind nur fuer den Einstieg ueber Suchmaschinen da."""
+    if not markenseiten.marken(_dieses_modul()):
+        return ""
+    return f'<a href="{lang_home(lang)}{markenseiten.UEBERSICHT_SEGMENT}">{MARKEN_FUSSLINK_TEXT[lang]}</a>'
 
 
 def build_markenseiten():
