@@ -11,7 +11,6 @@ import {
   widerrufAusKonto,
   widerrufVonWebsite,
   zahlungenPflegen,
-  orderStatusAutomatisch,
 } from "./admin-api.js";
 import { isWiderrufRoute } from "./widerruf.js";
 import { handleAdminInsights } from "./admin-insights.js";
@@ -23,7 +22,7 @@ import { handleAdminAlerts } from "./admin-alerts.js";
 import { handleAdminNotifications } from "./admin-notifications.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
-import { notifyPaidOrder, notifyPaidOrderByProviderOrder, notifyPickupReady } from "./notifications.js";
+import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications.js";
 import { ensureTelegramPickupWebhook, handleTelegramPickupWebhook, handleTelegramPickupPreview, isTelegramPickupPreview, isTelegramPickupWebhook } from "./telegram-pickup.js";
 import { sendQueuedPickupSamples } from "./telegram-pickup-samples.js";
 import { sendInvoiceAfterCaptureByProviderOrder, sendOrderConfirmation, sendOrderConfirmationByProviderOrder } from "./customer-mail.js";
@@ -32,6 +31,7 @@ import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
 import { dhlAutoMarken, handleVersand, istVersandRoute } from "./dhl.js";
 import { dhlMarkenAbgleichen, handleDhlQr, isDhlQrRoute, katalogAbgleich } from "./dhl-qr.js";
 import { sendungenVerfolgen } from "./dhl-tracking.js";
+import { sendungsVerdrahtung } from "./sendungs-freigabe.js";
 import { handleRuecksendungAdmin, handleRuecksendungOeffentlich, isRuecksendungAdmin, isRuecksendungOeffentlich, ruecksendungenAbgleichen } from "./ruecksendung.js";
 import { handlePacklink, handlePacklinkWebhook, isPacklinkRoute, isPacklinkWebhookRoute } from "./packlink.js";
 import { handleVersandOptionen, isVersandOptionenRoute } from "./versand.js";
@@ -662,12 +662,10 @@ const worker = {
     await runBackground(ctx, sendQueuedPickupSamples(env, reqId), "telegram_pickup_samples_failed", reqId);
     // Ruecksendeetiketten: bezahlt? QR-Code holen, Mail an die Kundin (ruecksendung.js).
     await runBackground(ctx, ruecksendungenAbgleichen(env, scheduledTime), "ruecksendung_refresh_failed", reqId);
-    // Sendungsverfolgung: unterwegs -> Versendet (Kundenmail), zugestellt -> Zugestellt (ohne Mail).
-    await runBackground(ctx, sendungenVerfolgen(env, reqId, scheduledTime, {
-      statusSetzen: (orderId, status) => orderStatusAutomatisch(env, orderId, status, reqId),
-      // Paket liegt in Packstation/Filiale: Telegram an den Inhaber, keine Kundenmail.
-      abholbereitMelden: (sendung, stand) => notifyPickupReady(env, sendung, stand, reqId),
-    }), "dhl_tracking_failed", reqId);
+    // Sendungsverfolgung: unterwegs -> Versendet, zugestellt -> Zugestellt.
+    // Kundenmails gehen dabei nie von selbst: je Anlass eine Telegram-Freigabe
+    // an den Inhaber (Vorschau, "Kundenmail senden", "Nicht senden").
+    await runBackground(ctx, sendungenVerfolgen(env, reqId, scheduledTime, sendungsVerdrahtung(env, reqId)), "dhl_tracking_failed", reqId);
     await runBackground(ctx, paypalErstattungenAbgleichen(env, reqId, true), "paypal_refund_reconciliation_failed", reqId);
     // Nach dem Abgleich: wartende Erstattungen erneut versuchen, erledigte
     // abschliessen (Kundenmail, wieder im Shop), an Offenes erinnern.

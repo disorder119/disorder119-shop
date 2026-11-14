@@ -1201,6 +1201,116 @@ export function formatPickupReady(order = {}, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Zustellmail (Inhaber 14.11.2026): "Dein Paket ist angekommen". Geht NIE von
+// selbst - nur nach der Telegram-Freigabe des Inhabers (telegram-pickup.js).
+// Bewusst kurz: Dank, Kontakt, Weg zum Widerruf. Keine Bitte um Bewertungen,
+// keine Rabatte, keine Zusagen. Der Status stammt aus der DHL-
+// Sendungsverfolgung - daher der Vermerk wie in der Abholmail.
+// ---------------------------------------------------------------------------
+
+const ZUSTELLMAIL_TEXT = Object.freeze({
+  de: {
+    subject: n => `Dein Paket ist angekommen – Bestellung ${n}`,
+    eyebrow: "Zugestellt",
+    titel: "Dein Paket ist angekommen",
+    kopf: nr => `Bestellung ${nr} ist laut DHL bei dir angekommen.`,
+    dank: mehrere => `Danke, dass du bei DISORDER119 bestellt hast. Viel Freude mit ${mehrere ? "deinen Teilen" : "deinem Teil"}.`,
+    band: "Zugestellt",
+    imPaket: "Im Paket",
+    vermerk: "Sendungsstatus: Delivered by Deutsche Post DHL Group",
+    vorschau: n => `Zugestellt · Bestellung ${n}`,
+  },
+  en: {
+    subject: n => `Your parcel has arrived – order ${n}`,
+    eyebrow: "Delivered",
+    titel: "Your parcel has arrived",
+    kopf: nr => `According to DHL, order ${nr} has arrived at your place.`,
+    dank: mehrere => `Thank you for ordering from DISORDER119. Enjoy your ${mehrere ? "pieces" : "piece"}.`,
+    band: "Delivered",
+    imPaket: "In the parcel",
+    vermerk: "Shipment status: Delivered by Deutsche Post DHL Group",
+    vorschau: n => `Delivered · order ${n}`,
+  },
+  fr: {
+    subject: n => `Ton colis est arrivé – commande ${n}`,
+    eyebrow: "Livré",
+    titel: "Ton colis est arrivé",
+    kopf: nr => `D’après DHL, la commande ${nr} est arrivée chez toi.`,
+    dank: mehrere => `Merci d’avoir commandé chez DISORDER119. Profite bien de ${mehrere ? "tes pièces" : "ta pièce"}.`,
+    band: "Livré",
+    imPaket: "Dans le colis",
+    vermerk: "Statut de l’envoi : Delivered by Deutsche Post DHL Group",
+    vorschau: n => `Livré · commande ${n}`,
+  },
+});
+
+// Motiv der Zustellmail: das Foto des Teils in einem schlichten schwarzen
+// Rahmen, oben "● Zugestellt" und der Tag der Zustellung, darunter Archiv-
+// Nummer und Titel. Nur Tabellen und Inline-Styles.
+function zustellMotiv(item, bild, { sprache = "de", datum = null } = {}) {
+  const t = ZUSTELLMAIL_TEXT[mailSprache(sprache)];
+  const titel = escapeHtml(stueckTitel(item, sprache));
+  const nr = safeText(item.article_no || item.articleNo || "", 40);
+  const mono = "'Courier New',Courier,monospace";
+  const tag = datum ? versandZeit(datum, sprache).tag : "";
+  return `<table role="presentation" class="mail-zustellung" cellpadding="0" cellspacing="0" style="width:300px;background:#0b0b0b;border:1px solid #2c2c2c;font-family:${MAIL_SCHRIFT};">
+    <tr><td style="padding:10px 12px;border-bottom:1px solid #2c2c2c;font-family:${mono};font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#ffffff;white-space:nowrap;"><span style="color:#39ff88;">&#9679;</span>&nbsp; ${escapeHtml(t.band)}</td>
+        <td align="right" style="padding:10px 12px;border-bottom:1px solid #2c2c2c;font-family:${mono};font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#8a8a8a;white-space:nowrap;">${escapeHtml(tag || "DISORDER119")}</td></tr>
+    <tr><td colspan="2" align="center" style="padding:22px 0 18px;background:#000000;"><img src="${escapeHtml(bild)}" width="208" alt="${titel}" style="display:block;width:208px;max-width:208px;height:auto;border:0;"></td></tr>
+    <tr><td colspan="2" align="center" style="padding:14px 16px 16px;border-top:1px solid #2c2c2c;">
+      <div style="font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#777777;">Archive No.${nr ? ` ${escapeHtml(nr)}` : ""}</div>
+      <div style="font-size:14px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;color:#ffffff;margin-top:4px;">${titel}</div>
+    </td></tr>
+  </table>`;
+}
+
+export function formatDeliveryNotice(order = {}, options = {}) {
+  const sprache = mailSprache(options.sprache || order.sprache);
+  const t = ZUSTELLMAIL_TEXT[sprache];
+  const v = VERSANDMAIL_TEXT[sprache];
+  const a = allgemein(sprache);
+  const number = safeText(order.order_number || order.orderNumber || "", 80) || "—";
+  const contactEmail = safeText(options.contactEmail || "", 200);
+  const items = Array.isArray(order.items) ? order.items : [];
+  // Derselbe Weg zum Widerruf wie in der Versandmail: Bestellnummer schon eingetragen.
+  const widerrufBasis = shopLink(sprache, "widerruf/");
+  const widerrufLink = number !== "—" ? `${widerrufBasis}?bestellung=${encodeURIComponent(number)}` : widerrufBasis;
+  const dank = t.dank(items.length > 1);
+  const subject = t.subject(number);
+
+  const text = [
+    "DISORDER119",
+    "",
+    t.kopf(number),
+    dank,
+    "",
+    ...(items.length ? [t.imPaket.toUpperCase(), ...items.map(item => `· ${stueckTitel(item, sprache)}`), ""] : []),
+    fragenText(contactEmail, sprache),
+    "",
+    v.widerrufText(widerrufLink),
+    "",
+    t.vermerk,
+  ].join("\n");
+
+  const F = MAIL_FARBE;
+  const bild = items.length ? stueckBild(items[0]) : "";
+  const motiv = bild ? zustellMotiv(items[0], bild, { sprache, datum: options.datum || order.zugestellt_am || null }) : "";
+  const kopf = `<p class="mail-kopf" style="margin:0 auto;max-width:440px;color:${F.leise};">${escapeHtml(t.kopf("§NR§")).replace("§NR§", `<strong style="color:${F.text};">${escapeHtml(number)}</strong>`)}</p>
+    <p style="margin:12px auto 0;max-width:420px;font-size:14px;color:${F.text};">${escapeHtml(dank)}</p>`;
+  const inhalt = [
+    motiv ? `<tr><td align="center" style="padding:26px 0 0;">${motiv}</td></tr>` : "",
+    (items.length > 1 || (items.length && !motiv)) ? mailAbschnitt(t.imPaket, `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">${items.map(item => stueckZeile(item, null, sprache)).join("")}</table>`) : "",
+    `<tr><td style="padding:24px 4px 30px;">
+      <p style="margin:0;font-size:13px;color:${F.leise};">${contactEmail ? `${escapeHtml(a.fragenMit[0])}<a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a>${escapeHtml(a.fragenMit[1])}` : escapeHtml(a.fragenOhne)}</p>
+      <p style="margin:12px 0 0;font-size:13px;color:${F.leise};">${escapeHtml(v.widerrufHtml[0])}<a href="${escapeHtml(widerrufLink)}" style="color:${F.text};">${escapeHtml(v.widerrufHtml[1])}</a>${escapeHtml(v.widerrufHtml[2])}</p>
+      <p style="margin:12px 0 0;font-size:11px;color:${F.leise};">${escapeHtml(t.vermerk)}</p>
+    </td></tr>`,
+  ].join("");
+  const html = kundenmailRahmen({ titel: t.titel, eyebrow: t.eyebrow, kopf, inhalt, vorschau: t.vorschau(number), sprache });
+  return { subject, text, html, sprache };
+}
+
+// ---------------------------------------------------------------------------
 // Freie Mail aus der Admin-App: eigener Text im Shop-Design (Absatz-Umbrueche,
 // Links klickbar, alles escaped). Ohne grosse Ueberschrift - wie ein Brief.
 // ---------------------------------------------------------------------------
@@ -1811,7 +1921,7 @@ export async function sendInvoiceAfterCaptureByProviderOrder(env, providerOrderI
 
 async function loadShippedOrder(env, orderId) {
   const order = await env.DB.prepare(`SELECT o.id,o.order_number,o.status,o.total_cents,o.shipping_cents,
-      s.carrier,s.tracking_number,s.shipped_at
+      s.id AS shipment_id,s.carrier,s.tracking_number,s.shipped_at
     FROM commerce_orders o
     LEFT JOIN shipments s ON s.order_id=o.id
     WHERE o.id=? ORDER BY s.created_at DESC LIMIT 1`).bind(String(orderId)).first();
@@ -1823,13 +1933,22 @@ async function loadShippedOrder(env, orderId) {
   return { ...order, items: items?.results || [], contact: contact || {} };
 }
 
-export async function sendShippingConfirmation(env, orderId, reqId = crypto.randomUUID()) {
-  if (!mailTransportReady(env) || !env.DB) return { sent: false, reason: "NOT_CONFIGURED" };
+// Optionen fuer die Telegram-Freigabe (telegram-pickup.js): vorschau=true baut
+// die Mail nur (kein Anspruch, kein Versand); expectedShipmentId bindet die
+// Freigabe an genau die Sendung, fuer die sie ausgestellt wurde; nurUnterwegs
+// verlangt, dass die Bestellung noch "Versendet" ist - nach der Zustellung
+// waere "geht jetzt zu dir" ueberholt.
+export async function sendShippingConfirmation(env, orderId, reqId = crypto.randomUUID(), { vorschau = false, expectedShipmentId = null, nurUnterwegs = false } = {}) {
+  if (!env?.DB) return { sent: false, reason: "NOT_CONFIGURED" };
+  if (!vorschau && !mailTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
   const order = await loadShippedOrder(env, orderId);
   if (!order) return { sent: false, reason: "ORDER_NOT_FOUND" };
-  if (!["SHIPPED", "DELIVERED"].includes(String(order.status || "").toUpperCase())) {
+  const status = String(order.status || "").toUpperCase();
+  if (!["SHIPPED", "DELIVERED"].includes(status)) {
     return { sent: false, reason: "ORDER_NOT_SHIPPED" };
   }
+  if (nurUnterwegs && status !== "SHIPPED") return { sent: false, reason: "SHIPPING_NOT_CURRENT" };
+  if (expectedShipmentId && String(order.shipment_id) !== String(expectedShipmentId)) return { sent: false, reason: "SHIPMENT_CHANGED" };
   const recipient = normalizeEmail(order.contact?.email);
   if (!recipient) return { sent: false, reason: "NO_CUSTOMER_EMAIL" };
 
@@ -1838,6 +1957,18 @@ export async function sendShippingConfirmation(env, orderId, reqId = crypto.rand
   // richtige noch bekommen - dieselbe Nummer aber nur einmal.
   const tracking = safeText(order.tracking_number || "", 60) || "ohne-nummer";
   const claimId = `notify:email:shipped:${order.id}:${tracking}`;
+  const bauen = async () => {
+    const sprache = await bestellSprache(env, order.id);
+    const mitTiteln = await titelFuerSprache(env, order, sprache);
+    return formatShippingConfirmation({ ...mitTiteln, items: await katalogAngaben(env, mitTiteln.items) }, {
+      contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200),
+      sprache,
+    });
+  };
+  if (vorschau) {
+    const entwurf = await bauen();
+    return { sent: false, vorschau: true, an: recipient, sprache: entwurf.sprache, subject: entwurf.subject, html: entwurf.html, text: entwurf.text };
+  }
   const claim = await env.DB.prepare(`INSERT OR IGNORE INTO audit_events
     (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
     VALUES (?,'SYSTEM','order',?,'SHIPPING_NOTICE_CLAIMED',?,?,?)`)
@@ -1845,12 +1976,7 @@ export async function sendShippingConfirmation(env, orderId, reqId = crypto.rand
     .run();
   if (!claim?.meta?.changes) return { sent: false, duplicate: true };
 
-  const sprache = await bestellSprache(env, order.id);
-  const mitTiteln = await titelFuerSprache(env, order, sprache);
-  const message = formatShippingConfirmation({ ...mitTiteln, items: await katalogAngaben(env, mitTiteln.items) }, {
-    contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200),
-    sprache,
-  });
+  const message = await bauen();
   try {
     const delivery = await sendMail(env, {
       to: recipient,
@@ -1890,7 +2016,7 @@ export async function sendShippingConfirmation(env, orderId, reqId = crypto.rand
 
 async function loadPickupOrder(env, orderId) {
   const order = await env.DB.prepare(`SELECT o.id,o.order_number,o.status,s.id AS shipment_id,s.carrier,s.tracking_number,s.shipped_at,
-      a.zustand AS verfolgung_zustand,a.status_text AS verfolgung_text,a.zuletzt_am AS verfolgung_zeit
+      a.zustand AS verfolgung_zustand,a.status_text AS verfolgung_text,a.zuletzt_am AS verfolgung_zeit,a.zugestellt_am AS zugestellt_am
     FROM commerce_orders o
     LEFT JOIN shipments s ON s.order_id=o.id
     LEFT JOIN sendungs_abfragen a ON a.shipment_id=s.id
@@ -1959,6 +2085,64 @@ export async function sendPickupReady(env, orderId, { reqId = crypto.randomUUID(
   }
   const jetzt = new Date().toISOString();
   await env.DB.prepare("UPDATE audit_events SET event_type='PICKUP_NOTICE_SENT',metadata_json=? WHERE id=?")
+    .bind(JSON.stringify({ channel: "email", sentAt: jetzt, sprache }), claimId).run().catch(() => {});
+  return { sent: true, ...info, gesendetAm: jetzt };
+}
+
+// ---------------------------------------------------------------------------
+// Zustellmail ausloesen - nur nach der Telegram-Freigabe. Nur wenn die
+// Bestellung "Zugestellt" ist UND der gespeicherte Stand der Sendungsverfolgung
+// fuer genau diese Sendung ZUGESTELLT lautet. Je Sendungsnummer genau einmal.
+// ---------------------------------------------------------------------------
+
+export async function sendDeliveryNotice(env, orderId, { reqId = crypto.randomUUID(), vorschau = false, expectedShipmentId = null } = {}) {
+  if (!env?.DB) return { sent: false, reason: "NOT_CONFIGURED" };
+  if (!vorschau && !mailTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
+  const order = await loadPickupOrder(env, orderId);
+  if (!order) return { sent: false, reason: "ORDER_NOT_FOUND" };
+  if (expectedShipmentId && String(order.shipment_id) !== String(expectedShipmentId)) return { sent: false, reason: "SHIPMENT_CHANGED" };
+  // Rueckgabe, Erstattung oder Storno nach der Zustellung: kein "Viel Freude".
+  if (String(order.status || "").toUpperCase() !== "DELIVERED" || order.verfolgung_zustand !== "ZUGESTELLT") {
+    return { sent: false, reason: "DELIVERY_NOT_CURRENT" };
+  }
+  const recipient = normalizeEmail(order.contact?.email);
+  if (!recipient) return { sent: false, reason: "NO_CUSTOMER_EMAIL" };
+
+  const sprache = await bestellSprache(env, order.id);
+  const mitTiteln = await titelFuerSprache(env, order, sprache);
+  const message = formatDeliveryNotice({ ...mitTiteln, items: await katalogAngaben(env, mitTiteln.items) }, {
+    contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200),
+    sprache,
+  });
+  const info = { an: recipient, sprache };
+  if (vorschau) return { sent: false, vorschau: true, ...info, subject: message.subject, html: message.html, text: message.text };
+
+  const tracking = safeText(order.tracking_number || "", 60) || "ohne-nummer";
+  const claimId = `notify:email:delivered:${order.id}:${tracking}`;
+  const claim = await env.DB.prepare(`INSERT OR IGNORE INTO audit_events
+    (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'ADMIN','order',?,'DELIVERY_NOTICE_CLAIMED',?,?,?)`)
+    .bind(claimId, String(order.id), safeText(reqId, 120), JSON.stringify({ channel: "email" }), new Date().toISOString())
+    .run();
+  if (!claim?.meta?.changes) return { sent: false, duplicate: true, ...info };
+  try {
+    const delivery = await sendMail(env, {
+      to: recipient,
+      toName: safeText(order.contact?.recipient_name || "", 120),
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      tag: "delivery-notice",
+      art: "MANUELL",
+      kopieAnShop: true,
+    });
+    if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
+  } catch (err) {
+    await env.DB.prepare("DELETE FROM audit_events WHERE id=? AND event_type='DELIVERY_NOTICE_CLAIMED'").bind(claimId).run().catch(() => {});
+    throw new Error(`delivery_notice_failed:${safeText(err?.message || "unknown", 120)}`);
+  }
+  const jetzt = new Date().toISOString();
+  await env.DB.prepare("UPDATE audit_events SET event_type='DELIVERY_NOTICE_SENT',metadata_json=? WHERE id=?")
     .bind(JSON.stringify({ channel: "email", sentAt: jetzt, sprache }), claimId).run().catch(() => {});
   return { sent: true, ...info, gesendetAm: jetzt };
 }

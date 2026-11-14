@@ -129,6 +129,12 @@ test("five simulated pickup cases and Telegram approval", async t => {
       assert.equal(io.calls.filter(c => c.url.includes("brevo")).length, mailsBefore);
       const answer = io.calls.filter(c => c.url.endsWith("answerCallbackQuery")).at(-1);
       assert.match(answer.body.text, /Keine Kundenmail/);
+      // "Nicht senden" im Test schliesst ihn - ebenfalls ohne Kundenmail.
+      assert.equal(photo.body.reply_markup.inline_keyboard[2][0].callback_data, `pickup-no:${token}`);
+      await handleTelegramPickupWebhook(request(token, { kind: "pickup-no" }), env);
+      assert.match(io.calls.filter(c => c.url.endsWith("answerCallbackQuery")).at(-1).body.text, /Test geschlossen/);
+      assert.equal(io.calls.filter(c => c.url.includes("brevo")).length, mailsBefore);
+      assert.equal((await handleTelegramPickupPreview(new URL(previewUrl), env)).status, 404);
     });
   } finally { io.restore(); }
 });
