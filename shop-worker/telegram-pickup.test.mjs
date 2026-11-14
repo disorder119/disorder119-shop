@@ -138,3 +138,36 @@ test("five simulated pickup cases and Telegram approval", async t => {
     });
   } finally { io.restore(); }
 });
+
+test("Statustest auf Zuruf: vier Meldungen, Vorschau je Anlass, nie eine Kundenmail", async () => {
+  const { sendQueuedStatusTests, STATUS_TEST_ID } = await import("./telegram-pickup.js");
+  const io = transport();
+  try {
+    const DB = seed();
+    const env = { DB, TELEGRAM_BOT_TOKEN: BOT, MAIL_API_KEY: "k", MAIL_FROM: "shop@disorder119.com", KATALOG_FETCH: catalogFetch() };
+    assert.deepEqual(await sendQueuedStatusTests(env, "r"), { skipped: true });
+    DB.raw.prepare("INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at) VALUES (?,'SYSTEM','telegram','status-tests','STATUS_TESTS_QUEUED','r','{}',?)").run(STATUS_TEST_ID, new Date().toISOString());
+    assert.deepEqual(await sendQueuedStatusTests(env, "r"), { sent: 4 });
+    assert.deepEqual(await sendQueuedStatusTests(env, "r"), { skipped: true });
+    const fotos = io.calls.filter(c => c.url.endsWith("sendPhoto"));
+    assert.equal(fotos.length, 4);
+    assert.match(fotos[0].body.caption, /UNTERWEGS/);
+    assert.match(fotos[1].body.caption, /234/);
+    assert.match(fotos[3].body.caption, /ZUGESTELLT/);
+    const rows = DB.raw.prepare("SELECT id,metadata_json FROM audit_events WHERE event_type='PICKUP_TEST_PENDING' ORDER BY created_at,rowid").all();
+    assert.equal(rows.length, 4);
+    const betreff = [];
+    for (const row of rows) {
+      const token = row.id.split(":").pop();
+      const res = await handleTelegramPickupPreview(new URL(`https://api.disorder119.com/telegram/pickup-preview/${token}`), env, "r");
+      assert.equal(res.status, 200);
+      const html = await res.text();
+      assert.match(html, /TESTVORSCHAU/);
+      betreff.push(/<title>([^<]*)/.exec(html)?.[1] || "");
+      const antwort = await handleTelegramPickupWebhook(request(token, { kind: "pickup-test" }), env, "r");
+      assert.equal(antwort.status, 200);
+    }
+    assert.equal(new Set(betreff).size >= 3, true, betreff.join(" | "));
+    assert.equal(io.calls.filter(c => c.url.includes("brevo")).length, 0);
+  } finally { io.restore(); }
+});

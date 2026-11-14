@@ -25,6 +25,7 @@ import { handleRentalBundle } from "./rental-bundle.js";
 import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications.js";
 import { ensureTelegramPickupWebhook, handleTelegramPickupWebhook, handleTelegramPickupPreview, isTelegramPickupPreview, isTelegramPickupWebhook } from "./telegram-pickup.js";
 import { sendQueuedPickupSamples } from "./telegram-pickup-samples.js";
+import { sendQueuedStatusTests } from "./telegram-pickup.js";
 import { sendInvoiceAfterCaptureByProviderOrder, sendOrderConfirmation, sendOrderConfirmationByProviderOrder } from "./customer-mail.js";
 import { handleAccountRequest, isAccountRoute, sendRequestedAccountLink, sendRequestedAccountLinkByProviderOrder } from "./customer-account.js";
 import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
@@ -660,6 +661,7 @@ const worker = {
     await runBackground(ctx, dhlMarkenAbgleichen(env, scheduledTime), "dhl_cart_refresh_failed", reqId);
     await runBackground(ctx, ensureTelegramPickupWebhook(env, reqId), "telegram_pickup_webhook_failed", reqId);
     await runBackground(ctx, sendQueuedPickupSamples(env, reqId), "telegram_pickup_samples_failed", reqId);
+    await runBackground(ctx, sendQueuedStatusTests(env, reqId), "telegram_status_tests_failed", reqId);
     // Ruecksendeetiketten: bezahlt? QR-Code holen, Mail an die Kundin (ruecksendung.js).
     await runBackground(ctx, ruecksendungenAbgleichen(env, scheduledTime), "ruecksendung_refresh_failed", reqId);
     // Sendungsverfolgung: unterwegs -> Versendet, zugestellt -> Zugestellt.
