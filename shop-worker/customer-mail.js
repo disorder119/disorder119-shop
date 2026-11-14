@@ -164,7 +164,7 @@ const MAIL_SCHRIFT = "'Helvetica Neue',Helvetica,Arial,sans-serif";
 // Rahmen der Kundenmails: Tabellen und Inline-Styles, weil Outlook und Gmail
 // kein modernes CSS koennen. `vorschau` ist die Zeile, die das Postfach neben
 // dem Betreff zeigt.
-export function kundenmailRahmen({ titel, eyebrow, kopf, inhalt, vorschau, sprache = "de", fussVerkaeufer = true }) {
+export function kundenmailRahmen({ titel, eyebrow, kopf, inhalt, vorschau, sprache = "de", fussVerkaeufer = false }) {
   const F = MAIL_FARBE;
   const l = mailSprache(sprache);
   return `<!DOCTYPE html>
@@ -202,7 +202,7 @@ ${vorschau ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;co
   ${inhalt}
   <tr><td style="padding:30px 4px 44px;border-top:1px solid ${F.linie};text-align:center;font-size:11px;line-height:1.6;color:${F.leise};">
     ${escapeHtml(allgemein(l).archiv)}<br>
-    ${fussVerkaeufer ? `${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}, ${escapeHtml(SELLER.street)}, ${escapeHtml(SELLER.city)}` : `${escapeHtml(SELLER.brand)} · <a href="${shopLink(l)}" style="color:${F.leise};">disorder119.com</a>`}
+    ${fussVerkaeufer ? `${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}, ${escapeHtml(SELLER.street)}, ${escapeHtml(SELLER.city)}` : `${escapeHtml(SELLER.brand)} · <a href="${shopLink(l)}" style="color:${F.leise};">disorder119.com</a> · <a href="${SHOP_URL}/impressum/" style="color:${F.leise};">Impressum</a>`}
   </td></tr>
 </table>
 </td></tr></table>
