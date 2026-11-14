@@ -876,6 +876,42 @@ def json_ld(it, lang):
                 "shippingRate": {"@type": "MonetaryAmount", "value": f"{versand_cents / 100:.2f}", "currency": "EUR"},
                 "shippingDestination": {"@type": "DefinedRegion", "addressCountry": "DE"},
             }
+        # Jedes Lieferland der Kasse mit seinem Preis und seiner Laufzeit - dieselben
+        # Zahlen wie im Merchant-Feed. Vorher stand hier nur Deutschland: Google legte
+        # die /en/- und /fr/-Seiten als Produkte fuer Belgien, Frankreich, Irland usw.
+        # an und sperrte sie dort wegen fehlender Versandangaben (Merchant Center 14.11.2026).
+        try:
+            from merchant_shipping import merchant_shipping_entries
+            # dieselbe Datei wie der Merchant-Feed (write_merchant_feed)
+            zeilen = merchant_shipping_entries(it, json.loads(SHOP_CONFIG_PATH.read_text(encoding="utf-8")))
+        except Exception:
+            zeilen = []
+        if zeilen:
+            def _tage(von, bis):
+                return {"@type": "QuantitativeValue", "minValue": von, "maxValue": bis, "unitCode": "DAY"}
+            details = []
+            # Laender mit gleichem Preis und gleicher Laufzeit in einem Eintrag (haelt die Seite klein).
+            gruppen = {}
+            for z in zeilen:
+                schluessel = (z["cents"], z["min_handling_time"], z["max_handling_time"], z["min_transit_time"], z["max_transit_time"])
+                gruppen.setdefault(schluessel, []).append(z)
+            for gruppe in gruppen.values():
+                z = gruppe[0]
+                laender = [x["country"] for x in gruppe]
+                eintrag = {
+                    "@type": "OfferShippingDetails",
+                    "shippingRate": {"@type": "MonetaryAmount", "value": f'{z["cents"] / 100:.2f}', "currency": "EUR"},
+                    "shippingDestination": {"@type": "DefinedRegion", "addressCountry": laender[0] if len(laender) == 1 else laender},
+                }
+                lieferzeit = {"@type": "ShippingDeliveryTime",
+                              "handlingTime": _tage(z["min_handling_time"], z["max_handling_time"])}
+                if z["min_transit_time"] is not None:
+                    lieferzeit["transitTime"] = _tage(z["min_transit_time"], z["max_transit_time"])
+                eintrag["deliveryTime"] = lieferzeit
+                details.append(eintrag)
+            data["offers"]["shippingDetails"] = details
+            # Das Widerrufsrecht gilt in jedem Lieferland.
+            data["offers"]["hasMerchantReturnPolicy"]["applicableCountry"] = [z["country"] for z in zeilen]
     return json.dumps(data, ensure_ascii=False)
 
 
