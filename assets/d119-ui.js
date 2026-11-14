@@ -474,6 +474,13 @@
 
   /* 8 · „Zuletzt angesehen“ (Browser-Speicher) im Archiv und auf jeder Produktseite. */
   function zuletztListe() { return speicher("ui_zuletzt") || []; }
+  // Nur der aktuelle Besuch (sessionStorage): das schwebt im Kopf des Archivs.
+  function besuchListe(neu) {
+    try {
+      if (neu) sessionStorage.setItem("ui_zuletzt_besuch", JSON.stringify(neu));
+      return JSON.parse(sessionStorage.getItem("ui_zuletzt_besuch") || "[]") || [];
+    } catch (e) { return []; }
+  }
   function zuletztRendern(ziel, vorElement, ohneSlug) {
     var liste = zuletztListe().filter(function (s) { return s !== ohneSlug; });
     if (!liste.length) return;
@@ -498,6 +505,7 @@
   if (istArtikel) {
     var slug = slugAus(location.pathname);
     var alt = zuletztListe().filter(function (s) { return s !== slug; }); alt.unshift(slug); speicher("ui_zuletzt", alt.slice(0, 12));
+    var besuch = besuchListe().filter(function (s) { return s !== slug; }); besuch.unshift(slug); besuchListe(besuch.slice(0, 12));
     var related = document.querySelector(".related");
     zuletztRendern(related ? related.parentNode : document.querySelector(".product").parentNode, related || document.querySelector(".page-foot"), slug);
   }
@@ -507,15 +515,16 @@
     var masthead = document.querySelector(".masthead");
     if (masthead) {
       katalog().then(function (k) {
-        // Erst ab drei angesehenen Teilen, nur aus dem eigenen Verlauf.
-        var teile = zuletztListe().map(function (s) { return teilZu(k, s); }).filter(Boolean).slice(0, 10);
+        // Nur was beim aktuellen Besuch angesehen wurde (Inhaber 14.11.2026), ab dem ersten Teil.
+        var teile = besuchListe().map(function (s) { return teilZu(k, s); }).filter(Boolean).slice(0, 10);
         var neu = false;
-        if (teile.length < 3) return;
+        if (!teile.length) return;
+
         var orbit = document.createElement("div"); orbit.className = "ui-orbit"; orbit.setAttribute("aria-hidden", "true");
         var label = document.createElement("span"); label.className = "ui-orbit__label"; label.textContent = neu ? "Neu im Archiv" : "Zuletzt angesehen";
         orbit.appendChild(label);
         masthead.classList.add("ui-orbit-host"); masthead.appendChild(orbit);
-        var schmal = window.innerWidth < 760, maxSichtbar = schmal ? 2 : 4, lebend = [], idx = 0;
+        var schmal = window.innerWidth < 760, maxSichtbar = Math.min(schmal ? 2 : 4, teile.length), lebend = [], idx = 0;
         // Plaetze neben dem Schriftzug, nie dahinter (Inhaber 04.11.): auf dem Handy klein in den
         // beiden oberen Ecken ueber der Zeile "Das kuratierte Archiv von", am Rechner links/rechts
         // am Rand in der oberen Haelfte (unten stehen Suche und Zahlen).
@@ -524,6 +533,8 @@
           : ["left:3%;top:8%", "right:3%;top:8%", "left:5%;top:44%", "right:5%;top:44%"];
         function zufall(a, b) { return a + Math.random() * (b - a); }
         function auftauchen() {
+          // Wenige Teile: jedes einmal zeigen und stehen lassen, nicht dasselbe immer neu einblenden.
+          if (teile.length <= maxSichtbar && idx >= teile.length) return;
           var it = teile[idx % teile.length]; idx++;
           var platz = plaetze[(idx - 1) % plaetze.length];
           if (lebend.length >= maxSichtbar) platz = plaetze[(idx - 1 - maxSichtbar) % plaetze.length];

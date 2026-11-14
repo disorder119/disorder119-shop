@@ -3890,3 +3890,32 @@ img[data-d119-image-protected] {
 .swipe-card__info span { position: relative; }
 .swipe-card__info:hover, .swipe-card__info:focus-visible { color: #f2efe7; outline: none; }
 .swipe-card__info:hover::before, .swipe-card__info:focus-visible::before { border-color: #f2efe7; }
+
+/* Menue (Inhaber 14.11.2026): wie bisher, aber fett, ohne Scrollen, Marken als Wolke wie im Filter, Modi nur als Symbole. */
+#menuDrawer { padding-top: 14px; padding-bottom: 14px; }
+#menuDrawer .menu-drawer__head { padding-bottom: 10px; }
+#menuDrawer .menu-drawer__nav { padding: 10px 0; }
+#menuDrawer .menu-drawer__section { padding: 8px 0; }
+#menuDrawer .menu-drawer__nav > button, #menuDrawer .menu-drawer__nav > a, #menuDrawer .menu-drawer__section button { padding: 5px 0; font-weight: 700; }
+#menuDrawer .menu-drawer__brands { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 11px; max-height: none; overflow: visible; margin: 6px 0 10px; padding: 0; border: 0; }
+#menuDrawer .menu-drawer__brands.hidden { display: none; }
+#menuDrawer .menu-drawer__brands button { display: inline-block; width: auto; padding: 2px 0; color: var(--paper); opacity: .62; font-weight: 800; letter-spacing: -.01em; line-height: 1.1; font-size: .64rem; }
+#menuDrawer .menu-drawer__brands button:hover, #menuDrawer .menu-drawer__brands button:focus-visible { opacity: 1; color: var(--paper); }
+#menuDrawer .menu-drawer__brands button[data-gewicht="2"] { font-size: .76rem; opacity: .74; }
+#menuDrawer .menu-drawer__brands button[data-gewicht="3"] { font-size: .92rem; opacity: .84; }
+#menuDrawer .menu-drawer__brands button[data-gewicht="4"] { font-size: 1.12rem; opacity: .92; }
+#menuDrawer .menu-drawer__brands button[data-gewicht="5"] { font-size: 1.36rem; opacity: 1; }
+#menuDrawer.marken-offen .menu-drawer__nav > [data-menu-categories], #menuDrawer.marken-offen .d119-rental-menu-section { display: none; }
+#menuDrawer .menu-drawer__modi { display: flex; gap: 26px; align-items: center; margin-top: 8px; padding: 10px 0 2px; border-top: 1px solid var(--rule); }
+#menuDrawer .menu-drawer__modi a { display: inline-block; width: auto; padding: 4px 2px; font-size: 1.35rem; line-height: 1; letter-spacing: 0; color: var(--paper); opacity: .8; text-decoration: none; }
+#menuDrawer .menu-drawer__modi a:hover, #menuDrawer .menu-drawer__modi a:focus-visible { opacity: 1; }
+/* PC-Startseite kompakter: Leiste und erste Reihe ruecken hoch, damit es nicht leer wirkt. */
+@media (min-width: 1000px) {
+  .masthead { padding-top: 30px; padding-bottom: 22px; }
+  .masthead .wordmark { font-size: clamp(56px, 4.5vw, 84px); }
+  .masthead .masthead__bottom { padding-top: 6px; }
+  .masthead .ui-kopf__suche { margin-top: 10px; margin-bottom: 8px; }
+}
+/* Kleiner Pfeil an allem, was auf- und zuklappt (Menue: Marken; Filter: Alle Marken, weitere Groessen). */
+#menuBrandsToggle::after, .d119-chip--leise[aria-expanded]::after { content: ""; display: inline-block; width: .4em; height: .4em; margin-left: .65em; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-.2em) rotate(45deg); transition: transform .18s ease; }
+#menuBrandsToggle[aria-expanded="true"]::after, .d119-chip--leise[aria-expanded="true"]::after { transform: translateY(.08em) rotate(-135deg); }
