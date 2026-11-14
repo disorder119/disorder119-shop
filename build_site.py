@@ -47,6 +47,8 @@ from app_i18n import app_text  # noqa: E402
 from aehnliche_teile import aehnliche_teile  # noqa: E402
 # Markenseiten /marke/<slug>/ und /marken/ (scripts/markenseiten.py).
 import markenseiten  # noqa: E402
+# Kategorieseiten /damen/, /herren/ und /damen/<kategorie>/ (scripts/kategorieseiten.py).
+import kategorieseiten  # noqa: E402
 SITE_URL = "https://disorder119.com/"
 DATA_PATH = BASE / "data" / "items.json"
 
@@ -221,7 +223,7 @@ META_PHRASES = {
         "tail_suffix": ". Aus dem kuratierten Second-Hand-Archiv von Disorder119.",
         "auto_suffix": ". Aus dem kuratierten Archiv von Disorder119.",
         "home_title": "Designer Second Hand & Vintage Mode | Disorder119",
-        "home_desc": "Kuratiertes Designer-Second-Hand-Archiv mit Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 und mehr. Jedes Teil nur 1× verfügbar, individuell fotografiert.",
+        "home_desc": "Vintage Archive Shop für Designer-Mode aus zweiter Hand: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 und mehr. Jedes Teil nur 1× verfügbar, individuell fotografiert.",
     },
     "en": {
         "sold": "{name} – already sold, part of the curated Disorder119 archive for designer and vintage fashion.",
@@ -230,7 +232,7 @@ META_PHRASES = {
         "tail_suffix": ". From the curated second-hand archive of Disorder119.",
         "auto_suffix": ". From the curated archive of Disorder119.",
         "home_title": "Pre-Owned Designer & Vintage Fashion | Disorder119",
-        "home_desc": "Curated archive of pre-owned designer fashion including Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 and more. Each piece available only once, individually photographed.",
+        "home_desc": "Vintage archive shop for pre-owned designer fashion: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 and more. Each piece available only once, individually photographed.",
     },
     "fr": {
         "sold": "{name} – déjà vendu, fait partie de l'archive sélectionnée Disorder119 pour la mode de créateurs et vintage.",
@@ -239,7 +241,7 @@ META_PHRASES = {
         "tail_suffix": ". Issu de l'archive seconde main sélectionnée de Disorder119.",
         "auto_suffix": ". Issu de l'archive sélectionnée de Disorder119.",
         "home_title": "Mode Designer Seconde Main & Vintage | Disorder119",
-        "home_desc": "Archive sélectionnée de mode de créateurs de seconde main avec Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 et plus. Chaque pièce disponible une seule fois, photographiée individuellement.",
+        "home_desc": "Vintage archive shop de mode de créateurs de seconde main : Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 et plus. Chaque pièce disponible une seule fois, photographiée individuellement.",
     },
 }
 
@@ -404,10 +406,40 @@ def fmt_price_de(v):
     return s + " €"
 
 
+FR_TITEL_WOERTER = {
+    "Women": "Femme", "Men": "Homme", "Unisex": "Unisexe",
+    "Dark Blue": "Bleu foncé", "Light Blue": "Bleu clair", "Navy Blue": "Bleu marine", "Navy": "Bleu marine",
+    "Black": "Noir", "White": "Blanc", "Brown": "Marron", "Grey": "Gris", "Gray": "Gris", "Blue": "Bleu", "Green": "Vert",
+    "Red": "Rouge", "Beige": "Beige", "Multicolour": "Multicolore", "Multicolor": "Multicolore", "Silver": "Argent",
+    "Gold": "Doré", "Orange": "Orange", "Pink": "Rose", "Yellow": "Jaune", "Purple": "Violet", "Cream": "Crème",
+    "Olive": "Olive", "Ivory": "Ivoire", "Khaki": "Kaki", "Burgundy": "Bordeaux", "Turquoise": "Turquoise",
+}
+_FR_TITEL_RE = re.compile(r"\b(" + "|".join(sorted((re.escape(w) for w in FR_TITEL_WOERTER), key=len, reverse=True)) + r")\b")
+
+
+def french_title(it):
+    """Titel fuer /fr/: der englische Titel (Modellnamen und Produktwoerter
+    versteht man in Frankreich), Bereich und Farbe am Ende auf Franzoesisch.
+    Vorher stand dort der deutsche Titel."""
+    titel = english_title(it)
+    if not titel:
+        return it.get("title") or ""
+    woerter = titel.split(" ")
+    # Nur das Ende uebersetzen (Bereich + Farbe) - Marken wie "Rundholz Black Label" bleiben.
+    schnitt = max(1, len(woerter) - 3)
+    ende = _FR_TITEL_RE.sub(lambda m: FR_TITEL_WOERTER[m.group(1)], " ".join(woerter[schnitt:]))
+    return " ".join(woerter[:schnitt] + [ende])
+
+
 def item_title(it, lang="de"):
-    """Sichtbarer Artikeltitel: im englischen Shop englisch, sonst der
-    gepflegte (deutsche) Titel aus data/items.json."""
-    return english_title(it) if lang == "en" else (it.get("title") or "")
+    """Sichtbarer Artikeltitel: im englischen Shop englisch, im franzoesischen
+    der englische mit franzoesischem Bereich/Farbe, sonst der gepflegte
+    (deutsche) Titel aus data/items.json."""
+    if lang == "en":
+        return english_title(it)
+    if lang == "fr":
+        return french_title(it)
+    return it.get("title") or ""
 
 
 def item_description(it, lang):
@@ -844,6 +876,42 @@ def json_ld(it, lang):
                 "shippingRate": {"@type": "MonetaryAmount", "value": f"{versand_cents / 100:.2f}", "currency": "EUR"},
                 "shippingDestination": {"@type": "DefinedRegion", "addressCountry": "DE"},
             }
+        # Jedes Lieferland der Kasse mit seinem Preis und seiner Laufzeit - dieselben
+        # Zahlen wie im Merchant-Feed. Vorher stand hier nur Deutschland: Google legte
+        # die /en/- und /fr/-Seiten als Produkte fuer Belgien, Frankreich, Irland usw.
+        # an und sperrte sie dort wegen fehlender Versandangaben (Merchant Center 14.11.2026).
+        try:
+            from merchant_shipping import merchant_shipping_entries
+            # dieselbe Datei wie der Merchant-Feed (write_merchant_feed)
+            zeilen = merchant_shipping_entries(it, json.loads(SHOP_CONFIG_PATH.read_text(encoding="utf-8")))
+        except Exception:
+            zeilen = []
+        if zeilen:
+            def _tage(von, bis):
+                return {"@type": "QuantitativeValue", "minValue": von, "maxValue": bis, "unitCode": "DAY"}
+            details = []
+            # Laender mit gleichem Preis und gleicher Laufzeit in einem Eintrag (haelt die Seite klein).
+            gruppen = {}
+            for z in zeilen:
+                schluessel = (z["cents"], z["min_handling_time"], z["max_handling_time"], z["min_transit_time"], z["max_transit_time"])
+                gruppen.setdefault(schluessel, []).append(z)
+            for gruppe in gruppen.values():
+                z = gruppe[0]
+                laender = [x["country"] for x in gruppe]
+                eintrag = {
+                    "@type": "OfferShippingDetails",
+                    "shippingRate": {"@type": "MonetaryAmount", "value": f'{z["cents"] / 100:.2f}', "currency": "EUR"},
+                    "shippingDestination": {"@type": "DefinedRegion", "addressCountry": laender[0] if len(laender) == 1 else laender},
+                }
+                lieferzeit = {"@type": "ShippingDeliveryTime",
+                              "handlingTime": _tage(z["min_handling_time"], z["max_handling_time"])}
+                if z["min_transit_time"] is not None:
+                    lieferzeit["transitTime"] = _tage(z["min_transit_time"], z["max_transit_time"])
+                eintrag["deliveryTime"] = lieferzeit
+                details.append(eintrag)
+            data["offers"]["shippingDetails"] = details
+            # Das Widerrufsrecht gilt in jedem Lieferland.
+            data["offers"]["hasMerchantReturnPolicy"]["applicableCountry"] = [z["country"] for z in zeilen]
     return json.dumps(data, ensure_ascii=False)
 
 
@@ -873,7 +941,9 @@ MARKEN_FUSSLINK_TEXT = {"de": "Marken", "en": "Brands", "fr": "Marques"}
 
 
 def marken_fusslink(lang):
-    """Fusszeilen-Link der Bundle-Seiten zur Markenuebersicht (/marken/)."""
+    """Fusszeilen-Link der Bundle-Seiten zur Markenuebersicht (/marken/). Die
+    Kategorie- und Einstiegsseiten (scripts/kategorieseiten.py) verlinkt der Shop
+    bewusst nicht - sie sind nur fuer den Einstieg ueber Suchmaschinen da."""
     if not markenseiten.marken(_dieses_modul()):
         return ""
     return f'<a href="{lang_home(lang)}{markenseiten.UEBERSICHT_SEGMENT}">{MARKEN_FUSSLINK_TEXT[lang]}</a>'
@@ -881,6 +951,10 @@ def marken_fusslink(lang):
 
 def build_markenseiten():
     markenseiten.build(_dieses_modul())
+
+
+def build_kategorieseiten():
+    kategorieseiten.build(_dieses_modul())
 
 
 def breadcrumb_json_ld(it, lang):
@@ -2453,6 +2527,7 @@ def build_llms_txt():
             fakten.append(str(it["color"]))
         zeilen.append(f"- [{item_title(it, 'de')}]({url}): " + " · ".join(fakten))
     zeilen += markenseiten.llms_zeilen(_dieses_modul())
+    zeilen += kategorieseiten.llms_zeilen(_dieses_modul())
     verkauft = len(public_items) - len(verfuegbar)
     if verkauft:
         zeilen += ["", f"Weitere {verkauft} Teile im Archiv sind verkauft und bleiben als Referenz sichtbar."]
@@ -2476,6 +2551,7 @@ def build_sitemap():
         + [("artikel/" + str(it.get("url_slug", it["id"])) + "/", it) for it in public_items]
         + [(slug + "/", None) for slug in indexable_specials]
         + [(seg, None) for seg in markenseiten.sitemap_segmente(_dieses_modul())]
+        + [(seg, None) for seg in kategorieseiten.sitemap_segmente(_dieses_modul())]
     )
 
     def url_entry(lang, segment, item=None):
@@ -3052,6 +3128,7 @@ def main():
     build_mobile_heroes()
     build_articles()
     build_markenseiten()
+    build_kategorieseiten()
     build_catalog_json()
     build_merchant_feed()
     build_sitemap()

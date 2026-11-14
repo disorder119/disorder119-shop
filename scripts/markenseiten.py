@@ -433,6 +433,9 @@ def _seite(b, lang, seg, titel, beschreibung, og_bild, jsonld, inhalt, shop_conf
     recht_label, recht_links = b.ARTIKEL_RECHT_LINKS[lang]
     recht = "".join(f'<a href="{home}{pfad}">{b.esc(text)}</a>' for pfad, text in recht_links)
     css = b._asset_version("assets/marken.css")
+    # Bereichsseiten (/damen/, /herren/) aus scripts/kategorieseiten.py.
+    import kategorieseiten
+    bereiche = "".join(f' · <a href="{b.esc(pfad)}">{b.esc(text)}</a>' for text, pfad in kategorieseiten.fusslinks(b, lang))
     return f"""<!DOCTYPE html>
 <html lang="{lang}">
 <head>
@@ -479,7 +482,7 @@ def _seite(b, lang, seg, titel, beschreibung, og_bild, jsonld, inhalt, shop_conf
 </main>
 <footer class="mk-foot">
   <p>{b.esc(t['fuss'])}</p>
-  <p><a href="{home}">{b.esc(t['fuss_archiv'])}</a> · <a href="{home}{UEBERSICHT_SEGMENT}">{b.esc(t['alle_marken'])}</a></p>
+  <p><a href="{home}">{b.esc(t['fuss_archiv'])}</a> · <a href="{home}{UEBERSICHT_SEGMENT}">{b.esc(t['alle_marken'])}</a>{bereiche}</p>
   <nav class="mk-foot__nav" aria-label="{b.esc(recht_label)}"><a href="{home}widerruf/">{b.esc(b.WIDERRUF_LINK_TEXT[lang])}</a>{recht}</nav>
 </footer>
 </body>
@@ -534,8 +537,14 @@ def markenseite_html(b, marke, lang, alle, shop_config, texte=None):
         f'<h1 class="mk-title">{b.esc(ueberschrift(marke, lang))}</h1>',
         f'<p class="mk-count">{b.esc(t["zahl"].format(n=len(marke["teile"])))}</p>',
         f'<div class="mk-text">{text}</div>',
-        f'<ul class="mk-grid">{kacheln}</ul>',
     ]
+    # Produktart-Seiten der Marke (scripts/kategorieseiten.py), z. B. "Prada Jacken".
+    import kategorieseiten
+    arten = kategorieseiten.marken_kategorien(b, marke, lang)
+    if arten:
+        teile_html.append('<ul class="mk-links">' + "".join(
+            f'<li><a href="{b.esc(pfad)}">{b.esc(name)}<small>{n}</small></a></li>' for name, pfad, n in arten) + "</ul>")
+    teile_html.append(f'<ul class="mk-grid">{kacheln}</ul>')
     if marke["verkauft"]:
         teile_html.append(f'<h2 class="mk-h2">{b.esc(t["verkauft_h2"])}</h2>')
         teile_html.append('<ul class="mk-grid mk-grid--sold">'

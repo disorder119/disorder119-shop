@@ -20,6 +20,12 @@ test('publication allows real shop, language, image, PWA and Apple Pay paths',()
   for(const path of ['/feed/','/feed/google-merchant.json','/feed/x/y.xml']) assert.equal(publicPath(path),false,path);
 });
 test('publication allows the generated brand pages and the brand overview',()=>{
+  for(const path of ['/designer/sneaker/','/en/designer/schwarze-jacken/index.html']) assert.equal(publicPath(path),true,path);
+  for(const path of ['/designer/','/designer/Sneaker/','/designer/sneaker/extra/']) assert.equal(publicPath(path),false,path);
+  for(const path of ['/neu/','/en/unter-100/','/unter-200/index.html','/vintage-archive-shop/','/marke/prada/jacken/','/fr/marke/y-3/schuhe/index.html']) assert.equal(publicPath(path),true,path);
+  for(const path of ['/unter-300/','/marke/prada/jacken/extra/','/marke/prada/prada/','/neu/extra/']) assert.equal(publicPath(path),false,path);
+  for(const path of ['/damen/','/herren/','/damen/jacken/','/en/herren/schuhe/','/fr/damen/index.html','/damen/roecke/index.html']) assert.equal(publicPath(path),true,path);
+  for(const path of ['/damen/prada/','/damen/jacken/extra/','/kinder/','/damen/Jacken/']) assert.equal(publicPath(path),false,path);
   for(const path of ['/marken/','/marken/index.html','/en/marken/','/marke/prada/','/marke/jean-paul-gaultier/index.html','/en/marke/y-3/','/fr/marke/dsquared2/','/marke/prada']) assert.equal(publicPath(path),true,path);
   for(const path of ['/marke/','/marke/Prada/','/marke/prada/extra/','/marke/-prada/','/marke/prada-/','/marke/a.b/','/marke/..%2f/','/marken/prada/','/marke/'+'a'.repeat(61)+'/','/config/marken-texte.json','/scripts/markenseiten.py']) assert.equal(publicPath(path),false,path);
 });

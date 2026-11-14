@@ -279,3 +279,8 @@ a:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
   .mk-card__frame img { transition: none; }
   @view-transition { navigation: none; }
 }
+
+/* Leise Kaufgruende auf den Einstiegsseiten (scripts/kategorieseiten.py). */
+.mk-trust { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 18px 0 0; padding: 0; list-style: none; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+.mk-trust li::before { content: "·"; margin-right: 8px; }
+.mk-text + .mk-links { margin-top: 22px; }
