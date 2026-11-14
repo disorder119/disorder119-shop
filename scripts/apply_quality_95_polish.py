@@ -50,9 +50,9 @@ def patch_filter_drawer() -> None:
   var wasOpen = false;
   var previousFocus = null;
   var COPY = {
-    de: { filter: "Filter", close: "Schließen", apply: "{count} Artikel anzeigen" },
-    en: { filter: "Filters", close: "Close", apply: "Show {count} items" },
-    fr: { filter: "Filtres", close: "Fermer", apply: "Afficher {count} articles" }
+    de: { filter: "Filter", close: "Schließen", apply: "Artikel anzeigen" },
+    en: { filter: "Filters", close: "Close", apply: "Show items" },
+    fr: { filter: "Filtres", close: "Fermer", apply: "Afficher les articles" }
   };
 
   function lang() {

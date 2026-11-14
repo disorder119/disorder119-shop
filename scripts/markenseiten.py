@@ -42,21 +42,20 @@ TEXTE = {
         "weitere_h2": "Weitere Marken", "alle_marken": "Alle Marken",
         "preis_anfrage": "Preis auf Anfrage", "groesse": "Größe",
         "und": "und",
-        "daten": "Aktuell führt Disorder119 {n} Teile von {brand}{bereich}{liste}. {preis}{groessen}Alle Teile sind Second Hand, "
+        "daten": "Aktuell führt Disorder119 Teile von {brand}{bereich}{liste}. {preis}{groessen}Alle Teile sind Second Hand, "
                  "werden einzeln fotografiert und sind jeweils nur einmal vorhanden. Versand mit DHL aus Deutschland.",
         "liste_alle": ": {cats}", "liste_auswahl": ", darunter {cats}",
         "bereich": " für {deps}",
         "groessen_alle": "Größen im Bestand: {sizes}. ", "groessen_auswahl": "Größen im Bestand unter anderem {sizes}. ",
         "preis_spanne": "Die Preise liegen zwischen {min} und {max}. ", "preis_einer": "Der Preis liegt bei {min}. ",
-        "desc": "{n} Teile von {brand} aus zweiter Hand: {cats}. {preis}Jedes Teil nur 1× verfügbar, einzeln fotografiert.",
+        "desc": "{brand} aus zweiter Hand: {cats}. {preis}Jedes Teil nur 1× verfügbar, einzeln fotografiert.",
         "desc_preis": "Preise ab {min}. ",
         "bereiche": {"Women": "Damen", "Men": "Herren", "Unisex": "Unisex"},
         "u_title": "Designer-Marken Second Hand & Vintage | Disorder119",
         "u_h1": "Designer-Marken – Second Hand & Vintage",
-        "u_desc": "Alle Marken im Disorder119-Archiv: {top} und weitere. {n} Second-Hand-Teile von {m} Marken, jedes nur 1× verfügbar.",
+        "u_desc": "Alle Marken im Disorder119-Archiv: {top} und weitere. Second-Hand-Teile ausgewählter Designer, jedes nur 1× verfügbar.",
         "u_text": "Disorder119 führt Second-Hand- und Vintage-Mode ausgewählter Designer. Auf dieser Seite stehen alle Marken, "
-                  "von denen derzeit mindestens {min} Teile verfügbar sind, jeweils mit der aktuellen Anzahl. Insgesamt sind "
-                  "{n} Teile von {m} Marken im Archiv verfügbar. Jedes Teil ist nur einmal vorhanden, wird einzeln fotografiert "
+                  "die derzeit im Archiv vertreten sind. Jedes Teil ist nur einmal vorhanden, wird einzeln fotografiert "
                   "und mit DHL aus Deutschland verschickt.",
         "u_teile": "{n} Teile", "u_rest_h2": "Weitere Marken im Archiv",
         "fuss": "Disorder119 · Kuratiertes Archiv für Designer-, Vintage- und Contemporary-Mode. Jedes Stück wird einzeln ausgewählt, fotografiert und beschrieben.",
@@ -72,21 +71,20 @@ TEXTE = {
         "weitere_h2": "More brands", "alle_marken": "All brands",
         "preis_anfrage": "Price on request", "groesse": "Size",
         "und": "and",
-        "daten": "Disorder119 currently has {n} {brand} pieces in stock{bereich}{liste}. {preis}{groessen}Every piece is pre-owned, "
+        "daten": "Disorder119 currently has {brand} pieces in stock{bereich}{liste}. {preis}{groessen}Every piece is pre-owned, "
                  "photographed individually and available only once. Shipping with DHL from Germany.",
         "liste_alle": ": {cats}", "liste_auswahl": ", including {cats}",
         "bereich": " for {deps}",
         "groessen_alle": "Sizes in stock: {sizes}. ", "groessen_auswahl": "Sizes in stock include {sizes}. ",
         "preis_spanne": "Prices range from {min} to {max}. ", "preis_einer": "The price is {min}. ",
-        "desc": "{n} pre-owned {brand} pieces: {cats}. {preis}Each piece available only once, photographed individually.",
+        "desc": "Pre-owned {brand} pieces: {cats}. {preis}Each piece available only once, photographed individually.",
         "desc_preis": "Prices from {min}. ",
         "bereiche": {"Women": "women", "Men": "men", "Unisex": "unisex"},
         "u_title": "Designer Brands Pre-Owned & Vintage | Disorder119",
         "u_h1": "Designer Brands – Pre-Owned & Vintage",
-        "u_desc": "All brands in the Disorder119 archive: {top} and more. {n} pre-owned pieces by {m} brands, each available only once.",
+        "u_desc": "All brands in the Disorder119 archive: {top} and more. Pre-owned pieces by selected designers, each available only once.",
         "u_text": "Disorder119 carries pre-owned and vintage fashion by selected designers. This page lists every brand with at "
-                  "least {min} pieces currently available, each with its current count. In total {n} pieces by {m} brands are "
-                  "available in the archive. Every piece exists only once, is photographed individually and ships with DHL from Germany.",
+                  "pieces currently in the archive. Every piece exists only once, is photographed individually and ships with DHL from Germany.",
         "u_teile": "{n} pieces", "u_rest_h2": "More brands in the archive",
         "fuss": "Disorder119 · Curated archive for designer, vintage and contemporary fashion. Every piece is individually selected, photographed and described.",
         "fuss_archiv": "To the full archive",
@@ -101,21 +99,20 @@ TEXTE = {
         "weitere_h2": "Autres marques", "alle_marken": "Toutes les marques",
         "preis_anfrage": "Prix sur demande", "groesse": "Taille",
         "und": "et",
-        "daten": "Disorder119 propose actuellement {n} pièces {brand}{bereich}{liste}. {preis}{groessen}Chaque pièce est de seconde main, "
+        "daten": "Disorder119 propose actuellement des pièces {brand}{bereich}{liste}. {preis}{groessen}Chaque pièce est de seconde main, "
                  "photographiée individuellement et disponible une seule fois. Expédition par DHL depuis l’Allemagne.",
         "liste_alle": " : {cats}", "liste_auswahl": ", dont {cats}",
         "bereich": " pour {deps}",
         "groessen_alle": "Tailles en stock : {sizes}. ", "groessen_auswahl": "Tailles en stock, entre autres : {sizes}. ",
         "preis_spanne": "Les prix vont de {min} à {max}. ", "preis_einer": "Le prix est de {min}. ",
-        "desc": "{n} pièces {brand} de seconde main : {cats}. {preis}Chaque pièce n’est disponible qu’une fois.",
+        "desc": "Pièces {brand} de seconde main : {cats}. {preis}Chaque pièce n’est disponible qu’une fois.",
         "desc_preis": "Prix à partir de {min}. ",
         "bereiche": {"Women": "femme", "Men": "homme", "Unisex": "unisexe"},
         "u_title": "Marques de créateurs seconde main | Disorder119",
         "u_h1": "Marques de créateurs – Seconde Main & Vintage",
-        "u_desc": "Toutes les marques de l’archive Disorder119 : {top} et d’autres. {n} pièces de seconde main de {m} marques, chacune disponible une seule fois.",
+        "u_desc": "Toutes les marques de l’archive Disorder119 : {top} et d’autres. Pièces de seconde main de créateurs choisis, chacune disponible une seule fois.",
         "u_text": "Disorder119 propose de la mode de seconde main et vintage de créateurs choisis. Cette page réunit toutes les "
-                  "marques dont au moins {min} pièces sont actuellement disponibles, avec leur nombre actuel. Au total, {n} pièces "
-                  "de {m} marques sont disponibles dans l’archive. Chaque pièce n’existe qu’une fois, est photographiée "
+                  "marques actuellement présentes dans l’archive. Chaque pièce n’existe qu’une fois, est photographiée "
                   "individuellement et expédiée par DHL depuis l’Allemagne.",
         "u_teile": "{n} pièces", "u_rest_h2": "Autres marques de l’archive",
         "fuss": "Disorder119 · Archive sélectionnée pour la mode de créateurs, vintage et contemporaine. Chaque pièce est choisie, photographiée et décrite individuellement.",
@@ -269,7 +266,7 @@ def daten_absatz(b, marke, lang):
     kats = _kategorien(b, marke, lang)
     liste = ""
     if kats:
-        cats = _aufzaehlung([f"{name} ({n})" for name, n in kats[:3]], lang)
+        cats = _aufzaehlung([name for name, _ in kats[:3]], lang)
         liste = (t["liste_alle"] if len(kats) <= 3 else t["liste_auswahl"]).format(cats=cats)
     vorhanden = {it.get("department") for it in marke["teile"]}
     deps = [t["bereiche"][d] for d in ("Women", "Men") if d in vorhanden]
@@ -535,7 +532,6 @@ def markenseite_html(b, marke, lang, alle, shop_config, texte=None):
     teile_html = [
         krumen,
         f'<h1 class="mk-title">{b.esc(ueberschrift(marke, lang))}</h1>',
-        f'<p class="mk-count">{b.esc(t["zahl"].format(n=len(marke["teile"])))}</p>',
         f'<div class="mk-text">{text}</div>',
     ]
     # Produktart-Seiten der Marke (scripts/kategorieseiten.py), z. B. "Prada Jacken".
@@ -543,7 +539,7 @@ def markenseite_html(b, marke, lang, alle, shop_config, texte=None):
     arten = kategorieseiten.marken_kategorien(b, marke, lang)
     if arten:
         teile_html.append('<ul class="mk-links">' + "".join(
-            f'<li><a href="{b.esc(pfad)}">{b.esc(name)}<small>{n}</small></a></li>' for name, pfad, n in arten) + "</ul>")
+            f'<li><a href="{b.esc(pfad)}">{b.esc(name)}</a></li>' for name, pfad, n in arten) + "</ul>")
     teile_html.append(f'<ul class="mk-grid">{kacheln}</ul>')
     if marke["verkauft"]:
         teile_html.append(f'<h2 class="mk-h2">{b.esc(t["verkauft_h2"])}</h2>')
@@ -552,7 +548,7 @@ def markenseite_html(b, marke, lang, alle, shop_config, texte=None):
     andere = [m for m in alle if m["slug"] != marke["slug"]]
     if andere:
         links = "".join(
-            f'<li><a href="{home}{segment(m)}">{b.esc(m["brand"])}<small>{len(m["teile"])}</small></a></li>' for m in andere)
+            f'<li><a href="{home}{segment(m)}">{b.esc(m["brand"])}</a></li>' for m in andere)
         links += f'<li><a href="{home}{UEBERSICHT_SEGMENT}">{b.esc(t["alle_marken"])}</a></li>'
         teile_html.append(f'<h2 class="mk-h2">{b.esc(t["weitere_h2"])}</h2>')
         teile_html.append(f'<ul class="mk-links">{links}</ul>')
@@ -600,7 +596,6 @@ def uebersicht_html(b, lang, alle, shop_config):
             f'<span class="mk-card__frame">{bild}</span>'
             '<span class="mk-card__body">'
             f'<span class="mk-card__title">{b.esc(m["brand"])}</span>'
-            f'<span class="mk-card__meta">{b.esc(t["u_teile"].format(n=len(m["teile"])))}</span>'
             '</span></a></li>')
     teile_html = [
         krumen,
@@ -612,7 +607,7 @@ def uebersicht_html(b, lang, alle, shop_config):
         # Marken mit weniger Teilen haben keine eigene Seite; der Link fuehrt
         # in das Archiv mit vorgewaehltem Markenfilter.
         links = "".join(
-            f'<li><a href="{home}?brand={quote(name)}">{b.esc(name)}<small>{n}</small></a></li>' for name, n in rest)
+            f'<li><a href="{home}?brand={quote(name)}">{b.esc(name)}</a></li>' for name, n in rest)
         teile_html.append(f'<h2 class="mk-h2">{b.esc(t["u_rest_h2"])}</h2>')
         teile_html.append(f'<ul class="mk-links mk-links--plain">{links}</ul>')
     sammlung = {
@@ -684,8 +679,8 @@ def llms_zeilen(b):
     if not alle:
         return []
     site = b.SITE_URL.rstrip("/")
-    zeilen = ["", f"## Marken ({len(alle)})",
-              f"- [Alle Marken]({site}/{UEBERSICHT_SEGMENT}): Übersicht mit Anzahl verfügbarer Teile je Marke"]
+    zeilen = ["", "## Marken",
+              f"- [Alle Marken]({site}/{UEBERSICHT_SEGMENT}): Übersicht der Marken im Archiv"]
     for m in alle:
-        zeilen.append(f"- [{m['brand']} Second Hand & Vintage]({site}/{segment(m)}): {len(m['teile'])} Teile verfügbar")
+        zeilen.append(f"- [{m['brand']} Second Hand & Vintage]({site}/{segment(m)})")
     return zeilen

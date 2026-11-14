@@ -50,16 +50,16 @@ TEXTE = {
         "h1": "Designer-{gruppe} für {bereich} – Vintage & Second Hand",
         "hub_titel": "Designer Mode {bereich} Vintage & Second Hand | Disorder119",
         "hub_h1": "Designer-Mode für {bereich} – Vintage Archive Shop",
-        "text": "Im Vintage-Archiv von Disorder119 sind aktuell {n} {gruppe} für {bereich} verfügbar{marken}. {preis}{groessen}"
+        "text": "Im Vintage-Archiv von Disorder119 sind aktuell {gruppe} für {bereich} verfügbar{marken}. {preis}{groessen}"
                 "Alle Teile sind Second-Hand- und Vintage-Einzelstücke ausgewählter Designer, werden einzeln fotografiert "
                 "und sind jeweils nur einmal vorhanden. Versand mit DHL aus Deutschland.",
         "hub_text": "Disorder119 ist ein Vintage Archive Shop für Designer-Mode aus zweiter Hand. Für {bereich} sind aktuell "
-                    "{n} Teile verfügbar{marken}. {preis}Jedes Teil ist ein Einzelstück, wird einzeln fotografiert und "
+                    "viele Teile verfügbar{marken}. {preis}Jedes Teil ist ein Einzelstück, wird einzeln fotografiert und "
                     "mit DHL aus Deutschland verschickt.",
         "hub_wort": "Teile",
         "marken": ", unter anderem von {liste}",
-        "desc": "{n} Designer-{gruppe} für {bereich} aus zweiter Hand{marken}. {preis}Vintage-Einzelstücke, einzeln fotografiert.",
-        "hub_desc": "Vintage Archive Shop: {n} Designer-Teile für {bereich} aus zweiter Hand{marken}. {preis}Jedes Teil nur 1× verfügbar.",
+        "desc": "Designer-{gruppe} für {bereich} aus zweiter Hand{marken}. {preis}Vintage-Einzelstücke, einzeln fotografiert.",
+        "hub_desc": "Vintage Archive Shop: Designer-Teile für {bereich} aus zweiter Hand{marken}. {preis}Jedes Teil nur 1× verfügbar.",
         "desc_marken": " von {liste}",
         "kat_h2": "Kategorien", "andere_h2": "Auch im Archiv", "marken_h2": "Marken in dieser Auswahl",
         "llms": "Kategorien",
@@ -73,16 +73,16 @@ TEXTE = {
         "h1": "Designer {gruppe} for {bereich} – Vintage & Pre-Owned",
         "hub_titel": "Designer Fashion {bereich} Vintage & Pre-Owned | Disorder119",
         "hub_h1": "Designer Fashion for {bereich} – Vintage Archive Shop",
-        "text": "The Disorder119 vintage archive currently has {n} {gruppe} for {bereich} in stock{marken}. {preis}{groessen}"
+        "text": "The Disorder119 vintage archive currently has {gruppe} for {bereich} in stock{marken}. {preis}{groessen}"
                 "Every piece is a pre-owned or vintage one-off by selected designers, photographed individually and "
                 "available only once. Shipping with DHL from Germany.",
-        "hub_text": "Disorder119 is a vintage archive shop for pre-owned designer fashion. {n} pieces for {bereich} are "
+        "hub_text": "Disorder119 is a vintage archive shop for pre-owned designer fashion. Pieces for {bereich} are "
                     "currently available{marken}. {preis}Every piece is a one-off, photographed individually and shipped "
                     "with DHL from Germany.",
         "hub_wort": "pieces",
         "marken": ", including {liste}",
-        "desc": "{n} pre-owned designer {gruppe} for {bereich}{marken}. {preis}Vintage one-offs, photographed individually.",
-        "hub_desc": "Vintage archive shop: {n} pre-owned designer pieces for {bereich}{marken}. {preis}Each available only once.",
+        "desc": "Pre-owned designer {gruppe} for {bereich}{marken}. {preis}Vintage one-offs, photographed individually.",
+        "hub_desc": "Vintage archive shop: pre-owned designer pieces for {bereich}{marken}. {preis}Each available only once.",
         "desc_marken": " by {liste}",
         "kat_h2": "Categories", "andere_h2": "Also in the archive", "marken_h2": "Brands in this selection",
         "llms": "Categories",
@@ -96,16 +96,16 @@ TEXTE = {
         "h1": "{gruppe} de créateurs {bereich} – Vintage & Seconde Main",
         "hub_titel": "Mode de créateurs {bereich} vintage & seconde main | Disorder119",
         "hub_h1": "Mode de créateurs {bereich} – Vintage Archive Shop",
-        "text": "L’archive vintage Disorder119 propose actuellement {n} {gruppe} {bereich}{marken}. {preis}{groessen}"
+        "text": "L’archive vintage Disorder119 propose actuellement des {gruppe} {bereich}{marken}. {preis}{groessen}"
                 "Chaque pièce est une pièce unique de seconde main ou vintage de créateurs choisis, photographiée "
                 "individuellement et disponible une seule fois. Expédition par DHL depuis l’Allemagne.",
-        "hub_text": "Disorder119 est un vintage archive shop de mode de créateurs de seconde main. {n} pièces {bereich} sont "
+        "hub_text": "Disorder119 est un vintage archive shop de mode de créateurs de seconde main. Des pièces {bereich} sont "
                     "actuellement disponibles{marken}. {preis}Chaque pièce est unique, photographiée individuellement et "
                     "expédiée par DHL depuis l’Allemagne.",
         "hub_wort": "pièces",
         "marken": ", notamment de {liste}",
-        "desc": "{n} {gruppe} de créateurs {bereich} de seconde main{marken}. {preis}Pièces vintage uniques.",
-        "hub_desc": "Vintage archive shop : {n} pièces de créateurs {bereich} de seconde main{marken}. {preis}Chaque pièce est unique.",
+        "desc": "{gruppe} de créateurs {bereich} de seconde main{marken}. {preis}Pièces vintage uniques.",
+        "hub_desc": "Vintage archive shop : pièces de créateurs {bereich} de seconde main{marken}. {preis}Chaque pièce est unique.",
         "desc_marken": " de {liste}",
         "kat_h2": "Catégories", "andere_h2": "Aussi dans l’archive", "marken_h2": "Marques de cette sélection",
         "llms": "Catégories",
@@ -123,25 +123,25 @@ EXTRA = {
     "de": {
         "mk_titel": "{brand} {gruppe} Second Hand & Vintage | Disorder119", "mk_titel_kurz": "{brand} {gruppe} Second Hand | Disorder119",
         "mk_h1": "{brand} {gruppe} – Second Hand & Vintage",
-        "mk_text": "Im Vintage-Archiv von Disorder119 sind aktuell {n} {gruppe} von {brand} verfügbar. {preis}{groessen}Alle Teile sind "
+        "mk_text": "Im Vintage-Archiv von Disorder119 sind aktuell {gruppe} von {brand} verfügbar. {preis}{groessen}Alle Teile sind "
                    "Second-Hand-Einzelstücke, werden einzeln fotografiert und sind jeweils nur einmal vorhanden. Versand mit DHL aus Deutschland.",
-        "mk_desc": "{n} {brand} {gruppe} aus zweiter Hand. {preis}Vintage-Einzelstücke, jedes nur 1× verfügbar.",
+        "mk_desc": "{brand} {gruppe} aus zweiter Hand. {preis}Vintage-Einzelstücke, jedes nur 1× verfügbar.",
         "neu_name": "Neu", "neu_titel": "Neu eingetroffen: Designer Second Hand & Vintage | Disorder119",
         "neu_h1": "Neu im Archiv – Designer Vintage & Second Hand",
-        "neu_text": "Die {n} neuesten Teile im Vintage-Archiv von Disorder119{marken}. {preis}Jedes Teil ist ein Einzelstück: "
+        "neu_text": "Die neuesten Teile im Vintage-Archiv von Disorder119{marken}. {preis}Jedes Teil ist ein Einzelstück: "
                     "Was verkauft ist, kommt nicht wieder. Versand mit DHL aus Deutschland.",
-        "neu_desc": "Die {n} neuesten Designer-Teile aus zweiter Hand{marken}. {preis}Jedes Teil nur 1× verfügbar.",
+        "neu_desc": "Die neuesten Designer-Teile aus zweiter Hand{marken}. {preis}Jedes Teil nur 1× verfügbar.",
         "preis_name": "Unter {grenze}", "preis_titel": "Designer Second Hand unter {grenze} | Disorder119",
         "preis_h1": "Designer-Mode unter {grenze} – Vintage & Second Hand",
-        "preis_text": "{n} Designer-Teile aus zweiter Hand unter {grenze}{marken}. {preis}Alle Teile sind Einzelstücke aus dem "
+        "preis_text": "Designer-Teile aus zweiter Hand unter {grenze}{marken}. {preis}Alle Teile sind Einzelstücke aus dem "
                       "Vintage-Archiv von Disorder119, einzeln fotografiert und nur einmal vorhanden. Versand mit DHL aus Deutschland.",
-        "preis_desc": "{n} Designer-Teile aus zweiter Hand unter {grenze}{marken}. Vintage-Einzelstücke, jedes nur 1× verfügbar.",
+        "preis_desc": "Designer-Teile aus zweiter Hand unter {grenze}{marken}. Vintage-Einzelstücke, jedes nur 1× verfügbar.",
         "vas_name": "Vintage Archive Shop", "vas_titel": "Vintage Archive Shop: Designer Second Hand | Disorder119",
         "vas_h1": "Vintage Archive Shop – Designer-Mode aus zweiter Hand",
         "vas_text": "Disorder119 ist ein Vintage Archive Shop für Archive Fashion: ein kuratiertes Archiv für Designer-Mode aus zweiter Hand{marken}. "
-                    "Aktuell sind {n} Teile verfügbar. {preis}Jedes Stück wird einzeln ausgewählt, fotografiert und beschrieben und "
+                    "{preis}Jedes Stück wird einzeln ausgewählt, fotografiert und beschrieben und "
                     "ist nur einmal vorhanden. Versand mit DHL aus Deutschland.",
-        "vas_desc": "Vintage Archive Shop für Designer-Mode aus zweiter Hand{marken}. {n} Einzelstücke, {preis}jedes nur 1× verfügbar.",
+        "vas_desc": "Vintage Archive Shop für Designer-Mode aus zweiter Hand{marken}. Einzelstücke, {preis}jedes nur 1× verfügbar.",
         "trust": ["Jedes Teil nur 1× verfügbar", "14 Tage Widerrufsrecht", "PayPal & Apple Pay"],
         "trust_versand": "Kostenloser Versand ab {betrag} in Deutschland",
         "verkauft_h2": "Zuletzt verkauft", "mehr_h2": "Mehr entdecken",
@@ -149,25 +149,25 @@ EXTRA = {
     "en": {
         "mk_titel": "{brand} {gruppe} Pre-Owned & Vintage | Disorder119", "mk_titel_kurz": "{brand} {gruppe} Pre-Owned | Disorder119",
         "mk_h1": "{brand} {gruppe} – Pre-Owned & Vintage",
-        "mk_text": "The Disorder119 vintage archive currently has {n} {brand} {gruppe} in stock. {preis}{groessen}Every piece is a "
+        "mk_text": "The Disorder119 vintage archive currently has {brand} {gruppe} in stock. {preis}{groessen}Every piece is a "
                    "pre-owned one-off, photographed individually and available only once. Shipping with DHL from Germany.",
-        "mk_desc": "{n} pre-owned {brand} {gruppe}. {preis}Vintage one-offs, each available only once.",
+        "mk_desc": "Pre-owned {brand} {gruppe}. {preis}Vintage one-offs, each available only once.",
         "neu_name": "New", "neu_titel": "New Arrivals: Pre-Owned Designer & Vintage | Disorder119",
         "neu_h1": "New in the Archive – Designer Vintage & Pre-Owned",
-        "neu_text": "The {n} latest pieces in the Disorder119 vintage archive{marken}. {preis}Every piece is a one-off: once it is "
+        "neu_text": "The latest pieces in the Disorder119 vintage archive{marken}. {preis}Every piece is a one-off: once it is "
                     "sold, it is gone. Shipping with DHL from Germany.",
-        "neu_desc": "The {n} latest pre-owned designer pieces{marken}. {preis}Each available only once.",
+        "neu_desc": "The latest pre-owned designer pieces{marken}. {preis}Each available only once.",
         "preis_name": "Under {grenze}", "preis_titel": "Pre-Owned Designer Fashion under {grenze} | Disorder119",
         "preis_h1": "Designer Fashion under {grenze} – Vintage & Pre-Owned",
-        "preis_text": "{n} pre-owned designer pieces under {grenze}{marken}. {preis}All pieces are one-offs from the Disorder119 "
+        "preis_text": "Pre-owned designer pieces under {grenze}{marken}. {preis}All pieces are one-offs from the Disorder119 "
                       "vintage archive, photographed individually and available only once. Shipping with DHL from Germany.",
-        "preis_desc": "{n} pre-owned designer pieces under {grenze}{marken}. Vintage one-offs, each available only once.",
+        "preis_desc": "Pre-owned designer pieces under {grenze}{marken}. Vintage one-offs, each available only once.",
         "vas_name": "Vintage Archive Shop", "vas_titel": "Archive Fashion: Vintage Archive Shop | Disorder119",
         "vas_h1": "Archive Fashion – Vintage Archive Shop for Pre-Owned Designer Pieces",
-        "vas_text": "Disorder119 is a vintage archive shop for archive fashion: a curated archive of pre-owned designer pieces{marken}. {n} pieces are "
-                    "currently available. {preis}Every piece is selected, photographed and described individually and exists only "
+        "vas_text": "Disorder119 is a vintage archive shop for archive fashion: a curated archive of pre-owned designer pieces{marken}. "
+                    "{preis}Every piece is selected, photographed and described individually and exists only "
                     "once. Shipping with DHL from Germany.",
-        "vas_desc": "Vintage archive shop for pre-owned designer fashion{marken}. {n} one-offs, {preis}each available only once.",
+        "vas_desc": "Vintage archive shop for pre-owned designer fashion{marken}. One-offs, {preis}each available only once.",
         "trust": ["Each piece available only once", "14-day right of withdrawal", "PayPal & Apple Pay"],
         "trust_versand": "Free shipping from {betrag} within Germany",
         "verkauft_h2": "Recently sold", "mehr_h2": "Discover more",
@@ -175,25 +175,25 @@ EXTRA = {
     "fr": {
         "mk_titel": "{gruppe} {brand} seconde main & vintage | Disorder119", "mk_titel_kurz": "{gruppe} {brand} seconde main | Disorder119",
         "mk_h1": "{gruppe} {brand} – Seconde Main & Vintage",
-        "mk_text": "L’archive vintage Disorder119 propose actuellement {n} {gruppe} {brand}. {preis}{groessen}Chaque pièce est une "
+        "mk_text": "L’archive vintage Disorder119 propose actuellement des {gruppe} {brand}. {preis}{groessen}Chaque pièce est une "
                    "pièce unique de seconde main, photographiée individuellement et disponible une seule fois. Expédition par DHL depuis l’Allemagne.",
-        "mk_desc": "{n} {gruppe} {brand} de seconde main. {preis}Pièces vintage uniques.",
+        "mk_desc": "{gruppe} {brand} de seconde main. {preis}Pièces vintage uniques.",
         "neu_name": "Nouveautés", "neu_titel": "Nouveautés : mode de créateurs seconde main | Disorder119",
         "neu_h1": "Nouveautés de l’archive – Vintage & Seconde Main",
-        "neu_text": "Les {n} dernières pièces de l’archive vintage Disorder119{marken}. {preis}Chaque pièce est unique : une fois "
+        "neu_text": "Les dernières pièces de l’archive vintage Disorder119{marken}. {preis}Chaque pièce est unique : une fois "
                     "vendue, elle ne revient pas. Expédition par DHL depuis l’Allemagne.",
-        "neu_desc": "Les {n} dernières pièces de créateurs de seconde main{marken}. {preis}Chaque pièce est unique.",
+        "neu_desc": "Les dernières pièces de créateurs de seconde main{marken}. {preis}Chaque pièce est unique.",
         "preis_name": "Moins de {grenze}", "preis_titel": "Mode de créateurs seconde main à moins de {grenze} | Disorder119",
         "preis_h1": "Mode de créateurs à moins de {grenze} – Vintage & Seconde Main",
-        "preis_text": "{n} pièces de créateurs de seconde main à moins de {grenze}{marken}. {preis}Toutes sont des pièces uniques de "
+        "preis_text": "Pièces de créateurs de seconde main à moins de {grenze}{marken}. {preis}Toutes sont des pièces uniques de "
                       "l’archive vintage Disorder119, photographiées individuellement. Expédition par DHL depuis l’Allemagne.",
-        "preis_desc": "{n} pièces de créateurs de seconde main à moins de {grenze}{marken}. Pièces vintage uniques.",
+        "preis_desc": "Pièces de créateurs de seconde main à moins de {grenze}{marken}. Pièces vintage uniques.",
         "vas_name": "Vintage Archive Shop", "vas_titel": "Vintage Archive Shop : mode de créateurs | Disorder119",
         "vas_h1": "Vintage Archive Shop – Mode de créateurs de seconde main",
         "vas_text": "Disorder119 est un vintage archive shop : une archive sélectionnée de mode de créateurs de seconde main{marken}. "
-                    "{n} pièces sont actuellement disponibles. {preis}Chaque pièce est choisie, photographiée et décrite "
+                    "{preis}Chaque pièce est choisie, photographiée et décrite "
                     "individuellement et n’existe qu’une fois. Expédition par DHL depuis l’Allemagne.",
-        "vas_desc": "Vintage archive shop de mode de créateurs de seconde main{marken}. {n} pièces uniques, {preis}disponibles une seule fois.",
+        "vas_desc": "Vintage archive shop de mode de créateurs de seconde main{marken}. Pièces uniques, {preis}disponibles une seule fois.",
         "trust": ["Chaque pièce disponible une seule fois", "Droit de rétractation de 14 jours", "PayPal & Apple Pay"],
         "trust_versand": "Livraison gratuite dès {betrag} en Allemagne",
         "verkauft_h2": "Vendu récemment", "mehr_h2": "À découvrir",
@@ -240,20 +240,20 @@ MATERIAL = (
 THEMA_TEXT = {
     "de": {"titel": "{wort} Second Hand & Vintage | Disorder119", "titel_kurz": "{wort} Second Hand | Disorder119",
            "h1": "{wort} – Second Hand & Vintage",
-           "text": "{wort}: aktuell {n} Teile im Vintage-Archiv von Disorder119{marken}. {preis}{groessen}Alle Teile sind "
+           "text": "{wort} im Vintage-Archiv von Disorder119{marken}. {preis}{groessen}Alle Teile sind "
                    "Second-Hand- und Vintage-Einzelstücke, werden einzeln fotografiert und sind jeweils nur einmal vorhanden. "
                    "Versand mit DHL aus Deutschland.",
-           "desc": "{wort} aus zweiter Hand: {n} Teile{marken}. {preis}Vintage-Einzelstücke, jedes nur 1× verfügbar."},
+           "desc": "{wort} aus zweiter Hand{marken}. {preis}Vintage-Einzelstücke, jedes nur 1× verfügbar."},
     "en": {"titel": "{wort} Pre-Owned & Vintage | Disorder119", "titel_kurz": "{wort} Pre-Owned | Disorder119",
            "h1": "{wort} – Pre-Owned & Vintage",
-           "text": "{wort}: {n} pieces currently in the Disorder119 vintage archive{marken}. {preis}{groessen}Every piece is a "
+           "text": "{wort} in the Disorder119 vintage archive{marken}. {preis}{groessen}Every piece is a "
                    "pre-owned or vintage one-off, photographed individually and available only once. Shipping with DHL from Germany.",
-           "desc": "Pre-owned {wort}: {n} pieces{marken}. {preis}Vintage one-offs, each available only once."},
+           "desc": "Pre-owned {wort}{marken}. {preis}Vintage one-offs, each available only once."},
     "fr": {"titel": "{wort} seconde main & vintage | Disorder119", "titel_kurz": "{wort} seconde main | Disorder119",
            "h1": "{wort} – Seconde Main & Vintage",
-           "text": "{wort} : {n} pièces actuellement dans l’archive vintage Disorder119{marken}. {preis}{groessen}Chaque pièce est "
+           "text": "{wort} dans l’archive vintage Disorder119{marken}. {preis}{groessen}Chaque pièce est "
                    "une pièce unique de seconde main ou vintage, photographiée individuellement. Expédition par DHL depuis l’Allemagne.",
-           "desc": "{wort} de seconde main : {n} pièces{marken}. {preis}Pièces vintage uniques."},
+           "desc": "{wort} de seconde main{marken}. {preis}Pièces vintage uniques."},
 }
 
 SEGMENTE = tuple(b["slug"] for b in BEREICHE)
@@ -572,7 +572,7 @@ def vertrauen_html(b, lang):
 
 
 def _links(b, eintraege):
-    return "".join(f'<li><a href="{b.esc(pfad)}">{b.esc(name)}<small>{n}</small></a></li>' for name, pfad, n in eintraege)
+    return "".join(f'<li><a href="{b.esc(pfad)}">{b.esc(name)}</a></li>' for name, pfad, n in eintraege)
 
 
 def seite_html(b, seite, lang, alle, shop_config):
@@ -586,7 +586,6 @@ def seite_html(b, seite, lang, alle, shop_config):
     teile_html = [
         krumen,
         f'<h1 class="mk-title">{b.esc(ueberschrift(seite, lang))}</h1>',
-        f'<p class="mk-count">{b.esc(mt["zahl"].format(n=len(seite["teile"])))}</p>',
         f'<div class="mk-text"><p>{b.esc(absatz(b, seite, lang))}</p></div>',
         vertrauen_html(b, lang),
     ]
@@ -725,7 +724,7 @@ def llms_zeilen(b):
     if not alle:
         return []
     site = b.SITE_URL.rstrip("/")
-    zeilen = ["", f"## Kategorien ({len(alle)})"]
+    zeilen = ["", "## Kategorien"]
     for s in alle:
-        zeilen.append(f"- [{ueberschrift(s, 'de')}]({site}/{s['seg']}): {len(s['teile'])} Teile verfügbar")
+        zeilen.append(f"- [{ueberschrift(s, 'de')}]({site}/{s['seg']})")
     return zeilen

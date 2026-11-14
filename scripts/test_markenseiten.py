@@ -128,7 +128,7 @@ class MarkenseitenTests(unittest.TestCase):
             self.assertEqual(alternativen, {
                 "de": erwartet[""][0], "en": erwartet["en/"][0], "fr": erwartet["fr/"][0], "x-default": erwartet[""][0]})
             self.assertIn('<meta name="robots" content="index,follow', seite)
-            self.assertRegex(seite, r'<meta name="description" content="4 [^"]+">')
+            self.assertRegex(seite, r'<meta name="description" content="[^"0-9][^"]+">')  # ohne Bestandszahl
             self.assertIn('<meta property="og:image" content="https://disorder119.com/assets/img/9004/0.webp">', seite)
             self.assertIn(f'<meta property="og:url" content="{canonical}">', seite)
 
@@ -174,13 +174,14 @@ class MarkenseitenTests(unittest.TestCase):
         seite = (wurzel / "marke/jean-paul-gaultier/index.html").read_text(encoding="utf-8")
         text = seite.split('<div class="mk-text">', 1)[1].split("</div>", 1)[0]
         self.assertIn("<p>Gepflegter Text DE.</p>", text)
-        self.assertIn("4 Teile von Jean Paul Gaultier für Damen: Jacken (4).", text)
+        self.assertIn("Teile von Jean Paul Gaultier für Damen: Jacken.", text)
+        self.assertNotIn("4 Teile", text)  # keine Bestandszahlen (Inhaber 14.11.2026)
         self.assertIn("zwischen 101 € und 104 €", text)
         # Marke ohne gepflegten Text: nur der berechnete Absatz.
         ohne = (wurzel / "marke/comme-des-garcons/index.html").read_text(encoding="utf-8")
         absaetze = re.findall(r"<p>(.*?)</p>", ohne.split('<div class="mk-text">', 1)[1].split("</div>", 1)[0])
         self.assertEqual(len(absaetze), 1)
-        self.assertIn("3 Teile von Comme des Garçons für Herren", absaetze[0])
+        self.assertIn("Teile von Comme des Garçons für Herren", absaetze[0])
 
     def test_uebersicht_listet_marken_mit_anzahl(self):
         wurzel = self.bauen()
@@ -189,8 +190,8 @@ class MarkenseitenTests(unittest.TestCase):
         self.assertEqual(len(re.findall(r"<h1\b", seite)), 1)
         raster = seite.split('mk-grid--brands">', 1)[1].split("</ul>", 1)[0]
         self.assertEqual(re.findall(r'href="([^"]+)"', raster), ["/marke/jean-paul-gaultier/", "/marke/comme-des-garcons/"])
-        self.assertIn("4 Teile", raster)
-        self.assertIn("3 Teile", raster)
+        self.assertNotIn("4 Teile", raster)  # keine Bestandszahlen
+        self.assertNotIn("3 Teile", raster)
         self.assertNotIn("/marke/gucci/", seite)
         self.assertIn('href="/?brand=Gucci"', seite)
 

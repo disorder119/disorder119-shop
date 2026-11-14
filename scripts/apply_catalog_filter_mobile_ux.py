@@ -14,9 +14,9 @@ ADDON = r'''
   var MARKER_ID = "d119CompactFilterDrawer";
   var MOBILE = "(max-width: 720px)";
   var COPY = {
-    de: { filter: "Filter", close: "Schließen", apply: "{count} Artikel anzeigen" },
-    en: { filter: "Filters", close: "Close", apply: "Show {count} items" },
-    fr: { filter: "Filtres", close: "Fermer", apply: "Afficher {count} articles" }
+    de: { filter: "Filter", close: "Schließen", apply: "Artikel anzeigen" },
+    en: { filter: "Filters", close: "Close", apply: "Show items" },
+    fr: { filter: "Filtres", close: "Fermer", apply: "Afficher les articles" }
   };
 
   function lang() {
