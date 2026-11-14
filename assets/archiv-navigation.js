@@ -23,7 +23,7 @@
       wenigerGroessen: "Weniger Größen", schuhgroessen: "Schuhgrößen",
       fuer: "Für", sortieren: "Sortieren", preis: "Preis", mehr: "Preis, Marke, Farbe",
       marke: "Marke", farbe: "Farbe", erhaltung: "Zustand", zuruecksetzen: "Alles zurücksetzen",
-      keineGroessen: "Für diese Auswahl gibt es keine Größenangaben.", alleMarken: "Alle Marken ({n})",
+      keineGroessen: "Für diese Auswahl gibt es keine Größenangaben.", alleMarken: "Alle Marken",
       weniger: "Weniger", bis: "bis {b} €", ab: "ab {a} €", spanne: "{a}–{b} €",
       anzeigen: "Filter anzeigen", ausblenden: "Filter ausblenden", filter: "Filter", schliessen: "Schließen",
       verkauft: "Bereits verkauft", verkauftArchiv: "Zum Archiv der verkauften Stücke", verkauftStatus: "Verkauft"
@@ -33,7 +33,7 @@
       wenigerGroessen: "Fewer sizes", schuhgroessen: "Shoe sizes",
       fuer: "For", sortieren: "Sort", preis: "Price", mehr: "Price, brand, colour",
       marke: "Brand", farbe: "Colour", erhaltung: "Condition", zuruecksetzen: "Reset all",
-      keineGroessen: "No sizes listed for this selection.", alleMarken: "All brands ({n})",
+      keineGroessen: "No sizes listed for this selection.", alleMarken: "All brands",
       weniger: "Less", bis: "up to €{b}", ab: "from €{a}", spanne: "€{a}–{b}",
       anzeigen: "Show filters", ausblenden: "Hide filters", filter: "Filters", schliessen: "Close",
       verkauft: "Already sold", verkauftArchiv: "See the archive of sold pieces", verkauftStatus: "Sold"
@@ -43,7 +43,7 @@
       wenigerGroessen: "Moins de tailles", schuhgroessen: "Pointures",
       fuer: "Pour", sortieren: "Trier", preis: "Prix", mehr: "Prix, marque, couleur",
       marke: "Marque", farbe: "Couleur", erhaltung: "État", zuruecksetzen: "Tout réinitialiser",
-      keineGroessen: "Aucune taille indiquée pour cette sélection.", alleMarken: "Toutes les marques ({n})",
+      keineGroessen: "Aucune taille indiquée pour cette sélection.", alleMarken: "Toutes les marques",
       weniger: "Moins", bis: "jusqu’à {b} €", ab: "dès {a} €", spanne: "{a}–{b} €",
       anzeigen: "Afficher les filtres", ausblenden: "Masquer les filtres", filter: "Filtres", schliessen: "Fermer",
       verkauft: "Déjà vendu", verkauftArchiv: "Voir l’archive des pièces vendues", verkauftStatus: "Vendu"
@@ -1234,7 +1234,7 @@
       "html.nebel #filterPanel.d119-chips-an .d119-chip:hover{opacity:.85}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__foot{justify-content:flex-start;gap:28px;padding:18px 0 26px calc(var(--nebel-links,56px) + var(--nebel-breite,1328px) * .38);background:color-mix(in srgb,var(--bg) 88%,transparent);border-top:1px solid color-mix(in srgb,var(--text) 12%,transparent)}",
       "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__apply{font-size:0;padding:0 40px}",
-      "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__apply::after{content:attr(data-nebel-text) \" [ \" attr(data-treffer) \" ]\";font-size:.74rem;font-weight:800;letter-spacing:.18em}",
+      "html.nebel #filterPanel.d119-chips-an .d119-filter-drawer__apply::after{content:attr(data-nebel-text);font-size:.74rem;font-weight:800;letter-spacing:.18em}",
       "}",
       /* Auch auf einem flacheren Laptop bleibt die Standardauswahl voll
          sichtbar. Erst aufgeklappte Zusatzwerte brauchen internes Scrollen. */

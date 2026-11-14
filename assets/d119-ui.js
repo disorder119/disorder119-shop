@@ -932,13 +932,8 @@
       meta.insertAdjacentElement("afterend", halter);
       halter.insertAdjacentElement("afterend", zeile);
     }
-    if (zeile) {
-      katalog().then(function (k) {
-        var verf = k.filter(function (x) { return x.public_status !== "SOLD"; }).length;
-        var marken = {}; k.forEach(function (x) { if (x.brand) marken[x.brand] = 1; });
-        zeile.textContent = verf + " verfügbar · " + k.length + " im Archiv · " + Object.keys(marken).length + " Marken";
-      });
-    }
+    // Keine Bestandszahlen mehr (Inhaber 14.11.2026): weder Teile noch Marken zaehlen.
+    if (zeile) zeile.hidden = true;
   }
 
   /* Startseite (ab dem zweiten Besuch): landet an der Leiste mit den Kategorien; der Kopf mit dem Schriftzug liegt darueber (hochscrollen). */
