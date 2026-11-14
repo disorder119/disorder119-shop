@@ -3916,3 +3916,6 @@ img[data-d119-image-protected] {
   .masthead .masthead__bottom { padding-top: 6px; }
   .masthead .ui-kopf__suche { margin-top: 10px; margin-bottom: 8px; }
 }
+/* Kleiner Pfeil an allem, was auf- und zuklappt (Menue: Marken; Filter: Alle Marken, weitere Groessen). */
+#menuBrandsToggle::after, .d119-chip--leise[aria-expanded]::after { content: ""; display: inline-block; width: .4em; height: .4em; margin-left: .65em; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-.2em) rotate(45deg); transition: transform .18s ease; }
+#menuBrandsToggle[aria-expanded="true"]::after, .d119-chip--leise[aria-expanded="true"]::after { transform: translateY(.08em) rotate(-135deg); }
