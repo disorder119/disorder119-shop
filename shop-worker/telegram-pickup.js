@@ -1,6 +1,6 @@
 import { safeText } from "./commerce-core.js";
-import { resolveTelegramChatId, telegramApi, sendTelegramMessage, sendTelegramPhoto, verkaufsBild, formatPickupReadyMessage, telegramZeile, freigabeKnoepfe, FREIGABE_ANLAESSE, FREIGABE_GUELTIG_MS } from "./notifications.js";
-import { formatPickupReady, sendPickupReady, sendShippingConfirmation, sendDeliveryNotice } from "./customer-mail.js";
+import { resolveTelegramChatId, telegramApi, sendTelegramMessage, sendTelegramPhoto, verkaufsBild, formatPickupReadyMessage, formatStatusFreigabeMessage, telegramZeile, freigabeKnoepfe, FREIGABE_ANLAESSE, FREIGABE_GUELTIG_MS } from "./notifications.js";
+import { formatPickupReady, formatShippingConfirmation, formatDeliveryNotice, sendPickupReady, sendShippingConfirmation, sendDeliveryNotice } from "./customer-mail.js";
 import { katalogNachId } from "./oeffentlicher-katalog.js";
 
 const WEBHOOK_URL = "https://api.disorder119.com/telegram/pickup-webhook";
@@ -35,7 +35,7 @@ function randomToken() {
 }
 
 function pickupTestNotice(html) {
-  const note = "TESTVORSCHAU: Dies ist nur die Vorschau. Es wird keine Abholmail an einen Kunden gesendet.";
+  const note = "TESTVORSCHAU: Dies ist nur die Vorschau. Es wird keine Mail an einen Kunden gesendet.";
   return String(html || "").replace(/(<body[^>]*>)/i, `$1<div style="background:#f6e8a5;color:#111;padding:12px;text-align:center;font:700 13px Arial,sans-serif">${note}</div>`);
 }
 
@@ -63,12 +63,86 @@ function pickupTestOrder(meta = {}) {
 
 function pickupTestMail(env, meta) {
   const order = pickupTestOrder(meta);
-  const message = formatPickupReady(order, {
-    contactEmail: safeText(env?.MAIL_REPLY_TO || env?.MAIL_FROM || "kontakt@disorder119.com", 200),
-    sprache: "de",
-    abholort: meta.abholort || { typ: "packstation", nummer: "119", ort: "Aschaffenburg" },
-  });
+  const contactEmail = safeText(env?.MAIL_REPLY_TO || env?.MAIL_FROM || "kontakt@disorder119.com", 200);
+  // Statustest (Inhaber 14.11.2026): je Anlass die echte Kundenmail zeigen.
+  let message;
+  if (meta.anlass === "VERSENDET") {
+    message = formatShippingConfirmation({ ...order, city: "Aschaffenburg", shipped_at: meta.zeit || new Date().toISOString() }, { contactEmail, sprache: "de" });
+  } else if (meta.anlass === "ZUGESTELLT") {
+    message = formatDeliveryNotice(order, { contactEmail, sprache: "de" });
+  } else {
+    message = formatPickupReady(order, {
+      contactEmail, sprache: "de",
+      abholort: meta.abholort || { typ: "packstation", nummer: "119", ort: "Aschaffenburg" },
+    });
+  }
   return { ...message, html: pickupTestNotice(message.html) };
+}
+
+// Statustest auf Zuruf: Ein von Hand in D1 angelegter Marker
+// (STATUS_TESTS_QUEUED) schickt je Anlass eine Testmeldung mit einem anderen
+// Artikel - so wie echte Meldungen aussehen. Vorschau und Knoepfe arbeiten,
+// eine Kundenmail geht dabei nie raus (PICKUP_TEST_PENDING).
+export const STATUS_TEST_ID = "telegram:status:tests";
+const STATUS_TESTS = Object.freeze([
+  { anlass: "VERSENDET", kunde: "Mara Beispiel", dhl: "Die Sendung wurde im Paketzentrum bearbeitet." },
+  { anlass: "ABHOLBEREIT", kunde: "Lena Beispiel", abholort: { typ: "packstation", nummer: "234", ort: "Aschaffenburg" } },
+  { anlass: "ABHOLBEREIT", kunde: "Noah Beispiel", abholort: { typ: "filiale", nummer: "45", ort: "Berlin" } },
+  { anlass: "ZUGESTELLT", kunde: "Tom Beispiel", dhl: "Die Sendung wurde zugestellt." },
+]);
+
+export async function sendQueuedStatusTests(env, reqId = crypto.randomUUID()) {
+  if (!env?.DB || !env?.TELEGRAM_BOT_TOKEN) return { skipped: true };
+  const claimed = await env.DB.prepare("UPDATE audit_events SET event_type='STATUS_TESTS_SENDING' WHERE id=? AND event_type='STATUS_TESTS_QUEUED'").bind(STATUS_TEST_ID).run();
+  if (!claimed?.meta?.changes) return { skipped: true };
+  let sent = 0;
+  try {
+    const chatId = await resolveTelegramChatId(env, reqId);
+    if (!chatId) throw new Error("TARGET_NOT_CONNECTED");
+    let katalog;
+    try { katalog = await katalogNachId({ env, fetcher: env.KATALOG_FETCH || null }); } catch { katalog = new Map(); }
+    const teile = [...katalog.values()].filter(k => k && Array.isArray(k.gallery) && k.gallery.length && String(k.public_status || k.status || "AVAILABLE").toUpperCase() === "AVAILABLE");
+    if (!teile.length) throw new Error("NO_ITEM");
+    const schritt = Math.max(1, Math.floor(teile.length / STATUS_TESTS.length));
+    for (let i = 0; i < STATUS_TESTS.length; i++) {
+      const muster = STATUS_TESTS[i];
+      const item = testItemData(teile[(i * schritt + 3) % teile.length]);
+      const token = randomToken();
+      const id = `notify:telegram:pickup:${token}`;
+      const jetzt = new Date().toISOString();
+      const meta = {
+        chatId: String(chatId), item, anlass: muster.anlass, zeit: jetzt,
+        orderNumber: `D119-TEST-${i + 1}`, trackingNumber: "00340434161094042557",
+        ...(muster.abholort ? { abholort: muster.abholort } : {}),
+      };
+      await env.DB.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+        VALUES (?,'SYSTEM','telegram','pickup-test','PICKUP_TEST_PENDING',?,?,?)`)
+        .bind(id, safeText(reqId, 120), JSON.stringify(meta), jetzt).run();
+      const text = formatStatusFreigabeMessage(muster.anlass,
+        { order_number: meta.orderNumber, kunde: muster.kunde, titel: item.title_snapshot, tracking: meta.trackingNumber },
+        { text: muster.dhl || "", abholort: muster.abholort });
+      const caption = `🧪 TEST ${i + 1}/${STATUS_TESTS.length} · keine echte Bestellung
+
+${text}
+
+Im Test geht bei keinem Knopf eine Kundenmail raus.`;
+      const result = await sendTelegramPhoto(env, verkaufsBild({ items: [item] }), caption, reqId, freigabeKnoepfe(token, { test: true }));
+      if (!result.sent) {
+        await env.DB.prepare("DELETE FROM audit_events WHERE id=? AND event_type='PICKUP_TEST_PENDING'").bind(id).run().catch(() => {});
+        throw new Error(result.reason || "TELEGRAM_STATUS_TEST_FAILED");
+      }
+      sent++;
+    }
+    await env.DB.prepare("UPDATE audit_events SET event_type='STATUS_TESTS_SENT',metadata_json=? WHERE id=? AND event_type='STATUS_TESTS_SENDING'")
+      .bind(JSON.stringify({ sent }), STATUS_TEST_ID).run();
+    return { sent };
+  } catch (err) {
+    // Nicht blind wiederholen (Telegram kann schon angenommen haben).
+    await env.DB.prepare("UPDATE audit_events SET event_type='STATUS_TESTS_FAILED',metadata_json=? WHERE id=? AND event_type='STATUS_TESTS_SENDING'")
+      .bind(JSON.stringify({ sent, code: String(err?.message || "error").slice(0, 80) }), STATUS_TEST_ID).run().catch(() => {});
+    console.error(JSON.stringify({ event: "telegram_status_tests_failed", requestId: reqId, sent, code: String(err?.message || "error").slice(0, 80) }));
+    return { sent, error: true };
+  }
 }
 
 // Der Test aus der Admin-App ist absichtlich derselbe Telegram-Weg wie eine
