@@ -1178,6 +1178,7 @@
       ".nebel-register button{appearance:none;border:0;background:none;color:var(--text);font:inherit;cursor:pointer;padding:2px 0;text-align:left;font-size:clamp(30px,3.6vw,56px);font-weight:800;letter-spacing:-.025em;line-height:1.02;text-transform:uppercase;opacity:.28;transition:opacity .18s ease}",
       ".nebel-register button:hover{opacity:.6}",
       ".nebel-register button.an{opacity:1}",
+      ".nebel-wahl .d119-chips__gruppe{transition:opacity .2s ease}.nebel-wahl .d119-chips__gruppe:not(.nebel-gewaehlt){opacity:.3}",
       ".nebel-register sup{font-size:.32em;letter-spacing:.06em;margin-left:.35em;vertical-align:super}",
       "html.nebel #filterPanel.d119-chips-an .d119-chips{display:block;width:calc(var(--nebel-breite,1328px) * .62);max-width:none;margin:0 0 0 calc(var(--nebel-links,56px) + var(--nebel-breite,1328px) * .38);padding:30px 0 18px}",
       "html.nebel #filterPanel.d119-chips-an .d119-chips__gruppe{display:block;margin:0 0 28px;padding:0}",
@@ -1335,7 +1336,7 @@
     document.head.appendChild(s);
   }
 
-  var box = null, register = null, pille = null, links = null, rechts = null;
+  var registerWahl = "", box = null, register = null, pille = null, links = null, rechts = null;
 
   // Gruppen kennzeichnen (data-gruppe, Zaehler am Titel), Marken A-Z mit Gewicht
   function schluessel(g) { var m = /d119-chips__gruppe--([a-z]+)/.exec(g.className); return m ? m[1] : ""; }
@@ -1392,8 +1393,13 @@
       return;
     }
     var gr = box.querySelectorAll(".d119-chips__gruppe"), aktiv = gr[0];
-    Array.prototype.forEach.call(gr, function (g) { if (g.getBoundingClientRect().top <= 150) aktiv = g; });
-    if (panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 4) aktiv = gr[gr.length - 1];
+    if (panel.scrollHeight <= panel.clientHeight + 4) {
+      // Alles passt auf den Schirm, es gibt nichts zu scrollen: Das angeklickte Wort zaehlt.
+      Array.prototype.forEach.call(gr, function (g) { if (registerWahl && g.getAttribute("data-gruppe") === registerWahl) aktiv = g; });
+    } else {
+      Array.prototype.forEach.call(gr, function (g) { if (g.getBoundingClientRect().top <= 150) aktiv = g; });
+      if (panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 4) aktiv = gr[gr.length - 1];
+    }
     Array.prototype.forEach.call(register.children, function (b) { b.classList.toggle("an", !!aktiv && b.getAttribute("data-g") === aktiv.getAttribute("data-gruppe")); });
   }
   function registerZeichnen() {
@@ -1404,6 +1410,8 @@
       register.setAttribute("aria-label", tx("gruppen"));
       panel.insertBefore(register, box);
       panel.addEventListener("scroll", function () { (window.requestAnimationFrame || setTimeout)(registerAktiv); }, { passive: true });
+      // Die anderen Gruppen werden wieder hell, sobald die Maus in die Auswahl geht.
+      box.addEventListener("mouseenter", function () { box.classList.remove("nebel-wahl"); });
     }
     register.textContent = "";
     Array.prototype.forEach.call(box.querySelectorAll(".d119-chips__gruppe"), function (g) {
@@ -1417,6 +1425,10 @@
           if (weniger) weniger.click();
         }
         panel.scrollTo({ top: Math.max(0, g.offsetTop - 96), behavior: "smooth" });
+        registerWahl = g.getAttribute("data-gruppe");
+        Array.prototype.forEach.call(box.querySelectorAll(".d119-chips__gruppe"), function (x) { x.classList.toggle("nebel-gewaehlt", x === g); });
+        box.classList.add("nebel-wahl");
+        registerAktiv();
       });
       register.appendChild(b);
     });
