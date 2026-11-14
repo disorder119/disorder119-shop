@@ -222,7 +222,7 @@ META_PHRASES = {
         "price_on_request": "Preis auf Anfrage",
         "tail_suffix": ". Aus dem kuratierten Second-Hand-Archiv von Disorder119.",
         "auto_suffix": ". Aus dem kuratierten Archiv von Disorder119.",
-        "home_title": "Vintage Archive Shop – Designer Second Hand | Disorder119",
+        "home_title": "Designer Second Hand & Vintage Mode | Disorder119",
         "home_desc": "Vintage Archive Shop für Designer-Mode aus zweiter Hand: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 und mehr. Jedes Teil nur 1× verfügbar, individuell fotografiert.",
     },
     "en": {
@@ -231,7 +231,7 @@ META_PHRASES = {
         "price_on_request": "Price on request",
         "tail_suffix": ". From the curated second-hand archive of Disorder119.",
         "auto_suffix": ". From the curated archive of Disorder119.",
-        "home_title": "Vintage Archive Shop – Pre-Owned Designer | Disorder119",
+        "home_title": "Pre-Owned Designer & Vintage Fashion | Disorder119",
         "home_desc": "Vintage archive shop for pre-owned designer fashion: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 and more. Each piece available only once, individually photographed.",
     },
     "fr": {
@@ -240,7 +240,7 @@ META_PHRASES = {
         "price_on_request": "Prix sur demande",
         "tail_suffix": ". Issu de l'archive seconde main sélectionnée de Disorder119.",
         "auto_suffix": ". Issu de l'archive sélectionnée de Disorder119.",
-        "home_title": "Vintage Archive Shop – Mode de créateurs | Disorder119",
+        "home_title": "Mode Designer Seconde Main & Vintage | Disorder119",
         "home_desc": "Vintage archive shop de mode de créateurs de seconde main : Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 et plus. Chaque pièce disponible une seule fois, photographiée individuellement.",
     },
 }
