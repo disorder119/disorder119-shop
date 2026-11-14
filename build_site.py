@@ -20,6 +20,7 @@ import datetime
 import hashlib
 import html
 import json
+from urllib.parse import quote
 import os
 import time
 import random
@@ -824,10 +825,21 @@ def json_ld(it, lang):
         # Paketgroesse und Versandart und kommt live aus der Kasse; eine feste
         # Zahl koennte bei Google anders aussehen als dort.
         frei_ab = versandkostenfrei_ab_cents()
+        versand_cents = None
         if frei_ab and it["price"] * 100 >= frei_ab:
+            versand_cents = 0
+        else:
+            # Darunter gilt der feste DHL-Preis nach Gewichtsklasse - dieselbe
+            # Zahl wie im Merchant-Feed und in der Kasse (merchant_shipping).
+            try:
+                from merchant_shipping import merchant_shipping_cents
+                versand_cents = merchant_shipping_cents(it, get_shop_config())
+            except Exception:
+                versand_cents = None
+        if versand_cents is not None:
             data["offers"]["shippingDetails"] = {
                 "@type": "OfferShippingDetails",
-                "shippingRate": {"@type": "MonetaryAmount", "value": "0.00", "currency": "EUR"},
+                "shippingRate": {"@type": "MonetaryAmount", "value": f"{versand_cents / 100:.2f}", "currency": "EUR"},
                 "shippingDestination": {"@type": "DefinedRegion", "addressCountry": "DE"},
             }
     return json.dumps(data, ensure_ascii=False)
@@ -1075,7 +1087,7 @@ def build_page(it, shop_config, lang):
     <div class="gallery__thumbs{' gallery__thumbs--reserved' if len(gallery) > 1 else ''}" id="galleryThumbs"></div>
   </div>
   <div class="info">
-    <a class="info__brand" href="{home}?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or ui(lang, "noBrand"))}</a>
+    <a class="info__brand" href="{home}?brand={esc(quote(it.get('brand') or ''))}">{esc(it.get("brand") or ui(lang, "noBrand"))}</a>
     <h1>{esc(item_title(it, lang))}</h1>
     <div id="priceBlock">{price_block_html(it, lang)}</div>
     {caption_html}
@@ -1673,6 +1685,13 @@ def build_index():
     print(f"index.html + {len(LANGS) - 1} Sprachvarianten geschrieben.")
 
 
+# Suchtitel der Sonderseiten: Thema vorn, Shopname hinten (vorher "Disorder119 — FAQ").
+SPECIAL_TITLES = {
+    "mieten": {"de": "Designermode mieten & ausleihen", "en": "Rent Designer Fashion", "fr": "Louer de la mode de créateur"},
+    "faq": {"de": "Häufige Fragen (FAQ)", "en": "Frequently Asked Questions (FAQ)", "fr": "Questions fréquentes (FAQ)"},
+}
+
+
 def build_special_pages():
     shop_config = get_shop_config()
     n = 0
@@ -1681,7 +1700,7 @@ def build_special_pages():
         ph = META_PHRASES[lang]
         for slug, labels in SPECIAL_PAGES.items():
             label = labels[lang]
-            title_tag = ("Disorder119 — " + label) if slug != "cart" else (label + " | Disorder119")
+            title_tag = SPECIAL_TITLES.get(slug, {}).get(lang, label) + " | Disorder119"
             desc_text = SPECIAL_META_DESCRIPTIONS.get(slug, {}).get(lang, ph["home_desc"])
             robots = "noindex,follow" if slug == "cart" or slug in duplicate_variants or slug in PRIVATE_LEGAL_PAGES else None
             canonical_segment = "" if slug in duplicate_variants else None
