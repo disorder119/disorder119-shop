@@ -798,6 +798,7 @@ def cta_html(it, shop_config, home, lang):
     # Mittelpunkte als eigene Elemente: am Handy je Punkt eine Zeile (article.css info__note-trenner).
     note_html = esc(note_text).replace(" · ", '<span class="info__note-trenner"> · </span>')
     parts.append('<p class="info__note">' + note_html + '</p>')
+    parts.append(dhl_logo_html("dhl-logo dhl-logo--info"))
     parts.append(product_data_gap_html(it, lang))
     if not shop_config["whatsappNumber"] and not shop_config["email"]:
         parts.append('<p class="info__config-warning" data-i18n="configWarning">' + esc(ui(lang, "configWarning")) + '</p>')
@@ -1211,6 +1212,7 @@ def build_page(it, shop_config, lang):
   <p data-i18n="footerNote">{esc(ui(lang, 'footerNote'))}</p>
   <p><a href="{home}" data-i18n="footerFullArchive">{esc(ui(lang, 'footerFullArchive'))}</a></p>
   {instagram_link_html(lang)}
+  {dhl_logo_html("dhl-logo dhl-logo--fuss")}
   {artikel_recht_nav(home, lang)}
 </div>
 <div class="lightbox" id="lightbox">
@@ -2001,6 +2003,21 @@ INSTAGRAM_TEXT = {"de": "Mehr Looks auf Instagram", "en": "More looks on Instagr
 
 
 _INSTAGRAM_URL = None
+
+
+def dhl_logo_html(klasse="dhl-logo", breite=120):
+    """DHL-Logo "Zustellung durch" - Originaldateien von DHL Group Brand Services (Freigabe
+    17.11.2026), unveraendert. Mindestbreite 100 px, Schutzzone 1/7 der Breite (CSS .dhl-logo).
+    Dunkle Ansicht: weisse Schrift; weisse Ansicht (data-theme="hell"): schwarze Schrift."""
+    hoehe = round(breite * 401.2197 / 900)
+    return (
+        f'<div class="{klasse}">'
+        f'<img class="dhl-zd dhl-zd--dunkel" src="/assets/dhl/dhl-zustellung-durch-weiss.svg" alt="Zustellung durch DHL" '
+        f'width="{breite}" height="{hoehe}" loading="lazy" decoding="async">'
+        f'<img class="dhl-zd dhl-zd--hell" src="/assets/dhl/dhl-zustellung-durch.svg" alt="" aria-hidden="true" '
+        f'width="{breite}" height="{hoehe}" loading="lazy" decoding="async">'
+        '</div>'
+    )
 
 
 def instagram_link_html(lang):
