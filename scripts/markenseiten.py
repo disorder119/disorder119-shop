@@ -481,6 +481,7 @@ def _seite(b, lang, seg, titel, beschreibung, og_bild, jsonld, inhalt, shop_conf
   <p>{b.esc(t['fuss'])}</p>
   <p><a href="{home}">{b.esc(t['fuss_archiv'])}</a> · <a href="{home}{UEBERSICHT_SEGMENT}">{b.esc(t['alle_marken'])}</a>{bereiche}</p>
   <nav class="mk-foot__nav" aria-label="{b.esc(recht_label)}"><a href="{home}widerruf/">{b.esc(b.WIDERRUF_LINK_TEXT[lang])}</a>{recht}</nav>
+  <div class="mk-foot__dhl"><img src="/assets/dhl/dhl-zustellung-durch-weiss.svg" alt="Zustellung durch DHL" width="120" height="53" loading="lazy" decoding="async"></div>
 </footer>
 </body>
 </html>

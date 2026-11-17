@@ -3944,3 +3944,7 @@ img[data-d119-image-protected] {
   }
   #appShell .footer__versand { grid-area: dhl; margin-bottom: 12px; }
 }
+/* DHL-Logo in den schlichten Fusszeilen (Kasse, Konto, Widerruf, Newsletter).
+   Freigabe DHL Group Brand Services: unveraendert, min. 100 px, Schutzzone >= 1/7 Breite (18 px). */
+.fuss-dhl { flex-basis: 100%; display: flex; justify-content: inherit; padding: 18px 18px 18px 2px; }
+.kasse-fuss .fuss-dhl { padding: 18px; }
