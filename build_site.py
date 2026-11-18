@@ -798,10 +798,12 @@ def cta_html(it, shop_config, home, lang):
     # Mittelpunkte als eigene Elemente: am Handy je Punkt eine Zeile (article.css info__note-trenner).
     note_html = esc(note_text).replace(" · ", '<span class="info__note-trenner"> · </span>')
     parts.append('<p class="info__note">' + note_html + '</p>')
-    parts.append(dhl_logo_html("dhl-logo dhl-logo--info"))
     parts.append(product_data_gap_html(it, lang))
     if not shop_config["whatsappNumber"] and not shop_config["email"]:
         parts.append('<p class="info__config-warning" data-i18n="configWarning">' + esc(ui(lang, "configWarning")) + '</p>')
+    # DHL-Logo (Freigabe DHL Group Brand Services 19.11.2026) - nach dem Block, den
+    # scripts/apply_focus_three_hardening.py als Anker erwartet.
+    parts.append(dhl_logo_html("dhl-logo dhl-logo--info"))
     return "".join(parts)
 
 
