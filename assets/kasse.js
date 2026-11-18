@@ -560,6 +560,17 @@
         nurHaustuer ? t("nurHaustuer") : ""].filter(Boolean).join(" · ");
       if (meta) name.appendChild(el("small", "", meta));
       label.appendChild(radio);
+      // DHL-Icon fuer den Checkout (Originaldatei DHL Group Brand Services, Freigabe 17.11.2026).
+      if (/dhl/i.test(String(o.carrier || "") + " " + versandTitel(o))) {
+        var dhlIcon = document.createElement("img");
+        dhlIcon.className = "kasse-option__dhl";
+        dhlIcon.src = "/assets/dhl/dhl-icon.svg";
+        dhlIcon.alt = "DHL";
+        dhlIcon.width = 60;
+        dhlIcon.height = 35;
+        dhlIcon.decoding = "async";
+        label.appendChild(dhlIcon);
+      }
       label.appendChild(name);
       label.appendChild(el("span", "kasse-option__preis", preisText(o.preisCents)));
       gruppe.appendChild(label);
