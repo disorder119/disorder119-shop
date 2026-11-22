@@ -48,22 +48,25 @@ Laufendes Protokoll der Sicherheitsarbeiten. Jede Änderung mit Datum, Prüfweg 
 
 ### 2.2 Cloudflare und Domain
 
-Stand: **offen – braucht Anmeldung des Inhabers bei Cloudflare und Porkbun.**
-Die Schritte stehen in Abschnitt 3.
+Erledigt am 22.11.2026 im Cloudflare-Dashboard und bei Porkbun (Inhaber angemeldet, Klicks durch Claude).
 
 | Datum | Änderung | Prüfen | Rückweg |
 |---|---|---|---|
-| – | DMARC auf `p=quarantine` | DoH `_dmarc.disorder119.com` TXT | Eintrag auf `p=none` zurück |
-| – | DNSSEC an + DS bei Porkbun | DoH `disorder119.com` DS vorhanden, AD-Flag `true` | **Erst** DS bei Porkbun löschen, 48 h warten, **dann** DNSSEC in Cloudflare aus |
-| – | Minimum TLS 1.2, Always Use HTTPS | TLS-1.1-Handshake abgelehnt, `http://` → 301 | Einstellung zurück |
-| – | CAA für `letsencrypt.org`, `pki.goog`, `ssl.com` | DoH `disorder119.com` CAA | CAA-Einträge löschen |
-| – | HSTS-Preload **nicht** aktivieren | Header ohne `preload` | – |
+| 22.11.2026 | **DMARC** `_dmarc` → `v=DMARC1; p=quarantine; rua=mailto:rua@dmarc.brevo.com`. **Wiedervorlage ~13.12.2026:** Brevo-DMARC-Berichte ansehen; nur saubere Berichte → `p=reject`. | DoH `_dmarc.disorder119.com` TXT | Inhalt auf `p=none` zurück |
+| 22.11.2026 | **DNSSEC** in Cloudflare aktiviert; DS bei Porkbun eingetragen: Key Tag `2371`, Algorithmus `13` (ECDSA/SHA-256), Digest-Typ `2` (SHA-256), Digest `B413998D…AC1713810`. Öffentliche Daten, kein Geheimnis. | DoH `disorder119.com` DS vorhanden, AD-Flag `true` | **Erst** DS bei Porkbun löschen, 48 h warten, **dann** DNSSEC in Cloudflare aus. Umgekehrt fällt die Domain aus. |
+| 22.11.2026 | **Minimum TLS 1.2** und **Always Use HTTPS**: waren bereits so eingestellt (seit ~28.10.2026), keine Änderung nötig. | TLS-1.1-Handshake abgelehnt, `http://` → 301 | – |
+| 22.11.2026 | **CAA** `0 issue "letsencrypt.org"` angelegt. Cloudflare ergänzt bei Universal SSL automatisch alle eigenen Zertifizierungsstellen (`issue` und `issuewild` für `letsencrypt.org`, `pki.goog`, `ssl.com`, `digicert.com`, `comodoca.com`). Manuelle Einträge für `pki.goog` und `ssl.com` sind damit überflüssig. Kein `iodef` gesetzt. | DoH `disorder119.com` CAA | CAA-Eintrag in Cloudflare löschen |
+| 22.11.2026 | **HSTS-Preload** bewusst **nicht** aktiviert | Header ohne `preload` | – |
+| 22.11.2026 | **Worker neu ausgerollt** (`npx.cmd wrangler deploy` und `--env sandbox` aus `main` 2961a55c62): Version `30f1e79a…` live, `WAECHTER_TELEGRAM=hart` aktiv. Vor dem Ausrollen geprüft: seit dem letzten Deploy (18.11.) nur die Wächter-Änderung neu. | `npx.cmd wrangler deployments list` | `npx.cmd wrangler rollback` auf die vorige Version |
+| 22.11.2026 | Nach #292 und #293 hat der Main-Rebuild erfolgreich veröffentlicht (checkout v7, download-artifact v8). | Actions → „Seite automatisch neu bauen“ grün, Commit „Automatischer Rebuild …“ | Revert |
+
+**Auffällig bei Porkbun:** Das Konto zeigt noch den Hinweis „Set Up 2FA“. Zwei-Faktor ist dort also **nicht** aktiv (siehe 3.2).
 
 ---
 
 ## 3. Schritte, die nur der Inhaber klicken kann
 
-### 3.1 Cloudflare (dash.cloudflare.com → disorder119.com)
+### 3.1 Cloudflare (dash.cloudflare.com → disorder119.com) – erledigt 22.11.2026, bleibt als Anleitung stehen
 1. **DMARC:** DNS → Records → TXT `_dmarc` bearbeiten → Inhalt
    `v=DMARC1; p=quarantine; rua=mailto:rua@dmarc.brevo.com` → Save.
    Nach 2–4 Wochen sauberer Brevo-DMARC-Berichte: `p=reject`.
@@ -103,7 +106,21 @@ Zurück: Zeile in `wrangler.toml` löschen (oder `"alles"`) und neu deployen.
 
 ## 4. Nachprüfung von außen
 
-Wird nach den Cloudflare-Schritten ergänzt (DoH `_dmarc`, DS, CAA; TLS-Versionen; Header; Live-Status).
+Geprüft am 22.11.2026 nach allen Änderungen (Cloudflare-DoH `cloudflare-dns.com` mit DO-Bit, Google-DoH, `curl`, .NET-TLS-Handshake):
+
+| Prüfung | Ergebnis |
+|---|---|
+| `_dmarc.disorder119.com` TXT | `v=DMARC1; p=quarantine; rua=mailto:rua@dmarc.brevo.com`, AD=true |
+| `disorder119.com` DS | `2371 13 2 b413998d…ac1713810` (Cloudflare- und Google-DoH), AD=true |
+| `disorder119.com` DNSKEY | KSK 257 und ZSK 256, Algorithmus 13, AD=true |
+| `disorder119.com` CAA | `issue`/`issuewild` für letsencrypt.org, pki.goog, ssl.com, digicert.com, comodoca.com, AD=true |
+| MX, `admin.`, `api.` | lösen weiter auf (Cloudflare Email Routing, Cloudflare-Proxy), AD=true |
+| TLS | 1.1 abgelehnt, 1.2 und 1.3 angenommen |
+| `http://disorder119.com/` | 301 → `https://disorder119.com/` |
+| Live-Status | `/` 200, `/kasse/` 200, `admin.` 200, `api./health` 200 |
+| HSTS | `max-age=31536000; includeSubDomains` auf allen vier, ohne `preload` |
+
+Offen beim Inhaber: Abschnitt 3.2 (Zwei-Faktor) und 3.3 (neuer Worker-Token mit Ablauf, alten löschen).
 
 ---
 
