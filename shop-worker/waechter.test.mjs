@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { angriffsSignatur, bekannterBot, fremdAusgeloest, istHosting, waechterPruefen } from "./waechter-regeln.js";
 import {
   anschlussHash, handleWaechterAdmin, uaKurz, waechterBuendeln, waechterFaelligkeit, waechterFehlversuch, waechterGesperrt, waechterIntern,
-  waechterPflegen, waechterSelbstEntsperren, waechterSpeicherLeeren, waechterText, waechterVorfall,
+  waechterPflegen, waechterSelbstEntsperren, telegramModus, waechterSpeicherLeeren, waechterText, waechterVorfall,
 } from "./waechter.js";
 import edge, { waechterMerkerLeeren } from "./storefront-edge.js";
 import workerEntry from "./worker-entry.js";
@@ -671,5 +671,36 @@ test("Standard: Telegram nur bei kritischen Sperren - Scanner-Pfade und Einzelpr
     // Hartnaeckiger Angreifer: ab 10 Treffern an einem Tag auch beim ersten Mal gemeldet.
     for (let i = 1; i <= 10; i++) await waechterVorfall(env, null, { ip: "192.0.2.63", ua: "nikto", land: "PL", pfad: `/?p=../../etc/passwd${i}`, art: "angriff", grund: "path-traversal" }, T0 + 3 * TAG + i * 1000);
     assert.equal(sperre(db, await anschlussHash(env, "192.0.2.63")).sammeln, 1, "ab 10 Versuchen gemeldet");
+  } finally { tg.zurueck(); }
+});
+
+test("WAECHTER_TELEGRAM=hart: nur harte Angriffe melden - Scanner, Fluten und Wellen sperren still", async () => {
+  const db = d1(), tg = telegramFangen();
+  try {
+    const env = envMit(db, { WAECHTER_TELEGRAM: "hart" });
+    assert.equal(telegramModus(env), "hart");
+    assert.equal(telegramModus(envMit(db)), "standard");
+    // Scanner-Pfade: gesperrt, nicht vorgemerkt.
+    for (let i = 1; i <= 3; i++) await waechterVorfall(env, null, { ip: "192.0.2.70", ua: CHROME, land: "BE", pfad: `/x${i}.php`, art: "probe", grund: "scanner-pfad" }, T0 + i * 1000);
+    assert.equal(await waechterGesperrt(env, "192.0.2.70", T0 + MIN), true);
+    assert.equal(sperre(db, await anschlussHash(env, "192.0.2.70")).sammeln, 0);
+    // Flut (im Standard gemeldet): im Modus hart still.
+    for (let i = 1; i <= 3; i++) await waechterVorfall(env, null, { ip: "192.0.2.71", ua: CHROME, land: "US", pfad: "/", art: "flut", grund: "" }, T0 + 20_000 + i * 1000);
+    assert.equal((await waechterBuendeln(env, T0 + 20_000 + 3000 + MIN + 1000)).gesendet, 0);
+    assert.equal(tg.nachrichten.length, 0);
+    // Wellen aus Scanner-Pfaden (>= 5 Sperren in 15 Min.) bleiben still.
+    for (let n = 0; n < 5; n++) {
+      for (let i = 1; i <= 3; i++) await waechterVorfall(env, null, { ip: `198.51.100.${10 + n}`, ua: CHROME, land: "NL", pfad: `/w${n}/x${i}.php`, art: "probe", grund: "scanner-pfad" }, T0 + MIN + n * 5000 + i * 100);
+    }
+    assert.equal((await waechterBuendeln(env, T0 + 20 * MIN)).gesendet, 0);
+    assert.equal(tg.nachrichten.length, 0, "keine Telegram-Nachricht fuer Scanner, Flut oder Welle");
+    // Einzelne SQL-Injection: sofort gemeldet (im Standard erst ab 10 Treffern).
+    const r = await waechterVorfall(env, null, { ip: "192.0.2.72", ua: "sqlmap/1.7", land: "CN", pfad: "/?id=1' OR '1'='1", art: "angriff", grund: "sql-injection" }, T0 + STD);
+    assert.equal(r.gesperrt, true);
+    assert.equal(r.gemeldet, true);
+    assert.equal((await waechterBuendeln(env, T0 + STD + 11 * MIN)).gesendet, 1);
+    assert.equal(tg.nachrichten.length, 1);
+    assert.match(tg.nachrichten[0], /SQL-Injection/);
+    assert.doesNotMatch(tg.nachrichten[0], /Scanner-Pfade/);
   } finally { tg.zurueck(); }
 });
