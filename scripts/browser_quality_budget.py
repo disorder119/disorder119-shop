@@ -263,12 +263,12 @@ def audit_accessibility(product_path: str) -> list[dict[str, Any]]:
     return reports
 
 
-# Am simulierten Handy schwankt Lighthouse je nach Runner stark (Lantern rechnet
-# den beobachteten Ablauf hoch): derselbe Stand lag zwischen 86 und 98 Punkten,
-# die Startseite war mal gruen, mal rot (06.11.2026). Google empfiehlt dafuer
-# den Median mehrerer Laeufe. Gewertet wird der mittlere Lauf nach Performance;
-# alle Grenzen und Floors bleiben unveraendert. Desktop ist stabil: ein Lauf.
-LIGHTHOUSE_RUNS = max(1, int(os.environ.get("D119_LIGHTHOUSE_RUNS", "3")))
+# Lighthouse schwankt je nach Runner auch ohne Quellaenderung: auf demselben
+# Stand lagen Mobile-LCP und Desktop-Performance in zwei CI-Versuchen jeweils
+# einmal ueber und einmal unter dem strengen Floor (22.11.2026). Daher fuer
+# beide Presets den Median aus fuenf Laeufen werten. Alle Grenzen und Floors
+# bleiben unveraendert; D119_LIGHTHOUSE_RUNS erlaubt kuerzere lokale Audits.
+LIGHTHOUSE_RUNS = max(1, int(os.environ.get("D119_LIGHTHOUSE_RUNS", "5")))
 
 
 def _lighthouse_once(case: dict[str, Any], url: str, output: Path, log_path: Path) -> dict[str, Any]:
@@ -297,7 +297,7 @@ def run_lighthouse(case: dict[str, Any], product_path: str) -> dict[str, Any]:
     url = urljoin(BASE_URL, path)
     output = REPORT_DIR / f"lighthouse-{case['name']}.json"
     log_path = REPORT_DIR / f"lighthouse-{case['name']}.log"
-    runs = 1 if case.get("preset") == "desktop" else LIGHTHOUSE_RUNS
+    runs = LIGHTHOUSE_RUNS
     laeufe: list[tuple[float, Path, Path, dict[str, Any]]] = []
     for nummer in range(1, runs + 1):
         out_n = output if runs == 1 else REPORT_DIR / f"lighthouse-{case['name']}-lauf{nummer}.json"
@@ -455,6 +455,8 @@ def main() -> None:
     }
     (REPORT_DIR / "summary.json").write_text(json.dumps(summary_data, ensure_ascii=False, indent=2), encoding="utf-8")
     (REPORT_DIR / "summary.md").write_text(summary, encoding="utf-8")
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     print(summary)
     if errors:
         sys.exit(1)
