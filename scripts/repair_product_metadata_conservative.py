@@ -73,8 +73,10 @@ CONDITION_MAP = {
     "mit defekt": "Mit Defekt", "with defect": "Mit Defekt", "avec défaut": "Mit Defekt", "avec defaut": "Mit Defekt",
 }
 
+# "Tour de taille 66 cm" (Taillenumfang der Schneiderpuppe im franzoesischen
+# Text) ist keine Groesse - sonst bekam ein Teil ohne Etikett Groesse 66.
 SIZE_RE = re.compile(
-    r"\b(?:gr(?:ö|oe)sse|gr\.?|size|taille|eu|uk|us)\s*[:#-]?\s*"
+    r"\b(?:gr(?:ö|oe)sse|gr\.?|size|(?<!tour de )taille|eu|uk|us)\s*[:#-]?\s*"
     r"(?P<size>xxs|xs|s|m|l|xl|xxl|xxxl|\d{1,3}(?:[.,]\d)?)\b",
     re.I,
 )

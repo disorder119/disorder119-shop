@@ -1,8 +1,13 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="ui-kopf">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Erste Produktbilder und app.css ganz vorn (06.11.2026): standen hinter ~27 KB Meta-Angaben und
+     Google-Daten (ItemList). Je nachdem, ob der Browser das Bild vor oder nach dem ersten Parse-Schritt
+     anforderte, rechnete Lighthouse am Handy bis zu 1,1 s Wartezeit dazu (Startseite 86-98 Punkte). -->
+
+<link rel="stylesheet" href="/assets/app.css?v=9030d1c2ef">
 <meta name="theme-color" content="#000000">
 <meta name="application-name" content="Disorder119">
 <meta name="mobile-web-app-capable" content="yes">
@@ -10,7 +15,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Disorder119">
 <link rel="manifest" href="/manifest.webmanifest"> <!-- D119_PWA_V1 -->
-<meta name="description" content="Kuratiertes Designer-Second-Hand-Archiv mit Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 und mehr. Einzelstücke, individuell fotografiert und archiviert.">
+<meta name="description" content="Vintage Archive Shop für Designer-Mode aus zweiter Hand: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 und mehr. Jedes Teil nur 1× verfügbar, individuell fotografiert.">
 <meta name="robots" content="noindex,follow">
 <meta name="google-site-verification" content="oBwR7CltLcTfhAmK_-CyhiD0knjOuDpZeX4xmgxQB7I">
 <link rel="canonical" href="https://disorder119.com/">
@@ -18,34 +23,65 @@
 <link rel="alternate" hreflang="en" href="https://disorder119.com/en/">
 <link rel="alternate" hreflang="fr" href="https://disorder119.com/fr/">
 <link rel="alternate" hreflang="x-default" href="https://disorder119.com/">
-<link rel="icon" type="image/png" href="/assets/favicon.png">
-<link rel="apple-touch-icon" href="/assets/favicon.png">
+<link rel="icon" type="image/png" href="/assets/favicon-centered.png">
+<link rel="apple-touch-icon" href="/assets/favicon-centered.png">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Disorder119">
 <meta property="og:locale" content="de_DE">
 <meta property="og:locale:alternate" content="en_US">
 <meta property="og:locale:alternate" content="fr_FR">
-<meta property="og:title" content="Disorder119 — Universum">
-<meta property="og:description" content="Kuratiertes Designer-Second-Hand-Archiv mit Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 und mehr. Einzelstücke, individuell fotografiert und archiviert.">
+<meta property="og:title" content="Universum | Disorder119">
+<meta property="og:description" content="Vintage Archive Shop für Designer-Mode aus zweiter Hand: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 und mehr. Jedes Teil nur 1× verfügbar, individuell fotografiert.">
 <meta property="og:url" content="https://disorder119.com/">
 <meta property="og:image" content="https://disorder119.com/assets/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Disorder119 — Universum">
+<meta property="og:image:alt" content="Universum | Disorder119">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Disorder119 — Universum">
-<meta name="twitter:description" content="Kuratiertes Designer-Second-Hand-Archiv mit Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 und mehr. Einzelstücke, individuell fotografiert und archiviert.">
+<meta name="twitter:title" content="Universum | Disorder119">
+<meta name="twitter:description" content="Vintage Archive Shop für Designer-Mode aus zweiter Hand: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 und mehr. Jedes Teil nur 1× verfügbar, individuell fotografiert.">
 <meta name="twitter:image" content="https://disorder119.com/assets/og-image.png">
-<meta name="twitter:image:alt" content="Disorder119 — Universum">
+<meta name="twitter:image:alt" content="Universum | Disorder119">
 
-<title>Disorder119 — Universum</title>
-
-<link rel="stylesheet" href="/assets/app.css?v=7d75946f99">
-<link rel="stylesheet" href="/assets/theme.css?v=d320763616">
-<script src="/assets/ansicht.js" defer></script>
-<script src="/assets/zurueck.js" defer></script>
+<title>Universum | Disorder119</title>
+<!-- theme.css traegt fast nur die weisse Ansicht: am Handy nach dem ersten Bild, bei weisser Ansicht sofort (spaet-lader.js). -->
+<link rel="d119-spaet" href="/assets/theme.css?v=bdbcc20f17" data-sofort-bei-hell>
+<link rel="stylesheet" href="/assets/theme.css?v=bdbcc20f17" media="(min-width: 861px)">
+<noscript><link rel="stylesheet" href="/assets/theme.css?v=bdbcc20f17"></noscript>
+<script src="/assets/ansicht.js" type="text/d119-spaet" defer></script>
+<script src="/assets/zurueck.js" type="text/d119-spaet" defer></script>
 <script>try{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}catch(e){}</script>
-<script src="/assets/catalog-number-links.js" defer></script>
+<script src="/assets/catalog-number-links.js" type="text/d119-spaet" defer></script>
+<script src="/assets/spaet-lader.js" defer></script>
+<!-- Datenschutz-Hinweis gleich mit der Seite (06.11.2026): besucher.js kam vorher erst nach app.js und catalog.json, der Hinweis erschien am Handy nach rund 4,5 s und galt fuer Lighthouse als groesster Inhalt (Startseite 82-84 statt 100). Statistik sendet besucher.js weiter erst nach dem Laden. -->
+<script src="/assets/besucher.js" defer></script>
+<style>
+/* Archiv-Kopf (d119-ui): Suche als Linie, kleine Zahlenzeile - inline, damit nichts springt. */
+html.ui-kopf .masthead__meta { display: none; }
+html.ui-kopf .rail__search { display: none; }
+.ui-kopf__suche { margin: 22px auto 12px; position: relative; width: min(100%, 440px); }
+.ui-kopf__suche::before { content: ""; position: absolute; right: 6px; top: 50%; width: 13px; height: 13px; margin-top: -9px; border: 1.5px solid currentColor; border-radius: 50%; opacity: .6; box-sizing: border-box; }
+.ui-kopf__suche::after { content: ""; position: absolute; right: 2px; top: 50%; width: 7px; height: 1.5px; margin-top: 4px; background: currentColor; opacity: .6; transform: rotate(45deg); }
+.ui-kopf__suche #searchInput { width: 100%; box-sizing: border-box; padding: 10px 28px 10px 0; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; border: 0; border-bottom: 1px solid rgba(242,239,231,.35); border-radius: 0; background: transparent; color: inherit; box-shadow: none; text-align: center; }
+.ui-kopf__suche #searchInput::placeholder { color: inherit; opacity: .55; }
+.ui-kopf__suche #searchInput:focus { outline: none; border-bottom-color: #f2efe7; }
+[data-theme="hell"] .ui-kopf__suche #searchInput { border-bottom-color: rgba(0,0,0,.35); }
+[data-theme="hell"] .ui-kopf__suche #searchInput { background: rgba(0,0,0,.04); border-color: rgba(0,0,0,.3); }
+.ui-kopf__zahlen { min-height: 15px; margin: 0 0 6px; font: 500 11px/1.4 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; opacity: .55; }
+html.ui-kopf .masthead__bottom { display: flex; flex-direction: column; align-items: center; gap: 0; }
+html.ui-kopf .masthead__index { margin-top: 8px; }
+.ui-kopf__suche { flex: 0 0 auto; }
+/* Archiv-Zeile vor dem Start schon wie danach (Filter 08.11.2026, archiv-navigation.js): Kanten der Fotos,
+   "Verfuegbar · Anzahl" um die Mitte, ab 1820px von Fotokante zu Fotokante - inline, damit nichts springt (CLS). */
+@media (min-width: 721px) {
+.rail { width: min(100%, 1400px); padding-left: clamp(18px, 3vw, 36px); padding-right: clamp(18px, 3vw, 36px); }
+.catalog-heading { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 34px; }
+.catalog-heading #catalogTitle { justify-self: end; }
+.catalog-heading .rail__count { justify-self: start; }
+.catalog-heading::after { content: "\00b7"; position: absolute; left: 50%; top: 0; transform: translateX(-50%); color: var(--text-faint); }
+}
+@media (min-width: 1820px) { .catalog-heading { display: flex; justify-content: space-between; } .catalog-heading::after { content: none; } }
+</style>
 </head>
 <body>
 
@@ -279,14 +315,16 @@
         <span class="meta-figure__label" data-i18n="metaBrandsLabel">Marken</span>
       </div>
     </div>
+    <div class="ui-kopf__suche">
+      <input id="searchInput" type="text" data-i18n-placeholder="searchPlaceholder" placeholder="Suche nach Marke, Titel" data-i18n-aria="searchPlaceholder" aria-label="Suche nach Marke, Artikel, Größe" autocomplete="off" />
+    </div>
+    <p class="ui-kopf__zahlen" id="uiZahlen">&nbsp;</p>
     <div class="masthead__index">Prada · Dior · Saint Laurent<br />Jean Paul Gaultier · Y-3 · <span id="brandLineMore">u.v.m.</span></div>
   </div>
 </div>
 
 <div class="rail">
-  <div class="rail__search">
-    <input id="searchInput" type="text" data-i18n-placeholder="searchPlaceholder" placeholder="Suche nach Marke, Titel" autocomplete="off" />
-  </div>
+  <div class="rail__search" hidden></div>
   <div class="catalog-heading">
     <span id="catalogTitle">Verfügbar</span>
     <span class="rail__count" id="railCount"></span>
@@ -298,6 +336,7 @@
   <div class="rail__right">
     <button class="theme-toggle" id="moreFiltersToggle" type="button" aria-expanded="false" data-i18n="moreFilters">Weitere Filter</button>
     <select class="rail__sort" id="sortSelect" aria-label="Artikel sortieren">
+      <option value="zufall" data-i18n="sortRandom">Zufällig</option>
       <option value="brightness" data-i18n="sortBrightness">Hell → Dunkel</option>
       <option value="new" data-i18n="sortNew">Neueste zuerst</option>
       <option value="price-asc" data-i18n="sortPriceAsc">Preis aufsteigend</option>
@@ -332,11 +371,11 @@
       <select id="filterCondition"><option value="" data-i18n="filterAllConditions">Alle Zustände</option></select>
     </div>
     <div class="filter-field filter-field--price">
-      <label data-i18n="filterPriceLabel">Preis (€)</label>
+      <label for="filterPriceMin" data-i18n="filterPriceLabel">Preis (€)</label>
       <div class="filter-price-inputs">
-        <input type="number" id="filterPriceMin" min="0" data-i18n-placeholder="filterPriceFrom" placeholder="von">
+        <input type="number" id="filterPriceMin" min="0" data-i18n-placeholder="filterPriceFrom" placeholder="von" data-i18n-aria="filterPriceMinAria" aria-label="Preis von (€)">
         <span>–</span>
-        <input type="number" id="filterPriceMax" min="0" data-i18n-placeholder="filterPriceTo" placeholder="bis">
+        <input type="number" id="filterPriceMax" min="0" data-i18n-placeholder="filterPriceTo" placeholder="bis" data-i18n-aria="filterPriceMaxAria" aria-label="Preis bis (€)">
       </div>
     </div>
     <button type="button" class="filter-reset" id="filterReset" data-i18n="filterResetLabel">Filter zurücksetzen</button>
@@ -363,7 +402,15 @@
     <a href="/faq/" data-info="faq" data-i18n="footerFaq">FAQ</a>
     <a href="/konto/" data-i18n="footerAccount">Konto</a>
     <a href="mailto:disorder119shop@gmail.com" data-i18n="footerContact">Kontakt</a>
+    <a href="https://www.instagram.com/disorder119_/" target="_blank" rel="noopener">Instagram</a>
+    <a href="/marken/">Marken</a>
   </nav>
+  <!-- Original-Logodatei von DHL Group Brand Services (Freigabe 17.11.2026), unveraendert;
+       Mindestbreite 100 px, Schutzzone 1/7 der Logobreite (assets/app.css .footer__versand). -->
+  <div class="footer__versand">
+    <img class="dhl-zd dhl-zd--dunkel" src="/assets/dhl/dhl-zustellung-durch-weiss.svg" alt="Zustellung durch DHL" width="120" height="53" loading="lazy" decoding="async">
+    <img class="dhl-zd dhl-zd--hell" src="/assets/dhl/dhl-zustellung-durch.svg" alt="" aria-hidden="true" width="120" height="53" loading="lazy" decoding="async">
+  </div>
   <span id="footerStamp" class="footer__stamp"></span>
   <a class="footer__widerruf" href="/widerruf/" data-widerruf data-i18n="legalWiderruf">Vertrag widerrufen</a>
   <div class="footer__legal">
@@ -453,15 +500,15 @@
   </div>
 </div>
 
-<script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "paypalClientId": "BAAcvD8X1aHIk42UUDAMZkYZ2i5gKLPCXZDBzbWjsh-axJ_6551l-FXgDdboqGtmZSidZbGWon2cQ_SuaI", "shopWorkerUrl": "https://api.disorder119.com", "turnstileSiteKey": "0x4AAAAAAFHqI2j_AitAYIKF", "environment": "live", "features": {"paypalCheckout": true, "customerAccounts": true}};</script>
-<script src="/assets/pwa.js?v=b32fa09366"></script>
-<script src="/assets/app.js?v=29bf3255a1"></script>
+<script>window.SHOP_CONFIG = {"whatsappNumber": "", "email": "disorder119shop@gmail.com", "paypalClientId": "BAAcvD8X1aHIk42UUDAMZkYZ2i5gKLPCXZDBzbWjsh-axJ_6551l-FXgDdboqGtmZSidZbGWon2cQ_SuaI", "shopWorkerUrl": "https://api.disorder119.com", "turnstileSiteKey": "0x4AAAAAAFHqI2j_AitAYIKF", "instagram": "https://www.instagram.com/disorder119_/", "environment": "live", "features": {"paypalCheckout": true, "customerAccounts": true}};</script>
+<script src="/assets/pwa.js?v=188add6d6a"></script>
+<script src="/assets/app.js?v=ab08071c67"></script>
 <script src="/assets/catalog-filter-simplify.js"></script>
-<script src="/assets/archiv-navigation.js?v=e52f257ecc"></script>
+<script src="/assets/archiv-navigation.js?v=3faa0e5ca7"></script>
 <script src="/assets/rental-v2.js"></script>
 <script src="/assets/rental-v2-ui.js"></script>
 <script src="/assets/rental-v2-picker.js"></script>
 
-<script src="/assets/newsletter.js?v=2d3e72755d" defer></script>
+<script src="/assets/newsletter.js?v=2d3e79d6cb" type="text/d119-spaet" defer></script>
 </body>
 </html>

@@ -15,7 +15,7 @@ class MobileHeroTests(unittest.TestCase):
     def test_pwa_preparation_preserves_catalogue_footer_and_deferred_product_scripts(self):
         from apply_pwa import patch_build
         root = Path(__file__).resolve().parents[1]
-        source = (root / "build_site.py").read_text()
+        source = (root / "build_site.py").read_text(encoding="utf-8")
         self.assertTrue(patch_build(source) == source, "PWA preparation must preserve the current generator verbatim")
 
     def test_mobile_hero_geometry_is_stable_when_full_styles_arrive(self):
@@ -24,8 +24,8 @@ class MobileHeroTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         layers = {
             "critical": build_site.PRODUCT_CRITICAL_CSS,
-            "base": (root / "assets/article.css").read_text(),
-            "final": (root / "assets/product-page-v4.css").read_text(),
+            "base": (root / "assets/article.css").read_text(encoding="utf-8"),
+            "final": (root / "assets/product-page-v4.css").read_text(encoding="utf-8"),
         }
         geometry = {}
         for name, css in layers.items():

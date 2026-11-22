@@ -1,4 +1,5 @@
 import { LEGAL_VERSION, CONTRACT_HTML, CONTRACT_HTML_EN, CONTRACT_HTML_FR } from "./legal-content.js";
+import { PdfText } from "./pdf-text.js";
 // Transaktionsmails an Kundinnen und Kunden: Bestellbestaetigung, Versand,
 // Anmeldelink fuers Kundenkonto.
 //
@@ -17,6 +18,7 @@ import { TAG_MS, kontingentBelegen } from "./kontingent.js";
 import { linksEntschaerfen } from "./oeffentliche-mails.js";
 import { landName } from "./laender.js";
 import { katalogNachId } from "./oeffentlicher-katalog.js";
+import { abholortAusText } from "./dhl-tracking.js";
 
 const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
 
@@ -162,13 +164,28 @@ const MAIL_SCHRIFT = "'Helvetica Neue',Helvetica,Arial,sans-serif";
 // Rahmen der Kundenmails: Tabellen und Inline-Styles, weil Outlook und Gmail
 // kein modernes CSS koennen. `vorschau` ist die Zeile, die das Postfach neben
 // dem Betreff zeigt.
-function kundenmailRahmen({ titel, eyebrow, kopf, inhalt, vorschau, sprache = "de" }) {
+export function kundenmailRahmen({ titel, eyebrow, kopf, inhalt, vorschau, sprache = "de", fussVerkaeufer = false }) {
   const F = MAIL_FARBE;
   const l = mailSprache(sprache);
   return `<!DOCTYPE html>
 <html lang="${l}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">
-<title>${escapeHtml(titel)}</title></head>
+<title>${escapeHtml(titel)}</title>
+<style>
+  /* Handy (Inhaber 05.11.2026: "fuer iOS und PC optimieren"): kleinere Ueberschrift,
+     schmaleres iPhone-Motiv, weniger Rand. Gmail-App und Apple Mail lesen das,
+     Outlook ignoriert es und zeigt die Rechner-Groessen. */
+  @media only screen and (max-width: 480px) {
+    .mail-h1 { font-size: 21px !important; line-height: 1.2 !important; }
+    .mail-kopf { font-size: 14px !important; }
+    .mail-phone { width: 244px !important; }
+    .mail-phone-foto { width: 164px !important; max-width: 164px !important; }
+    .mail-phone-titel { font-size: 13px !important; }
+    .mail-phone-kopf { font-size: 11px !important; }
+    .mail-band { font-size: 8px !important; letter-spacing: 0.22em !important; }
+    .mail-nummer { font-size: 15px !important; letter-spacing: 0.04em !important; padding: 10px 12px !important; max-width: 100% !important; word-break: break-all !important; }
+  }
+</style></head>
 <body style="margin:0;padding:0;background:${F.grund};">
 ${vorschau ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${F.grund};">${escapeHtml(vorschau)}</div>` : ""}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${F.grund};">
@@ -177,15 +194,15 @@ ${vorschau ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;co
   <tr><td align="center" style="padding:36px 0 26px;border-bottom:1px solid ${F.linie};">
     <a href="${shopLink(l)}" style="font-size:15px;font-weight:700;letter-spacing:0.34em;color:${F.text};text-decoration:none;">DISORDER119</a>
   </td></tr>
-  <tr><td style="padding:40px 4px 6px;text-align:center;">
+  ${titel ? `<tr><td style="padding:40px 4px 6px;text-align:center;">
     <p style="margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:${F.leise};">${escapeHtml(eyebrow)}</p>
-    <h1 style="margin:0 0 16px;font-size:28px;line-height:1.15;font-weight:700;letter-spacing:-0.01em;text-transform:uppercase;color:${F.text};">${escapeHtml(titel)}</h1>
+    <h1 class="mail-h1" style="margin:0 0 16px;font-size:28px;line-height:1.15;font-weight:700;letter-spacing:-0.01em;text-transform:uppercase;color:${F.text};">${escapeHtml(titel)}</h1>
     ${kopf}
-  </td></tr>
+  </td></tr>` : ""}
   ${inhalt}
   <tr><td style="padding:30px 4px 44px;border-top:1px solid ${F.linie};text-align:center;font-size:11px;line-height:1.6;color:${F.leise};">
     ${escapeHtml(allgemein(l).archiv)}<br>
-    ${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}, ${escapeHtml(SELLER.street)}, ${escapeHtml(SELLER.city)}
+    ${fussVerkaeufer ? `${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}, ${escapeHtml(SELLER.street)}, ${escapeHtml(SELLER.city)}` : `${escapeHtml(SELLER.brand)} · <a href="${shopLink(l)}" style="color:${F.leise};">disorder119.com</a> · <a href="${SHOP_URL}/impressum/" style="color:${F.leise};">Impressum</a>`}
   </td></tr>
 </table>
 </td></tr></table>
@@ -200,7 +217,7 @@ function mailAbschnitt(ueberschrift, inhalt, rand = true) {
   </td></tr>`;
 }
 
-function mailKnopf(href, label) {
+export function mailKnopf(href, label) {
   const F = MAIL_FARBE;
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr><td style="background:${F.text};">` +
     `<a href="${escapeHtml(href)}" style="display:inline-block;padding:15px 28px;font-family:${MAIL_SCHRIFT};font-size:13px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${F.grund};text-decoration:none;">${escapeHtml(label)}</a>` +
@@ -396,6 +413,71 @@ function vertragAus(roh, contactEmail) {
   return { html, text };
 }
 
+// ---------------------------------------------------------------------------
+// Fortlaufende Rechnungsnummer "2026-002" (Migration 0049) - atomar je Jahr.
+// Ohne Datenbank (Tests, Entwurf) null: dann bleibt die Bestellnummer die Nummer.
+// ---------------------------------------------------------------------------
+export async function naechsteRechnungsnummer(env, now = new Date()) {
+  if (!env?.DB) return null;
+  try {
+    const jahr = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric" }).format(now));
+    const jetzt = now.toISOString();
+    await env.DB.prepare("INSERT OR IGNORE INTO rechnungsnummern (jahr,zaehler,updated_at) VALUES (?,0,?)").bind(jahr, jetzt).run();
+    const row = await env.DB.prepare("UPDATE rechnungsnummern SET zaehler=zaehler+1,updated_at=? WHERE jahr=? RETURNING zaehler").bind(jetzt, jahr).first();
+    const zaehler = Number(row?.zaehler || 0);
+    if (!zaehler) return null;
+    return `${jahr}-${String(zaehler).padStart(3, "0")}`;
+  } catch (err) {
+    console.error(JSON.stringify({ level: "error", event: "rechnungsnummer_fehlgeschlagen", message: safeText(err?.message || "unknown", 120) }));
+    return null;
+  }
+}
+
+// Rechnung als PDF (gleiche Angaben wie das archivierte HTML aus tax-invoice.js).
+export function rechnungPdf(order = {}, invoice = {}, profile = {}) {
+  const seller = profile.seller || SELLER;
+  const contact = order.contact || {};
+  const items = Array.isArray(order.items) ? order.items : [];
+  const geld = c => new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(Number(c || 0) / 100);
+  const datum = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(invoice.issued_at || Date.now()));
+  const nummer = String(invoice.number || order.order_number || "");
+  const pdf = new PdfText({ titel: `Rechnung ${nummer}`, kopfzeile: `${seller.brand || "Disorder119"} · ${seller.name || ""} · ${seller.street || ""} · ${seller.city || ""}`, fusszeile: `Rechnung ${nummer}` });
+  pdf.ueberschrift("Rechnung");
+  pdf.absatz(`Rechnungsnummer ${nummer} · Ausgestellt am ${datum}${order.order_number && order.order_number !== nummer ? ` · Bestellung ${order.order_number}` : ""}`, { farbe: 0.3 });
+  pdf.block(["Rechnung an", contact.recipient_name || "", contact.address_line1 || "", contact.address_line2 || "", [contact.postal_code, contact.city].filter(Boolean).join(" "), landName(String(contact.country_code || "DE").toUpperCase(), "de") || contact.country_code || ""].filter(Boolean));
+  pdf.block([seller.name || "", (seller.brand || "") + (seller.street ? ` · ${seller.street}` : ""), [seller.city, seller.country].filter(Boolean).join(", "), profile.tax_number ? `Steuernummer: ${profile.tax_number}` : ""].filter(Boolean), { farbe: 0.3, groesse: 9 });
+  const itemsTotal = items.reduce((sum, i) => sum + Number(i.unit_price_cents || 0) * (i.quantity ?? 1), 0);
+  const g = order.gutschein && Number(order.gutschein.cents) > 0 ? order.gutschein : null;
+  pdf.tabelle([{ titel: "Artikel", breite: 5 }, { titel: "Interne Nr.", breite: 2 }, { titel: "Betrag", breite: 2, rechts: true }],
+    items.map(i => [String(i.title_snapshot || "") + (g && (g.itemId == null || Number(i.item_id) === Number(g.itemId)) ? ` – Preis vor Gutschein ${geld(Number(i.unit_price_cents || 0) + Number(g.cents))}, Gutschein ${g.code || ""} −${geld(g.cents)}` : ""),
+      "#" + String(i.article_no || "").replace(/^#+\s*/, ""), geld(i.unit_price_cents)]));
+  const rabatt = itemsTotal - Number(order.subtotal_cents || 0);
+  pdf.absatz([`Warenwert ${geld(itemsTotal)}`, rabatt > 0 ? `Rabatt −${geld(rabatt)}` : "", `Versand ${geld(order.shipping_cents)}`, `Gesamt ${geld(order.total_cents)}`].filter(Boolean).join("\n"), { fett: true });
+  pdf.absatz("Für diese Lieferung gilt die Steuerbefreiung für Kleinunternehmer gemäß § 19 UStG. Es wird keine Umsatzsteuer ausgewiesen.", { groesse: 9, farbe: 0.25 });
+  pdf.absatz(`Bestellung vom ${String(order.created_at || "").slice(0, 10)}. Lieferzeitpunkt gemäß gesondertem Liefer-/Versandnachweis. Zahlung über den Zahlungsanbieter; die Rechnung ist bereits beglichen.`, { groesse: 9, farbe: 0.25 });
+  return { name: `Rechnung ${nummer}.pdf`, b64: pdf.base64(), text: `Rechnung ${nummer}` };
+}
+
+// AGB und Widerrufsbelehrung als PDF-Anhang der Bestellbestaetigung (Textform,
+// dauerhafter Datentraeger) - statt des langen Blocks in der Mail selbst.
+export function vertragPdf(contract = {}) {
+  const pdf = new PdfText({ titel: `AGB und Widerrufsbelehrung · Version ${contract.version || LEGAL_VERSION}`, kopfzeile: "DISORDER119 · disorder119.com", fusszeile: `AGB und Widerrufsbelehrung · Version ${contract.version || LEGAL_VERSION}` });
+  const abschnitte = String(contract.text || "").split(/\n{2,}/);
+  for (const a of abschnitte) {
+    const z = a.trim();
+    if (!z) continue;
+    if (z.length < 70 && !/[.:;,]$/.test(z)) pdf.absatz(z, { fett: true, groesse: 11, nach: 3 });
+    else pdf.absatz(z, { groesse: 9.5 });
+  }
+  if (contract.verbindlich) {
+    pdf.neueSeite();
+    pdf.ueberschrift("Verbindliche deutsche Fassung", 14);
+    for (const a of String(contract.verbindlich.text || "").split(/\n{2,}/)) { const z = a.trim(); if (z) pdf.absatz(z, { groesse: 9.5 }); }
+  }
+  const text = String(contract.text || "") + (contract.verbindlich ? "\n\n" + String(contract.verbindlich.text || "") : "");
+  return { name: "AGB und Widerrufsbelehrung.pdf", b64: pdf.base64(), text };
+}
+
 // options.zahlung: fehlt = sofort eingezogen (Rechnung steht in dieser Mail),
 // "RESERVIERT" = PayPal hat nur reserviert, "EINGEZOGEN" = reserviert und
 // inzwischen eingezogen. In beiden neuen Faellen kommt die Rechnung mit dem
@@ -423,7 +505,7 @@ const BESTELLUNG_TEXT = Object.freeze({
     zahlungsartReserviert: "Zahlungsart: PayPal – reserviert, Abbuchung mit dem Versand",
     zahlungsart: "Zahlungsart: PayPal",
     bestellung: "BESTELLUNG",
-    zwischensumme: "Zwischensumme",
+    zwischensumme: "Zwischensumme", vorGutschein: "Warenwert vor Gutschein", gutschein: code => `Gutschein ${code}`,
     gesamt: "Gesamt",
     lieferadresse: "Lieferadresse",
     wieWeiter: "Wie es weitergeht",
@@ -434,6 +516,7 @@ const BESTELLUNG_TEXT = Object.freeze({
     kontoKnopf: "Bestellung im Konto ansehen",
     verkaeufer: "Verkäufer",
     vertragText: v => `VERTRAGSINFORMATIONEN · Fassung ${v}`,
+    vertragAnhang: "Unsere AGB mit Widerrufsbelehrung und Muster-Widerrufsformular liegen dieser Mail als PDF bei.",
     vertragHtml: v => `Vertragsinformationen · Fassung ${v}`,
     verbindlich: "",
     onlinefassung: url => `Onlinefassung: ${url}`,
@@ -457,7 +540,7 @@ const BESTELLUNG_TEXT = Object.freeze({
     zahlungsartReserviert: "Payment method: PayPal – reserved, charged when we ship",
     zahlungsart: "Payment method: PayPal",
     bestellung: "ORDER",
-    zwischensumme: "Subtotal",
+    zwischensumme: "Subtotal", vorGutschein: "Items before coupon", gutschein: code => `Coupon ${code}`,
     gesamt: "Total",
     lieferadresse: "Delivery address",
     wieWeiter: "What happens next",
@@ -468,6 +551,7 @@ const BESTELLUNG_TEXT = Object.freeze({
     kontoKnopf: "View order in your account",
     verkaeufer: "Seller",
     vertragText: v => `CONTRACT INFORMATION · Version ${v}`,
+    vertragAnhang: "Our terms and conditions with the withdrawal policy and model withdrawal form are attached to this e-mail as a PDF (binding German version included).",
     vertragHtml: v => `Contract information · Version ${v}`,
     verbindlich: "Legally binding German version",
     onlinefassung: url => `Online version: ${url}`,
@@ -491,7 +575,7 @@ const BESTELLUNG_TEXT = Object.freeze({
     zahlungsartReserviert: "Moyen de paiement : PayPal – réservé, débité à l’expédition",
     zahlungsart: "Moyen de paiement : PayPal",
     bestellung: "COMMANDE",
-    zwischensumme: "Sous-total",
+    zwischensumme: "Sous-total", vorGutschein: "Articles avant bon", gutschein: code => `Bon ${code}`,
     gesamt: "Total",
     lieferadresse: "Adresse de livraison",
     wieWeiter: "La suite",
@@ -502,6 +586,7 @@ const BESTELLUNG_TEXT = Object.freeze({
     kontoKnopf: "Voir la commande dans ton compte",
     verkaeufer: "Vendeur",
     vertragText: v => `INFORMATIONS CONTRACTUELLES · Version ${v}`,
+    vertragAnhang: "Nos CGV avec l’information sur le droit de rétractation et le formulaire type sont jointes à cet e-mail en PDF (version allemande faisant foi incluse).",
     vertragHtml: v => `Informations contractuelles · Version ${v}`,
     verbindlich: "Version allemande faisant foi",
     onlinefassung: url => `Version en ligne : ${url}`,
@@ -522,7 +607,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
   const zahlung = ["RESERVIERT", "EINGEZOGEN"].includes(options.zahlung) ? options.zahlung : null;
   const invoice = zahlung
     ? { ready: false, deferred: true, grund: "RECHNUNG_NACH_EINZUG", number: safeText(order.order_number || "", 80) }
-    : renderInvoice(order,options.taxProfile||invoiceProfile({},SELLER),options.issuedAt);
+    : renderInvoice(order,options.taxProfile||invoiceProfile({},SELLER),options.issuedAt,options.rechnungsnummer||"");
   const documentNote = zahlung === "RESERVIERT"
     ? t.notizReserviert
     : zahlung === "EINGEZOGEN"
@@ -538,6 +623,8 @@ export function formatOrderConfirmation(order = {}, options = {}) {
   const subtotal = Number(order.subtotal_cents ?? order.subtotalCents ?? 0);
   const shipping = Number(order.shipping_cents ?? order.shippingCents ?? 0);
   const total = Number(order.total_cents ?? order.totalCents ?? subtotal + shipping);
+  const gutschein = order.gutschein && Number(order.gutschein.cents) > 0 ? order.gutschein : null;
+  const gutscheinName = gutschein ? t.gutschein(gutschein.code || (gutschein.hint ? `····${gutschein.hint}` : "")).trim() : "";
   const ordered = mailDatum(order.created_at || order.createdAt || new Date(), sprache);
   const delivery = deliveryLines(order.contact || {}, sprache);
   const betrag = cents => euroAmount(cents, currency, sprache);
@@ -564,6 +651,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     t.bestellung,
     ...itemTextLines,
     "",
+    ...(gutschein ? [`${t.vorGutschein}: ${betrag(subtotal + gutschein.cents)}`, `${gutscheinName}: − ${betrag(gutschein.cents)}`] : []),
     `${t.zwischensumme}: ${betrag(subtotal)}`,
     `${versandBezeichnung(order, sprache)}: ${versandBetrag(shipping, currency, sprache)}`,
     `${t.gesamt}: ${betrag(total)}`,
@@ -581,9 +669,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     `${a.email}: ${contactEmail}`,
     "",
     t.vertragText(contract.version),
-    contract.text,
-    ...(contract.verbindlich ? [t.verbindlich.toUpperCase(), contract.verbindlich.text] : []),
-    "",
+    t.vertragAnhang,
     t.onlinefassung(agbUrl),
   ].join("\n");
 
@@ -598,6 +684,7 @@ export function formatOrderConfirmation(order = {}, options = {}) {
       ${items.map(item => stueckZeile(item, betrag(item.unit_price_cents ?? item.unitPriceCents ?? 0), sprache)).join("")}
     </table>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">
+      ${gutschein ? summenZeile(t.vorGutschein, betrag(subtotal + gutschein.cents), false) + summenZeile(gutscheinName, `− ${betrag(gutschein.cents)}`, false) : ""}
       ${summenZeile(t.zwischensumme, betrag(subtotal), false)}
       ${summenZeile(versandBezeichnung(order, sprache), versandBetrag(shipping, currency, sprache), false)}
       ${summenZeile(t.gesamt, betrag(total), true)}
@@ -612,9 +699,8 @@ export function formatOrderConfirmation(order = {}, options = {}) {
       ${mailKnopf(kontoUrl, t.kontoKnopf)}`),
     mailAbschnitt(t.verkaeufer, `<p style="margin:0;color:${F.leise};">${escapeHtml(SELLER.name)} — ${escapeHtml(SELLER.brand)}<br>${escapeHtml(SELLER.street)}<br>${escapeHtml(SELLER.city)}<br>${escapeHtml(verkaeuferLand(sprache))}<br>${escapeHtml(a.telefon)}: ${escapeHtml(SELLER.phone)}<br>${escapeHtml(a.email)}: <a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a></p>`),
     `<tr><td style="padding:26px 4px 30px;">
-      ${vertragBlock(t.vertragHtml(contract.version), contract.html)}${contract.verbindlich ? `
-      <div style="margin-top:18px;">${vertragBlock(t.verbindlich, contract.verbindlich.html)}</div>` : ""}
-      <p style="margin:14px 0 0;font-size:12px;color:${F.leise};">${escapeHtml(t.alleBedingungen)}<a href="${agbUrl}" style="color:${F.text};">${agbUrl}</a></p>
+      <div style="border-top:1px solid ${F.linie};padding-top:18px;font-size:12px;line-height:1.55;color:${F.leise};"><p style="margin:0 0 6px;">${escapeHtml(t.vertragHtml(contract.version))}</p><p style="margin:0;">${escapeHtml(t.vertragAnhang)}</p>
+      <p style="margin:10px 0 0;">${escapeHtml(t.alleBedingungen)}<a href="${agbUrl}" style="color:${F.text};">${agbUrl}</a></p></div>
     </td></tr>`,
   ].join("");
   const html = kundenmailRahmen({
@@ -624,9 +710,13 @@ export function formatOrderConfirmation(order = {}, options = {}) {
     inhalt,
     vorschau: t.vorschau(number, items.length, betrag(total)),
     sprache,
+    fussVerkaeufer: false,
   });
 
-  return { subject, text, html, invoice, sprache };
+  // Anhaenge: AGB + Widerrufsbelehrung immer, die Rechnung nur, wenn sie in dieser Mail steht.
+  const anhaenge = [vertragPdf(contract)];
+  if (invoice.ready) anhaenge.push(rechnungPdf(order, invoice, options.taxProfile || invoiceProfile({}, SELLER)));
+  return { subject, text, html, invoice, sprache, anhaenge };
 }
 
 // ---------------------------------------------------------------------------
@@ -666,8 +756,8 @@ export function trackingUrlFor(carrier, trackingNumber, sprache = "de") {
 
 const VERSANDMAIL_TEXT = Object.freeze({
   de: {
-    subject: n => `Deine Bestellung ${n} ist unterwegs`,
-    unterwegs: n => `Deine Bestellung ${n} ist unterwegs.`,
+    subject: n => `Deine Bestellung ${n} geht jetzt zu dir`,
+    unterwegs: n => `Deine Bestellung ${n} geht jetzt zu dir.`,
     imPaket: "Im Paket",
     nummer: (nr, c) => `Sendungsnummer: ${nr} (${c})`,
     versandMit: c => `Versand mit ${c}.`,
@@ -678,8 +768,8 @@ const VERSANDMAIL_TEXT = Object.freeze({
     widerrufHtml: ["Passt etwas nicht? Innerhalb von 14 Tagen nach Erhalt kannst du ", "den Vertrag hier widerrufen", "."],
     nummerLabel: c => `Sendungsnummer · ${c}`,
     knopf: "Sendung verfolgen",
-    kopf: nr => `Bestellung ${nr} hat unser Lager verlassen.`,
-    titel: "Dein Paket ist unterwegs",
+    kopf: (nr, stadt) => `Bestellung ${nr} ist bei DHL und auf dem Weg${stadt ? ` nach ${stadt}` : " zu dir"}.`,
+    titel: "Deine Bestellung geht jetzt zu dir",
     eyebrow: "Versandbestätigung",
     vorschauNummer: (nr, c) => `Sendungsnummer ${nr} · ${c}`,
     vorschauOhne: n => `Bestellung ${n} ist unterwegs`,
@@ -697,8 +787,8 @@ const VERSANDMAIL_TEXT = Object.freeze({
     widerrufHtml: ["Something not right? Within 14 days of receipt you can ", "withdraw from the contract here", "."],
     nummerLabel: c => `Tracking number · ${c}`,
     knopf: "Track parcel",
-    kopf: nr => `Order ${nr} has left our warehouse.`,
-    titel: "Your parcel is on its way",
+    kopf: (nr, stadt) => `Order ${nr} is with DHL and on its way${stadt ? ` to ${stadt}` : " to you"}.`,
+    titel: "Your order is on its way to you",
     eyebrow: "Shipping confirmation",
     vorschauNummer: (nr, c) => `Tracking number ${nr} · ${c}`,
     vorschauOhne: n => `Order ${n} is on its way`,
@@ -716,13 +806,125 @@ const VERSANDMAIL_TEXT = Object.freeze({
     widerrufHtml: ["Un souci ? Dans les 14 jours suivant la réception, tu peux ", "te rétracter du contrat ici", "."],
     nummerLabel: c => `Numéro de suivi · ${c}`,
     knopf: "Suivre le colis",
-    kopf: nr => `La commande ${nr} a quitté notre entrepôt.`,
-    titel: "Ton colis est en route",
+    kopf: (nr, stadt) => `La commande ${nr} est chez DHL et en route${stadt ? ` vers ${stadt}` : " vers toi"}.`,
+    titel: "Ta commande est en route vers toi",
     eyebrow: "Confirmation d’expédition",
     vorschauNummer: (nr, c) => `Numéro de suivi ${nr} · ${c}`,
     vorschauOhne: n => `Commande ${n} en route`,
   },
 });
+
+// Versandmail-Motiv (Inhaber 04.11.2026, "duester wie der Store, nicht cringe"):
+// ein iPhone, auf dem eine Story von disorder119 laeuft - Foto des gekauften
+// Teils, darunter Archiv-Nummer, Titel, "In Transit -> Stadt" und die
+// DHL-Nummer. Keine Sticker, keine Emojis. Entwurf C "Laufband" mit echter
+// Instagram-Oberflaeche (D:\d119_tasks\versandmail\mockups6.py); der Bildschirminhalt steckt in
+// storyBildschirm(), der Rahmen in iphone(). Nur Tabellen, Rahmen und
+// Inline-Styles; Outlook zeigt Ecken statt Rundungen. Foto aus
+// order_items.bild, sonst das Link-Vorschaubild assets/og/<id>.jpg; ohne Bild
+// entfaellt das Motiv (dann die Liste "Im Paket").
+const STORY_TEXT = Object.freeze({
+  de: { zeit: "2 Std.", archiv: "Archive No.", band: "Unterwegs", nachricht: "Nachricht senden…" },
+  en: { zeit: "2 h", archiv: "Archive No.", band: "On its way", nachricht: "Send message…" },
+  fr: { zeit: "2 h", archiv: "Archive No.", band: "En route", nachricht: "Envoyer un message…" },
+});
+
+function stueckBild(item) {
+  const pfad = safeText(item?.bild || "", 200).replace(/^\/+/, "");
+  const itemId = Number(item?.item_id);
+  return /^assets\/img\/[A-Za-z0-9_\/.-]+$/.test(pfad) ? `${SHOP_URL}/${pfad}`
+    : Number.isInteger(itemId) && itemId > 0 ? `${SHOP_URL}/assets/og/${itemId}.jpg` : "";
+}
+
+// Versandzeitpunkt in Berliner Zeit: "14:32" fuer die Statusleiste des iPhones,
+// "4. Nov." / "Nov 4" / "4 nov." fuer den Story-Kopf (Inhaber 04.11.2026:
+// "immer genau die Uhrzeit, wann es losgesendet wurde").
+export function versandZeit(datum, sprache = "de") {
+  const d = datum instanceof Date ? datum : new Date(String(datum || ""));
+  if (Number.isNaN(d.getTime())) return { uhr: "", tag: "" };
+  const l = mailSprache(sprache);
+  const uhr = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Berlin" }).format(d);
+  const tag = new Intl.DateTimeFormat(LOCALE[l], { day: "numeric", month: "short", timeZone: "Europe/Berlin" }).format(d);
+  return { uhr, tag };
+}
+
+// iPhone-Rahmen (Dynamic Island, Statusleiste, Home-Balken) um einen Bildschirm.
+function iphone(bildschirm, uhr = "9:41") {
+  return `<table role="presentation" class="mail-phone" cellpadding="0" cellspacing="0" style="width:290px;background:#050505;border:2px solid #222222;border-radius:46px;font-family:${MAIL_SCHRIFT};">
+    <tr><td style="padding:6px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#000000;border-radius:40px;">
+        <tr><td style="padding:12px 22px 0 24px;font-size:12px;font-weight:700;color:#ffffff;" width="60">${escapeHtml(uhr || "9:41")}</td>
+            <td align="center" style="padding:10px 0 0;"><div style="width:92px;height:28px;background:#000000;border:1px solid #161616;border-radius:16px;margin:0 auto;font-size:0;line-height:0;">&nbsp;</div></td>
+            <td align="right" style="padding:12px 22px 0 0;font-size:11px;font-weight:700;color:#ffffff;white-space:nowrap;" width="70">&#9679;&#9679;&#9679; &#9650; &#9646;</td></tr>
+        <tr><td colspan="3" style="padding:0;">${bildschirm}</td></tr>
+        <tr><td colspan="3" align="center" style="padding:6px 0 8px;"><div style="width:110px;height:4px;background:#ffffff;border-radius:2px;margin:0 auto;font-size:0;line-height:0;">&nbsp;</div></td></tr>
+      </table></td></tr>
+  </table>`;
+}
+
+// Instagram-Story-Oberflaeche wie echt: Segmentbalken, Avatar mit Ring
+// (Favicon des Shops), "disorder119 · 2 Std.", "..." und "x", unten das Feld
+// "Nachricht senden" mit Herz und Senden. Dazwischen das Textband
+// UNTERWEGS · IN TRANSIT, das Foto und Archiv-Nummer, Titel, Ziel, DHL-Nummer
+// (Entwurf C, D:\d119_tasks\versandmail\mockups6.py).
+function storyBand(text) {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" class="mail-band" style="padding:7px 0;font-family:${MAIL_SCHRIFT};font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:#ffffff;white-space:nowrap;border-top:1px solid #222222;border-bottom:1px solid #222222;">${text}</td></tr></table>`;
+}
+
+function storyBildschirm(item, bild, { sprache, stadt, tracking, carrier, zeit = "" }) {
+  const t = STORY_TEXT[mailSprache(sprache)];
+  const titel = escapeHtml(stueckTitel(item, sprache));
+  const nr = safeText(item.article_no || item.articleNo || "", 40);
+  const ziel = [stadt ? `&rarr; ${escapeHtml(stadt)}` : "", tracking ? `${escapeHtml(carrier)} ${escapeHtml(tracking)}` : ""].filter(Boolean).join(" · ");
+  const band = storyBand(`${escapeHtml(t.band)} &nbsp;·&nbsp; IN TRANSIT &nbsp;·&nbsp; ${escapeHtml(t.band)}`);
+  const seg = `<td style="height:2px;background:#ffffff;border-radius:2px;font-size:0;line-height:0;">&nbsp;</td><td style="width:3px;font-size:0;">&nbsp;</td>` +
+    `<td style="height:2px;background:#5a5a5a;border-radius:2px;font-size:0;line-height:0;">&nbsp;</td><td style="width:3px;font-size:0;">&nbsp;</td>` +
+    `<td style="height:2px;background:#5a5a5a;border-radius:2px;font-size:0;line-height:0;">&nbsp;</td>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#000000;font-family:${MAIL_SCHRIFT};">
+    <tr><td style="padding:6px 8px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${seg}</tr></table></td></tr>
+    <tr><td style="padding:8px 10px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td width="34"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="padding:2px;border:1.5px solid #ffffff;border-radius:50%;"><img src="${SHOP_URL}/assets/favicon.png" width="26" height="26" alt="" style="display:block;width:26px;height:26px;border-radius:50%;background:#000000;border:0;"></td></tr></table></td>
+      <td class="mail-phone-kopf" style="padding-left:8px;font-size:13px;font-weight:600;color:#ffffff;white-space:nowrap;">disorder119 <span style="font-weight:400;color:#a8a8a8;padding-left:4px;">${escapeHtml(zeit || t.zeit)}</span></td>
+      <td align="right" style="font-size:16px;color:#ffffff;white-space:nowrap;letter-spacing:2px;">&middot;&middot;&middot; &nbsp;&#10005;</td></tr></table></td></tr>
+    <tr><td style="padding:12px 0 0;">${band}</td></tr>
+    <tr><td align="center" style="padding:20px 0 18px;"><img class="mail-phone-foto" src="${escapeHtml(bild)}" width="196" alt="${titel}" style="display:block;width:196px;max-width:196px;height:auto;border:0;"></td></tr>
+    <tr><td align="center" style="padding:0 18px 20px;">
+      <div style="font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#777777;">${escapeHtml(t.archiv)}${nr ? ` ${escapeHtml(nr)}` : ""}</div>
+      <div class="mail-phone-titel" style="font-size:15px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;color:#ffffff;margin-top:4px;">${titel}</div>
+      ${ziel ? `<div style="font-family:'Courier New',Courier,monospace;font-size:10px;color:#777777;margin-top:8px;">${ziel}</div>` : ""}
+    </td></tr>
+    <tr><td style="padding:0;">${band}</td></tr>
+    <tr><td style="padding:0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td style="padding:12px 10px 4px 12px;"><div style="border:1px solid #bfbfbf;border-radius:22px;padding:10px 14px;font-size:13px;color:#bfbfbf;">${escapeHtml(t.nachricht)}</div></td>
+      <td width="60" style="padding:12px 14px 4px 0;font-size:22px;color:#ffffff;white-space:nowrap;line-height:1;">&#9825;&nbsp;&nbsp;&#10148;</td></tr></table></td></tr>
+  </table>`;
+}
+
+function versandMotiv(order, items, { sprache = "de", stadt = "", tracking = "", carrier = "DHL", datum = new Date() } = {}) {
+  if (!items.length) return "";
+  const bild = stueckBild(items[0]);
+  if (!bild) return "";
+  const { uhr, tag } = versandZeit(datum, sprache);
+  // Story-Kopf: "4. Nov. · 14:32" - Instagram zeigt sonst "2 Std.", hier zaehlt die echte Versandzeit.
+  const zeit = uhr ? `${tag} · ${uhr}` : "";
+  return iphone(storyBildschirm(items[0], bild, { sprache, stadt, tracking, carrier, zeit }), uhr);
+}
+
+// Marke und Groesse aus dem oeffentlichen Katalog (fuer den Anhaenger der
+// Versandmail). Faellt der Katalog aus, bleibt der Anhaenger ohne beides.
+export async function katalogAngaben(env, items = []) {
+  const ids = items.map(item => Number(item?.item_id)).filter(Number.isFinite);
+  if (!ids.length) return items;
+  try {
+    const katalog = await katalogNachId({ env, fetcher: env?.KATALOG_FETCH || null });
+    return items.map(item => {
+      const k = katalog.get(Number(item.item_id));
+      return k ? { ...item, brand: safeText(k.brand || "", 60), size: safeText(k.size || "", 40) } : item;
+    });
+  } catch {
+    return items;
+  }
+}
 
 export function formatShippingConfirmation(order = {}, options = {}) {
   const sprache = mailSprache(options.sprache || order.sprache);
@@ -762,14 +964,18 @@ export function formatShippingConfirmation(order = {}, options = {}) {
   const nummerBox = tracking
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:6px 0 22px;">
         <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${F.leise};">${escapeHtml(t.nummerLabel(carrier))}</p>
-        <div style="display:inline-block;border:1px solid ${F.text};padding:14px 20px;font-family:'Courier New',Courier,monospace;font-size:19px;font-weight:700;letter-spacing:0.08em;color:${F.text};">${escapeHtml(tracking)}</div>
+        <div class="mail-nummer" style="display:inline-block;border:1px solid ${F.text};padding:14px 20px;font-family:'Courier New',Courier,monospace;font-size:19px;font-weight:700;letter-spacing:0.08em;color:${F.text};">${escapeHtml(tracking)}</div>
       </td></tr></table>
       ${url ? mailKnopf(url, t.knopf) : ""}`
     : `<p style="margin:0;text-align:center;color:${F.leise};">${escapeHtml(t.versandMit(carrier))}</p>`;
-  const kopf = `<p style="margin:0 auto;max-width:440px;color:${F.leise};">${t.kopf(`<strong style="color:${F.text};">${escapeHtml(number)}</strong>`)}</p>`;
+  const stadt = safeText(order.city || order.contact?.city || "", 60);
+  const kopf = `<p class="mail-kopf" style="margin:0 auto;max-width:440px;color:${F.leise};">${t.kopf(`<strong style="color:${F.text};">${escapeHtml(number)}</strong>`, escapeHtml(stadt))}</p>`;
+  const marke = versandMotiv(order, items, { sprache, stadt, tracking, carrier, datum: options.datum || order.shipped_at || new Date() });
   const inhalt = [
-    `<tr><td style="padding:26px 4px 0;">${nummerBox}</td></tr>`,
-    items.length ? mailAbschnitt(t.imPaket, `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">${items.map(item => stueckZeile(item, null, sprache)).join("")}</table>`) : "",
+    marke ? `<tr><td align="center" style="padding:26px 0 0;">${marke}</td></tr>` : "",
+    `<tr><td style="padding:${marke ? "14px" : "26px"} 4px 0;">${nummerBox}</td></tr>`,
+    // Bei einem Teil steht es schon auf der Briefmarke; mehrere Teile werden gelistet.
+    (items.length > 1 || (items.length && !marke)) ? mailAbschnitt(t.imPaket, `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">${items.map(item => stueckZeile(item, null, sprache)).join("")}</table>`) : "",
     `<tr><td style="padding:24px 4px 30px;">
       <p style="margin:0;font-size:13px;color:${F.leise};">${escapeHtml(t.erfasstHtml)}${contactEmail ? ` ${escapeHtml(a.fragenMit[0])}<a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a>${escapeHtml(a.fragenMit[1])}` : ""}</p>
       <p style="margin:12px 0 0;font-size:13px;color:${F.leise};">${escapeHtml(t.widerrufHtml[0])}<a href="${escapeHtml(widerrufLink)}" style="color:${F.text};">${escapeHtml(t.widerrufHtml[1])}</a>${escapeHtml(t.widerrufHtml[2])}</p>
@@ -785,6 +991,377 @@ export function formatShippingConfirmation(order = {}, options = {}) {
   });
 
   return { subject, text, html, sprache };
+}
+
+// ---------------------------------------------------------------------------
+// Abholmail (Inhaber 07.11.2026): "Dein Paket ist abholbereit" - mit dem
+// gekauften Teil im offenen Fach einer Packstation (eigenes schwarzes Motiv im
+// Stil des Shops, kein DHL-Logo, kein DHL-Gelb). Geht NIE automatisch, nur wenn
+// der Inhaber sie in der Admin-App abschickt. Ehrlich: Abholcode und
+// Aufbewahrungsfrist kommen von DHL, die Mail verspricht dazu nichts Eigenes.
+// Der Status stammt aus der DHL-Sendungsverfolgung - daher der Vermerk
+// "Delivered by Deutsche Post DHL Group" (DHL-Bedingungen).
+// ---------------------------------------------------------------------------
+
+const ABHOLMAIL_TEXT = Object.freeze({
+  de: {
+    subject: n => `Fach auf: Deine Bestellung ${n} ist abholbereit`,
+    eyebrow: "Abholbereit",
+    titel: "Dein Teil wartet auf dich",
+    ort: o => o.typ === "filiale" ? `der Postfiliale${o.ort ? ` in ${o.ort}` : ""}` : o.nummer ? `der Packstation ${o.nummer}${o.ort ? ` in ${o.ort}` : ""}` : "einer Packstation",
+    kopf: (teil, ort) => `${teil} sitzt gerade in ${ort} und wartet auf dich.`,
+    teilOhne: "Deine Bestellung",
+    witze: [
+      "Es ist ein bisschen eng da drin. Hol es raus, bevor es sich zu sehr an die Nachbarfächer gewöhnt.",
+      "Tür zu, Licht aus, Spannung an: Es ist bereit für seinen großen Auftritt bei dir.",
+      "Ein Archivteil in einem Metallfach ist die kürzeste Ausstellung der Welt. Beende sie bald.",
+    ],
+    code: "Den Abholcode bekommst du direkt von DHL – in der Post & DHL App oder in der Benachrichtigung von DHL. Dort steht auch, wie lange das Paket auf dich wartet.",
+    nummer: (nr, c) => `Sendungsnummer: ${nr} (${c})`,
+    verfolgen: url => `Bei DHL ansehen: ${url}`,
+    knopf: "Sendung bei DHL ansehen",
+    imPaket: "Im Paket",
+    band: "Abholbereit",
+    display: "Abholbereit",
+    fach: "Fach",
+    schild: o => o.typ === "filiale" ? "Postfiliale" : `Packstation${o.nummer ? ` ${o.nummer}` : ""}`,
+    vermerk: "Sendungsstatus: Delivered by Deutsche Post DHL Group",
+    vorschau: n => `Abholbereit · Bestellung ${n}`,
+  },
+  en: {
+    subject: n => `Locker open: your order ${n} is ready for pickup`,
+    eyebrow: "Ready for pickup",
+    titel: "Your piece is waiting for you",
+    ort: o => o.typ === "filiale" ? `the post office${o.ort ? ` in ${o.ort}` : ""}` : o.nummer ? `Packstation ${o.nummer}${o.ort ? ` in ${o.ort}` : ""}` : "a Packstation",
+    kopf: (teil, ort) => `${teil} is chilling in ${ort} and waiting for you.`,
+    teilOhne: "Your order",
+    witze: [
+      "It’s a bit cramped in there. Come and get it before it gets too attached to the neighbouring lockers.",
+      "Door shut, lights off, tension rising: it’s ready for its big entrance at your place.",
+      "An archive piece in a metal locker is the world’s shortest exhibition. End it soon.",
+    ],
+    code: "Your pickup code comes straight from DHL – in the Post & DHL app or in DHL’s notification, which also tells you how long the parcel will wait for you.",
+    nummer: (nr, c) => `Tracking number: ${nr} (${c})`,
+    verfolgen: url => `View at DHL: ${url}`,
+    knopf: "View shipment at DHL",
+    imPaket: "In the parcel",
+    band: "Ready for pickup",
+    display: "Ready",
+    fach: "Locker",
+    schild: o => o.typ === "filiale" ? "Post office" : `Packstation${o.nummer ? ` ${o.nummer}` : ""}`,
+    vermerk: "Shipment status: Delivered by Deutsche Post DHL Group",
+    vorschau: n => `Ready for pickup · order ${n}`,
+  },
+  fr: {
+    subject: n => `Casier ouvert : ta commande ${n} est prête à être retirée`,
+    eyebrow: "Prête à être retirée",
+    titel: "Ta pièce t’attend",
+    ort: o => o.typ === "filiale" ? `le bureau de poste${o.ort ? ` à ${o.ort}` : ""}` : o.nummer ? `la Packstation ${o.nummer}${o.ort ? ` à ${o.ort}` : ""}` : "une Packstation",
+    kopf: (teil, ort) => `${teil} se repose dans ${ort} et t’attend.`,
+    teilOhne: "Ta commande",
+    witze: [
+      "C’est un peu étroit là-dedans. Viens la chercher avant qu’elle ne s’attache trop aux casiers voisins.",
+      "Porte fermée, lumière éteinte, suspense total : elle est prête pour sa grande entrée chez toi.",
+      "Une pièce d’archive dans un casier en métal, c’est la plus courte exposition du monde. Mets-y fin vite.",
+    ],
+    code: "Ton code de retrait arrive directement de DHL – dans l’app Post & DHL ou dans la notification de DHL, qui indique aussi combien de temps le colis t’attend.",
+    nummer: (nr, c) => `Numéro de suivi : ${nr} (${c})`,
+    verfolgen: url => `Voir chez DHL : ${url}`,
+    knopf: "Voir l’envoi chez DHL",
+    imPaket: "Dans le colis",
+    band: "Prête à être retirée",
+    display: "Prête",
+    fach: "Casier",
+    schild: o => o.typ === "filiale" ? "Bureau de poste" : `Packstation${o.nummer ? ` ${o.nummer}` : ""}`,
+    vermerk: "Statut de l’envoi : Delivered by Deutsche Post DHL Group",
+    vorschau: n => `Prête à être retirée · commande ${n}`,
+  },
+});
+
+// Abholort fuer die Mail: Packstation/Filiale aus der Lieferanschrift der
+// Bestellung ("Packstation 123", PLZ, Ort - abholorte.js), sonst was die
+// Sendungsverfolgung meldet.
+export function abholortFuerMail(contact = {}, ausVerfolgung = null) {
+  const v = ausVerfolgung && typeof ausVerfolgung === "object" ? ausVerfolgung : {};
+  // Der aktuelle DHL-Scan hat Vorrang, wenn er einen konkreten Abholort nennt.
+  // Die Lieferadresse kann von einer Umleitung oder Ersatz-Packstation abweichen.
+  if (v.typ) return {
+    typ: v.typ === "filiale" ? "filiale" : "packstation", nummer: safeText(v.nummer || "", 4),
+    plz: safeText(v.plz || contact.postal_code || "", 10), ort: safeText(v.ort || contact.city || "", 60),
+  };
+  const zeile = safeText(contact.address_line1 || "", 120);
+  const treffer = /^(packstation|postfiliale|filiale)\s*(\d{1,4})?/i.exec(zeile.trim());
+  if (treffer) {
+    return { typ: /packstation/i.test(treffer[1]) ? "packstation" : "filiale", nummer: treffer[2] || "",
+      plz: safeText(contact.postal_code || "", 10), ort: safeText(contact.city || "", 60) };
+  }
+  return { typ: v.typ === "filiale" ? "filiale" : "packstation", nummer: safeText(v.nummer || "", 4),
+    plz: safeText(v.plz || "", 10), ort: safeText(v.ort || contact.city || "", 60) };
+}
+
+// Gleicher Witz in Vorschau und echter Mail: aus der Bestellnummer gewaehlt.
+function abholWitz(liste, schluessel) {
+  let h = 0;
+  for (const z of String(schluessel || "")) h = (h * 31 + z.charCodeAt(0)) >>> 0;
+  return liste[h % liste.length];
+}
+
+// Packstation-Motiv: eine schwarze Fachwand, ein Fach steht offen - darin das
+// Foto des Teils. Oben das Schild, darunter das Display "● Abholbereit".
+// Nur Tabellen und Inline-Styles (Outlook zeigt Ecken statt Rundungen).
+function packstationMotiv(item, bild, { sprache = "de", abholort = {} } = {}) {
+  const t = ABHOLMAIL_TEXT[mailSprache(sprache)];
+  const titel = escapeHtml(stueckTitel(item, sprache));
+  const nr = safeText(item.article_no || item.articleNo || "", 40);
+  const mono = "'Courier New',Courier,monospace";
+  const fach = (n, hoehe) => `<td width="78" height="${hoehe}" valign="top" style="width:78px;height:${hoehe}px;background:#191919;border:1px solid #2c2c2c;border-radius:5px;padding:6px 7px;">
+      <div style="font-family:${mono};font-size:8px;letter-spacing:0.1em;color:#5a5a5a;">${String(n).padStart(2, "0")}</div>
+      <div style="width:16px;height:3px;background:#3c3c3c;border-radius:2px;margin:${Math.max(6, Math.round(hoehe / 2) - 14)}px 0 0 auto;font-size:0;line-height:0;">&nbsp;</div></td>`;
+  const offen = `<td rowspan="2" width="132" valign="top" style="width:132px;background:#000000;border:1px solid #4a4a4a;border-radius:5px;padding:8px 8px 10px;">
+      <div style="font-family:${mono};font-size:8px;letter-spacing:0.14em;color:#8a8a8a;text-transform:uppercase;">${escapeHtml(t.fach)} 05</div>
+      <img class="mail-fach-foto" src="${escapeHtml(bild)}" width="114" alt="${titel}" style="display:block;width:114px;max-width:114px;height:auto;margin:8px auto 6px;border:0;">
+      <div style="height:2px;background:#2a2a2a;border-radius:1px;font-size:0;line-height:0;">&nbsp;</div></td>`;
+  const schild = escapeHtml(t.schild(abholort));
+  return `<table role="presentation" class="mail-station" cellpadding="0" cellspacing="0" style="width:328px;font-family:${MAIL_SCHRIFT};">
+    <tr><td align="center" style="padding:0 0 8px;">
+      <div style="display:inline-block;background:#ffffff;color:#000000;font-size:13px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;padding:7px 14px;">${schild}</div></td></tr>
+    <tr><td style="background:#0b0b0b;border:2px solid #2a2a2a;border-radius:14px;padding:10px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0e0e0e;border:1px solid #2c2c2c;border-radius:6px;">
+        <tr><td style="padding:8px 10px;font-family:${mono};font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#ffffff;white-space:nowrap;"><span style="color:#39ff88;">&#9679;</span>&nbsp; ${escapeHtml(t.display)}</td>
+            <td align="right" style="padding:8px 10px;font-family:${mono};font-size:9px;letter-spacing:0.12em;color:#6a6a6a;white-space:nowrap;">DISORDER119</td></tr>
+      </table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="6" style="margin-top:4px;">
+        <tr>${fach(1, 40)}${fach(2, 40)}${fach(3, 40)}</tr>
+        <tr>${fach(4, 96)}${offen}${fach(6, 96)}</tr>
+        <tr>${fach(7, 96)}${fach(8, 96)}</tr>
+        <tr>${fach(9, 40)}${fach(10, 40)}${fach(11, 40)}</tr>
+      </table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:2px;">
+        <tr><td align="center" style="padding:8px 0 2px;font-family:${mono};font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:#6a6a6a;">${escapeHtml(t.band)} &nbsp;·&nbsp; ${nr ? `Archive No. ${escapeHtml(nr)}` : "Archive"}</td></tr>
+      </table>
+    </td></tr>
+    <tr><td align="center" style="padding:0;"><div style="width:300px;height:6px;background:#1c1c1c;border-radius:0 0 4px 4px;font-size:0;line-height:0;">&nbsp;</div></td></tr>
+  </table>`;
+}
+
+export function formatPickupReady(order = {}, options = {}) {
+  const sprache = mailSprache(options.sprache || order.sprache);
+  const t = ABHOLMAIL_TEXT[sprache];
+  const a = allgemein(sprache);
+  const number = safeText(order.order_number || order.orderNumber || "", 80) || "—";
+  const carrier = safeText(order.carrier || "DHL", 40) || "DHL";
+  const tracking = safeText(order.tracking_number || order.trackingNumber || "", 60);
+  const url = trackingUrlFor(carrier, tracking, sprache);
+  const contactEmail = safeText(options.contactEmail || "", 200);
+  const items = Array.isArray(order.items) ? order.items : [];
+  const abholort = options.abholort || abholortFuerMail(order.contact || {}, null);
+  const ortText = t.ort(abholort);
+  const teil = items.length === 1 ? stueckTitel(items[0], sprache) : "";
+  const witz = abholWitz(t.witze, number);
+  const subject = t.subject(number);
+
+  const text = [
+    "DISORDER119",
+    "",
+    t.kopf(teil || t.teilOhne, ortText),
+    witz,
+    "",
+    ...(items.length > 1 ? [t.imPaket.toUpperCase(), ...items.map(item => `· ${stueckTitel(item, sprache)}`), ""] : []),
+    t.code,
+    "",
+    ...(tracking ? [t.nummer(tracking, carrier)] : []),
+    ...(url ? [t.verfolgen(url)] : []),
+    "",
+    ...(contactEmail ? [fragenText(contactEmail, sprache), ""] : []),
+    t.vermerk,
+  ].join("\n");
+
+  const F = MAIL_FARBE;
+  const bild = items.length ? stueckBild(items[0]) : "";
+  const motiv = bild ? packstationMotiv(items[0], bild, { sprache, abholort }) : "";
+  const kopf = `<p class="mail-kopf" style="margin:0 auto;max-width:440px;color:${F.leise};">${escapeHtml(t.kopf("§TEIL§", ortText)).replace("§TEIL§", `<strong style="color:${F.text};">${escapeHtml(teil || t.teilOhne)}</strong>`)}</p>
+    <p style="margin:12px auto 0;max-width:420px;font-size:14px;color:${F.text};">${escapeHtml(witz)}</p>`;
+  const nummerBox = tracking
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:6px 0 18px;">
+        <div class="mail-nummer" style="display:inline-block;border:1px solid ${F.text};padding:12px 18px;font-family:'Courier New',Courier,monospace;font-size:17px;font-weight:700;letter-spacing:0.08em;color:${F.text};">${escapeHtml(tracking)}</div>
+      </td></tr></table>${url ? mailKnopf(url, t.knopf) : ""}`
+    : "";
+  const inhalt = [
+    motiv ? `<tr><td align="center" style="padding:26px 0 0;">${motiv}</td></tr>` : "",
+    `<tr><td style="padding:22px 4px 0;"><p style="margin:0 auto;max-width:440px;text-align:center;font-size:13px;color:${F.leise};">${escapeHtml(t.code)}</p></td></tr>`,
+    nummerBox ? `<tr><td style="padding:18px 4px 0;">${nummerBox}</td></tr>` : "",
+    (items.length > 1 || (items.length && !motiv)) ? mailAbschnitt(t.imPaket, `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">${items.map(item => stueckZeile(item, null, sprache)).join("")}</table>`) : "",
+    `<tr><td style="padding:24px 4px 30px;">
+      ${contactEmail ? `<p style="margin:0;font-size:13px;color:${F.leise};">${escapeHtml(a.fragenMit[0])}<a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a>${escapeHtml(a.fragenMit[1])}</p>` : ""}
+      <p style="margin:12px 0 0;font-size:11px;color:${F.leise};">${escapeHtml(t.vermerk)}</p>
+    </td></tr>`,
+  ].join("");
+  const html = kundenmailRahmen({ titel: t.titel, eyebrow: t.eyebrow, kopf, inhalt, vorschau: t.vorschau(number), sprache });
+  return { subject, text, html, sprache, abholort };
+}
+
+// ---------------------------------------------------------------------------
+// Zustellmail (Inhaber 14.11.2026): "Dein Paket ist angekommen". Geht NIE von
+// selbst - nur nach der Telegram-Freigabe des Inhabers (telegram-pickup.js).
+// Bewusst kurz: Dank, Kontakt, Weg zum Widerruf. Keine Bitte um Bewertungen,
+// keine Rabatte, keine Zusagen. Der Status stammt aus der DHL-
+// Sendungsverfolgung - daher der Vermerk wie in der Abholmail.
+// ---------------------------------------------------------------------------
+
+const ZUSTELLMAIL_TEXT = Object.freeze({
+  de: {
+    subject: n => `Dein Paket ist angekommen – Bestellung ${n}`,
+    eyebrow: "Zugestellt",
+    titel: "Dein Paket ist angekommen",
+    kopf: nr => `Bestellung ${nr} ist laut DHL bei dir angekommen.`,
+    dank: mehrere => `Danke, dass du bei DISORDER119 bestellt hast. Viel Freude mit ${mehrere ? "deinen Teilen" : "deinem Teil"}.`,
+    band: "Zugestellt",
+    imPaket: "Im Paket",
+    vermerk: "Sendungsstatus: Delivered by Deutsche Post DHL Group",
+    vorschau: n => `Zugestellt · Bestellung ${n}`,
+  },
+  en: {
+    subject: n => `Your parcel has arrived – order ${n}`,
+    eyebrow: "Delivered",
+    titel: "Your parcel has arrived",
+    kopf: nr => `According to DHL, order ${nr} has arrived at your place.`,
+    dank: mehrere => `Thank you for ordering from DISORDER119. Enjoy your ${mehrere ? "pieces" : "piece"}.`,
+    band: "Delivered",
+    imPaket: "In the parcel",
+    vermerk: "Shipment status: Delivered by Deutsche Post DHL Group",
+    vorschau: n => `Delivered · order ${n}`,
+  },
+  fr: {
+    subject: n => `Ton colis est arrivé – commande ${n}`,
+    eyebrow: "Livré",
+    titel: "Ton colis est arrivé",
+    kopf: nr => `D’après DHL, la commande ${nr} est arrivée chez toi.`,
+    dank: mehrere => `Merci d’avoir commandé chez DISORDER119. Profite bien de ${mehrere ? "tes pièces" : "ta pièce"}.`,
+    band: "Livré",
+    imPaket: "Dans le colis",
+    vermerk: "Statut de l’envoi : Delivered by Deutsche Post DHL Group",
+    vorschau: n => `Livré · commande ${n}`,
+  },
+});
+
+// Motiv der Zustellmail: das Foto des Teils in einem schlichten schwarzen
+// Rahmen, oben "● Zugestellt" und der Tag der Zustellung, darunter Archiv-
+// Nummer und Titel. Nur Tabellen und Inline-Styles.
+function zustellMotiv(item, bild, { sprache = "de", datum = null } = {}) {
+  const t = ZUSTELLMAIL_TEXT[mailSprache(sprache)];
+  const titel = escapeHtml(stueckTitel(item, sprache));
+  const nr = safeText(item.article_no || item.articleNo || "", 40);
+  const mono = "'Courier New',Courier,monospace";
+  const tag = datum ? versandZeit(datum, sprache).tag : "";
+  return `<table role="presentation" class="mail-zustellung" cellpadding="0" cellspacing="0" style="width:300px;background:#0b0b0b;border:1px solid #2c2c2c;font-family:${MAIL_SCHRIFT};">
+    <tr><td style="padding:10px 12px;border-bottom:1px solid #2c2c2c;font-family:${mono};font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#ffffff;white-space:nowrap;"><span style="color:#39ff88;">&#9679;</span>&nbsp; ${escapeHtml(t.band)}</td>
+        <td align="right" style="padding:10px 12px;border-bottom:1px solid #2c2c2c;font-family:${mono};font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#8a8a8a;white-space:nowrap;">${escapeHtml(tag || "DISORDER119")}</td></tr>
+    <tr><td colspan="2" align="center" style="padding:22px 0 18px;background:#000000;"><img src="${escapeHtml(bild)}" width="208" alt="${titel}" style="display:block;width:208px;max-width:208px;height:auto;border:0;"></td></tr>
+    <tr><td colspan="2" align="center" style="padding:14px 16px 16px;border-top:1px solid #2c2c2c;">
+      <div style="font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#777777;">Archive No.${nr ? ` ${escapeHtml(nr)}` : ""}</div>
+      <div style="font-size:14px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;color:#ffffff;margin-top:4px;">${titel}</div>
+    </td></tr>
+  </table>`;
+}
+
+export function formatDeliveryNotice(order = {}, options = {}) {
+  const sprache = mailSprache(options.sprache || order.sprache);
+  const t = ZUSTELLMAIL_TEXT[sprache];
+  const v = VERSANDMAIL_TEXT[sprache];
+  const a = allgemein(sprache);
+  const number = safeText(order.order_number || order.orderNumber || "", 80) || "—";
+  const contactEmail = safeText(options.contactEmail || "", 200);
+  const items = Array.isArray(order.items) ? order.items : [];
+  // Derselbe Weg zum Widerruf wie in der Versandmail: Bestellnummer schon eingetragen.
+  const widerrufBasis = shopLink(sprache, "widerruf/");
+  const widerrufLink = number !== "—" ? `${widerrufBasis}?bestellung=${encodeURIComponent(number)}` : widerrufBasis;
+  const dank = t.dank(items.length > 1);
+  const subject = t.subject(number);
+
+  const text = [
+    "DISORDER119",
+    "",
+    t.kopf(number),
+    dank,
+    "",
+    ...(items.length ? [t.imPaket.toUpperCase(), ...items.map(item => `· ${stueckTitel(item, sprache)}`), ""] : []),
+    fragenText(contactEmail, sprache),
+    "",
+    v.widerrufText(widerrufLink),
+    "",
+    t.vermerk,
+  ].join("\n");
+
+  const F = MAIL_FARBE;
+  const bild = items.length ? stueckBild(items[0]) : "";
+  const motiv = bild ? zustellMotiv(items[0], bild, { sprache, datum: options.datum || order.zugestellt_am || null }) : "";
+  const kopf = `<p class="mail-kopf" style="margin:0 auto;max-width:440px;color:${F.leise};">${escapeHtml(t.kopf("§NR§")).replace("§NR§", `<strong style="color:${F.text};">${escapeHtml(number)}</strong>`)}</p>
+    <p style="margin:12px auto 0;max-width:420px;font-size:14px;color:${F.text};">${escapeHtml(dank)}</p>`;
+  const inhalt = [
+    motiv ? `<tr><td align="center" style="padding:26px 0 0;">${motiv}</td></tr>` : "",
+    (items.length > 1 || (items.length && !motiv)) ? mailAbschnitt(t.imPaket, `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">${items.map(item => stueckZeile(item, null, sprache)).join("")}</table>`) : "",
+    `<tr><td style="padding:24px 4px 30px;">
+      <p style="margin:0;font-size:13px;color:${F.leise};">${contactEmail ? `${escapeHtml(a.fragenMit[0])}<a href="mailto:${escapeHtml(contactEmail)}" style="color:${F.text};">${escapeHtml(contactEmail)}</a>${escapeHtml(a.fragenMit[1])}` : escapeHtml(a.fragenOhne)}</p>
+      <p style="margin:12px 0 0;font-size:13px;color:${F.leise};">${escapeHtml(v.widerrufHtml[0])}<a href="${escapeHtml(widerrufLink)}" style="color:${F.text};">${escapeHtml(v.widerrufHtml[1])}</a>${escapeHtml(v.widerrufHtml[2])}</p>
+      <p style="margin:12px 0 0;font-size:11px;color:${F.leise};">${escapeHtml(t.vermerk)}</p>
+    </td></tr>`,
+  ].join("");
+  const html = kundenmailRahmen({ titel: t.titel, eyebrow: t.eyebrow, kopf, inhalt, vorschau: t.vorschau(number), sprache });
+  return { subject, text, html, sprache };
+}
+
+// ---------------------------------------------------------------------------
+// Freie Mail aus der Admin-App: eigener Text im Shop-Design (Absatz-Umbrueche,
+// Links klickbar, alles escaped). Ohne grosse Ueberschrift - wie ein Brief.
+// ---------------------------------------------------------------------------
+
+export function freieMail({ betreff = "", text = "", sprache = "de" } = {}) {
+  const F = MAIL_FARBE;
+  const subject = safeText(betreff, 200);
+  const roh = String(text || "").replace(/\r\n?/g, "\n").slice(0, 20_000).trim();
+  const verlinken = teil => escapeHtml(teil).replace(/https?:\/\/[^\s<>"']+/g, url =>
+    `<a href="${url}" style="color:${F.text};">${url}</a>`);
+  const absaetze = roh.split(/\n{2,}/).map(absatz => {
+    const zeilen = absatz.split("\n");
+    // Zitat einer Kundenmail ("> ...") leiser darstellen.
+    const zitat = zeilen.every(z => z.startsWith(">"));
+    const inhalt = zeilen.map(z => verlinken(zitat ? z.replace(/^>\s?/, "") : z)).join("<br>");
+    return zitat
+      ? `<p style="margin:0 0 16px;padding-left:12px;border-left:2px solid ${F.linie};color:${F.leise};font-size:14px;">${inhalt}</p>`
+      : `<p style="margin:0 0 16px;">${inhalt}</p>`;
+  }).join("");
+  const inhalt = `<tr><td style="padding:30px 4px 30px;font-size:15px;line-height:1.65;color:${F.text};text-align:left;">${absaetze}</td></tr>`;
+  const html = kundenmailRahmen({ titel: "", eyebrow: "", kopf: "", inhalt, vorschau: roh.slice(0, 110), sprache });
+  return { subject, text: roh, html };
+}
+
+// ---------------------------------------------------------------------------
+// Postausgang: jede verschickte Mail wird mit Inhalt gemerkt (Admin-App,
+// Postfach > Gesendet). Anmeldelinks und Bestaetigungslinks nur ohne Inhalt.
+// Bewusst fehlertolerant: das Merken darf den Versand nie verhindern.
+// ---------------------------------------------------------------------------
+
+export const VERTRAULICHE_TAGS = new Set(["login-link", "newsletter-bestaetigung"]);
+
+async function postausgangMerken(env, eintrag) {
+  if (!env?.DB) return null;
+  const id = crypto.randomUUID();
+  const vertraulich = Boolean(eintrag.vertraulich);
+  try {
+    await env.DB.prepare(`INSERT INTO postausgang
+      (id, gesendet_am, an_email, an_name, betreff, html, text, tag, art, anhaenge_json, status, fehler, message_id, antwort_auf, vertraulich)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(id, new Date().toISOString(), eintrag.an || "", eintrag.anName || null, eintrag.betreff || "",
+        vertraulich ? null : String(eintrag.html || "").slice(0, 400_000) || null,
+        vertraulich ? null : String(eintrag.text || "").slice(0, 60_000) || null,
+        eintrag.tag || null, eintrag.art || "AUTO", JSON.stringify(eintrag.anhaenge || []), eintrag.status,
+        eintrag.fehler || null, eintrag.messageId || null, eintrag.antwortAuf || null, vertraulich ? 1 : 0)
+      .run();
+    return id;
+  } catch (err) {
+    console.error(JSON.stringify({ level: "warn", event: "postausgang_merken_fehlgeschlagen", message: safeText(err?.message || "", 120) }));
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -822,6 +1399,26 @@ export async function sendMail(env, message = {}) {
     const kopie = normalizeEmail(env.MAIL_BCC || "");
     if (kopie && kopie !== to) payload.bcc = [{ email: kopie }];
   }
+  // PDF-Anhaenge (Rechnung, AGB und Widerrufsbelehrung): Base64 aus pdf-text.js.
+  const anhaenge = (Array.isArray(message.anhaenge) ? message.anhaenge : [])
+    .filter(a => a && a.b64 && /^[A-Za-z0-9+/=]+$/.test(a.b64) && a.b64.length < 8_000_000)
+    .map(a => ({ name: safeText(a.name || "Anhang.pdf", 100), content: a.b64 }));
+  if (anhaenge.length) payload.attachment = anhaenge;
+  // Antwort auf eine Kundenmail: im Postfach der Kundin im selben Verlauf.
+  if (message.headers && typeof message.headers === "object") {
+    const kopfzeilen = {};
+    for (const [name, wert] of Object.entries(message.headers)) {
+      if (/^(In-Reply-To|References)$/.test(name) && /^<[^<>\s]{3,300}>$/.test(String(wert))) kopfzeilen[name] = String(wert);
+    }
+    if (Object.keys(kopfzeilen).length) payload.headers = kopfzeilen;
+  }
+  const protokoll = {
+    an: to, anName: message.toName ? safeText(message.toName, 120) : null, betreff: subject,
+    html: payload.htmlContent, text: payload.textContent, tag: message.tag ? safeText(message.tag, 40) : null,
+    art: message.art === "MANUELL" ? "MANUELL" : "AUTO", anhaenge: anhaenge.map(a => a.name),
+    antwortAuf: message.antwortAuf ? safeText(message.antwortAuf, 60) : null,
+    vertraulich: Boolean(message.vertraulich) || VERTRAULICHE_TAGS.has(String(message.tag || "")),
+  };
 
   let response;
   try {
@@ -835,6 +1432,7 @@ export async function sendMail(env, message = {}) {
       body: JSON.stringify(payload),
     });
   } catch (err) {
+    await postausgangMerken(env, { ...protokoll, status: "FEHLER", fehler: safeText(err?.message || "Netzwerkfehler", 120) });
     throw new Error(`mail_network_error:${safeText(err?.message || "unknown", 80)}`);
   }
   const body = await response.json().catch(() => null);
@@ -842,9 +1440,12 @@ export async function sendMail(env, message = {}) {
     // Der Anbieter spiegelt Teile der Anfrage zurueck. Nur Code und Meldung
     // uebernehmen, damit keine Kundenadresse in die Logs laeuft.
     const detail = safeText(body?.message || body?.code || `HTTP ${response.status}`, 120);
+    await postausgangMerken(env, { ...protokoll, status: "FEHLER", fehler: detail });
     throw new Error(`mail_api_error:${detail}`);
   }
-  return { sent: true, messageId: safeText(body?.messageId || "", 200) || null };
+  const messageId = safeText(body?.messageId || "", 200) || null;
+  const protokollId = await postausgangMerken(env, { ...protokoll, status: "GESENDET", messageId });
+  return { sent: true, messageId, protokollId };
 }
 
 export function formatMailTestMessage(now = new Date()) {
@@ -858,6 +1459,33 @@ export function formatMailTestMessage(now = new Date()) {
       "Ab jetzt können Bestellbestätigungen automatisch verschickt werden.",
     ].join("\n"),
   };
+}
+
+// Versandmail-Vorschau an eine Adresse des Inhabers: ein zufaelliges (oder
+// gewaehltes) verfuegbares Teil aus dem Katalog, Beispiel-Bestellung, keine
+// Buchung, kein Durchschlag ins Postfach. Admin: POST
+// /admin/notifications/mail/versand-test {to, itemId?, sprache?}.
+export async function sendShippingPreview(env, recipient, { itemId = null, sprache = "de", reqId = crypto.randomUUID(), now = new Date() } = {}) {
+  if (!mailTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
+  const to = normalizeEmail(recipient);
+  if (!to) return { sent: false, reason: "INVALID_RECIPIENT" };
+  let katalog;
+  try { katalog = await katalogNachId({ env, fetcher: env?.KATALOG_FETCH || null }); } catch { katalog = new Map(); }
+  const teile = [...katalog.values()].filter(k => k && Array.isArray(k.gallery) && k.gallery.length && String(k.public_status || k.status || "AVAILABLE").toUpperCase() === "AVAILABLE");
+  const teil = (itemId && katalog.get(Number(itemId))) || (teile.length ? teile[Math.floor(Math.random() * teile.length)] : null);
+  if (!teil) return { sent: false, reason: "NO_ITEM" };
+  const preisCents = Math.round(Number(teil.price) * 100) || 0;
+  const nummer = `D119-${now.toISOString().slice(0, 10).replace(/-/g, "")}-TEST${String(teil.id).slice(-4).padStart(4, "0")}`;
+  const order = {
+    order_number: nummer, carrier: "DHL", tracking_number: "00340434161094042557", city: "Aschaffenburg",
+    total_cents: preisCents, shipping_cents: 0, shipped_at: now.toISOString(),
+    items: [{ item_id: Number(teil.id), article_no: safeText(teil.article || teil.article_no || teil.url_slug || "", 40),
+      title_snapshot: safeText(teil.title || "", 180), title_en: safeText(teil.title_en || "", 180),
+      bild: safeText(teil.gallery[0] || "", 200), unit_price_cents: preisCents, brand: safeText(teil.brand || "", 60), size: safeText(teil.size || "", 40) }],
+  };
+  const message = formatShippingConfirmation(order, { contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200), sprache, datum: now });
+  const result = await sendMail(env, { to, subject: `[TEST] ${message.subject}`, html: message.html, text: message.text, tag: "shipping-preview" });
+  return { ...result, itemId: Number(teil.id), titel: order.items[0].title_snapshot, requestId: safeText(reqId, 120) };
 }
 
 export async function sendMailTest(env, recipient, reqId = crypto.randomUUID()) {
@@ -914,7 +1542,26 @@ export async function loadOrderForConfirmation(env, orderId) {
   const contact = await env.DB.prepare(`SELECT email,recipient_name,given_name,surname,
       address_line1,address_line2,postal_code,city,region,country_code
     FROM order_contact_snapshots WHERE order_id=? LIMIT 1`).bind(String(orderId)).first();
-  return { ...order, items: items?.results || [], contact: contact || {}, versand: versand || null };
+  return { ...order, items: items?.results || [], contact: contact || {}, versand: versand || null,
+    gutschein: await bestellGutschein(env, orderId) };
+}
+
+// Eingeloester Gutschein (coupon-checkout.js protokolliert die Reservierung):
+// Betrag, Code bzw. Hinweis und ggf. das Stueck. Die Positionen tragen schon
+// den rabattierten Preis - Mail und Rechnung zeigen den Abzug nur als Info.
+export async function bestellGutschein(env, orderId) {
+  try {
+    const row = await env.DB.prepare(`SELECT metadata_json FROM audit_events WHERE entity_type='order' AND entity_id=?
+      AND event_type='COUPON_RESERVED' ORDER BY created_at DESC LIMIT 1`).bind(String(orderId)).first();
+    if (!row?.metadata_json) return null;
+    const m = JSON.parse(row.metadata_json);
+    const cents = Math.round(Number(m.discountCents) || 0);
+    if (cents <= 0) return null;
+    const code = safeText(m.code || "", 40).toUpperCase().replace(/[^A-Z0-9-]/g, "");
+    return { cents, code, hint: safeText(m.codeHint || "", 8), itemId: Number(m.itemId) || null };
+  } catch {
+    return null;
+  }
 }
 
 // Sprache der Bestellung (Migration 0043). Fehlt die Spalte oder die Zeile,
@@ -992,7 +1639,10 @@ export async function sendOrderConfirmation(env, orderId, reqId = crypto.randomU
       message={subject:saved.subject,html:saved.html,text:saved.text,invoice:JSON.parse(saved.invoice_json)};
     } else {
       const sprache=await bestellSprache(env,order.id);
-      message=formatOrderConfirmation(await titelFuerSprache(env,order,sprache),{contactEmail:mailSenderIdentity(env).email||safeText(env.MAIL_REPLY_TO||'',200),taxProfile:invoiceProfile(env,SELLER),zahlung:await zahlungsModus(env,order.id),sprache});
+      // Sofort eingezogen: die Rechnung steht in dieser Mail und bekommt ihre fortlaufende Nummer.
+      const modus=await zahlungsModus(env,order.id);
+      const rechnungsnummer=modus?null:await naechsteRechnungsnummer(env);
+      message=formatOrderConfirmation(await titelFuerSprache(env,order,sprache),{rechnungsnummer,contactEmail:mailSenderIdentity(env).email||safeText(env.MAIL_REPLY_TO||'',200),taxProfile:invoiceProfile(env,SELLER),zahlung:await zahlungsModus(env,order.id),sprache});
       await env.DB.prepare(`INSERT INTO order_confirmation_archive(order_id,subject,html,text,html_sha256,text_sha256,invoice_json,created_at) VALUES(?,?,?,?,?,?,?,?)`)
         .bind(order.id,message.subject,message.html,message.text,await pruefsumme(message.html),await pruefsumme(message.text),JSON.stringify(message.invoice),new Date().toISOString()).run();
     }
@@ -1007,6 +1657,7 @@ export async function sendOrderConfirmation(env, orderId, reqId = crypto.randomU
       html: message.html,
       text: message.text,
       tag: "order-confirmation",
+      anhaenge: message.anhaenge || (message.invoice?.ready ? [rechnungPdf(order, message.invoice, invoiceProfile(env, SELLER))] : []),
       // Diese eine Mail ist zugleich die Rechnung, deshalb geht ein
       // Durchschlag ins Shop-Postfach.
       kopieAnShop: true,
@@ -1049,12 +1700,12 @@ async function archiviereRechnung(env, order, message, recipient) {
     const versand = Number(order.shipping_cents ?? 0);
     const ergebnis = await env.DB.prepare(`INSERT OR IGNORE INTO rechnungen
       (id,order_id,rechnungsnummer,ausgestellt_am,waehrung,warenwert_cents,versand_cents,
-       gesamt_cents,empfaenger_email,html,text,pruefsumme,erstellt_am,document_type,html_sha256,tax_profile_json)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+       gesamt_cents,empfaenger_email,html,text,pruefsumme,erstellt_am,document_type,html_sha256,tax_profile_json,pdf_b64)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(
         crypto.randomUUID(),
         String(order.id),
-        safeText(order.order_number || "", 80),
+        safeText(invoice.number || order.order_number || "", 80),
         invoice.issued_at,
         order.currency || "EUR",
         warenwert,
@@ -1066,6 +1717,7 @@ async function archiviereRechnung(env, order, message, recipient) {
         await pruefsumme(invoice.text),
         jetzt,
         'invoice',await pruefsumme(invoice.html),JSON.stringify(invoice.profile),
+        (message.anhaenge || []).find(a => /^Rechnung /.test(String(a?.name || "")))?.b64 || null,
       ).run();
     return Boolean(ergebnis?.meta?.changes);
   } catch (err) {
@@ -1087,22 +1739,25 @@ async function archiviereRechnung(env, order, message, recipient) {
 // fragment, text und number.
 const RECHNUNGSMAIL_TEXT = Object.freeze({
   de: {
-    einleitung: (n, b) => `Den Betrag für deine Bestellung ${n} (${b}) haben wir jetzt über PayPal eingezogen. Hier ist deine Rechnung.`,
-    subject: n => `Deine Rechnung zur Bestellung ${n} – DISORDER119`,
+    einleitung: (n, b) => `Den Betrag für deine Bestellung ${n} (${b}) haben wir jetzt über PayPal eingezogen. Deine Rechnung liegt als PDF bei.`,
+    subject: n => `Deine Rechnung ${n} – DISORDER119`,
+    anhang: n => `Rechnung ${n} (PDF im Anhang)`,
     titel: "Deine Rechnung",
     eyebrow: "Rechnung",
     vorschau: (n, b) => `Rechnung ${n} · ${b}`,
   },
   en: {
-    einleitung: (n, b) => `We have now collected the amount for your order ${n} (${b}) via PayPal. Here is your invoice.`,
-    subject: n => `Your invoice for order ${n} – DISORDER119`,
+    einleitung: (n, b) => `We have now collected the amount for your order ${n} (${b}) via PayPal. Your invoice is attached as a PDF.`,
+    subject: n => `Your invoice ${n} – DISORDER119`,
+    anhang: n => `Invoice ${n} (PDF attached)`,
     titel: "Your invoice",
     eyebrow: "Invoice",
     vorschau: (n, b) => `Invoice ${n} · ${b}`,
   },
   fr: {
-    einleitung: (n, b) => `Nous avons maintenant débité via PayPal le montant de ta commande ${n} (${b}). Voici ta facture.`,
-    subject: n => `Ta facture pour la commande ${n} – DISORDER119`,
+    einleitung: (n, b) => `Nous avons maintenant débité via PayPal le montant de ta commande ${n} (${b}). Ta facture est jointe en PDF.`,
+    subject: n => `Ta facture ${n} – DISORDER119`,
+    anhang: n => `Facture ${n} (PDF en pièce jointe)`,
     titel: "Ta facture",
     eyebrow: "Facture",
     vorschau: (n, b) => `Facture ${n} · ${b}`,
@@ -1117,17 +1772,22 @@ export function formatInvoiceMail(order = {}, invoice = {}, options = {}) {
   const t = RECHNUNGSMAIL_TEXT[sprache];
   const hinweis = allgemein(sprache).rechnungDeutsch;
   const contactEmail = safeText(options.contactEmail || "", 200);
-  const number = safeText(order.order_number || invoice.number || "", 80) || "—";
+  const bestellnummer = safeText(order.order_number || "", 80) || "—";
+  const number = safeText(invoice.number || order.order_number || "", 80) || "—";
   const betrag = euroAmount(order.total_cents ?? 0, order.currency || "EUR", sprache);
-  const einleitung = t.einleitung(number, betrag);
+  const einleitung = t.einleitung(bestellnummer, betrag);
   const subject = t.subject(number);
+  const items = Array.isArray(order.items) ? order.items : [];
+  const stueckZeilen = items.map(i => `· ${safeText(i.title_snapshot || "", 160)} — ${euroAmount(i.unit_price_cents ?? 0, order.currency || "EUR", sprache)}`);
   const text = [
     "DISORDER119",
     "",
     einleitung,
     ...(hinweis ? [hinweis] : []),
     "",
-    String(invoice.text || ""),
+    t.anhang(number),
+    ...stueckZeilen,
+    `${BESTELLUNG_TEXT[sprache].gesamt}: ${betrag}`,
     "",
     fragenText(contactEmail, sprache),
   ].join("\n");
@@ -1135,17 +1795,21 @@ export function formatInvoiceMail(order = {}, invoice = {}, options = {}) {
   const kopf = `<p style="margin:0 auto;max-width:440px;color:${F.leise};">${escapeHtml(einleitung)}</p>${hinweis ? `
     <p style="margin:8px auto 0;max-width:440px;font-size:13px;color:${F.leise};">${escapeHtml(hinweis)}</p>` : ""}`;
   const inhalt = [
-    `<tr><td>${invoice.fragment || ""}</td></tr>`,
+    mailAbschnitt(t.anhang(number), `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${F.linie};">
+      ${items.map(item => stueckZeile(item, euroAmount(item.unit_price_cents ?? 0, order.currency || "EUR", sprache), sprache)).join("")}
+    </table>
+    <p style="margin:12px 0 0;font-size:17px;font-weight:700;color:${F.text};text-align:right;">${escapeHtml(BESTELLUNG_TEXT[sprache].gesamt)}: ${escapeHtml(betrag)}</p>`, false),
     fragenZeile(contactEmail, sprache),
   ].join("");
   const html = kundenmailRahmen({ titel: t.titel, eyebrow: t.eyebrow, kopf, inhalt, vorschau: t.vorschau(number, betrag), sprache });
-  return { subject, text, html, invoice, sprache };
+  const anhaenge = invoice.pdf ? [invoice.pdf] : [rechnungPdf(order, invoice, options.taxProfile || invoiceProfile({}, SELLER))];
+  return { subject, text, html, invoice, sprache, anhaenge };
 }
 
 // Eine archivierte Rechnung wieder als Rechnung lesen (fuer eine erneute Mail
 // nach einem Versandfehler) - nie neu ausstellen, was schon ausgestellt ist.
 async function archivierteRechnung(env, orderId) {
-  const row = await env.DB.prepare(`SELECT rechnungsnummer,ausgestellt_am,html,text,pruefsumme,html_sha256
+  const row = await env.DB.prepare(`SELECT rechnungsnummer,ausgestellt_am,html,text,pruefsumme,html_sha256,pdf_b64
     FROM rechnungen WHERE order_id=?`).bind(String(orderId)).first();
   if (!row) return null;
   if (await pruefsumme(row.text) !== row.pruefsumme || (row.html_sha256 && await pruefsumme(row.html) !== row.html_sha256)) {
@@ -1161,6 +1825,7 @@ async function archivierteRechnung(env, orderId) {
     html,
     text: row.text,
     fragment: start >= 0 && ende > start ? html.slice(start + 6, ende) : "",
+    pdf: row.pdf_b64 ? { name: `Rechnung ${row.rechnungsnummer}.pdf`, b64: String(row.pdf_b64), text: `Rechnung ${row.rechnungsnummer}` } : null,
   };
 }
 
@@ -1192,9 +1857,12 @@ export async function sendInvoiceAfterCapture(env, orderId, reqId = crypto.rando
 
   let invoice = await archivierteRechnung(env, order.id);
   if (!invoice) {
-    const neu = renderInvoice(order, invoiceProfile(env, SELLER), zahlung.eingezogen_am || new Date().toISOString());
-    if (!neu.ready) return { sent: false, reason: "INVOICE_NOT_READY", issues: neu.issues };
-    invoice = neu;
+    const profil = invoiceProfile(env, SELLER);
+    const probe = renderInvoice(order, profil, zahlung.eingezogen_am || new Date().toISOString());
+    if (!probe.ready) return { sent: false, reason: "INVOICE_NOT_READY", issues: probe.issues };
+    // Erst wenn die Rechnung ausgestellt werden kann, die fortlaufende Nummer ziehen.
+    const nummer = await naechsteRechnungsnummer(env);
+    invoice = nummer ? renderInvoice(order, profil, zahlung.eingezogen_am || new Date().toISOString(), nummer) : probe;
   }
 
   const claimId = `notify:email:invoice:${order.id}`;
@@ -1206,7 +1874,7 @@ export async function sendInvoiceAfterCapture(env, orderId, reqId = crypto.rando
 
   let archiviert = false;
   try {
-    const message = formatInvoiceMail(order, invoice, { contactEmail, sprache: await bestellSprache(env, order.id) });
+    const message = formatInvoiceMail(order, invoice, { contactEmail, sprache: await bestellSprache(env, order.id), taxProfile: invoiceProfile(env, SELLER) });
     archiviert = await archiviereRechnung(env, order, message, recipient);
     if (!archiviert) throw new Error("invoice_archive_failed");
     const delivery = await sendMail(env, {
@@ -1215,6 +1883,7 @@ export async function sendInvoiceAfterCapture(env, orderId, reqId = crypto.rando
       subject: message.subject,
       html: message.html,
       text: message.text,
+      anhaenge: message.anhaenge,
       tag: "invoice",
       // Beleg: Durchschlag ins Shop-Postfach.
       kopieAnShop: true,
@@ -1251,26 +1920,35 @@ export async function sendInvoiceAfterCaptureByProviderOrder(env, providerOrderI
 // ---------------------------------------------------------------------------
 
 async function loadShippedOrder(env, orderId) {
-  const order = await env.DB.prepare(`SELECT o.id,o.order_number,o.status,
-      s.carrier,s.tracking_number
+  const order = await env.DB.prepare(`SELECT o.id,o.order_number,o.status,o.total_cents,o.shipping_cents,
+      s.id AS shipment_id,s.carrier,s.tracking_number,s.shipped_at
     FROM commerce_orders o
     LEFT JOIN shipments s ON s.order_id=o.id
     WHERE o.id=? ORDER BY s.created_at DESC LIMIT 1`).bind(String(orderId)).first();
   if (!order) return null;
-  const items = await env.DB.prepare(`SELECT item_id,title_snapshot,article_no,bild FROM order_items
+  const items = await env.DB.prepare(`SELECT item_id,title_snapshot,article_no,bild,unit_price_cents FROM order_items
     WHERE order_id=? ORDER BY id`).bind(String(orderId)).all();
-  const contact = await env.DB.prepare(`SELECT email,recipient_name FROM order_contact_snapshots
+  const contact = await env.DB.prepare(`SELECT email,recipient_name,city FROM order_contact_snapshots
     WHERE order_id=? LIMIT 1`).bind(String(orderId)).first();
   return { ...order, items: items?.results || [], contact: contact || {} };
 }
 
-export async function sendShippingConfirmation(env, orderId, reqId = crypto.randomUUID()) {
-  if (!mailTransportReady(env) || !env.DB) return { sent: false, reason: "NOT_CONFIGURED" };
+// Optionen fuer die Telegram-Freigabe (telegram-pickup.js): vorschau=true baut
+// die Mail nur (kein Anspruch, kein Versand); expectedShipmentId bindet die
+// Freigabe an genau die Sendung, fuer die sie ausgestellt wurde; nurUnterwegs
+// verlangt, dass die Bestellung noch "Versendet" ist - nach der Zustellung
+// waere "geht jetzt zu dir" ueberholt.
+export async function sendShippingConfirmation(env, orderId, reqId = crypto.randomUUID(), { vorschau = false, expectedShipmentId = null, nurUnterwegs = false } = {}) {
+  if (!env?.DB) return { sent: false, reason: "NOT_CONFIGURED" };
+  if (!vorschau && !mailTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
   const order = await loadShippedOrder(env, orderId);
   if (!order) return { sent: false, reason: "ORDER_NOT_FOUND" };
-  if (!["SHIPPED", "DELIVERED"].includes(String(order.status || "").toUpperCase())) {
+  const status = String(order.status || "").toUpperCase();
+  if (!["SHIPPED", "DELIVERED"].includes(status)) {
     return { sent: false, reason: "ORDER_NOT_SHIPPED" };
   }
+  if (nurUnterwegs && status !== "SHIPPED") return { sent: false, reason: "SHIPPING_NOT_CURRENT" };
+  if (expectedShipmentId && String(order.shipment_id) !== String(expectedShipmentId)) return { sent: false, reason: "SHIPMENT_CHANGED" };
   const recipient = normalizeEmail(order.contact?.email);
   if (!recipient) return { sent: false, reason: "NO_CUSTOMER_EMAIL" };
 
@@ -1279,6 +1957,18 @@ export async function sendShippingConfirmation(env, orderId, reqId = crypto.rand
   // richtige noch bekommen - dieselbe Nummer aber nur einmal.
   const tracking = safeText(order.tracking_number || "", 60) || "ohne-nummer";
   const claimId = `notify:email:shipped:${order.id}:${tracking}`;
+  const bauen = async () => {
+    const sprache = await bestellSprache(env, order.id);
+    const mitTiteln = await titelFuerSprache(env, order, sprache);
+    return formatShippingConfirmation({ ...mitTiteln, items: await katalogAngaben(env, mitTiteln.items) }, {
+      contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200),
+      sprache,
+    });
+  };
+  if (vorschau) {
+    const entwurf = await bauen();
+    return { sent: false, vorschau: true, an: recipient, sprache: entwurf.sprache, subject: entwurf.subject, html: entwurf.html, text: entwurf.text };
+  }
   const claim = await env.DB.prepare(`INSERT OR IGNORE INTO audit_events
     (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
     VALUES (?,'SYSTEM','order',?,'SHIPPING_NOTICE_CLAIMED',?,?,?)`)
@@ -1286,11 +1976,7 @@ export async function sendShippingConfirmation(env, orderId, reqId = crypto.rand
     .run();
   if (!claim?.meta?.changes) return { sent: false, duplicate: true };
 
-  const sprache = await bestellSprache(env, order.id);
-  const message = formatShippingConfirmation(await titelFuerSprache(env, order, sprache), {
-    contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200),
-    sprache,
-  });
+  const message = await bauen();
   try {
     const delivery = await sendMail(env, {
       to: recipient,
@@ -1299,6 +1985,8 @@ export async function sendShippingConfirmation(env, orderId, reqId = crypto.rand
       html: message.html,
       text: message.text,
       tag: "shipping-confirmation",
+      // Durchschlag ins Shop-Postfach (MAIL_BCC), wie Bestell-, Rechnungs- und Erstattungsmail.
+      kopieAnShop: true,
     });
     if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
   } catch (err) {
@@ -1318,6 +2006,180 @@ export async function sendShippingConfirmation(env, orderId, reqId = crypto.rand
   } catch {
     return { sent: true, recorded: false };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Abholmail ausloesen - nur aus der Admin-App (Inhaber 07.11.2026: "nur wenn
+// ich es dir sage"). vorschau=true baut die Mail, ohne sie zu senden. Je
+// Sendungsnummer genau einmal; erneut=true schickt sie bewusst noch einmal.
+// ---------------------------------------------------------------------------
+
+async function loadPickupOrder(env, orderId) {
+  const order = await env.DB.prepare(`SELECT o.id,o.order_number,o.status,s.id AS shipment_id,s.carrier,s.tracking_number,s.shipped_at,
+      a.zustand AS verfolgung_zustand,a.status_text AS verfolgung_text,a.zuletzt_am AS verfolgung_zeit,a.zugestellt_am AS zugestellt_am
+    FROM commerce_orders o
+    LEFT JOIN shipments s ON s.order_id=o.id
+    LEFT JOIN sendungs_abfragen a ON a.shipment_id=s.id
+    WHERE o.id=? OR o.order_number=? ORDER BY s.created_at DESC LIMIT 1`).bind(String(orderId), String(orderId)).first();
+  if (!order) return null;
+  const items = await env.DB.prepare(`SELECT item_id,title_snapshot,article_no,bild,unit_price_cents FROM order_items
+    WHERE order_id=? ORDER BY id`).bind(String(order.id)).all();
+  const contact = await env.DB.prepare(`SELECT email,recipient_name,address_line1,postal_code,city FROM order_contact_snapshots
+    WHERE order_id=? LIMIT 1`).bind(String(order.id)).first();
+  return { ...order, items: items?.results || [], contact: contact || {} };
+}
+
+export async function sendPickupReady(env, orderId, { reqId = crypto.randomUUID(), vorschau = false, erneut = false, verfolgungsOrt = null, requireReady = false, expectedShipmentId = null } = {}) {
+  if (!env?.DB) return { sent: false, reason: "NOT_CONFIGURED" };
+  if (!vorschau && !mailTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
+  const order = await loadPickupOrder(env, orderId);
+  if (!order) return { sent: false, reason: "ORDER_NOT_FOUND" };
+  if (String(order.status || "").toUpperCase() !== "SHIPPED") return { sent: false, reason: "ORDER_NOT_SHIPPED" };
+  if (expectedShipmentId && String(order.shipment_id) !== String(expectedShipmentId)) return { sent: false, reason: "SHIPMENT_CHANGED" };
+  if (requireReady && (order.verfolgung_zustand !== "ABHOLBEREIT" || !order.verfolgung_zeit || !Number.isFinite(Date.parse(order.verfolgung_zeit)) || Math.abs(Date.now() - Date.parse(order.verfolgung_zeit)) > 8 * 3_600_000)) {
+    return { sent: false, reason: "PICKUP_NOT_CURRENT" };
+  }
+  const recipient = normalizeEmail(order.contact?.email);
+  if (!recipient) return { sent: false, reason: "NO_CUSTOMER_EMAIL" };
+
+  const sprache = await bestellSprache(env, order.id);
+  const mitTiteln = await titelFuerSprache(env, order, sprache);
+  // Ort der Abholung: Lieferanschrift (Packstation/Filiale), sonst DHL-Status.
+  const ausVerfolgung = verfolgungsOrt || (order.verfolgung_text ? abholortAusText(order.verfolgung_text) : null);
+  const abholort = abholortFuerMail(order.contact, ausVerfolgung);
+  const message = formatPickupReady({ ...mitTiteln, items: await katalogAngaben(env, mitTiteln.items) }, {
+    contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200),
+    sprache,
+    abholort,
+  });
+  const tracking = safeText(order.tracking_number || "", 60) || "ohne-nummer";
+  const basisId = `notify:email:pickup:${order.id}:${tracking}`;
+  const bisher = await env.DB.prepare("SELECT id,created_at,metadata_json FROM audit_events WHERE id LIKE ? AND event_type='PICKUP_NOTICE_SENT' ORDER BY created_at DESC LIMIT 1")
+    .bind(`${basisId}%`).first().catch(() => null);
+  const info = { an: recipient, sprache, abholort, verfolgung: order.verfolgung_zustand || null, gesendetAm: bisher?.created_at || null };
+  if (vorschau) return { sent: false, vorschau: true, ...info, subject: message.subject, html: message.html, text: message.text };
+  if (bisher && !erneut) return { sent: false, duplicate: true, ...info };
+
+  const claimId = bisher ? `${basisId}:${Date.now()}` : basisId;
+  const claim = await env.DB.prepare(`INSERT OR IGNORE INTO audit_events
+    (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'ADMIN','order',?,'PICKUP_NOTICE_CLAIMED',?,?,?)`)
+    .bind(claimId, String(order.id), safeText(reqId, 120), JSON.stringify({ channel: "email" }), new Date().toISOString())
+    .run();
+  if (!claim?.meta?.changes) return { sent: false, duplicate: true, ...info };
+  try {
+    const delivery = await sendMail(env, {
+      to: recipient,
+      toName: safeText(order.contact?.recipient_name || "", 120),
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      tag: "pickup-ready",
+      art: "MANUELL",
+      kopieAnShop: true,
+    });
+    if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
+  } catch (err) {
+    await env.DB.prepare("DELETE FROM audit_events WHERE id=? AND event_type='PICKUP_NOTICE_CLAIMED'").bind(claimId).run().catch(() => {});
+    throw new Error(`pickup_notice_failed:${safeText(err?.message || "unknown", 120)}`);
+  }
+  const jetzt = new Date().toISOString();
+  await env.DB.prepare("UPDATE audit_events SET event_type='PICKUP_NOTICE_SENT',metadata_json=? WHERE id=?")
+    .bind(JSON.stringify({ channel: "email", sentAt: jetzt, sprache }), claimId).run().catch(() => {});
+  return { sent: true, ...info, gesendetAm: jetzt };
+}
+
+// ---------------------------------------------------------------------------
+// Zustellmail ausloesen - nur nach der Telegram-Freigabe. Nur wenn die
+// Bestellung "Zugestellt" ist UND der gespeicherte Stand der Sendungsverfolgung
+// fuer genau diese Sendung ZUGESTELLT lautet. Je Sendungsnummer genau einmal.
+// ---------------------------------------------------------------------------
+
+export async function sendDeliveryNotice(env, orderId, { reqId = crypto.randomUUID(), vorschau = false, expectedShipmentId = null } = {}) {
+  if (!env?.DB) return { sent: false, reason: "NOT_CONFIGURED" };
+  if (!vorschau && !mailTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
+  const order = await loadPickupOrder(env, orderId);
+  if (!order) return { sent: false, reason: "ORDER_NOT_FOUND" };
+  if (expectedShipmentId && String(order.shipment_id) !== String(expectedShipmentId)) return { sent: false, reason: "SHIPMENT_CHANGED" };
+  // Rueckgabe, Erstattung oder Storno nach der Zustellung: kein "Viel Freude".
+  if (String(order.status || "").toUpperCase() !== "DELIVERED" || order.verfolgung_zustand !== "ZUGESTELLT") {
+    return { sent: false, reason: "DELIVERY_NOT_CURRENT" };
+  }
+  const recipient = normalizeEmail(order.contact?.email);
+  if (!recipient) return { sent: false, reason: "NO_CUSTOMER_EMAIL" };
+
+  const sprache = await bestellSprache(env, order.id);
+  const mitTiteln = await titelFuerSprache(env, order, sprache);
+  const message = formatDeliveryNotice({ ...mitTiteln, items: await katalogAngaben(env, mitTiteln.items) }, {
+    contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200),
+    sprache,
+  });
+  const info = { an: recipient, sprache };
+  if (vorschau) return { sent: false, vorschau: true, ...info, subject: message.subject, html: message.html, text: message.text };
+
+  const tracking = safeText(order.tracking_number || "", 60) || "ohne-nummer";
+  const claimId = `notify:email:delivered:${order.id}:${tracking}`;
+  const claim = await env.DB.prepare(`INSERT OR IGNORE INTO audit_events
+    (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'ADMIN','order',?,'DELIVERY_NOTICE_CLAIMED',?,?,?)`)
+    .bind(claimId, String(order.id), safeText(reqId, 120), JSON.stringify({ channel: "email" }), new Date().toISOString())
+    .run();
+  if (!claim?.meta?.changes) return { sent: false, duplicate: true, ...info };
+  try {
+    const delivery = await sendMail(env, {
+      to: recipient,
+      toName: safeText(order.contact?.recipient_name || "", 120),
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      tag: "delivery-notice",
+      art: "MANUELL",
+      kopieAnShop: true,
+    });
+    if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
+  } catch (err) {
+    await env.DB.prepare("DELETE FROM audit_events WHERE id=? AND event_type='DELIVERY_NOTICE_CLAIMED'").bind(claimId).run().catch(() => {});
+    throw new Error(`delivery_notice_failed:${safeText(err?.message || "unknown", 120)}`);
+  }
+  const jetzt = new Date().toISOString();
+  await env.DB.prepare("UPDATE audit_events SET event_type='DELIVERY_NOTICE_SENT',metadata_json=? WHERE id=?")
+    .bind(JSON.stringify({ channel: "email", sentAt: jetzt, sprache }), claimId).run().catch(() => {});
+  return { sent: true, ...info, gesendetAm: jetzt };
+}
+
+// Abholmail-Vorschau an eine Adresse des Inhabers (wie die Versandmail-Vorschau):
+// ein verfuegbares Teil aus dem Katalog, Beispiel-Packstation, keine Buchung.
+export async function sendPickupPreview(env, recipient, { itemId = null, sprache = "de", reqId = crypto.randomUUID(), now = new Date(), nurBauen = false, orderNumber = "", trackingNumber = "" } = {}) {
+  if (!nurBauen && !mailTransportReady(env)) return { sent: false, reason: "NOT_CONFIGURED" };
+  const to = normalizeEmail(recipient);
+  if (!nurBauen && !to) return { sent: false, reason: "INVALID_RECIPIENT" };
+  let katalog;
+  try { katalog = await katalogNachId({ env, fetcher: env?.KATALOG_FETCH || null }); } catch { katalog = new Map(); }
+  const teile = [...katalog.values()].filter(k => k && Array.isArray(k.gallery) && k.gallery.length && String(k.public_status || k.status || "AVAILABLE").toUpperCase() === "AVAILABLE");
+  const teil = (itemId && katalog.get(Number(itemId))) || (teile.length ? teile[Math.floor(Math.random() * teile.length)] : null);
+  if (!teil) return { sent: false, reason: "NO_ITEM" };
+  if ((orderNumber || trackingNumber) && (!/^D119-[A-Z0-9-]{8,60}$/i.test(orderNumber) || !/^\d{10,35}$/.test(trackingNumber))) {
+    return { sent: false, reason: "INVALID_PREVIEW_REFERENCE" };
+  }
+  const nummer = `D119-${now.toISOString().slice(0, 10).replace(/-/g, "")}-TEST${String(teil.id).slice(-4).padStart(4, "0")}`;
+  const order = {
+    order_number: orderNumber || nummer, carrier: "DHL", tracking_number: trackingNumber || "00340434161094042557",
+    items: [{ item_id: Number(teil.id), article_no: safeText(teil.article || teil.article_no || teil.url_slug || "", 40),
+      title_snapshot: safeText(teil.title || "", 180), title_en: safeText(teil.title_en || "", 180),
+      bild: safeText(teil.gallery[0] || "", 200), brand: safeText(teil.brand || "", 60), size: safeText(teil.size || "", 40) }],
+  };
+  const message = formatPickupReady(order, {
+    contactEmail: mailSenderIdentity(env).email || safeText(env.MAIL_REPLY_TO || "", 200), sprache,
+    // Eine Testmail kennt den tatsaechlichen DHL-Abholort nicht. Keine
+    // Beispielnummer als echte Packstation der Bestellung ausgeben.
+    abholort: { typ: "packstation", nummer: "", plz: "", ort: "" },
+  });
+  const hinweis = "TESTVORSCHAU: Die Ankunft an einer Packstation ist nicht bestätigt. Es wurde keine Abholmail an den Kunden gesendet.";
+  const html = message.html.replace(/(<body[^>]*>)/i, `$1<div style="background:#f6e8a5;color:#111;padding:12px;text-align:center;font:700 13px Arial,sans-serif">${hinweis}</div>`);
+  const text = `${hinweis}\n\n${message.text}`;
+  if (nurBauen) return { sent: false, ...message, html, text, itemId: Number(teil.id) };
+  const result = await sendMail(env, { to, subject: `[TEST] ${message.subject}`, html, text, tag: "pickup-preview" });
+  return { ...result, itemId: Number(teil.id), titel: order.items[0].title_snapshot, requestId: safeText(reqId, 120) };
 }
 
 export async function sendOrderConfirmationByProviderOrder(env, providerOrderId, reqId = crypto.randomUUID()) {
@@ -1817,6 +2679,8 @@ export async function sendReturnInstructions(env, orderId, reqId = crypto.random
       html: message.html,
       text: message.text,
       tag: "return-instructions",
+      // Durchschlag ins Shop-Postfach (MAIL_BCC), wie Bestell-, Rechnungs- und Erstattungsmail.
+      kopieAnShop: true,
     });
     if (!delivery.sent) throw new Error(delivery.reason || "mail_not_sent");
   } catch (err) {

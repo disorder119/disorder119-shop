@@ -22,6 +22,8 @@ TAXONOMY_CATEGORIES = {
 # from the reviewed description. Keeping these as item IDs means future brand
 # additions do not silently rewrite already-reviewed pieces.
 DEPARTMENT_OVERRIDES = {
+    9615: "Women",  # Yohji Yamamoto Blazer, Damenlinie laut Signatur-Etikett (Shooting 11, 29.10.2026)
+    9640: "Unisex", # Yohji Yamamoto x New Era Cap, Einheitsgroesse (Shooting 11, 29.10.2026)
     # Disorder119 has no separate children's department. Real child-size facts
     # remain in the raw size field, while the browse department stays neutral.
     6202: "Women",  # Prada Jacke mit Streifenkragen, Damen, keine Kinderjacke (Nutzer 08.10.); Etikett L, fällt klein aus (23.10.)
@@ -126,6 +128,10 @@ DEPARTMENT_OVERRIDES = {
 # Product-type overrides for titles that are too vague or currently have a
 # demonstrably wrong legacy category. These were checked against descriptions.
 PRODUCT_TYPE_OVERRIDES = {
+    9621: "Vest",  # Shooting 11 (29.10.2026): Issey Miyake Strickweste (Titel enthaelt 'Knit')
+    9622: "Jacket",  # Shooting 11 (29.10.2026): Porsche Design Blouson
+    9630: "Sandals",  # Shooting 11 (29.10.2026): Y-3 Zehensandalen
+    9632: "Bag",  # Shooting 11 (29.10.2026): Margiela x H&M Candy-Wrapper-Clutch
     # TAXONOMY_SUBTYPE_AUDIT_20260906: reviewed jacket/vest semantics.
     9512: "Jacket",  # Dsquared2 Suf Camp Gelb – description: Leichte Jacke
     9500: "Jacket",  # Prada Knitterjacke – description: Diese Prada Jacke
@@ -250,6 +256,9 @@ def _all_text(item: dict[str, Any]) -> str:
     ).lower()
 
 
+UNBEKANNTE_GROESSE = {"nicht angegeben", "not specified", "non spécifiée", "non specifiee", "unbekannt", "unknown", "-", "–"}
+
+
 def extract_label_size(item: dict[str, Any]) -> str:
     """Extract the manufacturer's/description size without reading mannequin measurements."""
     for key in ("desc_de", "desc", "desc_en", "desc_fr"):
@@ -265,6 +274,9 @@ def extract_label_size(item: dict[str, Any]) -> str:
             match = re.search(pattern, text)
             if match:
                 value = _clean(match.group(1)).strip(" .;,")
+                # "Groesse: Nicht angegeben" (Teil ohne Etikett, seit Shooting 11) ist keine Groesse.
+                if value.lower() in UNBEKANNTE_GROESSE:
+                    return ""
                 if 0 < len(value) <= 40:
                     return value
     return ""

@@ -26,13 +26,20 @@ test('website, translations and contract email share the reviewed canonical sour
 });
 test('confirmation contains full terms and withdrawal form in HTML and plain text',()=>{
   const mail=formatOrderConfirmation({order_number:'SYNTHETIC-1',items:[{title:'Test',article_no:'119-1',unit_price_cents:100}],subtotal_cents:100,total_cents:100},{contactEmail:'office@example.test',zahlung:'RESERVIERT'});
+  // Seit 04.11.2026 liegen AGB und Widerrufsbelehrung als PDF bei (Textform); die Mail nennt
+  // Fassung, Verkaeufer und den Anhang - der Vertragstext selbst steht im Anhang.
   for(const body of [mail.text,mail.html]) {
-    assert.match(body,/Geltungsbereich/); assert.match(body,/Bestellung und Vertragsschluss/);
-    assert.match(body,/Gewährleistung/);assert.match(body,/Muster-Widerrufsformular/);
     assert.match(body,/2026-10-28-3/);assert.match(body,/\+49 152 0829 7741/);assert.match(body,/office@example.test/);
+    assert.match(body,/als PDF bei/);
     assert.doesNotMatch(body,/\{email\}/);
   }
   assert.doesNotMatch(mail.text,/<h3>/);
+  const anhang=mail.anhaenge.find(a=>a.name==='AGB und Widerrufsbelehrung.pdf');
+  assert.ok(anhang,'Vertrags-PDF fehlt');
+  assert.match(anhang.text,/Geltungsbereich/); assert.match(anhang.text,/Bestellung und Vertragsschluss/);
+  assert.match(anhang.text,/Gewährleistung/);assert.match(anhang.text,/Muster-Widerrufsformular/);
+  assert.match(anhang.text,/office@example.test/);assert.doesNotMatch(anhang.text,/\{email\}/);assert.doesNotMatch(anhang.text,/<h3>/);
+  assert.match(Buffer.from(anhang.b64,'base64').toString('latin1'),/^%PDF-1\.4/);
 });
 
 test('withdrawal keeps the statutory period, return costs and refund proof in all languages',()=>{

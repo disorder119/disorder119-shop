@@ -290,5 +290,10 @@
     senden(startDaten);
     sichtEinrichten();
   }
-  start();
+  // Seit 06.11.2026 laedt die Seite dieses Skript gleich im Kopf (Hinweis
+  // sofort sichtbar). Die erste Meldung an den Server wartet trotzdem, bis die
+  // Seite geladen ist - sie soll den Fotos keine Leitung wegnehmen.
+  // Nur warten, solange die Seite wirklich noch laedt (defer: "interactive").
+  if (document.readyState === "loading" || document.readyState === "interactive") window.addEventListener("load", start, { once: true });
+  else start();
 })();

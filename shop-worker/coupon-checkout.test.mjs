@@ -39,7 +39,7 @@ test("Coupon patch keeps the chosen shipping price next to the discounted goods"
   }]);
 });
 
-test("create-order accepts only server reward code format", async () => {
+test("create-order accepts server reward codes and item word codes, nothing else", async () => {
   const valid = new Request("https://example.test/create-order", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -54,15 +54,25 @@ test("create-order accepts only server reward code format", async () => {
   });
   assert.equal(await couponCodeFromCreateRequest(missing), "");
 
-  const invalid = new Request("https://example.test/create-order", {
+  // Artikel-Code (Migration 0045): nur Buchstaben/Ziffern; ob es ihn gibt, entscheidet erst die Datenbank.
+  const wort = new Request("https://example.test/create-order", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ itemId: 119, couponCode: "SAVE10" }),
+    body: JSON.stringify({ itemId: 119, couponCode: " closerwithnylon " }),
   });
-  await assert.rejects(
-    () => couponCodeFromCreateRequest(invalid),
-    error => error instanceof CouponCheckoutError && error.code === "COUPON_INVALID_OR_USED" && error.status === 409,
-  );
+  assert.equal(await couponCodeFromCreateRequest(wort), "CLOSERWITHNYLON");
+
+  for (const couponCode of ["SAVE-10%", "ABC", "D119-10-KURZ", "x".repeat(33)]) {
+    const invalid = new Request("https://example.test/create-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemId: 119, couponCode }),
+    });
+    await assert.rejects(
+      () => couponCodeFromCreateRequest(invalid),
+      error => error instanceof CouponCheckoutError && error.code === "COUPON_INVALID_OR_USED" && error.status === 409,
+    );
+  }
 });
 
 // Kasse mit Gutschein ueber worker-entry.js - nachgebaut: GitHub

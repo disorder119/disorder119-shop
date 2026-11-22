@@ -19,6 +19,12 @@
   var RUNTIME = "/assets/pwa-runtime.js?v=20261008-1";
 
   function loadRuntime() {
+    // Handy-Ladezeit (05.11.2026): die Runtime (Service Worker, Sperre, Promos, Lightbox …)
+    // erst nach dem ersten Bild holen - vorher teilt sie sich die Leitung mit dem Foto.
+    if (document.readyState !== "complete") {
+      window.addEventListener("load", function () { setTimeout(loadRuntime, 0); }, { once: true });
+      return;
+    }
     if (document.querySelector('script[data-d119-pwa-runtime]')) return;
     var script = document.createElement("script");
     script.src = RUNTIME;

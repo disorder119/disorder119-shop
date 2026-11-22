@@ -123,6 +123,7 @@ export async function readRepoFileParallel(env, path, { userAgent = "disorder119
  * Neuer Commit auf `parent` mit geaenderten Dateien. files:
  *   { path, text }       - Textdatei (UTF-8, ohne Base64)
  *   { path, base64 }     - Binaerdatei (Bild), bereits Base64
+ *   { path, sha }        - schon hochgeladener Blob (manager-katalog.js)
  *   { path, remove: true }
  */
 export async function createCommit(env, { parent, baseTree, files, message, repo = SHOP_REPO, userAgent }) {
@@ -130,6 +131,11 @@ export async function createCommit(env, { parent, baseTree, files, message, repo
   for (const file of files) {
     if (file.remove) {
       tree.push({ path: file.path, mode: "100644", type: "blob", sha: null });
+      continue;
+    }
+    if (file.sha && file.text === undefined && file.base64 === undefined) {
+      if (!/^[0-9a-f]{40}$/.test(String(file.sha))) throw new GithubError("github_blob_sha_invalid");
+      tree.push({ path: file.path, mode: "100644", type: "blob", sha: String(file.sha) });
       continue;
     }
     const blob = await ghJson(env, repo, "/git/blobs", {

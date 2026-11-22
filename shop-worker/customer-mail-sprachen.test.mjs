@@ -56,11 +56,13 @@ test("order confirmation in English: subject, language tag, English title, bindi
   // Country written out in English.
   assert.match(mail.text, /\bFrance\b/);
   // EN contract plus the legally binding German version.
-  assert.match(mail.html, /Terms &amp; conditions/);
-  assert.match(mail.html, /Right of withdrawal/);
-  assert.match(mail.html, /Legally binding German version/);
-  assert.match(mail.html, /Allgemeine Geschäftsbedingungen/);
-  assert.match(mail.html, /Widerrufsbelehrung/);
+  // Seit 04.11.2026: Vertragstext als PDF-Anhang (englisch + verbindliche deutsche Fassung), die Mail sagt das.
+  assert.match(mail.html, /binding German version included/);
+  const anhangEn = mail.anhaenge.find(a => a.name === "AGB und Widerrufsbelehrung.pdf");
+  assert.match(anhangEn.text, /Terms & conditions/);
+  assert.match(anhangEn.text, /Right of withdrawal/);
+  assert.match(anhangEn.text, /Allgemeine Geschäftsbedingungen/);
+  assert.match(anhangEn.text, /Widerrufsbelehrung/);
   // Account link in the English path.
   assert.match(mail.html, /disorder119\.com\/en\/konto\//);
   assert.doesNotMatch(mail.html, /\{email\}/);
@@ -73,10 +75,11 @@ test("order confirmation in French: subject, language tag, binding German terms 
   assert.match(mail.html, /<html lang="fr"/);
   assert.match(mail.html, /Confirmation de commande/);
   assert.match(mail.text, /\bFrance\b/);
-  assert.match(mail.html, /Conditions générales de vente/);
-  assert.match(mail.html, /Droit de rétractation/);
-  assert.match(mail.html, /Version allemande faisant foi/);
-  assert.match(mail.html, /Allgemeine Geschäftsbedingungen/);
+  assert.match(mail.html, /allemande faisant foi incluse/);
+  const anhangFr = mail.anhaenge.find(a => a.name === "AGB und Widerrufsbelehrung.pdf");
+  assert.match(anhangFr.text, /Conditions générales de vente/);
+  assert.match(anhangFr.text, /Droit de rétractation/);
+  assert.match(anhangFr.text, /Allgemeine Geschäftsbedingungen/);
   assert.doesNotMatch(mail.html, /\{email\}/);
 });
 
@@ -147,10 +150,10 @@ test("return instructions and withdrawal receipt in EN/FR carry the statutory wo
 test("invoice mail is wrapped in the order language and says the invoice itself is German", () => {
   const invoice = { number: "D119-1", text: "RECHNUNG ...", fragment: "<p>Rechnung</p>" };
   const en = formatInvoiceMail({ order_number: "D119-1", total_cents: 24000, currency: "EUR" }, invoice, { sprache: "en" });
-  assert.match(en.subject, /Your invoice for order D119-1/);
+  assert.match(en.subject, /Your invoice D119-1/);
   assert.match(en.html, /The invoice is issued in German/);
   const fr = formatInvoiceMail({ order_number: "D119-1", total_cents: 24000, currency: "EUR" }, invoice, { sprache: "fr" });
-  assert.match(fr.subject, /Ta facture pour la commande D119-1/);
+  assert.match(fr.subject, /Ta facture D119-1/);
   assert.match(fr.html, /La facture est établie en allemand/);
 });
 
@@ -249,8 +252,8 @@ test("buyer simulation EN: checkout stores en, confirmation mail is English with
   assert.match(mail.htmlContent, /<html lang="en"/);
   assert.match(mail.htmlContent, /Order confirmation/);
   assert.match(mail.htmlContent, /Jean Paul Gaultier Printed T-Shirt Women Blue/);
-  assert.match(mail.htmlContent, /Legally binding German version/);
-  assert.match(mail.htmlContent, /Allgemeine Geschäftsbedingungen/);
+  assert.match(mail.htmlContent, /binding German version included/);
+  assert.equal(mail.attachment[0].name, "AGB und Widerrufsbelehrung.pdf");
 });
 
 test("buyer simulation FR: checkout to France stores fr, confirmation mail is French", async () => {
@@ -260,7 +263,8 @@ test("buyer simulation FR: checkout to France stores fr, confirmation mail is Fr
   assert.match(mail.htmlContent, /<html lang="fr"/);
   assert.match(mail.htmlContent, /Confirmation de commande/);
   assert.match(mail.htmlContent, /\bFrance\b/);
-  assert.match(mail.htmlContent, /Version allemande faisant foi/);
+  assert.match(mail.htmlContent, /allemande faisant foi incluse/);
+  assert.equal(mail.attachment[0].name, "AGB und Widerrufsbelehrung.pdf");
 
   // Admin-ausgeloeste Versandmail nimmt dieselbe gespeicherte Sprache.
   const netz = fakeNetz(brevo);

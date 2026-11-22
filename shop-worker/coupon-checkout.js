@@ -3,7 +3,7 @@ import {
   couponRejectionCode,
   findCouponHeldByOrder,
   findValidCoupon,
-  normalizeCouponCode,
+  normalizeEinloesbarerCode,
   releaseCouponClaim,
   redeemCouponForOrder,
 } from "./game-rewards.js";
@@ -51,7 +51,7 @@ export async function couponCodeFromCreateRequest(request) {
   if (!body || typeof body !== "object" || Array.isArray(body)) return "";
   const raw = String(body.couponCode || "").trim();
   if (!raw) return "";
-  const code = normalizeCouponCode(raw);
+  const code = normalizeEinloesbarerCode(raw);
   if (!code) throw new CouponCheckoutError("COUPON_INVALID_OR_USED", 409);
   return code;
 }
@@ -267,7 +267,10 @@ export async function applyCouponToCreatedOrder(env, code, createResult, request
     const now = new Date().toISOString();
     const zeilen = (await env.DB.prepare("SELECT id,unit_price_cents FROM order_items WHERE order_id=? ORDER BY rowid")
       .bind(orderId).all()).results || [];
-    const neuePreise = rabattVerteilen(zeilen.map(z => Number(z.unit_price_cents || 0)), discountedSubtotal);
+    // Artikel-Code: nur die Zeile des Stuecks bekommt den Festpreis.
+    const neuePreise = claim.zeileId
+      ? zeilen.map(z => (z.id === claim.zeileId ? claim.zeilenPreisCents : Number(z.unit_price_cents || 0)))
+      : rabattVerteilen(zeilen.map(z => Number(z.unit_price_cents || 0)), discountedSubtotal);
     const updates = await env.DB.batch([
       env.DB.prepare("UPDATE commerce_orders SET subtotal_cents=?,total_cents=?,updated_at=? WHERE id=? AND status='PAYMENT_PENDING'")
         .bind(discountedSubtotal, finalTotal, now, orderId),
@@ -280,12 +283,17 @@ export async function applyCouponToCreatedOrder(env, code, createResult, request
       throw new CouponCheckoutError("COUPON_LOCAL_SYNC_FAILED", 502);
     }
 
+    // Mail und Rechnung zeigen den Abzug spaeter aus diesem Eintrag (Positionen
+    // tragen schon den rabattierten Preis). Artikel-Code: Wort-Code mit Stueck.
     await audit(env, orderId, requestId, "COUPON_RESERVED", {
       couponId: claim.couponId,
       discountBps: claim.discountBps,
       discountCents: claim.discountCents,
       originalTotalCents: originalTotal,
       discountedTotalCents: finalTotal,
+      code: claim.zeileId ? code : "",
+      codeHint: code.slice(-4),
+      itemId: claim.itemId || null,
     });
 
     return {

@@ -207,6 +207,16 @@ def test_search_and_mobile_filter(driver) -> None:
         fail("Mobiler Filter-Drawer hat keinen sichtbaren Backdrop")
     wait(driver, lambda d: "d119-filter-drawer__close" in (d.switch_to.active_element.get_attribute("class") or ""), "Fokus im Filter-Drawer")
 
+    # Am Handy faehrt das Blatt von unten hoch (0,5 s). Wie ein Mensch erst tippen, wenn es steht -
+    # sonst trifft der Klick waehrend der Bewegung ein anderes Element (ElementClickIntercepted).
+    wait(
+        driver,
+        lambda d: d.execute_script(
+            "var p=document.getElementById('filterPanel');"
+            "return !p.getAnimations || p.getAnimations().every(function(a){return a.playState!=='running';});"
+        ),
+        "Filter-Blatt fertig eingeblendet",
+    )
     men = driver.find_element(By.CSS_SELECTOR, '#d119Chips [data-d119-facette="department"][data-d119-wert="Men"]')
     # Unten im Vollbild-Filter liegt die feste Leiste "… Artikel anzeigen" -
     # wie ein Mensch erst zum Chip scrollen, sonst trifft der Klick die Leiste.

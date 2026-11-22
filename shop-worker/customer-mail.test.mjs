@@ -108,22 +108,34 @@ test("addresses are validated before anything is sent", () => {
 
 test("order confirmation carries every legally required part", () => {
   const mail = formatOrderConfirmation(ORDER, { contactEmail: "bestellung@disorder119.com", taxProfile: {mode:"small_business",confirmed:true,tax_number:"TEST-ONLY-123",seller:SELLER} });
+  const strasse = new RegExp(SELLER.street.replace(/[.*+?^${}()|[]\]/g, "\$&"));
   for (const part of [mail.text, mail.html]) {
     assert.match(part, /D119-20260923-ABC12345/);
     assert.match(part, /Prada Reversible Jacket/);
     assert.match(part, /119-42/);
-    assert.match(part, /23\.09\.2026/);
+    assert.match(part, /23.09.2026/);
     // Warenwert, Versand und Gesamt muessen einzeln nachvollziehbar sein.
     assert.match(part, /380,00/);
     assert.match(part, /5,90/);
     assert.match(part, /385,90/);
     assert.match(part, /§ 19 UStG/);
-    assert.match(part, /Widerrufsrecht/);
-    assert.match(part, /Muster-Widerrufsformular/);
-    assert.match(part, new RegExp(SELLER.street.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(part, strasse);
     assert.match(part, /Musterweg 3/);
+    // AGB und Widerrufsbelehrung liegen als PDF bei - die Mail sagt das.
+    assert.match(part, /als PDF bei/);
   }
   assert.match(mail.subject, /D119-20260923-ABC12345/);
+  // Anhaenge: Vertrag (mit Widerrufsrecht und Formular) und, weil sofort eingezogen, die Rechnung.
+  assert.equal(mail.anhaenge.length, 2);
+  assert.equal(mail.anhaenge[0].name, "AGB und Widerrufsbelehrung.pdf");
+  assert.match(mail.anhaenge[0].text, /Widerrufsrecht/);
+  assert.match(mail.anhaenge[0].text, /Muster-Widerrufsformular/);
+  assert.match(Buffer.from(mail.anhaenge[0].b64, "base64").toString("latin1"), /^%PDF-1.4/);
+  assert.match(mail.anhaenge[1].name, /^Rechnung .*.pdf$/);
+  // Der Verkaeufer steht im Abschnitt "Verkaeufer" (und in der eingebetteten Rechnung), nicht noch
+  // einmal in der Fusszeile - die nennt nur noch die Marke.
+  assert.doesNotMatch(mail.html, /Joel Bittner — Disorder119, Nelseestra/);
+  assert.ok(mail.html.includes('Disorder119 · <a href="https://disorder119.com/"'), "Fusszeile nennt nur die Marke");
 });
 
 test("hostile item titles cannot inject markup into the mail", () => {
@@ -352,7 +364,29 @@ test("the shipping notice names the parcel, the number and the link", () => {
     // Wer zurueckschicken will: Widerrufsfunktion mit eingetragener Bestellnummer.
     assert.match(part, /https:\/\/disorder119\.com\/widerruf\/\?bestellung=D119-20260923-ABC12345/);
   }
-  assert.match(mail.subject, /unterwegs/);
+  assert.match(mail.subject, /geht jetzt zu dir/);
+  // iPhone mit Story des gekauften Teils (kein Foto bekannt: kein Motiv, dafuer die Liste).
+  assert.doesNotMatch(mail.html, /assets\/og\//);
+  assert.doesNotMatch(mail.html, /Archive No\./);
+  assert.match(mail.html, /Im Paket/);
+  const mitFoto = formatShippingConfirmation({
+    order_number: "D119-1", carrier: "DHL", tracking_number: "358088742443", city: "Bremen",
+    items: [{ item_id: 6216, article_no: "213", title_snapshot: "Y-3 Grafik-Beanie", bild: "assets/img/b2-216/0.webp", unit_price_cents: 7000 }],
+  }, { datum: new Date("2026-11-05T09:00:00Z") });
+  assert.match(mitFoto.html, /https:\/\/disorder119\.com\/assets\/img\/b2-216\/0\.webp/);
+  assert.match(mitFoto.html, /Archive No\. 213/);
+  assert.match(mitFoto.html, /&rarr; Bremen · DHL 358088742443/);
+  // Versandzeit (Berlin) in Statusleiste und Story-Kopf: 09:00 UTC = 10:00 MEZ.
+  assert.match(mitFoto.html, /width="60">10:00<\/td>/);
+  assert.match(mitFoto.html, /5\. Nov\. · 10:00/);
+  assert.match(mitFoto.html, /UNTERWEGS|Unterwegs &nbsp;·&nbsp; IN TRANSIT/);
+  assert.match(mitFoto.html, /Nachricht senden/);
+  assert.match(mitFoto.html, /assets\/favicon\.png/);
+  assert.match(mitFoto.html, /auf dem Weg nach Bremen/);
+  assert.doesNotMatch(mitFoto.html, /Im Paket/);
+  const zwei = formatShippingConfirmation({ order_number: "D119-2", items: [{ item_id: 6216, title_snapshot: "X" }, { item_id: 6217, title_snapshot: "Y" }] });
+  assert.match(zwei.html, /assets\/og\/6216\.jpg/);
+  assert.match(zwei.html, /Im Paket/);
 });
 
 test("without a tracking number the notice still makes sense", () => {

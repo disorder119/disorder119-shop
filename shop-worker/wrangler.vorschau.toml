@@ -1,0 +1,21 @@
+name = "disorder119-vorschau"
+main = "vorschau-edge.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+preview_urls = false
+
+# Eigener Build mit den UI-Ideen (scripts/vorschau_export.py), nie der Live-Export.
+[assets]
+directory = "../.vorschau-build"
+binding = "ASSETS"
+run_worker_first = true
+html_handling = "auto-trailing-slash"
+not_found_handling = "404-page"
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+invocation_logs = false

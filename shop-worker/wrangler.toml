@@ -23,6 +23,14 @@ PAYPAL_ENVIRONMENT = "live"
 # DHL-Schluessel allein schaltet nicht auf Produktion. Labelkauf bleibt eine
 # ausdrueckliche Admin-Aktion mit Zahlung im DHL-Frontend.
 DHL_PRIVAT_ENVIRONMENT = "live"
+# Geschaeftskundenvertrag (dhl.js, Secrets DHL_API_KEY/DHL_USER/DHL_PASSWORD/DHL_EKP):
+# "live" = echte Marken auf Rechnung; DHL_AUTO_MARKE = "an" erzeugt die Marke
+# von selbst nach jedem Kauf (zieht dabei die PayPal-Reservierung ein).
+DHL_ENVIRONMENT = "live"
+DHL_AUTO_MARKE = "an"
+# Durchschlag (BCC) jeder Bestell-, Rechnungs-, Versand-, Erstattungs- und Widerrufsmail an den Inhaber
+# (customer-mail.js, nur Nachrichten mit kopieAnShop - nie Anmeldelinks oder Auskuenfte).
+MAIL_BCC = "disorder119shop@gmail.com"
 # Geo-Sperre (geo-sperre.js): aus diesen Laendern ist die API gar nicht
 # erreichbar (403). ISO-Codes mit Komma, "aus" schaltet ab; DE und US werden
 # nie gesperrt. Optional GEO_SPERRE_KONTINENTE = "AS" fuer ganz Asien.
@@ -38,8 +46,11 @@ GEO_SPERRE_LAENDER = "RU,BY,IN,KP,IR"
 # Besucherstatistik und die einmalige Apple-Pay-Domain bei PayPal. Sie laufen
 # zusaetzlich beim Oeffnen der Admin-App; der Cron sorgt dafuer, dass sie auch
 # ohne Admin-Besuch passieren.
+# "7 * * * *": eigener stuendlicher Lauf nur fuer die Abholorte aus
+# OpenStreetMap (abholorte-osm.js, ein PLZ-Gebiet je Lauf, je Gebiet hoechstens
+# einmal die Woche) - getrennt von den Viertelstunden-Jobs.
 [triggers]
-crons = ["*/15 * * * *"]
+crons = ["*/15 * * * *", "7 * * * *"]
 
 [observability]
 enabled = true
@@ -117,11 +128,14 @@ preview_urls = false
 ADMIN_SESSION_HOURS = "24"
 PAYPAL_ENVIRONMENT = "sandbox"
 DHL_PRIVAT_ENVIRONMENT = "sandbox"
+DHL_ENVIRONMENT = "sandbox"
+DHL_AUTO_MARKE = "an"
 SANDBOX = "1"
 GEO_SPERRE_LAENDER = "RU,BY,IN,KP,IR"
 
+# Abholorte aus OpenStreetMap zur Minute 37 - nie gleichzeitig mit dem Shop bei Overpass.
 [env.sandbox.triggers]
-crons = ["*/15 * * * *"]
+crons = ["*/15 * * * *", "37 * * * *"]
 
 [[env.sandbox.ratelimits]]
 name = "RATE_LIMITER"

@@ -54,7 +54,8 @@ const text = max => value => {
 
 // Genau die Felder, die der Editor anbietet. Alles andere (Taxonomie,
 // Bildauswahl fuer die Kacheln, Bewertungen) rechnet der Build selbst aus.
-const EDITABLE = Object.freeze({
+// Dieselben Pruefungen gelten fuer neue Entwuerfe aus dem Manager (manager-katalog.js).
+export const EDITABLE = Object.freeze({
   title: text(200),
   brand: text(120),
   size: text(40),
@@ -78,6 +79,15 @@ const EDITABLE = Object.freeze({
     if (!["AVAILABLE", "SOLD", "DRAFT"].includes(status)) throw new KatalogError("STATUS_UNGUELTIG", 400);
     return status;
   },
+  sold_platform(value) {
+    const platform = String(value || "");
+    if (!["", "Vinted", "eBay"].includes(platform)) throw new KatalogError("VERKAUFSPLATTFORM_UNGUELTIG", 400);
+    return platform;
+  },
+  hidden_from_shop(value) {
+    if (typeof value !== "boolean") throw new KatalogError("FELD_UNGUELTIG", 400);
+    return value;
+  },
   gallery(value) {
     if (!Array.isArray(value) || value.length > 40) throw new KatalogError("GALERIE_UNGUELTIG", 400);
     return value.map(pfad => {
@@ -87,6 +97,34 @@ const EDITABLE = Object.freeze({
     });
   },
 });
+
+// Kategorie-Regeln, damit eine Speicherung den Rebuild auf main nie anhaelt
+// (dann bliebe jede weitere Aenderung liegen):
+//  - Oeffentliche Produktseiten brauchen die Zeile "Kategorie"
+//    (scripts/repair_public_article_integrity.py): Freischalten nur mit Kategorie.
+//  - Die Kategorie muss zur geprueften Kategorie passen, die der Build aus Titel
+//    und Beschreibung bestimmt (scripts/catalog_taxonomy.py). Abweichungen prueft
+//    validate_audit_perfection.py --section taxonomy-mismatches - auch bei
+//    Entwuerfen. Gemessen 06.11.2026: bei allen 276 oeffentlichen Stuecken haengt
+//    die gepruefte Kategorie nur am Titel, nicht an der gesetzten Kategorie.
+//  - Aendert sich der Titel in derselben Speicherung, ist die gepruefte Kategorie
+//    erst nach dem naechsten Rebuild bekannt: dann erst Titel speichern.
+// Bestehende Stuecke ohne Kategorie- oder Statusaenderung sind nicht betroffen.
+function pruefeKategorie(vorher, next, set) {
+  const kategorie = String(next.category || "").trim();
+  const kategorieNeu = Object.prototype.hasOwnProperty.call(set, "category") && kategorie !== String(vorher.category || "").trim();
+  const wirdOeffentlich = next.public_status !== "DRAFT" && String(vorher.public_status || "").toUpperCase() === "DRAFT";
+  if (!kategorieNeu && !wirdOeffentlich) return;
+  if (!kategorie) {
+    if (next.public_status !== "DRAFT") throw new KatalogError("KATEGORIE_FEHLT", 400, String(next.id));
+    return;
+  }
+  const geprueft = String(vorher.taxonomy_category || "").trim();
+  if (!geprueft) throw new KatalogError("TAXONOMIE_AUSSTEHEND", 409, String(next.id));
+  const titelNeu = Object.prototype.hasOwnProperty.call(set, "title") && String(next.title || "").trim() !== String(vorher.title || "").trim();
+  if (titelNeu) throw new KatalogError("TITEL_ERST_SPEICHERN", 409, String(next.id));
+  if (kategorie !== geprueft) throw new KatalogError("KATEGORIE_PASST_NICHT", 400, geprueft);
+}
 
 export function applyChanges(items, changes) {
   if (!Array.isArray(changes) || changes.length > 300) throw new KatalogError("AENDERUNGEN_UNGUELTIG", 400);
@@ -105,22 +143,44 @@ export function applyChanges(items, changes) {
       }
       next[field] = EDITABLE[field](value);
     }
+    if (next.hidden_from_shop && Object.prototype.hasOwnProperty.call(set, "public_status") && next.public_status !== "DRAFT") next.hidden_from_shop = false;
+    if (Object.prototype.hasOwnProperty.call(set, "hidden_from_shop") && next.hidden_from_shop) {
+      next.hidden_previous_status = ["AVAILABLE", "SOLD"].includes(String(items[index].public_status))
+        ? items[index].public_status : "AVAILABLE";
+      next.public_status = "DRAFT";
+      next.status = "Verborgen";
+    }
+    // Statuszeile folgt dem sichtbaren Status (wie artikelWiederVerfuegbar):
+    // Match/Swipe (assets/app.js buildSwipeQueue) liest "status" - ein im
+    // Admin auf SOLD gestelltes Stueck blieb dort sonst im Stapel, und ein
+    // Manager-Entwurf behielt nach dem Freischalten "Entwurf".
+    if (Object.prototype.hasOwnProperty.call(set, "public_status") && next.public_status !== String(items[index].public_status || "").toUpperCase()) {
+      if (next.public_status === "AVAILABLE") next.status = "Verfügbar";
+      else if (next.public_status === "SOLD") next.status = "Verkauft";
+    }
+    if (next.public_status !== "SOLD" && !next.hidden_from_shop) next.sold_platform = "";
     if (!String(next.title || "").trim()) throw new KatalogError("TITEL_FEHLT", 400, String(next.id));
     if (next.public_status !== "DRAFT" && !String(next.brand || "").trim()) throw new KatalogError("MARKE_FEHLT", 400, String(next.id));
+    pruefeKategorie(items[index], next, set);
     items[index] = next;
   }
   return items;
+}
+
+/** Base64 eines echten WebP: "RIFF" .... "WEBP" in den ersten zwoelf Byte. */
+export function webpPruefen(b64, path = "") {
+  if (!b64 || b64.length > MAX_IMAGE_B64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(b64)) throw new KatalogError("BILD_UNGUELTIG", 400, path);
+  let kopf;
+  try { kopf = atob(b64.slice(0, 16)); } catch { throw new KatalogError("BILD_UNGUELTIG", 400, path); }
+  if (kopf.slice(0, 4) !== "RIFF" || kopf.slice(8, 12) !== "WEBP") throw new KatalogError("BILD_KEIN_WEBP", 400, path);
+  return b64;
 }
 
 function checkImage(image) {
   const path = String(image?.path || "");
   const b64 = String(image?.base64 || "");
   if (!IMAGE_PATH.test(path)) throw new KatalogError("BILDPFAD_UNGUELTIG", 400, path.slice(0, 120));
-  if (!b64 || b64.length > MAX_IMAGE_B64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(b64)) throw new KatalogError("BILD_UNGUELTIG", 400, path);
-  // Nur echte WebP-Dateien: "RIFF" .... "WEBP" in den ersten zwoelf Byte.
-  let kopf;
-  try { kopf = atob(b64.slice(0, 16)); } catch { throw new KatalogError("BILD_UNGUELTIG", 400, path); }
-  if (kopf.slice(0, 4) !== "RIFF" || kopf.slice(8, 12) !== "WEBP") throw new KatalogError("BILD_KEIN_WEBP", 400, path);
+  webpPruefen(b64, path);
   return { path, base64: b64 };
 }
 

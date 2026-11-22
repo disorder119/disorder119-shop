@@ -268,8 +268,10 @@
     var priceEl = document.getElementById("priceBlock");
     if (priceEl) renderPriceBlock(priceEl);
 
+    // Strukturierte Beschreibung (beschreibung.py): der Text steht schon in
+    // der Seitensprache in den Klappleisten - nicht mit dem Rohtext ueberschreiben.
     var descEl = document.getElementById("itemDesc");
-    if (descEl) descEl.textContent = descriptionText();
+    if (descEl && !descEl.closest("[data-strukturiert]")) descEl.textContent = descriptionText();
 
     var soldNoteEl = document.getElementById("soldNote");
     if (soldNoteEl) soldNoteEl.textContent = t("soldNote");
@@ -468,7 +470,8 @@
   }
 
   // Live-Besucher (assets/besucher.js): nur mit eingerichtetem Shop-Worker.
-  if (/^https:\/\//.test(String(SHOP_CONFIG.shopWorkerUrl || ""))) {
+  // Seit 06.11.2026 steht es meist schon im Seitenkopf - dann nicht doppelt laden.
+  if (/^https:\/\//.test(String(SHOP_CONFIG.shopWorkerUrl || "")) && !document.querySelector('script[src*="/assets/besucher.js"]')) {
     try {
       var besucherScript = document.createElement("script");
       besucherScript.src = "/assets/besucher.js?v=zusammenfassung-20261028";
@@ -590,7 +593,8 @@
       versandZustand.laden = Promise.resolve(null);
       return versandZustand.laden;
     }
-    versandZustand.laden = fetch(worker + "/versand/optionen?artikel=" + encodeURIComponent(IT.id))
+    var gespeicherterCode = ""; try { gespeicherterCode = String(localStorage.getItem("d119_coupon_code") || "").trim().toUpperCase().replace(/\s+/g, ""); } catch (e) {}
+    versandZustand.laden = fetch(worker + "/versand/optionen?artikel=" + encodeURIComponent(IT.id) + (gespeicherterCode ? "&code=" + encodeURIComponent(gespeicherterCode) : ""))
       .then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; })
       .then(function (daten) {

@@ -1,6 +1,7 @@
 import { safeText } from "./commerce-core.js";
-import { sendTelegramTest, telegramTransportReady } from "./notifications.js";
-import { mailTransportReady, normalizeEmail, sendMailTest } from "./customer-mail.js";
+import { telegramTransportReady } from "./notifications.js";
+import { sendTelegramPickupTest } from "./telegram-pickup.js";
+import { mailTransportReady, normalizeEmail, sendMailTest, sendPickupPreview, sendShippingPreview } from "./customer-mail.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -89,6 +90,29 @@ export async function handleAdminNotifications(request, env, url, reqId, origin 
       throw new AdminNotificationsError("ORIGIN_NOT_ALLOWED", 403);
     }
     await requireAdmin(request, env);
+    if (url.pathname === "/admin/notifications/mail/versand-test") {
+      if (request.method !== "POST") throw new AdminNotificationsError("METHOD_NOT_ALLOWED", 405);
+      if (!mailTransportReady(env)) throw new AdminNotificationsError("MAIL_NOT_CONFIGURED", 503);
+      let body = {};
+      try { body = await request.json(); } catch { body = {}; }
+      const target = normalizeEmail(body?.to || "") || normalizeEmail(env.MAIL_REPLY_TO || env.MAIL_FROM || "");
+      if (!target) throw new AdminNotificationsError("MAIL_RECIPIENT_INVALID", 400);
+      const r = await sendShippingPreview(env, target, { itemId: Number(body?.itemId) || null, sprache: safeText(body?.sprache || "de", 2), reqId });
+      if (!r.sent) throw new AdminNotificationsError(r.reason === "NO_ITEM" ? "NO_ITEM" : "MAIL_DELIVERY_FAILED", r.reason === "NO_ITEM" ? 404 : 502);
+      return json({ ok: true, channel: "email", sent: true, itemId: r.itemId, titel: r.titel, messageId: r.messageId || null, requestId: reqId }, 200, origin);
+    }
+    // Abholmail-Vorschau an den Inhaber (Beispiel-Packstation, ein Teil aus dem Katalog).
+    if (url.pathname === "/admin/notifications/mail/abholbereit-test") {
+      if (request.method !== "POST") throw new AdminNotificationsError("METHOD_NOT_ALLOWED", 405);
+      if (!mailTransportReady(env)) throw new AdminNotificationsError("MAIL_NOT_CONFIGURED", 503);
+      let body = {};
+      try { body = await request.json(); } catch { body = {}; }
+      const target = normalizeEmail(body?.to || "") || normalizeEmail(env.MAIL_REPLY_TO || env.MAIL_FROM || "");
+      if (!target) throw new AdminNotificationsError("MAIL_RECIPIENT_INVALID", 400);
+      const r = await sendPickupPreview(env, target, { itemId: Number(body?.itemId) || null, sprache: safeText(body?.sprache || "de", 2), orderNumber: safeText(body?.orderNumber || "", 80), trackingNumber: safeText(body?.trackingNumber || "", 40), reqId });
+      if (!r.sent) throw new AdminNotificationsError(r.reason === "NO_ITEM" ? "NO_ITEM" : r.reason === "INVALID_PREVIEW_REFERENCE" ? "INVALID_PREVIEW_REFERENCE" : "MAIL_DELIVERY_FAILED", r.reason === "NO_ITEM" ? 404 : r.reason === "INVALID_PREVIEW_REFERENCE" ? 400 : 502);
+      return json({ ok: true, channel: "email", sent: true, itemId: r.itemId, titel: r.titel, messageId: r.messageId || null, requestId: reqId }, 200, origin);
+    }
     if (url.pathname === "/admin/notifications/mail/test") {
       if (request.method !== "POST") {
         throw new AdminNotificationsError("METHOD_NOT_ALLOWED", 405);
@@ -136,7 +160,7 @@ export async function handleAdminNotifications(request, env, url, reqId, origin 
       throw new AdminNotificationsError("TELEGRAM_NOT_CONFIGURED", 503);
     }
 
-    const result = await sendTelegramTest(env, reqId);
+    const result = await sendTelegramPickupTest(env, reqId);
     if (!result.sent) {
       if (result.reason === "TARGET_NOT_CONNECTED") {
         throw new AdminNotificationsError("TELEGRAM_TARGET_NOT_CONNECTED", 409);

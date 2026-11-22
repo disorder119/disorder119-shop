@@ -19,6 +19,16 @@ test('publication allows real shop, language, image, PWA and Apple Pay paths',()
   for(const path of ['/','/en/','/fr/agb/','/artikel/119/index.html','/artikel/119.html','/kasse/','/assets/img/test/0.webp','/assets/legal-content.js','/manifest.webmanifest','/.well-known/apple-developer-merchantid-domain-association','/feed/google-merchant.xml','/feed/google-merchant-en.xml']) assert.equal(publicPath(path),true,path);
   for(const path of ['/feed/','/feed/google-merchant.json','/feed/x/y.xml']) assert.equal(publicPath(path),false,path);
 });
+test('publication allows the generated brand pages and the brand overview',()=>{
+  for(const path of ['/designer/sneaker/','/en/designer/schwarze-jacken/index.html']) assert.equal(publicPath(path),true,path);
+  for(const path of ['/designer/','/designer/Sneaker/','/designer/sneaker/extra/']) assert.equal(publicPath(path),false,path);
+  for(const path of ['/neu/','/en/unter-100/','/unter-200/index.html','/vintage-archive-shop/','/marke/prada/jacken/','/fr/marke/y-3/schuhe/index.html']) assert.equal(publicPath(path),true,path);
+  for(const path of ['/unter-300/','/marke/prada/jacken/extra/','/marke/prada/prada/','/neu/extra/']) assert.equal(publicPath(path),false,path);
+  for(const path of ['/damen/','/herren/','/damen/jacken/','/en/herren/schuhe/','/fr/damen/index.html','/damen/roecke/index.html']) assert.equal(publicPath(path),true,path);
+  for(const path of ['/damen/prada/','/damen/jacken/extra/','/kinder/','/damen/Jacken/']) assert.equal(publicPath(path),false,path);
+  for(const path of ['/marken/','/marken/index.html','/en/marken/','/marke/prada/','/marke/jean-paul-gaultier/index.html','/en/marke/y-3/','/fr/marke/dsquared2/','/marke/prada']) assert.equal(publicPath(path),true,path);
+  for(const path of ['/marke/','/marke/Prada/','/marke/prada/extra/','/marke/-prada/','/marke/prada-/','/marke/a.b/','/marke/..%2f/','/marken/prada/','/marke/'+'a'.repeat(61)+'/','/config/marken-texte.json','/scripts/markenseiten.py']) assert.equal(publicPath(path),false,path);
+});
 test('publication rejects backend sources, drafts metadata, configuration and traversal',()=>{
   for(const path of ['/shop-worker/worker.js','/shop-worker/wrangler.toml','/.git/config','/config/shop-config.json','/data/catalog-taxonomy-report.json','/admin/index.html','/scripts/example.py','/assets/a.test.js','/assets/%252e%252e/secret.js','/assets/a\\b.js']) assert.equal(publicPath(path),false,path);
 });
@@ -81,7 +91,7 @@ test('real page views reach the shop Worker after the page, also while the shop 
   const aufrufe=()=>z.gesendet.filter(g=>g.url.endsWith('/intern/seitenaufruf'));
   assert.equal(aufrufe().length,1);
   assert.equal(aufrufe()[0].url,'https://storefront.intern/intern/seitenaufruf');
-  assert.deepEqual(aufrufe()[0].body,{p:'/artikel/119/',r:'https://l.instagram.com/',ua:IPHONE,ip:'203.0.113.7',land:'',sl:'',us:'',uc:''});
+  assert.deepEqual(aufrufe()[0].body,{p:'/artikel/119/',r:'https://l.instagram.com/',ua:IPHONE,ip:'203.0.113.7',land:'',sl:'',us:'',uc:'',asn:0,netz:''});
   await edge.fetch(seite('/'),z.env,z.ctx,async()=>new Response(null,{status:304}));
   await Promise.all(z.laeuft);
   assert.equal(aufrufe().length,2,'revalidated page still counts');
@@ -191,7 +201,7 @@ test('bfcache/prefetch ping counts once in the same counter with the same except
   assert.equal(response.status,204);
   await Promise.all(z.laeuft);
   const aufrufe=()=>z.gesendet.filter(g=>g.url.endsWith('/intern/seitenaufruf'));
-  assert.deepEqual(aufrufe()[0].body,{p:'/en/artikel/119/',r:'https://disorder119.com/en/',ua:IPHONE,ip:'198.51.100.4',land:'',sl:'',us:'instagram',uc:''});
+  assert.deepEqual(aufrufe()[0].body,{p:'/en/artikel/119/',r:'https://disorder119.com/en/',ua:IPHONE,ip:'198.51.100.4',land:'',sl:'',us:'instagram',uc:'',asn:0,netz:''});
   // Zurueck/Vor ohne verweisende Seite gilt als Aufruf innerhalb des Shops; Dublette binnen 3 s faellt weg.
   await edge.fetch(ping({u:'/',a:'zurueck'}),z.env,z.ctx,nieUrsprung);
   await edge.fetch(ping({u:'/',a:'zurueck'}),z.env,z.ctx,nieUrsprung);
@@ -210,4 +220,17 @@ test('bfcache/prefetch ping counts once in the same counter with the same except
   assert.equal(aufrufe().length,2);
   assert.equal((await edge.fetch(new Request('https://disorder119.com/_seitenaufruf'),z.env,z.ctx,nieUrsprung)).status,405);
   assert.equal(origin,0,'der Ping erreicht nie die statischen Dateien');
+});
+test('Teilen-Text: /_land nennt nur das Land, nie gecacht, ohne Herkunftsabruf',async()=>{
+  let origin=0;
+  const holen=async()=>{origin++;return new Response('x');};
+  const anfrage=(country,method='GET')=>{const r=new Request('https://disorder119.com/_land',{method,headers:{'User-Agent':IPHONE}});Object.defineProperty(r,'cf',{value:country===undefined?undefined:{country}});return r;};
+  const fr=await edge.fetch(anfrage('fr'),{},{},holen);
+  assert.equal(fr.status,200);
+  assert.deepEqual(await fr.json(),{land:'FR'});
+  assert.match(fr.headers.get('Cache-Control'),/no-store/);
+  assert.deepEqual(await (await edge.fetch(anfrage(undefined),{},{},holen)).json(),{land:''});
+  assert.deepEqual(await (await edge.fetch(anfrage('<x>'),{},{},holen)).json(),{land:''});
+  assert.equal((await edge.fetch(anfrage('DE','POST'),{},{},holen)).status,405);
+  assert.equal(origin,0,'kein Abruf beim Ursprung');
 });

@@ -26,12 +26,15 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 
 def patch_template(text: str) -> str:
-    text = replace_once(
-        text,
-        '<title>__META_TITLE__</title>\n<link rel="stylesheet" href="/assets/app.css?v=__APP_CSS_VERSION__">',
-        '<title>__META_TITLE__</title>\n__CRITICAL_IMAGE_PRELOADS__\n<link rel="stylesheet" href="/assets/app.css?v=__APP_CSS_VERSION__">',
-        "Critical-image preload token",
-    )
+    # Seit 06.11.2026 steht der Token mit app.css direkt hinter dem Viewport
+    # (index_template.html) - dann nichts mehr einfuegen.
+    if "__CRITICAL_IMAGE_PRELOADS__" not in text:
+        text = replace_once(
+            text,
+            '<title>__META_TITLE__</title>\n<link rel="stylesheet" href="/assets/app.css?v=__APP_CSS_VERSION__">',
+            '<title>__META_TITLE__</title>\n__CRITICAL_IMAGE_PRELOADS__\n<link rel="stylesheet" href="/assets/app.css?v=__APP_CSS_VERSION__">',
+            "Critical-image preload token",
+        )
     text = replace_once(
         text,
         '<div class="app-shell hidden" id="appShell">',
@@ -189,7 +192,8 @@ def product_data_gap_html(it, lang):
     old_cta = '''    parts.append('<p class="info__note">' + esc(trust_notes.get(lang, trust_notes["de"])) + '</p>')\n    if not shop_config["whatsappNumber"] and not shop_config["email"]:\n'''
     # note_text statt trust_notes[...]: der Hinweis traegt seit der
     # Versandpauschale zusaetzlich den Satz zu den Versandkosten.
-    new_cta = '''    parts.append('<p class="info__note">' + esc(note_text) + '</p>')\n    parts.append(product_data_gap_html(it, lang))\n    if not shop_config["whatsappNumber"] and not shop_config["email"]:\n'''
+    # Seit 04.11.2026 steht note_html (Trenner-Spans fuer den Handy-Umbruch) im Build.
+    new_cta = '''    parts.append('<p class="info__note">' + note_html + '</p>')\n    parts.append(product_data_gap_html(it, lang))\n    if not shop_config["whatsappNumber"] and not shop_config["email"]:\n'''
     text = replace_once(text, old_cta, new_cta, "product data gap disclosure")
     return text
 

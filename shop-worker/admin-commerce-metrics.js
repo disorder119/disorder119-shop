@@ -219,7 +219,7 @@ async function buildCommerceMetrics(env, url) {
     db.prepare(`SELECT status,COUNT(*) AS count,COALESCE(SUM(amount_cents),0) AS amountCents
       FROM payments WHERE created_at>=? GROUP BY status ORDER BY count DESC`).bind(cutoffIso),
     db.prepare(`SELECT status,COUNT(*) AS count,COALESCE(SUM(total_cents),0) AS orderValueCents
-      FROM commerce_orders WHERE created_at>=? GROUP BY status ORDER BY count DESC`).bind(cutoffIso),
+      FROM commerce_orders WHERE created_at>=? AND versteckt=0 GROUP BY status ORDER BY count DESC`).bind(cutoffIso),
     db.prepare(`SELECT status,COUNT(*) AS count,COALESCE(SUM(total_price_cents),0) AS rentalValueCents
       FROM rental_reservations WHERE created_at>=? GROUP BY status ORDER BY count DESC`).bind(cutoffIso),
   ];
@@ -233,6 +233,7 @@ async function buildCommerceMetrics(env, url) {
     SELECT oi.item_id AS itemId,MAX(oi.article_no) AS articleNo,MAX(oi.title_snapshot) AS title,
       COUNT(*) AS count,COALESCE(SUM(oi.unit_price_cents),0) AS valueCents
     FROM order_items oi JOIN paid_orders p ON p.order_id=oi.order_id
+    JOIN commerce_orders o ON o.id=oi.order_id AND o.versteckt=0
     GROUP BY oi.item_id ORDER BY valueCents DESC,count DESC LIMIT 20`).bind(cutoffIso);
 
   const rentalTopRowsStmt = db.prepare(`SELECT i.item_id AS itemId,MAX(i.article_no) AS articleNo,
@@ -257,7 +258,7 @@ async function buildCommerceMetrics(env, url) {
     JOIN paid p ON p.order_id=o.id
     LEFT JOIN refunded r ON r.order_id=o.id
     LEFT JOIN order_contact_snapshots cs ON cs.order_id=o.id
-    WHERE COALESCE(NULLIF(cs.email,''),NULLIF(o.guest_email,'')) IS NOT NULL
+    WHERE o.versteckt=0 AND COALESCE(NULLIF(cs.email,''),NULLIF(o.guest_email,'')) IS NOT NULL
     GROUP BY LOWER(COALESCE(NULLIF(cs.email,''),NULLIF(o.guest_email,'')))`);
 
   const rentalCustomerRowsStmt = db.prepare(`SELECT

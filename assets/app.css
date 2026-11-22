@@ -1254,7 +1254,7 @@
 
   .cart-note {
     font-size: 0.7rem;
-    color: var(--text-faint);
+    color: var(--text-muted); /* --text-faint hatte nur 2,9:1 Kontrast */
     line-height: 1.5;
   }
 
@@ -2961,8 +2961,8 @@
       grid-row: 1;
       min-width: 0;
       min-height: 0;
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-rows: repeat(5, minmax(0, 1fr));
       /* Oben ausgerichtet (Standard) statt zentriert: die erste Zeile
          links soll exakt auf gleicher Hoehe wie die erste Karte im
          Look-Board rechts beginnen ("auf einer Ebene", Nutzer-Feedback) -
@@ -2999,12 +2999,13 @@
       gap: 8px;
       padding: 0 8px;
       position: relative;
-      flex: 0 0 clamp(54px, 11vh, 100px);
-      height: clamp(54px, 11vh, 100px);
+      min-height: 0;
+      height: auto;
     }
     .outfit-slot__frame {
       width: clamp(36px, 7.5vh, 72px);
       height: clamp(42px, 8.8vh, 86px);
+      max-height: calc(100% - 4px);
       flex: 0 0 auto;
     }
     .outfit-slot__body { text-align: left; }
@@ -3059,9 +3060,34 @@
       width: 100%;
     }
 
-    /* ...und bei hohem Swipe-Karten-Inhalt auch den zentrierten "Zum Archiv"-
-       Button dort - Swipe-View bekommt daher unten reservierten Platz. */
-    .swipe-view { padding-bottom: 64px; }
+    /* Die Karte bekommt nur den Platz zwischen Kopf und Aktionen. So bleibt
+       auch der Archiv-Knopf oberhalb der iPhone-Browserleiste sichtbar. */
+    .swipe-view {
+      gap: clamp(8px, 1.5vh, 16px);
+      padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+    }
+    #swipeStage {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .swipe-card {
+      height: 100%;
+      max-height: 560px;
+      max-width: 100%;
+    }
+    .swipe-card__frame {
+      flex: 1 1 auto;
+      min-height: 0;
+      aspect-ratio: auto;
+    }
+    .swipe-card__body { flex: 0 0 auto; }
+    .swipe-view__actions,
+    .swipe-view__hint,
+    .swipe-view > .view-enter-btn { flex: 0 0 auto; }
   }
 
   /* ---------- Minimalistische Archiv-Struktur ---------- */
@@ -3797,3 +3823,128 @@ img[data-d119-image-protected] {
   .footer__nav button, .footer__nav a, .footer__cart,
   .footer__legal button, .footer__legal a { min-height: 32px; display: inline-flex; align-items: center; }
 }
+
+/* Bis app.js die ersten 12 Kacheln gezeichnet hat, zeigt das Server-Raster nur
+   wenige. Platz fuer eine Bildschirmhoehe reservieren, damit "Weitere laden"
+   und der Fussbereich nicht sichtbar nach unten springen - vor allem, wenn der
+   Shop beim Zurueckkommen die Scrollposition wiederherstellt (CLS 0,73 -> 0,01). */
+.grid[data-ssr-initial="1"] {
+  min-height: 100vh;
+}
+/* Fussbereich breit (Inhaber 06.11.2026): Der Shop ist breit aufgebaut, also
+   auch der Fuss. Am Desktop stehen die Links in einer Zeile ueber die ganze
+   Breite, darunter eine Schlusszeile: Widerruf und Rechtliches links, Stand
+   und Warenkorb rechts. Nur Anordnung - Markup, Texte und Links bleiben. */
+@media (min-width: 900px) {
+  #appShell .footer {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "nl nl nl nl"
+      "nav nav nav nav"
+      "wid legal stamp cart";
+    column-gap: clamp(20px, 2.6vw, 40px);
+    align-items: center;
+  }
+  #appShell .footer__newsletter { grid-area: nl; }
+  #appShell .footer__nav {
+    grid-area: nav;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px 32px;
+    margin-bottom: 30px;
+    padding: 30px 0;
+  }
+  #appShell .footer a.footer__widerruf { grid-area: wid; margin-top: 0; }
+  #appShell .footer__legal { grid-area: legal; margin-top: 0; gap: 8px 22px; }
+  #appShell .footer__stamp { grid-area: stamp; margin-top: 0; }
+  #appShell .footer__cart { grid-area: cart; margin-top: 0; }
+}
+
+/* Handy und Tablet: die sechs Links zweispaltig statt einer langen Liste. */
+@media (max-width: 899px) {
+  #appShell .footer__nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 24px;
+  }
+  #appShell .footer__cart { margin-top: 44px; }
+}
+
+/* FAQ: kurze Fragen auf einen Blick, Antworten bei Bedarf. */
+.faq-list { margin-top: 28px; border-top: 1px solid var(--rule-strong, #555); }
+.faq-item { border-bottom: 1px solid var(--rule-strong, #555); }
+.faq-item summary { display: block; position: relative; padding: 18px 38px 18px 0; cursor: pointer; font-weight: 600; list-style: none; }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: '+'; position: absolute; right: 4px; top: 15px; font-size: 1.4em; font-weight: 400; }
+.faq-item[open] summary::after { content: '−'; }
+.faq-item summary:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.faq-answer { padding: 0 0 20px; max-width: 72ch; }
+.faq-answer p { margin: 0; line-height: 1.65; }
+
+/* Match: Info-Knopf oben rechts auf der Karte -> Artikelseite (13.11.2026) */
+.swipe-card__info { position: absolute; top: 8px; right: 8px; z-index: 4; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: none; border: 0; color: rgba(242,239,231,.6); font: italic 600 13px/1 Georgia, 'Times New Roman', serif; text-decoration: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.swipe-card__info::before { content: ""; position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%; border: 1px solid rgba(242,239,231,.32); background: rgba(10,10,10,.35); }
+.swipe-card__info span { position: relative; }
+.swipe-card__info:hover, .swipe-card__info:focus-visible { color: #f2efe7; outline: none; }
+.swipe-card__info:hover::before, .swipe-card__info:focus-visible::before { border-color: #f2efe7; }
+
+/* Menue (Inhaber 14.11.2026): wie bisher, aber fett, ohne Scrollen, Marken als Wolke wie im Filter, Modi nur als Symbole. */
+#menuDrawer { padding-top: 14px; padding-bottom: 14px; }
+#menuDrawer .menu-drawer__head { padding-bottom: 10px; }
+#menuDrawer .menu-drawer__nav { padding: 10px 0; }
+#menuDrawer .menu-drawer__section { padding: 8px 0; }
+#menuDrawer .menu-drawer__nav > button, #menuDrawer .menu-drawer__nav > a, #menuDrawer .menu-drawer__section button { padding: 5px 0; font-weight: 700; }
+#menuDrawer .menu-drawer__brands { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 11px; max-height: none; overflow: visible; margin: 6px 0 10px; padding: 0; border: 0; }
+#menuDrawer .menu-drawer__brands.hidden { display: none; }
+#menuDrawer .menu-drawer__brands button { display: inline-block; width: auto; padding: 2px 0; color: var(--paper); opacity: .62; font-weight: 800; letter-spacing: -.01em; line-height: 1.1; font-size: .64rem; }
+#menuDrawer .menu-drawer__brands button:hover, #menuDrawer .menu-drawer__brands button:focus-visible { opacity: 1; color: var(--paper); }
+#menuDrawer .menu-drawer__brands button[data-gewicht="2"] { font-size: .76rem; opacity: .74; }
+#menuDrawer .menu-drawer__brands button[data-gewicht="3"] { font-size: .92rem; opacity: .84; }
+#menuDrawer .menu-drawer__brands button[data-gewicht="4"] { font-size: 1.12rem; opacity: .92; }
+#menuDrawer .menu-drawer__brands button[data-gewicht="5"] { font-size: 1.36rem; opacity: 1; }
+#menuDrawer.marken-offen .menu-drawer__nav > [data-menu-categories], #menuDrawer.marken-offen .d119-rental-menu-section { display: none; }
+#menuDrawer .menu-drawer__modi { display: flex; gap: 26px; align-items: center; margin-top: 8px; padding: 10px 0 2px; border-top: 1px solid var(--rule); }
+#menuDrawer .menu-drawer__modi a { display: inline-block; width: auto; padding: 4px 2px; font-size: 1.35rem; line-height: 1; letter-spacing: 0; color: var(--paper); opacity: .8; text-decoration: none; }
+#menuDrawer .menu-drawer__modi a:hover, #menuDrawer .menu-drawer__modi a:focus-visible { opacity: 1; }
+/* PC-Startseite kompakter: Leiste und erste Reihe ruecken hoch, damit es nicht leer wirkt. */
+@media (min-width: 1000px) {
+  .masthead { padding-top: 30px; padding-bottom: 22px; }
+  .masthead .wordmark { font-size: clamp(56px, 4.5vw, 84px); }
+  .masthead .masthead__bottom { padding-top: 6px; }
+  .masthead .ui-kopf__suche { margin-top: 10px; margin-bottom: 8px; }
+}
+/* Kleiner Pfeil an allem, was auf- und zuklappt (Menue: Marken; Filter: Alle Marken, weitere Groessen). */
+#menuBrandsToggle::after, .d119-chip--leise[aria-expanded]::after { content: ""; display: inline-block; width: .4em; height: .4em; margin-left: .65em; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-.2em) rotate(45deg); transition: transform .18s ease; }
+#menuBrandsToggle[aria-expanded="true"]::after, .d119-chip--leise[aria-expanded="true"]::after { transform: translateY(.08em) rotate(-135deg); }
+
+/* Keine Bestandszahlen (Inhaber 14.11.2026): Zaehler "x von y Objekten" und Zahlenzeile im Kopf bleiben unsichtbar. */
+#railCount, .rail__count, #uiZahlen, .ui-kopf__zahlen { display: none !important; }
+
+/* DHL-Logo "Zustellung durch" (Originaldateien von DHL Group Brand Services, Freigabe
+   17.11.2026): unveraendert, nur proportional skaliert, mindestens 100 px breit, rundum
+   eine Schutzzone von 1/7 der Logobreite (120 px -> 18 px). Dunkle Ansicht: weisse
+   Schrift, weisse Ansicht: schwarze Schrift. */
+.footer__versand, .dhl-logo { padding: 18px; display: flex; }
+.dhl-zd { display: block; width: 120px; min-width: 100px; height: auto; }
+.dhl-zd--hell { display: none; }
+:root[data-theme="hell"] .dhl-zd--dunkel { display: none; }
+:root[data-theme="hell"] .dhl-zd--hell { display: block; }
+.footer__versand { margin-left: -18px; }
+.dhl-logo--info { margin: 2px 0 0 -18px; }
+@media (min-width: 900px) {
+  #appShell .footer {
+    grid-template-areas:
+      "nl nl nl nl"
+      "nav nav nav nav"
+      "dhl dhl dhl dhl"
+      "wid legal stamp cart";
+  }
+  #appShell .footer__versand { grid-area: dhl; margin-bottom: 12px; }
+}
+/* DHL-Logo in den schlichten Fusszeilen (Kasse, Konto, Widerruf, Newsletter).
+   Freigabe DHL Group Brand Services: unveraendert, min. 100 px, Schutzzone >= 1/7 Breite (18 px). */
+.fuss-dhl { flex-basis: 100%; display: flex; justify-content: inherit; padding: 18px 18px 18px 2px; }
+.kasse-fuss .fuss-dhl { padding: 18px; }

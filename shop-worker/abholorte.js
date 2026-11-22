@@ -1,12 +1,27 @@
 // DHL-Abholorte fuer die Kasse: Packstationen, Postfilialen und Paketshops
-// in der Naehe der eingegebenen Adresse (DHL Unified Location Finder).
+// in der Naehe der eingegebenen PLZ.
 //
 //   GET /versand/abholorte?plz=63739&strasse=Nelseestrasse%2025
 //
+// Quelle im Normalfall: OpenStreetMap (abholorte-osm.js, ODbL) - eingelesen
+// vom Cron, die Suche selbst fragt nur D1 (Mitte der PLZ, naechste Orte; die
+// Strasse bleibt dabei unbenutzt). Die Antwort traegt dann quelle: "osm" und
+// den Quellenvermerk, den die Kasse unter Liste und Karte zeigt. Den DHL
+// Unified Location Finder fragt die Suche nur mit DHL_STANDORTSUCHE = "an"
+// (siehe unten); ohne beides: ABHOLORTE_NICHT_EINGERICHTET.
+//
 // Der Schluessel (DHL_PRIVAT_API_KEY, App "Disorder119 Shop") bleibt auf dem
-// Server. DHL erlaubt der App 500 Abfragen am Tag - deshalb wird jede
-// Antwort je PLZ und Strasse einen Tag zwischengespeichert. An DHL gehen nur
-// PLZ und Strasse, nie Name oder E-Mail der Kundin.
+// Server. An DHL gehen nur PLZ und Strasse, nie Name oder E-Mail der Kundin.
+//
+// Nutzungsbedingungen (Inhaber 05.11.2026: "nur, was erlaubt ist"): Die
+// Location-Finder-Bedingungen verbieten, Standortdaten in irgendeiner Form zu
+// speichern, und sehen die Anzeige nur zusammen mit Standorten anderer
+// Paketdienste vor (developer.dhl.com/api-reference/location-finder). Deshalb
+// gibt es keinen Zwischenspeicher mehr, und die Suche ist aus, solange
+// DHL_STANDORTSUCHE nicht "an" ist (erst nach schriftlicher Freigabe durch DHL).
+// Ohne Suche gibt die Kundin Nummer, PLZ und Ort selbst ein (Kasse: "Nummer
+// selbst eingeben", mit Link zur DHL-Standortsuche) - Packstation und Filiale
+// bleiben damit moeglich.
 //
 // Dazu die Pruefung beim Bestellen: Wer an eine Packstation oder Filiale
 // bestellt, schickt Nummer, PLZ und Ort des Abholorts und die DHL-Postnummer.
@@ -19,10 +34,14 @@ import { bundeslandZurPlz } from "./adresse.js";
 import { landAusSchluessel, luftbildFuer } from "./karte.js";
 import { kontingentBelegen } from "./kontingent.js";
 import { anschlussVonIp, ipPepper } from "./privacy-security.js";
+import { OSM_QUELLENVERMERK, osmAbholorteSuchen } from "./abholorte-osm.js";
 
 const FINDER = "https://api.dhl.com/location-finder/v1/find-by-address";
-const CACHE_SEKUNDEN = 24 * 60 * 60;
 const MAX_ORTE = 15;
+
+export function standortsucheAktiv(env = {}) {
+  return String(env?.DHL_STANDORTSUCHE || "").trim().toLowerCase() === "an";
+}
 const OEFFENTLICHE_ORIGINS = Object.freeze([
   "https://disorder119.com",
   "https://www.disorder119.com",
@@ -109,29 +128,7 @@ function anfrageAus(url) {
   return { plz, strasse };
 }
 
-async function cacheLesen(schluessel) {
-  try {
-    if (typeof caches === "undefined" || !caches.default) return null;
-    const treffer = await caches.default.match(schluessel);
-    return treffer ? await treffer.json() : null;
-  } catch {
-    return null;
-  }
-}
-
-async function cacheSchreiben(schluessel, daten) {
-  try {
-    if (typeof caches === "undefined" || !caches.default) return;
-    await caches.default.put(schluessel, new Response(JSON.stringify(daten), {
-      headers: { "Content-Type": "application/json", "Cache-Control": `max-age=${CACHE_SEKUNDEN}` },
-    }));
-  } catch {
-    // Ohne Zwischenspeicher geht es auch - nur mit mehr Abfragen bei DHL.
-  }
-}
-
-// DHL erlaubt 500 Abfragen am Tag. Damit niemand das Kontingent mit immer
-// neuen Strassennamen leerfragt (der Zwischenspeicher gilt je PLZ + Strasse):
+// DHL erlaubt 500 Abfragen am Tag. Damit niemand das Kontingent leerfragt:
 // je Anschluss hoechstens 40 DHL-Abfragen am Tag, insgesamt 300 (Luft fuer
 // die Kasse und eigene Tests bis zur DHL-Grenze von 500). Faellt die
 // Zaehlung aus, wird gefragt wie bisher.
@@ -153,11 +150,10 @@ async function sha256Hex(text) {
   return Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Jede Suche fragt DHL neu - die Antwort geht direkt an die Kasse und wird
+// nirgends gespeichert (Location-Finder-Bedingungen, siehe oben).
 export async function abholorteSuchen(env, { plz, strasse }, { kontingent = null } = {}) {
-  if (!env?.DHL_PRIVAT_API_KEY) throw new AbholortError("ABHOLORTE_NICHT_EINGERICHTET", 503);
-  const schluessel = `https://abholorte.disorder119.intern/v1/${plz}/${encodeURIComponent(strasse.toLowerCase())}`;
-  const vorhanden = await cacheLesen(schluessel);
-  if (vorhanden) return vorhanden;
+  if (!env?.DHL_PRIVAT_API_KEY || !standortsucheAktiv(env)) throw new AbholortError("ABHOLORTE_NICHT_EINGERICHTET", 503);
   if (typeof kontingent === "function" && !(await kontingent())) throw new AbholortError("DHL_LIMIT", 503);
   const query = new URLSearchParams({ countryCode: "DE", postalCode: plz, limit: "50", radius: "5000" });
   if (strasse) query.set("streetAddress", strasse);
@@ -169,16 +165,23 @@ export async function abholorteSuchen(env, { plz, strasse }, { kontingent = null
   }
   if (res.status === 401 || res.status === 403) throw new AbholortError("DHL_ZUGANG_ABGELEHNT", 502);
   if (res.status === 429) throw new AbholortError("DHL_LIMIT", 503);
-  if (res.status === 404) {
-    // DHL meldet "keine Treffer" als 404.
-    const leer = { orte: [] };
-    await cacheSchreiben(schluessel, leer);
-    return leer;
-  }
+  // DHL meldet "keine Treffer" als 404.
+  if (res.status === 404) return { orte: [] };
   if (!res.ok) throw new AbholortError("DHL_FEHLER", 502);
-  const daten = { orte: abholorteAus(await res.json().catch(() => ({}))) };
-  await cacheSchreiben(schluessel, daten);
-  return daten;
+  return { orte: abholorteAus(await res.json().catch(() => ({}))) };
+}
+
+// Welche Quelle antwortet: DHL nur mit Freigabe (DHL_STANDORTSUCHE = "an",
+// unveraendert wie oben), sonst die eingelesenen OpenStreetMap-Daten. Gibt es
+// fuer die PLZ noch keine, gibt die Kundin die Nummer selbst ein.
+async function abholorteFinden(env, anfrage, anschluss) {
+  if (env?.DHL_PRIVAT_API_KEY && standortsucheAktiv(env)) {
+    return abholorteSuchen(env, anfrage, { kontingent: () => dhlKontingent(env, anschluss) });
+  }
+  const osm = await osmAbholorteSuchen(env, anfrage.plz);
+  if (!osm) throw new AbholortError("ABHOLORTE_NICHT_EINGERICHTET", 503);
+  // bezug: "plz" - entfernungM zaehlt ab der Mitte des PLZ-Gebiets, nicht ab der Haustuer.
+  return { orte: osm.orte, quelle: "osm", quellenvermerk: OSM_QUELLENVERMERK, bezug: "plz" };
 }
 
 // ------------------------------------------------------------------ Bestellung
@@ -260,7 +263,7 @@ export async function handleAbholorte(request, env, url, reqId = crypto.randomUU
       if (r && r.success === false) throw new AbholortError("RATE_LIMITED", 429);
     }
     const anfrage = anfrageAus(url);
-    const daten = await abholorteSuchen(env, anfrage, { kontingent: () => dhlKontingent(env, anschluss) });
+    const daten = await abholorteFinden(env, anfrage, anschluss);
     // luftbild: { land, quelle } fuer die amtlichen Luftbilder des Bundeslands
     // der gesuchten PLZ (karte.js) - oder false, dann nur die Strassenkarte.
     const luftbild = daten.orte.length ? luftbildFuer(landAusSchluessel(await bundeslandZurPlz(env, anfrage.plz))) : false;

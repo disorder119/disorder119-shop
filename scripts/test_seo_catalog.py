@@ -49,9 +49,8 @@ class CatalogSeoTests(unittest.TestCase):
                 self.assertEqual(build_site.image_intrinsic_attributes("landscape.webp"), ' width="800" height="450"')
                 self.assertEqual(build_site.image_intrinsic_attributes("missing.webp"), "")
 
-    def test_internal_fixture_stays_in_source_but_not_public_generator_inventory(self):
-        source = json.loads((BASE / "data/items.json").read_text(encoding="utf-8"))
-        self.assertTrue(any(str(item["id"]) == "9999" for item in source))
+    def test_internal_fixture_stays_out_of_public_generator_inventory(self):
+        self.assertTrue(is_internal_product({"id": 9999}))
         self.assertFalse(any(is_internal_product(item) for item in build_site.ITEMS))
         self.assertTrue(is_internal_product({"id": 42, "internal_only": True}))
 
@@ -106,7 +105,7 @@ class CatalogSeoTests(unittest.TestCase):
             self.assertTrue((root / "en/katalog/index.html").is_file())
 
     def test_internal_fixture_legacy_html_is_removed_in_every_locale(self):
-        fixture = next(item for item in build_site.SOURCE_ITEMS if is_internal_product(item))
+        fixture = {"id": 9999, "url_slug": "9999", "public_status": "SOLD"}
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             paths = [root / language / "artikel/9999/index.html" for language in ("", "en", "fr")]

@@ -20,6 +20,10 @@ import datetime
 import hashlib
 import html
 import json
+from urllib.parse import quote
+import os
+import time
+import random
 import re
 import sys
 from pathlib import Path
@@ -36,8 +40,16 @@ from seo_text import compose_description, distinct_metadata_name, is_internal_pr
 # scripts/repair_public_article_integrity.py.
 from english_titles import english_description, english_title, farbe_en  # noqa: E402
 from french_titles import french_color, french_description, french_title  # noqa: E402
+# Strukturierte Produktbeschreibung (Schlagzeilen, Hook, Fakten, Klappleisten,
+# Puppenmasse) aus dem vorhandenen Beschreibungstext - beschreibung.py.
+import beschreibung  # noqa: E402
 # Beschriftungen aus der I18N-Tabelle von assets/app.js (Startseite /en/, /fr/).
 from app_i18n import app_text  # noqa: E402
+from aehnliche_teile import aehnliche_teile  # noqa: E402
+# Markenseiten /marke/<slug>/ und /marken/ (scripts/markenseiten.py).
+import markenseiten  # noqa: E402
+# Kategorieseiten /damen/, /herren/ und /damen/<kategorie>/ (scripts/kategorieseiten.py).
+import kategorieseiten  # noqa: E402
 SITE_URL = "https://disorder119.com/"
 DATA_PATH = BASE / "data" / "items.json"
 
@@ -81,7 +93,7 @@ PWA_JS_VERSION = _asset_version("assets/pwa.js")
 # before it can paint the already-preloaded hero image. Keep only the stable
 # shell geometry inline; the complete shared stylesheets are still cached and
 # applied immediately afterwards.
-PRODUCT_CRITICAL_CSS = """:root{--ink:#000;--paper:#f2efe7;--rule:rgba(242,239,231,.14);--rule-strong:rgba(242,239,231,.28);--text-muted:rgba(242,239,231,.58);--surface:#121212;color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;padding:0;overflow-x:hidden}body{background:#000;color:#f2efe7;font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}a{color:inherit}.page-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--rule)}.page-head__brand{font-family:"Helvetica Neue Condensed","Arial Narrow",Helvetica,Arial,sans-serif;font-weight:800;text-transform:uppercase;font-size:1.3rem;letter-spacing:-.01em;text-decoration:none}.page-head__right,.lang-switch{display:flex;align-items:center}.page-head__right{gap:12px}.lang-switch{gap:2px;border:1px solid var(--rule-strong)}.lang-switch__btn{display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;text-decoration:none}.page-head__back{display:none!important}.page-head__menu{display:none}.article-sequence-nav{max-width:1240px;margin:16px auto 0;padding:0 clamp(20px,5vw,48px);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px}.article-sequence-nav__link{min-height:38px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap}.article-sequence-nav__link--prev{justify-self:start}.article-sequence-nav__link--archive{justify-self:center}.article-sequence-nav__link--next{justify-self:end}.product{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:clamp(24px,4vw,56px);max-width:1240px;margin:0 auto;padding:clamp(20px,3vw,40px) clamp(20px,5vw,48px) 60px}.gallery,.info{min-width:0}.gallery{position:sticky;top:16px;align-self:start}.gallery__stage{position:relative;background:#121212;aspect-ratio:3/4;overflow:hidden}.gallery__stage img{width:100%;height:100%;object-fit:contain;display:block;background:#121212}.gallery__nav{position:absolute;top:50%;transform:translateY(-50%)}.gallery__nav--prev{left:10px}.gallery__nav--next{right:10px}.gallery__counter{position:absolute;right:10px;bottom:10px}.gallery__badge{position:absolute;left:10px;top:10px}.gallery__thumbs{display:flex;gap:8px;margin-top:10px;overflow-x:auto}.gallery__thumbs--reserved{min-height:84px}@media(max-width:860px){.page-head{position:relative;min-height:74px;padding:14px 16px;gap:8px}.page-head__menu{width:38px;height:38px;flex:0 0 38px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-decoration:none}.page-head__menu span{display:block;width:22px;height:1px;background:currentColor}.page-head__brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;font-size:.7rem;line-height:1;letter-spacing:.01em;white-space:nowrap}.page-head__right{margin-left:auto;justify-content:flex-end;flex-wrap:nowrap!important;gap:7px}.lang-switch{gap:2px}.lang-switch__btn{width:32px;height:32px;flex:0 0 32px;padding:0;font-size:.59rem}.page-head__cart{position:relative;width:34px;height:34px;flex:0 0 34px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:0}.page-head__cart>span:first-child{display:none}.article-sequence-nav{max-width:none;width:auto;margin:0;padding:0 16px;min-height:58px;grid-template-columns:1fr auto 1fr;gap:0;border-bottom:1px solid rgba(242,239,231,.18)}.article-sequence-nav__link{min-width:0;min-height:58px;padding:0 10px}.article-sequence-nav__link--archive{padding-left:22px;padding-right:22px;border-left:1px solid rgba(242,239,231,.16);border-right:1px solid rgba(242,239,231,.16)}.product{grid-template-columns:1fr;gap:22px;padding:12px 16px 48px}.gallery{position:static}.gallery__stage{border:0}.gallery__thumbs--reserved{min-height:100px}}@media(max-width:380px){.page-head{padding-left:12px;padding-right:12px}.page-head__menu{width:34px;flex-basis:34px}.page-head__brand{font-size:.68rem}.page-head__right{gap:5px}.lang-switch__btn{width:30px;height:30px;flex-basis:30px}.page-head__cart{width:31px;height:31px;flex-basis:31px}.article-sequence-nav{padding:0 12px}.article-sequence-nav__link{padding:0 6px}.article-sequence-nav__link--archive{padding-left:12px;padding-right:12px}.product{padding-left:12px;padding-right:12px}}"""
+PRODUCT_CRITICAL_CSS = """:root{--ink:#000;--paper:#f2efe7;--rule:rgba(242,239,231,.14);--rule-strong:rgba(242,239,231,.28);--text-muted:rgba(242,239,231,.58);--surface:#121212;color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;padding:0;overflow-x:hidden}body{background:#000;color:#f2efe7;font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}a{color:inherit}.page-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--rule)}.page-head__brand{font-family:"Helvetica Neue Condensed","Arial Narrow",Helvetica,Arial,sans-serif;font-weight:800;text-transform:uppercase;font-size:1.3rem;letter-spacing:-.01em;text-decoration:none}.page-head__right,.lang-switch{display:flex;align-items:center}.page-head__right{gap:12px}.lang-switch{gap:2px;border:1px solid var(--rule-strong)}.lang-switch__btn{display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;text-decoration:none}.page-head__back{display:none!important}.page-head__menu{display:none}.article-sequence-nav{max-width:1240px;margin:16px auto 0;padding:0 clamp(20px,5vw,48px);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px}.article-sequence-nav__link{min-height:38px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap}.article-sequence-nav__link--prev{justify-self:start}.article-sequence-nav__link--archive{justify-self:center}.article-sequence-nav__link--next{justify-self:end}.product{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:clamp(24px,4vw,56px);max-width:1240px;margin:0 auto;padding:clamp(20px,3vw,40px) clamp(20px,5vw,48px) 60px}.gallery,.info{min-width:0}.gallery{position:sticky;top:16px;align-self:start}.gallery__stage{position:relative;background:#121212;aspect-ratio:3/4;overflow:hidden}.gallery__stage img{width:100%;height:100%;object-fit:contain;display:block;background:#121212}.gallery__nav{position:absolute;top:50%;transform:translateY(-50%)}.gallery__nav--prev{left:10px}.gallery__nav--next{right:10px}.gallery__counter{position:absolute;right:10px;bottom:10px}.gallery__badge{position:absolute;left:10px;top:10px}.gallery__thumbs{display:flex;gap:8px;margin-top:10px;overflow-x:auto}.gallery__thumbs--reserved{min-height:84px}@media(max-width:860px){.page-head{position:relative;min-height:74px;padding:14px 16px;gap:8px}.page-head__menu{width:38px;height:38px;flex:0 0 38px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-decoration:none}.page-head__menu span{display:block;width:22px;height:1px;background:currentColor}.page-head__brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;font-size:.7rem;line-height:1;letter-spacing:.01em;white-space:nowrap}.page-head__right{margin-left:auto;justify-content:flex-end;flex-wrap:nowrap!important;gap:7px}.lang-switch{gap:2px}.lang-switch__btn{width:32px;height:32px;flex:0 0 32px;padding:0;font-size:.59rem}.page-head__cart{position:relative;width:34px;height:34px;flex:0 0 34px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:0}.page-head__cart>span:first-child{display:none}.article-sequence-nav{max-width:none;width:auto;margin:0;padding:0 16px;min-height:58px;grid-template-columns:1fr auto 1fr;gap:0;border-bottom:1px solid rgba(242,239,231,.18)}.article-sequence-nav__link{min-width:0;min-height:58px;padding:0 10px}.article-sequence-nav__link--archive{padding-left:22px;padding-right:22px;border-left:1px solid rgba(242,239,231,.16);border-right:1px solid rgba(242,239,231,.16)}.product{grid-template-columns:1fr;gap:22px;padding:12px 16px 48px}.gallery{position:static}.gallery__stage{border:0}.gallery__thumbs--reserved{min-height:100px}}@media(max-width:380px){.page-head{padding-left:12px;padding-right:12px}.page-head__menu{width:34px;flex-basis:34px}.page-head__brand{font-size:.68rem}.page-head__right{gap:5px}.lang-switch__btn{width:30px;height:30px;flex-basis:30px}.page-head__cart{width:31px;height:31px;flex-basis:31px}.article-sequence-nav{padding:0 12px}.article-sequence-nav__link{padding:0 6px}.article-sequence-nav__link--archive{padding-left:12px;padding-right:12px}.product{padding-left:16px;padding-right:16px}}"""
 PRODUCT_CRITICAL_CSS += "@media(max-width:860px){.lang-switch__btn{width:26px;flex-basis:26px}}"
 PRODUCT_CRITICAL_CSS += ":root[data-theme=hell]{--ink:#fff;--paper:#151514;--rule:rgba(21,21,20,.12);--rule-strong:rgba(21,21,20,.26);--surface:#f3f2ef;color-scheme:light}:root[data-theme=hell] body{background:#fff;color:#151514}:root[data-theme=hell] .gallery__stage,:root[data-theme=hell] .gallery__stage img{background:#fff}"
 PRODUCT_CRITICAL_CSS += ".gallery__stage>picture{display:block;width:100%;height:100%}"
@@ -213,7 +225,7 @@ META_PHRASES = {
         "tail_suffix": ". Aus dem kuratierten Second-Hand-Archiv von Disorder119.",
         "auto_suffix": ". Aus dem kuratierten Archiv von Disorder119.",
         "home_title": "Designer Second Hand & Vintage Mode | Disorder119",
-        "home_desc": "Kuratiertes Designer-Second-Hand-Archiv mit Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 und mehr. Einzelstücke, individuell fotografiert und archiviert.",
+        "home_desc": "Vintage Archive Shop für Designer-Mode aus zweiter Hand: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 und mehr. Jedes Teil nur 1× verfügbar, individuell fotografiert.",
     },
     "en": {
         "sold": "{name} – already sold, part of the curated Disorder119 archive for designer and vintage fashion.",
@@ -222,7 +234,7 @@ META_PHRASES = {
         "tail_suffix": ". From the curated second-hand archive of Disorder119.",
         "auto_suffix": ". From the curated archive of Disorder119.",
         "home_title": "Pre-Owned Designer & Vintage Fashion | Disorder119",
-        "home_desc": "Curated archive of pre-owned designer fashion including Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 and more. One-off pieces, individually photographed and archived.",
+        "home_desc": "Vintage archive shop for pre-owned designer fashion: Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 and more. Each piece available only once, individually photographed.",
     },
     "fr": {
         "sold": "{name} – déjà vendu, fait partie de l'archive sélectionnée Disorder119 pour la mode de créateurs et vintage.",
@@ -231,7 +243,7 @@ META_PHRASES = {
         "tail_suffix": ". Issu de l'archive seconde main sélectionnée de Disorder119.",
         "auto_suffix": ". Issu de l'archive sélectionnée de Disorder119.",
         "home_title": "Mode Designer Seconde Main & Vintage | Disorder119",
-        "home_desc": "Archive sélectionnée de mode de créateurs de seconde main avec Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 et plus. Pièces uniques, photographiées individuellement et archivées.",
+        "home_desc": "Vintage archive shop de mode de créateurs de seconde main : Prada, Dior, Jean Paul Gaultier, Yves Saint Laurent, Y-3 et plus. Chaque pièce disponible une seule fois, photographiée individuellement.",
     },
 }
 
@@ -274,14 +286,14 @@ LEGAL_CONTENT_HTML = json.loads((BASE / "config/legal-content.json").read_text(e
 
 INFO_CONTENT_HTML = {
     "aboutHtml": {
-        "de": '<h2>Über Disorder119</h2><p>DISORDER119 ist ein unabhängig geführtes, kuratiertes Archiv für ausgewählte Designer-, Vintage- und Contemporary-Pieces mit Fokus auf Qualität, Authentizität und Zeitlosigkeit.</p><h3>Auswahl &amp; Dokumentation</h3><p>Jedes angebotene Stück wird einzeln ausgewählt, fotografiert und beschrieben. Da es sich überwiegend um gebrauchte Einzelstücke handelt, werden Zustand und erkennbare Besonderheiten nach bestem Wissen dokumentiert. Wenn zu einem Artikel Angaben fehlen oder du zusätzliche Detailfotos oder Maße brauchst, klären wir das vor dem Kauf.</p><h3>Transparent einkaufen</h3><p>Disorder119 ist ein Einzelunternehmen aus Deutschland. Anbieterangaben, Widerrufsbelehrung, Gewährleistungsinformationen und Datenschutz findest du jederzeit in Impressum, AGB und Datenschutz.</p>',
-        "en": '<h2>About Disorder119</h2><p>DISORDER119 is an independently run, curated archive of selected designer, vintage and contemporary pieces with a focus on quality, authenticity and timelessness.</p><h3>Selection &amp; documentation</h3><p>Every listed piece is individually selected, photographed and described. As most pieces are pre-owned one-offs, condition and visible characteristics are documented to the best of our knowledge. If information is missing or you need additional detail photos or measurements, we clarify this before purchase.</p><h3>Transparent shopping</h3><p>Disorder119 is a sole proprietorship based in Germany. Seller information, withdrawal instructions, statutory warranty information and privacy details are available at all times in the legal notice, terms and privacy policy.</p>',
-        "fr": '<h2>À propos de Disorder119</h2><p>DISORDER119 est une archive indépendante et sélectionnée de pièces de créateurs, vintage et contemporaines, axée sur la qualité, l’authenticité et l’intemporalité.</p><h3>Sélection &amp; documentation</h3><p>Chaque pièce proposée est sélectionnée, photographiée et décrite individuellement. La plupart étant des pièces uniques d’occasion, leur état et leurs particularités visibles sont documentés au mieux de notre connaissance. Si une information manque ou si tu souhaites des photos de détail ou des mesures supplémentaires, nous clarifions cela avant l’achat.</p><h3>Achat transparent</h3><p>Disorder119 est une entreprise individuelle basée en Allemagne. Les informations vendeur, le droit de rétractation, les droits de garantie légaux et les informations de confidentialité sont disponibles à tout moment dans les mentions légales, les CGV et la politique de confidentialité.</p>',
+        "de": '<h2>Über Disorder119</h2><p>DISORDER119 ist ein unabhängig geführtes, kuratiertes Archiv für ausgewählte Designer-, Vintage- und Contemporary-Pieces mit Fokus auf Qualität, Authentizität und Zeitlosigkeit.</p><h3>Auswahl &amp; Dokumentation</h3><p>Jedes angebotene Stück wird einzeln ausgewählt, fotografiert und beschrieben. Da es sich überwiegend um gebrauchte Teile handelt, werden Zustand und erkennbare Besonderheiten nach bestem Wissen dokumentiert. Wenn zu einem Artikel Angaben fehlen oder du zusätzliche Detailfotos oder Maße brauchst, klären wir das vor dem Kauf.</p><h3>Transparent einkaufen</h3><p>Disorder119 ist ein Einzelunternehmen aus Deutschland. Anbieterangaben, Widerrufsbelehrung, Gewährleistungsinformationen und Datenschutz findest du jederzeit in Impressum, AGB und Datenschutz.</p>',
+        "en": '<h2>About Disorder119</h2><p>DISORDER119 is an independently run, curated archive of selected designer, vintage and contemporary pieces with a focus on quality, authenticity and timelessness.</p><h3>Selection &amp; documentation</h3><p>Every listed piece is individually selected, photographed and described. As most pieces are pre-owned, condition and visible characteristics are documented to the best of our knowledge. If information is missing or you need additional detail photos or measurements, we clarify this before purchase.</p><h3>Transparent shopping</h3><p>Disorder119 is a sole proprietorship based in Germany. Seller information, withdrawal instructions, statutory warranty information and privacy details are available at all times in the legal notice, terms and privacy policy.</p>',
+        "fr": '<h2>À propos de Disorder119</h2><p>DISORDER119 est une archive indépendante et sélectionnée de pièces de créateurs, vintage et contemporaines, axée sur la qualité, l’authenticité et l’intemporalité.</p><h3>Sélection &amp; documentation</h3><p>Chaque pièce proposée est sélectionnée, photographiée et décrite individuellement. La plupart étant des pièces d’occasion, leur état et leurs particularités visibles sont documentés au mieux de notre connaissance. Si une information manque ou si tu souhaites des photos de détail ou des mesures supplémentaires, nous clarifions cela avant l’achat.</p><h3>Achat transparent</h3><p>Disorder119 est une entreprise individuelle basée en Allemagne. Les informations vendeur, le droit de rétractation, les droits de garantie légaux et les informations de confidentialité sont disponibles à tout moment dans les mentions légales, les CGV et la politique de confidentialité.</p>',
     },
     "faqHtml": {
-        "de": '<h2>FAQ</h2><h3>Sind alle Artikel Einzelstücke?</h3><p>Ja. Alle verfügbaren Artikel sind kuratierte Einzelstücke. Deshalb kann ein Artikel nach Verkauf nicht erneut bestellt werden.</p><h3>Wie funktioniert eine Bestellung?</h3><p>Lege verfügbare Artikel in den Warenkorb und sende die Bestellanfrage über die angebotene Kontaktmöglichkeit. Die Anfrage ist zunächst unverbindlich. Verfügbarkeit, Gesamtpreis, Zahlungsart und Versand werden bestätigt; erst mit dieser Bestätigung kommt der Kaufvertrag zustande.</p><h3>Was kostet der Versand?</h3><p>Das hängt von Paketgröße und Versandart ab: Standard ist der günstigste Paketdienst mit Lieferung an die Haustür (meist 2 Werktage), Express kommt in der Regel am nächsten Werktag, soweit angeboten. Shirts, Tops und Accessoires gehen im kleinen Paket, Jacken, Hosen, Kleider und Schuhe im mittleren, Mäntel, Stiefel oder mehrere Teile im großen. Den genauen Betrag siehst du im Warenkorb und vor dem Kaufknopf. Versand ins Ausland und Abholung klären wir individuell.</p><h3>Sind die Artikel neu?</h3><p>In der Regel nicht. Disorder119 ist ein Designer-, Vintage- und Second-Hand-Archiv. Zustand und erkennbare Besonderheiten werden nach bestem Wissen in den Produktangaben beschrieben.</p><h3>Was ist, wenn Angaben wie Größe, Zustand oder Maße fehlen?</h3><p>Dann solltest du vor dem Kauf nachfragen. Zusätzliche Maße, Detailfotos und produktbezogene Informationen können vor Vertragsabschluss geklärt werden.</p><h3>Wie wird mit Authentizität umgegangen?</h3><p>Authentizität ist Teil des Auswahlfokus von Disorder119. Eine Prüfung oder Zertifizierung durch den jeweiligen Markenhersteller oder einen externen Authentifizierungsdienst wird jedoch nur dann zugesichert, wenn dies beim konkreten Artikel ausdrücklich angegeben ist. Bei Fragen können zusätzliche Detailfotos angefragt werden.</p><h3>Kann ich widerrufen und welche Gewährleistung gilt?</h3><p>Für Verbraucher:innen gilt das gesetzliche 14-tägige Widerrufsrecht. Am einfachsten widerrufst du über <a href="/widerruf/">Vertrag widerrufen</a> – du bekommst sofort eine Eingangsbestätigung per E-Mail und die Anleitung zur Rücksendung. Außerdem gelten die gesetzlichen Gewährleistungsrechte. Die vollständigen Bedingungen und die Widerrufsbelehrung findest du in den AGB.</p><h3>Wie werden meine Daten behandelt?</h3><p>Die Website verwendet keine Analyse-, Marketing- oder Tracking-Cookies. Warenkorb und Outfit-Baukasten werden lokal im Browser gespeichert. Details findest du in der Datenschutzerklärung.</p><h3>Warum bleiben verkaufte Artikel sichtbar?</h3><p>Verkaufte Pieces bleiben als Teil des DISORDER119-Archivs sichtbar und sind eindeutig als verkauft gekennzeichnet.</p>',
-        "en": '<h2>FAQ</h2><h3>Is every item one of a kind?</h3><p>Yes. Every available item is a curated one-off piece, so an item cannot be ordered again once sold.</p><h3>How do orders work?</h3><p>Add available pieces to the cart and send an order enquiry through the available contact method. The enquiry is initially non-binding. Availability, total price, payment method and shipping are confirmed; the purchase contract is only formed with that confirmation.</p><h3>What does shipping cost?</h3><p>It depends on the parcel size and the service: standard is the cheapest carrier with home delivery (usually 2 working days), express usually arrives the next working day where offered. Shirts, tops and accessories go in a small parcel, jackets, trousers, dresses and shoes in a medium one, coats, boots or several pieces in a large one. You see the exact amount in the cart and before the buy button. International shipping and pickup are arranged individually.</p><h3>Are the items new?</h3><p>Usually not. Disorder119 is a designer, vintage and second-hand archive. Condition and visible characteristics are described in the product information to the best of our knowledge.</p><h3>What if size, condition or measurements are missing?</h3><p>Please ask before purchasing. Additional measurements, detail photos and product-specific information can be clarified before the contract is concluded.</p><h3>How is authenticity handled?</h3><p>Authenticity is part of Disorder119’s selection focus. Authentication or certification by the respective brand or an external authentication service is only promised when this is explicitly stated for the specific item. Additional detail photos can be requested if needed.</p><h3>Can I withdraw and what warranty applies?</h3><p>Consumers have the statutory 14-day right of withdrawal. The easiest way is <a href="/en/widerruf/">Withdraw from contract here</a> – you immediately receive an acknowledgement of receipt by email and the return instructions. Statutory warranty rights also apply. Full terms and withdrawal instructions are available in the terms and conditions.</p><h3>How is my data handled?</h3><p>The website does not use analytics, marketing or tracking cookies. The cart and outfit builder are stored locally in your browser. See the privacy policy for details.</p><h3>Why do sold pieces remain visible?</h3><p>Sold pieces remain visible as part of the DISORDER119 archive and are clearly marked as sold.</p>',
-        "fr": '<h2>FAQ</h2><h3>Chaque article est-il unique ?</h3><p>Oui. Chaque article disponible est une pièce unique sélectionnée ; une fois vendu, il ne peut donc pas être commandé une seconde fois.</p><h3>Comment commander ?</h3><p>Ajoute les articles disponibles au panier et envoie une demande de commande via le moyen de contact proposé. La demande est d’abord sans engagement. La disponibilité, le prix total, le mode de paiement et l’expédition sont confirmés ; le contrat de vente n’est conclu qu’avec cette confirmation.</p><h3>Combien coûte la livraison ?</h3><p>Cela dépend de la taille du colis et du mode d\'envoi : le standard est le transporteur le moins cher avec livraison à domicile (généralement 2 jours ouvrés), l\'express arrive en général le jour ouvré suivant, si proposé. T-shirts, tops et accessoires partent en petit colis, vestes, pantalons, robes et chaussures en colis moyen, manteaux, bottes ou plusieurs pièces en grand colis. Le montant exact est indiqué dans le panier et avant le bouton d\'achat. Les envois à l\'étranger et le retrait sur place sont convenus individuellement.</p><h3>Les articles sont-ils neufs ?</h3><p>En général non. Disorder119 est une archive de créateurs, vintage et seconde main. L’état et les particularités visibles sont décrits au mieux de notre connaissance dans les informations produit.</p><h3>Que faire si la taille, l’état ou les mesures manquent ?</h3><p>Merci de demander avant l’achat. Des mesures, photos de détail et informations spécifiques supplémentaires peuvent être clarifiées avant la conclusion du contrat.</p><h3>Comment l’authenticité est-elle traitée ?</h3><p>L’authenticité fait partie des critères de sélection de Disorder119. Une authentification ou certification par la marque concernée ou un service externe n’est toutefois garantie que si cela est expressément indiqué pour l’article concerné. Des photos de détail supplémentaires peuvent être demandées.</p><h3>Puis-je me rétracter et quelle garantie s’applique ?</h3><p>Les consommateurs disposent du droit légal de rétractation de 14 jours. Le plus simple : <a href="/fr/widerruf/">Se rétracter du contrat ici</a> – tu reçois immédiatement un accusé de réception par e-mail et les instructions de retour. Les droits de garantie légaux s’appliquent également. Les conditions complètes et les informations de rétractation figurent dans les CGV.</p><h3>Comment mes données sont-elles traitées ?</h3><p>Le site n’utilise aucun cookie d’analyse, de marketing ou de suivi. Le panier et le configurateur de tenues sont enregistrés localement dans le navigateur. Consulte la politique de confidentialité pour les détails.</p><h3>Pourquoi les articles vendus restent-ils visibles ?</h3><p>Les pièces vendues restent visibles dans l’archive DISORDER119 et sont clairement indiquées comme vendues.</p>',
+        "de": '<h2>FAQ</h2><h3>Wie oft gibt es einen Artikel?</h3><p>Jeder Artikel ist nur 1× verfügbar. Nach dem Verkauf kann er deshalb nicht erneut bestellt werden.</p><h3>Wie funktioniert eine Bestellung?</h3><p>Lege verfügbare Artikel in den Warenkorb und sende die Bestellanfrage über die angebotene Kontaktmöglichkeit. Die Anfrage ist zunächst unverbindlich. Verfügbarkeit, Gesamtpreis, Zahlungsart und Versand werden bestätigt; erst mit dieser Bestätigung kommt der Kaufvertrag zustande.</p><h3>Was kostet der Versand?</h3><p>Das hängt von Paketgröße und Versandart ab: Standard ist der günstigste Paketdienst mit Lieferung an die Haustür (meist 2 Werktage), Express kommt in der Regel am nächsten Werktag, soweit angeboten. Shirts, Tops und Accessoires gehen im kleinen Paket, Jacken, Hosen, Kleider und Schuhe im mittleren, Mäntel, Stiefel oder mehrere Teile im großen. Den genauen Betrag siehst du im Warenkorb und vor dem Kaufknopf. Versand ins Ausland und Abholung klären wir individuell.</p><h3>Sind die Artikel neu?</h3><p>In der Regel nicht. Disorder119 ist ein Designer-, Vintage- und Second-Hand-Archiv. Zustand und erkennbare Besonderheiten werden nach bestem Wissen in den Produktangaben beschrieben.</p><h3>Was ist, wenn Angaben wie Größe, Zustand oder Maße fehlen?</h3><p>Dann solltest du vor dem Kauf nachfragen. Zusätzliche Maße, Detailfotos und produktbezogene Informationen können vor Vertragsabschluss geklärt werden.</p><h3>Wie wird mit Authentizität umgegangen?</h3><p>Authentizität ist Teil des Auswahlfokus von Disorder119. Eine Prüfung oder Zertifizierung durch den jeweiligen Markenhersteller oder einen externen Authentifizierungsdienst wird jedoch nur dann zugesichert, wenn dies beim konkreten Artikel ausdrücklich angegeben ist. Bei Fragen können zusätzliche Detailfotos angefragt werden.</p><h3>Kann ich widerrufen und welche Gewährleistung gilt?</h3><p>Für Verbraucher:innen gilt das gesetzliche 14-tägige Widerrufsrecht. Am einfachsten widerrufst du über <a href="/widerruf/">Vertrag widerrufen</a> – du bekommst sofort eine Eingangsbestätigung per E-Mail und die Anleitung zur Rücksendung. Außerdem gelten die gesetzlichen Gewährleistungsrechte. Die vollständigen Bedingungen und die Widerrufsbelehrung findest du in den AGB.</p><h3>Wie werden meine Daten behandelt?</h3><p>Die Website verwendet keine Analyse-, Marketing- oder Tracking-Cookies. Warenkorb und Outfit-Baukasten werden lokal im Browser gespeichert. Details findest du in der Datenschutzerklärung.</p><h3>Warum bleiben verkaufte Artikel sichtbar?</h3><p>Verkaufte Pieces bleiben als Teil des DISORDER119-Archivs sichtbar und sind eindeutig als verkauft gekennzeichnet.</p>',
+        "en": '<h2>FAQ</h2><h3>How many of each item are available?</h3><p>Each item is available only once, so it cannot be ordered again once sold.</p><h3>How do orders work?</h3><p>Add available pieces to the cart and send an order enquiry through the available contact method. The enquiry is initially non-binding. Availability, total price, payment method and shipping are confirmed; the purchase contract is only formed with that confirmation.</p><h3>What does shipping cost?</h3><p>It depends on the parcel size and the service: standard is the cheapest carrier with home delivery (usually 2 working days), express usually arrives the next working day where offered. Shirts, tops and accessories go in a small parcel, jackets, trousers, dresses and shoes in a medium one, coats, boots or several pieces in a large one. You see the exact amount in the cart and before the buy button. International shipping and pickup are arranged individually.</p><h3>Are the items new?</h3><p>Usually not. Disorder119 is a designer, vintage and second-hand archive. Condition and visible characteristics are described in the product information to the best of our knowledge.</p><h3>What if size, condition or measurements are missing?</h3><p>Please ask before purchasing. Additional measurements, detail photos and product-specific information can be clarified before the contract is concluded.</p><h3>How is authenticity handled?</h3><p>Authenticity is part of Disorder119’s selection focus. Authentication or certification by the respective brand or an external authentication service is only promised when this is explicitly stated for the specific item. Additional detail photos can be requested if needed.</p><h3>Can I withdraw and what warranty applies?</h3><p>Consumers have the statutory 14-day right of withdrawal. The easiest way is <a href="/en/widerruf/">Withdraw from contract here</a> – you immediately receive an acknowledgement of receipt by email and the return instructions. Statutory warranty rights also apply. Full terms and withdrawal instructions are available in the terms and conditions.</p><h3>How is my data handled?</h3><p>The website does not use analytics, marketing or tracking cookies. The cart and outfit builder are stored locally in your browser. See the privacy policy for details.</p><h3>Why do sold pieces remain visible?</h3><p>Sold pieces remain visible as part of the DISORDER119 archive and are clearly marked as sold.</p>',
+        "fr": '<h2>FAQ</h2><h3>Combien d’exemplaires de chaque article sont disponibles ?</h3><p>Chaque article n’est disponible qu’une seule fois ; une fois vendu, il ne peut donc pas être commandé une seconde fois.</p><h3>Comment commander ?</h3><p>Ajoute les articles disponibles au panier et envoie une demande de commande via le moyen de contact proposé. La demande est d’abord sans engagement. La disponibilité, le prix total, le mode de paiement et l’expédition sont confirmés ; le contrat de vente n’est conclu qu’avec cette confirmation.</p><h3>Combien coûte la livraison ?</h3><p>Cela dépend de la taille du colis et du mode d\'envoi : le standard est le transporteur le moins cher avec livraison à domicile (généralement 2 jours ouvrés), l\'express arrive en général le jour ouvré suivant, si proposé. T-shirts, tops et accessoires partent en petit colis, vestes, pantalons, robes et chaussures en colis moyen, manteaux, bottes ou plusieurs pièces en grand colis. Le montant exact est indiqué dans le panier et avant le bouton d\'achat. Les envois à l\'étranger et le retrait sur place sont convenus individuellement.</p><h3>Les articles sont-ils neufs ?</h3><p>En général non. Disorder119 est une archive de créateurs, vintage et seconde main. L’état et les particularités visibles sont décrits au mieux de notre connaissance dans les informations produit.</p><h3>Que faire si la taille, l’état ou les mesures manquent ?</h3><p>Merci de demander avant l’achat. Des mesures, photos de détail et informations spécifiques supplémentaires peuvent être clarifiées avant la conclusion du contrat.</p><h3>Comment l’authenticité est-elle traitée ?</h3><p>L’authenticité fait partie des critères de sélection de Disorder119. Une authentification ou certification par la marque concernée ou un service externe n’est toutefois garantie que si cela est expressément indiqué pour l’article concerné. Des photos de détail supplémentaires peuvent être demandées.</p><h3>Puis-je me rétracter et quelle garantie s’applique ?</h3><p>Les consommateurs disposent du droit légal de rétractation de 14 jours. Le plus simple : <a href="/fr/widerruf/">Se rétracter du contrat ici</a> – tu reçois immédiatement un accusé de réception par e-mail et les instructions de retour. Les droits de garantie légaux s’appliquent également. Les conditions complètes et les informations de rétractation figurent dans les CGV.</p><h3>Comment mes données sont-elles traitées ?</h3><p>Le site n’utilise aucun cookie d’analyse, de marketing ou de suivi. Le panier et le configurateur de tenues sont enregistrés localement dans le navigateur. Consulte la politique de confidentialité pour les détails.</p><h3>Pourquoi les articles vendus restent-ils visibles ?</h3><p>Les pièces vendues restent visibles dans l’archive DISORDER119 et sont clairement indiquées comme vendues.</p>',
     },
 }
 
@@ -382,6 +394,10 @@ for _it in ITEMS:
     _alias = BRAND_ALIASES.get(_it.get("brand") or "")
     if _alias:
         _it["brand"] = _alias
+    # Keine "Einzelstück"-Behauptungen im Shop (nur im Speicher, data/items.json bleibt).
+    for _feld in ("desc", "desc_de", "desc_en", "desc_fr"):
+        if isinstance(_it.get(_feld), str):
+            _it[_feld] = beschreibung.ohne_unikat_saetze(_it[_feld])
 
 BY_ID = {it["id"]: it for it in ITEMS}
 
@@ -396,8 +412,7 @@ def fmt_price_de(v):
 
 
 def item_title(it, lang="de"):
-    """Sichtbarer Artikeltitel: im englischen Shop englisch, sonst der
-    gepflegte (deutsche) Titel aus data/items.json."""
+    """Sichtbarer Artikeltitel in der Shop-Sprache, sonst aus data/items.json."""
     if lang == "en":
         return english_title(it)
     if lang == "fr":
@@ -497,11 +512,10 @@ def related_same_brand(it, n=4):
 
 
 def related_same_category(it, exclude_ids, n=4):
-    others = [x for x in ITEMS if x["id"] != it["id"] and x["id"] not in exclude_ids
-              and x.get("gallery") and x["gallery"][0]
-              and x.get("category") == it.get("category")]
-    others.sort(key=lambda x: (x.get("public_status") == "SOLD"))
-    return others[:n]
+    # "AEHNLICHE ARCHIVSTUECKE": Punktewertung nach Produktart, Bereich,
+    # Groesse, Preis, Marke, Farbe (scripts/aehnliche_teile.py) statt der
+    # ersten vier derselben Kategorie.
+    return aehnliche_teile(it, ITEMS, exclude_ids, n)
 
 
 def related_card_html(x, lang):
@@ -731,9 +745,9 @@ def cta_html(it, shop_config, home, lang):
     # 08.10.2026): Der Mietbereich /mieten/ bleibt, /mieten/?item=<id>
     # oeffnet die Anfrage weiter direkt fuer ein Stueck (assets/app.js).
     trust_notes = {
-        "de": "Einzelstück · individuell fotografiert · gesetzliches Widerrufsrecht von 14 Tagen für Verbraucher:innen · gesetzliche Gewährleistungsrechte.",
-        "en": "One-off piece · individually photographed · 14-day statutory withdrawal right for consumers · statutory warranty rights.",
-        "fr": "Pièce unique · photographiée individuellement · droit légal de rétractation de 14 jours pour les consommateurs · droits de garantie légaux.",
+        "de": "Nur 1× verfügbar · gesetzliches Widerrufsrecht von 14 Tagen für Verbraucher:innen · gesetzliche Gewährleistungsrechte.",
+        "en": "Only 1 available · 14-day statutory withdrawal right for consumers · statutory warranty rights.",
+        "fr": "Un seul exemplaire disponible · droit légal de rétractation de 14 jours pour les consommateurs · droits de garantie légaux.",
     }
     # Versandkosten gehoeren vor den Kaufknopf, nicht nur in die AGB (§ 312a
     # BGB, § 6 PAngV). Seit dem Versand ueber Packlink haengen sie an
@@ -770,11 +784,16 @@ def cta_html(it, shop_config, home, lang):
         "fr": " Nous livrons dans tous les pays de l'UE directement via la caisse – ailleurs en Europe et aux États-Unis sur demande.",
     }
     ship_notes = {sprache: text + liefergebiet[sprache] for sprache, text in ship_notes.items()}
-    note_text =trust_notes.get(lang, trust_notes["de"]) + ship_notes.get(lang, ship_notes["de"])
-    parts.append('<p class="info__note">' + esc(note_text) + '</p>')
+    note_text = trust_notes.get(lang, trust_notes["de"]) + ship_notes.get(lang, ship_notes["de"])
+    # Mittelpunkte als eigene Elemente: am Handy je Punkt eine Zeile (article.css info__note-trenner).
+    note_html = esc(note_text).replace(" · ", '<span class="info__note-trenner"> · </span>')
+    parts.append('<p class="info__note">' + note_html + '</p>')
     parts.append(product_data_gap_html(it, lang))
     if not shop_config["whatsappNumber"] and not shop_config["email"]:
         parts.append('<p class="info__config-warning" data-i18n="configWarning">' + esc(ui(lang, "configWarning")) + '</p>')
+    # DHL-Logo (Freigabe DHL Group Brand Services 19.11.2026) - nach dem Block, den
+    # scripts/apply_focus_three_hardening.py als Anker erwartet.
+    parts.append(dhl_logo_html("dhl-logo dhl-logo--info"))
     return "".join(parts)
 
 
@@ -833,12 +852,59 @@ def json_ld(it, lang):
         # Paketgroesse und Versandart und kommt live aus der Kasse; eine feste
         # Zahl koennte bei Google anders aussehen als dort.
         frei_ab = versandkostenfrei_ab_cents()
+        versand_cents = None
         if frei_ab and it["price"] * 100 >= frei_ab:
+            versand_cents = 0
+        else:
+            # Darunter gilt der feste DHL-Preis nach Gewichtsklasse - dieselbe
+            # Zahl wie im Merchant-Feed und in der Kasse (merchant_shipping).
+            try:
+                from merchant_shipping import merchant_shipping_cents
+                versand_cents = merchant_shipping_cents(it, get_shop_config())
+            except Exception:
+                versand_cents = None
+        if versand_cents is not None:
             data["offers"]["shippingDetails"] = {
                 "@type": "OfferShippingDetails",
-                "shippingRate": {"@type": "MonetaryAmount", "value": "0.00", "currency": "EUR"},
+                "shippingRate": {"@type": "MonetaryAmount", "value": f"{versand_cents / 100:.2f}", "currency": "EUR"},
                 "shippingDestination": {"@type": "DefinedRegion", "addressCountry": "DE"},
             }
+        # Jedes Lieferland der Kasse mit seinem Preis und seiner Laufzeit - dieselben
+        # Zahlen wie im Merchant-Feed. Vorher stand hier nur Deutschland: Google legte
+        # die /en/- und /fr/-Seiten als Produkte fuer Belgien, Frankreich, Irland usw.
+        # an und sperrte sie dort wegen fehlender Versandangaben (Merchant Center 14.11.2026).
+        try:
+            from merchant_shipping import merchant_shipping_entries
+            # dieselbe Datei wie der Merchant-Feed (write_merchant_feed)
+            zeilen = merchant_shipping_entries(it, json.loads(SHOP_CONFIG_PATH.read_text(encoding="utf-8")))
+        except Exception:
+            zeilen = []
+        if zeilen:
+            def _tage(von, bis):
+                return {"@type": "QuantitativeValue", "minValue": von, "maxValue": bis, "unitCode": "DAY"}
+            details = []
+            # Laender mit gleichem Preis und gleicher Laufzeit in einem Eintrag (haelt die Seite klein).
+            gruppen = {}
+            for z in zeilen:
+                schluessel = (z["cents"], z["min_handling_time"], z["max_handling_time"], z["min_transit_time"], z["max_transit_time"])
+                gruppen.setdefault(schluessel, []).append(z)
+            for gruppe in gruppen.values():
+                z = gruppe[0]
+                laender = [x["country"] for x in gruppe]
+                eintrag = {
+                    "@type": "OfferShippingDetails",
+                    "shippingRate": {"@type": "MonetaryAmount", "value": f'{z["cents"] / 100:.2f}', "currency": "EUR"},
+                    "shippingDestination": {"@type": "DefinedRegion", "addressCountry": laender[0] if len(laender) == 1 else laender},
+                }
+                lieferzeit = {"@type": "ShippingDeliveryTime",
+                              "handlingTime": _tage(z["min_handling_time"], z["max_handling_time"])}
+                if z["min_transit_time"] is not None:
+                    lieferzeit["transitTime"] = _tage(z["min_transit_time"], z["max_transit_time"])
+                eintrag["deliveryTime"] = lieferzeit
+                details.append(eintrag)
+            data["offers"]["shippingDetails"] = details
+            # Das Widerrufsrecht gilt in jedem Lieferland.
+            data["offers"]["hasMerchantReturnPolicy"]["applicableCountry"] = [z["country"] for z in zeilen]
     return json.dumps(data, ensure_ascii=False)
 
 
@@ -853,16 +919,53 @@ def product_json_ld_tag(it, lang):
     return '<script type="application/ld+json">' + json_ld(it, lang) + "</script>"
 
 
+def _dieses_modul():
+    return sys.modules[__name__]
+
+
+def marken_link(it, lang):
+    """Adresse der Markenseite des Artikels (/marke/<slug>/) - gibt es keine
+    (weniger als markenseiten.MIN_TEILE verfuegbare Teile), wie bisher der
+    Markenfilter des Archivs."""
+    return markenseiten.marken_pfad(_dieses_modul(), it, lang) or (lang_home(lang) + "?brand=" + quote(it.get("brand") or ""))
+
+
+MARKEN_FUSSLINK_TEXT = {"de": "Marken", "en": "Brands", "fr": "Marques"}
+
+
+def marken_fusslink(lang):
+    """Fusszeilen-Link der Bundle-Seiten zur Markenuebersicht (/marken/). Die
+    Kategorie- und Einstiegsseiten (scripts/kategorieseiten.py) verlinkt der Shop
+    bewusst nicht - sie sind nur fuer den Einstieg ueber Suchmaschinen da."""
+    if not markenseiten.marken(_dieses_modul()):
+        return ""
+    return f'<a href="{lang_home(lang)}{markenseiten.UEBERSICHT_SEGMENT}">{MARKEN_FUSSLINK_TEXT[lang]}</a>'
+
+
+def build_markenseiten():
+    markenseiten.build(_dieses_modul())
+
+
+def build_kategorieseiten():
+    kategorieseiten.build(_dieses_modul())
+
+
 def breadcrumb_json_ld(it, lang):
     home_url = SITE_URL.rstrip("/") + lang_home(lang)
     product_url = home_url + "artikel/" + str(it.get("url_slug", it["id"])) + "/"
     labels = {"de": "Archiv", "en": "Archive", "fr": "Archive"}
+    eintraege = [(labels.get(lang, "Archiv"), home_url)]
+    # Markenebene nur, wenn die Marke eine eigene Seite hat.
+    marken_pfad = markenseiten.marken_pfad(_dieses_modul(), it, lang)
+    if marken_pfad:
+        eintraege.append((it.get("brand"), SITE_URL.rstrip("/") + marken_pfad))
+    eintraege.append((display_name(it, lang), product_url))
     data = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
         "itemListElement": [
-            {"@type": "ListItem", "position": 1, "name": labels.get(lang, "Archiv"), "item": home_url},
-            {"@type": "ListItem", "position": 2, "name": display_name(it, lang), "item": product_url},
+            {"@type": "ListItem", "position": i + 1, "name": name, "item": url}
+            for i, (name, url) in enumerate(eintraege)
         ],
     }
     return json.dumps(data, ensure_ascii=False)
@@ -890,7 +993,7 @@ def card_image(it):
     """Kleinste vorhandene Fassung des Titelbilds fuer Karten und Kacheln."""
     gallery = it.get("gallery") or []
     if not gallery:
-        return "assets/favicon.png"
+        return "assets/favicon-centered.png"
     for kandidat in (thumb_path(gallery[0]), display_path(gallery[0])):
         if (BASE / kandidat).is_file():
             return kandidat
@@ -914,8 +1017,25 @@ def build_page(it, shop_config, lang):
     desc = meta_description(it, lang)
     raw_body_desc = item_description(it, lang) or ""
     body_desc = raw_body_desc.strip() or auto_description(it, lang)
+    # Hinweis-Punkte (" · ") als eigene Elemente: am Handy je Punkt eine Zeile (article.css).
+    desc_html = esc(body_desc).replace(" · ", '<span class="info__desc-trenner"> · </span>')
+    # Inhaber 05.11.2026: statt der Textwand rechts drei Schlagzeilen aus den
+    # Daten, ein Hook-Absatz, Kaufknoepfe sofort, Fakten als Tabelle, der lange
+    # Text in Klappleisten; die Puppenmasse als Leiste unter dem Foto.
+    teile = beschreibung.teile(raw_body_desc, lang)
+    caption_html = beschreibung.caption_html(beschreibung.caption_zeilen(
+        it, teile, lang, title=item_title(it, lang), color=item_color(it, lang),
+        size_label=size_tr(it["size"], lang) if it.get("size") else "",
+        kategorie_label=cat_tr(it["category"], lang) if it.get("category") else ""))
+    hook_html = beschreibung.hook_html(beschreibung.hook_text(teile, body_desc))
+    frei_ab_cents = versandkostenfrei_ab_cents()
+    akkordeon_html = beschreibung.akkordeon_html(
+        it, teile, lang, beschreibung_text=body_desc, gebraucht_hinweis=GEBRAUCHT_HINWEIS[lang],
+        frei_ab_text=euro_text(frei_ab_cents, lang) if frei_ab_cents else "")
+    spec_rows_html = beschreibung.spec_rows_html(it, teile, lang, archiv_nr=str(it.get("url_slug") or ""))
+    trust_html = beschreibung.trust_html(lang)
     gallery = it.get("gallery") or []
-    hero = gallery[0] if gallery else "assets/favicon.png"
+    hero = gallery[0] if gallery else "assets/favicon-centered.png"
     hero_display_candidate = display_path(hero)
     hero_display = hero_display_candidate if (BASE / hero_display_candidate).is_file() else hero
     hero_dimensions = image_intrinsic_attributes(hero_display)
@@ -924,6 +1044,9 @@ def build_page(it, shop_config, lang):
     hell = foto_hell(grid_thumb_path(it))
     gallery_attr = f' style="--d119-hell:{hell}"' if hell else ""
     home = lang_home(lang)
+    seq_prev, seq_next = sequenz_nachbarn(it)
+    nav_prev_attr = f' href="{home}artikel/{esc(seq_prev)}/" rel="prev"' if seq_prev else ' style="visibility:hidden"'
+    nav_next_attr = f' href="{home}artikel/{esc(seq_next)}/" rel="next"' if seq_next else ' style="visibility:hidden"'
     canonical = SITE_URL.rstrip("/") + home + "artikel/" + str(it.get("url_slug", it["id"])) + "/"
     hreflang_links = "\n".join(
         '<link rel="alternate" hreflang="' + l + '" href="'
@@ -967,15 +1090,19 @@ def build_page(it, shop_config, lang):
         "article": it.get("article"),
         "url_slug": it.get("url_slug", str(it["id"])),
         "title": item_title(it, lang),
+        # Teilen-Text im Ausland (d119-ui.js, Inhaber 06.11.2026): englischer Name.
+        "title_en": item_title(it, "en") or "",
         "brand": it.get("brand"),
         "size": it.get("size"),
         "color": it.get("color"),
         "condition": it.get("condition"),
         "category": it.get("category"),
-        "desc": it.get("desc") or "",
-        "desc_de": it.get("desc_de") or it.get("desc") or "",
-        "desc_en": (item_description(it, "en") if lang == "en" else it.get("desc_en")) or "",
-        "desc_fr": it.get("desc_fr") or "",
+        # Ohne Platzhalter-Angaben ("Material: Nicht eindeutig lesbar", Inhaber
+        # 06.11.2026) - article.js zeigt unstrukturierte Beschreibungen roh an.
+        "desc": beschreibung.ohne_platzhalter_zeilen(it.get("desc") or ""),
+        "desc_de": beschreibung.ohne_platzhalter_zeilen(it.get("desc_de") or it.get("desc") or ""),
+        "desc_en": beschreibung.ohne_platzhalter_zeilen((item_description(it, "en") if lang == "en" else it.get("desc_en")) or ""),
+        "desc_fr": beschreibung.ohne_platzhalter_zeilen(it.get("desc_fr") or ""),
         "gallery": gallery,
         "thumbs": [thumb_path(g) for g in gallery],
         "sold": sold,
@@ -995,13 +1122,13 @@ def build_page(it, shop_config, lang):
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Disorder119">
 <link rel="manifest" href="/manifest.webmanifest"> <!-- D119_PWA_V1_ARTICLE -->
-<link rel="apple-touch-icon" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/favicon-centered.png">
 <title>{esc(title_tag)}</title>
 <meta name="description" content="{esc(desc)}">
 {'<meta name="robots" content="noindex,nofollow">' if it.get("public_status") == "DRAFT" else '<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">'}
 <link rel="canonical" href="{canonical}">
 {hreflang_links}
-<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="icon" type="image/png" href="/assets/favicon-centered.png">
 <link rel="preload" as="image" href="/{esc(hero_mobile)}" media="(max-width: 600px)" fetchpriority="high">
 <link rel="preload" as="image" href="/{esc(hero_display)}" media="(min-width: 601px)" fetchpriority="high">
 <style>{PRODUCT_CRITICAL_CSS}</style>
@@ -1017,22 +1144,25 @@ def build_page(it, shop_config, lang):
 <meta property="og:title" content="{esc(title_tag)}">
 <meta property="og:description" content="{esc(desc)}">
 <meta property="og:url" content="{canonical}">
-<meta property="og:image" content="{SITE_URL}{esc(hero)}">
+<meta property="og:image" content="{og_bild_url(it, hero)}">
 <meta property="og:image:alt" content="{esc(name)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{esc(title_tag)}">
 <meta name="twitter:description" content="{esc(desc)}">
-<meta name="twitter:image" content="{SITE_URL}{esc(hero)}">
+<meta name="twitter:image" content="{og_bild_url(it, hero)}">
 <meta name="twitter:image:alt" content="{esc(name)}">
 <script type="application/ld+json">{site_entities_jsonld(shop_config)}</script>
 {product_json_ld_tag(it, lang)}
 <script type="application/ld+json">{breadcrumb_json_ld(it, lang)}</script>
 <link rel="preload" as="style" href="/assets/theme.css?v={THEME_CSS_VERSION}" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
 <link rel="stylesheet" href="/assets/theme.css?v={THEME_CSS_VERSION}" media="{DESKTOP_CSS_MEDIA}">
-<script src="/assets/ansicht.js" defer></script>
-<script src="/assets/zurueck.js" defer></script>
+<script src="/assets/ansicht.js" type="text/d119-spaet" defer></script>
+<script src="/assets/zurueck.js" type="text/d119-spaet" defer></script>
 <script>try{{var a=localStorage.getItem("d119_ansicht");if(a==="hell")document.documentElement.setAttribute("data-theme",a)}}catch(e){{}}</script>
-<script src="/assets/catalog-number-links.js" defer></script>
+<script src="/assets/catalog-number-links.js" type="text/d119-spaet" defer></script>{ui_tags()}
+<script src="/assets/spaet-lader.js" defer></script>
+<!-- Datenschutz-Hinweis gleich mit der Seite (06.11.2026, wie index_template.html). -->
+<script src="/assets/besucher.js" defer></script>
 </head>
 <body>
 <div class="page-head">
@@ -1049,9 +1179,9 @@ def build_page(it, shop_config, lang):
   </div>
 </div>
 <nav class="article-sequence-nav" aria-label="{esc(product_nav_copy['nav_aria'])}">
-  <a class="article-sequence-nav__link article-sequence-nav__link--prev" aria-label="{esc(product_nav_copy['prev_aria'])}" style="visibility:hidden">{esc(product_nav_copy['prev'])}</a>
+  <a class="article-sequence-nav__link article-sequence-nav__link--prev" aria-label="{esc(product_nav_copy['prev_aria'])}"{nav_prev_attr}>{esc(product_nav_copy['prev'])}</a>
   <a class="article-sequence-nav__link article-sequence-nav__link--archive" href="{home}" aria-label="{esc(product_nav_copy['archive_aria'])}">{esc(product_nav_copy['archive'])}</a>
-  <a class="article-sequence-nav__link article-sequence-nav__link--next" aria-label="{esc(product_nav_copy['next_aria'])}" style="visibility:hidden">{esc(product_nav_copy['next'])}</a>
+  <a class="article-sequence-nav__link article-sequence-nav__link--next" aria-label="{esc(product_nav_copy['next_aria'])}"{nav_next_attr}>{esc(product_nav_copy['next'])}</a>
 </nav>
 <div class="product" role="main">
   <div class="gallery"{gallery_attr}>
@@ -1068,13 +1198,15 @@ def build_page(it, shop_config, lang):
     <div class="gallery__thumbs{' gallery__thumbs--reserved' if len(gallery) > 1 else ''}" id="galleryThumbs"></div>
   </div>
   <div class="info">
-    <a class="info__brand" href="{home}?brand={esc(it.get('brand') or '')}">{esc(it.get("brand") or ui(lang, "noBrand"))}</a>
+    <a class="info__brand" href="{esc(marken_link(it, lang))}">{esc(it.get("brand") or ui(lang, "noBrand"))}</a>
     <h1>{esc(item_title(it, lang))}</h1>
     <div id="priceBlock">{price_block_html(it, lang)}</div>
-    <div class="info__facts">{facts_html(it, lang)}</div>
-    <p class="info__desc" id="itemDesc">{esc(body_desc)}</p>
-    <p class="info__gebraucht" data-zustand-hinweis>{esc(GEBRAUCHT_HINWEIS[lang])}</p>
+    {caption_html}
+    {hook_html}
     {cta_html(it, shop_config, home, lang)}
+    <div class="info__facts">{facts_html(it, lang)}{spec_rows_html}</div>
+    {akkordeon_html}
+    {trust_html}
   </div>
 </div>
 {related_sections_html(it, lang)}
@@ -1083,6 +1215,8 @@ def build_page(it, shop_config, lang):
   <p data-i18n="footerNote">{esc(ui(lang, 'footerNote'))}</p>
   <p><a href="{home}" data-i18n="footerFullArchive">{esc(ui(lang, 'footerFullArchive'))}</a></p>
   <p><a href="{home}katalog/">{esc(CATALOG_COPY[lang]['all'])}</a></p>
+  {instagram_link_html(lang)}
+  {dhl_logo_html("dhl-logo dhl-logo--fuss")}
   {artikel_recht_nav(home, lang)}
 </div>
 <div class="lightbox" id="lightbox">
@@ -1094,7 +1228,7 @@ def build_page(it, shop_config, lang):
   window.ARTICLE_SHOP_CONFIG = {json.dumps(shop_config, ensure_ascii=False)};
   window.ARTICLE_LANG = "{lang}";
 </script>
-<script src="/assets/newsletter.js?v={NEWSLETTER_ASSET_VERSION}" fetchpriority="low" defer></script>
+<script src="/assets/newsletter.js?v={NEWSLETTER_ASSET_VERSION}" type="text/d119-spaet" fetchpriority="low" defer></script>
 <script src="/assets/pwa.js?v={PWA_JS_VERSION}" defer></script>
 <script src="/assets/article.js?v={ARTICLE_JS_VERSION}" fetchpriority="low" defer></script>
 </body>
@@ -1140,6 +1274,8 @@ def get_shop_config():
         # das Token, das der Worker im Livebetrieb fuer Kauf, Miete und
         # Konto-Anmeldung verlangt.
         "turnstileSiteKey": raw.get("turnstileSiteKey") or "",
+        # Instagram-Profil (Fussbereich, Artikelseiten, Google "sameAs").
+        "instagram": raw.get("instagram") if str(raw.get("instagram") or "").startswith("https://www.instagram.com/") else "",
         "environment": environment,
         "features": {
             "paypalCheckout": bool(features_raw.get("paypalCheckout")),
@@ -1195,7 +1331,7 @@ def site_entities_jsonld(shop_config):
         "@id": SITE_URL + "#store",
         "name": "Disorder119",
         "url": SITE_URL,
-        "logo": SITE_URL + "assets/favicon.png",
+        "logo": SITE_URL + "assets/favicon-centered.png",
         "image": SITE_URL + "assets/og-image.png",
         "currenciesAccepted": "EUR",
         # Nur das Land: die Anschrift steht im Impressum, aber nicht in den
@@ -1204,6 +1340,9 @@ def site_entities_jsonld(shop_config):
     }
     if shop_config.get("email"):
         store["email"] = shop_config["email"]
+    # Instagram (Inhaber 06.11.2026): Google verknuepft Shop und Profil.
+    if str(shop_config.get("instagram", "")).startswith("https://www.instagram.com/"):
+        store["sameAs"] = [shop_config["instagram"]]
     data = {
         "@context": "https://schema.org",
         "@graph": [
@@ -1306,13 +1445,49 @@ def static_page_content_html(slug, lang, shop_config):
 # preloaded. This removes the previous request chain HTML -> app.js ->
 # catalog.json -> image that Lighthouse measured as ~4.8 s load delay.
 # The exact same cards are then hydrated by app.js instead of being replaced.
+_SSR_PAAR = {}
+
+
 def initial_archive_items(limit=2):
-    available = [it for it in ITEMS if it.get("public_status") == "AVAILABLE"]
-    return sorted(
-        available,
-        key=lambda it: it.get("brightness") if isinstance(it.get("brightness"), (int, float)) else 0.5,
-        reverse=True,
-    )[:limit]
+    # Die vorgeladenen Karten (Ladezeit) wechseln mit jedem Seitenbau: zwei zufaellige aus den
+    # zwoelf hellsten verfuegbaren Teilen (Inhaber 04.11.2026: Startseite soll nicht immer gleich
+    # aussehen; den Rest mischt app.js bei jedem Aufruf). Je Bau dieselbe Wahl fuer Vorladen und Raster.
+    if limit not in _SSR_PAAR:
+        available = [it for it in ITEMS if it.get("public_status") == "AVAILABLE"]
+        hell = sorted(
+            available,
+            key=lambda it: it.get("brightness") if isinstance(it.get("brightness"), (int, float)) else 0.5,
+            reverse=True,
+        )
+        kandidaten = hell[:max(limit, 12)]
+        wahl = random.Random(int(time.time())).sample(kandidaten, min(limit, len(kandidaten)))
+        _SSR_PAAR[limit] = sorted(wahl, key=lambda it: kandidaten.index(it))
+    return _SSR_PAAR[limit]
+
+
+# Vorheriger/Naechster auf der Produktseite schon im HTML (Inhaber 04.11.: die Links
+# erschienen erst eine Sekunde nach "Zum Archiv", weil pwa-runtime.js sie aus
+# catalog.json nachlud). Dieselbe Reihenfolge wie dort: verfuegbare Teile nach
+# Helligkeit, rundum. Hat die Kundschaft im Archiv gefiltert, ersetzt pwa-runtime.js
+# die Links durch die gespeicherte Reihenfolge.
+_SEQUENZ = None
+
+
+def sequenz_nachbarn(it):
+    global _SEQUENZ
+    if _SEQUENZ is None:
+        verfuegbar = [x for x in ITEMS if x.get("public_status") == "AVAILABLE"]
+        _SEQUENZ = [(str(x["id"]), str(x.get("url_slug", x["id"]))) for x in sorted(
+            verfuegbar,
+            key=lambda x: x.get("brightness") if isinstance(x.get("brightness"), (int, float)) else 0.5,
+            reverse=True,
+        )]
+    ids = [x[0] for x in _SEQUENZ]
+    aktuell = str(it.get("id"))
+    if aktuell not in ids or len(ids) < 2:
+        return None, None
+    i = ids.index(aktuell)
+    return _SEQUENZ[(i - 1) % len(ids)][1], _SEQUENZ[(i + 1) % len(ids)][1]
 
 
 def grid_thumb_path(it):
@@ -1579,9 +1754,9 @@ def build_catalog_pages():
 # Produktseite traegt denselben allgemeinen Hinweis, Besonderheiten stehen
 # als "Hinweis zum Zustand" in der Beschreibung (siehe AGB Abschnitt 3).
 GEBRAUCHT_HINWEIS = {
-    "de": "Gebrauchtes Einzelstück (Vintage / Second Hand) in gutem Zustand mit normalen, altersgemäßen Gebrauchsspuren. Besonderheiten stehen in der Beschreibung und sind auf den Fotos zu sehen.",
-    "en": "Pre-owned one-off piece (vintage / second hand) in good condition with normal, age-appropriate signs of wear. Any particular features are noted in the description and shown in the photos.",
-    "fr": "Pièce unique d’occasion (vintage / seconde main) en bon état, avec des traces d’usure normales liées à l’âge. Les particularités sont indiquées dans la description et visibles sur les photos.",
+    "de": "Gebrauchter Artikel (Vintage / Second Hand) mit normalen, altersgemäßen Gebrauchsspuren. Besonderheiten stehen in der Beschreibung und sind auf den Fotos zu sehen.",
+    "en": "Pre-owned item (vintage / second hand) with normal, age-appropriate signs of wear. Any particular features are noted in the description and shown in the photos.",
+    "fr": "Article d’occasion (vintage / seconde main) avec des traces d’usure normales liées à l’âge. Les particularités sont indiquées dans la description et visibles sur les photos.",
 }
 
 
@@ -1631,6 +1806,9 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
 
     out = tmpl
     out = out.replace("__ITEMLIST_JSONLD_BLOCK__", structured_block)
+    # Bewusst hier oben: CI-Skripte (apply_focus_three_hardening, apply_pwa)
+    # suchen die Zeilen weiter unten als zusammenhaengenden Block.
+    out = out.replace("__MARKEN_FUSSLINK__", marken_fusslink(lang))
     out = out.replace("__HTML_LANG__", lang)
     out = out.replace("__CANONICAL_URL__", canonical)
     out = out.replace("__HREFLANG_TAGS__", hreflang_block(urls_by_lang))
@@ -1652,6 +1830,10 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
     out = out.replace("__SHOP_CONFIG_JSON__", json.dumps(shop_config, ensure_ascii=False))
     out = out.replace("__APP_CSS_VERSION__", APP_CSS_VERSION)
     out = out.replace("__THEME_VERSION__", THEME_CSS_VERSION)
+    # Oberflaeche vor den Versions-Tokens einhaengen: scripts/apply_pwa.py erwartet
+    # APP_JS_VERSION, PWA_JS_VERSION und "return out" direkt hintereinander.
+    if include_item_list:
+        out = out.replace("</head>", ui_tags() + "\n</head>", 1)
     out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)
     out = out.replace("__PWA_JS_VERSION__", PWA_JS_VERSION)
     # A normal link remains discoverable before app.js hydrates the archive.
@@ -1780,6 +1962,13 @@ def build_index():
     print(f"index.html + {len(LANGS) - 1} Sprachvarianten geschrieben.")
 
 
+# Suchtitel der Sonderseiten: Thema vorn, Shopname hinten (vorher "Disorder119 — FAQ").
+SPECIAL_TITLES = {
+    "mieten": {"de": "Designermode mieten & ausleihen", "en": "Rent Designer Fashion", "fr": "Louer de la mode de créateur"},
+    "faq": {"de": "Häufige Fragen (FAQ)", "en": "Frequently Asked Questions (FAQ)", "fr": "Questions fréquentes (FAQ)"},
+}
+
+
 def build_special_pages():
     shop_config = get_shop_config()
     n = 0
@@ -1788,7 +1977,7 @@ def build_special_pages():
         ph = META_PHRASES[lang]
         for slug, labels in SPECIAL_PAGES.items():
             label = labels[lang]
-            title_tag = ("Disorder119 — " + label) if slug != "cart" else (label + " | Disorder119")
+            title_tag = SPECIAL_TITLES.get(slug, {}).get(lang, label) + " | Disorder119"
             desc_text = SPECIAL_META_DESCRIPTIONS.get(slug, {}).get(lang, ph["home_desc"])
             robots = "noindex,follow" if slug == "cart" or slug in duplicate_variants or slug in PRIVATE_LEGAL_PAGES else None
             canonical_segment = "" if slug in duplicate_variants else None
@@ -1973,6 +2162,41 @@ ARTIKEL_RECHT_LINKS = {
 
 
 ANSICHT_KNOPF_TEXT = {"de": "Weiße Ansicht", "en": "White view", "fr": "Affichage blanc"}
+
+
+INSTAGRAM_TEXT = {"de": "Mehr Looks auf Instagram", "en": "More looks on Instagram", "fr": "Plus de looks sur Instagram"}
+
+
+_INSTAGRAM_URL = None
+
+
+def dhl_logo_html(klasse="dhl-logo", breite=120):
+    """DHL-Logo "Zustellung durch" - Originaldateien von DHL Group Brand Services (Freigabe
+    17.11.2026), unveraendert. Mindestbreite 100 px, Schutzzone 1/7 der Breite (CSS .dhl-logo).
+    Dunkle Ansicht: weisse Schrift; weisse Ansicht (data-theme="hell"): schwarze Schrift."""
+    hoehe = round(breite * 401.2197 / 900)
+    return (
+        f'<div class="{klasse}">'
+        f'<img class="dhl-zd dhl-zd--dunkel" src="/assets/dhl/dhl-zustellung-durch-weiss.svg" alt="Zustellung durch DHL" '
+        f'width="{breite}" height="{hoehe}" loading="lazy" decoding="async">'
+        f'<img class="dhl-zd dhl-zd--hell" src="/assets/dhl/dhl-zustellung-durch.svg" alt="" aria-hidden="true" '
+        f'width="{breite}" height="{hoehe}" loading="lazy" decoding="async">'
+        '</div>'
+    )
+
+
+def instagram_link_html(lang):
+    # Instagram (Inhaber 06.11.2026) - Adresse aus config/shop-config.json,
+    # einmal je Build gelesen (die Funktion laeuft fuer jede Artikelseite).
+    global _INSTAGRAM_URL
+    if _INSTAGRAM_URL is None:
+        _INSTAGRAM_URL = str(get_shop_config().get("instagram", ""))
+    url = _INSTAGRAM_URL
+    if not url.startswith("https://www.instagram.com/"):
+        return ""
+    handle = "@" + url.rstrip("/").rsplit("/", 1)[-1]
+    return (f'<p class="page-foot__instagram"><a href="{esc(url)}" target="_blank" rel="noopener">'
+            f'{esc(INSTAGRAM_TEXT.get(lang, INSTAGRAM_TEXT["de"]))} · {esc(handle)}</a></p>')
 
 
 def artikel_recht_nav(home, lang):
@@ -2283,6 +2507,14 @@ def build_articles():
     count = 0
     de_pages_by_id = {}
     for it in ITEMS:
+        if it.get("hidden_from_shop"):
+            # Ein vorher öffentliches Stück kann jederzeit im Admin verborgen
+            # werden. Bereits eingecheckte Seiten müssen beim Rebuild weg.
+            for lang in LANGS:
+                for identifier in {str(it.get("url_slug", it["id"])), str(it["id"])}:
+                    old_page = article_dir(lang, identifier) / "index.html"
+                    old_page.unlink(missing_ok=True)
+            continue
         for lang in LANGS:
             page = build_page(it, shop_config, lang)
             item_dir = article_dir(lang, it.get("url_slug", it["id"]))
@@ -2332,6 +2564,171 @@ def page_fingerprint(segment, item, lang, public_items):
     return h.hexdigest()
 
 
+LLMS_PATH = BASE / "llms.txt"
+
+# ---------------------------------------------------------------- Oberflaeche
+# assets/d119-ui.js/.css (04.11.2026, aus der UI-Vorschau uebernommen) auf der
+# Startseite und jeder Produktseite; Link-Vorschaubilder assets/og/<id>.jpg
+# (Foto, Marke, Titel, Preis, Groesse) fuer WhatsApp/Instagram.
+def ui_tags():
+    v = _asset_version("assets/d119-ui.js")[:8] + _asset_version("assets/d119-ui.css")[:4]
+    # Stylesheet nicht blockierend und beides mit niedriger Prioritaet (Muster wie theme.css/newsletter.js:
+    # sonst verdraengen die beiden Dateien auf dem Handy die erste Darstellung um rund eine Sekunde): die Kopf-Regeln der Startseite stehen inline in
+    # index_template.html, alles andere (Slideshow, Teilen, Zuletzt angesehen ...) braucht es erst nach dem Laden.
+    # Seit 05.11.2026 (Handy-Ladezeit) kommt d119-ui.css wie d119-ui.js erst nach dem ersten Bild
+    # (rel="d119-spaet", assets/spaet-lader.js). Was schon beim ersten Bild gelten muss, steht inline:
+    # Seitenuebergang, keine Scrollleiste unter den Vorschaubildern, Markenlink als 24-px-Tippziel (axe).
+    sofort = ('<style>/* d119-ui: sofort gueltig, der Rest kommt mit assets/d119-ui.css nach dem Laden */'
+              '@view-transition{navigation:auto}'
+              '::view-transition-old(root){animation:ui-raus .22s ease-in both}'
+              '::view-transition-new(root){animation:ui-rein .32s ease-out both}'
+              '@keyframes ui-raus{to{opacity:0}}@keyframes ui-rein{from{opacity:0}}'
+              '@media (prefers-reduced-motion:reduce){::view-transition-old(root),::view-transition-new(root){animation:none}}'
+              '.gallery__thumbs{scrollbar-width:none}'
+              '.info__brand{display:inline-flex;align-items:center;min-height:24px}</style>')
+    return (f'\n{sofort}<link rel="d119-spaet" href="/assets/d119-ui.css?v={v}">'
+            f'<noscript><link rel="stylesheet" href="/assets/d119-ui.css?v={v}"></noscript>'
+            f'\n<script src="/assets/d119-ui.js?v={v}" type="text/d119-spaet" fetchpriority="low" defer></script>')
+
+
+def og_bild_url(it, hero):
+    return f"{SITE_URL}assets/og/{esc(str(it['id']))}.jpg"
+
+
+def _og_schrift(groesse, fett=False):
+    from PIL import ImageFont
+    for name in (["arialbd.ttf", "Arial Bold.ttf"] if fett else ["arial.ttf", "Arial.ttf"]):
+        for ordner in (Path("C:/Windows/Fonts"), Path("/usr/share/fonts/truetype/dejavu")):
+            p = ordner / name
+            if p.is_file():
+                return ImageFont.truetype(str(p), groesse)
+    try:
+        return ImageFont.truetype("DejaVuSans-Bold.ttf" if fett else "DejaVuSans.ttf", groesse)
+    except OSError:
+        return ImageFont.load_default()
+
+
+def _og_zeilen(draw, text, schrift, breite, max_zeilen):
+    woerter, zeilen, aktuell = text.split(), [], ""
+    for w in woerter:
+        probe = (aktuell + " " + w).strip()
+        if draw.textlength(probe, font=schrift) <= breite:
+            aktuell = probe
+        else:
+            if aktuell:
+                zeilen.append(aktuell)
+            aktuell = w
+        if len(zeilen) == max_zeilen:
+            break
+    if aktuell and len(zeilen) < max_zeilen:
+        zeilen.append(aktuell)
+    if len(zeilen) == max_zeilen and " ".join(zeilen) != text:
+        zeilen[-1] = zeilen[-1].rstrip(".,") + " …"
+    return zeilen
+
+
+def og_bild_schreiben(it, ziel):
+    """1200x630: Foto links, Marke/Titel/Preis/Groesse rechts, dunkler Grund."""
+    from PIL import Image, ImageDraw
+    bild = Image.new("RGB", (1200, 630), (17, 17, 17))
+    draw = ImageDraw.Draw(bild)
+    look = BASE / (it.get("look") or (it.get("gallery") or [""])[0] or "")
+    if look.is_file():
+        foto = Image.open(look).convert("RGBA")
+        foto.thumbnail((540, 540))
+        feld = Image.new("RGBA", (560, 630), (24, 24, 24, 255))
+        feld.alpha_composite(foto, ((560 - foto.width) // 2, (630 - foto.height) // 2))
+        bild.paste(feld.convert("RGB"), (0, 0))
+    x = 610
+    draw.text((x, 54), "DISORDER119 · ARCHIV", font=_og_schrift(24, True), fill=(160, 160, 160))
+    draw.text((x, 110), (it.get("brand") or "").upper(), font=_og_schrift(46, True), fill=(242, 239, 231))
+    y = 180
+    for zeile in _og_zeilen(draw, item_title(it, "de"), _og_schrift(34), 540, 3):
+        draw.text((x, y), zeile, font=_og_schrift(34), fill=(242, 239, 231))
+        y += 44
+    preis = fmt_price_de(it["price"]) if it.get("public_status") != "SOLD" and it.get("price", 0) > 0 else "SOLD"
+    draw.text((x, y + 24), preis, font=_og_schrift(56, True), fill=(242, 239, 231))
+    # Nur die Groesse (Inhaber 04.11.: Farbe und "Second Hand" klingen billig, das Teil steht fuer sich).
+    if title_size(it, "de"):
+        draw.text((x, y + 104), "Größe " + title_size(it, "de"), font=_og_schrift(26), fill=(170, 170, 170))
+    draw.text((x, 560), "disorder119.com", font=_og_schrift(26, True), fill=(120, 120, 120))
+    ziel.parent.mkdir(parents=True, exist_ok=True)
+    bild.save(ziel, "JPEG", quality=82, optimize=True)
+
+
+def build_og_bilder():
+    public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
+    og_dir = BASE / "assets" / "og"
+    for it in public_items:
+        og_bild_schreiben(it, og_dir / f"{it['id']}.jpg")
+    # Verwaiste Bilder (Entwuerfe, geloeschte Artikel) weg.
+    gueltig = {f"{it['id']}.jpg" for it in public_items}
+    for alt in og_dir.glob("*.jpg"):
+        if alt.name not in gueltig:
+            alt.unlink()
+    print(f"{len(public_items)} Link-Vorschaubilder (assets/og) geschrieben.")
+
+
+def build_llms_txt():
+    """llms.txt (llmstxt.org): Kurzbeschreibung des Shops fuer KI-Assistenten und
+    Einkaufs-Agenten plus die Liste aller verfuegbaren Teile mit Preis, Groesse
+    und Adresse. Ohne Anschrift (die bleibt im Impressum), ohne Entwuerfe.
+    Wird bei jedem Build neu geschrieben; storefront-edge.js liefert die Datei
+    an der Wurzel aus (ROOT_FILES)."""
+    public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
+    verfuegbar = [it for it in public_items if it.get("public_status") != "SOLD" and it.get("price", 0) > 0]
+    verfuegbar.sort(key=lambda it: (it.get("brand") or "", -float(it.get("price") or 0), str(it["id"])))
+    frei_ab = versandkostenfrei_ab_cents()
+    try:
+        email = json.loads(SHOP_CONFIG_PATH.read_text(encoding="utf-8")).get("email") or ""
+    except (OSError, ValueError):
+        email = ""
+    marken = sorted({it.get("brand") for it in verfuegbar if it.get("brand")}, key=str.lower)
+    site = SITE_URL.rstrip("/")
+    zeilen = [
+        "# Disorder119",
+        "",
+        "> Kuratiertes Archiv für Second-Hand-Designermode aus Deutschland: ausgewählte Teile von "
+        + ", ".join(marken[:12]) + (" und weiteren" if len(marken) > 12 else "")
+        + ". Jedes Teil ist im Shop nur 1× verfügbar, Zustand gebraucht, Fotos vom tatsächlichen Stück. "
+        "Sprachen: Deutsch (/), Englisch (/en/), Französisch (/fr/).",
+        "",
+        "## Kaufen",
+        "- Preise in EUR, Endpreise (Kleinunternehmer, keine Umsatzsteuer ausgewiesen).",
+        "- Versand mit DHL aus Deutschland nach Deutschland und in alle EU-Länder; Versandkosten stehen in der Kasse"
+        + (f", ab {frei_ab // 100} € Warenwert versandkostenfrei innerhalb Deutschlands" if frei_ab else "") + ".",
+        "- Zahlung: PayPal, Apple Pay, Kreditkarte (über PayPal). Bezahlt wird erst beim Versand (Reservierung).",
+        f"- Widerruf 14 Tage: {site}/widerruf/ · FAQ: {site}/faq/ · AGB: {site}/agb/ · Datenschutz: {site}/datenschutz/",
+        f"- Kontakt: {email}" if email else "- Kontakt: über das Formular im Shop",
+        "- Mieten einzelner Teile für Shootings/Events: " + site + "/mieten/",
+        "",
+        "## Maschinenlesbar (für Einkaufs-Agenten)",
+        f"- Katalog als JSON (alle sichtbaren Teile, Preis, Größe, Bilder): {site}/data/catalog.json",
+        f"- Produktfeed (Google-Merchant-Format): {site}/feed/google-merchant.xml · Englisch: {site}/feed/google-merchant-en.xml",
+        f"- Sitemap: {site}/sitemap.xml",
+        "- Jede Produktseite enthält schema.org Product + Offer als JSON-LD (Preis, Verfügbarkeit, Größe, Farbe, Zustand, Versand, Rückgabe).",
+        "- Artikelnummer = Pfad: " + site + "/artikel/<nummer>/ (Englisch /en/artikel/<nummer>/, Französisch /fr/artikel/<nummer>/).",
+        "- Impressum und Rechtstexte sind für Menschen auf der Seite erreichbar und werden bewusst nicht indexiert.",
+        "",
+        f"## Verfügbare Teile ({len(verfuegbar)})",
+    ]
+    for it in verfuegbar:
+        url = site + lang_home("de") + "artikel/" + str(it.get("url_slug", it["id"])) + "/"
+        groesse = title_size(it, "de") or (it.get("size") or "")
+        fakten = [f"{float(it['price']):.0f} €"]
+        if groesse:
+            fakten.append("Größe " + str(groesse))
+        if it.get("color"):
+            fakten.append(str(it["color"]))
+        zeilen.append(f"- [{item_title(it, 'de')}]({url}): " + " · ".join(fakten))
+    zeilen += markenseiten.llms_zeilen(_dieses_modul())
+    zeilen += kategorieseiten.llms_zeilen(_dieses_modul())
+    verkauft = len(public_items) - len(verfuegbar)
+    if verkauft:
+        zeilen += ["", f"Weitere {verkauft} Teile im Archiv sind verkauft und bleiben als Referenz sichtbar."]
+    LLMS_PATH.write_text("\n".join(zeilen) + "\n", encoding="utf-8")
+
+
 def build_sitemap():
     public_items = [it for it in ITEMS if it.get("public_status") != "DRAFT"]
     heute = datetime.date.today().isoformat()
@@ -2349,6 +2746,8 @@ def build_sitemap():
         + [("artikel/" + str(it.get("url_slug", it["id"])) + "/", it) for it in public_items]
         + [(slug + "/", None) for slug in indexable_specials]
         + [(spec["segment"], None) for spec in catalog_page_specs()]
+        + [(seg, None) for seg in markenseiten.sitemap_segmente(_dieses_modul())]
+        + [(seg, None) for seg in kategorieseiten.sitemap_segmente(_dieses_modul())]
     )
 
     def url_entry(lang, segment, item=None):
@@ -2929,9 +3328,13 @@ def main():
     build_mobile_heroes()
     build_articles()
     build_catalog_pages()
+    build_markenseiten()
+    build_kategorieseiten()
     build_catalog_json()
     build_merchant_feed()
     build_sitemap()
+    build_llms_txt()
+    build_og_bilder()
     if "--thumbs" in sys.argv:
         build_thumbs()
 

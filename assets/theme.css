@@ -33,9 +33,11 @@
 :root[data-theme] .gallery-thumb, :root[data-theme] .related-card__frame { background: var(--mount); }
 
 /* Helle Ansicht: Kacheln reinweiss wie die Seite (kein warmer Fotogrund).
-   Die freigestellten Fotos heller und kraeftiger, dazu ein weicher Schatten
-   entlang der Silhouette - so heben sich auch weisse Teile vom Weiss ab, und
-   die Farben leuchten. Wie stark aufgehellt wird, misst build_site.py je Foto
+   Die freigestellten Fotos heller und kraeftiger, dazu ein enger Schatten
+   direkt an der Silhouette - so heben sich auch weisse Teile vom Weiss ab, und
+   die Farben leuchten. Bis 06.11.2026 war er breit (12px tief, 16px weich):
+   um helle Stuecke lag dann ein grauer Schleier, auf dem iPhone wie ein
+   grauer Hintergrund (Inhaber). Wie stark aufgehellt wird, misst build_site.py je Foto
    (foto_hell -> --d119-hell, 1.0 bis 1.25; ohne Messwert 1.08). Die
    Bilddateien bleiben unveraendert. */
 :root[data-theme="hell"] .plate__frame,
@@ -48,7 +50,7 @@
 :root[data-theme="hell"] .cart-line__frame img,
 :root[data-theme="hell"] .kasse-stueck__bild img {
   background: transparent;
-  filter: brightness(var(--d119-hell, 1.08)) contrast(1.06) saturate(1.22) drop-shadow(0 12px 16px rgba(21, 21, 20, 0.16));
+  filter: brightness(var(--d119-hell, 1.08)) contrast(1.06) saturate(1.22) drop-shadow(0 2px 3px rgba(21, 21, 20, 0.12));
   transition: filter .35s ease;
 }
 @media (prefers-reduced-motion: reduce) {

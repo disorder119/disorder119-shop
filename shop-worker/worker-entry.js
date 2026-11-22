@@ -23,22 +23,32 @@ import { handleAdminNotifications } from "./admin-notifications.js";
 import { syncOperationsAlerts } from "./operations-monitor.js";
 import { handleRentalBundle } from "./rental-bundle.js";
 import { notifyPaidOrder, notifyPaidOrderByProviderOrder } from "./notifications.js";
+import { ensureTelegramPickupWebhook, handleTelegramPickupWebhook, handleTelegramPickupPreview, isTelegramPickupPreview, isTelegramPickupWebhook } from "./telegram-pickup.js";
+import { sendQueuedPickupSamples } from "./telegram-pickup-samples.js";
+import { sendQueuedStatusTests } from "./telegram-pickup.js";
 import { sendInvoiceAfterCaptureByProviderOrder, sendOrderConfirmation, sendOrderConfirmationByProviderOrder } from "./customer-mail.js";
 import { handleAccountRequest, isAccountRoute, sendRequestedAccountLink, sendRequestedAccountLinkByProviderOrder } from "./customer-account.js";
 import { handleBuchhaltung, istBuchhaltungsRoute } from "./buchhaltung.js";
-import { handleVersand, istVersandRoute } from "./dhl.js";
-import { handleDhlQr, isDhlQrRoute, katalogAbgleich } from "./dhl-qr.js";
+import { dhlAutoMarken, handleVersand, istVersandRoute } from "./dhl.js";
+import { dhlMarkenAbgleichen, handleDhlQr, isDhlQrRoute, katalogAbgleich } from "./dhl-qr.js";
+import { sendungenVerfolgen } from "./dhl-tracking.js";
+import { sendungsVerdrahtung } from "./sendungs-freigabe.js";
+import { handleRuecksendungAdmin, handleRuecksendungOeffentlich, isRuecksendungAdmin, isRuecksendungOeffentlich, ruecksendungenAbgleichen } from "./ruecksendung.js";
 import { handlePacklink, handlePacklinkWebhook, isPacklinkRoute, isPacklinkWebhookRoute } from "./packlink.js";
 import { handleVersandOptionen, isVersandOptionenRoute } from "./versand.js";
 import { handleAbholorte, isAbholorteRoute } from "./abholorte.js";
+import { abholorteOsmPflegen, handleAbholorteOsmAdmin, isAbholorteOsmAdminRoute, istAbholorteOsmCron } from "./abholorte-osm.js";
 import { handleKarte, isKarteRoute } from "./karte.js";
 import { handleAdresse, isAdresseRoute } from "./adresse.js";
 import { handleKatalog, isKatalogRoute } from "./admin-katalog.js";
 import { handleSiteLock, isSiteLockRoute } from "./site-lock.js";
 import { handleIncomingEmail, handlePostfach, isPostfachRoute, postfachMeldungNachholen } from "./postfach.js";
+import { handleLager, isLagerRoute } from "./lager.js";
+import { postausgangNachholen } from "./postausgang-nachholen.js";
 import { zahlungsMeldungenNachholen } from "./zahlung.js";
 import { SEITENAUFRUF_PFAD, besucherAufraeumen, entsperrtMelden, handleBesucher, istBesucherRoute } from "./besucher.js";
 import { sitzungenMelden } from "./besucher-zusammenfassung.js";
+import { wochenberichtSenden } from "./wochenbericht.js";
 import { geoGesperrt, geoSperrAntwort } from "./geo-sperre.js";
 import {
   handleWaechterAdmin,
@@ -210,6 +220,8 @@ async function bestellungNachbereiten(env, ctx, orderId, providerOrderId, reqId)
   );
   await runBackground(ctx, redeemCouponAfterPayment(env, String(orderId), reqId), "coupon_redeem_failed", reqId);
   await runBackground(ctx, notifyPaidOrder(env, String(orderId), reqId), "sale_notification_failed", reqId);
+  // Geschaeftskundenvertrag mit Automatik (DHL_AUTO_MARKE): Marke sofort nach dem Kauf.
+  await runBackground(ctx, dhlAutoMarken(env, reqId), "dhl_auto_label_failed", reqId);
   await runBackground(ctx, sendRequestedAccountLink(env, String(orderId), reqId), "account_link_failed", reqId);
 }
 
@@ -308,6 +320,14 @@ const worker = {
       const abgewiesen = await waechterVorab(request, env, ctx, url);
       if (abgewiesen) return finish(abgewiesen);
 
+      // Telegram sendet Callback-Daten ohne Browser-Origin. Der Handler prueft
+      // den geheimen Header sowie den verbundenen privaten Inhaber-Chat.
+      if (isTelegramPickupWebhook(url)) return finish(await handleTelegramPickupWebhook(request, env, reqId));
+
+      // Vorschau der tatsaechlichen Kundenmail aus dem Telegram-Knopf. Der
+      // Link selbst ist eine zufaellige Kennung und ist zeitlich begrenzt.
+      if (isTelegramPickupPreview(url)) return finish(await handleTelegramPickupPreview(url, env, reqId));
+
       if (isEbayRoute(url)) {
         await guardRuntimeRequest(request, env, url);
         return finish(await handleEbayGateway(request, env, url));
@@ -332,6 +352,11 @@ const worker = {
       // DHL-Packstationen und -Filialen zur Adresse (oeffentlich, nur lesen).
       if (isAbholorteRoute(url)) {
         return finish(await handleAbholorte(request, runtimeEnv, url, reqId, origin));
+      }
+      // Ruecksendeetikett aus der Kundenmail: QR-Code, PDF und Seite fuer den
+      // Schalter - oeffentlich, nur mit dem langen Zugang (ruecksendung.js).
+      if (isRuecksendungOeffentlich(url)) {
+        return finish(await handleRuecksendungOeffentlich(request, runtimeEnv, url));
       }
       // Luftbild-Kacheln fuer die Abholort-Karte (amtliche Luftbilder der Laender).
       if (isKarteRoute(url)) {
@@ -388,6 +413,11 @@ const worker = {
         return finish(await handleAdminAlerts(request, runtimeEnv, url, reqId, origin));
       }
 
+      // Abholorte aus OpenStreetMap: Stand (GET) und einen Schritt einlesen (POST).
+      if (isAbholorteOsmAdminRoute(url)) {
+        return finish(await handleAbholorteOsmAdmin(request, runtimeEnv, url, reqId, origin));
+      }
+
       // Das Kundenkonto laeuft vor den Shop-Routen, weil worker.js /account/
       // bisher bewusst mit 501 beantwortet hat.
       if (isAccountRoute(url)) {
@@ -438,6 +468,11 @@ const worker = {
         return finish(await handlePostfach(request, runtimeEnv, url, reqId, origin));
       }
 
+      // Lager der Admin-App: welche Artikelnummer liegt in welcher Kiste.
+      if (isLagerRoute(url)) {
+        return finish(await handleLager(request, runtimeEnv, url, reqId, origin));
+      }
+
       // Newsletter: Anmeldung, Bestaetigung und Abmeldung von der Website,
       // /admin/newsletter fuer die Liste in der Admin-App.
       if (isNewsletterRoute(url)) {
@@ -458,6 +493,11 @@ const worker = {
         return finish(await handleDhlQr(request, runtimeEnv, url, reqId, origin));
       }
 
+      // Ruecksendeetikett anlegen, nachsehen, Mail senden (Admin-App).
+      if (isRuecksendungAdmin(url)) {
+        return finish(await handleRuecksendungAdmin(request, runtimeEnv, url, reqId, origin));
+      }
+
       if (istVersandRoute(url)) {
         return finish(await handleVersand(request, runtimeEnv, url, reqId, origin));
       }
@@ -466,7 +506,7 @@ const worker = {
         return finish(await handleBuchhaltung(request, runtimeEnv, url, reqId, origin));
       }
 
-      if (url.pathname === "/admin/notifications/telegram/test" || url.pathname === "/admin/notifications/mail/test") {
+      if (url.pathname === "/admin/notifications/telegram/test" || url.pathname === "/admin/notifications/mail/test" || url.pathname === "/admin/notifications/mail/versand-test" || url.pathname === "/admin/notifications/mail/abholbereit-test") {
         return finish(await handleAdminNotifications(request, runtimeEnv, url, reqId, origin));
       }
 
@@ -572,6 +612,7 @@ const worker = {
                 reqId,
               );
               await runBackground(ctx, notifyPaidOrderByProviderOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_sale_notification_failed", reqId);
+              await runBackground(ctx, dhlAutoMarken(runtimeEnv, reqId), "dhl_auto_label_failed", reqId);
               await runBackground(ctx, sendRequestedAccountLinkByProviderOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_account_link_failed", reqId);
               // Eingezogene Reservierung: die Rechnung (hoechstens einmal).
               await runBackground(ctx, sendInvoiceAfterCaptureByProviderOrder(runtimeEnv, String(providerOrderId), reqId), "webhook_invoice_failed", reqId);
@@ -601,11 +642,32 @@ const worker = {
   async scheduled(event, env, ctx) {
     const scheduledTime = Number(event?.scheduledTime || Date.now());
     const reqId = `cron-${scheduledTime}`;
+    // Eigener stuendlicher Cron (abholorte-osm.js): Packstationen und Filialen
+    // aus OpenStreetMap, ein Gebiet je Lauf - ohne die Viertelstunden-Jobs,
+    // damit beide ihre eigene Rechenzeit und ihre eigenen Abfragen haben.
+    if (istAbholorteOsmCron(event?.cron)) {
+      await runBackground(ctx, abholorteOsmPflegen(env, scheduledTime), "abholorte_osm_import_failed", reqId);
+      return;
+    }
     await runBackground(ctx, reconcilePurchasePayments(env, reqId), "purchase_reconciliation_failed", reqId);
     await runBackground(ctx, offeneBestellungenNachbereiten(env, reqId, new Date(scheduledTime)), "order_followup_failed", reqId);
     // Reservierte Zahlungen spaetestens am Ende der PayPal-Garantiezeit
     // einziehen, gepruefte Abbuchungen nachfragen, Rechnungen nachholen.
     await runBackground(ctx, zahlungenPflegen(env, reqId, new Date(scheduledTime)), "payment_capture_failed", reqId);
+    // DHL-Vertragsmarken fuer bezahlte Bestellungen ohne Sendung (nur mit DHL_AUTO_MARKE = "an").
+    await runBackground(ctx, dhlAutoMarken(env, reqId, scheduledTime), "dhl_auto_label_failed", reqId);
+    // Online-Frankierung: offene Marken mit Warenkorb-Nummer (aus der DHL-Mail)
+    // bei DHL nachsehen - bezahlt? Sendungsnummer? (dhl-qr.js)
+    await runBackground(ctx, dhlMarkenAbgleichen(env, scheduledTime), "dhl_cart_refresh_failed", reqId);
+    await runBackground(ctx, ensureTelegramPickupWebhook(env, reqId), "telegram_pickup_webhook_failed", reqId);
+    await runBackground(ctx, sendQueuedPickupSamples(env, reqId), "telegram_pickup_samples_failed", reqId);
+    await runBackground(ctx, sendQueuedStatusTests(env, reqId), "telegram_status_tests_failed", reqId);
+    // Ruecksendeetiketten: bezahlt? QR-Code holen, Mail an die Kundin (ruecksendung.js).
+    await runBackground(ctx, ruecksendungenAbgleichen(env, scheduledTime), "ruecksendung_refresh_failed", reqId);
+    // Sendungsverfolgung: unterwegs -> Versendet, zugestellt -> Zugestellt.
+    // Kundenmails gehen dabei nie von selbst: je Anlass eine Telegram-Freigabe
+    // an den Inhaber (Vorschau, "Kundenmail senden", "Nicht senden").
+    await runBackground(ctx, sendungenVerfolgen(env, reqId, scheduledTime, sendungsVerdrahtung(env, reqId)), "dhl_tracking_failed", reqId);
     await runBackground(ctx, paypalErstattungenAbgleichen(env, reqId, true), "paypal_refund_reconciliation_failed", reqId);
     // Nach dem Abgleich: wartende Erstattungen erneut versuchen, erledigte
     // abschliessen (Kundenmail, wieder im Shop), an Offenes erinnern.
@@ -625,10 +687,14 @@ const worker = {
     // (Sammelmeldung bei Angriffswellen, abgelaufene Vorfaelle loeschen).
     await runBackground(ctx, sitzungenMelden(env, scheduledTime, { limit: 25 }), "besucher_summary_failed", reqId);
     await runBackground(ctx, waechterPflegen(env, scheduledTime), "waechter_maintenance_failed", reqId);
+    // Montags 08:00 Berlin: Wochenbericht (Besuche, Herkunft, Teile, Umsatz, Waechter).
+    await runBackground(ctx, wochenberichtSenden(env, scheduledTime), "weekly_report_failed", reqId);
     // Telegram-Meldungen, die beim ersten Versuch nicht ankamen (Zahlungen) bzw.
     // gedrosselt gesammelt wurden (Postfach), nachholen.
     await runBackground(ctx, zahlungsMeldungenNachholen(env, reqId, new Date(scheduledTime)), "payment_notice_retry_failed", reqId);
     await runBackground(ctx, postfachMeldungNachholen(env, scheduledTime), "mailbox_notice_retry_failed", reqId);
+    // Einmalig: fruehere Shop-Mails aus dem Brevo-Protokoll in "Gesendet" uebernehmen.
+    await runBackground(ctx, postausgangNachholen(env, scheduledTime), "sent_mail_backfill_failed", reqId);
     // Zaehler gegen Missbrauch (IP-Hashes) nach Ablauf ihres Fensters loeschen.
     await runBackground(ctx, kontingentAufraeumen(env.DB, new Date(scheduledTime)), "kontingent_cleanup_failed", reqId);
     // Offene Halte (Kasse, Miete) zaehlen hoechstens 30 Minuten - danach weg.

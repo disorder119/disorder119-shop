@@ -25,6 +25,7 @@ on:
       - "data/catalog-taxonomy-report.json"
       - "index_template.html"
       - "build_site.py"
+      - "beschreibung.py"
       - "robots.txt"
       - "admin/index.html"
       - "config/shop-config.json"
@@ -32,6 +33,7 @@ on:
       - "config/mode-guard.json"
       - "config/photo-sources.json"
       - "config/catalog-number-links.json"
+      - "config/marken-texte.json"
       - "tools/fotoquellen.py"
       - "assets/**"
       - "shop-worker/**"
@@ -87,6 +89,8 @@ jobs:
       - name: Cloudflare-Publikation ohne Zugangsdaten pruefen
         run: |
           python -m unittest discover -s scripts -p test_storefront_publishing.py -v
+          python -m unittest discover -s scripts -p test_markenseiten.py
+          python -m unittest discover -s scripts -p test_kategorieseiten.py
           node --test shop-worker/storefront-assets.test.mjs shop-worker/storefront-edge.test.mjs shop-worker/storefront-csp.test.mjs
 
       - name: Bestaetigte Artikelnummern gegen feste Produkt-IDs pruefen
@@ -230,6 +234,9 @@ jobs:
 
       - name: Katalog-Taxonomie auf Quelldaten anwenden
         run: python scripts/apply_catalog_taxonomy.py
+
+      - name: Weiterleitungen alter Shop-IDs aus der Konfiguration erzeugen
+        run: python scripts/sync_catalog_number_routes.py
 
       - name: Seite bauen
         run: python build_site.py

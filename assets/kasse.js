@@ -40,7 +40,9 @@
       freiFehlt: "Noch {betrag} bis zum kostenlosen Versand – ab {grenze} Warenwert übernehmen wir den günstigsten Standardversand.",
       lieferung: "Heute bestellt – voraussichtlich bei dir zwischen {von} und {bis}.", zahlart: "Mit PayPal-Käuferschutz",
       gutschein: "Gutschein {code} wird beim Bezahlen verrechnet.",
+      gutscheinZeile: "Gutschein {code}", gutscheinNurFuer: "Der Code {code} gilt nur für {label} – das Teil ist nicht in dieser Bestellung.",
       gutscheinWeg: "Dein Gutschein ist ungültig oder schon eingelöst – wir haben ihn entfernt. Klick bitte noch einmal auf PayPal, dann bezahlst du ohne Gutschein.",
+      gutscheinNichtFuer: "Dieser Code gilt nur für ein bestimmtes Teil, das nicht in deiner Bestellung ist – wir haben ihn entfernt. Klick bitte noch einmal auf PayPal, dann bezahlst du ohne Code.",
       gutscheinReserviert: "Dein Gutschein ist gerade noch für eine offene, nicht bezahlte Bestellung reserviert – zum Beispiel nach einem geschlossenen PayPal-Fenster. Er bleibt gespeichert und ist nach spätestens 25 Minuten wieder frei. Versuch es dann bitte noch einmal.",
       recht: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Versand innerhalb von 3 Werktagen; die angezeigte Lieferzeit gilt ab Bestellung. Mit dem PayPal-Knopf und deiner Bestätigung bei PayPal bestellst du zahlungspflichtig. PayPal reserviert den Betrag – abgebucht wird erst mit dem Versand, spätestens drei Tage nach der Bestellung.",
       rechtAnfrage: "Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer. Die Anfrage ist unverbindlich – wir bestätigen Verfügbarkeit und Gesamtpreis per E-Mail.",
@@ -70,15 +72,18 @@
       mailAdresse: "Lieferadresse", mailVersand: "Versand", mailGesamt: "Gesamt", mailGruss: "Hallo! Ich möchte folgende Stücke bestellen:",
       mailFrage: "Bitte bestätigt mir Verfügbarkeit und Zahlungsweg. Danke!",
       angaben: "Deine Angaben", zustWohin: "Wohin soll das Paket?", zustHaustuer: "An meine Adresse", zustAbholort: "An Packstation oder Filiale",
-      zustNurDhl: "mit DHL", nurHaustuer: "nur an die Haustür", versichert: "versichert bis {betrag}", abholSuche: "PLZ für die Suche",
+      zustNurDhl: "mit DHL", nurHaustuer: "nur an die Haustür", versichert: "versichert bis {betrag}", haftung: "DHL haftet bis {betrag}", abholSuche: "PLZ für die Suche",
       abholSuchen: "Suchen", abholLaedt: "Suche Packstationen und Filialen …", abholKeine: "Hier haben wir keine Packstation oder Filiale gefunden. Probier eine andere PLZ oder gib die Nummer selbst ein.",
-      abholFehler: "Die Suche bei DHL klappt gerade nicht. Gib die Nummer der Packstation oder Filiale selbst ein oder lass an deine Adresse liefern.",
+      abholFehler: "Die Suche klappt gerade nicht. Gib die Nummer der Packstation oder Filiale selbst ein oder lass an deine Adresse liefern.",
       abholPlzFehlt: "Gib eine fünfstellige PLZ ein, dann zeigen wir dir Packstationen und Filialen in der Nähe.", abholOhneSuche: "Gib die Nummer deiner Packstation oder Filiale ein – du findest sie in der DHL-App oder auf dhl.de.", abholGefunden: "{n} Abholorte in der Nähe – wähle einen aus der Liste oder auf der Karte.",
       abholWaehlen: "Bitte wähle eine Packstation oder Filiale.", abholPackstation: "Packstation", abholFiliale: "Filiale",
       abholKarte: "Auf der Karte zeigen", abholKarteZu: "Karte ausblenden", abholKarteHinweis: "Die Karte lädt Kartenbilder von OpenStreetMap – dabei sieht der Kartendienst deine IP-Adresse.",
       kartePlus: "Karte vergrößern", karteMinus: "Karte verkleinern", karteLuftbild: "Luftbild", karteStrassen: "Karte",
       abholKarteHinweisLuftbild: "Die amtlichen Luftbilder holt unser Server beim Vermessungsamt deines Bundeslands – ohne deine IP-Adresse. Die Straßenkarte kommt direkt von OpenStreetMap, das dabei deine IP-Adresse sieht.", abholManuell: "Nummer selbst eingeben", abholArt: "Art",
       abholNummer: "Nummer", abholUebernehmen: "Übernehmen", abholNummerFehlt: "Bitte gib die Nummer ein (bis zu 4 Ziffern).",
+      abholPlzOrt: "PLZ der Packstation oder Filiale", abholDhlFinder: "Nummer nicht zur Hand? In der DHL-Standortsuche nachsehen ↗",
+      abholOsmVor: "Abholorte:", abholOsmLink: "© OpenStreetMap-Mitwirkende",
+      abholOsmHinweis: "(ODbL). Die Liste kann unvollständig sein – fehlt deine Packstation oder Filiale, gib die Nummer selbst ein. Entfernung ab der Mitte des PLZ-Gebiets.",
       postnummer: "DHL-Postnummer", optional: "optional", postnummerHinweisP: "Pflicht an der Packstation: deine 6- bis 10-stellige Postnummer aus der DHL-App. Vor- und Nachname müssen zu deinem DHL-Konto passen.",
       postnummerHinweisF: "Pflicht auch an der Filiale: deine 6- bis 10-stellige Postnummer aus der DHL-App. Abholen kannst du mit Ausweis.", fehltPostnummer: "Bitte gib deine DHL-Postnummer an (6 bis 10 Ziffern).",
       postnummerUngueltig: "Die Postnummer hat 6 bis 10 Ziffern.", abholNurDhl: "An Packstation und Filiale liefert nur DHL. Bitte wähle DHL oder die Lieferung an deine Adresse.",
@@ -107,7 +112,9 @@
       freiFehlt: "{betrag} more for free shipping – from {grenze} goods value we cover the cheapest standard shipping.",
       lieferung: "Order today – expected to arrive between {von} and {bis}.", zahlart: "With PayPal Buyer Protection",
       gutschein: "Coupon {code} is applied when you pay.",
+      gutscheinZeile: "Coupon {code}", gutscheinNurFuer: "Code {code} is only valid for {label} – that piece is not in this order.",
       gutscheinWeg: "Your coupon is invalid or has already been used – we have removed it. Please click PayPal again to pay without the coupon.",
+      gutscheinNichtFuer: "This code is only valid for a specific piece that is not in your order – we have removed it. Please click PayPal again to pay without the code.",
       gutscheinReserviert: "Your coupon is still reserved for an open, unpaid order – for example after closing the PayPal window. It stays saved and will be free again within 25 minutes at the latest. Please try again then.",
       recht: "Small business under § 19 UStG, so no VAT is charged. Shipped within 3 working days; the delivery time shown counts from your order. With the PayPal button and your confirmation at PayPal you place a binding order. PayPal reserves the amount – it is only charged when we ship, at the latest three days after your order.",
       rechtAnfrage: "Small business under § 19 UStG, so no VAT is charged. The request is non-binding – we confirm availability and the total by e-mail.",
@@ -137,15 +144,18 @@
       mailAdresse: "Delivery address", mailVersand: "Shipping", mailGesamt: "Total", mailGruss: "Hello! I would like to order these pieces:",
       mailFrage: "Please confirm availability and payment. Thank you!",
       angaben: "Your details", zustWohin: "Where should the parcel go?", zustHaustuer: "To my address", zustAbholort: "To a Packstation or post office",
-      zustNurDhl: "with DHL", nurHaustuer: "home delivery only", versichert: "insured up to {betrag}", abholSuche: "Postcode to search",
+      zustNurDhl: "with DHL", nurHaustuer: "home delivery only", versichert: "insured up to {betrag}", haftung: "DHL liability up to {betrag}", abholSuche: "Postcode to search",
       abholSuchen: "Search", abholLaedt: "Searching for Packstations and post offices …", abholKeine: "We found no Packstation or post office here. Try another postcode or enter the number yourself.",
-      abholFehler: "The DHL search is not working right now. Enter the Packstation or post office number yourself, or have the parcel delivered to your address.",
+      abholFehler: "The search is not working right now. Enter the Packstation or post office number yourself, or have the parcel delivered to your address.",
       abholPlzFehlt: "Enter a five-digit postcode and we will show you Packstations and post offices nearby.", abholOhneSuche: "Enter the number of your Packstation or post office – you can find it in the DHL app or on dhl.de.", abholGefunden: "{n} pickup points nearby – choose one from the list or on the map.",
       abholWaehlen: "Please choose a Packstation or post office.", abholPackstation: "Packstation", abholFiliale: "Post office",
       abholKarte: "Show on map", abholKarteZu: "Hide map", abholKarteHinweis: "The map loads tiles from OpenStreetMap – the map service sees your IP address.",
       kartePlus: "Zoom in", karteMinus: "Zoom out", karteLuftbild: "Aerial", karteStrassen: "Map",
       abholKarteHinweisLuftbild: "Our server fetches the official aerial images from your state's survey office – without your IP address. The street map comes directly from OpenStreetMap, which sees your IP address.", abholManuell: "Enter the number yourself", abholArt: "Type", abholNummer: "Number",
       abholUebernehmen: "Use this", abholNummerFehlt: "Please enter the number (up to 4 digits).", postnummer: "DHL Postnummer",
+      abholPlzOrt: "Postcode of the Packstation or post office", abholDhlFinder: "Don’t know the number? Look it up in the DHL location finder ↗",
+      abholOsmVor: "Pickup points:", abholOsmLink: "© OpenStreetMap contributors",
+      abholOsmHinweis: "(ODbL). The list may be incomplete – if your Packstation or post office is missing, enter the number yourself. Distance from the centre of the postcode area.",
       optional: "optional", postnummerHinweisP: "Required for a Packstation: your 6 to 10 digit Postnummer from the DHL app. First and last name must match your DHL account.",
       postnummerHinweisF: "Required for a post office too: your 6 to 10 digit Postnummer from the DHL app. Bring your ID to collect.", fehltPostnummer: "Please enter your DHL Postnummer (6 to 10 digits).",
       postnummerUngueltig: "The Postnummer has 6 to 10 digits.", abholNurDhl: "Only DHL delivers to Packstations and post offices. Please choose DHL or delivery to your address.",
@@ -174,7 +184,9 @@
       freiFehlt: "Plus que {betrag} pour la livraison gratuite – dès {grenze} d’articles, nous offrons la livraison standard la moins chère.",
       lieferung: "Commande aujourd’hui – livraison prévue entre le {von} et le {bis}.", zahlart: "Avec la Protection des achats PayPal",
       gutschein: "Le bon {code} est déduit au paiement.",
+      gutscheinZeile: "Bon {code}", gutscheinNurFuer: "Le code {code} n'est valable que pour {label} – cette pièce n'est pas dans la commande.",
       gutscheinWeg: "Ton bon est invalide ou a déjà été utilisé – nous l'avons retiré. Clique à nouveau sur PayPal pour payer sans bon.",
+      gutscheinNichtFuer: "Ce code n'est valable que pour une pièce précise qui ne fait pas partie de ta commande – nous l'avons retiré. Clique à nouveau sur PayPal pour payer sans code.",
       gutscheinReserviert: "Ton bon est encore réservé pour une commande ouverte non payée – par exemple après avoir fermé la fenêtre PayPal. Il reste enregistré et sera de nouveau disponible dans 25 minutes au plus tard. Réessaie ensuite.",
       recht: "Micro-entreprise selon le § 19 UStG, pas de TVA. Expédition sous 3 jours ouvrés ; le délai de livraison indiqué court à partir de la commande. Avec le bouton PayPal et ta confirmation chez PayPal, tu passes une commande ferme. PayPal réserve le montant – il n'est débité qu'à l'expédition, au plus tard trois jours après la commande.",
       rechtAnfrage: "Micro-entreprise selon le § 19 UStG, pas de TVA. La demande est sans engagement – nous confirmons disponibilité et total par e-mail.",
@@ -204,9 +216,9 @@
       mailAdresse: "Adresse de livraison", mailVersand: "Livraison", mailGesamt: "Total", mailGruss: "Bonjour ! Je souhaite commander ces pièces :",
       mailFrage: "Merci de me confirmer disponibilité et paiement !",
       angaben: "Tes coordonnées", zustWohin: "Où livrer le colis ?", zustHaustuer: "À mon adresse", zustAbholort: "En Packstation ou bureau de poste",
-      zustNurDhl: "avec DHL", nurHaustuer: "à domicile uniquement", versichert: "assuré jusqu’à {betrag}", abholSuche: "Code postal pour la recherche",
+      zustNurDhl: "avec DHL", nurHaustuer: "à domicile uniquement", versichert: "assuré jusqu’à {betrag}", haftung: "responsabilité DHL jusqu’à {betrag}", abholSuche: "Code postal pour la recherche",
       abholSuchen: "Rechercher", abholLaedt: "Recherche des Packstations et bureaux de poste …", abholKeine: "Aucune Packstation ni bureau de poste trouvé ici. Essaie un autre code postal ou saisis le numéro toi-même.",
-      abholFehler: "La recherche DHL ne fonctionne pas pour le moment. Saisis toi-même le numéro de la Packstation ou du bureau de poste, ou fais livrer à ton adresse.",
+      abholFehler: "La recherche ne fonctionne pas pour le moment. Saisis toi-même le numéro de la Packstation ou du bureau de poste, ou fais livrer à ton adresse.",
       abholPlzFehlt: "Saisis un code postal à cinq chiffres pour voir les Packstations et bureaux de poste à proximité.", abholOhneSuche: "Saisis le numéro de ta Packstation ou de ton bureau de poste – tu le trouves dans l’app DHL ou sur dhl.de.",
       abholGefunden: "{n} points de retrait à proximité – choisis-en un dans la liste ou sur la carte.", abholWaehlen: "Choisis une Packstation ou un bureau de poste.",
       abholPackstation: "Packstation", abholFiliale: "Bureau de poste", abholKarte: "Afficher sur la carte", abholKarteZu: "Masquer la carte",
@@ -214,6 +226,9 @@
       karteMinus: "Zoom arrière", karteLuftbild: "Vue aérienne", karteStrassen: "Plan",
       abholKarteHinweisLuftbild: "Notre serveur charge les vues aériennes officielles auprès du service cadastral de ton Land – sans ton adresse IP. Le plan vient directement d’OpenStreetMap, qui voit ton adresse IP.", abholManuell: "Saisir le numéro toi-même", abholArt: "Type", abholNummer: "Numéro", abholUebernehmen: "Valider",
       abholNummerFehlt: "Saisis le numéro (jusqu’à 4 chiffres).", postnummer: "Postnummer DHL", optional: "facultatif",
+      abholPlzOrt: "Code postal de la Packstation ou du bureau de poste", abholDhlFinder: "Numéro inconnu ? Cherche-le dans la recherche de points DHL ↗",
+      abholOsmVor: "Points de retrait :", abholOsmLink: "© les contributeurs d’OpenStreetMap",
+      abholOsmHinweis: "(ODbL). La liste peut être incomplète – si ta Packstation ou ton bureau de poste manque, saisis le numéro toi-même. Distance depuis le centre du code postal.",
       postnummerHinweisP: "Obligatoire pour une Packstation : ta Postnummer de 6 à 10 chiffres de l’app DHL. Prénom et nom doivent correspondre à ton compte DHL.",
       postnummerHinweisF: "Obligatoire aussi au bureau de poste : ta Postnummer de 6 à 10 chiffres de l’app DHL. Retrait avec une pièce d’identité.", fehltPostnummer: "Saisis ta Postnummer DHL (6 à 10 chiffres).",
       postnummerUngueltig: "La Postnummer compte 6 à 10 chiffres.", abholNurDhl: "Seul DHL livre en Packstation et en bureau de poste. Choisis DHL ou la livraison à ton adresse.",
@@ -407,17 +422,26 @@
   }
 
   // ---- Versand: Standard (und Express, wenn angeboten) mit Live-Preis
-  function versandLaden() {
+  // still: im Hintergrund neu laden (nach der Codepruefung) - Anzeige und Summe bleiben, bis die Antwort da ist.
+  function versandLaden(still) {
     var box = $("kasseVersand");
-    box.textContent = t("versandLaedt");
-    box.setAttribute("aria-busy", "true");
+    if (!still) {
+      box.textContent = t("versandLaedt");
+      box.setAttribute("aria-busy", "true");
+    }
     if (!WORKER) { zustand.versand = null; versandZeichnen(); return Promise.resolve(); }
     var ids = zustand.stuecke.map(function (it) { return it.id; }).join(",");
-    var nr = ++versandAnfrage;
-    return fetch(WORKER + "/versand/optionen?artikel=" + encodeURIComponent(ids) + "&land=" + encodeURIComponent(zustand.land))
+    // Stilles Nachladen zaehlt nicht als neue Anfrage: eine noch laufende erste Antwort darf
+    // weiter gelten (sonst bleibt auf langsamen Geraeten die Versandwahl leer, bis die zweite da ist).
+    var nr = still ? versandAnfrage : ++versandAnfrage;
+    var codeParam = gespeicherterCode() ? "&code=" + encodeURIComponent(gespeicherterCode()) : "";
+    var antwortDa;
+    versandLaufend = new Promise(function (r) { antwortDa = r; });
+    return fetch(WORKER + "/versand/optionen?artikel=" + encodeURIComponent(ids) + "&land=" + encodeURIComponent(zustand.land) + codeParam)
       .then(function (r) { return r.json().catch(function () { return null; }).then(function (d) { return r.ok ? d : (d && d.laender ? { laender: d.laender } : null); }); })
       .catch(function () { return null; })
       .then(function (daten) {
+        antwortDa();
         // Nur die Antwort zum zuletzt gewaehlten Land zaehlt.
         if (nr !== versandAnfrage) return;
         if (daten && daten.laender) laenderSetzen(daten.laender);
@@ -425,6 +449,8 @@
       });
   }
   var versandAnfrage = 0;
+  // Laufende Versandabfrage: die Bestellung wartet darauf, statt ohne Versandwahl zu scheitern.
+  var versandLaufend = null;
   function versandSetzen(daten) {
     var gueltig = daten && daten.optionen && daten.optionen.length ? daten : null;
     if (gueltig && gueltig.frei && gueltig.frei.abCents) FREI_AB_CENTS = gueltig.frei.abCents;
@@ -529,10 +555,22 @@
       radio.addEventListener("change", function () { zustand.wahl = o; versandZeichnen(); });
       var name = el("span", "kasse-option__name", versandTitel(o));
       var dienst = o.carrier && versandTitel(o).indexOf(o.carrier) !== 0 ? o.carrier : "";
-      var meta = [dienst, tage(o), o.versichertBisCents ? tf("versichert", { betrag: geldRund(o.versichertBisCents) }) : "",
+      // Nur die echte Transportversicherung heisst "versichert"; sonst ist es die Haftung von DHL.
+      var meta = [dienst, tage(o), o.versichertBisCents ? tf(o.hoeherversicherung ? "versichert" : "haftung", { betrag: geldRund(o.versichertBisCents) }) : "",
         nurHaustuer ? t("nurHaustuer") : ""].filter(Boolean).join(" · ");
       if (meta) name.appendChild(el("small", "", meta));
       label.appendChild(radio);
+      // DHL-Icon fuer den Checkout (Originaldatei DHL Group Brand Services, Freigabe 17.11.2026).
+      if (/dhl/i.test(String(o.carrier || "") + " " + versandTitel(o))) {
+        var dhlIcon = document.createElement("img");
+        dhlIcon.className = "kasse-option__dhl";
+        dhlIcon.src = "/assets/dhl/dhl-icon.svg";
+        dhlIcon.alt = "DHL";
+        dhlIcon.width = 60;
+        dhlIcon.height = 35;
+        dhlIcon.decoding = "async";
+        label.appendChild(dhlIcon);
+      }
       label.appendChild(name);
       label.appendChild(el("span", "kasse-option__preis", preisText(o.preisCents)));
       gruppe.appendChild(label);
@@ -573,15 +611,53 @@
       liste.appendChild(reihe);
     }
     var ware = stueckeCents();
+    var code = gespeicherterCode();
+    var rabatt = PAYPAL_BEREIT ? rabattCents(code, ware) : 0;
     zeile(t("zwischensumme") + " (" + zustand.stuecke.length + ")", geld(ware));
+    if (rabatt > 0) zeile(tf("gutscheinZeile", { code: code }), "− " + geld(rabatt), "kasse-summe__rabatt");
     zeile(t("versandZeile") + (zustand.wahl ? " · " + versandName(zustand.wahl) : ""), zustand.wahl ? preisText(zustand.wahl.preisCents) : "…");
     if (abholung() && abhol.ort) zeile(t("lieferungAn"), abhol.ort.name + (abhol.ort.ort ? ", " + abhol.ort.ort : ""), "kasse-summe__ziel");
-    zeile(t("gesamt"), zustand.wahl ? geld(ware + zustand.wahl.preisCents) : "…", "kasse-summe__gesamt");
-    var code = "";
-    try { code = String(localStorage.getItem(CODE_KEY) || "").trim().toUpperCase(); } catch (e) { code = ""; }
+    zeile(t("gesamt"), zustand.wahl ? geld(ware - rabatt + zustand.wahl.preisCents) : "…", "kasse-summe__gesamt");
     var gs = $("kasseGutschein");
     gs.hidden = !(code && PAYPAL_BEREIT);
-    if (code && PAYPAL_BEREIT) gs.textContent = tf("gutschein", { code: code });
+    if (code && PAYPAL_BEREIT) {
+      var info = gutscheinInfo && gutscheinInfo.code === code ? gutscheinInfo : null;
+      gs.textContent = info && info.fixedPriceCents && !rabatt
+        ? tf("gutscheinNurFuer", { code: code, label: info.itemLabel || "1" })
+        : tf("gutschein", { code: code });
+    }
+  }
+  // ---- Gutschein vorab anzeigen: der Server prueft den Code (/coupons/validate),
+  //      die Kasse zeigt den Abzug schon vor PayPal. Verbindlich rechnet weiter
+  //      nur der Worker beim Anlegen der Bestellung.
+  var gutscheinInfo = null;
+  function gespeicherterCode() {
+    try { return String(localStorage.getItem(CODE_KEY) || "").trim().toUpperCase().replace(/\s+/g, ""); } catch (e) { return ""; }
+  }
+  // Artikel-Code: Stueckpreis minus Festpreis, nur wenn das Stueck in der
+  // Bestellung ist; Prozent-Code: Anteil vom Warenwert (wie discountForSubtotal).
+  function rabattCents(code, ware) {
+    var info = gutscheinInfo;
+    if (!code || !info || info.code !== code) return 0;
+    if (info.fixedPriceCents) {
+      var stueck = zustand.stuecke.filter(function (it) { return Number(it.id) === Number(info.itemId); })[0];
+      return stueck ? Math.max(0, Math.round(stueck.price * 100) - Number(info.fixedPriceCents)) : 0;
+    }
+    var prozent = Number(info.discountPercent) || 0;
+    return prozent > 0 ? Math.min(ware, Math.round(ware * prozent / 100)) : 0;
+  }
+  function gutscheinPruefen() {
+    var code = gespeicherterCode();
+    if (!code || !WORKER || !PAYPAL_BEREIT) return;
+    fetch(WORKER + "/coupons/validate", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: code }), credentials: "omit"
+    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (daten) {
+      if (!daten) return;
+      if (daten.valid === true) gutscheinInfo = Object.assign({ code: code }, daten);
+      summeZeichnen();
+      // Versandkostenfrei gilt ab 99 € nach Abzug des Codes: Versand im Hintergrund neu laden.
+      versandLaden(true);
+    }).catch(function () { /* ohne Vorschau: der Abzug kommt bei PayPal */ });
   }
   function rechtZeichnen() {
     var p = $("kasseRecht");
@@ -712,13 +788,14 @@
   Object.keys(f).forEach(function (k) { f[k].addEventListener("input", function () { if (k !== "plz") feldFehler(f[k], ""); }); });
 
   // ---- Zustellung: DHL liefert auch an Packstation oder Filiale. Die Orte
-  // sucht der Shop-Server bei DHL (shop-worker/abholorte.js) - an DHL gehen
-  // nur PLZ und Strasse. Die Karte laedt OpenStreetMap-Kacheln erst nach
+  // kommen vom Shop-Server (shop-worker/abholorte.js): im Normalfall aus den
+  // dort eingelesenen OpenStreetMap-Daten (abholorte-osm.js, quelle "osm" -
+  // dann steht der Quellenvermerk unter Liste und Karte), die Suche verlaesst
+  // den Server nicht. Die Karte laedt OpenStreetMap-Kacheln erst nach
   // einem Klick (Datenschutz) und kommt ohne Bibliothek aus.
   // luftbild: { land, quelle } - amtliche Luftbilder des Bundeslands (shop-worker/karte.js) oder null;
-  // ebene: "luftbild" oder "karte" (Strassenkarte von OpenStreetMap).
-  var abhol = { art: "haustuer", ort: null, orte: null, laedt: false, fehler: "", gesucht: "", karte: false, zoom: 0, luftbild: false, ebene: "" };
-  var abholCache = {};
+  // ebene: "luftbild" oder "karte" (Strassenkarte von OpenStreetMap); quelle: "osm" oder "".
+  var abhol = { art: "haustuer", ort: null, orte: null, laedt: false, fehler: "", gesucht: "", karte: false, zoom: 0, luftbild: false, ebene: "", quelle: "" };
   var abholAnfrage = 0;
   function kannAbholen(o) { return !!(o && o.abholstation); }
   function abholung() { return abhol.art === "abholort" && kannAbholen(zustand.wahl); }
@@ -790,7 +867,26 @@
   var aWerkzeug = el("div", "kasse-abholort__werkzeug");
   aWerkzeug.appendChild(aKarteKnopf);
   aWerkzeug.appendChild(aManuellKnopf);
-  [aSuche, aStatus, aWerkzeug, aKarteHinweis, aKarte, aManuell, aListe, aPostFeld].forEach(function (e) { aPanel.appendChild(e); });
+  // Ohne Standortsuche am Server (DHL-Bedingungen, shop-worker/abholorte.js):
+  // die offizielle DHL-Standortsuche zum Nachsehen der Nummer.
+  var aDhlFinder = el("a", "kasse-link kasse-abholort__dhl", t("abholDhlFinder"));
+  aDhlFinder.href = LANG === "de" ? "https://www.dhl.de/de/privatkunden/dhl-standorte-finden.html" : "https://www.dhl.de/en/privatkunden/dhl-standorte-finden.html";
+  aDhlFinder.target = "_blank";
+  aDhlFinder.rel = "noopener noreferrer";
+  aDhlFinder.hidden = true;
+  var abholOhneSuche = false;
+  // Quellenvermerk der OpenStreetMap-Daten (ODbL) unter Liste und Karte, mit dem
+  // Hinweis, dass die Liste unvollstaendig sein kann.
+  var aOsm = el("p", "kasse-hinweis kasse-abholort__klein kasse-abholort__osm");
+  var aOsmLink = el("a", "", t("abholOsmLink"));
+  aOsmLink.href = "https://www.openstreetmap.org/copyright";
+  aOsmLink.target = "_blank";
+  aOsmLink.rel = "noopener noreferrer";
+  aOsm.appendChild(document.createTextNode(t("abholOsmVor") + " "));
+  aOsm.appendChild(aOsmLink);
+  aOsm.appendChild(document.createTextNode(" " + t("abholOsmHinweis")));
+  aOsm.hidden = true;
+  [aSuche, aStatus, aDhlFinder, aWerkzeug, aKarteHinweis, aKarte, aManuell, aListe, aOsm, aPostFeld].forEach(function (e) { aPanel.appendChild(e); });
 
   // Hinweis im Adressblock: Bei der Abholung reichen Name und E-Mail.
   var aAdressHinweis = el("p", "kasse-hinweis kasse-feld--breit kasse-abholhinweis", t("adresseAbhol"));
@@ -998,6 +1094,7 @@
     karteZeichnen();
     postZeichnen();
     sperrZeichnen();
+    aOsm.hidden = abhol.quelle !== "osm";
   }
 
   function ortWaehlen(o, vonKarte) {
@@ -1029,7 +1126,20 @@
     summeZeichnen();
   }
 
+  // Server ohne Standortsuche: Nummer, PLZ und Ort von Hand, Suche und Karte weg.
+  function ohneSucheZeigen() {
+    abholOhneSuche = true;
+    aSuchKnopf.hidden = true;
+    aManuellKnopf.hidden = true;
+    aDhlFinder.hidden = false;
+    var titel = aSuche.querySelector("span");
+    if (titel) titel.textContent = t("abholPlzOrt");
+    abhol.laedt = false; abhol.orte = null; abhol.fehler = "abholOhneSuche"; abhol.quelle = "";
+    manuellZeigen(true);
+  }
+
   function abholSuchen(automatisch) {
+    if (abholOhneSuche) { ohneSucheZeigen(); abholZeichnen(); return; }
     var plz = aPlz.value.replace(/\D/g, "").slice(0, 5);
     aPlz.value = plz;
     if (!/^\d{5}$/.test(plz)) {
@@ -1045,10 +1155,7 @@
     if (abhol.gesucht === schluessel && (abhol.laedt || abhol.orte)) return;
     abhol.gesucht = schluessel;
     abhol.zoom = 0;
-    if (abholCache[schluessel]) {
-      abhol.orte = abholCache[schluessel].orte; abhol.luftbild = abholCache[schluessel].luftbild;
-      abhol.fehler = ""; abhol.laedt = false; abholZeichnen(); return;
-    }
+    // Kein Zwischenspeicher fuer DHL-Standorte (Location-Finder-Bedingungen).
     var nr = ++abholAnfrage;
     abhol.laedt = true; abhol.fehler = "";
     statusZeichnen();
@@ -1061,16 +1168,17 @@
         abhol.orte = Array.isArray(daten.orte) ? daten.orte : [];
         // { land, quelle } - amtliche Luftbilder des Bundeslands der PLZ, sonst nur Strassenkarte.
         abhol.luftbild = WORKER && daten.luftbild && /^[A-Z]{2}$/.test(daten.luftbild.land) && daten.luftbild.quelle ? daten.luftbild : null;
-        abholCache[schluessel] = { orte: abhol.orte, luftbild: abhol.luftbild };
+        abhol.quelle = daten.quelle === "osm" ? "osm" : "";
         abholZeichnen();
       }, function (e) {
         if (nr !== abholAnfrage) return;
         var code = (e && e.code) || "";
-        abhol.laedt = false; abhol.orte = null; abhol.gesucht = "";
+        abhol.laedt = false; abhol.orte = null; abhol.gesucht = ""; abhol.quelle = "";
         // Ohne DHL-Zugang am Server: gleich die Nummer eingeben lassen, ohne Stoerungsmeldung.
         abhol.fehler = code === "RATE_LIMITED" ? "zuSchnell" : code === "PLZ_UNGUELTIG" ? "fehltPlz"
           : code === "ABHOLORTE_NICHT_EINGERICHTET" ? "abholOhneSuche" : "abholFehler";
-        if (abhol.fehler === "abholFehler" || abhol.fehler === "abholOhneSuche") manuellZeigen(true);
+        if (abhol.fehler === "abholOhneSuche") ohneSucheZeigen();
+        else if (abhol.fehler === "abholFehler") manuellZeigen(true);
         abholZeichnen();
       });
   }
@@ -1078,6 +1186,8 @@
   function manuellZeigen(an) {
     aManuell.hidden = !an;
     aManuellKnopf.setAttribute("aria-expanded", String(an));
+    // Wer die Nummer selbst eingibt, findet sie in der DHL-Standortsuche.
+    aDhlFinder.hidden = !(abholOhneSuche || an);
     if (an && !mOrt.value && aPlz.value === f.plz.value.trim()) mOrt.value = f.ort.value.trim();
   }
   function manuellUebernehmen() {
@@ -1256,6 +1366,7 @@
     if (code === "TOO_MANY_OPEN_ORDERS") return t(e && e.daten && e.daten.reason === "EMAIL" ? "zuVieleOffenMail" : "zuVieleOffen");
     if (code === "COUPON_INVALID_OR_USED") return t("gutscheinWeg");
     if (code === "COUPON_RESERVED") return t("gutscheinReserviert");
+    if (code === "COUPON_NOT_FOR_ORDER") return t("gutscheinNichtFuer");
     if (code === "ITEM_UNAVAILABLE" || code === "ITEM_NOT_FOUND" || code === "PRICE_ON_REQUEST") return t("schonWeg");
     return t("fehler");
   }
@@ -1316,7 +1427,11 @@
       createOrder: function () {
         letzterFehler = "";
         melden("", status);
+        // Versandpreis noch unterwegs (langsames Netz, Nachladen nach der Codepruefung): kurz warten.
+        var warten = zustand.wahl || !versandLaufend ? Promise.resolve() : versandLaufend;
+        return warten.then(function () {
         var wahl = zustand.wahl;
+        if (!wahl) { melden(t(zustand.versand ? "versandWahlFehlt" : "versandFehlt"), status); return Promise.reject(new Error("VERSAND_FEHLT")); }
         var ids = zustand.stuecke.map(function (it) { return it.id; });
         var zustellung = zustellungDaten();
         var inhalt = { itemIds: ids, adresse: zustellung ? { name: adresse().name, land: "DE" } : adresse(), email: f.email.value.trim(),
@@ -1346,9 +1461,10 @@
           if (code === "ITEM_UNAVAILABLE" || code === "ITEM_NOT_FOUND") artikelLaden();
           // shop-promos.js hat den Code schon vergessen: Hinweis "wird
           // verrechnet" ausblenden, der naechste Klick bestellt ohne Gutschein.
-          if (code === "COUPON_INVALID_OR_USED") summeZeichnen();
+          if (code === "COUPON_INVALID_OR_USED" || code === "COUPON_NOT_FOR_ORDER") summeZeichnen();
           letzterFehler = fehlerText(e);
           throw e;
+        });
         });
       },
       onApprove: function (daten) {
@@ -1465,6 +1581,7 @@
   }
 
   rechtZeichnen();
+  gutscheinPruefen();
   artikelLaden().then(function () {
     if (!zustand.stuecke.length) return;
     if (PAYPAL_BEREIT && window.paypal && typeof window.paypal.Buttons === "function") paypalEinrichten();

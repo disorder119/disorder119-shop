@@ -289,8 +289,7 @@ test("versandkostenfrei: only the cheapest standard is free, the rest costs the 
   // Ersatzpreis (Packlink fehlt): auch der wird uebernommen.
   const ersatz = versandkostenfreiAnwenden({ paket: "S", quelle: "ersatz", optionen: [{ id: "ersatz-S", art: "standard", preisCents: 590 }] }, 12000, konfig);
   assert.equal(ersatz.optionen[0].preisCents, 0);
-  // Die echte Konfiguration: ab 99 Euro.
-  // Die echte Konfiguration: ab 99 Euro, nur in Deutschland (EU zahlt den DHL-Preis).
+  // Die echte Konfiguration: ab 99 Euro (seit 04.11.2026 nach Abzug eines Codes), nur in Deutschland (EU zahlt den DHL-Preis).
   assert.deepEqual(VERSAND.versandkostenfrei, { abCents: 9900, zonen: ["DE"] });
   const kaputt = structuredClone(shopConfig);
   kaputt.versand.versandkostenfrei = { abCents: "99" };

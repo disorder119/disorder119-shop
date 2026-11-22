@@ -18,13 +18,16 @@ from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
 NAME = re.compile(r"^(?P<name>.+?)\s*\((?P<n>\d+)\)\s*#\s*(?P<nr>\d+)\s+freigestellt$", re.IGNORECASE)
+# Seit Shooting 11 (Okt. 2026) heissen Originale "Name #Nr (n)"; die alte Form "(n) #Nr" hat Vorrang,
+# weil dort eine Zahl VOR "(n)" ein alter Foto-Tag ist ("#195 (1) #192" = Artikel 192).
+NAME_NEU = re.compile(r"^(?P<name>.+?)\s*#\s*(?P<nr>\d+)\s*\((?P<n>\d+)\)\s+freigestellt$", re.IGNORECASE)
 GALERIE = re.compile(r"^assets/img/[A-Za-z0-9._-]{1,80}/\d{1,3}\.webp$")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 
 def parse_name(rel: str):
     stem = Path(str(rel).replace("\\", "/")).stem
-    m = NAME.match(stem.strip())
+    m = NAME.match(stem.strip()) or NAME_NEU.match(stem.strip())
     return (int(m.group("n")), m.group("nr")) if m else None
 
 

@@ -126,6 +126,9 @@ def test_baukasten(driver) -> None:
     wait(driver, lambda d: "open" in (picker.get_attribute("class") or ""), "Baukasten-Picker offen")
     if picker.get_attribute("role") != "dialog" or picker.get_attribute("aria-modal") != "true":
         fail("Baukasten: Picker besitzt keine Dialog-Semantik")
+    top_titles = [item.text for item in driver.find_elements(By.CSS_SELECTOR, "#outfitPickerGrid .outfit-picker__item-title")]
+    if "Prada Pumps Damen Schwarz" in top_titles or "Pierre Balmain Sweatshirt Herren Grau" not in top_titles:
+        fail("Baukasten: Oberteil-Auswahl verwendet nicht die gepruefte Artikel-Taxonomie")
     driver.find_element(By.ID, "outfitPickerClose").click()
     wait(driver, lambda d: "open" not in (picker.get_attribute("class") or ""), "Baukasten-Picker geschlossen")
 
@@ -134,6 +137,54 @@ def test_baukasten(driver) -> None:
     wait(driver, lambda d: "open" in (picker.get_attribute("class") or ""), "Baukasten-Picker per Enter offen")
     driver.find_element(By.ID, "outfitPickerClose").click()
     wait(driver, lambda d: "open" not in (picker.get_attribute("class") or ""), "Baukasten-Picker nach Keyboard-Test geschlossen")
+
+    driver.find_elements(By.CSS_SELECTOR, "#outfitStack .outfit-slot")[3].click()
+    wait(driver, lambda d: "open" in (picker.get_attribute("class") or ""), "Schuh-Picker offen")
+    shoe_titles = [item.text for item in driver.find_elements(By.CSS_SELECTOR, "#outfitPickerGrid .outfit-picker__item-title")]
+    if "Prada Pumps Damen Schwarz" not in shoe_titles:
+        fail("Baukasten: Pumps fehlen in der Schuh-Auswahl")
+    driver.find_element(By.ID, "outfitPickerClose").click()
+    wait(driver, lambda d: "open" not in (picker.get_attribute("class") or ""), "Schuh-Picker geschlossen")
+
+    driver.find_elements(By.CSS_SELECTOR, "#outfitStack .outfit-slot")[1].click()
+    wait(driver, lambda d: "open" in (picker.get_attribute("class") or ""), "Jacken-Picker offen")
+    jacket_titles = [item.text for item in driver.find_elements(By.CSS_SELECTOR, "#outfitPickerGrid .outfit-picker__item-title")]
+    if "Maison Margiela x H&M Blazer Damen Grau" not in jacket_titles:
+        fail("Baukasten: Blazer fehlt in der Jacken-Auswahl")
+    driver.find_element(By.ID, "outfitPickerClose").click()
+    wait(driver, lambda d: "open" not in (picker.get_attribute("class") or ""), "Jacken-Picker geschlossen")
+
+    driver.find_elements(By.CSS_SELECTOR, "#outfitStack .outfit-slot")[4].click()
+    wait(driver, lambda d: "open" in (picker.get_attribute("class") or ""), "Accessoire-Picker offen")
+    accessory_titles = [item.text for item in driver.find_elements(By.CSS_SELECTOR, "#outfitPickerGrid .outfit-picker__item-title")]
+    if "Hysteric Glamour Pop-Up Toaster" in accessory_titles:
+        fail("Baukasten: Deko-Objekt erscheint als tragbares Accessoire")
+    driver.find_element(By.ID, "outfitPickerClose").click()
+    wait(driver, lambda d: "open" not in (picker.get_attribute("class") or ""), "Accessoire-Picker geschlossen")
+
+    driver.execute_script("localStorage.setItem('disorder119_outfit', JSON.stringify({top: 9463}))")
+    driver.refresh()
+    wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#outfitStack .outfit-slot")) == 5, "Baukasten nach altem Look")
+    if "Prada Pumps" in driver.find_elements(By.CSS_SELECTOR, "#outfitStack .outfit-slot")[0].text:
+        fail("Baukasten: alter Look behaelt Schuhe im Oberteil-Fach")
+    if driver.execute_script("return JSON.parse(localStorage.getItem('disorder119_outfit')).top || null"):
+        fail("Baukasten: unpassender Artikel bleibt im gespeicherten Look")
+
+    driver.execute_script("localStorage.setItem('disorder119_outfit', JSON.stringify({top: 9400, bottom: 9642}))")
+    driver.refresh()
+    wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#outfitStack .outfit-slot")) == 5, "Baukasten mit Kleid")
+    if "outfit-slot--locked" not in driver.find_elements(By.CSS_SELECTOR, "#outfitStack .outfit-slot")[2].get_attribute("class"):
+        fail("Baukasten: Kleid sperrt das Unterteil nicht")
+    if driver.execute_script("return JSON.parse(localStorage.getItem('disorder119_outfit')).bottom || null"):
+        fail("Baukasten: Unterteil bleibt zusammen mit einem Kleid gespeichert")
+
+    driver.execute_script("localStorage.setItem('disorder119_outfit', JSON.stringify({top: 9515, bottom: 9642}))")
+    driver.refresh()
+    wait(driver, lambda d: len(d.find_elements(By.CSS_SELECTOR, "#outfitStack .outfit-slot")) == 5, "Baukasten mit Mesh-Top")
+    if "outfit-slot--locked" in driver.find_elements(By.CSS_SELECTOR, "#outfitStack .outfit-slot")[2].get_attribute("class"):
+        fail("Baukasten: Mesh-Top wird faelschlich als Kleid behandelt")
+    if "Y-3 Sport Uniform Cargohose" not in driver.find_elements(By.CSS_SELECTOR, "#outfitStack .outfit-slot")[2].text:
+        fail("Baukasten: Unterteil zum Mesh-Top fehlt")
 
     if urlparse(driver.current_url).path != "/baukasten/":
         fail("Baukasten: Picker-Interaktion veraendert unerwartet die Route")

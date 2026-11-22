@@ -373,6 +373,9 @@
 .kasse-abholort__klein { font-size: 0.74rem; }
 .kasse-abholort__werkzeug { display: flex; flex-wrap: wrap; gap: 6px 18px; }
 .kasse-abholort__werkzeug [hidden] { display: none; }
+.kasse-abholort__dhl { display: inline-block; align-self: flex-start; }
+.kasse-abholort__dhl[hidden], .kasse-abholort__suche [hidden] { display: none; }
+.kasse-abholort__osm a { color: inherit; text-decoration: underline; }
 
 .kasse-link {
   font: inherit;
@@ -556,6 +559,7 @@
 .kasse-form--abholort #kZusatz { opacity: 0.55; }
 
 .kasse-summe__ziel dd { text-align: right; overflow-wrap: anywhere; }
+.kasse-summe__rabatt dd { color: var(--text); font-weight: 600; white-space: nowrap; }
 
 @media (max-width: 520px) {
   .kasse-wohin { grid-template-columns: minmax(0, 1fr); }
@@ -701,3 +705,9 @@
    malen - sonst steht helle Schrift auf der weissen Liste des Systems. */
 :root:not([data-theme]) .kasse-feld select { color-scheme: dark; }
 .kasse-feld select:disabled { opacity: 0.7; }
+
+/* DHL-Icon in der Kasse (Originaldatei von DHL Group Brand Services, Freigabe 17.11.2026):
+   unveraendert, nur proportional skaliert, mindestens 60 px breit. */
+/* DHL-Icon (Freigabe DHL Group Brand Services): mind. 60 px breit, Schutzzone >= 1/7 Breite */
+.kasse-option:has(.kasse-option__dhl) { grid-template-columns: auto 60px minmax(0, 1fr) auto; column-gap: 14px; }
+.kasse-option__dhl { display: block; width: 60px; min-width: 60px; height: auto; }

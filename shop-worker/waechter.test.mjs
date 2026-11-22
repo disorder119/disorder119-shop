@@ -108,10 +108,10 @@ test("Hoster und Privat-Relay werden unterschieden", () => {
   assert.equal(fremdAusgeloest(new Request("https://disorder119.com/", { headers: { "Sec-Fetch-Site": "none" } })), false);
 });
 
-test("Angriff sperrt sofort fuer 24 h ohne Turnstile - nur Hash, eine gebuendelte Telegram-Nachricht", async () => {
+test("Angriff sperrt sofort fuer 24 h ohne Turnstile - nur Hash, eine gebuendelte Telegram-Nachricht (WAECHTER_TELEGRAM=alles)", async () => {
   const db = d1(), tg = telegramFangen();
   try {
-    const env = envMit(db);
+    const env = envMit(db, { WAECHTER_TELEGRAM: "alles" });
     const r = await waechterVorfall(env, null, { ip: IP, ua: "sqlmap/1.7.2#stable (https://sqlmap.org)", land: "CN", pfad: "/?id=1' OR '1'='1", art: "angriff", grund: "sql-injection", asn: 4134, netz: "Chinanet", nr: "W-ABCD2345" }, T0);
     assert.equal(r.gesperrt, true);
     assert.equal(r.selbst, false, "eindeutiger Angriff: keine Selbst-Entsperrung");
@@ -184,7 +184,7 @@ test("Kampagne: dieselbe SQL-Injection von 4 Anschluessen -> eine Meldung, danac
     const k = db.raw.prepare("SELECT * FROM waechter_kampagnen").get();
     assert.equal(k.signatur, "sql-injection|/mieten/?item");
     assert.equal(k.anschluesse, 4);
-    assert.equal(Date.parse(k.streng_bis), T0 + 3 * 4000 + 2 * STD, "Standard: 2 Stunden strenger");
+    assert.equal(Date.parse(k.streng_bis), T0 + 3 * 4000 + 6 * STD, "Standard: 6 Stunden strenger");
     assert.equal(db.raw.prepare("SELECT COUNT(*) n FROM waechter_sperren WHERE kampagne=?").get(k.id).n, 4, "alle vier gehoeren zur Kampagne");
     // Eine einzige Telegram-Nachricht fuer alle vier.
     assert.equal(await waechterFaelligkeit(env, T0 + 20_000), T0 + MIN);
@@ -195,13 +195,14 @@ test("Kampagne: dieselbe SQL-Injection von 4 Anschluessen -> eine Meldung, danac
     assert.match(tg.nachrichten[0], /4 Anschlüsse · Frankreich 4/);
     assert.match(tg.nachrichten[0], /OVH SAS \(AS16276\) 2/);
     assert.match(tg.nachrichten[0], /4 Anschlüsse gesperrt \(davon 4 aus Kampagnen\)/);
+    assert.match(tg.nachrichten[0], /✅ abgewehrt: jede dieser Anfragen wurde abgewiesen/);
     assert.equal((await waechterBuendeln(env, T0 + 2 * MIN)).gesendet, 0, "nicht doppelt");
     // Strenger Modus: neuer Anschluss aus OVH -> erster Scanner-Pfad sperrt;
     // aus einem unbeteiligten Netz erst ab der normalen Schwelle.
     const probe = (ip, asn, netz, t) => waechterVorfall(env, null, { ip, ua: CHROME, land: "FR", pfad: "/.env", art: "probe", grund: "scanner-pfad", asn, netz }, t);
     assert.equal((await probe("192.0.2.150", 16276, "OVH SAS", T0 + 30 * MIN)).gesperrt, true);
     assert.equal((await probe("192.0.2.151", 3320, "Deutsche Telekom AG", T0 + 30 * MIN)).gesperrt, false);
-    assert.equal((await probe("192.0.2.152", 12322, "Free SAS", T0 + 3 * STD)).gesperrt, false, "nach dem strengen Fenster wieder normal");
+    assert.equal((await probe("192.0.2.152", 12322, "Free SAS", T0 + 7 * STD)).gesperrt, false, "nach dem strengen Fenster wieder normal");
     // Neue Sperren in derselben Kampagne kommen gesammelt, fruehestens 10 Minuten nach der letzten Meldung.
     assert.equal((await waechterBuendeln(env, T0 + 31 * MIN + 1000)).gesendet, 1);
     assert.equal(tg.nachrichten.length, 2);
@@ -604,7 +605,7 @@ test("Gesperrter Angreifer erzeugt hoechstens eine Schreibung je Minute, die Spe
     const env2 = { ...env, DB: zaehlendeDb };
     for (let i = 1; i <= 200; i++) await waechterVorfall(env2, null, { ip: IP, ua: "nikto", art: "angriff", grund: "xss" }, T0 + 1000 + i * 100);
     for (let i = 1; i <= 200; i++) assert.equal(await waechterGesperrt(env2, IP, T0 + 1000 + i * 100), true);
-    assert.ok(schreibungen <= 3, `nur ${schreibungen} Schreibungen fuer 400 Versuche`);
+    assert.ok(schreibungen <= 4, `nur ${schreibungen} Schreibungen fuer 400 Versuche (eine davon: ab 10 Treffern zum Melden vorgemerkt)`);
     assert.equal(db.raw.prepare("SELECT COUNT(*) n FROM waechter_vorfaelle").get().n, 1, "keine neuen Vorfall-Zeilen waehrend der Sperre");
     await waechterVorfall(env, null, { ip: IP, ua: "nikto", art: "angriff", grund: "xss" }, T0 + 23 * STD);
     assert.equal(await waechterGesperrt(env, IP, T0 + 30 * STD), true);
@@ -641,4 +642,34 @@ test("Abrufe anderer Cloudflare-Worker ohne Browserkennung (Testshop) werden nie
   assert.equal(gesendet.filter(g => g.url.endsWith("/pruefen")).length, 0);
   const vorfaelle = gesendet.filter(g => g.url.endsWith("/vorfall"));
   assert.deepEqual(vorfaelle.map(v => [v.body.art, v.body.bot]), [["probe", true]], "Probe nur als Bot gemeldet, 404 gar nicht");
+});
+
+test("Standard: Telegram nur bei kritischen Sperren - Scanner-Pfade und Einzelproben bleiben still", async () => {
+  const db = d1(), tg = telegramFangen();
+  try {
+    const env = envMit(db);
+    // Drei Scanner-Pfade sperren, aber ohne Nachricht.
+    for (let i = 1; i <= 3; i++) await waechterVorfall(env, null, { ip: "192.0.2.60", ua: CHROME, land: "BE", pfad: `/x${i}.php`, art: "probe", grund: "scanner-pfad" }, T0 + i * 1000);
+    assert.equal(await waechterGesperrt(env, "192.0.2.60", T0 + MIN), true);
+    assert.equal(sperre(db, await anschlussHash(env, "192.0.2.60")).sammeln, 0, "nicht zum Melden vorgemerkt");
+    // Einzelne abgewehrte SQL-Injection: gesperrt, aber still.
+    const r = await waechterVorfall(env, null, { ip: "192.0.2.61", ua: "sqlmap/1.7", land: "CN", pfad: "/?id=1' OR '1'='1", art: "angriff", grund: "sql-injection" }, T0 + 5000);
+    assert.equal(r.gesperrt, true);
+    assert.equal(r.gemeldet, false);
+    assert.equal(await waechterFaelligkeit(env, T0 + 10_000), null, "nichts faellig");
+    assert.equal((await waechterBuendeln(env, T0 + 2 * MIN)).gesendet, 0);
+    assert.equal(tg.nachrichten.length, 0);
+    // Flut (Gefahr fuer den Betrieb): wird gemeldet.
+    for (let i = 1; i <= 3; i++) await waechterVorfall(env, null, { ip: "192.0.2.62", ua: CHROME, land: "US", pfad: "/", art: "flut", grund: "" }, T0 + 20_000 + i * 1000);
+    assert.equal((await waechterBuendeln(env, T0 + 20_000 + 3000 + MIN + 1000)).gesendet, 1);
+    assert.match(tg.nachrichten[0], /zu viele Anfragen pro Minute/);
+    // Wiederholungstaeter: zweite Sperre binnen 7 Tagen wird gemeldet.
+    await waechterVorfall(env, null, { ip: "192.0.2.61", ua: "sqlmap/1.7", land: "CN", pfad: "/?q=<script>", art: "angriff", grund: "xss" }, T0 + 2 * TAG);
+    assert.equal(sperre(db, await anschlussHash(env, "192.0.2.61")).sammeln, 1);
+    assert.equal((await waechterBuendeln(env, T0 + 2 * TAG + MIN + 1000)).gesendet, 1);
+    assert.match(tg.nachrichten[1], /7 Tage, Wiederholungstäter/);
+    // Hartnaeckiger Angreifer: ab 10 Treffern an einem Tag auch beim ersten Mal gemeldet.
+    for (let i = 1; i <= 10; i++) await waechterVorfall(env, null, { ip: "192.0.2.63", ua: "nikto", land: "PL", pfad: `/?p=../../etc/passwd${i}`, art: "angriff", grund: "path-traversal" }, T0 + 3 * TAG + i * 1000);
+    assert.equal(sperre(db, await anschlussHash(env, "192.0.2.63")).sammeln, 1, "ab 10 Versuchen gemeldet");
+  } finally { tg.zurueck(); }
 });

@@ -5,7 +5,7 @@ import {
   canTransitionRental,
   safeText,
 } from "./commerce-core.js";
-import { sendShippingConfirmation } from "./customer-mail.js";
+import { sendPickupReady, sendShippingConfirmation } from "./customer-mail.js";
 import {
   ErstattungsFehler,
   erstattungAusWebhook,
@@ -203,6 +203,26 @@ function loadCatalogMap(env) {
   return katalogNachId({ env });
 }
 
+// Fuer Bestellbilder und "Artikel online" nie lange warten: was nach
+// KATALOG_WARTEN_MS nicht da ist, fehlt diesmal - der Abruf laeuft weiter und
+// landet im 5-Minuten-Speicher von oeffentlicher-katalog.js (Inhaber 06.11.2026:
+// in der Admin-App fehlte das Artikelbild, weil der Browser catalog.json von
+// disorder119.com nicht lesen darf - jetzt liefert der Server den Pfad mit).
+const KATALOG_WARTEN_MS = 700;
+function katalogKurz(env) {
+  let timer;
+  return Promise.race([
+    loadCatalogMap(env).catch(() => null),
+    new Promise(resolve => { timer = setTimeout(() => resolve(null), KATALOG_WARTEN_MS); }),
+  ]).finally(() => clearTimeout(timer));
+}
+
+// Vorschaubild (thumbs, 220x293) wie im Shop am Handy, sonst das erste Foto.
+function katalogBild(item) {
+  const pfad = item?.grid_image || (Array.isArray(item?.gallery) ? item.gallery[0] : "") || "";
+  return pfad ? `/${String(pfad).replace(/^\/+/, "")}` : null;
+}
+
 function catalogView(item) {
   if (!item) return null;
   return {
@@ -304,11 +324,42 @@ async function getOverview(env, url) {
     COUNT(*) AS requests, COALESCE(SUM(rr.total_price_cents),0) AS quotedRentalCents
     FROM rental_reservations rr JOIN inventory i ON i.id=rr.inventory_id
     WHERE rr.status NOT IN ('CANCELLED') GROUP BY i.item_id,i.article_no ORDER BY requests DESC, quotedRentalCents DESC LIMIT 8`);
+  // Kacheln der Uebersicht fuer den gewaehlten Zeitraum (Inhaber 06.11.2026:
+  // "Bestellungen 2" zaehlte alle Bestellungen seit Start, "Umsatz" auch eine
+  // voll erstattete Testzahlung). Ausgeblendete Testbestellungen zaehlen nie.
+  const sichtbar = col => `(${col} IS NULL OR ${col} NOT IN (SELECT id FROM commerce_orders WHERE versteckt=1))`;
+  const zeitraumStmt = db.prepare(`SELECT
+    (SELECT COUNT(*) FROM commerce_orders WHERE versteckt=0 AND created_at>=?) AS bestellungen,
+    (SELECT COUNT(*) FROM payments WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED')
+      AND provider_payment_id IS NOT NULL AND ${sichtbar("payments.order_id")} AND ${CAPTURE_TIME_SQL}>=?) AS zahlungen,
+    (SELECT COALESCE(SUM(amount_cents),0) FROM payments WHERE status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED')
+      AND provider_payment_id IS NOT NULL AND ${sichtbar("payments.order_id")} AND ${CAPTURE_TIME_SQL}>=?) AS eingenommenCents,
+    (SELECT COALESCE(SUM(amount_cents),0) FROM refunds WHERE status='COMPLETED'
+      AND ${sichtbar("refunds.order_id")} AND COALESCE(updated_at,created_at)>=?) AS erstattetCents`)
+    .bind(cutoffIso, cutoffIso, cutoffIso, cutoffIso);
+  const katalogLaeuft = katalogKurz(env);
   // Alles in einer Rundreise zu D1: jede Abfrage einzeln kostete live rund
   // 50 ms (Worker in Frankfurt, Datenbank in Madrid).
-  const ergebnisse = await db.batch([...summaryStmts, ordersDailyStmt, paymentsDailyStmt, rentalsDailyStmt, topPurchasedStmt, topRentedStmt]);
+  const ergebnisse = await db.batch([...summaryStmts, ordersDailyStmt, paymentsDailyStmt, rentalsDailyStmt, topPurchasedStmt, topRentedStmt, zeitraumStmt]);
   const summary = ergebnisse.slice(0, summaryStmts.length);
-  const [ordersDaily, paymentsDaily, rentalsDaily, topPurchased, topRentedRows] = ergebnisse.slice(summaryStmts.length);
+  const [ordersDaily, paymentsDaily, rentalsDaily, topPurchased, topRentedRows, zeitraumRows] = ergebnisse.slice(summaryStmts.length);
+  const zr = (zeitraumRows?.results && zeitraumRows.results[0]) || {};
+  const eingenommen = Number(zr.eingenommenCents || 0), erstattet = Number(zr.erstattetCents || 0);
+  const zeitraum = {
+    bestellungen: Number(zr.bestellungen || 0),
+    zahlungen: Number(zr.zahlungen || 0),
+    eingenommenCents: eingenommen,
+    erstattetCents: erstattet,
+    umsatzCents: Math.max(0, eingenommen - erstattet),
+  };
+  // "Artikel online" wie im Shop: oeffentlich, verfuegbar, mit Preis. Die
+  // Tabelle inventory kennt nur Stuecke, die schon einmal im Checkout waren.
+  const katalogMap = await katalogLaeuft;
+  const katalogListe = katalogMap ? [...katalogMap.values()] : [];
+  const katalog = katalogListe.length ? {
+    online: katalogListe.filter(it => it.public_status === "AVAILABLE" && Number(it.price) > 0).length,
+    verkauft: katalogListe.filter(it => it.public_status === "SOLD").length,
+  } : null;
   const byDay = new Map();
   const touch = day => {
     if (!byDay.has(day)) byDay.set(day, { day, orders: 0, orderValueCents: 0, capturedCents: 0, rentals: 0, quotedRentalCents: 0 });
@@ -318,7 +369,7 @@ async function getOverview(env, url) {
   for (const row of paymentsDaily.results || []) Object.assign(touch(row.day), { capturedCents: row.capturedCents || 0 });
   for (const row of rentalsDaily.results || []) Object.assign(touch(row.day), { rentals: row.rentals || 0, quotedRentalCents: row.quotedRentalCents || 0 });
 
-  const catalog = (topRentedRows.results || []).length ? await loadCatalogMap(env) : new Map();
+  const catalog = (topRentedRows.results || []).length ? (katalogMap || await loadCatalogMap(env)) : new Map();
   const topRented = (topRentedRows.results || []).map(row => ({ ...row, catalog: catalogView(catalog.get(Number(row.itemId))) }));
 
   const first = result => (result?.results && result.results[0]) || {};
@@ -331,11 +382,24 @@ async function getOverview(env, url) {
     inventory: first(summary[3]),
     customers: first(summary[4]),
     operations: first(summary[5]),
+    zeitraum,
+    katalog,
     daily: Array.from(byDay.values()).sort((a, b) => a.day.localeCompare(b.day)),
     topPurchased: topPurchased.results || [],
     topRented,
   };
 }
+
+// Verwaltungsansicht: nach der vollen 14-Tage-Frist plus Tagespuffer.
+// Der echte Bestellstatus bleibt DELIVERED, damit Zahlungs-/Retourenlogik
+// unveraendert bleibt. Offene Kundenfaelle verhindern den Abschluss.
+export const ORDER_COMPLETED_SQL = `o.status='DELIVERED'
+  AND (SELECT s.delivered_at FROM shipments s WHERE s.order_id=o.id ORDER BY s.created_at DESC LIMIT 1)
+    <= strftime('%Y-%m-%dT%H:%M:%fZ','now','-15 days')
+  AND NOT EXISTS (SELECT 1 FROM widerrufe w WHERE w.order_id=o.id AND w.status<>'ERLEDIGT')
+  AND NOT EXISTS (SELECT 1 FROM returns r WHERE r.order_id=o.id AND r.status NOT IN ('CLOSED','REJECTED'))
+  AND NOT EXISTS (SELECT 1 FROM refunds r WHERE r.order_id=o.id AND r.status IN ('PENDING','FAILED'))
+  AND NOT EXISTS (SELECT 1 FROM erstattungsauftraege e WHERE e.order_id=o.id AND e.status NOT IN ('ERLEDIGT','ABGEBROCHEN'))`;
 
 async function getOrders(env, url) {
   const db = requireDb(env);
@@ -345,11 +409,19 @@ async function getOrders(env, url) {
   // PAID,PREPARING, "Retouren" RETURN_REQUESTED,RETURNED.
   const statuses = safeText(url.searchParams.get("status"), 200).toUpperCase().split(",").map(s => s.trim()).filter(Boolean);
   const q = safeText(url.searchParams.get("q"), 120);
-  if (statuses.length > 6 || statuses.some(s => !ORDER_STATUSES.includes(s))) throw new AdminError("INVALID_ORDER_STATUS", 400);
+  if (statuses.length > 6 || statuses.some(s => s !== "COMPLETED" && !ORDER_STATUSES.includes(s))) throw new AdminError("INVALID_ORDER_STATUS", 400);
 
-  const where = [];
+  // Versteckte Testbestellungen (commerce_orders.versteckt, Migration 0048) nie in der Liste.
+  const where = ["o.versteckt=0"];
   const binds = [];
-  if (statuses.length) { where.push(`o.status IN (${statuses.map(() => "?").join(",")})`); binds.push(...statuses); }
+  if (statuses.length) {
+    const normal = statuses.filter(s => s !== "COMPLETED" && s !== "DELIVERED");
+    const choices = [];
+    if (normal.length) { choices.push(`o.status IN (${normal.map(() => "?").join(",")})`); binds.push(...normal); }
+    if (statuses.includes("DELIVERED")) choices.push(`(o.status='DELIVERED' AND NOT (${ORDER_COMPLETED_SQL}))`);
+    if (statuses.includes("COMPLETED")) choices.push(`(${ORDER_COMPLETED_SQL})`);
+    where.push(`(${choices.join(" OR ")})`);
+  }
   if (q) {
     where.push(`(o.order_number LIKE ? OR o.guest_email LIKE ? OR EXISTS (
       SELECT 1 FROM order_items qi WHERE qi.order_id=o.id AND (qi.article_no LIKE ? OR qi.title_snapshot LIKE ?)
@@ -361,7 +433,7 @@ async function getOrders(env, url) {
   // Zahl und Seite in einer Rundreise (db.batch) statt nacheinander.
   const [countResult, rows] = await db.batch([
     db.prepare(`SELECT COUNT(*) AS total FROM commerce_orders o ${clause}`).bind(...binds),
-    db.prepare(`SELECT o.*,
+    db.prepare(`SELECT o.*,CASE WHEN ${ORDER_COMPLETED_SQL} THEN 'COMPLETED' ELSE o.status END AS displayStatus,
       (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=o.id) AS itemCount,
       (SELECT GROUP_CONCAT(oi.title_snapshot,' · ') FROM order_items oi WHERE oi.order_id=o.id) AS itemTitles,
       (SELECT GROUP_CONCAT(oi.item_id) FROM order_items oi WHERE oi.order_id=o.id) AS itemIds,
@@ -377,23 +449,93 @@ async function getOrders(env, url) {
     .bind(...binds, limit, offset),
   ]);
   const count = countResult?.results?.[0];
+  const liste = rows.results || [];
+  const katalog = liste.length ? await katalogKurz(env) : null;
   return {
     total: Number(count?.total || 0), limit, offset,
-    orders: (rows.results || []).map(row => ({ ...row, nextStatuses: orderNextStatuses(row.status) })),
+    orders: liste.map(row => {
+      const ersteId = Number(String(row.itemIds || "").split(",")[0]);
+      return { ...row, itemImage: katalog && ersteId ? katalogBild(katalog.get(ersteId)) : null, nextStatuses: orderNextStatuses(row.status) };
+    }),
   };
 }
 
-async function getOrderDetail(env, id) {
+// Was die Kundschaft per Mail bekommen hat, so wie verschickt (unveraenderliche
+// Archive order_confirmation_archive und rechnungen). Versand- und
+// Erstattungsmails werden nicht archiviert - sie stehen nur im Protokoll.
+async function getOrderMails(env, id) {
   const db = requireDb(env);
-  const order = await db.prepare("SELECT * FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
+  const order = await db.prepare("SELECT id,order_number FROM commerce_orders WHERE id=? OR order_number=?").bind(id, id).first();
   if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
+  const [bestaetigung, rechnungen] = await db.batch([
+    db.prepare("SELECT subject,html,created_at FROM order_confirmation_archive WHERE order_id=?").bind(order.id),
+    db.prepare("SELECT rechnungsnummer,ausgestellt_am,gesamt_cents,empfaenger_email,html FROM rechnungen WHERE order_id=? ORDER BY ausgestellt_am").bind(order.id),
+  ]);
+  const mails = [];
+  for (const b of bestaetigung?.results || []) {
+    mails.push({ art: "bestaetigung", titel: "Bestellbestätigung", betreff: b.subject, gesendetAm: b.created_at, html: b.html });
+  }
+  for (const r of rechnungen?.results || []) {
+    mails.push({ art: "rechnung", titel: `Rechnung ${r.rechnungsnummer}`, betreff: `Rechnung ${r.rechnungsnummer}`, gesendetAm: r.ausgestellt_am,
+      an: r.empfaenger_email || null, gesamtCents: Number(r.gesamt_cents || 0), html: r.html });
+  }
+  return { orderId: order.id, orderNumber: order.order_number, mails };
+}
+
+const DHL_VERFOLGEN = "https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=";
+
+// Sendung + Stand der DHL-Abfrage (sendungs_abfragen) fuer die Admin-App:
+// Zustand, juengste Stationen, letzte Abfrage, Fehler und der Link zur
+// Sendungsverfolgung bei DHL (geht immer, auch wenn die Abfrage scheitert).
+function sendungMitVerfolgung(s) {
+  const {
+    verfolgung_zustand: zustand, verfolgung_text: text, verfolgung_abfragen: abfragen, verfolgung_zuletzt_am: zuletztAm,
+    verfolgung_geaendert_am: geaendertAm, verfolgung_fehler: fehler, verfolgung_ereignisse_json: ereignisseJson,
+    verfolgung_zugestellt_am: zugestelltAm, ...sendung
+  } = s;
+  let stationen = [];
+  try { const roh = JSON.parse(ereignisseJson || "[]"); if (Array.isArray(roh)) stationen = roh.slice(0, 25); } catch { stationen = []; }
+  const nummer = String(sendung.tracking_number || "").trim();
+  const istDhl = /dhl|deutsche post/i.test(String(sendung.carrier || ""));
+  return {
+    ...sendung,
+    dhlLink: istDhl && /^[A-Za-z0-9]{8,40}$/.test(nummer) ? DHL_VERFOLGEN + encodeURIComponent(nummer) : null,
+    verfolgung: zuletztAm ? {
+      zustand: zustand || "UNBEKANNT", text: text || "", abfragen: Number(abfragen || 0), zuletztAm,
+      geaendertAm: geaendertAm || null, zugestelltAm: zugestelltAm || null, fehler: fehler || null, stationen,
+    } : null,
+  };
+}
+
+// Stand der Abholmail aus den Ereignissen der Bestellung (customer-mail.sendPickupReady).
+function abholmailStand(ereignisse = []) {
+  const gesendet = (Array.isArray(ereignisse) ? ereignisse : []).filter(e => e && e.event_type === "PICKUP_NOTICE_SENT");
+  if (!gesendet.length) return { gesendet: false, anzahl: 0, zuletztAm: null };
+  const zuletzt = gesendet.map(e => String(e.created_at || "")).sort().pop() || null;
+  return { gesendet: true, anzahl: gesendet.length, zuletztAm: zuletzt };
+}
+
+function abholmailKurz(r = {}) {
+  return { sent: Boolean(r.sent), duplicate: Boolean(r.duplicate), an: r.an || null, sprache: r.sprache || null, gesendetAm: r.gesendetAm || null };
+}
+
+async function getOrderDetail(env, id, { bilder = true } = {}) {
+  const db = requireDb(env);
+  const order = await db.prepare(`SELECT o.*,CASE WHEN ${ORDER_COMPLETED_SQL} THEN 'COMPLETED' ELSE o.status END AS displayStatus
+    FROM commerce_orders o WHERE o.id=? OR o.order_number=?`).bind(id, id).first();
+  if (!order) throw new AdminError("ORDER_NOT_FOUND", 404);
+  const katalogLaeuft = bilder ? katalogKurz(env) : Promise.resolve(null);
   const [items, payments, shipments, returns, refunds, events, notes, contact, versand] = await db.batch([
     db.prepare(`SELECT oi.*,i.status AS inventory_status FROM order_items oi
       LEFT JOIN inventory i ON i.id=oi.inventory_id WHERE oi.order_id=? ORDER BY oi.rowid`).bind(order.id),
     db.prepare(`SELECT p.*,
       (SELECT e.amount_cents FROM tax_cash_events e WHERE e.payment_id=p.id AND e.kind='fee' LIMIT 1) AS paypal_fee_cents
       FROM payments p WHERE p.order_id=? ORDER BY p.created_at DESC`).bind(order.id),
-    db.prepare("SELECT * FROM shipments WHERE order_id=? ORDER BY created_at DESC").bind(order.id),
+    // Stand der DHL-Sendungsverfolgung (dhl-tracking.js, Cron) gleich mit.
+    db.prepare(`SELECT s.*, a.zustand AS verfolgung_zustand, a.status_text AS verfolgung_text, a.abfragen AS verfolgung_abfragen,
+      a.zuletzt_am AS verfolgung_zuletzt_am, a.geaendert_am AS verfolgung_geaendert_am, a.fehler AS verfolgung_fehler,
+      a.ereignisse_json AS verfolgung_ereignisse_json, a.zugestellt_am AS verfolgung_zugestellt_am
+      FROM shipments s LEFT JOIN sendungs_abfragen a ON a.shipment_id=s.id WHERE s.order_id=? ORDER BY s.created_at DESC`).bind(order.id),
     db.prepare("SELECT * FROM returns WHERE order_id=? ORDER BY created_at DESC").bind(order.id),
     db.prepare("SELECT * FROM refunds WHERE order_id=? ORDER BY created_at DESC").bind(order.id),
     db.prepare("SELECT * FROM audit_events WHERE entity_id=? OR (entity_type='order' AND entity_id=?) ORDER BY created_at DESC LIMIT 200").bind(order.id, order.id),
@@ -409,14 +551,15 @@ async function getOrderDetail(env, id) {
     addresses = addr.results || [];
   }
   const activity = (events.results || []).map(row => ({ ...row, metadata: parseMetadata(row.metadata_json) }));
-  const itemRows = items.results || [];
+  const katalog = await katalogLaeuft;
+  const itemRows = (items.results || []).map(i => ({ ...i, image: katalog ? katalogBild(katalog.get(Number(i.item_id))) : null }));
   const [erstattungsauftraege, widerrufe, sperre] = await Promise.all([
     auftraegeFuerBestellung(db, order.id),
     widerrufeFuerBestellung(db, order.id),
     versandSperre(db, order.id),
   ]);
   const laufend = erstattungsauftraege.find(a => a.laufend) || null;
-  const shipmentRows = shipments.results || [];
+  const shipmentRows = (shipments.results || []).map(sendungMitVerfolgung);
   const paymentRows = payments.results || [];
   // Juengste PayPal-Zahlung: reserviert, eingezogen, freigegeben, gescheitert.
   const zahlung = zahlungView(paymentRows.find(p => p.provider === "PAYPAL") || null);
@@ -434,6 +577,8 @@ async function getOrderDetail(env, id) {
     laufenderAuftrag: laufend,
     widerrufe,
     versandSperre: sperre,
+    // Abholmail (Paket liegt in Packstation/Filiale) - nur aus der Admin-App.
+    abholmail: abholmailStand(activity),
     ruecklauf: ruecklaufAngebot(order, itemRows, shipmentRows, refunds.results || [], widerrufe, laufend, zahlung),
     wiederVerfuegbar: wiederVerfuegbarStand(order, itemRows, activity, { warVerkauft }),
     items: itemRows,
@@ -680,6 +825,13 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN", optionen =
       status=COALESCE(?,status), shipped_at=CASE WHEN ?='SHIPPED' THEN COALESCE(shipped_at,?) ELSE shipped_at END,
       delivered_at=CASE WHEN ?='DELIVERED' THEN COALESCE(delivered_at,?) ELSE delivered_at END, updated_at=? WHERE id=?`)
       .bind(carrier, service, trackingNumber, shipmentStatus, shipmentStatus, now, shipmentStatus, now, now, shipment.id).run();
+    if (trackingNumber) {
+      // DHL-Online-Frankierung ohne Rueckmeldung (dhl-qr.js, Kennung "ohne-..."): DHL meldet
+      // den Kauf nicht zurueck. Sobald der Inhaber die Sendungsnummer eintraegt, ist die
+      // Marke bezahlt - so kommen ihre Kosten in Steuer-Datensatz und Manager.
+      await db.prepare(`UPDATE dhl_qr_marken SET state='PAYED',shipment_number=COALESCE(shipment_number,?),paid_at=COALESCE(paid_at,?),updated_at=?
+        WHERE order_id=? AND state IN ('PREPAID','INPAYMENT') AND cart_id LIKE 'ohne-%'`).bind(trackingNumber, now, now, order.id).run().catch(() => {});
+    }
     await auditAdmin(env, "shipment", shipment.id, "SHIPMENT_UPDATED", reqId, { orderId: order.id, status: shipmentStatus || undefined, carrier: carrier || undefined, tracking: Boolean(trackingNumber) }, actorType);
   } else if (effectiveStatus === "DELIVERED") {
     await db.prepare("UPDATE shipments SET status='DELIVERED',delivered_at=COALESCE(delivered_at,?),updated_at=? WHERE order_id=?")
@@ -694,7 +846,12 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN", optionen =
   // beim Mailanbieter darf den Versandeintrag nicht verhindern. Die
   // Verdopplungssperre haengt an der Sendungsnummer, ein erneuter Aufruf
   // schickt also nichts zweimal.
-  if (effectiveStatus === "SHIPPED") {
+  //
+  // Ausnahme (Inhaber 14.11.2026): Meldet die DHL-Sendungsverfolgung
+  // "unterwegs", geht die Mail nicht von selbst - der Inhaber gibt sie per
+  // Telegram frei (optionen.ohneVersandmail, notifications.notifyStatusFreigabe).
+  // Der Klick in der Admin-App mailt weiter sofort.
+  if (effectiveStatus === "SHIPPED" && optionen?.ohneVersandmail !== true) {
     try {
       await sendShippingConfirmation(env, order.id, reqId);
     } catch (err) {
@@ -708,7 +865,9 @@ async function updateOrder(env, id, body, reqId, actorType = "ADMIN", optionen =
     }
   }
 
-  return getOrderDetail(env, order.id);
+  // Automatische Statuswechsel (PayPal-Abgleich, DHL-Cron) brauchen keine
+  // Artikelbilder - dort keinen Katalog-Abruf anstossen.
+  return getOrderDetail(env, order.id, { bilder: actorType === "ADMIN" });
 }
 
 // ----------------------------------------------------------------- Stornieren
@@ -913,8 +1072,11 @@ async function orderErstatten(env, id, body = {}, reqId) {
 // Fuer automatische Schritte aus der Sendungsverfolgung (packlink.js): derselbe
 // Weg wie der Statusknopf in der Admin-App - Statuspruefung, Lagerstueck,
 // Versandmail -, nur im Protokoll als SYSTEM statt ADMIN vermerkt.
-export async function orderStatusAutomatisch(env, orderId, status, reqId = crypto.randomUUID()) {
-  return updateOrder(env, orderId, { status }, reqId, "SYSTEM");
+// versandmail=false (DHL-Sendungsverfolgung): Status, Lagerstueck und
+// Zahlungseinzug wie immer, aber die Versandmail wartet auf die Telegram-
+// Freigabe des Inhabers.
+export async function orderStatusAutomatisch(env, orderId, status, reqId = crypto.randomUUID(), { versandmail = true } = {}) {
+  return updateOrder(env, orderId, { status }, reqId, "SYSTEM", { ohneVersandmail: versandmail === false });
 }
 
 // PayPal meldet eine Erstattung (auch direkt in PayPal ausgeloest).
@@ -1419,6 +1581,18 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
 
     // Ruecksendung: anlegen (Kundin hat per Mail/Brief widerrufen) und
     // "Ware eingegangen" (Stuecke waehlen, pruefen, erstatten).
+    // Abholmail: {vorschau:true} baut sie nur (fuer die Vorschau in der App),
+    // sonst geht sie an die Kundschaft - einmal je Sendung, {erneut:true} nochmal.
+    const abholMatch = /^\/admin\/orders\/([^/]+)\/abholmail$/.exec(path);
+    if (abholMatch && request.method === "POST") {
+      const id = decodeURIComponent(abholMatch[1]);
+      const body = await readJson(request);
+      const r = await sendPickupReady(env, id, { reqId, vorschau: body?.vorschau === true, erneut: body?.erneut === true });
+      if (r.vorschau) return adminJson({ abholmail: r }, 200, origin);
+      if (!r.sent && !r.duplicate) throw new AdminError(r.reason || "PICKUP_MAIL_FAILED", r.reason === "ORDER_NOT_FOUND" ? 404 : 409);
+      return adminJson({ ...(await getOrderDetail(env, id)), abholmailErgebnis: abholmailKurz(r) }, 200, origin);
+    }
+
     const ruecksendungMatch = /^\/admin\/orders\/([^/]+)\/ruecksendung(\/eingegangen)?$/.exec(path);
     if (ruecksendungMatch && request.method === "POST") {
       const id = decodeURIComponent(ruecksendungMatch[1]);
@@ -1460,6 +1634,10 @@ export async function handleAdminRequest(request, env, url, reqId, origin = null
       return adminJson(await updateOrderContact(env, decodeURIComponent(contactMatch[1]), await readJson(request), reqId), 200, origin);
     }
 
+    const mailsMatch = /^\/admin\/orders\/([^/]+)\/mails$/.exec(path);
+    if (mailsMatch && request.method === "GET") {
+      return adminJson(await getOrderMails(env, decodeURIComponent(mailsMatch[1])), 200, origin);
+    }
     const orderMatch = /^\/admin\/orders\/([^/]+)$/.exec(path);
     if (orderMatch) {
       const id = decodeURIComponent(orderMatch[1]);

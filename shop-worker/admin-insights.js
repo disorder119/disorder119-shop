@@ -150,7 +150,7 @@ async function buildInsights(env, url) {
       SUM(CASE WHEN status='PAID' THEN 1 ELSE 0 END) AS paidWaiting,
       SUM(CASE WHEN status='PREPARING' THEN 1 ELSE 0 END) AS preparing,
       SUM(CASE WHEN status='PAYMENT_PENDING' AND created_at < datetime('now','-30 minutes') THEN 1 ELSE 0 END) AS stalePaymentPending
-      FROM commerce_orders`),
+      FROM commerce_orders WHERE versteckt=0`),
     db.prepare(`SELECT COUNT(*) AS shippedWithoutTracking
       FROM commerce_orders o
       WHERE o.status='SHIPPED' AND NOT EXISTS (
@@ -181,7 +181,7 @@ async function buildInsights(env, url) {
       MAX(o.created_at) AS lastOrderAt
     FROM commerce_orders o
     LEFT JOIN order_contact_snapshots cs ON cs.order_id=o.id
-    WHERE EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id
+    WHERE o.versteckt=0 AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id
       AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND p.provider_payment_id IS NOT NULL)
       AND COALESCE(NULLIF(cs.email,''),NULLIF(o.guest_email,'')) IS NOT NULL
     GROUP BY LOWER(COALESCE(NULLIF(cs.email,''),NULLIF(o.guest_email,'')))
@@ -190,7 +190,7 @@ async function buildInsights(env, url) {
   const countryRowsStmt = db.prepare(`SELECT COALESCE(NULLIF(country_code,''),'UNBEKANNT') AS countryCode,
       COUNT(*) AS orders, COALESCE(SUM(o.total_cents),0) AS orderValueCents
     FROM commerce_orders o JOIN order_contact_snapshots cs ON cs.order_id=o.id
-    WHERE EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id
+    WHERE o.versteckt=0 AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id=o.id
       AND p.status IN ('COMPLETED','REFUNDED','PARTIALLY_REFUNDED') AND p.provider_payment_id IS NOT NULL)
     GROUP BY COALESCE(NULLIF(country_code,''),'UNBEKANNT')
     ORDER BY orderValueCents DESC, orders DESC LIMIT 20`);

@@ -15,6 +15,34 @@ const ITEMS = [
 ];
 const ITEMS_TEXT = JSON.stringify(ITEMS, null, 2) + "\n";
 
+test("external sale reaches SOLD and records its platform", () => {
+  const sold = applyChanges(structuredClone(ITEMS), [{ id: 6241, set: { public_status: "SOLD", sold_platform: "Vinted" } }]);
+  assert.equal(sold[0].public_status, "SOLD");
+  assert.equal(sold[0].status, "Verkauft");
+  assert.equal(sold[0].sold_platform, "Vinted");
+  assert.throws(() => applyChanges(structuredClone(ITEMS), [{ id: 6241, set: { sold_platform: "unknown" } }]));
+});
+
+test("hiding keeps an item editable and returning it to the shop restores availability", () => {
+  const sample = structuredClone(ITEMS);
+  sample[0].category = "Pants";
+  sample[0].taxonomy_category = "Pants";
+  const hidden = applyChanges(sample, [{ id: 6241, set: { hidden_from_shop: true } }]);
+  assert.equal(hidden[0].public_status, "DRAFT");
+  assert.equal(hidden[0].status, "Verborgen");
+  const back = applyChanges(hidden, [{ id: 6241, set: { public_status: "AVAILABLE", hidden_from_shop: false } }]);
+  assert.equal(back[0].public_status, "AVAILABLE");
+  assert.equal(back[0].hidden_from_shop, false);
+  assert.equal(back[0].status, "Verfügbar");
+  const sold = applyChanges(structuredClone(sample), [{ id: 6241, set: { public_status: "SOLD", sold_platform: "eBay" } }]);
+  const hiddenSold = applyChanges(sold, [{ id: 6241, set: { hidden_from_shop: true, public_status: "DRAFT" } }]);
+  assert.equal(hiddenSold[0].hidden_previous_status, "SOLD");
+  assert.equal(hiddenSold[0].sold_platform, "eBay");
+  const archived = applyChanges(hiddenSold, [{ id: 6241, set: { public_status: "SOLD", hidden_from_shop: false } }]);
+  assert.equal(archived[0].status, "Verkauft");
+  assert.equal(archived[0].sold_platform, "eBay");
+});
+
 // Nachbau der GitHub-Schnittstelle: Git-Daten, Pull Requests, Merge.
 function fakeGithub({ conflicts = 0, stalledHistory = false } = {}) {
   const calls = [];
@@ -215,4 +243,43 @@ test("a stalled optional commit history cannot prevent loading the catalog", asy
     assert.deepEqual(result.data.commits, []);
     assert.equal(result.data.sha, "items-sha");
   } finally { gh.restore(); }
+});
+
+test("publishing needs a category that matches the build's checked category", () => {
+  const draft = { id: 9701, title: "Y-3 Wollmantel Schwarz", brand: "Y-3", category: "", public_status: "DRAFT", taxonomy_category: "Coats" };
+  const run = (item, set) => applyChanges([structuredClone(item)], [{ id: item.id, set }])[0];
+  // Ohne Kategorie nicht freischalten (Produktseite braucht die Zeile "Kategorie").
+  assert.throws(() => run(draft, { public_status: "AVAILABLE" }), /KATEGORIE_FEHLT/);
+  assert.throws(() => run(draft, { public_status: "SOLD" }), /KATEGORIE_FEHLT/);
+  // Kategorie muss zur geprueften Kategorie aus dem Titel passen - auch im Entwurf.
+  assert.throws(() => run(draft, { category: "Jackets", public_status: "AVAILABLE" }), /KATEGORIE_PASST_NICHT/);
+  assert.throws(() => run(draft, { category: "Jackets" }), /KATEGORIE_PASST_NICHT/);
+  // Neuer Titel und Kategorie in einem Zug: gepruefte Kategorie erst nach dem Rebuild bekannt.
+  assert.throws(() => run(draft, { title: "Y-3 Jacke Schwarz", category: "Coats", public_status: "AVAILABLE" }), /TITEL_ERST_SPEICHERN/);
+  // Noch nicht vom Build geprueft: warten.
+  assert.throws(() => run({ ...draft, taxonomy_category: undefined }, { category: "Coats" }), /TAXONOMIE_AUSSTEHEND/);
+  // Passend: frei.
+  const ok = run(draft, { category: "Coats", public_status: "AVAILABLE" });
+  assert.equal(ok.public_status, "AVAILABLE");
+  assert.equal(ok.category, "Coats");
+  // Texte, Preis und Titel des Entwurfs bleiben frei aenderbar.
+  assert.equal(run(draft, { title: "Y-3 Wollmantel Herren Schwarz", price: 240 }).price, 240);
+  // Eine oeffentliche Kategorie darf nicht geleert werden.
+  assert.throws(() => run(ok, { category: "" }), /KATEGORIE_FEHLT/);
+  // Bestehende Stuecke: Preis- und Statusaenderungen ohne Kategorieaenderung wie bisher,
+  // auch bei bewusst abweichender Altkategorie (z. B. 9365 Strickjacke unter Jackets).
+  const alt = { id: 9365, title: "Prada Strickjacke", brand: "Prada", category: "Jackets", public_status: "AVAILABLE", taxonomy_category: "Knitwear" };
+  assert.equal(run(alt, { price: 150, public_status: "SOLD" }).public_status, "SOLD");
+});
+
+test("the status line follows the visible status, so Match never shows a sold piece", () => {
+  const draft = { id: 9701, title: "Y-3 Wollmantel", brand: "Y-3", category: "Coats", taxonomy_category: "Coats", status: "Entwurf", public_status: "DRAFT" };
+  const live = applyChanges([structuredClone(draft)], [{ id: 9701, set: { public_status: "AVAILABLE" } }])[0];
+  assert.equal(live.status, "Verfügbar");
+  const sold = applyChanges([structuredClone(live)], [{ id: 9701, set: { public_status: "SOLD" } }])[0];
+  assert.equal(sold.status, "Verkauft");
+  // Ohne Statuswechsel bleibt die Zeile, wie sie ist (z. B. "Online auf Vinted").
+  const vinted = { ...live, status: "Online auf Vinted" };
+  assert.equal(applyChanges([structuredClone(vinted)], [{ id: 9701, set: { price: 99, public_status: "AVAILABLE" } }])[0].status, "Online auf Vinted");
+  assert.equal(applyChanges([structuredClone(live)], [{ id: 9701, set: { public_status: "DRAFT" } }])[0].status, "Verfügbar");
 });

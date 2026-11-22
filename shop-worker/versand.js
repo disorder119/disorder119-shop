@@ -28,6 +28,7 @@ import { parsePriceToCents, safeText } from "./commerce-core.js";
 import { lieferfenster } from "./lieferzeit.js";
 import { angeboteLaden } from "./packlink.js";
 import { PAKETE, VERSAND, dienstErlaubt, lieferlaender, paketFuer, paketFuerArtikel, zoneFuerLand } from "./versand-config.js";
+import { findValidCoupon, normalizeEinloesbarerCode, rabattierterWarenwert } from "./game-rewards.js";
 
 const CACHE_MS = 10 * 60 * 1000;
 const KATALOG_CACHE_MS = 5 * 60 * 1000;
@@ -169,6 +170,7 @@ export function festeOptionen(paket, konfig = VERSAND, land = "DE") {
       zone: zone.key,
       abholstation: t.abholstation,
       versichertBisCents: t.versichertBisCents,
+      hoeherversicherung: t.hoeherversicherung === true,
       abWarenwertCents: t.abWarenwertCents,
       bisWarenwertCents: t.bisWarenwertCents,
     };
@@ -274,8 +276,10 @@ export function oeffentlicheOptionen(ergebnis, jetzt = new Date()) {
         carrier: o.carrier,
         // Nur DHL liefert an Packstation und Filiale - und nur in Deutschland.
         abholstation: o.abholstation === true,
-        // Feste Tarife: bis zu welchem Warenwert der Paketdienst haftet.
+        // Feste Tarife: bis zu welchem Warenwert der Paketdienst haftet -
+        // hoeherversicherung: true heisst echte Transportversicherung.
         ...(Number.isSafeInteger(o.versichertBisCents) && o.versichertBisCents > 0 ? { versichertBisCents: o.versichertBisCents } : {}),
+        ...(o.hoeherversicherung === true ? { hoeherversicherung: true } : {}),
         // Voraussichtlich bei der Kundschaft: { von, bis } als Datum.
         lieferung: lieferfenster(tage, jetzt, tageBis),
       };
@@ -429,9 +433,16 @@ export async function handleVersandOptionen(request, env, url, reqId = crypto.ra
       const artikel = await katalogArtikel(env, ids);
       // Unbekannte Nummern zaehlen trotzdem mit: zwei Teile bleiben zwei Teile.
       paket = paketFuerArtikel([...artikel, ...Array(Math.max(0, ids.length - artikel.length)).fill({})]);
-      // Warenwert wie beim Bestellen: nur verfuegbare Stuecke mit Preis.
-      warenwertCents = artikel.filter(it => it.public_status === "AVAILABLE")
-        .reduce((summe, it) => summe + (parsePriceToCents(it.price) || 0), 0);
+      // Warenwert wie beim Bestellen: nur verfuegbare Stuecke mit Preis - und
+      // nach Abzug eines Codes (?code=..., Kasse und Warenkorb schicken den
+      // gespeicherten Code mit), damit "versandkostenfrei ab" dasselbe sagt
+      // wie spaeter die Bestellung.
+      const stuecke = artikel.filter(it => it.public_status === "AVAILABLE")
+        .map(it => ({ id: it.id, cents: parsePriceToCents(it.price) || 0 }));
+      let gutschein = null;
+      const code = normalizeEinloesbarerCode(String(url.searchParams.get("code") || "").trim().slice(0, 40));
+      if (code) gutschein = await findValidCoupon(env, code).catch(() => null);
+      warenwertCents = rabattierterWarenwert(gutschein, stuecke);
     } catch (err) {
       console.warn(JSON.stringify({ level: "warn", event: "versand_katalog_fehlt", requestId: reqId, code: safeText(err?.message || "unbekannt", 60) }));
     }

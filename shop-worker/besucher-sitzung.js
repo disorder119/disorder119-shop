@@ -84,10 +84,12 @@ async function offeneSitzung(env, besucher) {
 export const SITZUNG_GRENZE = "GRENZE";
 
 export async function sitzungBeruehren(env, ctx, info, now = Date.now()) {
-  const { besucher, einwilligung = false, wiederkehr = null, abschied = false, entsperrt = false, neuErlaubt = null } = info || {};
+  const { besucher, einwilligung = false, wiederkehr = null, abschied = false, entsperrt = false, neuErlaubt = null, verdacht = 0 } = info || {};
   if (!env?.DB || !besucher) return null;
   const { ruheMs, abschiedMs } = sitzungsZeiten(env);
   const zeit = iso(now);
+  // Verdachtspunkte (Migration 0046): Hoster-Netz beim Seitenaufruf vom Server.
+  const punkte = ganzzahl(verdacht, 0, 0, 99);
   try {
     for (let versuch = 0; versuch < 3; versuch++) {
       const offen = await offeneSitzung(env, besucher);
@@ -102,10 +104,10 @@ export async function sitzungBeruehren(env, ctx, info, now = Date.now()) {
         if (typeof neuErlaubt === "function" && !(await neuErlaubt())) return SITZUNG_GRENZE;
         const faellig = now + ruheMs;
         const neu = await env.DB.prepare(`INSERT INTO besucher_sitzungen
-          (besucher, beginn, zuletzt, faellig, offen, einwilligung, besuch_nr, erster_besuch, vorher_besuch, entsperrt)
-          VALUES (?,?,?,?,1,?,?,?,?,?) ON CONFLICT DO NOTHING`)
+          (besucher, beginn, zuletzt, faellig, offen, einwilligung, besuch_nr, erster_besuch, vorher_besuch, entsperrt, verdacht)
+          VALUES (?,?,?,?,1,?,?,?,?,?,?) ON CONFLICT DO NOTHING`)
           .bind(besucher, zeit, zeit, iso(faellig), einwilligung ? 1 : 0,
-            wiederkehr?.nr ?? null, wiederkehr?.erster ?? null, wiederkehr?.vorher ?? null, entsperrt ? 1 : 0)
+            wiederkehr?.nr ?? null, wiederkehr?.erster ?? null, wiederkehr?.vorher ?? null, entsperrt ? 1 : 0, punkte)
           .run();
         if (Number(neu?.meta?.changes || 0) !== 1) continue; // gleichzeitig angelegt: dort weiter
         await weckerStellen(env, ctx, faellig);
@@ -121,10 +123,11 @@ export async function sitzungBeruehren(env, ctx, info, now = Date.now()) {
           besuch_nr=COALESCE(?5, besuch_nr),
           erster_besuch=COALESCE(?6, erster_besuch),
           vorher_besuch=COALESCE(?7, vorher_besuch),
-          entsperrt=MAX(entsperrt, ?8)
+          entsperrt=MAX(entsperrt, ?8),
+          verdacht=MAX(verdacht, ?10)
         WHERE id=?9 AND offen=1 AND gemeldet=0`)
         .bind(abschied ? 1 : 0, zeit, iso(faellig), einwilligung ? 1 : 0,
-          wiederkehr?.nr ?? null, wiederkehr?.erster ?? null, wiederkehr?.vorher ?? null, entsperrt ? 1 : 0, offen.id)
+          wiederkehr?.nr ?? null, wiederkehr?.erster ?? null, wiederkehr?.vorher ?? null, entsperrt ? 1 : 0, offen.id, punkte)
         .run();
       if (Number(res?.meta?.changes || 0) !== 1) continue; // gerade gemeldet: neuer Besuch
       if (faellig < bisher) await weckerStellen(env, ctx, faellig);

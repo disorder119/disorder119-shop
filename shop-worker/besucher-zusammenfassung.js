@@ -15,6 +15,29 @@ import { sperreLesen } from "./site-lock.js";
 const MINUTE = 60_000;
 const STANDARD_PRO_STUNDE = 40;
 const MAX_SCHRITTE = 14;
+// Ab so vielen Verdachtspunkten gilt ein Besuch als automatisiert: keine
+// Telegram-Nachricht (meldung_grund "bot"), in der Admin-App weiter sichtbar.
+export const VERDACHT_GRENZE = 2;
+const MASCHINEN_TEMPO_MS = 2000;
+const HEIMAT = new Set(["DE", "AT", "CH"]);
+
+// Verdachtspunkte fuer Crawler und Scanner mit Browserkennung. Nur aus dem,
+// was ohnehin da ist: Netz (Hoster, 2 Punkte, kommt vom Seitenaufruf),
+// Tempo (mehrere Seiten im Maschinentempo, 2), Linux-Desktop ohne
+// Einwilligung (1), ein einziger Aufruf ohne Herkunft von ausserhalb
+// DE/AT/CH (1). Einwilligung im Browser oder ein In-App-Browser
+// (Instagram, TikTok ...) = Mensch, 0 Punkte.
+export function verdachtPunkte(s, lauf) {
+  if (Number(lauf?.einwilligung) === 1 || s?.datenUmfang === "browser_detail") return 0;
+  if (/-App$/.test(String(s?.browser || ""))) return 0;
+  let punkte = Math.max(0, Number(lauf?.verdacht || 0));
+  const seiten = (s?.schritte || []).filter(x => x.typ === "seite" || x.typ === "artikel");
+  const spanne = Date.parse(s?.ende || "") - Date.parse(s?.start || "");
+  if (seiten.length >= 2 && Number.isFinite(spanne) && spanne / (seiten.length - 1) < MASCHINEN_TEMPO_MS) punkte += 2;
+  if (/^Linux-PC/.test(String(s?.geraet || ""))) punkte += 1;
+  if (seiten.length === 1 && !s?.quelle && !HEIMAT.has(String(s?.ort?.land || ""))) punkte += 1;
+  return Math.min(99, punkte);
+}
 
 function ganzzahl(value, fallback, min, max) {
   const n = Number(value);
@@ -96,12 +119,14 @@ function wiederkehrText(lauf, heuteNr) {
 
 // Reine Textbausteine: s = Sitzung aus sitzungenBilden, lauf = Zeile aus
 // besucher_sitzungen, map = Katalog. Kein Netz, damit testbar.
-export function zusammenfassungText(s, lauf, map = new Map(), { heuteNr = 1, gesperrt = false, schluessel = "" } = {}) {
+export function zusammenfassungText(s, lauf, map = new Map(), { heuteNr = 1, gesperrt = false, schluessel = "", verdacht = 0 } = {}) {
   const ort = s.ort || {};
   const label = besucherLabel(schluessel, { geraet: s.geraet, stadt: ort.stadt, land: ort.land });
   const einwilligung = Boolean(lauf?.einwilligung) || s.datenUmfang === "browser_detail";
   const abschied = lauf?.abschied && Date.parse(lauf.abschied) >= Date.parse(lauf.zuletzt);
   const zeilen = [`👋 BESUCH VORBEI · ${label}`];
+  if (verdacht >= VERDACHT_GRENZE) zeilen.push("🤖 Vermutlich automatisiert (Crawler/Scanner) – nur gemeldet, weil BESUCHER_TELEGRAM=alles");
+  else if (verdacht > 0) zeilen.push("🤔 Könnte automatisiert sein (ein Verdachtspunkt)");
 
   const dauer = dauerText(s.dauerBekannt ? s.dauerMs : null);
   const sichtbar = s.vordergrundMs != null ? dauerText(s.vordergrundMs) : null;
@@ -226,11 +251,17 @@ export async function sitzungenMelden(env, now = Date.now(), { limit = 10 } = {}
       if (telegramModus(env) === "aus" || !telegramTransportReady(env)) { await abschliessen(env, lauf.id, 2, "aus", now); ergebnis.uebersprungen++; continue; }
       const s = await sitzungLaden(env, lauf);
       if (!s) { await abschliessen(env, lauf.id, 2, "leer", now); ergebnis.uebersprungen++; continue; }
+      // Crawler und Scanner mit Browserkennung: Punkte festhalten, keine Nachricht.
+      const verdacht = verdachtPunkte(s, lauf);
+      if (verdacht !== Number(lauf.verdacht || 0)) {
+        await env.DB.prepare("UPDATE besucher_sitzungen SET verdacht=? WHERE id=?").bind(verdacht, lauf.id).run().catch(() => {});
+      }
+      if (verdacht >= VERDACHT_GRENZE && telegramModus(env) !== "alles") { await abschliessen(env, lauf.id, 2, "bot", now); ergebnis.uebersprungen++; continue; }
       if (!(await budgetFrei(env, now))) { await abschliessen(env, lauf.id, 2, "deckel", now); ergebnis.uebersprungen++; continue; }
       map ??= await katalogLaden(env);
       gesperrt ??= Boolean((await sperreLesen(env).catch(() => ({})))?.locked);
       const heute = await env.DB.prepare("SELECT COUNT(*) AS n FROM besucher_sitzungen WHERE besucher=? AND id<=?").bind(lauf.besucher, lauf.id).first();
-      const text = zusammenfassungText(s, lauf, map, { heuteNr: Number(heute?.n || 1), gesperrt, schluessel: lauf.besucher });
+      const text = zusammenfassungText(s, lauf, map, { heuteNr: Number(heute?.n || 1), gesperrt, schluessel: lauf.besucher, verdacht });
       const gesendet = await sendTelegramMessage(env, text);
       if (!gesendet?.sent) throw new Error(`telegram_${gesendet?.reason || "failed"}`);
       await abschliessen(env, lauf.id, 1, null, now);

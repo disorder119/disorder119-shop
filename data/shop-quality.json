@@ -1,11 +1,11 @@
 {
   "summary": {
-    "items_total": 239,
-    "catalog_public": 235,
-    "available": 154,
+    "items_total": 278,
+    "catalog_public": 275,
+    "available": 191,
     "reserved": 0,
-    "sold": 81,
-    "draft": 4
+    "sold": 84,
+    "draft": 3
   },
   "quality": {
     "missing_size": {
@@ -18,7 +18,6 @@
         9368,
         9369,
         9370,
-        9373,
         9374,
         9375,
         9376,
@@ -45,11 +44,12 @@
         9486,
         9502,
         9503,
-        9537
+        9537,
+        9610
       ]
     },
     "missing_color": {
-      "count": 59,
+      "count": 58,
       "item_ids": [
         6042,
         6197,
@@ -58,7 +58,6 @@
         9368,
         9370,
         9372,
-        9373,
         9374,
         9376,
         9384,
@@ -121,10 +120,9 @@
       "item_ids": []
     },
     "single_photo_only": {
-      "count": 2,
+      "count": 1,
       "item_ids": [
-        9402,
-        9999
+        9402
       ]
     },
     "price_on_request": {
@@ -136,10 +134,9 @@
       "item_ids": []
     },
     "duplicate_article_number": {
-      "count": 2,
+      "count": 1,
       "item_ids": [
-        "45",
-        "72"
+        "45"
       ]
     }
   }

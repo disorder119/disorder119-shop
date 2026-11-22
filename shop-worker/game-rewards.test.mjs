@@ -156,3 +156,17 @@ test("game codes: fixed daily cap across all connections", async () => {
   assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM reward_coupons").get().n, 3);
   assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM game_scores").get().n, 5);
 });
+
+test("rabattierterWarenwert: Festpreis-Code nur fuer das eine Stueck, Prozent-Code auf die Summe, sonst die Summe", async () => {
+  const { rabattierterWarenwert } = await import("./game-rewards.js");
+  const stuecke = [{ id: 9402, cents: 12000 }, { id: 9403, cents: 6000 }];
+  assert.equal(rabattierterWarenwert(null, stuecke), 18000);
+  // Artikel-Code CLOSERWITHNYLON-artig: 120 € -> 70 € fuer Stueck 9402.
+  assert.equal(rabattierterWarenwert({ item_id: 9402, fixed_price_cents: 7000 }, stuecke), 13000);
+  assert.equal(rabattierterWarenwert({ item_id: 9402, fixed_price_cents: 7000 }, [{ id: 9402, cents: 12000 }]), 7000, "allein: unter der 99-Euro-Grenze");
+  // Stueck nicht dabei oder Festpreis nicht guenstiger: keine Aenderung.
+  assert.equal(rabattierterWarenwert({ item_id: 9999, fixed_price_cents: 7000 }, stuecke), 18000);
+  assert.equal(rabattierterWarenwert({ item_id: 9403, fixed_price_cents: 9000 }, stuecke), 18000);
+  // Prozent-Code (Spiel): 10 % auf alles.
+  assert.equal(rabattierterWarenwert({ discount_bps: 1000 }, stuecke), 16200);
+});

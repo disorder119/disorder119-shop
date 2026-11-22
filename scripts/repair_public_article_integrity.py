@@ -24,6 +24,7 @@ from seo_text import compose_description, distinct_metadata_name, is_internal_pr
 # Englische Titel und desc_en ohne deutsche Reste - wie in build_site.py.
 from english_titles import english_description, english_title, farbe_en  # noqa: E402
 from french_titles import french_color, french_description, french_title  # noqa: E402
+from aehnliche_teile import aehnliche_teile  # noqa: E402
 
 BASE = Path(__file__).resolve().parents[1]
 ITEMS_PATH = BASE / "data" / "items.json"
@@ -203,14 +204,9 @@ def related_sections(item: dict, public_items: list[dict], lang: str, n: int = 4
     same_brand.sort(key=lambda x: x.get("public_status") == "SOLD")
     brand_items = same_brand[:n]
     excluded = {x["id"] for x in brand_items}
-    wanted_category = item.get("taxonomy_category") or item.get("category")
-    same_category = [
-        x for x in candidates
-        if x["id"] not in excluded
-        and (x.get("taxonomy_category") or x.get("category")) == wanted_category
-    ]
-    same_category.sort(key=lambda x: x.get("public_status") == "SOLD")
-    category_items = same_category[:n]
+    # Punktewertung wie in build_site.py (scripts/aehnliche_teile.py), damit
+    # die Reparatur dieselben Karten erzeugt wie der Build.
+    category_items = aehnliche_teile(item, public_items, excluded, n)
     parts: list[str] = []
     if brand_items:
         heading = META[lang]["brand"].format(brand=(item.get("brand") or "").upper())
@@ -278,7 +274,10 @@ def repair_page(item: dict, public_items: list[dict], lang: str) -> None:
         legacy=article_dir(lang,int(item['id']))/'index.html'
         if legacy.exists():
             prefix='/' if lang=='de' else '/'+lang+'/'
-            redirected=text.replace('<head>','<head><meta name="robots" content="noindex,follow"><meta http-equiv="refresh" content="0;url='+prefix+'artikel/'+str(item['url_slug'])+'/">',1)
+            # Das robots-Meta der Zielseite (index,follow) ersetzen statt ein zweites
+            # davorzusetzen - sonst widersprechen sich zwei Angaben auf derselben Seite.
+            ohne_robots=re.sub(r'<meta name="robots"[^>]*>\s*','',text)
+            redirected=ohne_robots.replace('<head>','<head><meta name="robots" content="noindex,follow"><meta http-equiv="refresh" content="0;url='+prefix+'artikel/'+str(item['url_slug'])+'/">',1)
             legacy.write_text(redirected,encoding='utf-8')
 
 

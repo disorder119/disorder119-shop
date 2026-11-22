@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  adminBestellungLink,
+  sendTelegramPhoto,
   formatSaleMessage,
   formatTelegramTestMessage,
   sendTelegramMessage,
@@ -188,6 +190,32 @@ test("only line feeds separate Telegram lines: NEL and Unicode line separators b
   try {
     await sendTelegramMessage({ TELEGRAM_BOT_TOKEN: "bot", TELEGRAM_CHAT_ID: "42" }, "Kopf\nBetreff: a\u2028b\u0085c\u2029d\r\nEnde");
     assert.equal(seenBody.text, "Kopf\nBetreff: a b c d\nEnde");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("sale photo carries two admin buttons: DHL-Marke kaufen (?dhl=1) and open order; foreign links are dropped", async () => {
+  assert.equal(adminBestellungLink({ id: "e1bbbe11-fa0b" }, { dhl: true }), "https://admin.disorder119.com/?bestellung=e1bbbe11-fa0b&dhl=1");
+  assert.equal(adminBestellungLink({ id: "e1bbbe11-fa0b" }), "https://admin.disorder119.com/?bestellung=e1bbbe11-fa0b");
+  const originalFetch = globalThis.fetch;
+  let seen = null;
+  globalThis.fetch = async (url, options) => {
+    seen = { url: String(url), body: JSON.parse(String(options?.body || "{}")) };
+    return new Response(JSON.stringify({ ok: true, result: { message_id: 5 } }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    const r = await sendTelegramPhoto({ TELEGRAM_BOT_TOKEN: "t", TELEGRAM_CHAT_ID: "1" }, "https://disorder119.com/assets/og/6216.jpg", "VERKAUFT", "req", [
+      { text: "DHL-Marke kaufen", url: adminBestellungLink({ id: "o1" }, { dhl: true }) },
+      { text: "Bestellung öffnen", url: adminBestellungLink({ id: "o1" }) },
+      { text: "fremd", url: "https://evil.example/" },
+    ]);
+    assert.equal(r.sent, true);
+    assert.match(seen.url, /sendPhoto$/);
+    assert.deepEqual(seen.body.reply_markup.inline_keyboard.map(z => z[0].url), [
+      "https://admin.disorder119.com/?bestellung=o1&dhl=1",
+      "https://admin.disorder119.com/?bestellung=o1",
+    ]);
   } finally {
     globalThis.fetch = originalFetch;
   }

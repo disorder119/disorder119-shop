@@ -11,11 +11,15 @@
 //   (?v=20261008-1) oder nicht passender Wert behaelt die bisherige Regel;
 //   so kann auch waehrend eines Deploys nie eine alte Datei unter einer neuen
 //   Adresse fest im Browser landen.
-// - Bilder: 10 Minuten ohne Nachfrage. Ein ausgetauschtes Foto (gleicher
-//   Pfad) ist damit spaetestens nach 10 Minuten ueberall neu.
+// - Bilder: eine Stunde ohne Nachfrage (06.11.2026, vorher 10 Minuten - danach
+//   fragte der Browser jedes Foto einzeln neu an). Danach darf der Browser
+//   das gespeicherte Foto noch bis zu einer Woche sofort zeigen und im
+//   Hintergrund auffrischen (stale-while-revalidate; Chrome/Android, Safari
+//   fragt nach der Stunde normal nach). Ein ausgetauschtes Foto (gleicher Pfad)
+//   ist damit spaetestens nach einer Stunde bzw. beim naechsten Aufruf neu.
 // Katalog und unversionierte Skripte bleiben unveraendert; Seiten siehe unten.
 export const CACHE_UNVERAENDERLICH = 'public, max-age=31536000, immutable';
-export const CACHE_BILD = 'public, max-age=600';
+export const CACHE_BILD = 'public, max-age=3600, stale-while-revalidate=604800';
 export const BILD_ENDUNG = /\.(?:webp|avif|png|jpe?g|gif|svg|ico)$/i;
 
 export function assetVersion(url) {

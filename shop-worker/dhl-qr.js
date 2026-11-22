@@ -20,7 +20,7 @@ import { safeText } from "./commerce-core.js";
 import { versandSperre } from "./erstattung-auftrag.js";
 import { ZahlungFehler, zahlungSicherstellen } from "./zahlung.js";
 import { iso3, plzNormalisieren, plzSondergebiet } from "./laender.js";
-import { GROESSEN, VERSAND, zoneFuerLand } from "./versand-config.js";
+import { GROESSEN, VERSAND, hoeherversicherungCents, zoneFuerLand } from "./versand-config.js";
 
 const ADMIN_ORIGINS = Object.freeze([
   "https://admin.disorder119.com",
@@ -201,6 +201,9 @@ export function assertReceiver(receiver, countryCode = "DE") {
 }
 
 // ------------------------------------------------------------------- DHL-API
+
+// Auch fuer Ruecksendeetiketten (ruecksendung.js): derselbe Zugang, dieselbe Fehlerbehandlung.
+export function dhlAnfrage(env, path, optionen = {}) { return dhl(env, path, optionen); }
 
 async function dhl(env, path, { method = "GET", body, accept = "application/json" } = {}) {
   if (!dhlQrReady(env)) throw new DhlQrError("DHL_QR_NICHT_EINGERICHTET", 503);
@@ -446,9 +449,29 @@ function view(mark) {
     bezahlLink: mark.state === "PAYED" ? null : mark.entry_url,
     sendungsnummer: mark.shipment_number || null,
     qrPng: mark.qr_png_b64 ? `data:image/png;base64,${mark.qr_png_b64}` : null,
+    // Marke als PDF (falls DHL sie liefert) - die Admin-App oeffnet sie als Datei.
+    labelPdf: mark.label_pdf_b64 ? `data:application/pdf;base64,${mark.label_pdf_b64}` : null,
+    // true: DHL meldet den Bezahlstatus nicht zurueck (keine Warenkorb-Kennung) - Sendungsnummer von Hand eintragen.
+    ohneAbgleich: String(mark.cart_id).startsWith("ohne-"),
     erstelltAm: mark.created_at,
     bezahltAm: mark.paid_at || null,
   };
+}
+
+// Versicherungshoehe eines Produkts der Online-Frankierung in Cent:
+// "PAK05.HVERSI2000.EU" -> 200000, ohne ".HVERSI" -> 0.
+export function produktVersichertCents(produktId) {
+  const m = /\.HVERSI(\d{3,5})(?:\.|$)/i.exec(String(produktId || ""));
+  return m ? Number(m[1]) * 100 : 0;
+}
+
+export async function versicherungPruefen(db, orderId, produkt) {
+  const versand = await db.prepare("SELECT option_id FROM order_versand WHERE order_id=? LIMIT 1").bind(orderId).first().catch(() => null);
+  const noetig = hoeherversicherungCents(versand?.option_id);
+  if (!noetig) return 0;
+  if (produktVersichertCents(produkt) >= noetig) return noetig;
+  throw new DhlQrError("VERSICHERUNG_FEHLT", 409,
+    `Die Kundin hat die Höherversicherung bis ${Math.round(noetig / 100).toLocaleString("de-DE")} € bezahlt – diese Marke wäre nicht versichert.`);
 }
 
 export async function createMark(env, orderId, body = {}) {
@@ -474,6 +497,11 @@ export async function createMark(env, orderId, body = {}) {
   if (!(await listProducts(env, land)).some(p => p.id === produkt)) {
     throw new DhlQrError("PRODUKT_NICHT_FUER_LAND", 409, `${produkt} → ${land}`);
   }
+  // Bezahlte Hoeherversicherung: Die Schnittstelle bucht keine
+  // Transportversicherung dazu (DHL-Doku nennt keine) - nur ein Produkt mit
+  // eingebauter Hoeherversicherung (".HVERSI<Euro>") in passender Hoehe ist
+  // erlaubt. Sonst Marke auf dhl.de mit Versicherung kaufen (Admin-App).
+  await versicherungPruefen(db, order.id, produkt);
   try {
     await zahlungSicherstellen(env, order.id, crypto.randomUUID(), { anlass: "VERSAND" });
   } catch (err) {
@@ -494,11 +522,21 @@ export async function createMark(env, orderId, body = {}) {
       },
     },
   });
-  const cart = (await response.json())?.shoppingcart || {};
-  const cartId = safeText(cart.shoppingCartId, 12);
+  const antwortJson = await response.json().catch(() => null);
+  const cart = antwortJson?.shoppingcart || {};
   const entryUrl = String(cart.download?.entryUrl || "");
-  if (!/^[A-Za-z0-9]{12}$/.test(cartId) || !safeDhlCheckoutUrl(entryUrl)) {
-    throw new DhlQrError("DHL_ANTWORT_UNGUELTIG", 502);
+  if (!safeDhlCheckoutUrl(entryUrl)) {
+    throw new DhlQrError("DHL_ANTWORT_UNGUELTIG", 502, "kein Bezahl-Link von DHL");
+  }
+  // Seit 11/2026 liefert DHL die Warenkorb-Kennung nicht mehr in der Antwort,
+  // sondern nur per registrierter Rueckruf-Adresse (notifyUrl, DHL-Serviceticket).
+  // Ohne Kennung: Marke trotzdem anlegen (Bezahl-Link geht), Kennung als
+  // "ohne-<hash>" merken - dann kann refreshMark nicht bei DHL nachfragen, und
+  // die Sendungsnummer wird nach dem Bezahlen von Hand eingetragen.
+  let cartId = safeText(cart.shoppingCartId, 12);
+  if (!/^[A-Za-z0-9]{12}$/.test(cartId)) {
+    const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(entryUrl));
+    cartId = "ohne-" + Array.from(new Uint8Array(hash)).slice(0, 10).map(b => b.toString(16).padStart(2, "0")).join("");
   }
   const price = (cart.items?.[0]?.prices || []).reduce((sum, p) => sum + Math.round(Number(p.amount || 0) * 100), 0);
   const now = new Date().toISOString();
@@ -523,6 +561,7 @@ export async function refreshMark(env, orderId) {
   const mark = await latestMark(env, safeText(orderId, 80));
   if (!mark || mark.state === "ERSETZT") return view(null);
   if (mark.state === "PAYED" && mark.qr_png_b64) return view(mark);
+  if (String(mark.cart_id).startsWith("ohne-") && mark.state !== "PAYED") return view(mark);
 
   const now = new Date().toISOString();
   if (mark.state !== "PAYED") {
@@ -542,15 +581,170 @@ export async function refreshMark(env, orderId) {
     await attachTracking(env, mark.order_id, shipmentNumber, now);
     mark.state = "PAYED";
     mark.shipment_number = shipmentNumber;
+    mark.pak_id = safeText(item.pakId, 9) || null;
     mark.paid_at = now;
   }
 
-  // QR einmal holen und aufheben - er aendert sich nicht mehr.
-  const png = await (await dhl(env, `/labels/${encodeURIComponent(mark.shipment_number)}/qr-code`, { accept: "image/png" })).arrayBuffer();
-  if (png.byteLength < 100 || png.byteLength > 200_000) throw new DhlQrError("DHL_ANTWORT_UNGUELTIG", 502);
-  const b64 = toBase64(png);
-  await db.prepare("UPDATE dhl_qr_marken SET qr_png_b64=?,updated_at=? WHERE id=?").bind(b64, now, mark.id).run();
-  return view({ ...mark, qr_png_b64: b64 });
+  return markeHolen(env, mark, now);
+}
+
+// QR einmal holen und aufheben - er aendert sich nicht mehr. Laut DHL-Doku
+// laufen QR-Code und Marke ueber die PAKID aus dem bezahlten Warenkorb; mit
+// der Sendungsnummer antwortet DHL seit dem 04.11.2026 mit WRONG_FORMAT.
+// Reihenfolge: PAKID, dann Sendungsnummer. Zusaetzlich die Marke als PDF.
+// Gebremst: hoechstens alle 10 Minuten, insgesamt QR_MAX_VERSUCHE Mal.
+export const QR_MAX_VERSUCHE = 30;
+const QR_PAUSE_MS = 10 * 60_000;
+
+function markenKennungen(mark) {
+  return [...new Set([mark.pak_id, mark.shipment_number]
+    .map(v => safeText(v, 40)).filter(v => /^[A-Za-z0-9]{6,40}$/.test(v)))];
+}
+
+function istPdf(buffer) {
+  const kopf = new Uint8Array(buffer.slice(0, 5));
+  return String.fromCharCode(...kopf) === "%PDF-";
+}
+
+async function markeHolen(env, mark, now) {
+  if (mark.qr_png_b64) return view(mark);
+  const db = requireDb(env);
+  const versuche = Number(mark.qr_versuche || 0);
+  const zuletzt = Date.parse(mark.qr_versucht_am || "") || 0;
+  if (versuche >= QR_MAX_VERSUCHE || (zuletzt && Date.parse(now) - zuletzt < QR_PAUSE_MS)) return view(mark);
+  await db.prepare("UPDATE dhl_qr_marken SET qr_versuche=COALESCE(qr_versuche,0)+1,qr_versucht_am=?,updated_at=? WHERE id=?")
+    .bind(now, now, mark.id).run();
+  let qr = null;
+  let pdf = mark.label_pdf_b64 || null;
+  const fehler = [];
+  for (const kennung of markenKennungen(mark)) {
+    if (!qr) {
+      try {
+        const png = await (await dhl(env, `/labels/${encodeURIComponent(kennung)}/qr-code`, { accept: "image/png" })).arrayBuffer();
+        if (png.byteLength >= 100 && png.byteLength <= 200_000) qr = toBase64(png);
+      } catch (err) {
+        fehler.push(`qr(${kennung.length}): ${safeText(err?.detail || err?.code || err?.message || "", 60)}`);
+      }
+    }
+    if (!pdf) {
+      try {
+        const buf = await (await dhl(env, `/labels/${encodeURIComponent(kennung)}`, { accept: "application/pdf" })).arrayBuffer();
+        if (buf.byteLength > 200 && buf.byteLength <= 1_400_000 && istPdf(buf)) pdf = toBase64(buf);
+      } catch (err) {
+        fehler.push(`pdf(${kennung.length}): ${safeText(err?.detail || err?.code || err?.message || "", 60)}`);
+      }
+    }
+    if (qr) break;
+  }
+  if (qr || (pdf && pdf !== mark.label_pdf_b64)) {
+    await db.prepare("UPDATE dhl_qr_marken SET qr_png_b64=COALESCE(?,qr_png_b64),label_pdf_b64=COALESCE(?,label_pdf_b64),updated_at=? WHERE id=?")
+      .bind(qr, pdf, now, mark.id).run();
+  }
+  if (!qr) {
+    console.error(JSON.stringify({ level: "warn", event: "dhl_qr_png_unavailable", orderId: String(mark.order_id),
+      pdf: Boolean(pdf), detail: safeText(fehler.join(" | "), 300) }));
+  }
+  return view({ ...mark, qr_png_b64: qr || mark.qr_png_b64, label_pdf_b64: pdf });
+}
+
+// --------------------------------------------- Warenkorb-Nummer aus der DHL-Mail
+//
+// Seit DHL keine Warenkorb-Kennung mehr zurueckgibt (Marken "ohne-..."), kommt
+// sie ueber die Auftragsbestaetigung der Online-Frankierung an kontakt@
+// ("Auftragsbestaetigung Ihrer Online Frankierung QM73WSTKZNES", im Text
+// "Warenkorb-Nr.: QM73WSTKZNES"). Mit dieser Nummer antwortet
+// /shopping-carts/{id} wieder: Bezahlstatus und Sendungsnummer (live geprueft
+// 04.11.2026). Zuordnung: die offene Marke ohne Kennung, bei mehreren die mit
+// passendem Preis, sonst die aelteste (Marken werden der Reihe nach gekauft).
+export function warenkorbAusMail(mail = {}) {
+  const betreff = String(mail.betreff || mail.subject || "");
+  const text = String(mail.text || mail.body_text || "");
+  const von = String(mail.vonEmail || mail.from_email || "").toLowerCase();
+  if (!/@(?:[a-z0-9-]+\.)*(dhl\.(?:com|de)|deutschepost\.de)$/.test(von)) return null;
+  const m = /Warenkorb-Nr\.?:?\s*([A-Z0-9]{12})\b/i.exec(text) || /Online[ -]Frankierung\s+([A-Z0-9]{12})\b/i.exec(betreff);
+  if (!m) return null;
+  const preis = /\/\s*(\d{1,3}),(\d{2})\s*€/.exec(text);
+  return { cartId: m[1].toUpperCase(), preisCents: preis ? Number(preis[1]) * 100 + Number(preis[2]) : null };
+}
+
+// Abfrage, die vor der Migration der Ruecksende-Tabelle scheitern darf.
+async function ohneFehler(abfrage, ersatz) {
+  try { return await abfrage(); } catch { return ersatz; }
+}
+
+export async function warenkorbZuordnen(env, mail = {}, now = new Date().toISOString()) {
+  if (!env?.DB) return { zugeordnet: false, grund: "DATENBANK_FEHLT" };
+  const kennung = warenkorbAusMail(mail);
+  if (!kennung) return { zugeordnet: false, grund: "KEINE_DHL_MAIL" };
+  const db = env.DB;
+  const bekannt = await db.prepare("SELECT id,order_id,state FROM dhl_qr_marken WHERE cart_id=?").bind(kennung.cartId).first()
+    || await ohneFehler(() => db.prepare("SELECT id,order_id,state FROM ruecksende_marken WHERE cart_id=?").bind(kennung.cartId).first(), null);
+  if (bekannt) return { zugeordnet: false, grund: "SCHON_ZUGEORDNET", orderId: bekannt.order_id, cartId: kennung.cartId };
+  const seit = new Date(Date.parse(now) - 14 * 86_400_000).toISOString();
+  // Versandmarken und Ruecksendeetiketten (ruecksendung.js) kommen ueber dieselbe
+  // DHL-Mail - beide sind Kandidaten. Fehlt die Ruecksende-Tabelle noch, nur Versand.
+  const offene = await ohneFehler(async () => (await db.prepare(`SELECT 'versand' AS art,id,order_id,price_cents,created_at FROM dhl_qr_marken
+      WHERE cart_id LIKE 'ohne-%' AND state IN ('PREPAID','INPAYMENT') AND created_at>=?
+    UNION ALL
+    SELECT 'ruecksendung' AS art,id,order_id,price_cents,created_at FROM ruecksende_marken
+      WHERE cart_id LIKE 'ohne-%' AND state IN ('PREPAID','INPAYMENT') AND created_at>=?
+    ORDER BY created_at ASC`).bind(seit, seit).all()).results || [], null)
+    || (await db.prepare(`SELECT 'versand' AS art,id,order_id,price_cents,created_at FROM dhl_qr_marken
+      WHERE cart_id LIKE 'ohne-%' AND state IN ('PREPAID','INPAYMENT') AND created_at>=?
+      ORDER BY created_at ASC`).bind(seit).all()).results || [];
+  if (!offene.length) return { zugeordnet: false, grund: "KEINE_OFFENE_MARKE", cartId: kennung.cartId };
+  let wahl = offene;
+  if (offene.length > 1 && kennung.preisCents) {
+    const passend = offene.filter(m => Number(m.price_cents) === kennung.preisCents);
+    if (passend.length) wahl = passend;
+  }
+  const marke = wahl[0];
+  const tabelle = marke.art === "ruecksendung" ? "ruecksende_marken" : "dhl_qr_marken";
+  const r = await db.prepare(`UPDATE ${tabelle} SET cart_id=?,updated_at=? WHERE id=? AND cart_id LIKE 'ohne-%'`).bind(kennung.cartId, now, marke.id).run();
+  if (!r?.meta?.changes) return { zugeordnet: false, grund: "MARKE_GEAENDERT", cartId: kennung.cartId };
+  await db.prepare(`INSERT INTO audit_events (id,actor_type,entity_type,entity_id,event_type,request_id,metadata_json,created_at)
+    VALUES (?,'SYSTEM','order',?,'DHL_WARENKORB_AUS_MAIL',NULL,?,?)`)
+    .bind(crypto.randomUUID(), String(marke.order_id), JSON.stringify({ cartId: kennung.cartId, kandidaten: offene.length, art: marke.art }), now).run().catch(() => {});
+  if (marke.art === "ruecksendung") {
+    // Ruecksendung: bezahlt? QR holen, Mail an die Kundin (ruecksendung.js).
+    let stand = null;
+    try {
+      const { ruecksendungAktualisieren } = await import("./ruecksendung.js");
+      stand = await ruecksendungAktualisieren(env, marke.id, now);
+    } catch (err) {
+      console.error(JSON.stringify({ level: "warn", event: "ruecksendung_refresh_after_mail_failed", orderId: String(marke.order_id), code: safeText(err?.code || err?.message || "", 80) }));
+    }
+    return { zugeordnet: true, art: "ruecksendung", orderId: marke.order_id, cartId: kennung.cartId, state: stand?.state || null };
+  }
+  // Direkt nachsehen: meist ist die Marke in dem Moment schon bezahlt.
+  let marke2 = null;
+  try { marke2 = await refreshMark(env, marke.order_id); } catch (err) {
+    console.error(JSON.stringify({ level: "warn", event: "dhl_cart_refresh_after_mail_failed", orderId: String(marke.order_id), code: safeText(err?.code || err?.message || "", 80) }));
+  }
+  return { zugeordnet: true, orderId: marke.order_id, cartId: kennung.cartId, state: marke2?.state || null, sendungsnummer: marke2?.sendungsnummer || null };
+}
+
+// Cron: Marken mit Warenkorb-Kennung, die noch nicht bezahlt gemeldet sind,
+// bei DHL nachsehen (hoechstens 14 Tage, hoechstens 10 je Lauf).
+export async function dhlMarkenAbgleichen(env, now = Date.now()) {
+  if (!env?.DB || !dhlQrReady(env)) return { uebersprungen: true };
+  const seit = new Date(now - 14 * 86_400_000).toISOString();
+  // Offene Warenkoerbe, dazu bezahlte Marken ohne QR-Code (Abruf erneut versuchen).
+  const offene = (await env.DB.prepare(`SELECT order_id,state FROM dhl_qr_marken
+    WHERE cart_id NOT LIKE 'ohne-%' AND created_at>=?
+      AND (state IN ('PREPAID','INPAYMENT') OR (state='PAYED' AND qr_png_b64 IS NULL AND COALESCE(qr_versuche,0)<?))
+    ORDER BY created_at ASC LIMIT 10`).bind(seit, QR_MAX_VERSUCHE).all()).results || [];
+  const ergebnis = { geprueft: 0, bezahlt: [], fehler: [] };
+  for (const row of offene) {
+    try {
+      const m = await refreshMark(env, row.order_id);
+      ergebnis.geprueft += 1;
+      if (m?.state === "PAYED" && row.state !== "PAYED") ergebnis.bezahlt.push(String(row.order_id));
+    } catch (err) {
+      ergebnis.fehler.push({ orderId: String(row.order_id), code: safeText(err?.code || err?.message || "", 80) });
+    }
+  }
+  return ergebnis;
 }
 
 // Sendungsnummer an den Auftrag haengen, noch ohne "Versendet": abgegeben ist
@@ -598,6 +792,10 @@ function headers(origin) {
   if (origin && ADMIN_ORIGINS.includes(origin)) out["Access-Control-Allow-Origin"] = origin;
   return out;
 }
+
+export function adminKopf(origin) { return headers(origin); }
+export function adminHerkunftErlaubt(origin) { return !origin || ADMIN_ORIGINS.includes(origin); }
+export async function adminTokenGleich(left, right) { return tokenEquals(left, right); }
 
 async function tokenEquals(left, right) {
   if (!left || !right) return false;

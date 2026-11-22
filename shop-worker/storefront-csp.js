@@ -121,7 +121,8 @@ export function contentSecurityPolicy(hashes=[],nonce='',apiOrigin='https://api.
   return "default-src 'self'; script-src "+scripts.join(' ')+
     "; script-src-attr 'unsafe-hashes' '"+STYLE_HASH+"'; style-src 'self' 'unsafe-inline'; "+
     "img-src 'self' data: https://*.paypal.com https://*.paypalobjects.com https://tile.openstreetmap.org "+apiOrigin+"; "+
-    "font-src 'self' data:; connect-src 'self' "+apiOrigin+" https://*.paypal.com https://*.paypalobjects.com https://challenges.cloudflare.com https://apple-pay-gateway.apple.com; "+
+    // Apple-Pay-Knopf laedt seine Schrift von applepay.cdn-apple.com (sonst 4 CSP-Fehler je Kassenaufruf).
+    "font-src 'self' data: https://applepay.cdn-apple.com; connect-src 'self' "+apiOrigin+" https://*.paypal.com https://*.paypalobjects.com https://challenges.cloudflare.com https://apple-pay-gateway.apple.com; "+
     "frame-src https://*.paypal.com https://*.paypalobjects.com https://challenges.cloudflare.com; "+
     "worker-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests";
 }

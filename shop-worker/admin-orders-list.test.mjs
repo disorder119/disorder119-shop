@@ -45,3 +45,53 @@ test("the order list carries item ids and the customer's name for the admin app"
   const bad = await list(DB, "PAID,HACKED");
   assert.equal(bad.status, 400);
 });
+
+test("Bestellbild, DHL-Stand und Uebersicht kommen vom Server (Inhaber 06.11.2026)", async () => {
+  const { oeffentlichenKatalogLeeren } = await import("./oeffentlicher-katalog.js");
+  const original = globalThis.fetch;
+  const katalog = [
+    { id: 6241, public_status: "AVAILABLE", price: 90, grid_image: "assets/img/6241/thumbs/0.webp", gallery: ["assets/img/6241/0.webp"] },
+    { id: 6242, public_status: "SOLD", price: 0, gallery: ["assets/img/6242/0.webp"] },
+    { id: 6243, public_status: "AVAILABLE", price: 0, gallery: [] },
+  ];
+  globalThis.fetch = async url => String(url).includes("catalog.json")
+    ? new Response(JSON.stringify(katalog), { headers: { "Content-Type": "application/json" } })
+    : new Response("nein", { status: 404 });
+  oeffentlichenKatalogLeeren();
+  try {
+    const DB = seed();
+    const now = new Date().toISOString();
+    DB.raw.prepare(`INSERT INTO shipments (id,order_id,carrier,service,tracking_number,status,created_at) VALUES ('s3','o3','DHL','Online-Frankierung','00340434161234567890','SHIPPED',?)`).run(now);
+    DB.raw.prepare(`INSERT INTO sendungs_abfragen (shipment_id,tracking_number,zustand,abfragen,zuletzt_am,fehler,ereignisse_json)
+      VALUES ('s3','00340434161234567890','UNBEKANNT',13,?,'HTTP_401',?)`).run(now, JSON.stringify([{ zeit: now, text: "Die Sendung wurde abgeholt.", ort: "Aschaffenburg" }]));
+
+    const liste = await list(DB);
+    const bild = Object.fromEntries(liste.data.orders.map(o => [o.order_number, o.itemImage]));
+    assert.equal(bild["D119-1"], "/assets/img/6241/thumbs/0.webp", "Vorschaubild wie im Shop");
+    assert.equal(bild["D119-2"], "/assets/img/6242/0.webp", "ohne Vorschaubild das erste Foto");
+    assert.equal(bild["D119-3"], null);
+
+    const detailUrl = "https://api.disorder119.com/admin/orders/o3";
+    const res = await handleAdminRequest(new Request(detailUrl, { headers: { Authorization: "Bearer t", Origin: ADMIN } }), { DB, ADMIN_TOKEN: "t" }, new URL(detailUrl), "req", ADMIN);
+    const detail = await res.json();
+    assert.equal(res.status, 200);
+    const s = detail.shipments[0];
+    assert.equal(s.tracking_number, "00340434161234567890", "Sendungsnummer bleibt die der Sendung");
+    assert.equal(s.dhlLink, "https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=00340434161234567890");
+    assert.equal(s.verfolgung.fehler, "HTTP_401");
+    assert.equal(s.verfolgung.abfragen, 13);
+    assert.equal(s.verfolgung.stationen[0].ort, "Aschaffenburg");
+    assert.ok(!("verfolgung_fehler" in s), "keine Rohspalten");
+
+    const ueUrl = "https://api.disorder119.com/admin/overview?days=30";
+    const ue = await (await handleAdminRequest(new Request(ueUrl, { headers: { Authorization: "Bearer t", Origin: ADMIN } }), { DB, ADMIN_TOKEN: "t" }, new URL(ueUrl), "req", ADMIN)).json();
+    assert.deepEqual(ue.katalog, { online: 1, verkauft: 1 }, "online = verfuegbar mit Preis");
+    assert.equal(ue.zeitraum.bestellungen, 3);
+    DB.raw.prepare("UPDATE commerce_orders SET versteckt=1 WHERE id='o1'").run();
+    const ue2 = await (await handleAdminRequest(new Request(ueUrl, { headers: { Authorization: "Bearer t", Origin: ADMIN } }), { DB, ADMIN_TOKEN: "t" }, new URL(ueUrl), "req", ADMIN)).json();
+    assert.equal(ue2.zeitraum.bestellungen, 2, "ausgeblendete Testbestellung zaehlt nicht");
+  } finally {
+    globalThis.fetch = original;
+    oeffentlichenKatalogLeeren();
+  }
+});

@@ -250,8 +250,12 @@ function assertMethod(request, pathname) {
 
 // Nur hier duerfen Anfragen groesser sein: der Katalog-Editor laedt Fotos hoch.
 // Die Route verlangt eine Admin-Anmeldung, bevor der Koerper gelesen wird.
+// Der PC Manager schickt Fotos (hoechstens drei je Anfrage) und Entwurfstexte
+// nur mit der Freigabe "katalog_entwurf" (manager-katalog.js).
 const LARGE_BODY_ROUTES = Object.freeze({
   "/admin/katalog/speichern": 8 * 1024 * 1024,
+  "/manager/katalog/bilder": 3 * 1024 * 1024,
+  "/manager/katalog/entwurf": 256 * 1024,
 });
 
 export async function assertRequestBodySize(request, limit = MAX_REQUEST_BYTES, timeoutMs = 10000) {
