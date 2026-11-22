@@ -284,3 +284,7 @@ a:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
 .mk-trust { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 18px 0 0; padding: 0; list-style: none; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
 .mk-trust li::before { content: "·"; margin-right: 8px; }
 .mk-text + .mk-links { margin-top: 22px; }
+
+/* DHL-Logo (Freigabe DHL Group Brand Services): weisse Variante, 120 px, Schutzzone >= 1/7 Breite */
+.mk-foot__dhl { display: flex; margin-top: 18px; padding: 0 18px 18px 2px; }
+.mk-foot__dhl img { display: block; width: 120px; min-width: 100px; height: auto; }

@@ -3922,3 +3922,29 @@ img[data-d119-image-protected] {
 
 /* Keine Bestandszahlen (Inhaber 14.11.2026): Zaehler "x von y Objekten" und Zahlenzeile im Kopf bleiben unsichtbar. */
 #railCount, .rail__count, #uiZahlen, .ui-kopf__zahlen { display: none !important; }
+
+/* DHL-Logo "Zustellung durch" (Originaldateien von DHL Group Brand Services, Freigabe
+   17.11.2026): unveraendert, nur proportional skaliert, mindestens 100 px breit, rundum
+   eine Schutzzone von 1/7 der Logobreite (120 px -> 18 px). Dunkle Ansicht: weisse
+   Schrift, weisse Ansicht: schwarze Schrift. */
+.footer__versand, .dhl-logo { padding: 18px; display: flex; }
+.dhl-zd { display: block; width: 120px; min-width: 100px; height: auto; }
+.dhl-zd--hell { display: none; }
+:root[data-theme="hell"] .dhl-zd--dunkel { display: none; }
+:root[data-theme="hell"] .dhl-zd--hell { display: block; }
+.footer__versand { margin-left: -18px; }
+.dhl-logo--info { margin: 2px 0 0 -18px; }
+@media (min-width: 900px) {
+  #appShell .footer {
+    grid-template-areas:
+      "nl nl nl nl"
+      "nav nav nav nav"
+      "dhl dhl dhl dhl"
+      "wid legal stamp cart";
+  }
+  #appShell .footer__versand { grid-area: dhl; margin-bottom: 12px; }
+}
+/* DHL-Logo in den schlichten Fusszeilen (Kasse, Konto, Widerruf, Newsletter).
+   Freigabe DHL Group Brand Services: unveraendert, min. 100 px, Schutzzone >= 1/7 Breite (18 px). */
+.fuss-dhl { flex-basis: 100%; display: flex; justify-content: inherit; padding: 18px 18px 18px 2px; }
+.kasse-fuss .fuss-dhl { padding: 18px; }

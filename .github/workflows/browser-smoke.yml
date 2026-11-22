@@ -144,7 +144,8 @@ jobs:
         continue-on-error: true
         run: |
           rm -rf .quality-reports
-          python -m http.server 4174 --bind 127.0.0.1 > /tmp/d119-quality-http.log 2>&1 &
+          # Komprimiert wie Cloudflare live (Brotli/Gzip), sonst misst Lighthouse rohe 114 KB app.css.
+          python scripts/quality_static_server.py 4174 > /tmp/d119-quality-http.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
           for i in {1..20}; do

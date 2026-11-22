@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+from statistics import median
 import subprocess
 import sys
 from pathlib import Path
@@ -263,12 +264,15 @@ def audit_accessibility(product_path: str) -> list[dict[str, Any]]:
     return reports
 
 
-# Am simulierten Handy schwankt Lighthouse je nach Runner stark (Lantern rechnet
-# den beobachteten Ablauf hoch): derselbe Stand lag zwischen 86 und 98 Punkten,
-# die Startseite war mal gruen, mal rot (06.11.2026). Google empfiehlt dafuer
-# den Median mehrerer Laeufe. Gewertet wird der mittlere Lauf nach Performance;
-# alle Grenzen und Floors bleiben unveraendert. Desktop ist stabil: ein Lauf.
-LIGHTHOUSE_RUNS = max(1, int(os.environ.get("D119_LIGHTHOUSE_RUNS", "3")))
+# Lighthouse schwankt je nach Runner auch ohne Quellaenderung: auf demselben
+# Stand lagen Mobile-LCP und Desktop-Performance in zwei CI-Versuchen jeweils
+# einmal ueber und einmal unter dem strengen Floor (22.11.2026). Daher fuer
+# beide Presets den Median aus fuenf Laeufen werten. Scores und Messwerte
+# brauchen jeweils ihren eigenen Median: der Lauf mit mittlerem Gesamtscore
+# kann z. B. einen ueberhohten LCP haben, obwohl der LCP-Median besteht.
+# Alle Grenzen und Floors bleiben unveraendert; D119_LIGHTHOUSE_RUNS erlaubt
+# kuerzere lokale Audits.
+LIGHTHOUSE_RUNS = max(1, int(os.environ.get("D119_LIGHTHOUSE_RUNS", "5")))
 
 
 def _lighthouse_once(case: dict[str, Any], url: str, output: Path, log_path: Path) -> dict[str, Any]:
@@ -297,7 +301,7 @@ def run_lighthouse(case: dict[str, Any], product_path: str) -> dict[str, Any]:
     url = urljoin(BASE_URL, path)
     output = REPORT_DIR / f"lighthouse-{case['name']}.json"
     log_path = REPORT_DIR / f"lighthouse-{case['name']}.log"
-    runs = 1 if case.get("preset") == "desktop" else LIGHTHOUSE_RUNS
+    runs = LIGHTHOUSE_RUNS
     laeufe: list[tuple[float, Path, Path, dict[str, Any]]] = []
     for nummer in range(1, runs + 1):
         out_n = output if runs == 1 else REPORT_DIR / f"lighthouse-{case['name']}-lauf{nummer}.json"
@@ -306,19 +310,24 @@ def run_lighthouse(case: dict[str, Any], product_path: str) -> dict[str, Any]:
         perf = float(((bericht.get("categories") or {}).get("performance") or {}).get("score") or 0.0)
         laeufe.append((perf, out_n, log_n, bericht))
     laeufe.sort(key=lambda lauf: lauf[0])
-    _, median_out, median_log, report = laeufe[len(laeufe) // 2]
+    _, median_out, median_log, _ = laeufe[len(laeufe) // 2]
     if runs > 1:
-        # Der Median-Lauf liegt unter dem gewohnten Namen (Artefakt, Floors).
+        # Der Lauf mit mittlerem Gesamtscore bleibt als Rohbericht verfuegbar.
         output.write_text(median_out.read_text(encoding="utf-8"), encoding="utf-8")
         log_path.write_text(median_log.read_text(encoding="utf-8"), encoding="utf-8")
-    categories = report.get("categories") or {}
-    audits = report.get("audits") or {}
+    reports = [lauf[3] for lauf in laeufe]
     scores = {
-        category: float((categories.get(category) or {}).get("score") or 0.0)
+        category: float(median([
+            float(((report.get("categories") or {}).get(category) or {}).get("score") or 0.0)
+            for report in reports
+        ]))
         for category in ("performance", "accessibility", "best-practices", "seo")
     }
     metrics = {
-        audit_id: float((audits.get(audit_id) or {}).get("numericValue") or 0.0)
+        audit_id: float(median([
+            float(((report.get("audits") or {}).get(audit_id) or {}).get("numericValue") or 0.0)
+            for report in reports
+        ]))
         for audit_id in (
             "first-contentful-paint",
             "largest-contentful-paint",
@@ -335,8 +344,11 @@ def run_lighthouse(case: dict[str, Any], product_path: str) -> dict[str, Any]:
         "metrics": metrics,
         "score_gates": case["score_gates"],
         "metric_gates": case["metric_gates"],
-        # Alle Laeufe zur Nachvollziehbarkeit (Performance-Punkte, sortiert).
+        # Alle Laeufe zur Nachvollziehbarkeit; Rohberichte bleiben archiviert.
         "runs": [round(lauf[0] * 100) for lauf in laeufe],
+        "lcp_runs_ms": sorted(round(float(
+            ((report.get("audits") or {}).get("largest-contentful-paint") or {}).get("numericValue") or 0.0
+        )) for report in reports),
     }
 
 
@@ -378,6 +390,7 @@ def render_summary(lighthouse_reports: list[dict[str, Any]], axe_reports: list[d
         "## Disorder119 Performance & Accessibility Audit",
         "",
         "Quantitativer Chromium-Audit des normalen Shop-Flows. Match, Chaos und Baukasten bleiben durch ihre separaten Guard-/Browser-Tests geschützt.",
+        "Alle Lighthouse-Scores und Messwerte sind die jeweiligen Mediane der Einzelläufe; die Rohberichte liegen im Artefakt.",
         "",
         "### Lighthouse",
         "",
@@ -455,6 +468,8 @@ def main() -> None:
     }
     (REPORT_DIR / "summary.json").write_text(json.dumps(summary_data, ensure_ascii=False, indent=2), encoding="utf-8")
     (REPORT_DIR / "summary.md").write_text(summary, encoding="utf-8")
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     print(summary)
     if errors:
         sys.exit(1)
