@@ -37,6 +37,10 @@ MAIL_BCC = "disorder119shop@gmail.com"
 # Die Shop-Seite selbst (Storefront-Worker) liest dieselben Namen aus den
 # GitHub-Repository-Variablen (rebuild.yml) - beide gleich halten.
 GEO_SPERRE_LAENDER = "RU,BY,IN,KP,IR"
+# Waechter-Telegram (waechter.js): "hart" = nur harte Angriffe (Angriffs-Programm,
+# SQL-Injection, XSS, Path-Traversal, Log4Shell). Scanner, Fluten und Wellen sperren
+# still (Admin-App -> Besucher -> Sicherheit). Leer = Standard, "alles" = jede Sperre.
+WAECHTER_TELEGRAM = "hart"
 
 # Produktionsfehler muessen nachtraeglich ueber Request-ID und strukturierte Logs
 # untersuchbar bleiben. Bei wachsendem Traffic kann die Sampling-Rate bewusst
@@ -132,6 +136,10 @@ DHL_ENVIRONMENT = "sandbox"
 DHL_AUTO_MARKE = "an"
 SANDBOX = "1"
 GEO_SPERRE_LAENDER = "RU,BY,IN,KP,IR"
+# Waechter-Telegram (waechter.js): "hart" = nur harte Angriffe (Angriffs-Programm,
+# SQL-Injection, XSS, Path-Traversal, Log4Shell). Scanner, Fluten und Wellen sperren
+# still (Admin-App -> Besucher -> Sicherheit). Leer = Standard, "alles" = jede Sperre.
+WAECHTER_TELEGRAM = "hart"
 
 # Abholorte aus OpenStreetMap zur Minute 37 - nie gleichzeitig mit dem Shop bei Overpass.
 [env.sandbox.triggers]

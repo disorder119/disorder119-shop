@@ -123,11 +123,11 @@ def validate_repository_hardening() -> None:
     all_workflows = "\n".join(path.read_text(encoding="utf-8") for path in sorted(WORKFLOWS.glob("*.yml")))
     unpinned = re.findall(r"uses:\s+[^\s]+@v\d+", all_workflows)
     require(not unpinned, "nicht immutable gepinnte Actions: " + ", ".join(unpinned[:8]))
-    require("actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in all_workflows,
+    require("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" in all_workflows,
             "Checkout-Action ist nicht auf den auditierten Commit gepinnt")
-    require("actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065" in rebuild,
+    require("actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0" in rebuild,
             "setup-python ist nicht immutable gepinnt")
-    require("actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020" in rebuild,
+    require("actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1" in rebuild,
             "setup-node ist nicht immutable gepinnt")
     require("permissions:\n  contents: read" in browser,
             "Browser-Audit besitzt mehr Repository-Rechte als erforderlich")
