@@ -82,13 +82,29 @@ const AUS = ["aus", "false", "0", "off", "nein"];
 // hartnaeckige Angriffe (>= KRITISCH_VERSUCHE Treffer an einem Tag). Einzelne
 // Scanner-Pfade, 404-Fluten und abgewehrte Einzelproben bleiben still - sie
 // stehen in der Admin-App. WAECHTER_TELEGRAM=alles meldet jede Sperre.
+// WAECHTER_TELEGRAM=hart (22.11.2026): nur harte Angriffe (HARTE_GRUENDE:
+// Angriffs-Programm, SQL-Injection, XSS, Path-Traversal, Log4Shell), jede
+// Sperre sofort gebuendelt. Scanner, Fluten, Wellen und Kampagnen aus
+// Scanner-Pfaden sperren weiter, bleiben aber still (Admin-App -> Sicherheit).
 const KRITISCHE_GRUENDE = Object.freeze(["zu-viele-anfragen", "codes-durchprobiert", "kasse-fehlschlaege"]);
 const KRITISCH_VERSUCHE = 10;
 const WELLE_MIN = 5;
 const WELLE_FENSTER = 15 * MINUTE;
 
+export function telegramModus(env) {
+  const wert = String(env?.WAECHTER_TELEGRAM ?? "").trim().toLowerCase();
+  if (wert === "alles") return "alles";
+  if (["hart", "nur-hart", "angriffe"].includes(wert)) return "hart";
+  return "standard";
+}
+
 function telegramAlles(env) {
-  return String(env?.WAECHTER_TELEGRAM ?? "").trim().toLowerCase() === "alles";
+  return telegramModus(env) === "alles";
+}
+
+// Darf diese Sperre/Kampagne im aktuellen Modus per Telegram gemeldet werden?
+function meldbar(env, grund) {
+  return telegramModus(env) !== "hart" || HARTE_GRUENDE.includes(grund);
 }
 
 export function sperreKritisch({ grund, hart = false, wiederholt = false, kampagne = null, versuche = 1 } = {}) {
@@ -345,7 +361,9 @@ async function sperren(env, ctx, s) {
     .bind(hash, iso(now - TAG)).first())?.n || 1);
   // sammeln=1 heisst: in die naechste Telegram-Meldung. Eine noch nicht
   // gemeldete Sperre (sammeln=1) bleibt beim Verlaengern gemeldet.
-  let melden = telegramAlles(env) || sperreKritisch({ grund: s.grund, hart: s.hart, wiederholt, kampagne: s.kampagne, versuche });
+  let melden = telegramModus(env) === "hart"
+    ? HARTE_GRUENDE.includes(s.grund)
+    : telegramAlles(env) || sperreKritisch({ grund: s.grund, hart: s.hart, wiederholt, kampagne: s.kampagne, versuche });
   await env.DB.prepare(`INSERT INTO waechter_sperren (anschluss, seit, bis, zuletzt, land, ua_kurz, grund, beispiel, versuche,
       sammeln, sammeln_seit, anzahl, selbst, asn, netz, kampagne, nr)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -362,7 +380,7 @@ async function sperren(env, ctx, s) {
   // Welle: ab WELLE_MIN Sperren in 15 Minuten werden alle noch stillen
   // Sperren dieser Welle gemeldet - viele Angreifer auf einmal sind
   // auffaellig, auch wenn jeder einzelne nur eine Probe war.
-  if (!melden) {
+  if (!melden && telegramModus(env) !== "hart") {
     const welle = await env.DB.prepare("SELECT COUNT(*) AS n FROM waechter_sperren WHERE seit>=? AND aufgehoben IS NULL")
       .bind(iso(now - WELLE_FENSTER)).first().catch(() => null);
     if (Number(welle?.n || 0) >= WELLE_MIN) {
@@ -495,9 +513,22 @@ export async function waechterBuendeln(env, now = Date.now()) {
     const kampagnen = (await env.DB.prepare(`SELECT * FROM waechter_kampagnen WHERE gemeldet_zeit IS NULL
       ${ids.length ? `OR id IN (${ids.map(() => "?").join(",")})` : ""} ORDER BY seit LIMIT 20`).bind(...ids).all()).results || [];
     if (!sperren.length && !kampagnen.some(k => !k.gemeldet_zeit)) return { gesendet: 0 };
-    const ergebnis = await sendTelegramMessage(env, waechterBuendelText(sperren, kampagnen));
-    if (!ergebnis?.sent) return { gesendet: 0, fehler: ergebnis?.reason || "failed" };
     const zeit = iso(now);
+    // Modus "hart": nicht meldbares (Scanner, Fluten ...) still als erledigt markieren.
+    const sperrenMelden = sperren.filter(s => meldbar(env, s.grund));
+    const kampagnenMelden = kampagnen.filter(k => meldbar(env, k.grund));
+    const still = sperren.filter(s => !meldbar(env, s.grund)).map(s => s.id);
+    for (let i = 0; i < still.length; i += 50) {
+      const teil = still.slice(i, i + 50);
+      await env.DB.prepare(`UPDATE waechter_sperren SET sammeln=0, gemeldet_zeit=? WHERE id IN (${teil.map(() => "?").join(",")})`)
+        .bind(zeit, ...teil).run();
+    }
+    for (const k of kampagnen.filter(k => !meldbar(env, k.grund) && !k.gemeldet_zeit)) {
+      await env.DB.prepare("UPDATE waechter_kampagnen SET gemeldet_zeit=?, gemeldet_anschluesse=anschluesse WHERE id=?").bind(zeit, k.id).run();
+    }
+    if (!sperrenMelden.length && !kampagnenMelden.some(k => !k.gemeldet_zeit)) return { gesendet: 0, still: still.length };
+    const ergebnis = await sendTelegramMessage(env, waechterBuendelText(sperrenMelden, kampagnenMelden));
+    if (!ergebnis?.sent) return { gesendet: 0, fehler: ergebnis?.reason || "failed" };
     const sperrIds = sperren.map(s => s.id);
     for (let i = 0; i < sperrIds.length; i += 50) {
       const teil = sperrIds.slice(i, i + 50);
