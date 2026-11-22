@@ -39,6 +39,7 @@ from seo_text import compose_description, seo_title  # noqa: E402
 # sonst Marke + Produktart + Bereich + Farbe) - geteilt mit
 # scripts/repair_public_article_integrity.py.
 from english_titles import english_description, english_title, farbe_en  # noqa: E402
+from french_titles import french_color, french_description, french_title  # noqa: E402
 # Strukturierte Produktbeschreibung (Schlagzeilen, Hook, Fakten, Klappleisten,
 # Puppenmasse) aus dem vorhandenen Beschreibungstext - beschreibung.py.
 import beschreibung  # noqa: E402
@@ -406,35 +407,8 @@ def fmt_price_de(v):
     return s + " €"
 
 
-FR_TITEL_WOERTER = {
-    "Women": "Femme", "Men": "Homme", "Unisex": "Unisexe",
-    "Dark Blue": "Bleu foncé", "Light Blue": "Bleu clair", "Navy Blue": "Bleu marine", "Navy": "Bleu marine",
-    "Black": "Noir", "White": "Blanc", "Brown": "Marron", "Grey": "Gris", "Gray": "Gris", "Blue": "Bleu", "Green": "Vert",
-    "Red": "Rouge", "Beige": "Beige", "Multicolour": "Multicolore", "Multicolor": "Multicolore", "Silver": "Argent",
-    "Gold": "Doré", "Orange": "Orange", "Pink": "Rose", "Yellow": "Jaune", "Purple": "Violet", "Cream": "Crème",
-    "Olive": "Olive", "Ivory": "Ivoire", "Khaki": "Kaki", "Burgundy": "Bordeaux", "Turquoise": "Turquoise",
-}
-_FR_TITEL_RE = re.compile(r"\b(" + "|".join(sorted((re.escape(w) for w in FR_TITEL_WOERTER), key=len, reverse=True)) + r")\b")
-
-
-def french_title(it):
-    """Titel fuer /fr/: der englische Titel (Modellnamen und Produktwoerter
-    versteht man in Frankreich), Bereich und Farbe am Ende auf Franzoesisch.
-    Vorher stand dort der deutsche Titel."""
-    titel = english_title(it)
-    if not titel:
-        return it.get("title") or ""
-    woerter = titel.split(" ")
-    # Nur das Ende uebersetzen (Bereich + Farbe) - Marken wie "Rundholz Black Label" bleiben.
-    schnitt = max(1, len(woerter) - 3)
-    ende = _FR_TITEL_RE.sub(lambda m: FR_TITEL_WOERTER[m.group(1)], " ".join(woerter[schnitt:]))
-    return " ".join(woerter[:schnitt] + [ende])
-
-
 def item_title(it, lang="de"):
-    """Sichtbarer Artikeltitel: im englischen Shop englisch, im franzoesischen
-    der englische mit franzoesischem Bereich/Farbe, sonst der gepflegte
-    (deutsche) Titel aus data/items.json."""
+    """Sichtbarer Artikeltitel in der Shop-Sprache, sonst aus data/items.json."""
     if lang == "en":
         return english_title(it)
     if lang == "fr":
@@ -446,12 +420,16 @@ def item_description(it, lang):
     """Eigener Beschreibungstext der Sprache; im EN-Shop ohne deutsche
     Titel-/Farbreste (english_description)."""
     text = {"de": it.get("desc_de") or it.get("desc"), "en": it.get("desc_en"), "fr": it.get("desc_fr")}[lang]
-    return english_description(it, text) if lang == "en" and text else text
+    if lang == "en" and text:
+        return english_description(it, text)
+    return french_description(it, text) if lang == "fr" and text else text
 
 
 def item_color(it, lang="de"):
     farbe = it.get("color") or ""
-    return (farbe_en(farbe) or farbe) if lang == "en" else farbe
+    if lang == "en":
+        return farbe_en(farbe) or farbe
+    return french_color(farbe) if lang == "fr" else farbe
 
 
 def display_name(it, lang="de"):
@@ -459,7 +437,7 @@ def display_name(it, lang="de"):
     title = it.get("title") or ""
     # Eigenstaendig fuer Deutsch: shop-worker/commerce-core.test.mjs fuehrt
     # genau diese Funktion ohne den Rest des Moduls aus.
-    if lang == "en":
+    if lang in {"en", "fr"}:
         title = item_title(it, lang)
     # Steht die Marke schon irgendwo im Titel - etwa hinter einer Linie wie
     # "MM6 Maison Margiela" oder "Pierre Balmain" -, wird sie nicht noch
@@ -2810,6 +2788,10 @@ def build_catalog_json():
         farbe = farbe_en(it.get("color") or "")
         if farbe:
             row["color_en"] = farbe
+        row["title_fr"] = french_title(it)
+        couleur = french_color(it.get("color") or "")
+        if couleur:
+            row["color_fr"] = couleur
     CATALOG_PATH.write_text(
         json.dumps(catalog, ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",

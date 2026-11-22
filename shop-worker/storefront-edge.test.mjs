@@ -34,6 +34,7 @@ test('publication rejects backend sources, drafts metadata, configuration and tr
 });
 test('only public records and approved simple fields leave the origin',()=>{
   assert.deepEqual(publicCatalog([{id:1,public_status:'AVAILABLE',title:'A',purchase_price:20,nested:{private:1},gallery:['assets/a.webp']},{id:2,public_status:'DRAFT',title:'Hidden'},{id:3,public_status:'SOLD',title:{private:1}}]),[{id:1,public_status:'AVAILABLE',title:'A',gallery:['assets/a.webp']},{id:3,public_status:'SOLD'}]);
+  assert.deepEqual(publicCatalog([{id:4,public_status:'AVAILABLE',title:'Jacke',title_fr:'veste',color_fr:'noir',private_note:'hidden'}]),[{id:4,public_status:'AVAILABLE',title:'Jacke',title_fr:'veste',color_fr:'noir'}]);
 });
 test('photo brightness for the light view reaches the browser',()=>{
   // foto_hell (build_site.py) steuert die Aufhellung je Foto in der hellen Ansicht.
