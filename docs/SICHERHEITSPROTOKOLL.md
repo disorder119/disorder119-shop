@@ -41,7 +41,7 @@ Laufendes Protokoll der Sicherheitsarbeiten. Jede Änderung mit Datum, Prüfweg 
 | 22.11.2026 | **Dependabot #293** (upload-artifact v4→v7.0.2 `cf430e03…`, download-artifact v4→v8.0.2 `9000827c…`): SHAs gegen Tags geprüft. | CI von #293 grün; nach Merge: Job „Validierten Main-Rebuild publizieren“ lädt den Patch | Revert des Merge-Commits |
 | 22.11.2026 | **Alte PRs geschlossen** (Branches bleiben): #238 (ersetzt durch #275), #275 (Konflikt, Migration 0038 inzwischen belegt), #297 und #337 (seit Oktober in Konflikt mit main, würden neuere Stände überschreiben). Begründung steht je PR als Kommentar. | `gh pr list --state closed` | PR wieder öffnen (`gh pr reopen <nr>`) |
 | 22.11.2026 | **14 Branches `claude/*` gelöscht.** Alle per Squash gemergt (#197, #199, #200, #212, #213, #217, #285, #286, #287, #288) oder in #217 zusammengefasst (#214, #215, #216); `claude/sharp-knuth-ncrrwl` ohne PR, durch spätere PRs ersetzt. Letzte SHAs siehe Anhang A. | `gh api repos/disorder119/disorder119-shop/branches --paginate --jq '.[].name' \| grep claude/` → leer | `gh api -X POST repos/disorder119/disorder119-shop/git/refs -f ref=refs/heads/<name> -f sha=<sha>` |
-| 22.11.2026 | **Wächter: Telegram-Modus `hart`** (`shop-worker/waechter.js`): mit `WAECHTER_TELEGRAM=hart` meldet Telegram nur noch harte Angriffe (Angriffs-Programm, SQL-Injection, XSS, Path-Traversal, Log4Shell), jede solche Sperre gebündelt. Scanner-Pfade, Fluten und Wellen sperren weiter, aber still (Admin-App → Besucher → Sicherheit). Standard ohne Variable bleibt wie bisher. Test `WAECHTER_TELEGRAM=hart: …` in `waechter.test.mjs`. | `node --test shop-worker/waechter.test.mjs` (27/27) | Variable entfernen oder auf `standard` setzen; Code per Revert |
+| 22.11.2026 | **Wächter: Telegram-Modus `hart`** (`shop-worker/waechter.js`): mit `WAECHTER_TELEGRAM=hart` meldet Telegram nur noch harte Angriffe (Angriffs-Programm, SQL-Injection, XSS, Path-Traversal, Log4Shell), jede solche Sperre gebündelt. Scanner-Pfade, Fluten und Wellen sperren weiter, aber still (Admin-App → Besucher → Sicherheit). Standard ohne Variable bleibt wie bisher. Test `WAECHTER_TELEGRAM=hart: …` in `waechter.test.mjs`. Eingeschaltet über `WAECHTER_TELEGRAM = "hart"` in `shop-worker/wrangler.toml`. | `node --test shop-worker/waechter.test.mjs` (27/27) | Zeile in `wrangler.toml` entfernen, neu deployen; Code per Revert |
 | 22.11.2026 | **Admin-Einrichtung „4 - GitHub verbinden“**: das vorausgefüllte Token-Formular setzt jetzt **365 Tage Ablauf** statt „kein Ablauf“ (`_skripte/github.ps1`, Sicherung `github.ps1.bak_20261122`; liegt außerhalb des Repos). | Skript öffnet GitHub mit `expires_in=365` | Sicherung zurückkopieren |
 
 **Hinweis zum Worker-Token:** Der Worker braucht für Katalog-Speicherungen aus der Admin-App **Contents: Read and write** *und* **Pull requests: Read and write** (er legt einen PR an und mergt ihn, damit der Main-Wächter die Änderung akzeptiert). Nur „Contents“ würde das Speichern brechen.
@@ -93,9 +93,11 @@ Wiederherstellungscodes jeweils offline ablegen (Notfallpaket), nicht in der Clo
 3. Danach bei GitHub → Settings → Developer settings → Fine-grained tokens den **alten** Token (ohne Ablauf, z. B. „lo go“ / „Disorder119 Admin-App“) **löschen**.
 4. Erinnerung setzen: Token läuft nach 365 Tagen ab → dann Schritt 1 wiederholen.
 
-### 3.4 Wächter-Telegram auf „nur harte Angriffe“ (nach Merge des Sicherheits-PRs)
-Cloudflare → Workers → `disorder119-shop-worker` → Settings → Variables → `WAECHTER_TELEGRAM` = `hart` (Text, kein Secret) → Deploy.
-Zurück: Variable löschen.
+### 3.4 Wächter-Telegram auf „nur harte Angriffe“
+Steht als `WAECHTER_TELEGRAM = "hart"` in `shop-worker/wrangler.toml` (`[vars]`) und gilt nach dem nächsten
+`npx.cmd wrangler deploy` im Ordner `shop-worker`. **Nicht** im Cloudflare-Dashboard setzen: `wrangler deploy`
+überschreibt dortige Variablen mit `[vars]`.
+Zurück: Zeile in `wrangler.toml` löschen (oder `"alles"`) und neu deployen.
 
 ---
 
