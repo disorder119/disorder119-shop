@@ -76,6 +76,11 @@ jobs:
       - name: Python Syntax pruefen
         run: python -m py_compile build_site.py scripts/*.py
 
+      - name: Franzoesische Produkttexte pruefen
+        run: |
+          python scripts/test_french_titles.py
+          node scripts/test_archive_localization.cjs
+
       - name: Cloudflare-Publikation ohne Zugangsdaten pruefen
         run: |
           python -m unittest discover -s scripts -p test_storefront_publishing.py -v

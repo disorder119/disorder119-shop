@@ -13,7 +13,7 @@ import { anschlussVonIp } from './privacy-security.js';
 const PAGES = new Set(['agb','baukasten','cart','chaos','datenschutz','faq','impressum','kasse','konto','marken','match','mieten','neu','newsletter','ueber-uns','universe','unter-100','unter-200','vintage-archive-shop','widerruf']);
 // google7945c4dc594a9a9c.html: Inhaberschaft fuer die Google Search Console (Konto disorder119shop), muss dauerhaft erreichbar bleiben.
 const ROOT_FILES = new Set(['index.html','404.html','offline.html','robots.txt','sitemap.xml','llms.txt','manifest.webmanifest','sw.js','favicon.ico','apple-touch-icon.png','apple-touch-icon-precomposed.png','google7945c4dc594a9a9c.html','d119-indexnow.txt']);
-const FIELDS = new Set(['id','article','url_slug','title','title_en','color_en','brand','price','price_estimated','public_status','status','category','size','color','condition','brightness','gallery','look','department','product_type','taxonomy_category','size_normalized','rental_price','grid_image','hover_image','foto_hell']);
+const FIELDS = new Set(['id','article','url_slug','title','title_en','title_fr','color_en','color_fr','brand','price','price_estimated','public_status','status','category','size','color','condition','brightness','gallery','look','department','product_type','taxonomy_category','size_normalized','rental_price','grid_image','hover_image','foto_hell']);
 // Gestaltete Fehlerseite fuer Adressen, die es im Shop nicht gibt. Steht hier
 // fertig im Worker: der Ursprung wird fuer solche Pfade nie gefragt.
 const SEITE_404='<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Seite nicht gefunden – Disorder119</title>'

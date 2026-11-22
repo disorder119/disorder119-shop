@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from seo_text import compose_description  # noqa: E402
 # Englische Titel und desc_en ohne deutsche Reste - wie in build_site.py.
 from english_titles import english_description, english_title  # noqa: E402
+from french_titles import french_description, french_title  # noqa: E402
 from aehnliche_teile import aehnliche_teile  # noqa: E402
 
 BASE = Path(__file__).resolve().parents[1]
@@ -87,7 +88,9 @@ def tr(table: dict, value: str, lang: str) -> str:
 
 
 def item_title(item: dict, lang: str = "de") -> str:
-    return english_title(item) if lang == "en" else (item.get("title") or "")
+    if lang == "en":
+        return english_title(item)
+    return french_title(item) if lang == "fr" else (item.get("title") or "")
 
 
 def display_name(item: dict, lang: str = "de") -> str:
@@ -118,6 +121,8 @@ def meta_description(item: dict, lang: str) -> str:
                     "en": item.get("desc_en"), "fr": item.get("desc_fr")}[lang]
     if lang == "en" and eigener_text:
         eigener_text = english_description(item, eigener_text)
+    elif lang == "fr" and eigener_text:
+        eigener_text = french_description(item, eigener_text)
     return compose_description(prefix, eigener_text, ph["suffix"], name)
 
 
