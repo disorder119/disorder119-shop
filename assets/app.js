@@ -3898,6 +3898,15 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   var outfitPickerKey = null;
   var outfitPickerQuery = "";
 
+  function outfitCategory(item) {
+    return item.taxonomy_category || item.category;
+  }
+
+  function outfitAvailable(item, categories) {
+    return !!(item && item.public_status === "AVAILABLE" && item.price > 0 &&
+      item.gallery && item.gallery[0] && categories.indexOf(outfitCategory(item)) !== -1);
+  }
+
   function outfitEligible(categories, query, opts) {
     // public_status statt der alten "status === Verkauft"-Pruefung - sonst
     // koennten hier (anders als im Rest des Shops) auch interne Workflow-
@@ -3905,8 +3914,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     opts = opts || {};
     var q = (query || "").trim().toLowerCase();
     return ITEMS.filter(function (it) {
-      if (it.public_status !== "AVAILABLE" || !(it.price > 0) || !it.gallery || !it.gallery[0]) return false;
-      if (categories.indexOf(it.category) === -1) return false;
+      if (!outfitAvailable(it, categories)) return false;
       if (opts.size && it.size !== opts.size) return false;
       if (opts.priceMax && it.price > opts.priceMax) return false;
       if (!q) return true;
@@ -3916,7 +3924,7 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
   }
 
   function outfitIsDress() {
-    return !!(outfitSlots.top.item && outfitSlots.top.item.category === "Dresses");
+    return !!(outfitSlots.top.item && outfitCategory(outfitSlots.top.item) === "Dresses");
   }
 
   function outfitVisibleKeys() {
@@ -3954,18 +3962,26 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
       var raw = window.localStorage.getItem(OUTFIT_KEY);
       if (!raw) return;
       var ids = JSON.parse(raw);
+      var changed = false;
       OUTFIT_ORDER.forEach(function (k) {
         if (ids[k] != null) {
           var it = findItem(ids[k]);
-          if (it && it.public_status === "AVAILABLE" && it.price > 0) outfitSlots[k].item = it;
+          if (outfitAvailable(it, outfitSlots[k].categories)) outfitSlots[k].item = it;
+          else changed = true;
         }
       });
+      if (outfitIsDress() && outfitSlots.bottom.item) {
+        outfitSlots.bottom.item = null;
+        changed = true;
+      }
+      if (changed) saveOutfit();
     } catch (e) {}
   }
 
   function setOutfitSlot(key, item) {
+    if (item && !outfitAvailable(item, outfitSlots[key].categories)) return;
     outfitSlots[key].item = item;
-    if (key === "top" && item && item.category === "Dresses") {
+    if (key === "top" && item && outfitCategory(item) === "Dresses") {
       outfitSlots.bottom.item = null;
     }
     saveOutfit();
