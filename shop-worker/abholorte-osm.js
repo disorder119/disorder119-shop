@@ -57,10 +57,16 @@ const TAG_MS = 24 * 60 * 60 * 1000;
 const STUNDE_MS = 60 * 60 * 1000;
 // Hoechstens einmal je Woche je Gebiet (Overpass-Nutzungsregeln: wenige grosse Abfragen).
 export const AUFFRISCHEN_MS = 7 * TAG_MS;
+// Nur Server mit Gebietssuche (map_to_area). overpass.private.coffee lieferte
+// darauf leere, aber "vollstaendige" Antworten - 16 Leitregionen standen so mit
+// 0 Orten da (Nov. 2026).
 const OVERPASS_STANDARD = Object.freeze([
   "https://overpass-api.de/api/interpreter",
-  "https://overpass.private.coffee/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
 ]);
+// Leitregionen ohne Zustellbezirke (nur Grosskunden-/Postfach-PLZ oder unbelegt):
+// hier ist eine Antwort ohne PLZ-Gebiet echt, sonst ein Serverfehler.
+const OHNE_PLZ_GEBIETE = new Set(["05", "11", "43", "62"]);
 const USER_AGENT = "Disorder119-Shop (kontakt@disorder119.com)";
 const OVERPASS_TIMEOUT_S = 240;
 const ABRUF_TIMEOUT_MS = 270 * 1000;
@@ -70,11 +76,15 @@ const TAGS = Object.freeze([
   "postal_code", "note", "name", "amenity", "ref", "brand", "operator", "post_office:brand", "access",
   "addr:street", "addr:housenumber", "addr:postcode", "addr:city",
 ]);
-// Umkreis um die Mitte der PLZ: 5 km, auf dem Land bis 10 km, hoechstens 15 Orte.
+// Umkreis um die Mitte der PLZ: 5 km, auf dem Land bis 10 km, notfalls 25 km -
+// dazu immer der ganze eigene Ort (bis 40 km, gleichnamige Orte woanders bleiben
+// draussen); hoechstens 30 Orte, die naechsten zuerst.
 const RADIUS_M = 5000;
 const RADIUS_WEIT_M = 10000;
+const RADIUS_MAX_M = 25000;
+const RADIUS_ORT_M = 40000;
 const MIN_NAH = 3;
-const MAX_ORTE = 15;
+const MAX_ORTE = 30;
 const SCHREIB_BLOCK = 400;
 
 export class OsmImportError extends Error {
@@ -288,6 +298,8 @@ export async function gebietLaden(env, gebiet, { laden = standardLaden } = {}) {
   for (const ziel of overpassZiele(env)) {
     try {
       const daten = gebietAuswerten(await laden(ziel, abfrage), gebiet);
+      // Eine echte Leitregion hat PLZ-Gebiete - "0 PLZ" heisst: Server ohne Gebietssuche.
+      if (daten.plz.length === 0 && !OHNE_PLZ_GEBIETE.has(String(gebiet))) throw new OsmImportError("OVERPASS_LEER");
       return { daten, quelle: safeText(new URL(ziel).host, 80) };
     } catch (err) {
       letzter = err instanceof OsmImportError ? err : new OsmImportError("OVERPASS_FEHLER", safeText(err?.message || "", 80));
@@ -439,11 +451,24 @@ function abstandM(a, b) {
 // Abholorte um die Mitte des PLZ-Gebiets - nur aus D1. Ergebnis { orte } wie
 // abholorteAus (abholorte.js), entfernungM ab der Mitte der PLZ; null, wenn es
 // fuer diese PLZ noch keine OSM-Daten gibt (Kasse: Nummer von Hand).
+// Mitte der PLZ; fehlt die PLZ in OSM (Postfach-/Grosskunden-PLZ, Luecke), die
+// Mitte der Nachbar-PLZ mit gleichen ersten vier, sonst drei Ziffern.
+async function plzMitte(db, plz) {
+  const genau = await db.prepare("SELECT lat,lng,ort FROM abholorte_osm_plz WHERE plz=?").bind(plz).first();
+  if (genau) return genau;
+  for (const laenge of [4, 3]) {
+    const nachbar = await db.prepare(`SELECT AVG(lat) AS lat, AVG(lng) AS lng, MIN(ort) AS ort, COUNT(*) AS n
+      FROM abholorte_osm_plz WHERE plz LIKE ?`).bind(`${plz.slice(0, laenge)}%`).first();
+    if (nachbar && Number(nachbar.n) > 0) return { lat: nachbar.lat, lng: nachbar.lng, ort: "" };
+  }
+  return null;
+}
+
 export async function osmAbholorteSuchen(env, plz) {
   if (!env?.DB || osmAbgeschaltet(env) || !/^\d{5}$/.test(String(plz))) return null;
   let mitte;
   try {
-    mitte = await env.DB.prepare("SELECT lat,lng FROM abholorte_osm_plz WHERE plz=?").bind(plz).first();
+    mitte = await plzMitte(env.DB, plz);
     if (!mitte) {
       // Leitregion schon eingelesen, aber die PLZ hat in OSM kein Gebiet (z. B. Postfach-PLZ).
       const eingelesen = await env.DB.prepare("SELECT 1 AS da FROM abholorte_osm_gebiete WHERE gebiet=? AND stand IS NOT NULL").bind(plz.slice(0, 2)).first();
@@ -455,13 +480,21 @@ export async function osmAbholorteSuchen(env, plz) {
   }
   const lat = Number(mitte.lat);
   const lng = Number(mitte.lng);
-  const dLat = RADIUS_WEIT_M / 111320;
+  const stadt = String(mitte.ort || "").trim();
+  const dLat = RADIUS_MAX_M / 111320;
   const kos = Math.cos(lat * Math.PI / 180);
-  const dLng = RADIUS_WEIT_M / (111320 * Math.max(0.2, kos));
-  const { results = [] } = await env.DB.prepare(`SELECT id,typ,nummer,name,geschaeft,strasse,plz,ort,lat,lng,osm_id AS osmId FROM abholorte_osm
+  const dLng = RADIUS_MAX_M / (111320 * Math.max(0.2, kos));
+  const { results: umkreis = [] } = await env.DB.prepare(`SELECT id,typ,nummer,name,geschaeft,strasse,plz,ort,lat,lng,osm_id AS osmId FROM abholorte_osm
     WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?
-    ORDER BY (lat-?)*(lat-?) + (lng-?)*(lng-?)*? LIMIT 60`)
+    ORDER BY (lat-?)*(lat-?) + (lng-?)*(lng-?)*? LIMIT 120`)
     .bind(lat - dLat, lat + dLat, lng - dLng, lng + dLng, lat, lat, lng, lng, kos * kos).all();
+  // Der ganze Ort: alle Abholorte mit dem Ortsnamen der PLZ (Grossstadt: die ganze Stadt),
+  // begrenzt auf RADIUS_ORT_M - gleichnamige Orte woanders ("Neustadt") bleiben draussen.
+  const { results: imOrt = [] } = stadt.length >= 2
+    ? await env.DB.prepare(`SELECT id,typ,nummer,name,geschaeft,strasse,plz,ort,lat,lng,osm_id AS osmId FROM abholorte_osm
+        WHERE ort = ? LIMIT 400`).bind(stadt).all()
+    : { results: [] };
+  const results = [...umkreis, ...imOrt];
   const gesehen = new Set();
   const alle = [];
   for (const r of results) {
@@ -469,7 +502,8 @@ export async function osmAbholorteSuchen(env, plz) {
     gesehen.add(r.id);
     gesehen.add(r.osmId);
     const entfernungM = Math.round(abstandM({ lat, lng }, { lat: Number(r.lat), lng: Number(r.lng) }));
-    if (entfernungM > RADIUS_WEIT_M) continue;
+    const imSelbenOrt = stadt.length >= 2 && r.ort === stadt;
+    if (entfernungM > (imSelbenOrt ? RADIUS_ORT_M : RADIUS_MAX_M)) continue;
     alle.push({
       id: r.id,
       typ: r.typ,
@@ -485,8 +519,16 @@ export async function osmAbholorteSuchen(env, plz) {
     });
   }
   alle.sort((a, b) => a.entfernungM - b.entfernungM || a.id.localeCompare(b.id));
-  const nah = alle.filter(o => o.entfernungM <= RADIUS_M);
-  return { orte: (nah.length >= MIN_NAH ? nah : alle).slice(0, MAX_ORTE) };
+  // Immer der ganze eigene Ort; dazu die Umgebung: bis 5 km, bei weniger als drei
+  // Treffern bis 10 km, und ist dann noch nichts da, bis 25 km.
+  const ort = alle.filter(o => stadt.length >= 2 && o.ort === stadt);
+  let umgebung = alle.filter(o => o.entfernungM <= RADIUS_M);
+  if (umgebung.length + ort.length < MIN_NAH) umgebung = alle.filter(o => o.entfernungM <= RADIUS_WEIT_M);
+  if (umgebung.length + ort.length === 0) umgebung = alle;
+  const ids = new Set();
+  const auswahl = [...ort, ...umgebung].filter(o => (ids.has(o.id) ? false : ids.add(o.id)));
+  auswahl.sort((a, b) => a.entfernungM - b.entfernungM || a.id.localeCompare(b.id));
+  return { orte: auswahl.slice(0, MAX_ORTE) };
 }
 
 // ------------------------------------------------------------------ Admin

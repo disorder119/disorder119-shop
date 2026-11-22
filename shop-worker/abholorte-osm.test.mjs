@@ -169,7 +169,7 @@ test("Einlesen in D1: nur der Unterschied wird geschrieben, ein Fehler laesst de
   const versuche = [];
   const weg = await abholorteOsmPflegen(env, t0 + 3 * AUFFRISCHEN_MS, { gebiet: "63", laden: async ziel => { versuche.push(ziel); throw new Error("502 Gateway Timeout"); } });
   assert.equal(weg.fehler, "OVERPASS_FEHLER");
-  assert.deepEqual(versuche, ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"]);
+  assert.deepEqual(versuche, ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]);
   assert.deepEqual(DB.raw.prepare("SELECT * FROM abholorte_osm ORDER BY id").all(), vorher);
   const status = DB.raw.prepare("SELECT * FROM abholorte_osm_gebiete WHERE gebiet='63'").get();
   assert.equal(status.fehler, "OVERPASS_FEHLER");
@@ -256,11 +256,11 @@ test("Overpass wird hoeflich gefragt: POST, eigener User-Agent, zweiter Server n
   };
   try {
     const { daten, quelle } = await gebietLaden({}, "63");
-    assert.equal(quelle, "overpass.private.coffee");
+    assert.equal(quelle, "overpass.kumi.systems");
     assert.equal(daten.orte.length, 8);
     assert.deepEqual(aufrufe.map(a => [a.url, a.method, a.ua]), [
       ["https://overpass-api.de/api/interpreter", "POST", "Disorder119-Shop (kontakt@disorder119.com)"],
-      ["https://overpass.private.coffee/api/interpreter", "POST", "Disorder119-Shop (kontakt@disorder119.com)"],
+      ["https://overpass.kumi.systems/api/interpreter", "POST", "Disorder119-Shop (kontakt@disorder119.com)"],
     ]);
     assert.equal(decodeURIComponent(aufrufe[0].body.replace(/^data=/, "")), overpassAbfrage("63"));
   } finally {
@@ -268,7 +268,7 @@ test("Overpass wird hoeflich gefragt: POST, eigener User-Agent, zweiter Server n
   }
 });
 
-test("Suche: Mitte der PLZ, naechste Orte bis 5 km (auf dem Land bis 10 km), hoechstens 15, sortiert", async () => {
+test("Suche: der ganze Ort plus Umgebung (5 km, auf dem Land 10 km, notfalls 25 km), hoechstens 30, sortiert", async () => {
   const DB = sqliteD1(allMigrations());
   const env = { DB };
   assert.equal(await osmAbholorteSuchen(env, "63739"), null, "noch nichts eingelesen");
@@ -278,6 +278,8 @@ test("Suche: Mitte der PLZ, naechste Orte bis 5 km (auf dem Land bis 10 km), hoe
   const nah = await osmAbholorteSuchen(env, "63739");
   assert.deepEqual(nah.orte.map(o => [o.name, Math.round(o.entfernungM / 100) / 10]), [
     ["Packstation 125", 0.2], ["Postfiliale 593", 0.5], ["Packstation 201", 1], ["Packstation 202", 3], ["Packstation 203", 4.9],
+    // ganz Aschaffenburg, auch ausserhalb von 5 km
+    ["Packstation 204", 6], ["Packstation 205", 9], ["Packstation 206", 12],
   ]);
   assert.deepEqual(Object.keys(nah.orte[1]), ["id", "typ", "nummer", "name", "geschaeft", "strasse", "plz", "ort", "lat", "lng", "entfernungM"]);
   assert.equal(nah.orte[1].geschaeft, "Hauptpost");
@@ -291,12 +293,12 @@ test("Suche: Mitte der PLZ, naechste Orte bis 5 km (auf dem Land bis 10 km), hoe
   assert.equal(await osmAbholorteSuchen(env, "80331"), null);
   assert.equal(await osmAbholorteSuchen({ DB, ABHOLORTE_OSM: "aus" }, "63739"), null);
 
-  // Viele Orte: die 15 naechsten.
+  // Viele Orte: alle im Ort, hoechstens 30.
   const viele = [plzGebiet("10115", "52.532", "13.384", "10115 Berlin")];
   for (let i = 1; i <= 25; i++) viele.push(packstation(String(7000 + i), String(100 + i), (52.532 + i * 0.0005).toFixed(6), "13.384"));
   await abholorteOsmPflegen(env, Date.now(), { gebiet: "10", laden: async () => csv(viele) });
   const berlin = await osmAbholorteSuchen(env, "10115");
-  assert.equal(berlin.orte.length, 15);
+  assert.equal(berlin.orte.length, 25);
   assert.deepEqual(berlin.orte.slice(0, 3).map(o => o.nummer), ["101", "102", "103"]);
   assert.ok(berlin.orte.every((o, i, a) => i === 0 || a[i - 1].entfernungM <= o.entfernungM));
 });
@@ -326,7 +328,7 @@ test("GET /versand/abholorte: Antwort aus OpenStreetMap mit Quellenvermerk - ohn
     assert.deepEqual(ok.daten.quellenvermerk, { text: "© OpenStreetMap-Mitwirkende", url: "https://www.openstreetmap.org/copyright", lizenz: "ODbL 1.0" });
     assert.deepEqual(ok.daten.quellenvermerk, { ...OSM_QUELLENVERMERK });
     assert.deepEqual(ok.daten.luftbild, { land: "BY", quelle: "© Bayerische Vermessungsverwaltung, CC BY 4.0" });
-    assert.equal(ok.daten.orte.length, 5);
+    assert.equal(ok.daten.orte.length, 8, "ganz Aschaffenburg");
     assert.deepEqual(ok.daten.orte[0], { id: "packstation-125-63739", typ: "packstation", nummer: "125", name: "Packstation 125", strasse: "", plz: "63739",
       ort: "Aschaffenburg", lat: r6(nord(0.2)), lng: MITTE.lng, entfernungM: ok.daten.orte[0].entfernungM });
     assert.ok(Math.abs(ok.daten.orte[0].entfernungM - 200) <= 2);

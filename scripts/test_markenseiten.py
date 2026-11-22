@@ -101,7 +101,8 @@ class MarkenseitenTests(unittest.TestCase):
         bestand = [teil(n, "Prada") for n in range(1, 9)]
         wurzel = self.bauen(bestand)
         seite = (wurzel / "marke/prada/index.html").read_text(encoding="utf-8")
-        bilder = re.findall(r"<img [^>]+>", seite)
+        # Produktkacheln zaehlen; das DHL-Logo in der Fusszeile ist kein Produktbild
+        bilder = [b for b in re.findall(r"<img [^>]+>", seite) if "/assets/dhl/" not in b]
         self.assertEqual(len(bilder), 8)
         self.assertIn('fetchpriority="high"', bilder[0])
         for bild in bilder[:markenseiten.EAGER_KACHELN]:
