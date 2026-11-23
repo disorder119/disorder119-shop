@@ -64,7 +64,8 @@ class PublishingTests(unittest.TestCase):
             for name in ('storefront-edge.js', 'storefront-csp.js', 'catalog-number-routes.js', 'geo-sperre.js', 'waechter-regeln.js', 'waechter-seiten.js', 'waechter-erwischt-texte.js', 'privacy-security.js'):
                 shutil.copyfile(exporter.ROOT / 'shop-worker' / name, root / 'shop-worker' / name)
             paths = ['index.html', 'en/index.html', 'fr/index.html', 'kasse/index.html',
-                'feed/google-merchant.xml', 'google7945c4dc594a9a9c.html',
+                'feed/google-merchant.xml', 'feed/google-merchant-en.xml',
+                'feed/google-merchant-fr.xml', 'google7945c4dc594a9a9c.html',
                 '.well-known/apple-developer-merchantid-domain-association', 'assets/img/a.webp',
                 'artikel/777/index.html', 'en/artikel/777/index.html', 'fr/artikel/777/index.html',
                 'config/credentials.json', 'assets/example.test.js', 'admin/index.html']

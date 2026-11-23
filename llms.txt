@@ -12,7 +12,7 @@
 
 ## Maschinenlesbar (für Einkaufs-Agenten)
 - Katalog als JSON (alle sichtbaren Teile, Preis, Größe, Bilder): https://disorder119.com/data/catalog.json
-- Produktfeed (Google-Merchant-Format): https://disorder119.com/feed/google-merchant.xml · Englisch: https://disorder119.com/feed/google-merchant-en.xml
+- Produktfeed (Google-Merchant-Format): https://disorder119.com/feed/google-merchant.xml · Englisch: https://disorder119.com/feed/google-merchant-en.xml · Französisch: https://disorder119.com/feed/google-merchant-fr.xml
 - Sitemap: https://disorder119.com/sitemap.xml
 - Jede Produktseite enthält schema.org Product + Offer als JSON-LD (Preis, Verfügbarkeit, Größe, Farbe, Zustand, Versand, Rückgabe).
 - Artikelnummer = Pfad: https://disorder119.com/artikel/<nummer>/ (Englisch /en/artikel/<nummer>/, Französisch /fr/artikel/<nummer>/).

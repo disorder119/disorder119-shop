@@ -2703,7 +2703,7 @@ def build_llms_txt():
         "",
         "## Maschinenlesbar (für Einkaufs-Agenten)",
         f"- Katalog als JSON (alle sichtbaren Teile, Preis, Größe, Bilder): {site}/data/catalog.json",
-        f"- Produktfeed (Google-Merchant-Format): {site}/feed/google-merchant.xml · Englisch: {site}/feed/google-merchant-en.xml",
+        f"- Produktfeed (Google-Merchant-Format): {site}/feed/google-merchant.xml · Englisch: {site}/feed/google-merchant-en.xml · Französisch: {site}/feed/google-merchant-fr.xml",
         f"- Sitemap: {site}/sitemap.xml",
         "- Jede Produktseite enthält schema.org Product + Offer als JSON-LD (Preis, Verfügbarkeit, Größe, Farbe, Zustand, Versand, Rückgabe).",
         "- Artikelnummer = Pfad: " + site + "/artikel/<nummer>/ (Englisch /en/artikel/<nummer>/, Französisch /fr/artikel/<nummer>/).",
@@ -3037,6 +3037,7 @@ MERCHANT_FEED_PATH = BASE / "feed" / "google-merchant.xml"
 # englische Titel (english_titles.py) und desc_en. Im Merchant Center ist das
 # eine eigene Datenquelle (Sprache Englisch, Laender EU).
 MERCHANT_FEED_EN_PATH = BASE / "feed" / "google-merchant-en.xml"
+MERCHANT_FEED_FR_PATH = BASE / "feed" / "google-merchant-fr.xml"
 MERCHANT_FEED_TEXT = {
     "de": {"suffix": " – Second Hand", "home": "",
            "channel": "Kuratiertes Archiv für Designer-, Vintage- und Contemporary-Mode aus zweiter Hand.",
@@ -3044,6 +3045,9 @@ MERCHANT_FEED_TEXT = {
     "en": {"suffix": " – Pre-Owned", "home": "en/",
            "channel": "Curated archive of pre-owned designer, vintage and contemporary fashion.",
            "dep": {"Women": "Women", "Men": "Men"}},
+    "fr": {"suffix": " – Seconde main", "home": "fr/",
+           "channel": "Archive sélectionnée de mode de créateurs, vintage et d'occasion.",
+           "dep": {"Women": "Femme", "Men": "Homme"}},
 }
 
 
@@ -3066,8 +3070,8 @@ def merchant_category(it):
 
 def merchant_description(it, lang="de"):
     from seo_text import description_snippet
-    if lang == "en":
-        text = str(item_description(it, "en") or "").strip()
+    if lang in {"en", "fr"}:
+        text = str(item_description(it, lang) or "").strip()
     else:
         text = str(it.get("desc_de") or it.get("desc") or "").strip()
     auszug = description_snippet(text, 1500, display_name(it, lang)) if text else ""
@@ -3106,6 +3110,7 @@ def merchant_shipping_xml(it, shipping_config, frei_cents):
 def build_merchant_feed():
     write_merchant_feed("de", MERCHANT_FEED_PATH)
     write_merchant_feed("en", MERCHANT_FEED_EN_PATH)
+    write_merchant_feed("fr", MERCHANT_FEED_FR_PATH)
 
 
 def write_merchant_feed(lang, path):

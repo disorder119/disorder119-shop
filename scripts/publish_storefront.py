@@ -89,7 +89,8 @@ def deploy_versions(versions, message):
 def check_public(revision, manifest):
     entries = {r["path"]: r for r in manifest["files"]}
     paths = ["/", "/en/", "/fr/", "/cart/", "/kasse/", "/widerruf/", "/agb/",
-             "/feed/google-merchant.xml", "/google7945c4dc594a9a9c.html",
+             "/feed/google-merchant.xml", "/feed/google-merchant-en.xml",
+             "/feed/google-merchant-fr.xml", "/google7945c4dc594a9a9c.html",
              "/.well-known/apple-developer-merchantid-domain-association", "/data/catalog.json"]
     rows = json.loads((ROOT / ".storefront-build/public/data/catalog.json").read_text("utf-8"))
     for item in rows[:3]:
