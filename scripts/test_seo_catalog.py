@@ -31,6 +31,11 @@ class Links(HTMLParser):
 
 
 class CatalogSeoTests(unittest.TestCase):
+    def test_pwa_preparation_preserves_catalogue_footer(self):
+        from apply_pwa import patch_build
+        source = (BASE / "build_site.py").read_text(encoding="utf-8")
+        self.assertEqual(patch_build(source), source)
+
     def test_generated_taxonomy_does_not_require_internal_fixture_pages(self):
         import apply_catalog_taxonomy
         fixture = {"id": 9999, "url_slug": "9999", "public_status": "SOLD"}
