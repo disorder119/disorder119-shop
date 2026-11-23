@@ -19,6 +19,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from seo_text import is_internal_product
 
 BASE = Path(__file__).resolve().parents[1]
 ITEMS_PATH = BASE / "data" / "items.json"
@@ -323,7 +324,9 @@ def validate_and_report() -> None:
             catalog_ids.append(cid)
         if isinstance(item, dict) and item.get("public_status") == "DRAFT":
             severe.append(f"DRAFT-Artikel {cid} ist in data/catalog.json oeffentlich gelandet")
-    expected_catalog = {i for i, it in by_id.items() if (it.get("public_status") or "DRAFT") != "DRAFT"}
+        if isinstance(item, dict) and is_internal_product(item):
+            severe.append(f"Interner Testartikel {cid} ist in data/catalog.json oeffentlich gelandet")
+    expected_catalog = {i for i, it in by_id.items() if (it.get("public_status") or "DRAFT") != "DRAFT" and not is_internal_product(it)}
     if set(catalog_ids) != expected_catalog:
         missing = sorted(expected_catalog - set(catalog_ids))
         extra = sorted(set(catalog_ids) - expected_catalog)
@@ -452,7 +455,7 @@ def validate_english_pages() -> None:
     deutsch = re.compile(r"\b(Damen|Herren|In den Warenkorb|Jetzt kaufen|Zum Archiv|Ohne Marke)\b")
     rueckfall, seiten = [], 0
     for item in items:
-        if item.get("public_status") == "DRAFT":
+        if item.get("public_status") == "DRAFT" or is_internal_product(item):
             continue
         slug = str(item.get("url_slug", item["id"]))
         titel_en = english_title(item)

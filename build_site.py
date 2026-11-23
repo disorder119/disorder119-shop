@@ -34,7 +34,7 @@ BASE = Path(__file__).parent
 sys.path.insert(0, str(BASE / "scripts"))
 from sync_legal_content import sync_legal_content
 sync_legal_content(BASE)
-from seo_text import compose_description, seo_title  # noqa: E402
+from seo_text import compose_description, is_internal_product, seo_title  # noqa: E402
 # Englische Titel/Farben fuer /en/ (Wort-fuer-Wort aus dem deutschen Titel,
 # sonst Marke + Produktart + Bereich + Farbe) - geteilt mit
 # scripts/repair_public_article_integrity.py.
@@ -372,7 +372,8 @@ LEGAL_EMAIL_PENDING = {
     "fr": 'sera ajoutée dès la mise en ligne de la boutique',
 }
 
-ITEMS = json.loads(DATA_PATH.read_text(encoding="utf-8"))
+SOURCE_ITEMS = json.loads(DATA_PATH.read_text(encoding="utf-8"))
+ITEMS = [it for it in SOURCE_ITEMS if not is_internal_product(it)]
 
 # Manche Marken im Rohbestand sind eigentlich Linien/Kollaborationen einer
 # anderen Marke und sollen im Shop nicht als eigene Marke gezaehlt/gefiltert
@@ -1191,6 +1192,7 @@ def build_page(it, shop_config, lang):
   <div data-d119-newsletter data-quelle="artikel"></div>
   <p data-i18n="footerNote">{esc(ui(lang, 'footerNote'))}</p>
   <p><a href="{home}" data-i18n="footerFullArchive">{esc(ui(lang, 'footerFullArchive'))}</a></p>
+  <p><a href="{home}katalog/">{esc(CATALOG_COPY[lang]['all'])}</a></p>
   {instagram_link_html(lang)}
   {dhl_logo_html("dhl-logo dhl-logo--fuss")}
   {artikel_recht_nav(home, lang)}
@@ -1569,6 +1571,163 @@ def initial_archive_preloads():
     return "\n".join(links)
 
 
+# Real HTML catalogue pages complement the interactive archive. They deliberately
+# do not load app.js: its infinite-scroll/filter state continues to belong to the
+# homepage, while every item here is reachable through ordinary links without JS.
+CATALOG_PAGE_SIZE = 24
+CATALOG_CATEGORY_SLUGS = {
+    "Jackets": "jackets", "Coats": "coats", "Tops": "tops", "Shirts": "shirts",
+    "Knitwear": "knitwear", "Pants": "pants", "Skirts": "skirts", "Dresses": "dresses",
+    "Shoes": "shoes", "Accessories": "accessories",
+    "Objects": "objects",
+}
+CATALOG_COPY = {
+    "de": {"title": "Designer Second Hand & Vintage Katalog", "all": "Alle Stücke",
+           "archive": "Interaktives Archiv", "categories": "Kategorien", "page": "Seite",
+           "of": "von", "previous": "Zurück", "next": "Weiter", "sold": "Verkauft",
+           "intro": "Verfügbare Einzelstücke und bereits verkaufte Stücke aus dem Disorder119-Archiv.",
+           "description": "{name} bei Disorder119: Designer- und Vintage-Einzelstücke aus zweiter Hand, mit Fotos, Größen und Beschreibungen."},
+    "en": {"title": "Designer Second Hand & Vintage Catalogue", "all": "All pieces",
+           "archive": "Interactive archive", "categories": "Categories", "page": "Page",
+           "of": "of", "previous": "Previous", "next": "Next", "sold": "Sold",
+           "intro": "Available one-off pieces and previously sold pieces from the Disorder119 archive.",
+           "description": "{name} at Disorder119: one-off pre-owned designer and vintage pieces, with photos, sizes and descriptions."},
+    "fr": {"title": "Catalogue de mode de créateurs et vintage d’occasion", "all": "Toutes les pièces",
+           "archive": "Archive interactive", "categories": "Catégories", "page": "Page",
+           "of": "sur", "previous": "Précédente", "next": "Suivante", "sold": "Vendu",
+           "intro": "Pièces uniques disponibles et pièces déjà vendues des archives Disorder119.",
+           "description": "{name} chez Disorder119 : pièces uniques de créateurs et vintage d’occasion, avec photos, tailles et descriptions."},
+}
+CATALOG_CSS = """html,body{margin:0}.catalogue{max-width:1280px;margin:auto;padding:24px 20px 48px}.catalogue__head,.catalogue__languages,.catalogue__pagination,.catalogue__categories{display:flex;flex-wrap:wrap;gap:12px;align-items:center}.catalogue__head{justify-content:space-between;margin-bottom:32px}.catalogue__brand{font-weight:800;letter-spacing:.04em;text-decoration:none}.catalogue h1{font-size:clamp(1.5rem,4vw,2.4rem);line-height:1.2;margin:0 0 16px}.catalogue__intro{max-width:720px;line-height:1.6;margin-bottom:24px}.catalogue__categories{padding:16px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-bottom:28px}.catalogue a{color:inherit}.catalogue__categories a,.catalogue__pagination a,.catalogue__pagination span{padding:8px 10px}.catalogue [aria-current=page]{font-weight:700;text-decoration:underline}.catalogue .grid{width:100%;margin:0}.catalogue__pagination{justify-content:center;margin:32px 0}.catalogue__foot{padding-top:24px;border-top:1px solid var(--rule)}.catalogue .plate__brand{font:inherit}.catalogue .plate__price--sold{color:var(--text-muted)}"""
+
+
+def catalog_segment(category=None, page=1):
+    segment = "katalog/"
+    if category:
+        segment += "kategorie/" + CATALOG_CATEGORY_SLUGS[category] + "/"
+    return segment + (("seite/" + str(page) + "/") if page > 1 else "")
+
+
+def catalog_page_specs():
+    public = [it for it in ITEMS if it.get("public_status") in {"AVAILABLE", "SOLD"}]
+    public.sort(key=lambda it: it.get("public_status") == "SOLD")
+    groups = [(None, public)] + [
+        (category, [it for it in public if (it.get("taxonomy_category") or it.get("category")) == category])
+        for category in CATALOG_CATEGORY_SLUGS
+    ]
+    specs = []
+    for category, items in groups:
+        if not items:
+            continue
+        pages = (len(items) + CATALOG_PAGE_SIZE - 1) // CATALOG_PAGE_SIZE
+        for page in range(1, pages + 1):
+            specs.append({"segment": catalog_segment(category, page), "category": category,
+                          "page": page, "pages": pages, "count": len(items),
+                          "items": items[(page - 1) * CATALOG_PAGE_SIZE:page * CATALOG_PAGE_SIZE]})
+    return specs
+
+
+def catalog_card_html(it, lang, position):
+    card = initial_archive_card_html(it, lang)
+    card = re.sub(r' data-ssr-item-id="[^"]*"', "", card)
+    # The standalone page has no brand-filter action or nested interactive button.
+    card = card.replace('<button type="button" class="plate__brand" data-brand-filter>', '<span class="plate__brand">')
+    card = card.replace('</button>', '</span>')
+    if it.get("public_status") == "SOLD":
+        card = re.sub(r'<span class="plate__price">.*?</span>',
+                      '<span class="plate__price plate__price--sold">' + CATALOG_COPY[lang]["sold"] + '</span>', card)
+    if position >= 2:
+        card = card.replace('loading="eager"', 'loading="lazy"').replace('fetchpriority="high"', 'fetchpriority="auto"')
+    return card.replace('decoding="sync"', 'decoding="async"')
+
+
+def catalog_categories_html(lang, current=None):
+    copy = CATALOG_COPY[lang]
+    categories = {spec["category"] for spec in catalog_page_specs()}
+    links = []
+    for category in [None] + list(CATALOG_CATEGORY_SLUGS):
+        if category is not None and category not in categories:
+            continue
+        label = copy["all"] if category is None else cat_tr(category, lang)
+        active = ' aria-current="page"' if current == category else ""
+        links.append('<a href="' + lang_home(lang) + catalog_segment(category) + '"' + active + '>' + esc(label) + '</a>')
+    return '<nav class="catalogue__categories" aria-label="' + copy["categories"] + '">' + "".join(links) + '</nav>'
+
+
+def catalog_pagination_html(spec, lang):
+    if spec["pages"] < 2:
+        return ""
+    copy = CATALOG_COPY[lang]
+    links = []
+    def link(page, label, rel=""):
+        return '<a href="' + lang_home(lang) + catalog_segment(spec["category"], page) + '"' + rel + '>' + esc(label) + '</a>'
+    if spec["page"] > 1:
+        links.append(link(spec["page"] - 1, copy["previous"], ' rel="prev"'))
+    for page in range(1, spec["pages"] + 1):
+        if page == spec["page"]:
+            links.append('<span aria-current="page">' + str(page) + '</span>')
+        else:
+            links.append(link(page, str(page)))
+    if spec["page"] < spec["pages"]:
+        links.append(link(spec["page"] + 1, copy["next"], ' rel="next"'))
+    return '<nav class="catalogue__pagination" aria-label="' + copy["page"] + '">' + "".join(links) + '</nav>'
+
+
+def catalog_page_html(spec, lang, shop_config):
+    copy = CATALOG_COPY[lang]
+    name = cat_tr(spec["category"], lang) if spec["category"] else copy["title"]
+    heading = name + " · " + copy["page"] + " " + str(spec["page"]) + " " + copy["of"] + " " + str(spec["pages"])
+    title = heading + " | Disorder119"
+    description = copy["description"].format(name=name) + " " + copy["page"] + " " + str(spec["page"]) + "."
+    urls = {l: SITE_URL.rstrip("/") + lang_home(l) + spec["segment"] for l in LANGS}
+    canonical = urls[lang]
+    item_list = json.loads(item_list_jsonld(spec["items"], lang))
+    item_list["name"] = heading
+    item_list["@id"] = canonical + "#items"
+    for index, entry in enumerate(item_list["itemListElement"]):
+        entry["position"] = (spec["page"] - 1) * CATALOG_PAGE_SIZE + index + 1
+    schemas = [site_entities_jsonld(shop_config), webpage_jsonld(title, description, canonical, lang),
+               page_breadcrumb_jsonld(heading, canonical, lang), json.dumps(item_list, ensure_ascii=False)]
+    structured = "\n".join('<script type="application/ld+json">' + block + '</script>' for block in schemas)
+    languages = "".join('<a href="' + lang_home(l) + spec["segment"] + '" lang="' + l + '"'
+                        + (' aria-current="page"' if l == lang else '') + '>' + l.upper() + '</a>' for l in LANGS)
+    cards = "".join(catalog_card_html(it, lang, index) for index, it in enumerate(spec["items"]))
+    return f'''<!DOCTYPE html>
+<html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{esc(title)}</title><meta name="description" content="{esc(description)}">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<link rel="canonical" href="{canonical}">{hreflang_block(urls)}
+<meta property="og:type" content="website"><meta property="og:site_name" content="Disorder119"><meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(description)}"><meta property="og:url" content="{canonical}"><meta property="og:image" content="{SITE_URL}assets/og-image.png">
+<link rel="icon" href="/assets/favicon.png"><link rel="stylesheet" href="/assets/app.css?v={APP_CSS_VERSION}"><link rel="stylesheet" href="/assets/theme.css?v={THEME_CSS_VERSION}">
+<style>{CATALOG_CSS}</style>{structured}<script src="/assets/ansicht.js" defer></script></head>
+<body><main class="catalogue"><header class="catalogue__head"><a class="catalogue__brand" href="{lang_home(lang)}">DISORDER119</a><a href="{lang_home(lang)}">{copy['archive']}</a><nav class="catalogue__languages" aria-label="Language">{languages}</nav></header>
+<h1>{esc(heading)}</h1><p class="catalogue__intro">{copy['intro']}</p>{catalog_categories_html(lang, spec['category'])}
+<div class="grid">{cards}</div>{catalog_pagination_html(spec, lang)}
+<footer class="catalogue__foot"><a href="{lang_home(lang)}">{copy['archive']} →</a></footer></main></body></html>'''
+
+
+def build_catalog_pages():
+    shop_config = get_shop_config()
+    specs = catalog_page_specs()
+    for lang in LANGS:
+        base = BASE / lang_home(lang).strip("/") / "katalog"
+        # A smaller inventory must not leave stale page/category URLs behind.
+        if base.is_dir():
+            for path in base.rglob("index.html"):
+                path.unlink()
+            for path in sorted(base.rglob("*"), reverse=True):
+                if path.is_dir():
+                    try:
+                        path.rmdir()
+                    except OSError:
+                        pass
+        for spec in specs:
+            directory = BASE / lang_home(lang).strip("/") / spec["segment"]
+            directory.mkdir(parents=True, exist_ok=True)
+            (directory / "index.html").write_text(catalog_page_html(spec, lang, shop_config), encoding="utf-8")
+    print(f"{len(specs) * len(LANGS)} crawlbare Katalogseiten geschrieben.")
+
+
 # Kein Zustand je Artikel (Wunsch des Inhabers, 07.10.2026): jede
 # Produktseite traegt denselben allgemeinen Hinweis, Besonderheiten stehen
 # als "Hinweis zum Zustand" in der Beschreibung (siehe AGB Abschnitt 3).
@@ -1655,6 +1814,10 @@ def render_bundle_page(lang, path_segment, title_tag, desc_text, shop_config,
         out = out.replace("</head>", ui_tags() + "\n</head>", 1)
     out = out.replace("__APP_JS_VERSION__", APP_JS_VERSION)
     out = out.replace("__PWA_JS_VERSION__", PWA_JS_VERSION)
+    # A normal link remains discoverable before app.js hydrates the archive.
+    marker = '<nav class="footer__nav" aria-label="Footer">'
+    out = out.replace(marker, marker + '<a href="' + lang_home(lang) + 'katalog/">'
+                      + esc(CATALOG_COPY[lang]["all"]) + '</a>', 1)
     return out
 
 
@@ -2306,6 +2469,19 @@ def article_dir(lang, item_id):
 
 def build_articles():
     shop_config = get_shop_config()
+    for it in SOURCE_ITEMS:
+        if not is_internal_product(it):
+            continue
+        for slug in {str(it.get("id") or ""), str(it.get("url_slug") or "")}:
+            if not re.fullmatch(r"[0-9]+", slug):
+                continue
+            for lang in LANGS:
+                page = article_dir(lang, slug) / "index.html"
+                page.unlink(missing_ok=True)
+                try:
+                    page.parent.rmdir()
+                except OSError:
+                    pass
     count = 0
     de_pages_by_id = {}
     for it in ITEMS:
@@ -2547,6 +2723,7 @@ def build_sitemap():
         [("", None)]
         + [("artikel/" + str(it.get("url_slug", it["id"])) + "/", it) for it in public_items]
         + [(slug + "/", None) for slug in indexable_specials]
+        + [(spec["segment"], None) for spec in catalog_page_specs()]
         + [(seg, None) for seg in markenseiten.sitemap_segmente(_dieses_modul())]
         + [(seg, None) for seg in kategorieseiten.sitemap_segmente(_dieses_modul())]
     )
@@ -3128,6 +3305,7 @@ def main():
     build_widerruf_pages()
     build_mobile_heroes()
     build_articles()
+    build_catalog_pages()
     build_markenseiten()
     build_kategorieseiten()
     build_catalog_json()
