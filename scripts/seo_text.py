@@ -22,6 +22,11 @@ TITLE_SUFFIX = " | Disorder119"
 TITLE_MAX = 60          # darueber kuerzt Google den Titel in der Trefferliste
 DESCRIPTION_MAX = 160   # dito fuer die Beschreibung
 
+
+def is_internal_product(item: dict) -> bool:
+    """Exclude internal checkout fixtures from generated public inventory."""
+    return str(item.get("id", "")) == "9999" or item.get("internal_only") is True
+
 # Produktart im Singular. Schluessel sind die Werte aus product_type.
 TYPE_TR = {
     "Accessory": ("Accessoire", "Accessory", "Accessoire"),

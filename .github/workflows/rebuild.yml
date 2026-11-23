@@ -81,6 +81,9 @@ jobs:
           python scripts/test_french_titles.py
           node scripts/test_archive_localization.cjs
 
+      - name: Crawlbare Katalogseiten pruefen
+        run: python scripts/test_seo_catalog.py
+
       - name: Cloudflare-Publikation ohne Zugangsdaten pruefen
         run: |
           python -m unittest discover -s scripts -p test_storefront_publishing.py -v
@@ -250,6 +253,9 @@ jobs:
 
       - name: Oeffentliche Produktseiten reparieren und DRAFT isolieren
         run: python scripts/repair_public_article_integrity.py
+
+      - name: Crawlbare Katalogseiten und Sprachmetadaten pruefen
+        run: python scripts/validate_seo_catalog.py
 
       - name: Smartphone-App/PWA pruefen
         run: python scripts/validate_pwa.py

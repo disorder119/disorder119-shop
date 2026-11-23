@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # eigene Kopie; weil dieses Skript die Meta-Beschreibung nach dem Bauen
 # erneut setzt, hat es jede Aenderung am Generator stillschweigend
 # ueberschrieben.
-from seo_text import compose_description  # noqa: E402
+from seo_text import compose_description, is_internal_product  # noqa: E402
 # Englische Titel und desc_en ohne deutsche Reste - wie in build_site.py.
 from english_titles import english_description, english_title  # noqa: E402
 from french_titles import french_description, french_title  # noqa: E402
@@ -275,8 +275,8 @@ def repair_page(item: dict, public_items: list[dict], lang: str) -> None:
 
 def main() -> None:
     items = json.loads(ITEMS_PATH.read_text(encoding="utf-8"))
-    public_items = [item for item in items if item.get("public_status") != "DRAFT"]
-    drafts = [item for item in items if item.get("public_status") == "DRAFT"]
+    public_items = [item for item in items if item.get("public_status") != "DRAFT" and not is_internal_product(item)]
+    drafts = [item for item in items if item.get("public_status") == "DRAFT" or is_internal_product(item)]
 
     removed = 0
     for item in drafts:

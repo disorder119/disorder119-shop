@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 
 from catalog_taxonomy import DEPARTMENTS, TAXONOMY_CATEGORIES
+from seo_text import is_internal_product
 
 BASE = Path(__file__).resolve().parents[1]
 ITEMS_PATH = BASE / "data" / "items.json"
@@ -145,7 +146,7 @@ def main() -> None:
         fail("Taxonomie-Report enthält weiterhin Kids")
 
     catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
-    public_expected = sum(1 for item in items if item.get("public_status") != "DRAFT")
+    public_expected = sum(1 for item in items if item.get("public_status") != "DRAFT" and not is_internal_product(item))
     if len(catalog) != public_expected:
         fail(f"catalog.json enthält {len(catalog)} statt {public_expected} öffentliche Artikel")
     for row in catalog:
@@ -161,7 +162,7 @@ def main() -> None:
         for lang in ("de", "en", "fr"):
             root = BASE if lang == "de" else BASE / lang
             page = root / "artikel" / str(item.get('url_slug',item['id'])) / "index.html"
-            if item.get("public_status") == "DRAFT":
+            if item.get("public_status") == "DRAFT" or is_internal_product(item):
                 if page.exists():
                     fail(f"DRAFT-Produktseite ist öffentlich vorhanden: {page.relative_to(BASE)}")
                 draft_page_count += 1
@@ -214,7 +215,7 @@ def main() -> None:
                     linked = by_route.get(int(linked_id_s))
                     if not linked:
                         fail(f"Related-Link auf unbekannten Artikel {linked_id_s} in {page.relative_to(BASE)}")
-                    if linked.get("public_status") == "DRAFT":
+                    if linked.get("public_status") == "DRAFT" or is_internal_product(linked):
                         fail(f"DRAFT {linked_id_s} wird von öffentlicher Seite {page.relative_to(BASE)} verlinkt")
 
                 category_marker = page_html.find('data-related-heading="category"', related_start, page_foot)
