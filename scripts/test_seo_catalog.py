@@ -12,7 +12,7 @@ from unittest.mock import patch
 BASE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BASE))
 sys.path.insert(0, str(BASE / "scripts"))
-from seo_text import is_internal_product
+from seo_text import distinct_metadata_name, is_internal_product, seo_title
 
 # Importing the build module must not rewrite shared JS/legal assets during tests.
 with patch("sync_legal_content.sync_legal_content"):
@@ -125,6 +125,34 @@ class CatalogSeoTests(unittest.TestCase):
         self.assertEqual(product["name"], name)
         self.assertEqual(product["color"], "bleu")
         self.assertNotIn("Marmorierte", page)
+
+    def test_duplicate_archive_metadata_prefers_recorded_sizes_and_keeps_visible_names(self):
+        rows = [item for item in build_site.ITEMS if str(item.get("url_slug")) in {"150", "149", "138"}]
+        names = [build_site.product_metadata_name(item, "de") for item in rows]
+        self.assertEqual(len(set(names)), 3)
+        self.assertTrue(all("Art." not in name for name in names))
+        self.assertTrue(all("Gr." in name for name in names))
+        for item in rows:
+            self.assertEqual(build_site.item_title(item, "de"), "A.F. Vandevorst Kleid Damen")
+        boots = [item for item in build_site.ITEMS if str(item.get("url_slug")) in {"135", "97"}]
+        self.assertEqual(len({build_site.product_metadata_name(item, "de") for item in boots}), 2)
+        self.assertTrue(all("Art." in build_site.product_metadata_name(item, "de") for item in boots))
+
+    def test_unique_names_are_unchanged_and_size_is_not_repeated(self):
+        row = {"id": 1, "article": "1", "size": "S"}
+        self.assertEqual(distinct_metadata_name("Prada Jacke", row, [row], "de"), "Prada Jacke")
+        title = seo_title("Prada Jacke · Gr. S", "Jacket", "S", "de")
+        self.assertEqual(title.count("Gr. S"), 1)
+
+    def test_generator_and_repair_keep_duplicate_metadata_consistent(self):
+        import repair_public_article_integrity as repair
+        item = next(row for row in build_site.ITEMS if str(row.get("url_slug")) == "138")
+        public = [row for row in build_site.ITEMS if row.get("public_status") in {"AVAILABLE", "SOLD"}]
+        for lang, marker in (("de", "Gr. 36"), ("en", "Size 36"), ("fr", "Taille 36")):
+            with self.subTest(lang=lang):
+                generated = build_site.meta_description(item, lang)
+                self.assertEqual(generated, repair.meta_description(item, lang, public))
+                self.assertEqual(generated.count(marker), 1)
 
 
 if __name__ == "__main__":

@@ -34,7 +34,7 @@ BASE = Path(__file__).parent
 sys.path.insert(0, str(BASE / "scripts"))
 from sync_legal_content import sync_legal_content
 sync_legal_content(BASE)
-from seo_text import compose_description, is_internal_product, seo_title  # noqa: E402
+from seo_text import compose_description, distinct_metadata_name, is_internal_product, seo_title  # noqa: E402
 # Englische Titel/Farben fuer /en/ (Wort-fuer-Wort aus dem deutschen Titel,
 # sonst Marke + Produktart + Bereich + Farbe) - geteilt mit
 # scripts/repair_public_article_integrity.py.
@@ -96,6 +96,7 @@ PWA_JS_VERSION = _asset_version("assets/pwa.js")
 PRODUCT_CRITICAL_CSS = """:root{--ink:#000;--paper:#f2efe7;--rule:rgba(242,239,231,.14);--rule-strong:rgba(242,239,231,.28);--text-muted:rgba(242,239,231,.58);--surface:#121212;color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;padding:0;overflow-x:hidden}body{background:#000;color:#f2efe7;font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}a{color:inherit}.page-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--rule)}.page-head__brand{font-family:"Helvetica Neue Condensed","Arial Narrow",Helvetica,Arial,sans-serif;font-weight:800;text-transform:uppercase;font-size:1.3rem;letter-spacing:-.01em;text-decoration:none}.page-head__right,.lang-switch{display:flex;align-items:center}.page-head__right{gap:12px}.lang-switch{gap:2px;border:1px solid var(--rule-strong)}.lang-switch__btn{display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;text-decoration:none}.page-head__back{display:none!important}.page-head__menu{display:none}.article-sequence-nav{max-width:1240px;margin:16px auto 0;padding:0 clamp(20px,5vw,48px);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px}.article-sequence-nav__link{min-height:38px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap}.article-sequence-nav__link--prev{justify-self:start}.article-sequence-nav__link--archive{justify-self:center}.article-sequence-nav__link--next{justify-self:end}.product{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:clamp(24px,4vw,56px);max-width:1240px;margin:0 auto;padding:clamp(20px,3vw,40px) clamp(20px,5vw,48px) 60px}.gallery,.info{min-width:0}.gallery{position:sticky;top:16px;align-self:start}.gallery__stage{position:relative;background:#121212;aspect-ratio:3/4;overflow:hidden}.gallery__stage img{width:100%;height:100%;object-fit:contain;display:block;background:#121212}.gallery__nav{position:absolute;top:50%;transform:translateY(-50%)}.gallery__nav--prev{left:10px}.gallery__nav--next{right:10px}.gallery__counter{position:absolute;right:10px;bottom:10px}.gallery__badge{position:absolute;left:10px;top:10px}.gallery__thumbs{display:flex;gap:8px;margin-top:10px;overflow-x:auto}.gallery__thumbs--reserved{min-height:84px}@media(max-width:860px){.page-head{position:relative;min-height:74px;padding:14px 16px;gap:8px}.page-head__menu{width:38px;height:38px;flex:0 0 38px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-decoration:none}.page-head__menu span{display:block;width:22px;height:1px;background:currentColor}.page-head__brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;font-size:.7rem;line-height:1;letter-spacing:.01em;white-space:nowrap}.page-head__right{margin-left:auto;justify-content:flex-end;flex-wrap:nowrap!important;gap:7px}.lang-switch{gap:2px}.lang-switch__btn{width:32px;height:32px;flex:0 0 32px;padding:0;font-size:.59rem}.page-head__cart{position:relative;width:34px;height:34px;flex:0 0 34px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:0}.page-head__cart>span:first-child{display:none}.article-sequence-nav{max-width:none;width:auto;margin:0;padding:0 16px;min-height:58px;grid-template-columns:1fr auto 1fr;gap:0;border-bottom:1px solid rgba(242,239,231,.18)}.article-sequence-nav__link{min-width:0;min-height:58px;padding:0 10px}.article-sequence-nav__link--archive{padding-left:22px;padding-right:22px;border-left:1px solid rgba(242,239,231,.16);border-right:1px solid rgba(242,239,231,.16)}.product{grid-template-columns:1fr;gap:22px;padding:12px 16px 48px}.gallery{position:static}.gallery__stage{border:0}.gallery__thumbs--reserved{min-height:100px}}@media(max-width:380px){.page-head{padding-left:12px;padding-right:12px}.page-head__menu{width:34px;flex-basis:34px}.page-head__brand{font-size:.68rem}.page-head__right{gap:5px}.lang-switch__btn{width:30px;height:30px;flex-basis:30px}.page-head__cart{width:31px;height:31px;flex-basis:31px}.article-sequence-nav{padding:0 12px}.article-sequence-nav__link{padding:0 6px}.article-sequence-nav__link--archive{padding-left:12px;padding-right:12px}.product{padding-left:16px;padding-right:16px}}"""
 PRODUCT_CRITICAL_CSS += "@media(max-width:860px){.lang-switch__btn{width:26px;flex-basis:26px}}"
 PRODUCT_CRITICAL_CSS += ":root[data-theme=hell]{--ink:#fff;--paper:#151514;--rule:rgba(21,21,20,.12);--rule-strong:rgba(21,21,20,.26);--surface:#f3f2ef;color-scheme:light}:root[data-theme=hell] body{background:#fff;color:#151514}:root[data-theme=hell] .gallery__stage,:root[data-theme=hell] .gallery__stage img{background:#fff}"
+PRODUCT_CRITICAL_CSS += ".gallery__stage>picture{display:block;width:100%;height:100%}"
 # Produktseite am Desktop: Die drei Stylesheets kommen dort zusaetzlich als
 # normales (blockierendes) <link media=...>. Nur mit dem kritischen Inline-CSS
 # sprang die Seite nach dem Nachladen sichtbar (Kopfzeile 4 px hoeher,
@@ -449,6 +450,14 @@ def display_name(it, lang="de"):
     return (brand + " " + title).strip()
 
 
+def product_metadata_name(it, lang):
+    """Disambiguate search metadata while leaving the visible H1 unchanged."""
+    name = display_name(it, lang)
+    peers = [other for other in ITEMS if other.get("public_status") != "DRAFT"
+             and display_name(other, lang).casefold() == name.casefold()]
+    return distinct_metadata_name(name, it, peers, lang, item_color(it, lang))
+
+
 def title_size(it, lang):
     """Groesse fuer den Seitentitel - nur Konfektionsgroessen, keine Masse
     wie "ca. 28 x 18 x 15.5 cm" und nichts Unbekanntes."""
@@ -463,13 +472,14 @@ def title_size(it, lang):
 def meta_description(it, lang):
     ph = META_PHRASES[lang]
     cat = cat_tr(it.get("category") or "", lang)
-    name = display_name(it, lang)
+    name = product_metadata_name(it, lang)
     if it.get("public_status") == "SOLD":
         return ph["sold"].format(name=name)
     tail = []
     if cat:
         tail.append(cat)
-    if it.get("size"):
+    metadata_size = {"de": "Gr.", "en": "Size", "fr": "Taille"}[lang] + " " + str(it.get("size") or "")
+    if it.get("size") and metadata_size.casefold() not in name.casefold():
         tail.append(ph["size_label"] + " " + size_tr(it["size"], lang))
     tail_str = ", ".join(tail)
     prefix = (name + " – " + tail_str) if tail_str else name
@@ -531,7 +541,7 @@ def related_card_html(x, lang):
         # Hauptbilds - und verzoegerte dessen Ladestart um 1892 ms. Das
         # ohnehin vorhandene Vorschaubild (220x293) hat genau die richtige
         # Groesse. width/height reservieren zusaetzlich den Platz.
-        '<img src="/' + esc(card_image(x)) + '" alt="' + esc(display_name(x, lang)) + '" loading="lazy" decoding="async" width="220" height="293" />' +
+        '<img src="/' + esc(card_image(x)) + '" alt="' + esc(display_name(x, lang)) + '" loading="lazy" decoding="async" fetchpriority="low" width="220" height="293" />' +
         (price_html if sold else "") +
         "</div>"
         '<span class="related-card__brand">' + esc(x.get("brand") or ph["no_brand"]) + "</span>"
@@ -989,10 +999,20 @@ def card_image(it):
     return gallery[0]
 
 
+def image_intrinsic_attributes(relative_path):
+    """Reserve the actual source aspect ratio, including landscape photos."""
+    from PIL import Image
+    try:
+        with Image.open(BASE / relative_path) as image:
+            return f' width="{image.width}" height="{image.height}"'
+    except (OSError, ValueError):
+        return ""
+
+
 
 def build_page(it, shop_config, lang):
     name = display_name(it, lang)
-    title_tag = seo_title(name, it.get("product_type"), title_size(it, lang), lang)
+    title_tag = seo_title(product_metadata_name(it, lang), it.get("product_type"), title_size(it, lang), lang)
     desc = meta_description(it, lang)
     raw_body_desc = item_description(it, lang) or ""
     body_desc = raw_body_desc.strip() or auto_description(it, lang)
@@ -1017,6 +1037,7 @@ def build_page(it, shop_config, lang):
     hero = gallery[0] if gallery else "assets/favicon-centered.png"
     hero_display_candidate = display_path(hero)
     hero_display = hero_display_candidate if (BASE / hero_display_candidate).is_file() else hero
+    hero_dimensions = image_intrinsic_attributes(hero_display)
     mobile_candidate = mobile_hero_path(hero)
     hero_mobile = mobile_candidate if (BASE / mobile_candidate).is_file() else hero_display
     hell = foto_hell(grid_thumb_path(it))
@@ -1165,9 +1186,9 @@ def build_page(it, shop_config, lang):
   <div class="gallery"{gallery_attr}>
     <div class="gallery__stage">
 {'      <span class="gallery__badge">SOLD</span>' if sold else ""}
-      <picture style="display:contents">
+      <picture>
         <source media="(max-width: 600px)" srcset="/{esc(hero_mobile)}">
-      <img id="galleryMain" src="/{esc(hero_display)}" alt="{esc(name)}" fetchpriority="high" decoding="sync">
+      <img id="galleryMain" src="/{esc(hero_display)}" alt="{esc(name)}"{hero_dimensions} fetchpriority="high" decoding="sync">
       </picture>
       <button type="button" class="gallery__nav gallery__nav--prev" id="galleryPrev" data-i18n-aria="prevPhotoAria" aria-label="{esc(ui(lang, 'prevPhotoAria'))}">‹</button>
       <button type="button" class="gallery__nav gallery__nav--next" id="galleryNext" data-i18n-aria="nextPhotoAria" aria-label="{esc(ui(lang, 'nextPhotoAria'))}">›</button>

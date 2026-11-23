@@ -82,7 +82,9 @@ jobs:
           node scripts/test_archive_localization.cjs
 
       - name: Crawlbare Katalogseiten pruefen
-        run: python scripts/test_seo_catalog.py
+        run: |
+          python scripts/test_seo_catalog.py
+          python scripts/test_mobile_product_hero.py
 
       - name: Cloudflare-Publikation ohne Zugangsdaten pruefen
         run: |

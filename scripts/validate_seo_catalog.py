@@ -57,6 +57,7 @@ def main():
                         for page in range(1, pages + 1))
     expected_urls = {"/" + prefix(lang) + segment for lang in LANGUAGES for segment, _ in segments}
     checked = 0
+    product_titles = {lang: [] for lang in LANGUAGES}
     for lang in LANGUAGES:
         root = BASE / prefix(lang)
         files = {"/" + str(path.relative_to(BASE).parent) + "/" for path in (root / "katalog").rglob("index.html")}
@@ -87,8 +88,9 @@ def main():
         for row in catalog:
             slug = str(row.get("url_slug", row["id"]))
             page = (root / "artikel" / slug / "index.html").read_text(encoding="utf-8")
+            title = html.unescape(re.search(r"<title>(.*?)</title>", page)[1])
+            product_titles[lang].append(title)
             if lang == "fr":
-                title = html.unescape(re.search(r"<title>(.*?)</title>", page)[1])
                 name = row.get("title_fr")
                 h1 = html.unescape(re.search(r"<h1>(.*?)</h1>", page, re.S)[1])
                 require(name and h1 == name, f"French H1 differs from catalogue: {slug}")
@@ -97,7 +99,9 @@ def main():
                     schema = json.loads(text)
                     if schema.get("@type") == "Product":
                         require(schema.get("name") == name, f"French Product name differs from H1: {slug}")
-    print(f"SEO catalogue: {checked} crawlable pages, {len(catalog)} public products, 3 consistent languages; no public test fixture.")
+    for lang, titles in product_titles.items():
+        require(len(titles) == len(set(titles)), f"{lang}: duplicate product titles remain")
+    print(f"SEO catalogue: {checked} crawlable pages, {len(catalog)} public products, 3 consistent languages; no public test fixture or duplicate product titles.")
 
 
 if __name__ == "__main__":
