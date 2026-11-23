@@ -213,6 +213,7 @@ def export(root: Path, target: Path, revision: str, node="node"):
     asset_versionen_pruefen(public)
     for required in ("index.html", "en/index.html", "fr/index.html", "data/catalog.json",
                      "data/items.json", "kasse/index.html", "feed/google-merchant.xml",
+                     "feed/google-merchant-en.xml", "feed/google-merchant-fr.xml",
                      "google7945c4dc594a9a9c.html", ".well-known/apple-developer-merchantid-domain-association"):
         if not (public / required).is_file():
             raise ValueError("Required integration/page asset missing: " + required)

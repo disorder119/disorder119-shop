@@ -12,8 +12,10 @@ class ConfirmedDefectFeedTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             target=pathlib.Path(directory)/"feed.xml"
             target_en=pathlib.Path(directory)/"feed-en.xml"
+            target_fr=pathlib.Path(directory)/"feed-fr.xml"
             with patch.object(build_site,"ITEMS",[item]),patch.object(build_site,"MERCHANT_FEED_PATH",target),\
-                    patch.object(build_site,"MERCHANT_FEED_EN_PATH",target_en):
+                    patch.object(build_site,"MERCHANT_FEED_EN_PATH",target_en),\
+                    patch.object(build_site,"MERCHANT_FEED_FR_PATH",target_fr):
                 build_site.build_merchant_feed()
             root=ET.parse(target).getroot();ns={"g":"http://base.google.com/ns/1.0"}
             product=root.find("channel/item")
@@ -33,5 +35,14 @@ class ConfirmedDefectFeedTest(unittest.TestCase):
             self.assertEqual(en.findtext("g:link",namespaces=ns),"https://disorder119.com/en/artikel/13/")
             self.assertTrue(en.findtext("g:title",namespaces=ns).endswith("– Pre-Owned"))
             self.assertEqual(len(en.findall("g:shipping",ns)),27)
+            # Französischer Feed: lokalisierte Zielseite und Beschreibung,
+            # Versandpreise weiter aus derselben Shop-Konfiguration.
+            fr=ET.parse(target_fr).getroot().find("channel/item")
+            self.assertEqual(fr.findtext("g:id",namespaces=ns),"13")
+            self.assertEqual(fr.findtext("g:link",namespaces=ns),"https://disorder119.com/fr/artikel/13/")
+            self.assertTrue(fr.findtext("g:title",namespaces=ns).endswith("– Seconde main"))
+            self.assertIn("Les boutons du col sont manquants",fr.findtext("g:description",namespaces=ns))
+            self.assertNotIn("Die Knöpfe",fr.findtext("g:description",namespaces=ns))
+            self.assertEqual(len(fr.findall("g:shipping",ns)),27)
 
 if __name__=="__main__": unittest.main()
