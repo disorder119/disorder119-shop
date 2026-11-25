@@ -6,6 +6,24 @@ sys.path.insert(0,str(ROOT))
 import build_site
 
 class ConfirmedDefectFeedTest(unittest.TestCase):
+    def test_merchant_description_adds_only_documented_product_details(self):
+        item=next(x for x in build_site.ITEMS if str(x.get("article"))=="91")
+        expected={
+            "de": ("Größe: 38.", "Farbe: Braun.", "Material: Außen Polyurethan-Mix"),
+            "en": ("Size: 38.", "Color: Brown.", "Material: Polyurethane mix outside"),
+            "fr": ("Taille: 38.", "Couleur: marron.", "Matière: Mélange de polyuréthane extérieur"),
+        }
+        for lang, details in expected.items():
+            with self.subTest(lang=lang):
+                description=build_site.merchant_description(item, lang)
+                for detail in details:
+                    self.assertIn(detail, description)
+        unknown=next(x for x in build_site.ITEMS if str(x.get("article"))=="280")
+        for lang in ("de", "en", "fr"):
+            with self.subTest(unknown_material_language=lang):
+                description=build_site.merchant_description(unknown, lang)
+                self.assertNotIn({"de": "Material:", "en": "Material:", "fr": "Matière:"}[lang], description)
+
     def test_confirmed_missing_buttons_reach_short_merchant_description(self):
         item=copy.deepcopy(next(x for x in build_site.ITEMS if str(x.get("article"))=="13"))
         item["public_status"]="AVAILABLE"
