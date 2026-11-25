@@ -1958,7 +1958,16 @@ window.D119Legal = {"de": {"legalImpressumHtml": "<h2>Impressum</h2><p>Angaben g
     // rutschen aber immer ans Ende der Liste.
     var available = copy.filter(function (it) { return it.status !== "Verkauft"; });
     var sold = copy.filter(function (it) { return it.status === "Verkauft"; });
-    return available.concat(sold);
+    var ordered = available.concat(sold);
+    // Eine reine Artikelnummer soll ihr exaktes Stueck zuerst zeigen. Sonst
+    // koennen Groessen, Jahreszahlen oder laengere IDs davor erscheinen.
+    if (/^\d+$/.test(state.query)) {
+      var exactIndex = ordered.findIndex(function (it) {
+        return String(it.article || it.url_slug || it.id) === state.query || String(it.id) === state.query;
+      });
+      if (exactIndex > 0) ordered.unshift(ordered.splice(exactIndex, 1)[0]);
+    }
+    return ordered;
   }
 
   var firstGridRenderDone = false;
