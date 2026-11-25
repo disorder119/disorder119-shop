@@ -3070,12 +3070,36 @@ def merchant_category(it):
 
 def merchant_description(it, lang="de"):
     from seo_text import description_snippet
-    if lang in {"en", "fr"}:
-        text = str(item_description(it, lang) or "").strip()
-    else:
-        text = str(it.get("desc_de") or it.get("desc") or "").strip()
+
+    text = str(item_description(it, lang) or "").strip()
     auszug = description_snippet(text, 1500, display_name(it, lang)) if text else ""
-    return auszug or meta_description(it, lang)
+    beschreibung = auszug or meta_description(it, lang)
+
+    # Der Fliesstext endet vor "Details". Im Merchant-Feed fehlen dadurch
+    # Suchmerkmale, die bereits fuer das einzelne Stueck dokumentiert sind.
+    labels = {
+        "de": ("Größe", "Farbe", "Material"),
+        "en": ("Size", "Color", "Material"),
+        "fr": ("Taille", "Couleur", "Matière"),
+    }[lang]
+    fakten = []
+    if it.get("size"):
+        fakten.append(f"{labels[0]}: {str(it['size']).split('/')[0].strip()}")
+    farbe = item_color(it, lang)
+    if farbe:
+        fakten.append(f"{labels[1]}: {farbe}")
+    material_zeile = re.search(
+        r"(?im)^[ \t]*(?:Material|Matériau|Matière)[ \t]*:[ \t]*([^\r\n]+)", text
+    )
+    if material_zeile:
+        material = material_zeile.group(1).strip(" .;")
+        unbekannt = re.match(
+            r"(?i)^(?:nicht angegeben|nicht bekannt|not specified|not stated|"
+            r"unknown|non spécifi\w*|non indiqu\w*|inconnu\w*)\b", material
+        )
+        if material and len(material) <= 180 and not unbekannt:
+            fakten.append(f"{labels[2]}: {material}")
+    return beschreibung + (" " + ". ".join(fakten) + "." if fakten else "")
 
 
 def merchant_shipping_xml(it, shipping_config, frei_cents):
