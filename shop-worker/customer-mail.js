@@ -288,6 +288,10 @@ export function normalizeEmail(value) {
   // Bewusst streng: ein Zeichen vor dem @, ein Punkt danach, keine Leerzeichen.
   // Eine kaputte Adresse soll hier auffallen und nicht erst beim Versand.
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(raw)) return "";
+  // Fuzzing 26.11.2026: Zeichen, die in einer normalen (nicht gequoteten)
+  // Adresse nie vorkommen, aber HTML/Mail-Kopfzeilen stoeren koennten
+  // ("<script>@x.de", "a,b@x.de"), sofort ablehnen.
+  if (/[<>()[\]\\,;:"`]/.test(raw)) return "";
   return raw;
 }
 
