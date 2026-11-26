@@ -456,8 +456,8 @@
   /* 6 · „Zum Home-Bildschirm“: nur iPhone/iPad, nicht in der installierten App, ab dem zweiten Besuch,
      höchstens zweimal, nach Wegtippen 30 Tage Ruhe. (Vorschau: ?homescreen erzwingt die Anzeige.) */
   if (istArchiv && istIphone && !(navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches)) {
-    var besuche = (speicher("ui_besuche") || 0) + 1; speicher("ui_besuche", besuche);
-    var stand = speicher("ui_home") || { gezeigt: 0, weg: 0 };
+    var besuche = (Number(speicher("ui_besuche")) || 0) + 1; speicher("ui_besuche", besuche);
+    var stand = speicher("ui_home"); if (!stand || typeof stand !== "object") stand = {}; stand = { gezeigt: Number(stand.gezeigt) || 0, weg: Number(stand.weg) || 0 };
     var erzwingen = location.search.indexOf("homescreen") >= 0;
     if (erzwingen || (besuche >= 2 && stand.gezeigt < 2 && Date.now() - stand.weg > 30 * 864e5)) {
       setTimeout(function () {
@@ -473,12 +473,14 @@
   }
 
   /* 8 · „Zuletzt angesehen“ (Browser-Speicher) im Archiv und auf jeder Produktseite. */
-  function zuletztListe() { return speicher("ui_zuletzt") || []; }
+  // Nur Listen aus Text-Slugs: ein fremder/kaputter Speicherwert (Zahl, Objekt, Text) darf die Produktseite nicht abbrechen (Fuzzing 26.11.2026).
+  function nurSlugs(wert) { return Array.isArray(wert) ? wert.filter(function (s) { return typeof s === "string" && s; }) : []; }
+  function zuletztListe() { return nurSlugs(speicher("ui_zuletzt")); }
   // Nur der aktuelle Besuch (sessionStorage): das schwebt im Kopf des Archivs.
   function besuchListe(neu) {
     try {
       if (neu) sessionStorage.setItem("ui_zuletzt_besuch", JSON.stringify(neu));
-      return JSON.parse(sessionStorage.getItem("ui_zuletzt_besuch") || "[]") || [];
+      return nurSlugs(JSON.parse(sessionStorage.getItem("ui_zuletzt_besuch") || "[]"));
     } catch (e) { return []; }
   }
   function zuletztRendern(ziel, vorElement, ohneSlug) {
@@ -943,7 +945,7 @@
     // Erst ab dem zweiten Besuch: beim ersten Mal bleibt der Schriftzug oben (und das
     // Raster darf sich noch setzen - Lighthouse wertet den Sprung sonst als Layout-Verschiebung,
     // Startseite mobil 50 statt 95 Punkte).
-    var besuche = Number(speicher("ui_besuche") || 0) + 1;
+    var besuche = (Number(speicher("ui_besuche")) || 0) + 1;
     speicher("ui_besuche", besuche);
     // Auch beim Zurueck aus einem Teil (iPhone: Kopf soll oben liegen, nicht sichtbar sein) - nur wenn
     // der Browser die alte Position nicht ohnehin wiederhergestellt hat (scrollY < 40).
