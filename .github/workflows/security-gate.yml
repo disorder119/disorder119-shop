@@ -87,6 +87,9 @@ jobs:
           node --check assets/besucher.js
           node --test shop-worker/besucher.test.mjs
 
+      - name: Fuzzing Shop-API, Kasse und Shop-Seiten (lokal, nie gegen live)
+        run: node --test shop-worker/fuzz-api.test.mjs
+
       - name: Erstattung ueber PayPal und Stornieren pruefen
         run: |
           node --check shop-worker/erstattung.js
