@@ -10,6 +10,8 @@
 //   200 {ok, nicht_im_shop:true, artikelnummer, shop_id, status}     Entwurf, verborgen, nicht mehr im Katalog
 //   409 {error:"in_bestellung", bestellung, bestellstatus, art}      steckt in einer offenen Shop-Bestellung
 //   404 {error:"artikel_unbekannt"}      400 {error:"anfrage_ungueltig", feld}
+//   502 {error:"github_nicht_erreichbar", detail}  Katalog nicht les- oder schreibbar (auch Netzfehler) - spaeter erneut
+//   503 {error:"katalog_nicht_eingerichtet"}
 //
 // Artikelnummer -> Shop-ID: config/catalog-number-links.json ("links", vom
 // Inhaber bestaetigt) und sonst das Feld "article" in data/items.json. Eine
@@ -26,7 +28,10 @@
 //
 // D1: Vor dem Commit haelt eine kurze Reservierung (dieselbe wie in der Kasse:
 // reservations RESERVED + inventory RESERVED) das Stueck fest - so kann es
-// niemand zwischen Pruefung und Commit in die Kasse legen. Danach steht
+// niemand zwischen Pruefung und Commit in die Kasse legen. Ohne Halt kein
+// Commit: Greift eine Kasse oder Miete nach der Pruefung zu, scheitert der
+// Halt und es gibt 409 (Fuzzing 28.11.2026: der Halt wurde uebersprungen,
+// sobald das Lagerstueck schon RESERVED war - genau dann). Danach steht
 // inventory.catalog_status auf SOLD und der Halt ist wieder frei. Scheitert
 // der Commit, wird der Halt sofort freigegeben (sonst laeuft er nach fuenf
 // Minuten ab).
@@ -120,7 +125,30 @@ export function telegramText(eingabe, item) {
 
 // --------------------------------------------------------------- Katalog
 
+// Netzfehler (fetch wirft TypeError), unlesbare Antworten (SyntaxError) und
+// eine ausgefallene Katalogquelle im Testshop heissen "GitHub nicht
+// erreichbar" (502, der Manager versucht es spaeter) - nicht 500.
+function alsGithubFehler(err) {
+  if (err instanceof VerkauftFehler || err instanceof GithubError) return err;
+  let code = null;
+  if (err instanceof SyntaxError) code = "github_antwort_unlesbar";
+  else if (err instanceof TypeError) code = "github_netz";
+  else if (/^sandbox_katalog_http_\d{3}$/.test(String(err?.message))) code = err.message;
+  if (!code) return err;
+  const fehler = new GithubError(code);
+  fehler.ursache = safeText(err?.message || "unknown", 120);
+  return fehler;
+}
+
 async function katalogLesen(env) {
+  try {
+    return await katalogHolen(env);
+  } catch (err) {
+    throw alsGithubFehler(err);
+  }
+}
+
+async function katalogHolen(env) {
   if (istSandbox(env)) {
     // Testshop: oeffentlicher main-Stand, im Testshop Verkauftes aus D1 obendrauf.
     const { items } = await sandboxKatalogLaden(env);
@@ -157,14 +185,19 @@ async function offeneBestellung(env, shopId) {
   return null;
 }
 
-/** Stueck festhalten wie die Kasse (reserveForPurchase): eine Reservierung, inventory RESERVED. */
+/**
+ * Stueck festhalten wie die Kasse (reserveForPurchase): eine Reservierung,
+ * inventory RESERVED. Auch fuer ein Lagerstueck, das gerade nicht AVAILABLE
+ * ist (z. B. REFUNDED): Die Reservierung allein sperrt dann Kasse und Miete -
+ * scheitern darf der Halt nur an einer anderen Reservierung oder Miete.
+ */
 async function festhalten(env, inventoryId, requestId) {
   const db = env.DB, id = crypto.randomUUID(), jetzt = new Date(), stamp = jetzt.toISOString();
   const bis = new Date(jetzt.getTime() + HALT_SEKUNDEN * 1000).toISOString();
   const r = await db.batch([
     db.prepare(`INSERT INTO reservations (id,inventory_id,kind,status,idempotency_key,expires_at,created_at)
       SELECT ?,id,'PURCHASE','RESERVED',?,?,? FROM inventory
-      WHERE id=? AND status='AVAILABLE' AND catalog_status='AVAILABLE'
+      WHERE id=? AND catalog_status='AVAILABLE'
       AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.inventory_id=inventory.id AND r.status='RESERVED')
       AND NOT EXISTS (SELECT 1 FROM rental_reservations rr WHERE rr.inventory_id=inventory.id AND rr.status IN (${liste(MIETE_AKTIV)}))`)
       .bind(id, `${HALT_PREFIX}${requestId}:${id}`, bis, stamp, inventoryId),
@@ -214,7 +247,10 @@ async function beanspruchen(env, eingabe, access) {
     (request_id,grant_id,artikelnummer,plattform,verkauft_am,versuch,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)`)
     .bind(eingabe.requestId, access.id, eingabe.artikelnummer, eingabe.plattform, eingabe.verkauftAm, versuch, stamp, stamp).run();
   const row = await db.prepare("SELECT * FROM manager_verkauft_meldungen WHERE request_id=?").bind(eingabe.requestId).first();
-  if (!row) throw new Error("meldung_fehlt");
+  // Weg zwischen Anlegen und Lesen: ein gleichzeitiger Versuch mit derselben
+  // request_id hatte den Eintrag und hat ihn nach einer Absage (409/502)
+  // freigegeben - wie "laeuft noch", der Manager wiederholt (vorher 500).
+  if (!row) throw new VerkauftFehler(409, { error: "in_arbeit" });
   if (row.artikelnummer !== eingabe.artikelnummer || row.plattform !== eingabe.plattform || row.verkauft_am !== eingabe.verkauftAm) {
     throw new VerkauftFehler(409, { error: "request_id_wiederverwendet" });
   }
@@ -281,22 +317,19 @@ async function verkaufen(env, eingabe, access, reqId) {
   // 4. Verfuegbar: festhalten, Commit "Verkauft: Artikel <Shop-ID>", Halt loesen.
   const inv = await ensureInventory(env, treffer.item);
   await cleanupExpired(env, inv.id);
-  const jetzt = await env.DB.prepare("SELECT status FROM inventory WHERE id=?").bind(inv.id).first();
-  let halt = null;
-  // Nur ein freies Stueck kann die Kasse reservieren - nur das muss festgehalten werden.
-  if (jetzt?.status === "AVAILABLE") {
-    halt = await festhalten(env, inv.id, eingabe.requestId);
-    if (!halt) {
-      const k = (await offeneBestellung(env, treffer.shopId)) || { error: "in_bestellung", bestellung: null, bestellstatus: null, art: "kasse" };
-      if (k.error === "in_bestellung") await protokoll(env, "MANAGER_VERKAUFT_IN_BESTELLUNG", eingabe, access, treffer.shopId, { bestellung: k.bestellung, art: k.art });
-      return { status: 409, body: k };
-    }
+  // Immer festhalten: Steht das Lagerstueck inzwischen auf RESERVED, hat seit
+  // Schritt 1 eine Kasse oder Miete zugegriffen - dann scheitert der Halt, 409.
+  const halt = await festhalten(env, inv.id, eingabe.requestId);
+  if (!halt) {
+    const k = (await offeneBestellung(env, treffer.shopId)) || { error: "in_bestellung", bestellung: null, bestellstatus: null, art: "kasse" };
+    if (k.error === "in_bestellung") await protokoll(env, "MANAGER_VERKAUFT_IN_BESTELLUNG", eingabe, access, treffer.shopId, { bestellung: k.bestellung, art: k.art });
+    return { status: 409, body: k };
   }
   try {
     await markCatalogSold(env, treffer.shopId);
   } catch (err) {
-    if (halt) await loesen(env, halt, inv.id, false).catch(() => {}); // sonst nach HALT_SEKUNDEN
-    throw err;
+    await loesen(env, halt, inv.id, false).catch(() => {}); // sonst nach HALT_SEKUNDEN
+    throw alsGithubFehler(err);
   }
   try {
     await loesen(env, halt, inv.id, true);
@@ -355,7 +388,8 @@ export async function handleManagerVerkauft(request, env, url, access) {
     if (claim?.versuch) await freigeben(env, claim);
     if (err instanceof VerkauftFehler) return antwort(err.body, err.status);
     if (err instanceof GithubError) {
-      console.error(JSON.stringify({ level: "error", event: "manager_verkauft_github_failed", requestId: reqId, code: err.code }));
+      console.error(JSON.stringify({ level: "error", event: "manager_verkauft_github_failed", requestId: reqId, code: err.code,
+        ...(err.ursache ? { ursache: err.ursache } : {}) }));
       return antwort({ error: "github_nicht_erreichbar", detail: err.code }, 502);
     }
     const code = String(err?.message || "");
