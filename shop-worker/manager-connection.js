@@ -1,17 +1,34 @@
-// Native Manager: external browser approval + PKCE, two separate fixed scopes.
+// Native Manager: external browser approval + PKCE, three separate fixed scopes.
 // shop_dataset_read (0031) only reads datasets; katalog_entwurf (0056) may only
-// add NEW catalog items as drafts (manager-katalog.js). Each scope has its own
-// grant table and bearer; one never turns into the other or into an Admin bearer.
-// Only hashes of bearer tokens/codes persist. No checkout/provider side effects.
+// add NEW catalog items as drafts (manager-katalog.js); katalog_verkauft (0059)
+// may only mark an existing piece SOLD after a sale elsewhere (manager-verkauft.js).
+// Each scope has its own grant table and bearer; one never turns into another
+// or into an Admin bearer. Only hashes of bearer tokens/codes persist. Only the
+// katalog_verkauft route touches checkout state (a short inventory hold).
 import {resolveAdminSession} from './admin-passkeys.js';
 import {prepareDataset} from './tax-dataset-stream.js';
 import {prepareTaxDatasetV3} from './tax-ready-dataset-v3.js';
 import {handleManagerKatalog} from './manager-katalog.js';
+import {handleManagerVerkauft} from './manager-verkauft.js';
 
 const ORIGINS=new Set(['https://admin.disorder119.com','http://localhost:8765','http://127.0.0.1:8765']);
 const SCOPE='shop_dataset_read';
 export const KATALOG_SCOPE='katalog_entwurf';
-const TABLES=Object.freeze({[SCOPE]:'manager_dataset_grants',[KATALOG_SCOPE]:'manager_katalog_grants'});
+export const VERKAUFT_SCOPE='katalog_verkauft';
+const TABLES=Object.freeze({[SCOPE]:'manager_dataset_grants',[KATALOG_SCOPE]:'manager_katalog_grants',[VERKAUFT_SCOPE]:'manager_verkauft_grants'});
+// Pending approvals: the CHECK on manager_auth_requests.scope (0056) only knows
+// the first two scopes and SQLite cannot widen it, so katalog_verkauft requests
+// live in their own table (0059). A request row only counts for the scope its
+// table belongs to; ids are random, so a lookup across both tables is unambiguous.
+const REQUESTS=Object.freeze({[SCOPE]:'manager_auth_requests',[KATALOG_SCOPE]:'manager_auth_requests',[VERKAUFT_SCOPE]:'manager_verkauft_requests'});
+const REQUEST_TABLES=Object.freeze([...new Set(Object.values(REQUESTS))]);
+async function findRequest(env,where,binds){
+ for(const table of REQUEST_TABLES){
+  const row=await env.DB.prepare(`SELECT * FROM ${table} WHERE ${where}`).bind(...binds).first();
+  if(row){const scope=Object.hasOwn(TABLES,row.scope)&&REQUESTS[row.scope]===table?row.scope:null;return scope?{row,table,scope}:null;}
+ }
+ return null;
+}
 const B64=/^[A-Za-z0-9_-]{43}$/;
 const encoder=new TextEncoder();
 const random=()=>btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -90,23 +107,23 @@ async function antworten(request,env,url){
    }
    if(path==='/admin/manager/request'&&request.method==='GET'){
     const id=url.searchParams.get('id');if(!B64.test(id||''))fail('MANAGER_ID_INVALID');
-    const row=await env.DB.prepare('SELECT id,device_name,expires_at,code_hash,denied_at,used_at,scope FROM manager_auth_requests WHERE id=? AND expires_at>?').bind(id,stamp).first();
+    const found=await findRequest(env,'id=? AND expires_at>?',[id,stamp]),row=found?.row;
     if(!row||row.code_hash||row.denied_at||row.used_at)fail('MANAGER_REQUEST_EXPIRED',410);
-    return json({id:row.id,device_name:row.device_name,expires_at:row.expires_at,scope:Object.hasOwn(TABLES,row.scope)?row.scope:SCOPE});
+    return json({id:row.id,device_name:row.device_name,expires_at:row.expires_at,scope:found.scope});
    }
    if(path==='/admin/manager/approve'&&request.method==='POST'){
     await rate(request,env,'approve');const v=await body(request);
     if(!B64.test(v.id||'')||v.confirm!==true)fail('MANAGER_CONFIRM_REQUIRED');
-    const row=await env.DB.prepare('SELECT * FROM manager_auth_requests WHERE id=? AND expires_at>? AND denied_at IS NULL AND used_at IS NULL AND code_hash IS NULL').bind(v.id,stamp).first();
+    const found=await findRequest(env,'id=? AND expires_at>? AND denied_at IS NULL AND used_at IS NULL AND code_hash IS NULL',[v.id,stamp]),row=found?.row;
     if(!row||!validRedirect(row.redirect_uri))fail('MANAGER_REQUEST_EXPIRED',410);
-    const code=random();const result=await env.DB.prepare('UPDATE manager_auth_requests SET approved_by=?,code_hash=?,code_expires_at=? WHERE id=? AND expires_at>? AND code_hash IS NULL AND denied_at IS NULL AND used_at IS NULL').bind(session.passkeyId,await digest(code),date(now,60),v.id,stamp).run();
+    const code=random();const result=await env.DB.prepare(`UPDATE ${found.table} SET approved_by=?,code_hash=?,code_expires_at=? WHERE id=? AND expires_at>? AND code_hash IS NULL AND denied_at IS NULL AND used_at IS NULL`).bind(session.passkeyId,await digest(code),date(now,60),v.id,stamp).run();
     if(result.meta.changes!==1)fail('MANAGER_REQUEST_USED',409);
     const callback=new URL(row.redirect_uri);callback.searchParams.set('code',code);callback.searchParams.set('state',row.state);
     return json({callback_uri:callback.href});
    }
    if(path==='/admin/manager/deny'&&request.method==='POST'){
     const v=await body(request);if(!B64.test(v.id||''))fail('MANAGER_ID_INVALID');
-    await env.DB.prepare('UPDATE manager_auth_requests SET denied_at=? WHERE id=? AND code_hash IS NULL AND used_at IS NULL AND denied_at IS NULL').bind(stamp,v.id).run();return json({denied:true});
+    await env.DB.batch(REQUEST_TABLES.map(t=>env.DB.prepare(`UPDATE ${t} SET denied_at=? WHERE id=? AND code_hash IS NULL AND used_at IS NULL AND denied_at IS NULL`).bind(stamp,v.id)));return json({denied:true});
    }
    fail('MANAGER_ROUTE_NOT_ALLOWED',405);
   }
@@ -119,26 +136,31 @@ async function antworten(request,env,url){
    const scope=v.scope===undefined?SCOPE:v.scope;if(typeof scope!=='string'||!Object.hasOwn(TABLES,scope))fail('MANAGER_SCOPE_INVALID');
    const id=random(),expires=date(now,600);
    // Bound retained unauthenticated requests. This only removes expired auth rows.
-   await env.DB.prepare('DELETE FROM manager_auth_requests WHERE expires_at<? '+Object.values(TABLES).map(t=>`AND NOT EXISTS(SELECT 1 FROM ${t} g WHERE g.request_id=manager_auth_requests.id)`).join(' ')).bind(date(now,-86400)).run();
-   const count=await env.DB.prepare('SELECT COUNT(*) AS n FROM manager_auth_requests WHERE expires_at>?').bind(stamp).first();if(count.n>=1000)fail('MANAGER_REQUEST_LIMIT',429);
-   await env.DB.prepare('INSERT INTO manager_auth_requests(id,device_name,redirect_uri,state,challenge,created_at,expires_at,scope) VALUES(?,?,?,?,?,?,?,?)').bind(id,v.device_name.trim(),v.redirect_uri,v.state,v.code_challenge,stamp,expires,scope).run();
+   for(const t of REQUEST_TABLES)await env.DB.prepare(`DELETE FROM ${t} WHERE expires_at<? `+Object.values(TABLES).map(g=>`AND NOT EXISTS(SELECT 1 FROM ${g} g WHERE g.request_id=${t}.id)`).join(' ')).bind(date(now,-86400)).run();
+   const count=await env.DB.prepare('SELECT '+REQUEST_TABLES.map(t=>`(SELECT COUNT(*) FROM ${t} WHERE expires_at>?)`).join('+')+' AS n').bind(...REQUEST_TABLES.map(()=>stamp)).first();if(count.n>=1000)fail('MANAGER_REQUEST_LIMIT',429);
+   await env.DB.prepare(`INSERT INTO ${REQUESTS[scope]}(id,device_name,redirect_uri,state,challenge,created_at,expires_at,scope) VALUES(?,?,?,?,?,?,?,?)`).bind(id,v.device_name.trim(),v.redirect_uri,v.state,v.code_challenge,stamp,expires,scope).run();
    return json({request_id:id,authorization_uri:'https://admin.disorder119.com/#manager='+id,expires_at:expires,scope},201);
   }
   if(path==='/manager/token'&&request.method==='POST'){
    await rate(request,env,'token');const v=await body(request);
    if(!B64.test(v.code||'')||!B64.test(v.code_verifier||'')||!validRedirect(v.redirect_uri))fail('MANAGER_CODE_INVALID',401);
-   const row=await env.DB.prepare('SELECT * FROM manager_auth_requests WHERE code_hash=? AND code_expires_at>? AND expires_at>? AND used_at IS NULL AND denied_at IS NULL').bind(await digest(v.code),stamp,stamp).first();
+   const found=await findRequest(env,'code_hash=? AND code_expires_at>? AND expires_at>? AND used_at IS NULL AND denied_at IS NULL',[await digest(v.code),stamp,stamp]),row=found?.row;
    if(!row||row.redirect_uri!==v.redirect_uri||row.challenge!==await digest(v.code_verifier))fail('MANAGER_CODE_INVALID',401);
    const token=random(),id=random(),expires=date(now,90*86400);
-   const scope=Object.hasOwn(TABLES,row.scope)?row.scope:SCOPE,table=TABLES[scope];
+   const scope=found.scope,table=TABLES[scope],requests=found.table;
    // D1 batch is transactional. The conditional insert claims the single-use
    // request; concurrent exchanges cannot create or return a second grant.
    const result=await env.DB.batch([
-    env.DB.prepare(`INSERT INTO ${table}(id,request_id,token_hash,passkey_id,device_name,scope,created_at,expires_at) SELECT ?,r.id,?,r.approved_by,r.device_name,?,?,? FROM manager_auth_requests r JOIN admin_passkeys p ON p.id=r.approved_by WHERE r.id=? AND r.used_at IS NULL AND r.denied_at IS NULL AND r.code_expires_at>? AND r.expires_at>? AND p.revoked_at IS NULL AND (SELECT COUNT(*) FROM ${table} WHERE revoked_at IS NULL AND expires_at>?)<20`).bind(id,await digest(token),scope,stamp,expires,row.id,stamp,stamp,stamp),
-    env.DB.prepare(`UPDATE manager_auth_requests SET used_at=? WHERE id=? AND used_at IS NULL AND EXISTS(SELECT 1 FROM ${table} WHERE id=? AND request_id=?)`).bind(stamp,row.id,id,row.id)
+    env.DB.prepare(`INSERT INTO ${table}(id,request_id,token_hash,passkey_id,device_name,scope,created_at,expires_at) SELECT ?,r.id,?,r.approved_by,r.device_name,?,?,? FROM ${requests} r JOIN admin_passkeys p ON p.id=r.approved_by WHERE r.id=? AND r.used_at IS NULL AND r.denied_at IS NULL AND r.code_expires_at>? AND r.expires_at>? AND p.revoked_at IS NULL AND (SELECT COUNT(*) FROM ${table} WHERE revoked_at IS NULL AND expires_at>?)<20`).bind(id,await digest(token),scope,stamp,expires,row.id,stamp,stamp,stamp),
+    env.DB.prepare(`UPDATE ${requests} SET used_at=? WHERE id=? AND used_at IS NULL AND EXISTS(SELECT 1 FROM ${table} WHERE id=? AND request_id=?)`).bind(stamp,row.id,id,row.id)
    ]);
    if(result[0].meta.changes!==1||result[1].meta.changes!==1)fail('MANAGER_CODE_USED_OR_LIMIT',409);
    return json({access_token:token,token_type:'Bearer',scope,expires_at:expires,grant_id:id});
+  }
+  // Must precede the generic catalog prefix: a draft bearer gets 403 here.
+  if(path.replace(/\/+$/,'')==='/manager/katalog/verkauft'){
+   const access=await grant(request,env,now,VERKAUFT_SCOPE);
+   return await handleManagerVerkauft(request,env,url,access);
   }
   if(path.startsWith('/manager/katalog/')){
    const access=await grant(request,env,now,KATALOG_SCOPE);

@@ -64,3 +64,67 @@ Test shop (`SANDBOX=1`): every check runs against the public main state, but
 nothing is written to GitHub. Rollout: `wrangler d1 migrations apply` (sandbox
 first, then production), then deploy the worker. Tests:
 `node --test shop-worker/manager-katalog.test.mjs shop-worker/manager-connection.test.mjs`.
+
+## Third, separate grant: pieces sold elsewhere (Migration 0059)
+
+When a piece sells on Vinted, eBay or elsewhere, the Manager marks it SOLD in
+the shop so it cannot be sold twice. Fixed scope `katalog_verkauft`; pairing is
+identical to `katalog_entwurf` (`POST /manager/authorize` with
+`scope: "katalog_verkauft"`, passkey approval, `/manager/token`, 90 days,
+listed and revocable in the Admin app, `/manager/status` and
+`/manager/disconnect` as usual). Migration 0059 is purely additive: SQLite
+cannot widen the scope CHECK of `manager_auth_requests` (0056), and rebuilding
+that table fails under D1's always-on foreign keys because both grant tables
+reference it. Pending requests for this scope therefore live in
+`manager_verkauft_requests`, grants in `manager_verkauft_grants` (CHECK
+scope='katalog_verkauft', revoke is final), finished answers in
+`manager_verkauft_meldungen`. A draft or dataset bearer gets 403 on this route;
+this bearer gets 403 on `/manager/katalog/pruefen|bilder|entwurf` and
+`/manager/dataset.zip`. Requests with an `Origin` header are refused (403).
+
+`POST /manager/katalog/verkauft`, `Authorization: Bearer <katalog_verkauft token>`,
+JSON (max. 4 KiB):
+`{"artikelnummer":"213","plattform":"vinted"|"ebay"|"sonstige","verkauft_am":"YYYY-MM-DD","request_id":"<uuid>"}`
+
+| Answer | Meaning |
+| --- | --- |
+| 200 `{"ok":true,"status":"SOLD","artikelnummer":"213","shop_id":6216,"bereits":false}` | marked SOLD now |
+| 200 `{...,"bereits":true}` | was already SOLD - no second commit |
+| 200 `{"ok":true,"nicht_im_shop":true,"artikelnummer","shop_id","status"}` | DRAFT/hidden, excluded shop id or retired number (`status` "DRAFT" or "ENTFERNT") - nothing done |
+| 409 `{"error":"in_bestellung","bestellung":"<order number>"\|null,"bestellstatus","art":"bestellung"\|"miete"\|"kasse"}` | piece is in an open shop order (RESERVED ... RETURN_REQUESTED), an active rental or a checkout in progress - nothing changed, the owner decides (double sale). Checked before "already SOLD". |
+| 404 `{"error":"artikel_unbekannt"}` | number unknown to the shop |
+| 400 `{"error":"anfrage_ungueltig","feld":...}` | bad body/field (date: valid, not in the future, one day tolerance) |
+| 409 `request_id_wiederverwendet` / `in_arbeit` / `katalog_konflikt` / `nummer_mehrdeutig` | same id other body / same piece or id still running / main kept moving / number not unique - retry later or fix |
+| 401/403/429/502/503 | grant invalid / wrong scope / rate limited / GitHub unreachable / not configured - retry later |
+
+Idempotency: the first finished 200 answer per `request_id` is stored and
+returned unchanged on every repeat (no second commit, audit or Telegram).
+409/404/5xx are not stored; a repeat with the same id is evaluated again (e.g.
+after the owner cancelled the conflicting shop order).
+
+Article number -> shop id: `config/catalog-number-links.json` `links` (confirmed),
+otherwise the `article` field in `data/items.json`; `excluded_shop_ids` and
+`retired_links` count as "nicht im Shop". There is no arithmetic rule
+(#213 = 6216, #1 = 9372).
+
+Effect: exactly the checkout's post-payment path - `markCatalogSold`
+(worker.js) pushes one commit `Verkauft: Artikel <shop id>` that changes only the
+two status lines, the only direct push the main guard
+(`scripts/main_provenance.py`) keeps. Checkout reads `data/items.json` fresh from
+main for every purchase, so the piece is unpurchasable from that commit on; the
+static rebuild only updates the pages. Before the commit a short D1 hold (the
+checkout's own reservation: `reservations` RESERVED + `inventory` RESERVED,
+key `manager-verkauft:`, 5 minutes) keeps anyone from reserving it in between;
+afterwards `inventory.catalog_status='SOLD'` and the hold is released. A failed
+commit releases the hold at once (502). Each outcome writes an `audit_events`
+row (`MANAGER_VERKAUFT`, `_BEREITS`, `_NICHT_IM_SHOP`, `_IN_BESTELLUNG`; actor
+ADMIN, `actor_ref` `manager:<grant id>`); a success sends the owner
+"Manager: Artikel N auf <Plattform> verkauft – im Shop ausgeblendet" via
+Telegram - a Telegram failure never fails the request. `sold_platform` in the
+catalog is not set: the guard would revert any extra line.
+
+Test shop (`SANDBOX=1`): public main catalog, SOLD only in D1 (`sandbox_verkauft`),
+nothing written to GitHub, answers carry `"testshop":true`.
+Rollout: `wrangler d1 migrations apply` (sandbox first, then production), deploy
+the Admin app with labels for the new scope, then the worker. Tests:
+`node --test shop-worker/manager-verkauft.test.mjs shop-worker/manager-connection.test.mjs shop-worker/manager-katalog.test.mjs`.

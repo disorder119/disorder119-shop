@@ -349,7 +349,7 @@ function assertCatalogItemForSale(item) {
   return cents;
 }
 
-async function ensureInventory(env, item) {
+export async function ensureInventory(env, item) {
   const db = requireDb(env);
   const id = `inv_${item.id}`;
   const now = new Date().toISOString();
@@ -403,7 +403,7 @@ export async function expirePurchaseReservations(env, now = new Date().toISOStri
   ]);
 }
 
-async function cleanupExpired(env, inventoryId) {
+export async function cleanupExpired(env, inventoryId) {
   const db = requireDb(env);
   const now = new Date().toISOString();
   await expirePurchaseReservations(env, now);
